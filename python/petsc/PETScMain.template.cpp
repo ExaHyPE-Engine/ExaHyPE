@@ -1,36 +1,43 @@
 #include "{{MAIN_NAME}}.h"
-#include "observers/Assemble.h"
+
 #include "observers/CreateGrid.h"
 #include "observers/EnumerateAndInitSolution.h"
+#include "observers/Assemble.h"
+#include "observers/Solve.h"
 #include "observers/MapSolutionOntoMesh.h"
 #include "observers/Plot.h"
-#include "observers/Solve.h"
-#include "peano4/peano.h"
-#include "peano4/UnitTests.h"
-#include "petsc/UnitTests.h"
+
 #include "repositories/DataRepository.h"
 #include "repositories/StepRepository.h"
-#include "tarch/UnitTests.h"
-#include "peano4/grid/Spacetree.h"
-#include "peano4/parallel/SpacetreeSet.h"
+
 #include "tarch/logging/Log.h"
+#include "tarch/logging/Statistics.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/LogFilterFileReader.h"
-#include "tarch/logging/Statistics.h"
-#include "tarch/multicore/Core.h"
+#include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/Core.h"
 #include "tarch/multicore/otter.h"
-#include "tarch/tests/TreeTestCaseCollection.h"
-#include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
-#include "toolbox/finiteelements/UnitTests.h"
+#include "tarch/timing/Measurement.h"
+#include "tarch/tests/TreeTestCaseCollection.h"
+
+#include "peano4/peano.h"
+#include "peano4/grid/Spacetree.h"
+#include "peano4/parallel/SpacetreeSet.h"
+#include "peano4/UnitTests.h"
+
 #include "toolbox/loadbalancing/loadbalancing.h"
 
-// #include "petsc/UserInterface.h"
+#include "toolbox/finiteelements/UnitTests.h"
 
-// #ifdef UseFenv
-// #include "tarch/FenvWrapper.h"
-// #endif
+#include "petsc/UnitTests.h"
+
+//#include "petsc/UserInterface.h"
+
+//#ifdef UseFenv
+//#include "tarch/FenvWrapper.h"
+//#endif
 
 using namespace {{NAMESPACE | join("::")}};
 
@@ -38,25 +45,25 @@ using namespace {{NAMESPACE | join("::")}};
 tarch::logging::Log _log("::");
 
 
-tarch::timing::Measurement createGridMeasurement;
-tarch::timing::Measurement enumerateMeasurement;
-tarch::timing::Measurement initMeasurement;
-tarch::timing::Measurement assembleMeasurement;
-tarch::timing::Measurement solveMeasurement;
-tarch::timing::Measurement mapSolutionOntoMeshMeasurement;
-tarch::timing::Measurement plotMeasurement;
+tarch::timing::Measurement   createGridMeasurement;
+tarch::timing::Measurement   enumerateMeasurement;
+tarch::timing::Measurement   initMeasurement;
+tarch::timing::Measurement   assembleMeasurement;
+tarch::timing::Measurement   solveMeasurement;
+tarch::timing::Measurement   mapSolutionOntoMeshMeasurement;
+tarch::timing::Measurement   plotMeasurement;
 
 
 /**
  *
  * <h2> Control of the parallel grid construction </h2>
  *
- *
+ * 
  *
  * @return continues to run
  */
 bool selectNextAlgorithmicStep() {
-  static bool gridCreated = false;
+  static bool gridCreated                             = false;
 
   bool continueToSolve = true;
 
@@ -64,57 +71,73 @@ bool selectNextAlgorithmicStep() {
     int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
     auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 
-    switch (stepName) {
-    case repositories::StepRepository::Steps::CreateGrid: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::EnumerateAndInitSolution)
-      );
-    } break;
-    case repositories::StepRepository::Steps::EnumerateAndInitSolution: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::InitPETSc)
-      );
-    } break;
-    case repositories::StepRepository::Steps::InitPETSc: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::Assemble)
-      );
-    } break;
-    case repositories::StepRepository::Steps::Assemble: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::Solve)
-      );
-    } break;
-    case repositories::StepRepository::Steps::Solve: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::MapSolutionOntoMesh)
-      );
-    } break;
-    case repositories::StepRepository::Steps::MapSolutionOntoMesh: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::Plot)
-      );
-    } break;
-    case repositories::StepRepository::Steps::Plot: {
-      continueToSolve = false;
-    } break;
-    case repositories::StepRepository::Steps::Undef:
-      assertion(false);
-      break;
+    switch ( stepName ) {
+      case repositories::StepRepository::Steps::CreateGrid:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::EnumerateAndInitSolution )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::EnumerateAndInitSolution:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitPETSc )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::InitPETSc:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Assemble )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::Assemble:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::Solve:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::MapSolutionOntoMesh )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::MapSolutionOntoMesh:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::Plot:
+        {
+          continueToSolve = false;
+        }
+        break;
+      case repositories::StepRepository::Steps::Undef:
+        assertion(false);
+        break;
     }
-  } else {
-    static tarch::la::Vector<Dimensions, double> minH = tarch::la::Vector<Dimensions, double>(
-      std::numeric_limits<double>::max()
-    );
-    static int globalNumberOfTrees = 0;
+  }
+  else {
+    static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
+    static int    globalNumberOfTrees                         = 0;
 
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGrid)
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::CreateGrid )
     );
 
-    if (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps() > 5) {
+    if (
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>5
+    ) {
       logInfo(
-        "selectNextAlgorithmicStep()", "mesh has been stationary for more than 5 grid sweeps. Stop grid construction"
+        "selectNextAlgorithmicStep()",
+        "mesh has been stationary for more than 5 grid sweeps. Stop grid construction"
       );
       gridCreated = true;
     }
@@ -129,113 +152,127 @@ void step() {
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 
   static tarch::logging::Log _log("");
-#if PeanoDebug > 0
-#else
+  #if PeanoDebug>0
+  #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
-#endif
-  logInfo("step()", "run " << repositories::StepRepository::toString(stepName));
+  #endif
+  logInfo( "step()", "run " << repositories::StepRepository::toString(stepName) );
 
-  static tarch::timing::Watch watch("::", "step()", false);
+  static tarch::timing::Watch  watch( "::", "step()", false );
 
   static int creepingNumberOfLocalCells = 0;
 
-  switch (stepName) {
-  case repositories::StepRepository::Steps::CreateGrid: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid");
+  switch ( stepName ) {
+    case repositories::StepRepository::Steps::CreateGrid:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
 
-    observers::CreateGrid observer;
-    watch.start();
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
-    createGridMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::EnumerateAndInitSolution: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("enumerate-and-init-solution");
+        observers::CreateGrid  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        createGridMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::EnumerateAndInitSolution:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate-and-init-solution" );
 
-    observers::EnumerateAndInitSolution observer;
-    watch.start();
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
-    enumerateMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::InitPETSc: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("init-PETSc");
+        observers::EnumerateAndInitSolution  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        enumerateMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::InitPETSc:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-PETSc" );
 
-    watch.start();
+        watch.start();
 
-    repositories::computeLocalToGlobalMapsForAllSolvers();
-    const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
-    logInfo("step()", "total no of dofs=" << totalNumberOfDegreesOfFreedom);
+        repositories::computeLocalToGlobalMapsForAllSolvers();
+        const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
+        logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
 
-    { % if Project_Name == "HDG" % }
-    const int totalNumberOfFaceDofs = repositories::getTotalFaceDofs();
-    const int totalNumberOfCellDofs = repositories::getTotalCellDofs();
-    const int totalDofs             = totalNumberOfFaceDofs + totalNumberOfCellDofs;
-    logInfo("step()", "total no of face dofs=" << totalNumberOfFaceDofs);
-    logInfo("step()", "total no of cell dofs=" << totalNumberOfCellDofs);
-    logInfo("step()", "initialising petsc matrix with " << totalDofs << " dofs");
-    repositories::instanceOfPetsc.initMatrixAndVectors(totalDofs);
+        {% if Project_Name=="HDG" %}
+        const int totalNumberOfFaceDofs  = repositories::getTotalFaceDofs();
+        const int totalNumberOfCellDofs  = repositories::getTotalCellDofs();
+        const int totalDofs              = totalNumberOfFaceDofs + totalNumberOfCellDofs;
+        logInfo( "step()", "total no of face dofs=" << totalNumberOfFaceDofs );
+        logInfo( "step()", "total no of cell dofs=" << totalNumberOfCellDofs );
+        logInfo( "step()", "initialising petsc matrix with " << totalDofs << " dofs" );
+        repositories::instanceOfPetsc.initMatrixAndVectors( totalDofs );
 
-    { % else % } repositories::instanceOfPetsc.initMatrixAndVectors(totalNumberOfDegreesOfFreedom);
-    { % endif % }
+        {%else%}
+        repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
+        {% endif %}
+        
+        watch.stop();
+        initMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::Assemble:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "assemble" );
 
-    watch.stop();
-    initMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::Assemble: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("assemble");
+        observers::Assemble  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
 
-    observers::Assemble observer;
-    watch.start();
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        //assemble the matrix
+        repositories::instanceOfPetsc.assemble();
+        watch.stop();
+        assembleMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::Solve:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
 
-    // assemble the matrix
-    repositories::instanceOfPetsc.assemble();
-    watch.stop();
-    assembleMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::Solve: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("solve");
+        watch.start();
+        {% if Project_Name=="Poisson" %}
+        // solve
+        repositories::instanceOfPetsc.petscSolve();
+        {% endif %}
 
-    watch.start();
-    { % if Project_Name == "Poisson" % }
-    // solve
-    repositories::instanceOfPetsc.petscSolve();
-    { % endif % }
+        watch.stop();
+        solveMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::MapSolutionOntoMesh:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "map-solution-onto-mesh" );
 
-    watch.stop();
-    solveMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::MapSolutionOntoMesh: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("map-solution-onto-mesh");
+        observers::MapSolutionOntoMesh  observer;
+        watch.start();
 
-    observers::MapSolutionOntoMesh observer;
-    watch.start();
+        //move data from petsc to c++
+        {% if Project_Name=="Poisson" %}
+        repositories::instanceOfPetsc.convertToStdVector();
+        {% endif %}
+        
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        
+        repositories::instanceOfPetsc.petscDestroy();
+        watch.stop();
+        mapSolutionOntoMeshMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::Plot:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
 
-    // move data from petsc to c++
-    { % if Project_Name == "Poisson" % }
-    repositories::instanceOfPetsc.convertToStdVector();
-    { % endif % }
-
-    peano4::parallel::SpacetreeSet::getInstance()
-      .traverse(observer);
-
-    repositories::instanceOfPetsc.petscDestroy();
-    watch.stop();
-    mapSolutionOntoMeshMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::Plot: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("plot");
-
-    observers::Plot observer;
-    watch.start();
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
-    plotMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::Undef:
-    assertion(false);
-    break;
+        observers::Plot  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        plotMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::Undef:
+      assertion(false);
+      break;
   }
 }
 
@@ -246,123 +283,97 @@ int main(int argc, char** argv) {
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
 
-  peano4::initParallelEnvironment(&argc, &argv);
+  peano4::initParallelEnvironment(&argc,&argv);
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
   tarch::la::Vector<Dimensions, double> x = {{DomainOffset}};
   tarch::la::Vector<Dimensions, double> h = {{DomainSize}};
 
-  peano4::initSingletons(x, h);
+  peano4::initSingletons(
+    x,
+    h
+  );
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
+  if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
     return ExitCodeInvalidBuild;
   }
 
-  if (not tarch::logging::LogFilterFileReader::parsePlainTextFile("petsc.log-filter")) {
-    logWarning(
-      "main()", "no petsc.log-filter file found or file has been corrupted. Use default logging configuration"
-    );
+  if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( "petsc.log-filter" ) ) {
+    logWarning( "main()", "no petsc.log-filter file found or file has been corrupted. Use default logging configuration" );
   }
 
   repositories::DataRepository::initDatatypes();
 
-  // #ifdef UseFenv
-  // tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-  // #endif
+//#ifdef UseFenv
+  //tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+//#endif
 
-#if PeanoDebug >= 2
+  #if PeanoDebug>=2
   tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection();
-  unitTests->addTestCase(peano4::getUnitTests());
-  unitTests->addTestCase(tarch::getUnitTests());
-  unitTests->addTestCase(toolbox::finiteelements::getUnitTests());
-  unitTests->addTestCase(petsc::getUnitTests());
+  unitTests->addTestCase( peano4::getUnitTests() );
+  unitTests->addTestCase( tarch::getUnitTests() );
+  unitTests->addTestCase( toolbox::finiteelements::getUnitTests() );
+  unitTests->addTestCase( petsc::getUnitTests() );
   unitTests->run();
   if (unitTests->getNumberOfErrors() != 0) {
     logError("main()", "unit tests failed. Quit.");
-    tarch::mpi::Rank::abort(ExitCodeUnitTestsFailed);
+    tarch::mpi::Rank::abort( ExitCodeUnitTestsFailed );
   }
   delete unitTests;
-#endif
+  #endif
 
   tarch::logging::Statistics::getInstance().clear();
 
   OTTER_INITIALISE();
 
-#if defined(SharedOMP)
-#pragma omp parallel
+  #if defined(SharedOMP)
+  #pragma omp parallel
   {
-#pragma omp master
-    {
-#endif
+  #pragma omp master 
+  {
+  #endif
 
-#if defined(UseSmartMPI)
-      const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-#else
-  const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
+  #if defined(UseSmartMPI)
+  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  #else
+  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
-#endif
+  #endif
 
-      if (isGlobalMaster) {
-        while (selectNextAlgorithmicStep()) {
-          step();
-        }
+  if ( isGlobalMaster ) {
+    while ( selectNextAlgorithmicStep() ) {
+      step();
+    }
 
-        logInfo("main()", "terminated successfully");
-        logInfo(
-          "main()",
-          "grid construction:           " << createGridMeasurement.getAccumulatedValue(
-          ) << "s\t" << createGridMeasurement.toString()
-        );
-        logInfo(
-          "main()",
-          "enumerate:                   " << enumerateMeasurement.getAccumulatedValue(
-          ) << "s\t" << enumerateMeasurement.toString()
-        );
-        logInfo(
-          "main()",
-          "init (setup PETSc):          " << initMeasurement.getAccumulatedValue(
-          ) << "s\t" << initMeasurement.toString()
-        );
-        logInfo(
-          "main()",
-          "assemble:                    " << assembleMeasurement.getAccumulatedValue(
-          ) << "s\t" << assembleMeasurement.toString()
-        );
-        logInfo(
-          "main()",
-          "solve:                       " << solveMeasurement.getAccumulatedValue(
-          ) << "s\t" << solveMeasurement.toString()
-        );
-        logInfo(
-          "main()",
-          "map solution back onto mesh: " << mapSolutionOntoMeshMeasurement.getAccumulatedValue(
-          ) << "s\t" << mapSolutionOntoMeshMeasurement.toString()
-        );
-        logInfo(
-          "main()",
-          "plotting:                    " << plotMeasurement.getAccumulatedValue(
-          ) << "s\t" << plotMeasurement.toString()
-        );
-      } else if (isPeanoComputeNode) {
-        while (peano4::parallel::Node::getInstance().continueToRun()) {
-          step();
-        }
-      }
-#if defined(UseSmartMPI)
-      else {
-        while (smartmpi::continueToRun()) {
-          smartmpi::tick();
-        }
-      }
-#endif
-
-#if defined(SharedOMP)
+    logInfo("main()", "terminated successfully");
+    logInfo("main()", "grid construction:           " << createGridMeasurement.getAccumulatedValue() << "s\t" << createGridMeasurement.toString() );
+    logInfo("main()", "enumerate:                   " << enumerateMeasurement.getAccumulatedValue() << "s\t" << enumerateMeasurement.toString() );
+    logInfo("main()", "init (setup PETSc):          " << initMeasurement.getAccumulatedValue() << "s\t" << initMeasurement.toString() );
+    logInfo("main()", "assemble:                    " << assembleMeasurement.getAccumulatedValue() << "s\t" << assembleMeasurement.toString() );
+    logInfo("main()", "solve:                       " << solveMeasurement.getAccumulatedValue() << "s\t" << solveMeasurement.toString() );
+    logInfo("main()", "map solution back onto mesh: " << mapSolutionOntoMeshMeasurement.getAccumulatedValue() << "s\t" << mapSolutionOntoMeshMeasurement.toString() );
+    logInfo("main()", "plotting:                    " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
+  }
+  else if (isPeanoComputeNode) {
+    while (peano4::parallel::Node::getInstance().continueToRun()) {
+      step();
     }
   }
-#endif
+  #if defined(UseSmartMPI)
+  else {
+    while ( smartmpi::continueToRun() ) {
+      smartmpi::tick();
+    }
+  }
+  #endif
+
+  #if defined(SharedOMP)
+  }
+  }
+  #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
