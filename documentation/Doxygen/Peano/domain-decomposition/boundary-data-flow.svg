@@ -9,11 +9,7 @@
    id="svg8"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
    sodipodi:docname="boundary-data-flow.svg"
-<<<<<<<< HEAD:documentation/Doxygen/Peano/boundary-data-flow.svg
-   inkscape:export-filename="/home/tobias/git/Peano/documentation/Doxygen/Peano/boundary-data-flow.png"
-========
    inkscape:export-filename="/home/tobias/git/Peano/documentation/Doxygen/Peano/domain-decomposition/boundary-data-flow.png"
->>>>>>>> p4:documentation/Doxygen/Peano/domain-decomposition/boundary-data-flow.svg
    inkscape:export-xdpi="96"
    inkscape:export-ydpi="96"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
