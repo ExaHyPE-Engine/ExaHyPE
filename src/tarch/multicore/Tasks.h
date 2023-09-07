@@ -60,7 +60,7 @@ namespace tarch {
       int       _priority;
 
     public:
-      static constexpr int DefaultPriority = 0;
+      static constexpr int DefaultPriority = 1024;
       static constexpr int Host            = -1;
       static constexpr int DontFuse        = -1;
 
@@ -71,8 +71,9 @@ namespace tarch {
        *        type and fuse/batch them into one task call. However, if you don't
        *        want Peano to even thing about task fusion, pass in DontFuse as
        *        argument.
+       *
        * @param priority Integer value that indicates what priority you want to
-       *        assign a task. Not all tasking backends support priorities.
+       *        assign a task. Value has to be non-negative.
        */
       Task(int taskType, int priority);
 
@@ -80,6 +81,12 @@ namespace tarch {
 
       int  getTaskType() const;
       int  getPriority() const;
+
+      /**
+       * Set priority
+       *
+       * @param priority Has to be non-negative
+       */
       void setPriority(int priority);
 
       /**
@@ -356,6 +363,9 @@ namespace tarch {
     namespace native {
       /**
        * Spawn a ready task into the runtime system of choice.
+       *
+       * The responsibility to destroy task is handed over to the runtime of
+       * choice.
        */
       void spawnTask(Task* task);
 
@@ -369,6 +379,9 @@ namespace tarch {
        * orchestration. If the subtasks enqueue tasks into the thread-local
        * queue, they will remain there. This routine does not touch the
        * thread-local queue.
+       *
+       * The responsibility for the pointers in tasks is handed over to the
+       * runtime of choice, i.e. you don't have to delete them.
        *
        * @param tasks Set of tasks. Is guaranteed to be non-empty.
        */

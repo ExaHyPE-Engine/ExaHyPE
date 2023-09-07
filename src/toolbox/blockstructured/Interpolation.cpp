@@ -940,24 +940,12 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
   int                                       haloDestinationPatch,
   int                                       unknowns,
   const double* __restrict__                sourceValues,
-  double* __restrict__                      destinationValues
+  double* __restrict__                      destinationValues,
+  ::peano4::utils::LoopParallelism          parallelisation
 ) {
   assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
 
-  #if Dimensions==2 and defined(SharedOMP)
-  #pragma omp taskloop collapse(2)
-  for( int destinationVolume0 = 0; destinationVolume0 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume0++ )
-  for( int destinationVolume1 = 0; destinationVolume1 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume1++ ) {
-    tarch::la::Vector<Dimensions, int> destinationVolume = { destinationVolume0, destinationVolume1 };
-  #elif Dimensions==3 and defined(SharedOMP)
-  #pragma omp taskloop collapse(3)
-  for( int destinationVolume0 = 0; destinationVolume0 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume0++ )
-  for( int destinationVolume1 = 0; destinationVolume1 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume1++ )
-  for( int destinationVolume2 = 0; destinationVolume2 < numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch; destinationVolume2++ ) {
-    tarch::la::Vector<Dimensions, int> destinationVolume = { destinationVolume0, destinationVolume1, destinationVolume2 };
-  #else
-  dfor( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch ) {
-  #endif
+  parallelDforWithDynamicScheduling( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch, parallelisation )
     const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch) * unknowns;
     for (int unknown=0; unknown<unknowns; unknown++) {
       destinationValues[baseIndexDestination+unknown] = 0.0;
@@ -991,8 +979,10 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
         distanceAlongCoordinateAxis = 1.0 - distanceAlongCoordinateAxis / h ;
         weight *= std::max(0.0, distanceAlongCoordinateAxis);
       }
+      #if !defined(SharedSYCL)
       assertion( tarch::la::greaterEquals(weight, 0.0) );
       assertion( tarch::la::smallerEquals(weight, 1.0) );
+      #endif
 
       tarch::la::Vector<Dimensions, int> amendedSourceVolume = sourceVolume;
       if (isFromUnitialisedDiagonal) {
@@ -1008,7 +998,7 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
         destinationValues[baseIndexDestination+unknown] += weight * sourceValues[baseIndexSource+unknown];
       }
     }
-  }
+  end_parallelDfor
 }
 
 

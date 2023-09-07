@@ -7,6 +7,8 @@
 
 #include "tarch/la/DynamicMatrix.h"
 
+#include "peano4/utils/Loop.h"
+
 
 #include <map>
 
@@ -558,7 +560,8 @@ namespace toolbox {
       int                                       haloDestinationPatch,
       int                                       unknowns,
       const double* __restrict__                sourceValues,
-      double* __restrict__                      destinationValues
+      double* __restrict__                      destinationValues,
+      ::peano4::utils::LoopParallelism          parallelisation
     );
 
     namespace internal {

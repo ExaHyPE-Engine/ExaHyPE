@@ -18,6 +18,7 @@ tarch::logging::Log tarch::timing::Measurement::_log("tarch::timing::Measurement
 tarch::timing::Measurement::Measurement(const double& accuracy):
   _accuracy(accuracy),
   _accumulatedValue(0.0),
+  _lastValue(0.0),
   _accumulatedSquares(0.0),
   _numberOfMeasurements(0.0),
   _isAccurateValue(false),
@@ -55,6 +56,11 @@ double tarch::timing::Measurement::getMeanValueOfNextStep(double newValue) const
 
 
 double tarch::timing::Measurement::getAccumulatedValue() const { return _accumulatedValue; }
+
+
+double tarch::timing::Measurement::getMostRecentValue() const {
+  return _lastValue;
+}
 
 
 double tarch::timing::Measurement::getValue() const {
@@ -111,9 +117,10 @@ void tarch::timing::Measurement::setValue(const double& value) {
     _maxMeasurement = _numberOfMeasurements;
   }
 
-  _accumulatedValue += value;
-  _accumulatedSquares += value * value;
+  _accumulatedValue     += value;
+  _accumulatedSquares   += value * value;
   _numberOfMeasurements += 1.0;
+  _lastValue             = value;
 
   logDebug(
     "setValue",
