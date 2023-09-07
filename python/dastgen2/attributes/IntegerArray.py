@@ -22,7 +22,7 @@ class IntegerArray(Integer):
         Integer.__init__(
             self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval
         )
-        self._cardinality = cardinality
+        self._cardinality = str(cardinality)  # ensure this is a string.
         self._min_value = min_value
         self._max_value = max_value
         self.compress = min_value != None or max_value != None
@@ -40,9 +40,9 @@ class IntegerArray(Integer):
         accessor_name = self._name[:1].title() + self._name[1:]
         return [
             ("get" + accessor_name + "() const", "const int*"),
-            ("set" + accessor_name + "(int value[" + self._cardinality + "])", "void"),
+            ("set" + accessor_name + "(const int value[" + self._cardinality + "])", "void"),
             ("get" + accessor_name + "(int index) const", "int"),
-            ("set" + accessor_name + "(int index, int)", "void"),
+            ("set" + accessor_name + "(int index, int value)", "void"),
         ]
 
     def get_plain_C_attributes(self):
@@ -50,7 +50,7 @@ class IntegerArray(Integer):
             return [
                 (
                     "_" + self._name + "[" + self._cardinality + "]",
-                    "double",
+                    "int",
                     "[[clang::pack_range("
                     + str(self._min_value)
                     + ","
@@ -59,7 +59,7 @@ class IntegerArray(Integer):
                 )
             ]
         else:
-            return [("_" + self._name + "[" + self._cardinality + "]", "double", "")]
+            return [("_" + self._name + "[" + self._cardinality + "]", "int", "")]
 
     def get_first_plain_C_attribute(self):
         return [("_" + self._name + "[0]", "int")]
