@@ -29,7 +29,7 @@ class {{NAMESPACE | join("::")}}::PetscData{
     PetscData();
     virtual ~PetscData();
 
-    void setRows(int cols);
+    void setRows(int rows);
     int  getRows() const;
     void setCols(int cols);
     int  getCols() const;

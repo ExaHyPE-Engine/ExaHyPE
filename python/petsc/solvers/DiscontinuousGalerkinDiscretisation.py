@@ -301,14 +301,21 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     * we order the matrix like so:
 
     A_cc A_fc    0  
-       0 A_ff  -id
-   -A_cf    0   id
+       0   id   -A_ff
+    -id  A_cf    0
 
     and the solution vector:
     ( x_c   )
     ( x_f   )
     ( x_\pm )
+
+    as such, we write two new methods to calculate
+    the number of rows and columns we want in the 
+    petsc matrix
     */
+    int getGlobalMatrixRows();
+    int getGlobalMatrixCols();
+
     int getGlobalCellIndex(std::pair<int,int> localIndex);
     int getGlobalFaceIndex(std::pair<int,int> localIndex);
     
@@ -399,12 +406,6 @@ int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom()
   int result = 0;
   {% for SOLVER in SOLVER_INSTANCES %}
   result +=    {{SOLVER[1]}}.getCellLocalToGlobalMap().getTotalNumberOfIndices();
-
-  /*
-  harcoding it to be 3 here. 
-  it's 3 because we have the \pm unknowns, as well as the u_f which comes from
-  averaging
-  */
   result += 3 * {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
   {% endfor %}
   return result;
@@ -433,6 +434,17 @@ int {{NAMESPACE | join("::")}}::repositories::getTotalVertexDofs() {
   {% endfor %}
   return result;
 }
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalMatrixRows()
+{
+  return 2 * getTotalCellDofs() + getTotalFaceDofs();
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalMatrixCols()
+{
+  return getTotalCellDofs() + 3 * getTotalFaceDofs();
+}
+
 
 int {{NAMESPACE | join("::")}}::repositories::getGlobalCellIndex(std::pair<int,int> localIndex) {
   int result;

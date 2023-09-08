@@ -187,9 +187,11 @@ void step() {
         watch.start();
 
         repositories::computeLocalToGlobalMapsForAllSolvers();
-        const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
-        logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
-        repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
+        const int matrixRows = repositories::getGlobalMatrixRows();
+        const int matrixCols = repositories::getGlobalMatrixCols();
+        logInfo( "step()", "total no of rows="  << matrixRows );
+        logInfo( "step()", "total no of cols="  << matrixCols );
+        repositories::instanceOfPetsc.initMatrixAndVectors( matrixRows, matrixCols );
         
         watch.stop();
         initMeasurement.setValue( watch.getCalendarTime() );
