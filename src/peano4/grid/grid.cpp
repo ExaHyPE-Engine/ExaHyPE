@@ -63,11 +63,11 @@ bool peano4::grid::overlaps(const tarch::la::Vector<Dimensions, double>& x, cons
 }
 
 peano4::grid::GridVertex peano4::grid::createVertex(
-  GridVertex::State                            state,
-  const tarch::la::Vector<Dimensions, double>& x,
-  int                                          level,
-  const tarch::la::Vector<TwoPowerD, int>&     adjacentRanks,
-  bool                                         isNewFineGridVertex
+  [[maybe_unused]] GridVertex::State                            state,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] int                                          level,
+  [[maybe_unused]] const tarch::la::Vector<TwoPowerD,int>&      adjacentRanks,
+  [[maybe_unused]] bool                                         isNewFineGridVertex
 ) {
   GridVertex result;
 
@@ -111,7 +111,7 @@ std::string peano4::grid::toString(const std::list<GridControlEvent>& events) {
 }
 
 std::vector<peano4::grid::GridControlEvent> peano4::grid::merge(
-  std::vector<GridControlEvent> events, const double Tolerance
+  std::vector<GridControlEvent> events, [[maybe_unused]] const double Tolerance
 ) {
   logTraceInWith1Argument("merge(...)", events.size());
 
@@ -222,8 +222,8 @@ peano4::grid::GridStatistics operator+(peano4::grid::GridStatistics lhs, peano4:
     lhs.getNumberOfLocalRefinedCells() + rhs.getNumberOfLocalRefinedCells(),
     lhs.getNumberOfRemoteRefinedCells() + rhs.getNumberOfRemoteRefinedCells(),
     std::min(lhs.getStationarySweeps(), rhs.getStationarySweeps()),
-    lhs.getCoarseningHasBeenVetoed() | rhs.getCoarseningHasBeenVetoed(),
-    lhs.getRemovedEmptySubtree() | rhs.getRemovedEmptySubtree(),
+    lhs.getCoarseningHasBeenVetoed() or rhs.getCoarseningHasBeenVetoed(),
+    lhs.getRemovedEmptySubtree() or rhs.getRemovedEmptySubtree(),
     tarch::la::min(lhs.getMinH(), rhs.getMinH())
   );
 }
@@ -392,7 +392,7 @@ peano4::grid::GridControlEvent peano4::grid::internal::createBoundingBoxEvent(
   return GridControlEvent(rhs.getRefinementControl(), boundingEventOffset, boundingEventSize, rhs.getH());
 };
 
-void peano4::grid::reduceGridControlEvents(std::vector<GridControlEvent>& events) {
+void peano4::grid::reduceGridControlEvents([[maybe_unused]] std::vector<GridControlEvent>& events) {
 #ifdef Parallel
   std::vector<GridControlEvent> localEvents = events;
   int                           localSize   = events.size();

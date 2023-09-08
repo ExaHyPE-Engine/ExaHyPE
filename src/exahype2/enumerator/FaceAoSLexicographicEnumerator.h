@@ -2,14 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 
-
 #include <functional>
 #include <string>
-
 
 namespace exahype2 {
   namespace enumerator {
@@ -55,7 +52,6 @@ namespace exahype2 {
      * data. ExaHyPE's volumetric enumerators in contrast can index a whole
      * batch of cells in one go.
      *
-     *
      */
     struct FaceAoSLexicographicEnumerator {
       public:
@@ -80,7 +76,7 @@ namespace exahype2 {
          *   properties such as the first derivative along the normal. Some
          *   code snippets within ExaHyPE call the haloSize overlap.
          */
-        FaceAoSLexicographicEnumerator(
+        inline FaceAoSLexicographicEnumerator(
           int faceNumber,
           int numberOfDoFsPerAxisInPatch,
           int haloSize,
@@ -96,16 +92,46 @@ namespace exahype2 {
         /**
          * Access a dof
          */
-        int operator()(
+        inline int operator()(
           const tarch::la::Vector<Dimensions,int>&  dofIndex,
           int unknown
-        ) const;
+        ) const {
+          int base   = 1;
+          int result = 0;
+          for (int d=0; d<Dimensions; d++) {
+            result += dofIndex(d) * base;
+            if (d==_faceNumber % Dimensions) {
+              #if !defined(GPUOffloadingOMP)
+              assertion2(dofIndex(d)>=0,toString(),dofIndex);
+              assertion2(dofIndex(d)<2*_haloSize,toString(),dofIndex);
+              #endif
+              base *= (2*_haloSize);
+            } else {
+              #if !defined(GPUOffloadingOMP)
+              assertion2(dofIndex(d)>=0,toString(),dofIndex);
+              assertion2(dofIndex(d)<_numberOfDoFsPerAxisInPatch,toString(),dofIndex);
+              #endif
+              base *= _numberOfDoFsPerAxisInPatch;
+            }
+          }
+          return result * (_unknowns+_numberOfAuxiliaryVariables) + unknown;
+        }
 
         #if !defined(GPUOffloadingOMP)
         std::string toString() const;
         #endif
 
-        int size() const;
+        inline int size() const {
+          if constexpr (Dimensions==2) {
+            return (_numberOfDoFsPerAxisInPatch)
+                * (2*_haloSize)
+                * (_unknowns+_numberOfAuxiliaryVariables);
+          } else {
+            return (_numberOfDoFsPerAxisInPatch*_numberOfDoFsPerAxisInPatch)
+                * (2*_haloSize)
+                * (_unknowns+_numberOfAuxiliaryVariables);
+          }
+        }
 
         const int _faceNumber;
         const int _numberOfDoFsPerAxisInPatch;
@@ -115,6 +141,3 @@ namespace exahype2 {
     };
   }
 }
-
-
-

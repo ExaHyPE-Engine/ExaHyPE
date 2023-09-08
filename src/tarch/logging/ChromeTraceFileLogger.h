@@ -2,22 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #ifdef Parallel
 #include <mpi.h>
 #endif
+
 #include <iostream>
 #include <fstream>
 #include <set>
 #include <stack>
 
-
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/logging/Log.h"
-
-
-
 
 namespace tarch {
   namespace logging {
@@ -39,7 +35,7 @@ class tarch::logging::ChromeTraceFileLogger {
   private:
     static Log _log;
 
-    static ChromeTraceFileLogger   _singleton;
+    static ChromeTraceFileLogger _singleton;
 
     tarch::multicore::BooleanSemaphore _semaphore;
 
@@ -50,21 +46,19 @@ class tarch::logging::ChromeTraceFileLogger {
     bool           _quitOnError;
     bool           _hasWrittenEntry;
 
-
     void nextEntry();
 
     /**
      * Declared private since assignment does not make sense for an output
      * class (output information mismatch).
      */
-    ChromeTraceFileLogger& operator=(const ChromeTraceFileLogger& rhs);
+    ChromeTraceFileLogger& operator=(const ChromeTraceFileLogger&);
 
     /**
      * Declared private since copying does not make sense for an output
      * class (output information mismatch).
      */
-    ChromeTraceFileLogger(const ChromeTraceFileLogger& param);
-
+    ChromeTraceFileLogger(const ChromeTraceFileLogger&);
 
     /**
      * Ensures each column has same length
@@ -80,7 +74,6 @@ class tarch::logging::ChromeTraceFileLogger {
 	   long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message
     );
 
-
     std::string constructEventEntryInTraceFile(
       std::string          messageType,
 	   long int timestampMS, int rank, int threadId, const std::string& trace, const std::string& message
@@ -95,6 +88,7 @@ class tarch::logging::ChromeTraceFileLogger {
      * It's a singleton.
      */
     ChromeTraceFileLogger();
+
   public:
     ~ChromeTraceFileLogger();
 
@@ -125,4 +119,3 @@ class tarch::logging::ChromeTraceFileLogger {
 
     void close();
 };
-

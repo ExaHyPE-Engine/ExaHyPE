@@ -2,23 +2,17 @@
 
 #include "peano4/parallel/SpacetreeSet.h"
 
-
 tarch::logging::Log  toolbox::loadbalancing::AbstractLoadBalancing::_log( "toolbox::loadbalancing::AbstractLoadBalancing" );
-
 
 std::ostream& operator<<(std::ostream& out, const toolbox::loadbalancing::AbstractLoadBalancing& balancing) {
   out << balancing.toString();
   return out;
 }
 
-
-
 toolbox::loadbalancing::AbstractLoadBalancing::AbstractLoadBalancing(Configuration* configuration, bool deleteInDestructor):
-  _state( State::Undefined ),
   _configuration(configuration),
-  _deleteInDestructor(deleteInDestructor) {
-}
-
+  _state( State::Undefined ),
+  _deleteInDestructor(deleteInDestructor) {}
 
 toolbox::loadbalancing::AbstractLoadBalancing::~AbstractLoadBalancing() {
   if (_deleteInDestructor) {
@@ -48,8 +42,7 @@ void toolbox::loadbalancing::AbstractLoadBalancing::enable( bool value ) {
   if (value and _state==State::SwitchedOff) {
     _state = State::InterRankBalancing;
     logInfo( "enable()", "switched load balancing on (again) and therefore change to state " << ::toString(_state) );
-  }
-  else if (not value and _state != State::SwitchedOff) {
+  } else if (not value and _state != State::SwitchedOff) {
     logInfo( "enable()", "switched load balancing off" );
     _state = State::SwitchedOff;
   }
@@ -74,14 +67,15 @@ int toolbox::loadbalancing::AbstractLoadBalancing::getGlobalNumberOfTrees() cons
 }
 
 
-bool toolbox::loadbalancing::AbstractLoadBalancing::fitsIntoMemory(State state) const {
-  // This is a magic paramter with the 2. You might still run out of memory if you refine while you
-  // rebalance.
+bool toolbox::loadbalancing::AbstractLoadBalancing::fitsIntoMemory([[maybe_unused]] State state) const {
+  // This is a magic parameter with the 2.
+  // You might still run out of memory if you refine while you rebalance.
   if ( _configuration->makeSplitDependOnMemory(_state) ) {
     int worstCaseEstimateForSizeOfSpacetree = 2 * tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
     return tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) >= worstCaseEstimateForSizeOfSpacetree;
+  } else {
+    return true;
   }
-  else return true;
 }
 
 
@@ -93,14 +87,11 @@ void toolbox::loadbalancing::AbstractLoadBalancing::finishSimulation() {
 bool toolbox::loadbalancing::AbstractLoadBalancing::isInterRankBalancingBad() const {
   if ( not _statistics.hasConsistentViewOfWorld()) {
     return false;
-  }
-  else if ( _statistics.getGlobalNumberOfTrees() < tarch::mpi::Rank::getInstance().getNumberOfRanks() ) {
+  } else if ( _statistics.getGlobalNumberOfTrees() < tarch::mpi::Rank::getInstance().getNumberOfRanks() ) {
     return true;
-  }
-  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state) ) {
+  } else if ( static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) >= _configuration->getMaxLocalTreesPerRank(_state) ) {
     return false;
-  }
-  else {
+  } else {
     int localCells = 0;
     std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
     for (auto p: idsOfLocalSpacetrees) {
@@ -116,8 +107,7 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::isInterRankBalancingBad() co
 
     if (result) {
       logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _statistics.getGlobalNumberOfInnerUnrefinedCells() << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
-    }
-    else {
+    } else {
       logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _statistics.getGlobalNumberOfInnerUnrefinedCells() << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
     }
 
@@ -127,19 +117,15 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::isInterRankBalancingBad() co
 
 
 bool toolbox::loadbalancing::AbstractLoadBalancing::isIntraRankBalancingBad() const {
-  if ( not _statistics.hasConsistentViewOfWorld()) {//
+  if ( not _statistics.hasConsistentViewOfWorld()) {
     return false;
-  }
-  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==0 ) {
+  } else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() == 0 ) {
     return false;
-  }
-  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==1 ) {
+  } else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() == 1 ) {
     return true;
-  }
-  else if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= _configuration->getMaxLocalTreesPerRank(_state) ) {
+  } else if ( static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) >= _configuration->getMaxLocalTreesPerRank(_state) ) {
     return false;
-  }
-  else {
+  } else {
     int maxCells = 0;
     int minCells = std::numeric_limits<int>::max();
 
@@ -175,5 +161,3 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::areRanksUnemployed() const {
   return _statistics.getMinimumOfMaximumOfTreesPerRank() == 0
      and _statistics.getGlobalNumberOfTrees() > 0;
 }
-
-

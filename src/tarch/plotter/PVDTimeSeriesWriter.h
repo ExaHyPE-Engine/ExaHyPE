@@ -2,20 +2,17 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <string>
 #include <sstream>
 #include <vector>
 
 #include "tarch/logging/Log.h"
 
-
 namespace tarch {
   namespace plotter {
     class PVDTimeSeriesWriter;
   }
 }
-
 
 /**
  * Writes time series in vtk/vtu format. According to the VTK spec, time series
@@ -72,6 +69,3 @@ class tarch::plotter::PVDTimeSeriesWriter {
 
     static double getLatestTimeStepInIndexFile( std::string dataFile );
 };
-
-
-

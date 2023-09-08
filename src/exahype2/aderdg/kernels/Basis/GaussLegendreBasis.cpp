@@ -19,17 +19,17 @@
 #include "generated/GaussLegendreBasis.csnippet"
 
 double kernels::legendre::interpolate(
-    const double* offsetOfPatch,
-    const double* sizeOfPatch,
-    const double* x,
-    int           numberOfUnknowns,
-    int           unknown,
-    int           order,
-    const double* u
+  [[maybe_unused]] const double* offsetOfPatch,
+  [[maybe_unused]] const double* sizeOfPatch,
+  [[maybe_unused]] const double* x,
+  [[maybe_unused]] int           numberOfUnknowns,
+  [[maybe_unused]] int           unknown,
+  [[maybe_unused]] int           order,
+  [[maybe_unused]] const double* u
 ) {
   double result = 0.0;
 
-  double xRef[Dimensions];
+  [[maybe_unused]] double xRef[Dimensions];
   xRef[0] =  (x[0] - offsetOfPatch[0]) / sizeOfPatch[0];
   xRef[1] =  (x[1] - offsetOfPatch[1]) / sizeOfPatch[1];
   #if Dimensions==3

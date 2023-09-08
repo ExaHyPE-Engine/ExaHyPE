@@ -2,13 +2,13 @@
 
 
 tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::VertexDataWriter::VertexDataWriter(
-  const std::string&                                                   identifier,
-  int                                                                  unknownsPerAxis,
-  int                                                                  numberOfUnknowns,
-  const std::string&                                                   description,
-  const std::string&                                                   metaData,
-  double*                                                              mapping,
-  tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter& writer
+  [[maybe_unused]] const std::string&                                                   identifier,
+  [[maybe_unused]] int                                                                  unknownsPerAxis,
+  [[maybe_unused]] int                                                                  numberOfUnknowns,
+  [[maybe_unused]] const std::string&                                                   description,
+  [[maybe_unused]] const std::string&                                                   metaData,
+  [[maybe_unused]] double*                                                              mapping,
+  [[maybe_unused]] tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter& writer
 ):
   _writer(writer),
   _identifier(identifier),
@@ -124,7 +124,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::Vertex
 
 
 void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::VertexDataWriter::plotVertex(
-  int index, double* values
+  [[maybe_unused]] int index, [[maybe_unused]] double* values
 ) {
   /*
     while (static_cast<int>(_data.size())<(index+1)*_numberOfUnknowns) {
@@ -140,7 +140,6 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::Vertex
     }
   */
 }
-
 
 void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::VertexDataWriter::close() {
   assignRemainingVerticesDefaultValues();
@@ -195,7 +194,7 @@ void tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::Vertex
 
 
 int tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::VertexDataWriter::getFirstVertexWithinPatch(
-  int index
+  [[maybe_unused]] int index
 ) const {
   return -1;
 }

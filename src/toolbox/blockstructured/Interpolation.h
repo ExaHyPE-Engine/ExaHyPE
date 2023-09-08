@@ -2,11 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 
 #include "tarch/la/DynamicMatrix.h"
+
+#include "peano4/utils/Loop.h"
 
 
 #include <map>
@@ -179,11 +180,6 @@
  *
  *
  */
-
-
-
-
-
 namespace toolbox {
   namespace blockstructured {
     /**
@@ -564,7 +560,8 @@ namespace toolbox {
       int                                       haloDestinationPatch,
       int                                       unknowns,
       const double* __restrict__                sourceValues,
-      double* __restrict__                      destinationValues
+      double* __restrict__                      destinationValues,
+      ::peano4::utils::LoopParallelism          parallelisation
     );
 
     namespace internal {
@@ -816,7 +813,7 @@ namespace toolbox {
         int overlap;
         int normal;
 
-        FaceInterpolationOperatorKey(
+        inline FaceInterpolationOperatorKey(
           int numberOfDoFsPerAxisInPatch_,
           int overlap_,
           int normal_
@@ -825,13 +822,12 @@ namespace toolbox {
           overlap(overlap_),
           normal(normal_) {}
 
-        bool operator<( const FaceInterpolationOperatorKey&  otherKey ) const {
-          return this->numberOfDoFsPerAxisInPatch < otherKey.numberOfDoFsPerAxisInPatch
-              or this->numberOfDoFsPerAxisInPatch == otherKey.numberOfDoFsPerAxisInPatch and this->overlap < otherKey.overlap
-              or this->numberOfDoFsPerAxisInPatch == otherKey.numberOfDoFsPerAxisInPatch and this->overlap == otherKey.overlap and this->normal < otherKey.normal;
+        inline bool operator < ( const FaceInterpolationOperatorKey& otherKey ) const {
+          return (this->numberOfDoFsPerAxisInPatch < otherKey.numberOfDoFsPerAxisInPatch)
+              or (this->numberOfDoFsPerAxisInPatch == otherKey.numberOfDoFsPerAxisInPatch and this->overlap < otherKey.overlap)
+              or (this->numberOfDoFsPerAxisInPatch == otherKey.numberOfDoFsPerAxisInPatch and this->overlap == otherKey.overlap and this->normal < otherKey.normal);
         }
       };
-
 
       /**
        * @see CellInterpolationMap
@@ -839,16 +835,13 @@ namespace toolbox {
       struct CellInterpolationOperatorKey {
         int numberOfDoFsPerAxisInPatch;
 
-        CellInterpolationOperatorKey(
-          int numberOfDoFsPerAxisInPatch_
-        ):
+        inline CellInterpolationOperatorKey(int numberOfDoFsPerAxisInPatch_):
           numberOfDoFsPerAxisInPatch(numberOfDoFsPerAxisInPatch_) {}
 
-        bool operator<( const CellInterpolationOperatorKey&  otherKey ) const {
+        inline bool operator < ( const CellInterpolationOperatorKey& otherKey ) const {
           return this->numberOfDoFsPerAxisInPatch < otherKey.numberOfDoFsPerAxisInPatch;
         }
       };
-
 
       typedef std::map< FaceInterpolationOperatorKey, tarch::la::DynamicMatrix* >  FaceInterpolationMap;
 
@@ -864,5 +857,3 @@ namespace toolbox {
     }
   }
 }
-
-

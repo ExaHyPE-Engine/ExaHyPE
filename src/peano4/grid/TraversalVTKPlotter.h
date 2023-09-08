@@ -2,27 +2,21 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "TraversalObserver.h"
-
 
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 
-
 #include "tarch/plotter/griddata/unstructured/vtk/VTUTextFileWriter.h"
 
-
 #include "config.h"
-
 
 namespace peano4 {
   namespace grid {
     class TraversalVTKPlotter;
   }
 }
-
 
 /**
  * Observer which pipes the automaton transitions into a VTK file
@@ -64,6 +58,7 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
     void plotCell(
         const GridTraversalEvent&  event
     );
+
   private:
     tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter*                  _writer;
     tarch::plotter::griddata::unstructured::UnstructuredGridWriter::VertexWriter*    _vertexWriter;
@@ -72,6 +67,7 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
     tarch::plotter::griddata::unstructured::UnstructuredGridWriter::CellDataWriter*  _coreWriter;
 
     static tarch::mpi::BooleanSemaphore                                              _sempahore;
+
   public:
     /**
      * You have to invoke startNewSnapshot() if you wanna have a pvd file
@@ -115,4 +111,3 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
      */
     virtual std::vector< GridControlEvent > getGridControlEvents() const override;
 };
-

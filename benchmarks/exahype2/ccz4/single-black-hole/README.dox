@@ -22,10 +22,22 @@ compromise between accuracy and stability.
 export PYTHONPATH=../../../../python
 export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 
-python3 convergence-study.py -cs 2 -plot -s fd4-rk1-limited-ps-6
+python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-As always, the parameter --help makes the Python script yield further info.
+
+As always, the parameter --help makes the Python script yield further info,
+while the sections below enlist characteristic choices of the parameters.
+There are different scripts in the directory.
+They serve different purposes and support slightly different parameters.
+
+
+Depending on your system, you might have to load the GSL module separately
+before you build the application:
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module load gsl
+~~~~~~~~~~~~~~~~~~~~~~~
 
 
 ## Clean up old and temporary files
@@ -76,14 +88,145 @@ is only active in a tiny cross-shaped region within.
 Benchmarking the single black hole is not easy, as it is a rather complex setup
 already with a rather long initialisation and grid construction phase. However,
 it is possible to benchmark it once you disable plots, the tracers, and you use
-an unreasonable coarse mesh. Here are my default profiling setups that I use.
-The upper one tests "only" FD4, the lower one profiles a limited setup. 
+an unreasonable coarse mesh. 
+
+
+Below are some performance data which I collected on my local workstation. They 
+provide a first look-n-feel. The Python script for these performance studies 
+differs from our production script in multiple ways:
+
+1. AMR can be switched on/off.
+2. You can configure the number of subpartitions per rank that are used by the
+   load balancing.
+3. The default runtime is very short.
+4. You can pick various schedulers for the tasking bit.
+
+
+An example invocation is
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-python3 convergence-study.py -cs 2 -s fd4-rk1-ps-6 -no-tracer -et 0.01
-python3 convergence-study.py -cs 1 -s fd4-rk1-ps-3 -no-tracer -et 0.01
-python3 convergence-study.py -cs 2 -s fd4-rk1-limited-ps-3 -no-tracer -et 0.01
+python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler subtasks -amr --trees 8
 ~~~~~~~~~~~~~~~~~~~~~~~
+
+
+### No AMR
+
+Name                           | Trees | Scheduler              | Python script call                                                                                        |   TBB   |  OpenMP |   SYCL 
+-------------------------------|------:|:-----------------------|:----------------------------------------------------------------------------------------------------------|--------:|--------:|--------:
+(Almost) No parallel task producers | | | | | | |
+Native tasking w/o priorities  |     x |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 1         |     527 |     532 |       x 
+Native tasking with priorities |     x |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native --trees 1                       |     518 |     529 |       x 
+Tailored task scheduling       |     x |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored --trees 1                     |     516 |     534 |       x 
+Parallel for                   |     x |  parallel-for          | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler parallel-for --trees 1                 |     307 |     637 |       x 
+Subtasks                       |     x |  subtasks              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler subtasks --trees 1                     |     302 |     534 |       x 
+Fewer BSP sections than threads | | | | | | |
+Native tasking w/o priorities  |     6 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 6         |     428 |     457 |       x 
+Native tasking with priorities |     6 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native --trees 6                       |     430 |     456 |       x 
+Tailored task scheduling       |     6 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored --trees 6                     |     427 |     453 |       x 
+Parallel for                   |     6 |  parallel-for          | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler parallel-for --trees 6                 |     225 |     454 |       x 
+Subtasks                       |     6 |  subtasks              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler subtasks --trees 6                     |     223 |     453 |       x 
+One BSP section per threads | | | | | | |
+Native tasking w/o priorities  |     8 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 8         |       x |     436 |       x 
+Native tasking with priorities |     8 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native --trees 8                       |       x |     433 |       x 
+Tailored task scheduling       |     8 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored --trees 8                     |       x |     434 |       x 
+Parallel for                   |     8 |  parallel-for          | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler parallel-for --trees 8                 |       x |       x |       x 
+Subtasks                       |     8 |  subtasks              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler subtasks --trees 8                     |     207 |       x |       x 
+Threads overbooked with BSP sections | | | | | | |
+Native tasking w/o priorities  |    12 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native-no-priorities --trees 12        |       x |     432 |       x 
+Native tasking with priorities |    12 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler native --trees 12                      |       x |     435 |       x 
+Tailored task scheduling       |    12 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler tailored --trees 12                    |       x |     432 |       x 
+Parallel for                   |    12 |  parallel-for          | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler parallel-for --trees 12                |       x |     435 |       x 
+Subtasks                       |    12 |  subtasks              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler subtasks --trees 12                    |     212 |     482 |       x 
+
+
+### With adaptive mesh refinement
+
+Name                           | Trees | Scheduler              | Python script call                                                                                        |   TBB   |  OpenMP |   SYCL 
+-------------------------------|------:|:-----------------------|:----------------------------------------------------------------------------------------------------------|--------:|--------:|--------:
+(Almost) No parallel task producers | | | | | | |
+Native tasking w/o priorities  |     x |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native-no-priorities --trees 1    |     408 |     435 |       x 
+Native tasking with priorities |     x |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native --trees 1                  |     406 |     433 |       x 
+Tailored task scheduling       |     x |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored --trees 1                |     415 |     434 |       x 
+Parallel for                   |     x |  parallel-for          | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler parallel-for --trees 1            |     194 |     432 |       x 
+Subtasks                       |     x |  subtasks              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler subtasks --trees 1                |     193 |     434 |       x 
+Fewer BSP sections than threads | | | | | | |
+Native tasking w/o priorities  |     6 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native-no-priorities --trees 6    |     398 |     420 |       x 
+Native tasking with priorities |     6 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native --trees 6                  |     396 |     419 |       x 
+Tailored task scheduling       |     6 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored --trees 6                |     398 |     418 |       x 
+Parallel for                   |     6 |  parallel-for          | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler parallel-for --trees 6            |     186 |     419 |       x 
+Subtasks                       |     6 |  subtasks              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler subtasks --trees 6                |     183 |     420 |       x 
+One BSP section per threads | | | | | | |
+Native tasking w/o priorities  |     8 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native-no-priorities --trees 8    |     390 |     413 |       x 
+Native tasking with priorities |     8 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native --trees 8                  |     386 |     414 |       x 
+Tailored task scheduling       |     8 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored --trees 8                |     390 |     413 |       x 
+Parallel for                   |     8 |  parallel-for          | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler parallel-for --trees 8            |     178 |     412 |       x 
+Subtasks                       |     8 |  subtasks              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler subtasks --trees 8                |     181 |     414 |       x 
+Threads overbooked with BSP sections | | | | | | |
+Native tasking w/o priorities  |    12 |  native-no-priorities  | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native-no-priorities --trees 12   |     391 |     415 |       x 
+Native tasking with priorities |    12 |  native                | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler native --trees 12                 |     392 |     413 |       x 
+Tailored task scheduling       |    12 |  tailored              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler tailored --trees 12               |     390 |     446 |       x 
+Parallel for                   |    12 |  parallel-for          | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler parallel-for --trees 12           |     182 |     412 |       x 
+Subtasks                       |    12 |  subtasks              | python3 performance-studies.py -s fd4-rk1-limited-ps-3 -amr --scheduler subtasks --trees 12               |     178 |     506 |       x 
+
+
+The above measurements are done on my eight core laptop with the Intel oneAPI 
+toolchain.
+
+
+### Script to create all data
+
+
+Below is a script that creates all data points in one go. You will have to 
+amend the prefix accordingly.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PREFIX=tbb or openmp or sycl
+
+mkdir results
+
+for SCHEDULER in native-no-priorities native tailored parallel-for subtasks
+do
+  for TREES in 1 6 8 12
+  do
+    OUTPUT=$PREFIX-without-amr-$SCHEDULER-$TREES-trees
+    python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
+    ./$OUTPUT > results/$OUTPUT.txt
+    
+    OUTPUT=$PREFIX-with-amr-$SCHEDULER-$TREES-trees
+    python3 performance-studies.py -s fd4-rk1-limited-ps-3 --amr --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
+    ./$OUTPUT > results/$OUTPUT.txt  
+  done
+done
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+If you create the files as per the script above, you can extract the quantities
+of interest as follows:
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+export PREFIX=tbb or openmp or sycl
+
+
+OUTPUT=results/$PREFIX.txt
+echo $PREFIX > $OUTPUT
+for AMR in without-amr with-amr
+do
+  for TREES in 1 6 8 12
+  do
+    for SCHEDULER in native-no-priorities native tailored parallel-for subtasks
+    do
+      FILE=results/$PREFIX-$AMR-$SCHEDULER-$TREES-trees.txt
+      echo $FILE >> $OUTPUT
+      grep "time stepping:" $FILE >> $OUTPUT
+    done
+  done
+done
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
@@ -92,45 +235,28 @@ python3 convergence-study.py -cs 2 -s fd4-rk1-limited-ps-3 -no-tracer -et 0.01
 
 Han's original setup uses the full-blown CCZ4 setup with 
 
-
 ~~~~~~~~~~~~~~~~~~~~~~~
 python3 ccz4.py -ext adm -impl fd4-rk1-adaptive -s single-puncture -maxh 0.4 -minh 0.04 -ps 6 -plt 0.5 -et 100 -exn sbh27 --domain_r 9.0 --ReSwi 7 -cfl 0.1 -outdir ./ --KOSigma 8.0 -sommerfeld
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-We mirror this setup by 
+and aims for a final time of at least 46. We mirror these properties in the 
+following configurations:
 
+Name             | Cell size | Limiter patch size | End time | Plot    |   AMR levels/FV patches  |     Required nodes     | Call
+---------------------|-------|--------------------|----------|---------|--------------------------|------------------------|--------
+Small test with vis  |  1.0  | 6                  | 60.0     | yes     | 2 (h_min=0.111111) / 7   | 1 (around 5.8% of mem) | python3 convergence-study.py -plot -cs 1.0 -s fd4-rk1-limited-ps-6 -et 60.0
+Medium test with vis |  0.5  | 6                  | 60.0     | yes     | 3 (h_min=0.037037) / 7   | 1 (around 40% of mem)  | python3 convergence-study.py -plot -cs 0.5 -s fd4-rk1-limited-ps-6 -et 60.0
+Large test with vis  |  0.1  | 6                  | 60.0     | yes     | 4 (h_min=0.0123457) / 33 | 1 (around 30% of mem)* | python3 convergence-study.py -plot -cs 0.1 -s fd4-rk1-limited-ps-6 -et 60.0
+---------------------|-------|--------------------|----------|---------|--------------------------|------------------------|--------
+Production test 0    | 0.05  | 6                  | 60.0     | yes     |                      4   |                     x  | python3 convergence-study.py -cs 0.05 -s fd4-rk1-limited-ps-6 -et 60.0
+@todo The calls above are not valid anymore. See benchmark docu further down which works.
+ 
 
-Code time should be 46
+* It is clear that the excessive use of AMR here ensures that no enclave tasks 
+  are left anymore. 
 
-python3 convergence-study.py -cs 2 -plot -et 60
-
-
-I found it advantageous to use 
-
-~~~~~~~~~~~~~~~~~~~~~~~
---threading-model native
-~~~~~~~~~~~~~~~~~~~~~~~
-
-as command line argument with CCZ4. The employed FD4 scheme works with very 
-wide boundary layers of width 3. Therefore, any task that is not processed
-immediately introduces a huge memory overhead. Along these lines, picking
-
-~~~~~~~~~~~~~~~~~~~~~~~
---threading-model fuse-or-process-immediately-1
-~~~~~~~~~~~~~~~~~~~~~~~
-
-might be reasonably whenever you are really short of main memory. Furthermore,
-this scheme will also immediately start to spawn the Finite Volume patches as
-tasks which are extremely expensive compared to their higher order cell
-counterparts. If they are not immediately processed, they will lead to serial
-compute phases later down the line.
-
-
-On the long term, we will want to have a scheduler which takes priorities into
-account as we already give enclave tasks of the Finite Volume scheme higher
-priority. See the discussion below. A better schedule should bring the 
-Finite Volume tasks forward and primarily ship those to GPUs.
-
+I found that OpenMP is comparatively slow. TBB does a way nicer job. I 
+therefore recommend to use TBB in this case for the benchmarking.
  
 
 ## Code remarks (FD4-FV scheme)
@@ -287,7 +413,7 @@ should go straight onto a core or the GPU. To re-prioritise, we add
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-  self.enclave_task_priority = "2*tarch::multicore::Task::DefaultPriority"
+  self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority+1"
 ~~~~~~~~~~~~~~~~~~~~~~~
       
 to the constructor.

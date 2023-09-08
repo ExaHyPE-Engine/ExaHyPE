@@ -10,10 +10,9 @@
 
 #include <string>
 
-
 #ifdef Parallel
-  #include <mpi.h>
-  #include <functional>
+#include <mpi.h>
+#include <functional>
 #endif
 
 #include "tarch/la/Vector.h"
@@ -32,18 +31,14 @@ namespace grid{
 }
 }
 
-
-
 struct peano4::grid::GridControlEvent {
   public:
-
     enum class RefinementControl: int {
       Refine=0, Erase=1
     };
 
     GridControlEvent() {}
     GridControlEvent(RefinementControl  __refinementControl, tarch::la::Vector<Dimensions,double>  __offset, tarch::la::Vector<Dimensions,double>  __width, tarch::la::Vector<Dimensions,double>  __h);
-
 
     peano4::grid::GridControlEvent::RefinementControl   getRefinementControl() const;
     void   setRefinementControl(RefinementControl value);
@@ -63,6 +58,8 @@ struct peano4::grid::GridControlEvent {
 
 
     #ifdef Parallel
+    PragmaPush
+    SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -82,7 +79,7 @@ struct peano4::grid::GridControlEvent {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-
+    PragmaPop
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -139,16 +136,17 @@ struct peano4::grid::GridControlEvent {
     std::string toString() const;
 
   private:
+    PragmaPush
+    SilenceUnknownAttribute
     [[clang::pack]]  RefinementControl   _refinementControl;
     tarch::la::Vector<Dimensions,double>   _offset;
     tarch::la::Vector<Dimensions,double>   _width;
     tarch::la::Vector<Dimensions,double>   _h;
-
-
+    PragmaPop
 
     #ifdef Parallel
     private:
-      int                  _senderDestinationRank;
+      int _senderDestinationRank;
 
       #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
       /**
@@ -164,7 +162,3 @@ struct peano4::grid::GridControlEvent {
 
 
 };
-
-  
-
-

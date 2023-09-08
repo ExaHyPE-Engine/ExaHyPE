@@ -22,11 +22,11 @@ class DefaultSequence(object):
     self.d         = {}
 
   def _get_header_file_template(self):
-    templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )    
+    templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     return templatefile_prefix+".template.h"
 
   def _get_implementation_file_template(self):
-    templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )    
+    templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     return templatefile_prefix+".template.cpp"
 
   def construct_output(self,output,main_name):
@@ -34,7 +34,7 @@ class DefaultSequence(object):
       Pass in a version of output
 
       main_name Is the name of you main file. By default, this might be
-         main.cpp, but you might want to have different main files for
+         Main.cpp, but you might want to have different main files for
          different experiments. Please do not give the file an extension.
     """
     output.makefile.add_h_file( main_name + ".h", generated=True )

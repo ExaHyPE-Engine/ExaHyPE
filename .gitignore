@@ -304,3 +304,11 @@ UnitTests3d*
 *.def
 
 builds/
+# Misc
+.DS_Store
+/Debug/
+*.tmp
+*.trs
+*.sh
+compile_commands.json
+/documentation/
