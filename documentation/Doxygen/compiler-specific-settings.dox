@@ -140,8 +140,10 @@ SYCL is directly supported via icpx. There are only a few things to do:
 - Translate your code with --with-multithreading=sycl and/or --with-gpu=sycl.
 - Add CXXFLAGS="... -fsycl" to your compiler flags. This way, all the headers
   of SYCL are known to icpx.
-- Add CXXFLAGS="... -fsycl" to your linker flags. This way, the linker will
-  automatically add all SYCL libraries.
+- Add LDFLAGS="... -fsycl" or LIBS="... -lsycl" to your linker flags. This way, 
+  the linker will automatically add all SYCL libraries. The latter variant 
+  seems to be the variant of choice for the Intel tools, whereas -fsycl is the 
+  linker flag for the Clang+Codeplay flavour.
 - Ensure CXX=icpx points to the icpx compiler.
 - Reset the MPI compiler (see below).
 
@@ -251,5 +253,4 @@ the OpenMP target instructions:
   
 
  */
-      std::size_t counter##Range = static_cast<std::size_t>(max);
-
+ 

@@ -74,6 +74,47 @@
  * ***or on the CPU***. It does not matter.
  *
  *
+ * ## SYCL on the host
+ *
+ * SYCL can be used on the host such that SYCL handles the multicore
+ * parallelism. In this case, I use one SYCL queue on the CPU which is
+ * administered in tarch/multicore/sycl/Core.h. The key ingredients there
+ * are
+ *
+ * - an internal (hidden) queue object for the host, and
+ * - the function tarch::multicore::getHostSYCLQueue().
+ *
+ * When we initialise the host queue, we have to be little bit careful:
+ * Newer versions of SYCL need a selector for the queue. Otherwise SYCL will
+ * use heuristics and likely deploy our queue to the GPU. The docu is not
+ * consistent. A lot of (older) docu says the host would be the default
+ * fall-back, but I cannot trust that here.
+ *
+ * You can construct a CPU selector object manually, but there should already
+ * be such a variable which is globally defined.
+ *
+ * The "old" syntax
+ *
+ * ~~~~~~~~~~~~~~~~~~
+ * sycl::queue  hostSyclQueue( sycl::device(sycl::cpu_selector()) );
+ * ~~~~~~~~~~~~~~~~~~
+ *
+ * seems not to work anymore.
+ *
+ * On top of that, we need to consider that the tarch is shipped as static
+ * object. Therefore, it can happen that a global queue object is created
+ * before SYCL is properly initialised. This leads to a seg fault. What I
+ * do now is that the global queue object results from the default constructor.
+ * Once the tarch::multicore::Core object is instantiated - this will happen
+ * after Peano is properly initialised - its constructor creates a "proper"
+ * SYCL queue on the CPU host and overwrites the global queue object.
+ *
+ * Without this overwrite/reinitialisation, I permanently ended up in seg
+ * faults. Please note that any output in the Core constructor has to be
+ * realised through cout/cerr, as the logging might not be up. However, to bring
+ * the logging up, it will again try to instantiate the Core object to
+ * find out which core wrote the error message. So we have to circumnavigate
+ * Peano's logging.
  */
 #if defined(GPUOffloadingSYCL)
 

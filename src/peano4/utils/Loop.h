@@ -386,7 +386,7 @@ namespace peano4 {
     } \
   });
 #elif Dimensions==2 and defined(SharedSYCL)
-#define parallelDfor(counter, max) \
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   std::size_t counter##Range = max; \
   tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
     handle.parallel_for( \
@@ -399,7 +399,7 @@ namespace peano4 {
     ); \
   }).wait();
 #elif Dimensions==3 and defined(SharedSYCL)
-#define parallelDfor(counter, max) \
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   std::size_t counter##Range = max; \
   tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
     handle.parallel_for( \

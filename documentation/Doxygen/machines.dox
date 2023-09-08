@@ -113,13 +113,15 @@ module load cuda
 
 Codeplay's website has some useful information on compiler flags. Here's
 a short explaination of the above SYCL related flags:
+
 - `-fsycl` tells the compiler to link SYCL libraries and makes it aware of
-SYCL code.
+  SYCL code. It seems that Clang behaves slightly different to icpx, where you
+  need `-lsycl` in the linker flags.
 - `-fsycl-targets=` allows the compiler to generate code for different devices,
-e.g., different vendors, host or device.
+  e.g., different vendors, host or device.
 - `-Xsycl-target-backend=` is required if you want to select a specific device 
-architecture. For example, I put `--cuda-gpu-arch=sm_80` after it to compile for
-A100 with compute capability 8.0.
+  architecture. For example, I put `--cuda-gpu-arch=sm_80` after it to compile for
+  A100 with compute capability 8.0.
 
 It also needs at least 2023.0.0 version of oneAPI with Codeplay's nvidia
 GPU plugin which is not installed on NCC. They encourage the use of 
