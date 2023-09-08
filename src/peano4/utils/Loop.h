@@ -2,35 +2,65 @@
 // use, please see the copyright notice at www.peano-framework.org
 
 
-/**
- * This file defines some macros for d-dimensional loops.
- *
- * @version $Revision: 1.10 $
- * @author Tobias Weinzierl
- */
 #pragma once
 
 #include <bitset>
 
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Vector.h"
+#include "tarch/accelerator/accelerator.h"
+
+#include "config.h"
+
+#if defined(SharedTBB)
+#include <oneapi/tbb/parallel_for.h>
+#include <oneapi/tbb/blocked_range.h>
+#include <oneapi/tbb/blocked_range2d.h>
+#include <oneapi/tbb/blocked_range3d.h>
+#endif
+
+#if defined(SharedSYCL)
+#include "tarch/multicore/sycl/Core.h"
+
+/**
+ * @see peano4::utils::dLinearised() and @ref tarch_accelerator_SYCL
+ */
+#define CPUGPUMethod SYCL_EXTERNAL
+#else
+#define CPUGPUMethod
+#endif
 
 namespace peano4 {
   namespace utils {
+    /**
+     * Control loop-level parallelism
+     */
+    enum class LoopParallelism {
+      None,
+      ParallelFor,
+      Subtasks
+    };
+
     /**
      * Is used by the z-loop. See macro dforz.
      */
     typedef std::bitset<Dimensions> LoopDirection;
 
     /**
+     * d-dimensional counterpart of increment operator
+     *
      * This operation performs a d-dimensional increment on a given integer vector:
      * The first component of the vector is incremented. If the first component is
      * greater than max-1, the component is set zero and the next component is
      * incremented by one. This operation is used often by d-dimensional for-loops.
+     *
+     * @see dLinearised() for a discussion of GPU annotation
      */
-    void dInc(tarch::la::Vector<Dimensions, int>& counter, int max);
+    CPUGPUMethod void dInc(tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
+     * d-dimensional counterpart of decrement operator
+     *
      * This operation performs a d-dimensional decrement on a given integer vector:
      * The first component of the vector is decremented. If the first component is
      * smaller than 0, the component is set to max and the next component is
@@ -39,6 +69,8 @@ namespace peano4 {
     void dDec(tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
+     * d-dimensional counterpart of increment, where individula vector components have different max values
+     *
      * This operation performs a d-dimensional increment on a given integer vector:
      * The first component of the vector is incremented. If the first component is
      * greater than max(0)-1, the component is set zero and the next component is
@@ -74,20 +106,30 @@ namespace peano4 {
     void dInc(tarch::la::Vector<Dimensions, int>& counter, int max, LoopDirection& direction);
 
     /**
-     * Element-wise comparison for the for loops.
+     * Element-wise comparison for the for d-dimensional for loops
+     *
+     * Consult dLinearised() for a discussion of GPU aspect. Further to the
+     * discussion therein, we have to disable assertions within a SYCL
+     * context.
+     *
      * @return true if all entries of counter are smaller max
      */
-    int dCmp(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    CPUGPUMethod int dCmp(const tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
-     * Element-wise comparison for the loops.
+     * Element-wise comparison for the for d-dimensional for loops
+     *
+     * Element-wise comparison for the loops. Different to the other dCmp()
+     * operation, this one works fine even if the max range per vector entry is
+     * different.
+     *
      * @return true if all entries of counter are smaller than their corresponding
      *         entries in max
      */
     int dCmp(const tarch::la::Vector<Dimensions, int>& counter, const tarch::la::Vector<Dimensions, int>& max);
 
     /**
-     * compares two vectors with regards to their linearised value.
+     * Compares two vectors with regards to their linearised value
      *
      * @returns true, if dLinearised(counter, XXX) < dLinearised(max, XXX)
      */
@@ -96,6 +138,8 @@ namespace peano4 {
     );
 
     /**
+     * Map d-dimensional vector onto integer index
+     *
      * This operation is called pretty often and, thus, might cause a significant
      * slowdown in the overall performance. Therefore, I introduced a aggressive
      * optimization based on lookup tables. This optimization is switched on if
@@ -112,11 +156,32 @@ namespace peano4 {
      * Although the mapping might be slow, it is still faster than computing the
      * partial sums of a to the power of b.
      *
+     *
+     * ## GPU programming
+     *
+     * The d-linear loops are used mainly on the host, but I provide a SYCL
+     * implementation of d-linear, too. SYCL does not really distinguish the
+     * host queue from the accelerator queue at the moment. I therefore have to
+     * mark the dLinearised() routine as GPU offloadable. See parallelDfor
+     * for a discussion of when this is required.
+     *
+     * Once annotated, we might still get errors if we use SYCL on the host and
+     * have no GPU offloading (via SYCL) enabled: The macro GPUCallableMethod
+     * in this case is not defined. Actually, it is explicitly defined as
+     * empty, so I cannot even overwrite it. Therefore, I introduce the new
+     * macro
+     *
+     *          CPUGPUMethod
+     *
+     * It delegates to SYCL_EXTERNAL, once SYCL is enabled on the CPU.
+     * Consult @ref tarch_accelerator_SYCL as well for further SYCL details.
+     *
+     *
      * @return the linearisation of the counter, i.e. the k-th component is
      *         multiplied by max^k and the results are accumulated.
      */
-    int dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max);
-    int dLinearised(const std::bitset<Dimensions>& counter);
+    CPUGPUMethod int dLinearised(const tarch::la::Vector<Dimensions, int>& counter, int max);
+    CPUGPUMethod int dLinearised(const std::bitset<Dimensions>& counter);
 
     /**
      * Special 2d variant of dLinearised that works also if you compile with other
@@ -158,9 +223,13 @@ namespace peano4 {
     void setupLookupTableForDDelinearised();
 
     /**
+     * Construct start vector (0,0,....) for d-dimensional loop
+     *
+     * @see dLinearised() for a discussion of GPU impact.
+     *
      * @return a vector containing zero values only.
      */
-    tarch::la::Vector<Dimensions, int> dStartVector();
+    CPUGPUMethod tarch::la::Vector<Dimensions, int> dStartVector();
 
     /**
      * @return a vector containing only zero values besides the dim-th entry. This
@@ -218,6 +287,140 @@ namespace peano4 {
 #define dfor(counter, max) \
   for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
        peano4::utils::dInc(counter, max))
+
+
+/**
+ * Parallel version of dfor
+ *
+ * Don't use a { after the parallelDfor. It is included in the macro. Also
+ * don't close it with a }. Instead, use the end_parallelDfor macro.
+ *
+ * This macro works great on the CPU. I recommend not to use it on the GPU,
+ * where you usually have specialised parallel for realisations anyway.
+ *
+ *
+ * ## OpenMP
+ *
+ * OpenMP relies on pragmas around the nexted for loops, which is tricky as
+ * parallelDfor itself is a pragma. I hijack the construct
+ *
+ *              _Pragma( "#pragma my embedded pragma" )
+ *
+ * which is, to the best of my knowledge, a C99 instruction and not C++17.
+ *
+ *
+ * ## TBB
+ *
+ * TBB is, in my opinion, the most straightforward implementation, as it
+ * supports d-dimensional ranges: It has loop collapsing built-in. I use the
+ * TBB ranges, embed a nested for loop into the range, and then puzzle the
+ * counter of interest together from the ranges indices again.
+ *
+ *
+ *
+ * ## SYCL
+ *
+ * Different to TBB, SYCL has this accelerator paradigm in mind, even though we
+ * submit to the host queue. Therefore, we have to capture the variables via =.
+ * Furthermore, the SYCL code does not really "see" that this thing is always
+ * executed on the host. Therefore, I have to mark the dLinearised() routine as
+ * GPU offloadable, which is a little bit annoying.
+ *
+ * SYCL is the one tasking back-end, where we cannot prescribe a minimal grain
+ * size. We also cannot run the for loop sequentially with built-in mechanisms.
+ * There is no dynamic scheduling version of the SYCL backend therefore.
+ *
+ */
+#define parallelDfor(counter, max) \
+  parallelDforWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
+
+#if Dimensions==2 and defined(SharedOMP)
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
+    _Pragma( "#pragma omp taskloop for collapse(2) if (loopParallelism==::peano4::utils::LoopParallelism::Subtasks)" ) \
+    _Pragma( "#pragma omp parallel for collapse(2) if (loopParallelism==::peano4::utils::LoopParallelism::ParallelFor)" ) \
+    for( int counter##0 = 0; counter##0 < max; counter##0++ ) \
+    for( int counter##1 = 0; counter##1 < max; counter##1++ ) { \
+      tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1 };
+
+#define end_parallelDfor }
+#elif Dimensions==3 and defined(SharedOMP)
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
+  _Pragma( "#pragma omp taskloop for collapse(3) if (loopParallelism==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "#pragma omp parallel for collapse(3) if (loopParallelism==::peano4::utils::LoopParallelism::ParallelFor)" ) \
+  for( int counter##0 = 0; counter##0 < max; counter##0++ ) \
+  for( int counter##1 = 0; counter##1 < max; counter##1++ ) \
+  for( int counter##2 = 0; counter##2 < max; counter##2++ ) { \
+    tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
+
+#define end_parallelDfor }
+#elif Dimensions==2 and defined(SharedTBB)
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
+  tbb::parallel_for( \
+    tbb::blocked_range2d<int>( \
+      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1, \
+      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1 \
+  ), \
+  [&]( const tbb::blocked_range2d<int>&  range ) { \
+    for( int counter##1 = range.rows().begin();  counter##1 < range.rows().end();  counter##1++ ) \
+    for( int counter##2 = range.cols().begin();  counter##2 < range.cols().end();  counter##2++ ) { \
+      tarch::la::Vector<Dimensions, int> counter = { counter##1, counter##2 };
+
+#define end_parallelDfor \
+    } \
+  });
+#elif Dimensions==3 and defined(SharedTBB)
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
+  tbb::parallel_for( \
+    tbb::blocked_range3d<int>( \
+      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1, \
+      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1, \
+      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1 \
+  ), \
+  [&]( const tbb::blocked_range3d<int>&  range ) { \
+    for( int counter##0 = range.pages().begin(); counter##0 < range.pages().end(); counter##0++ ) \
+    for( int counter##1 = range.rows().begin();  counter##1 < range.rows().end();  counter##1++ ) \
+    for( int counter##2 = range.cols().begin();  counter##2 < range.cols().end();  counter##2++ ) { \
+      tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
+
+#define end_parallelDfor \
+    } \
+  });
+#elif Dimensions==2 and defined(SharedSYCL)
+#define parallelDfor(counter, max) \
+  std::size_t counter##Range = max; \
+  tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
+    handle.parallel_for( \
+      sycl::range<2>{counter##Range,counter##Range}, \
+      [=](sycl::id<2> counter##Iterator) { \
+        tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]) };
+
+#define end_parallelDfor \
+      } \
+    ); \
+  }).wait();
+#elif Dimensions==3 and defined(SharedSYCL)
+#define parallelDfor(counter, max) \
+  std::size_t counter##Range = max; \
+  tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
+    handle.parallel_for( \
+      sycl::range<3>{counter##Range,counter##Range,counter##Range}, \
+      [=](sycl::id<3> counter##Iterator) { \
+        tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]), static_cast<int>(counter##Iterator[2]) };
+
+
+#define end_parallelDfor \
+      } \
+    ); \
+  }).wait();
+#else
+#define parallelDfor(counter, max) \
+  for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
+       peano4::utils::dInc(counter, max))
+
+#define end_parallelDfor }
+#endif
+
+
 
 
 /**

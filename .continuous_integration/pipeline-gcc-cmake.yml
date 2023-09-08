@@ -12,7 +12,7 @@ gcc-build-cmake:
     - echo $CI_COMMIT_SHA
     - echo $CI_COMMIT_BRANCH
     - echo "Running CI with $(nproc) cores"
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} python3 configure.py --exahype --swift --cmake=build
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} python3 configure.py --exahype --swift --multithreading=omp --cmake=build
     - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< ' cd build; make -j $(nproc --all)'
   artifacts:
     paths:
@@ -41,6 +41,15 @@ gcc-tutorials-cmake:
   script:
     - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/euler; python3 euler.py'
     - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/euler; make -j'
+
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/acoustic-wave; python3 acoustic-wave.py'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/acoustic-wave; make -j'
+
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/elastic-wave; python3 elastic-wave.py'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/elastic-wave; make -j'
+
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/advection; python3 advection.py'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/advection; make -j'
   retry: 0
 
 gcc-applications-cmake:
@@ -53,6 +62,15 @@ gcc-applications-cmake:
   script:
     - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; python3 euler.py --no-make --executable=euler'
     - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j'
+
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; python3 acoustic-wave.py --no-make --executable=acoustic-wave'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; make -j'
+
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; python3 elastic-wave.py --no-make --executable=elastic-wave'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; make -j'
+
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; python3 advection.py --no-make --executable=advection'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; make -j'
   retry: 0
 
 gcc-benchmarks-cmake:

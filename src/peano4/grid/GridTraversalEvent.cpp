@@ -1,7 +1,5 @@
 #include "GridTraversalEvent.h"
 
-
-
 #include <sstream>
 #include <algorithm>
 
@@ -29,8 +27,6 @@ setInvokingSpacetree( __invokingSpacetree);
 setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
 }
 
-
-
 peano4::grid::GridTraversalEvent::GridTraversalEvent( const GridTraversalEvent& copy ) {
   setX( copy.getX() );
   setH( copy.getH() );
@@ -52,10 +48,6 @@ peano4::grid::GridTraversalEvent::GridTraversalEvent( const GridTraversalEvent& 
   setInvokingSpacetree( copy.getInvokingSpacetree() );
   setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( copy.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() );
 }
-
-
-
-
 
 std::string peano4::grid::GridTraversalEvent::toString() const {
   std::ostringstream out;
@@ -100,10 +92,6 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << ")";
   return out.str();
 }
-
-
-
-
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridTraversalEvent::getX() const {
 

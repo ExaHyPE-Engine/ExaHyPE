@@ -100,9 +100,11 @@ if not os.path.exists("solution"):
 # If you only target a sequential execution, you can omit the load balancing.
 # However, for a parallel build and execution you need to set load balancing.
 # This requires the 'LoadBalancing' toolbox to be built.
+# The type of load balancer can greatly impact the speedup and overall performance.
+# For an overview of available load balancer refer to the documentation.
 #
 my_project.set_load_balancing(
-    "toolbox::loadbalancing::RecursiveBipartition",
+    "toolbox::loadbalancing::SpreadOutHierarchically",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 
@@ -119,6 +121,11 @@ my_project.set_Peano4_installation("../../../", mode=peano4.output.CompileMode.R
 # This gives us access to some functions we want to use to finalise and build this project.
 #
 my_project = my_project.generate_Peano4_project(verbose=True)
+
+#
+# Optional: Set an floating-point exception handler to the Peano4 project.
+#
+my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 #
 # We add our custom C++ solver file here.
