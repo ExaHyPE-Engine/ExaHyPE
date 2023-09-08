@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "tarch/logging/Log.h"
+#include "config.h"
 
 namespace tarch::accelerator {
   struct BenchmarkResultInNanoSeconds;

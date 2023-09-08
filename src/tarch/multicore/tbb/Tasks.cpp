@@ -12,75 +12,95 @@
 #if defined(SharedTBB)
 #include <tbb/task_arena.h>
 #include <tbb/task_group.h>
+#include <oneapi/tbb/task_arena.h>
 
 namespace {
   tarch::multicore::BooleanSemaphore suspensionPointSemaphore;
+
+  ::oneapi::tbb::task_arena      defaultTaskArena;
+
+  /**
+   * Task arena for background tasks
+   *
+   * TBB models the world in task arenas, with the global one having the
+   * default priority. If you don't use task arenas yourself, then you
+   * will always submit to the default arena, i.e. each and every task
+   * will have the same priority. We want to avoid such default behaviour
+   * and instead use the three priorities offered by TBB.
+   */
+  ::oneapi::tbb::task_arena      backgroundTaskArena(
+    ::oneapi::tbb::task_arena::automatic,    // max_concurrency
+    1,                                       // reserved_for_masters
+    ::oneapi::tbb::task_arena::priority::low // priority a_priority
+  );
+
+  ::oneapi::tbb::task_arena      highPriorityTaskArena(
+    ::oneapi::tbb::task_arena::automatic,    // max_concurrency
+    1,                                       // reserved_for_masters
+    ::oneapi::tbb::task_arena::priority::high // priority a_priority
+  );
+
+  /**
+   * Fiddle out which arena to use for a job
+   */
+  ::oneapi::tbb::task_arena*   getArena( ::tarch::multicore::Task* task ) {
+    ::oneapi::tbb::task_arena* result = &defaultTaskArena;
+
+    if (task->getPriority()>tarch::multicore::Task::DefaultPriority) {
+      result = &highPriorityTaskArena;
+    }
+    else if (task->getPriority()<tarch::multicore::Task::DefaultPriority) {
+      result = &backgroundTaskArena;
+    }
+
+    return result;
+  }
 } // namespace
 
-/**
- * We seem to need this task group. Has to be investigated.
- *
- * @see spawnTask()
- * @see spawnAndWaitAsTaskLoop()
- */
-::tbb::task_group backgroundTaskGroup;
 
 /**
  * Native mapping of a task loop onto a SYCL/oneTBB loop
  *
- *
- * # Design
- *
- * In principle, the TBB/SYCL world offers us two ways on the CPU/host to pipe tasks
- * into the tasking system: We can either rely on bespoke tasking interfaces, or we
- * can use a queue which we pin to the host. The latter is the mechanism that we have
- * to use on GPUs: We throw tasks into a GPU queue and wait until these tasks have
- * completed. I would have liked to use the queue concept on the host, too. From a
- * source code's perspective, it would be great to stick to one paradigm everywhere.
- *
- * Using queues on the host however is off the table, as tasks within queues may not
- * have side effects, i.e. access and modify global variables, or use virtual function
- * calls. Our code base however relies heavily on virtual function calls, unless
- * kernels are explicitly tailored towards particular solvers. So no queues on the CPU.
- *
- * With SYCL/TBB, this leaves us with two options on the host side: We could either
- * use the C++ API, or we could use something TBB-specific. In principle, the C++
- * front-end should, behind the scenes, feed into TBB. Under the hood, we therefore
- * work with TBB anyway. TBB however offers some nice constructs such as the taskGroup
- * which are convenient. Furthermore, the TBB-specific constructs offer two more
- * advantages:
- * - They ensure that the BSP section is really mapped onto tasks and not onto
- *   heavy-weight threads.
- * - They offer the opportunity to make the interna NUMA-aware as they explicitly
- *   integrate with TBB's arena concept.
- *
- * The high-level architecture thus reads as follows: Peano uses a BSP-like structure
- * on the highest level. This BSP structure is mapped onto TBB's taskGroup: Every
- * BSP thread (this is typically a subdomain traversal) is mapped onto one task within
- * the group, we trigger all of these tasks (aka traversals) and then wait for the
- * task group to terminate.
+ * In TBB, the convenient way to model fork-join parallelism is the creation of
+ * a task group. We can then assign all tasks to that task group and eventually
+ * wait for all of its tasks to terminate.
  *
  * Each task within the task group (aka BSP thread - though these logical threads are
  * internally mapped onto lightweight tasks) can spawn additional tasks. As part of
  * the enclave concept, we don't have to wait for these children tasks at the end
  * of the BSP section. Therefore, the BSP tasks enqueue their new children into a
- * separate task group (see spawnTask()) and ``forget'' them.
+ * separate task group/arena (see spawnTask()) and ``forget'' them.
  *
- * This design with two task groups is very convenient. The synchronisation within the
- * BSP task group is straightforward: We fire our tasks (which might spawn additional
- * tasks which we ignore), and we wait for all BSP tasks to terminate. Whenever we
- * wait for some task from the second task group, we simply empty the second task
- * group.
  *
- * # Runtime assumptions
+ * ## Task arenas and task priorities
  *
- * We expect that TBB can handle two task groups. One of them is persistent (the one
- * holding these enclave tasks), while the other type of task group is created
- * on-the-fly whenever we hit a BSP code segment. We also expect TBB to use both
- * task groups to keep all threads idle and to give the temporary BSP-type task
- * group higher priority: the BSP threads should always come first. Only once they
- * have terminated and freed their cores, TBB should step in and ``backfill'' the
- * idling cores with tasks from the other background task group.
+ * I do not explicitly submit the new task group into a task arena, i.e. I use
+ * the task arena of the surrounding task. Peano uses nested parallelism. We
+ * therefore might submit spawnAndWaitAsTaskLoop() for different areas with
+ * different priorities.
+ *
+ * This realisation remark clarifies that we do not consider task priorities here.
+ *
+ * If we worked with a task arena explicitly, we would have to write
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *   ::tbb::task_group taskGroup;
+ *   for (auto& p : tasks) {
+ *     defaultTaskArena.execute( [&]{
+ *       taskGroup.run([&tasks, p]() -> void {
+ *         while (p->run()) {
+ *           tarch::multicore::Core::getInstance().yield();
+ *         }
+ *         delete p;
+ *       });
+ *     });
+ *   }
+ *
+ *   defaultTaskArena.execute( [&]{
+ *     taskGroup.wait();
+ *   });
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
  *
  * @see spawnTask()
  *
@@ -88,8 +108,6 @@ namespace {
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
   assertion(not tasks.empty());
 
-  // is implicitly executed within root arena, as the invoking task is
-  // run within root arena
   ::tbb::task_group taskGroup;
   for (auto& p : tasks) {
     taskGroup.run([&tasks, p]() -> void {
@@ -99,34 +117,47 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
       delete p;
     });
   }
+
   taskGroup.wait();
 }
 
+
 /**
- * Read spawnAndWaitAsTaskLoop() first.
+ * Spawn a single task
+ *
+ * Spawn a single task. This spawn is not a classic tree-based/nested
+ * parallelism but instead is used within Peano to realise a producer-consumer
+ * pattern. As a result, we cannot simply spawn the task as a child, but we
+ * have to enqueue it as a free task.
+ *
+ * There are two options to do so. On the one hand, we could use a global task
+ * group, which we use to always "supervise" all ready tasks that are produced.
+ * On the other hand, we could use TBB's arena mechanism and spawn the produced
+ * tasks directly as new roots into an arena of our choice.
+ *
+ * The advantage of the task group approach is that we can always explicitly
+ * empty all (background) tasks by invoking a wait() on the task group.
+ * However, relying (solely) on an explicit task group strips us off the
+ * opportunity to work with different priorities, and it is not really in line
+ * with the TBB vision, where a task group is a helper construct to logically
+ * order tasks which have to synchronise at the end. Therefore, I decided to
+ * abandon the task group concept and instead work with task arenas.
+ *
+ *
+ * ## Priorities
+ *
+ * TBB does not support proper task priorities anymore.
+ * Instead, its arenas have priorities. This does not match Peano, where each
+ * and every task could have a different priority. Therefore, we create three
+ * explicit task arenas (one per TBB priority) and check the priorities handed
+ * in for the task: If the priority is higher than the default priority, we
+ * enqueue a task in the high priority arena. For low priority we do the same
+ * kind of check. All the default queues go into TBB's default arena.
  *
  * @see spawnAndWaitAsTaskLoop()
  */
 void tarch::multicore::native::spawnTask(Task* job) {
-  // Does not work, as we have virtual functions, too.
-  /*
-    backgroundTaskQueue.submit([&] (sycl::handler& commandGroupHandler) {
-      commandGroupHandler.single_task(
-        [job] () -> void {
-          //nonblockingTasksCounter--;
-        }
-      );
-    });
-  */
-
-  // Serial version
-  /*
-    while (job->run()) {}
-    delete job;
-    nonblockingTasksCounter--;
-  */
-
-  backgroundTaskGroup.run([&, job] {
+  getArena(job)->enqueue( [&, job] {
     while (job->run()) {
     }
     delete job;
@@ -134,6 +165,8 @@ void tarch::multicore::native::spawnTask(Task* job) {
 }
 
 /**
+ * Process a fused task (an assembly of multiple tasks of the same type)
+ *
  * It is not clear what happens if I use tasksOfSameType directly within the task.
  * It is clear that a pure reference cannot be used within a task, as the task uses
  * firstprivate by default. Therefore, it would copy something which ceases to exist.
@@ -147,7 +180,7 @@ void tarch::multicore::native::processFusedTask(
   Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
 ) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-  backgroundTaskGroup.run([&, myTask, copyOfTasksOfSameType] {
+  getArena(myTask)->execute([&, myTask, copyOfTasksOfSameType] {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
       tarch::multicore::native::spawnTask(myTask);
@@ -157,6 +190,8 @@ void tarch::multicore::native::processFusedTask(
   });
 }
 
-void tarch::multicore::native::drainTaskQueues() { backgroundTaskGroup.wait(); }
+void tarch::multicore::native::drainTaskQueues() {
+  //backgroundTaskGroup.wait();
+}
 
 #endif

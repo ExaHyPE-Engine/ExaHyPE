@@ -44,7 +44,7 @@ class TsunamiModel(umbridge.Model):
         run("./%s" % application_name).check_returncode()
 
         operating_directory = "./output-%s/" % application_name
-        # read out values from csv file
+        # read values from csv file
         if(not isdir(operating_directory)):
             print("Output directory not found! Aborting!")
             return
