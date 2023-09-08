@@ -21,6 +21,10 @@
 
 #include "tarch/la/Vector.h"
 
+{% if "std::float16_t" in computePrecisions or "std::bfloat16_t" in computePrecisions %}
+#include <stdfloat>
+{% endif %}
+
 //forward declaration of the user solver
 {% for namespaceName in solverNamespaceList %}
 namespace {{namespaceName}} {
@@ -148,9 +152,9 @@ namespace {{namespaceName}} {
     const double inverseDx //Assume dx[0] == dx[1] == dx[2]
   );
   
-  template <typename cCompType>
+  template <typename solutionType, typename cCompType>
   void faceIntegral(
-    cCompType *lduh, 
+    solutionType *lduh, 
     const cCompType *const lFhbnd,
     const int direction, 
     const int orientation,

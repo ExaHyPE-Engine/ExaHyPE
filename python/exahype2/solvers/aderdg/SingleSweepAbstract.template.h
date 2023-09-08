@@ -29,6 +29,11 @@
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
 {% endif %}
 
+{% if USE_HALF_PRECISION==True %}
+#include <stdfloat>
+{% endif %}
+
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 

@@ -56,6 +56,12 @@ PrecisionType = {
     "double": "double",
     "quadruple": "long double",
     "long double": "long double",
+    "half_c++23": "std::float16_t",
+    "float16_t": "std::float16_t",
+    "std::float16_t": "std::float16_t",
+    "bfloat": "std::bfloat16_t",
+    "bfloat16_t": "std::bfloat16_t",
+    "std::bfloat16_t": "std::bfloat16_t"
 }
 
 
@@ -165,6 +171,7 @@ class ADERDG(object):
         self._predictor_computation_precisions = [PrecisionType["double"]]
         self._corrector_computation_precision = PrecisionType["double"]
         self._solution_persistent_storage_precision = PrecisionType["double"]
+        self._use_half_precision = False
 
         #determines whether to hold respectively the cells and faces on the stack or heap (with smart pointers)
         self._hold_cell_data_on_heap_with_smart_pointer = False
@@ -439,16 +446,23 @@ class ADERDG(object):
         # handles adaptive mesh refinement
         self._action_set_AMR = exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
             solver=self,
-            guard=self._store_cell_data_default_guard(),
+            guard=self._store_cell_data_default_guard()
+            + " and (repositories::"
+            + self.get_name_of_global_instance()
+            + ".isLastGridSweepOfTimeStep() or repositories::"
+            + self.get_name_of_global_instance()
+            + ".getSolverState()=="
+            + self._name
+            + "::SolverState::GridInitialisation)",
             build_up_new_refinement_instructions=True,
-            implement_previous_refinement_instructions=True,
+            implement_previous_refinement_instructions=True
         )
         self._action_set_AMR_commit_without_further_analysis = (
             exahype2.solvers.aderdg.actionsets.AdaptivityCriterion(
                 solver=self,
                 guard=self._store_cell_data_default_guard(),
                 build_up_new_refinement_instructions=False,
-                implement_previous_refinement_instructions=True,
+                implement_previous_refinement_instructions=True
             )
         )
 
@@ -644,7 +658,8 @@ class ADERDG(object):
 #include "peano4/utils/Loop.h"
 
 #include "repositories/SolverRepository.h"
-"""
+""" + "#include <stdfloat>" if self._use_half_precision else ""
+
 
     """
   The following functions will be called by the peano4 project,
@@ -1089,6 +1104,8 @@ class ADERDG(object):
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])
         d["NUMBER_OF_PRECISIONS"] = len(d["COMPUTATION_PRECISIONS"])
 
+        d["USE_HALF_PRECISION"]   = self._use_half_precision
+
         d["ASSERTION_WITH_1_ARGUMENTS"] = "nonCriticalAssertion1"
         d["ASSERTION_WITH_2_ARGUMENTS"] = "nonCriticalAssertion2"
         d["ASSERTION_WITH_3_ARGUMENTS"] = "nonCriticalAssertion3"
@@ -1301,8 +1318,10 @@ class ADERDG(object):
             if value not in PrecisionType.keys():
                 raise AssertionError(
                     "one of the chosen precisions was not a valid choice. valid choices are: "
-                    + PrecisionType.keys()
+                    + ", ".join(PrecisionType.keys())
                 )
+            if PrecisionType[value]=="std::float16_t" or PrecisionType[value]=="std::bfloat16_t":
+              self._use_half_precision = True
 
         self._predictor_computation_precisions = []
         for precision in predictor_computation_precisions:

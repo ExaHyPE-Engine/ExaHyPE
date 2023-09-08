@@ -99,7 +99,7 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
   // Update {{output}}
   for (int it_vect = 0; it_vect < {{vectSize}}; it_vect++) {
 {% if multiplyByWeights %}
-    const pCompType updateSize = weights1[{{time_var}}] * weights3[xyz+it_vect] * dt;
+    const pCompType updateSize = Quadrature<pCompType>::weights1[{{time_var}}] * Quadrature<pCompType>::weights3[xyz+it_vect] * dt;
 {% endif %}
     #pragma vector aligned
     for (int n = 0; n < {{nVarPad}}; n++) {
@@ -139,7 +139,7 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
   // Update {{output}}
   for (int it_vect = 0; it_vect < {{rest_size}}; it_vect++) {
 {% if multiplyByWeights %}
-    const pCompType updateSize = weights1[{{time_var}}] * weights3[{{rest_start}}+it_vect] * dt;
+    const pCompType updateSize = Quadrature<pCompType>::weights1[{{time_var}}] * Quadrature<pCompType>::weights3[{{rest_start}}+it_vect] * dt;
 {% endif %}
     #pragma vector aligned
     for (int n = 0; n < {{nVarPad}}; n++) {
@@ -219,7 +219,7 @@ std::fill_n(&{{sourceArray}}[0{{addShift}}], {{nVarPad}}, 0.0);
 
   // Update {{output}}
 {% if multiplyByWeights %}
-  const pCompType updateSize = weights1[{{time_var}}] * weights3[xyz] * dt;
+  const pCompType updateSize = Quadrature<pCompType>::weights1[{{time_var}}] * Quadrature<pCompType>::weights3[xyz] * dt;
 {% endif %}
   #pragma omp simd aligned({{output}},{{sourceArray}}:{{alignmentSize}})
   for (int n = 0; n < {{nVarPad}}; n++) {
