@@ -29,15 +29,22 @@ class {{NAMESPACE | join("::")}}::PetscData{
     PetscData();
     virtual ~PetscData();
 
-    int getDoFs() const;
-    void setDoFs(int dofs);
+    void setRows(int cols);
+    int  getRows() const;
+    void setCols(int cols);
+    int  getCols() const;
 
     /**
-     * method to intialise the matrix and two vectors
-     * each we _dofs entries
-     * \param int dofs
+    overload to init petsc matrix
+    when we have a square matrix
     */
-    void initMatrixAndVectors( int dofs );
+    void initMatrixAndVectors( int rows );
+
+    /*
+    overload to have different numbers of columns and
+    rows in global petsc matrix
+    */
+    void initMatrixAndVectors( int rows, int cols );
     //method to convert petsc vec to std array
     //for now, just for the solution vector
     void convertToStdVector();
@@ -53,8 +60,6 @@ class {{NAMESPACE | join("::")}}::PetscData{
     */
     void insertDoubleAtIndexij(int i, int j, double val);
     void incrementDoubleAtIndexij(int i, int j, double val);
-    void applyStencilToA(int numRows, int rowIndices, int numCols, int colIndices, double values[], double scale);
-
 
     /**
     * method to insert values into matrix based on stencil
@@ -179,7 +184,8 @@ class {{NAMESPACE | join("::")}}::PetscData{
 
 
   private:
-    int _dofs;
+    int _rows;
+    int _cols;
 
     //Ax = b
     Mat _A;

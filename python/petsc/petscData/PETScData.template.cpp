@@ -7,17 +7,17 @@
 {{NAMESPACE | join("::")}}::PetscData::PetscData() {}
 {{NAMESPACE | join("::")}}::PetscData::~PetscData() {}
 
-void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
+void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int rows, int cols )
+{
   logTraceInWith1Argument( "initMatrixAndVectors()", dofs );
-  setDoFs( dofs );
+  setRows( rows );
+  setCols( cols );
   // init petsc
   PetscInitialize(PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR);
 
-  //matrix size, set it to number of dofs
-  PetscInt n = _dofs;
-
   MatCreate(PETSC_COMM_WORLD, &_A);
-  MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, n, n);
+  //init matrix. last two arguments are number of rows and columns
+  MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, getRows(), getCols());
   MatSetFromOptions(_A);
   MatSetUp(_A);
 
@@ -26,8 +26,8 @@ void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
   VecCreate(PETSC_COMM_WORLD, &_x);
   VecCreate(PETSC_COMM_WORLD, &_b);
 
-  VecSetSizes(_x, PETSC_DECIDE, n);
-  VecSetSizes(_b, PETSC_DECIDE, n);
+  VecSetSizes(_x, PETSC_DECIDE, getCols());
+  VecSetSizes(_b, PETSC_DECIDE, getCols());
 
   VecSetFromOptions(_x);
   VecSetFromOptions(_b);
@@ -35,24 +35,30 @@ void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
   VecSetUp(_x);
   VecSetUp(_b);
 
-  //explicitly set the diagonals to be 0!
-  int tempRowArray[1];
-  double zero[1] = {0};
-
-  for (int i=0; i<dofs; i++){
-    tempRowArray[0] = i;
-    insertLocalMatrix( 1, tempRowArray, 1, tempRowArray, zero );
-  }
-  
   logTraceOut( "initMatrixAndVectors()" );
 }
 
-void {{NAMESPACE | join("::")}}::PetscData::setDoFs(int dofs){
-  _dofs = dofs;
+/**
+use this if you want a square system
+*/
+void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int rows ){
+  initMatrixAndVectors(rows, rows);
 }
 
-int {{NAMESPACE | join("::")}}::PetscData::getDoFs() const{
-  return _dofs;
+void {{NAMESPACE | join("::")}}::PetscData::setRows(int rows){
+  _rows = rows;
+}
+
+int {{NAMESPACE | join("::")}}::PetscData::getRows() const{
+  return _rows;
+}
+
+void {{NAMESPACE | join("::")}}::PetscData::setCols(int cols){
+  _cols = cols;
+}
+
+int {{NAMESPACE | join("::")}}::PetscData::getCols() const{
+  return _cols;
 }
 
 void {{NAMESPACE | join("::")}}::PetscData::convertToStdVector(){
@@ -67,8 +73,7 @@ void {{NAMESPACE | join("::")}}::PetscData::convertToStdVector(){
 
   //temp array to hold the indices we request
   PetscInt ix[size];
-  for (int i=0; i<size; i++)
-    ix[i] = i;
+  std::iota(ix, ix + size, 0);
 
   //ask petsc
   VecGetValues( _x, size, ix, y );
