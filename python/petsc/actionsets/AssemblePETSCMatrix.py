@@ -561,7 +561,6 @@ class AssemblePETSCMatrixForDG(ActionSet):
     const int size = rows * cols;
     double tempMatrix[ rows*cols ];
 
-    //scale mass matrix down by h**2
     std::transform( repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data(), repositories::{{SOLVER_INSTANCE}}._cellCellMassMatrix.data() + size,
                     repositories::{{SOLVER_INSTANCE}}._cellCellSystemMatrix.data(), // get data from both matrices, combine them together in the lambda
                     tempMatrix,                                                     // write result to temp array
