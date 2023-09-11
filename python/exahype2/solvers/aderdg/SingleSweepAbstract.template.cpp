@@ -354,8 +354,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       break;
   }
 
-  {{START_TIME_STEP_IMPLEMENTATION}}
-
   if (_solverState==SolverState::Prediction) {
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
@@ -380,6 +378,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
     _cellUpdates    = 0;
   }
+
+  {{START_TIME_STEP_IMPLEMENTATION}}
 
   logInfo( "startTimeStep(...)", "phase " + toString(_solverState) );
 
