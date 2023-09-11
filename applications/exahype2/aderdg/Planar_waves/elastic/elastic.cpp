@@ -3,6 +3,16 @@
 
 tarch::logging::Log   examples::exahype2::elastic::elastic::elastic::_log( "examples::exahype2::elastic::elastic::elastic" );
 
+::exahype2::PrecisionCommand examples::exahype2::elastic::elastic::precisionCriterion(
+  const std::bfloat16_t * __restrict__ Q, // Q[9+3]
+  const tarch::la::Vector<Dimensions,double>&         x,
+  const tarch::la::Vector<Dimensions,double>&         h,
+  double                                              t,
+  SolverState                                         currentState
+){
+  return ::exahype2::PrecisionCommand::Double;
+}
+
 /*
  * Enables the usage of shortcuts to access variables, e.g. use Q[s.sigma] instead of Q[0]
  */
