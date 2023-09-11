@@ -1,15 +1,17 @@
 import sys
-sys.path.append('../../../tutorials/exahype2/euler')
-
-import pde
-import sympy
 
 from exahype2.solvers.fv.PDETerms import PDETerms
 
-class GaussianExplosion(pde.PDE):
-    def __init__(self, unknowns, auxiliary_variables, dimensions):
-        super().__init__(unknowns=unknowns, auxiliary_variables=auxiliary_variables, dimensions=dimensions)
-        self.substitute_expression(self.gamma, 1.4)
+
+class GaussianExplosion:
+    def __init__(self, unknowns, auxiliary_variables, dimensions, use_symbolic_description):
+        self.use_symbolic_description = use_symbolic_description
+        if use_symbolic_description:
+          sys.path.append('../../../tutorials/exahype2/euler')
+          import sympy
+          from pde import PDE
+          self.pde = PDE(unknowns=unknowns, auxiliary_variables=auxiliary_variables, dimensions=dimensions)
+          self.pde.substitute_expression(self.pde.gamma, 1.4)
 
 
     def implementation_of_initial_conditions(self):
@@ -40,7 +42,30 @@ class GaussianExplosion(pde.PDE):
 
 
     def implementation_of_boundary_conditions(self):
-        return self.implementation_of_homogeneous_Neumann_BC()
+        if self.use_symbolic_description:
+            return self.pde.implementation_of_homogeneous_Neumann_BC()
+        else:
+            return """
+            ::exahype2::euler::neumannBoundaryConditions(Qinside, Qoutside, faceCentre, t, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+            """
+
+
+    def implementation_of_flux(self):
+        if self.use_symbolic_description:
+            return self.pde.implementation_of_flux()
+        else:
+            return """
+            ::exahype2::euler::flux(Q, faceCentre, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, F);
+            """
+
+
+    def implementation_of_max_eigenvalue(self):
+        if self.use_symbolic_description:
+            return self.pde.implementation_of_max_eigenvalue()
+        else:
+            return """
+            return ::exahype2::euler::maxEigenvalue(Q, faceCentre, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+            """
 
 
     def implementation_of_sources(self):

@@ -14,6 +14,7 @@ class PDE(object):
         self.initial_values = sympy.symarray("Q0", (unknowns + auxiliary_variables))
         self.boundary_values = sympy.symarray("Qb", (unknowns + auxiliary_variables))
         self.x = sympy.symarray("x", (dimensions))
+        self.h = sympy.symarray("h", (dimensions))
         pass
 
     def unknown_identifier_for_plotter(self):
@@ -66,7 +67,12 @@ class PDE(object):
             else:
                 result += "faceCentre"
             result += "(" + str(i) + ");\n"
-            result += ";\n"
+        for i in range(0, self.dimensions):
+            result += "const double h_"
+            result += str(i)
+            result += " = "
+            result += "volumeH"
+            result += "(" + str(i) + ");\n"
 
         return result
 
@@ -76,19 +82,14 @@ class PDE(object):
         So if you have 10 unknowns and 2 auxiliary variables, the name you assign the
         10s Q entry is the one for the first auxiliary variable.
         There's also a dedicated routine for auxiliary variables if you prefer this one.
+        @see name_auxiliary_variable
         """
         self.Q[offset_in_Q] = sympy.symbols(name)
         return self.Q[offset_in_Q]
 
-    def name_auxiliary_variable(self, number, name):
-        """
-        Q covers both unknowns plus auxiliary variables. They simply are concatenated.
-        So if you have 10 unknowns and 2 auxiliary variables, the name you assign the
-        10s Q entry is the one for the first auxiliary variable.
-        There's also a dedicated routine for auxiliary variables if you prefer this one.
-        """
-        self.Q[number + self.auxiliary_variables] = sympy.symbols(name)
-        return self.Q[number + self.auxiliary_variables]
+    def name_auxiliary_variable(self,number,name):
+        self.Q[number + self.unknowns] = sympy.symbols(name)
+        return self.Q[number + self.unknowns]
 
     def name_Q_entries(self, offset_in_Q, cardinality, name):
         new_entry = sympy.symarray(name, cardinality)

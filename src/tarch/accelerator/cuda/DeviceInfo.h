@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "tarch/logging/Log.h"
+#include "config.h"
 
 namespace tarch::accelerator {
   struct BenchmarkResultInNanoSeconds;
@@ -12,38 +13,56 @@ namespace tarch::accelerator {
 namespace tarch::accelerator::cuda {
 
   /**
-   * Queries device information for CUDA GPU accelerator  backend.
+   * @brief Query device information using CUDA API.
    *
-   * It implements the device infromation queries described in `tarch::accelerator::queryDeviceInformation`
+   * This function queries device information using the CUDA API. 
+   * It retrieves properties of each device, such as the device name, 
+   * global memory, free memory, clock frequency, and compute units. 
+   * The information is stored in the provided property matrix.
    *
-   * @see tarch::accelerator::queryDeviceInformation
+   * @param propertyMatrix A reference to a matrix that will store the device properties.
    */
-  void queryDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix);
+  void queryDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix);
 
   /**
-   * Prints device information for CUDA GPU accelerator  backend.
+   * @brief Print device information when there is access to the CUDA API.
    *
-   * It implements the device infromation printing described in `tarch::accelerator::printDeviceInformation`
+   * This function prints the device information using the CUDA API. 
+   * It takes a property matrix containing the device properties and outputs the information to the log.
    *
-   * @see tarch::accelerator::printDeviceInformation
+   * @param propertyMatrix A reference to a matrix containing the device properties.
    */
-  void printDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix);
+  void printDeviceInformation(std::vector<std::vector<std::string>> &propertyMatrix);
 
   /**
-   * Runs benchmarks for the CUDA GPU accelerator backend.
+   * @brief Test kernel launch capability.
    *
-   * It implements the kernel launch test described in `tarch::accelerator::testKernelLaunch`
+   * This function tests the capability of kernel launch based on the available GPU offloading backend.
+   * The kernels reside in a separate CUDA file. The function will compiled only if we use CUDA for GPU 
+   * offloading, unlike the query/information functions where only the CUDA API is called to retrieve information,
+   * here CUDA kernels will be launched. And therefore the compiling is hidden behind pre processor flags.
    *
-   * @see tarch::accelerator::testKernelLaunch
+   * @return A vector of bool values indicating the kernel launch capability for each device.
    */
   std::vector<bool> testKernelLaunch();
 
-  /**
-   * Runs benchmarks for the CUDA GPU accelerator backend.
-   *
-   * It implements the memory bandwidth benchmarks described in `tarch::accelerator::runBenchmarks`
-   *
-   * @see tarch::accelerator::runBenchmarks
-   */
+/**
+ * @brief Run benchmarks with CUDA backend by launch kernels to perform the streaming benchmarks.
+ *
+ * This function runs benchmarks to measure the performance of various GPU operations using the CUDA backend. 
+ * It queries the number of devices using the CUDA backend and performs benchmarks for each device. 
+ * The benchmarks include memory allocation, data transfers between CPU and GPU, and kernel execution. 
+ * The results are collected in a vector of `tarch::accelerator::BenchmarkResultInNanoSeconds` structures.
+ * The function is compiled only if GPUOffloadingCUDA is defined. see `testKernelLaunch` too.
+ * We allocate roughly 1GB of data on the CPU then transfer it to the GPU, and add half of this
+ * data to the other half and transfer it back. Every step is then measured and saved in the BenchmarkResultsInNanoSeconds
+ * struct to be printed as a table.
+ *
+ * @return A vector of `tarch::accelerator::BenchmarkResultInNanoSeconds` structures containing benchmark results for each device.
+ * 
+ * @see tarch::accelerator::omp::runBenchmarks
+ * @see tarch::accelerator::cpp::runBenchmarks
+ * @see tarch::accelerator::sycl::runBenchmarks
+ */
   std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks();
 } // namespace tarch::accelerator::cuda

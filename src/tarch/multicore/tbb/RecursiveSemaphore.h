@@ -40,12 +40,12 @@ class tarch::multicore::RecursiveSemaphore {
     /**
      * You may not copy a semaphore
      */
-    inline RecursiveSemaphore([[maybe_unused]] const RecursiveSemaphore& semaphore) {}
+    inline RecursiveSemaphore(const RecursiveSemaphore&) {}
 
     /**
      * You may not copy a semaphore
      */
-    RecursiveSemaphore& operator = ([[maybe_unused]] const RecursiveSemaphore& semaphore) { return *this; }
+    RecursiveSemaphore& operator = (const RecursiveSemaphore&) { return *this; }
 
   public:
     RecursiveSemaphore();

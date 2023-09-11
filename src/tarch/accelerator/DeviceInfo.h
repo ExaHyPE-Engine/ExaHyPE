@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "tarch/logging/Log.h"
+
 namespace tarch::accelerator {
   /**
    * Vector of strings representing various properties.
@@ -28,10 +29,24 @@ namespace tarch::accelerator {
     "GPU-GPU Copy"};
 
   /**
-   * Structure representing benchmark results in nanoseconds.
-   * It is used to provide a nice interface to save benchmark results
+   * @brief Struct representing benchmark results in nanoseconds.
+   *
+   * This is an internal struct holds the benchmark results for various operations
+   * for streaming benchmarks measured in nanoseconds.
+   * It includes the following fields and should ne needed by the end-user:
+   *
+   * - CPUtoGPUCopy: Time taken for CPU to GPU data copy.
+   * - GPUtoCPUCopy: Time taken for GPU to CPU data copy.
+   * - GPUMalloc: Time taken for GPU memory allocation.
+   * - GPUtoGPUCopy: Time taken for GPU to GPU data copy.
+   * - repeats: Number of repetitions performed for the benchmark.
+   * - allocatedDataSize: Size of allocated data in bytes.
+   * - readWriteSize: Size of data read/written during the benchmark.
+   *
+   * @note The values of these fields are obtained during benchmarking operations.
    */
-  struct BenchmarkResultInNanoSeconds {
+  struct BenchmarkResultInNanoSeconds
+  {
     uint64_t CPUtoGPUCopy;
     uint64_t GPUtoCPUCopy;
     uint64_t GPUMalloc;

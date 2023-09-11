@@ -19,30 +19,21 @@
 #include <scorep/SCOREP_User.h>
 #endif
 
-
 tarch::logging::Log tarch::logging::ScorePLogger::_log( "tarch::logging::ScorePLogger" );
-
 
 tarch::logging::ScorePLogger  tarch::logging::ScorePLogger::_singleton;
 
-
-tarch::logging::ScorePLogger::ScorePLogger() {
-}
-
+tarch::logging::ScorePLogger::ScorePLogger() {}
 
 tarch::logging::ScorePLogger& tarch::logging::ScorePLogger::getInstance() {
   return _singleton;
 }
 
-
 tarch::logging::ScorePLogger::~ScorePLogger() {
   close();
 }
 
-
-void tarch::logging::ScorePLogger::indent( bool indent, const std::string& trace, const std::string& message ) {
-}
-
+void tarch::logging::ScorePLogger::indent( bool, const std::string&, const std::string& ) {}
 
 std::string tarch::logging::ScorePLogger::getTimeStampHumanReadable( long int timestampNanoseconds ) const {
   long int timestampSeconds = timestampNanoseconds / 1000 / 1000 / 1000;
@@ -73,10 +64,13 @@ std::string tarch::logging::ScorePLogger::getTimeStampHumanReadable( long int ti
   return result.str();
 }
 
-
 std::string tarch::logging::ScorePLogger::constructMessageString(
-  std::string          messageType,
-  long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message
+  [[maybe_unused]] std::string messageType,
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
 ) {
   std::ostringstream result;
   result << getTimeStampHumanReadable(timestampNanoseconds)
@@ -87,7 +81,6 @@ std::string tarch::logging::ScorePLogger::constructMessageString(
          << "\n";
   return result.str();
 }
-
 
 void tarch::logging::ScorePLogger::debug(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
   #if !defined(PeanoDebug) || PeanoDebug<1
@@ -103,7 +96,6 @@ void tarch::logging::ScorePLogger::debug(long int timestampNanoseconds, int rank
   std::cout << outputMessage;
 }
 
-
 void tarch::logging::ScorePLogger::info(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
   std::string outputMessage = constructMessageString(
     LogFilter::FilterListEntry::TargetInfo,
@@ -113,7 +105,6 @@ void tarch::logging::ScorePLogger::info(long int timestampNanoseconds, int rank,
   tarch::multicore::Lock lockCout( _semaphore );
   std::cout << outputMessage;
 }
-
 
 void tarch::logging::ScorePLogger::warning(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
   std::string outputMessage = constructMessageString(
@@ -125,7 +116,6 @@ void tarch::logging::ScorePLogger::warning(long int timestampNanoseconds, int ra
   std::cerr << outputMessage;
   std::cerr.flush();
 }
-
 
 void tarch::logging::ScorePLogger::error(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
   std::string outputMessage = constructMessageString(
@@ -141,8 +131,13 @@ void tarch::logging::ScorePLogger::error(long int timestampNanoseconds, int rank
   tarch::mpi::Rank::abort(-1);
 }
 
-
-void tarch::logging::ScorePLogger::traceIn(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ScorePLogger::traceIn(
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
+) {
   #ifdef UseScoreP
   tarch::multicore::Lock lock(_semaphore);
 
@@ -154,13 +149,17 @@ void tarch::logging::ScorePLogger::traceIn(long int timestampNanoseconds, int ra
   #endif
 }
 
-
-void tarch::logging::ScorePLogger::traceOut(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ScorePLogger::traceOut(
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
+) {
   #ifdef UseScoreP
   SCOREP_USER_REGION_LEAVE(_scorePHandles[trace]);
   #endif
 }
-
 
 void tarch::logging::ScorePLogger::close() {
   std::cout.flush();

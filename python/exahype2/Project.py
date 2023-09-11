@@ -32,7 +32,7 @@ class Project(object):
     @see generate_Peano4_project()
     """
 
-    def __init__(self, namespace, project_name, directory=".", executable=""):
+    def __init__(self, namespace, project_name, executable, directory="."):
         self._project = peano4.Project(namespace, project_name, directory)
         self._project.output.makefile.add_cmake_core_library("ExaHyPE2Core")
 
@@ -44,9 +44,17 @@ class Project(object):
         self._max_terminal_time = 0.0
         self._first_plot_time_stamp = 0.0
         self._time_in_between_plots = 0.1
-        self._load_balancer_name = ""
+        self._load_balancer_name      = ""
         self._load_balancer_arguments = ""
-        self._Peano_src_directory = "."
+        self._log_filter_file         = "exahype.log-filter"
+        self._number_of_threads       = "tarch::multicore::Core::UseDefaultNumberOfThreads"
+        self._multicore_orchestration = "tarch::multicore::orchestration::createDefaultStrategy()"
+        self._gpus                    = []
+        self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h", 
+                                          "tarch/multicore/orchestration/StrategyFactory.h",
+                                          "tarch/accelerator/Device.h"
+                                        ]
+        self._Peano_src_directory     = "."
         self._build_mode = peano4.output.CompileMode.Asserts
         self._executable_name = executable
         self._periodic_BC = [False, False, False]
@@ -82,6 +90,45 @@ class Project(object):
         self._load_balancer_name = load_balancer_name
         self._load_balancer_arguments = load_balancer_arguments
 
+    def set_log_filter_file(self, file_name):
+        """! Set a log filter file name
+        
+        Pass in the empty string, if you want the code to use the hard-coded
+        defaults.
+         
+        """
+        self._log_filter_file = file_name
+        
+    def set_number_of_threads(self, value):
+        """! Set number of threads to use
+        
+        Pass in number of threads (positive integer) or a string such as 
+        "tarch::multicore::Core::UseDefaultNumberOfThreads".
+        
+        """
+        self._number_of_threads = value
+        
+    def set_multicore_orchestration(self,value):
+        """! Set orchestration
+        
+        value has to be a string which creates an orchestration object, 
+        i.e. an object of the type tarch::multicore::orchestration::Orchestration.
+        You can either create it directly (in this case you need to add a new),
+        or you can use a factory method such as 
+        "tarch::multicore::orchestration::StrategyFactory::createDefaultStrategy()".
+        
+        """
+        self._multicore_orchestration = value
+        
+    def set_gpus(self,value):
+        """! Set GPUs to be used
+        
+        value is a list of integers or the empty list if you want the code to 
+        use all GPUs that are visible to a rank. 
+        
+        """
+        self._gpus                    = value
+        
     """
    The standard extensions that I use for both Peano and ExaHyPE.
   """
@@ -287,6 +334,9 @@ thus appreciate any citation of the original release paper
         self._output_path = path
         if not self._output_path.endswith("/"):
             self._output_path += "/"
+            
+    def add_mainfile_include(self,value):
+        self._additional_includes.append( value )
 
     def __generate_solver_repository(self):
         """
@@ -294,11 +344,16 @@ thus appreciate any citation of the original release paper
         are a subclass of DoF, they have a name property.
         """
         solverRepositoryDictionary = {
-            "SOLVERS": [],
-            "LOAD_BALANCER": self._load_balancer_name,
-            "LOAD_BALANCER_ARGUMENTS": self._load_balancer_arguments,
-            "PLOT_FILTER": self._plot_filters,
-            "TRACERS": [x.name for x in self._tracer_particles],
+            "SOLVERS":                  [],
+            "LOAD_BALANCER":            self._load_balancer_name,
+            "LOAD_BALANCER_ARGUMENTS":  self._load_balancer_arguments,
+            "PLOT_FILTER":              self._plot_filters,
+            "TRACERS":                  [x.name for x in self._tracer_particles],
+            "LOG_FILTER_FILE":          self._log_filter_file,
+            "NUMBER_OF_THREADS":        self._number_of_threads,
+            "MULTICORE_ORCHESTRATION":  self._multicore_orchestration,
+            "GPUS":                     self._gpus,
+            "ADDITIONAL_INCLUDES":      self._additional_includes,
         }
 
         for solver in self._solvers:

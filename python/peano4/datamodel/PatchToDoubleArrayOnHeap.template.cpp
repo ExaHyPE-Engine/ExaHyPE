@@ -14,7 +14,7 @@
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other):
-  value( tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, tarch::MemoryLocation::Heap ) ) {
+  value( nullptr ) {
   clone(other);
 }
 
@@ -32,11 +32,22 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clone(const {{CLASSNAME}}& other
   _debugH = other._debugH;
   #endif
 
-  #if Dimensions==2
-  std::copy_n( other.value, {{CARDINALITY_2D}}, value );
-  #else
-  std::copy_n( other.value, {{CARDINALITY_3D}}, value );
-  #endif
+  if (value!=nullptr) {
+    tarch::freeMemory( value, tarch::MemoryLocation::Heap );
+    value = nullptr;
+  }
+
+  if (other.value==nullptr) {
+    value = nullptr;
+  }
+  else {
+    if (value==nullptr) {
+      value = tarch::allocateMemory< {{FLOAT_TYPE}} >( Cardinality, tarch::MemoryLocation::Heap );
+    }
+    assertion(other.value!=nullptr);
+    assertion(value!=nullptr);
+    std::copy_n( other.value, Cardinality, value );
+  }
 }
 
 

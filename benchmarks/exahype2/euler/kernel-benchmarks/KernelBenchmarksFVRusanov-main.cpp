@@ -26,9 +26,6 @@
 #include "tarch/timing/Watch.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
-// #ifdef UseFenv
-// #include "tarch/FenvWrapper.h"
-// #endif
 
 #if defined(SharedTBB)
 #include <tbb/task_group.h>
@@ -955,10 +952,6 @@ int main(int argc, char** argv) {
   exahype2::initNonCritialAssertionEnvironment();
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
-
-  // #ifdef UseFenv
-  //   tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-  // #endif
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
     logError("main()", "MPI runs without multithreading are not supported currently.");

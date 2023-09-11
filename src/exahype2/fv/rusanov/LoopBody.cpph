@@ -234,7 +234,10 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   );
 
   // scatter
-  for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+  #if defined(SharedOMP)
+  #pragma omp unroll
+  #endif
+  for (int unknown = 0; unknown < Solver::NumberOfUnknowns; unknown++) {
     QOut[QOutEnumerator(
       patchIndex, volumeIndex, unknown
     )] = dt * QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)]
@@ -251,9 +254,12 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 #endif
   }
 
-  for (int unknown = QInEnumerator._unknowns;
-       unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables;
-       unknown++) {
+  for (
+    int unknown = QInEnumerator._unknowns;
+    // unknown < QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables;
+    unknown < Solver::NumberOfUnknowns + Solver::NumberOfAuxiliaryVariables;
+    unknown++
+  ) {
     QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] = QIn[QInEnumerator(patchIndex, volumeIndex, unknown)];
 
 #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
@@ -285,7 +291,7 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
   int                                          normal,
   double* __restrict__ QMaxEigenvalue,
   QMaxEigenvalueEnumeratorType QMaxEigenvalueEnumerator
-) {
+) InlineMethod {
   double QInGathered[QInEnumerator._unknowns + QInEnumerator._numberOfAuxiliaryVariables];
 
 // gather
@@ -1015,6 +1021,8 @@ void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
     DeltaQ[unknown] = QIn[QInEnumerator(patchIndex, rightAdjacentVolume, unknown)]
                       - QIn[QInEnumerator(patchIndex, leftAdjacentVolume, unknown)];
   }
+
+
 
   ncp(
     QAverage,

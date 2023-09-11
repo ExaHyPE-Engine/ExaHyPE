@@ -7,7 +7,7 @@ Assuming we have built the ExaHyPE 2 engine and the core libraries successfully,
 
 Assuming this was successful, you should see several files have appeared in your working directory.
 We will ignore most of these for now but know that these contain the implementation of the ExaHyPE 2 project.
-One file, in particular, is of interest to us now: the file simply named advection is the executable for our implementation.
+One file, in particular, is of interest to us now: the file simply named euler-* is the executable for our implementation.
 We will therefore run this executable file by using the following command:
 
     ./euler-<dimensions>d
@@ -19,7 +19,7 @@ To understand what it is that we have executed, let us take a look at the file w
 
     euler.py
 
-As this is a Python script, should surprise no one that we start with the following:
+As this is a Python script, it should surprise no one that we start with the following:
 
     import peano4
     import exahype2
@@ -65,8 +65,6 @@ $$
   \end{pmatrix}
   = \vec{0}.
 $$
-
-This is the notation we use in this tutorial. Everything is implemented symbolically (i.e., we don't need to define any source files but Python).
 
 To implement this equation, the following things are needed: the initial condition,
 the boundary conditions, the maximal eigenvalue, the flux, and (optionally) the
@@ -116,8 +114,13 @@ $$
                         \end{array} \right)
 $$
 
-## Three-dimensional Euler Equations
+t=0.0             |  t=1.0
+:-------------------------:|:-------------------------:
+![](Euler_2D_start.png)  |  ![](Euler_2D_end.png)
 
+-------------------------*The computed energy of the 2D Euler equations at times t=0.0 and t=1.0*-------------------------
+
+## Three-dimensional Euler Equations
 Finally, we can implement the Euler equations in three dimensions.
 
 The three-dimensional Euler equations are very similar to the two-dimensional equations:
@@ -129,7 +132,7 @@ $$
                     \rho u_1 \\
                     \rho u_2 \\
                     \rho u_3 \\
-                    E_t 
+                    E_t
         \end{array} \right) +
     \nabla
         \begin{pmatrix}
@@ -164,7 +167,6 @@ $$
                     \sqrt[]{\frac{\gamma  p}{\rho}} \\
         \end{array} \right)
 $$
-
 
 t=0.0             |  t=1.0
 :-------------------------:|:-------------------------:

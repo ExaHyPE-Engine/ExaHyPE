@@ -130,7 +130,8 @@ Some remarks:
     from neighbours.
   - `effect` has different options depending on the output type of the
     calculation, e.g. `ALTER_LOCAL_STATE` means that only the current particle is
-    updated. Other options notably include `CHANGE_POSITION_OR_INTERACTION_RADIUS`,
+    updated. Other options notably include `CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN`
+    and `CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN`,
     which implies that the code needs to resort the particles after this step.
   - `cell_kernel` invokes a compute kernel which depends on the `localParticles`
     and `activeParticles` sets of the PIDT scheme.

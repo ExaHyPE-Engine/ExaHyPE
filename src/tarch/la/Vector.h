@@ -126,7 +126,7 @@ struct tarch::la::Vector {
      *   loops containing vector element accesses.
      */
     inline const Scalar & operator[] (int index) const InlineMethod {
-        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
+        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a vector with only Size components" );
         #endif
@@ -139,7 +139,7 @@ struct tarch::la::Vector {
      * @see operator[] for remarks on SSE
      */
     inline Scalar & operator[] (int index) InlineMethod {
-        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
+        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
           assertion3 ( index >= 0, index, Size, toString(*this) );
           assertion3 ( index < Size, index, Size, toString(*this) );
         #endif
@@ -149,10 +149,16 @@ struct tarch::la::Vector {
     /**
      * Returns read-only ref. to component of given index.
      *
+     * If we use the vector on the GPU, we cannot have assertions. If we use
+     * SYCL on the CPU for the multitasking, we cannot have assertions in the
+     * SYCL part either, as SYCL aims to be platform-independent, i.e. has to
+     * assume that the code generated also will be deployed to a GPU. See
+     * discussion on @ref tarch_accelerator_SYCL.
+     *
      * @see operator[] for remarks on SSE
      */
     inline const Scalar & operator() (int index) const InlineMethod {
-        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
+        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
           assertion3 ( index >= 0, index, Size, toString(*this) );
           assertion3 ( index < Size, index, Size, toString(*this) );
         #endif
@@ -165,7 +171,7 @@ struct tarch::la::Vector {
      * @see operator[] for remarks on SSE
      */
     inline Scalar & operator() (int index) InlineMethod {
-       #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL)
+       #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
         assertion3 ( index >= 0, index, Size, toString(*this) );
         assertion3 ( index < Size, index, Size, toString(*this) );
        #endif

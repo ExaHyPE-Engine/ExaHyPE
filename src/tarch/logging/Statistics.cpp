@@ -153,7 +153,7 @@ void tarch::logging::Statistics::inc( const std::string& identifier, double valu
 #endif
 
 
-void tarch::logging::Statistics::writeToCSV( std::string filename ) {
+void tarch::logging::Statistics::writeToCSV( [[maybe_unused]] std::string filename ) {
 #ifdef TrackStatistics
   logDebug( "writeToCSV(string)", "start to dump statistics into file " << filename );
 
@@ -238,5 +238,3 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
   logWarning( "writeToCSV(string)", "no statistics available. Recompile with -DTrackStatistics for runtime sampling" );
   #endif
 }
-
-

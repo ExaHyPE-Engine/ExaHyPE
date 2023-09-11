@@ -1,6 +1,5 @@
 #include "AoSLexicographicEnumerator.h"
 
-
 #if !defined(GPUOffloadingOMP)
 std::string exahype2::enumerator::AoSLexicographicEnumerator::toString() const {
   std::ostringstream msg;
@@ -34,4 +33,3 @@ std::string exahype2::enumerator::AoSLexicographicEnumerator::toString() const {
   return msg.str();
 }
 #endif
-

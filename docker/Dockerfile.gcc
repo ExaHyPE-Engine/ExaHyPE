@@ -1,0 +1,206 @@
+FROM ubuntu:22.04
+LABEL peano-framework.org=http://www.peano-framework.org/
+
+ENV FORCE_UNSAFE_CONFIGURE=1 \
+DEBIAN_FRONTEND=noninteractive \
+TZ=Europe/Berlin \
+DISPLAY=host.docker.internal:0.0 \
+TERM=xterm \
+OMPI_ALLOW_RUN_AS_ROOT=1 \
+OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1 \
+SPACK_ROOT=/usr/local
+
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+software-properties-common \
+apt-utils \
+build-essential \
+bash \
+wget \
+git \
+curl \
+ssh \
+subversion \
+tar \
+unzip \
+patch \
+gzip \
+bzip2 \
+file \
+gnupg \
+coreutils \
+mercurial \
+nano \
+pkg-config \
+tree \
+flex \
+automake \
+make \
+cmake \
+cmake-curses-gui \
+ccache \
+cppcheck \
+libtool \
+gcovr \
+vim \
+less \
+meld \
+gedit \
+gdb \
+strace \
+linux-tools-common \
+linux-tools-generic \
+valgrind \
+unifdef \
+ninja-build \
+meson \
+graphviz \
+doxygen \
+xorg-dev \
+mesa-utils \
+mesa-common-dev \
+freeglut3-dev \
+ca-certificates \
+libxml2-dev \
+libbz2-dev \
+libxslt1-dev \
+libelf-dev \
+libtbb-dev \
+libtbb2 \
+libsimde-dev \
+libcurl4-openssl-dev \
+libgl-dev \
+libgl1-mesa-dev \
+libglu1-mesa-dev \
+libglvnd-core-dev \
+libyaml-cpp-dev \
+nodejs \
+gcc \
+g++ \
+gfortran \
+libgomp1 \
+libnuma-dev \
+libnuma1 \
+python3 \
+python3-dev \
+python3-venv \
+python3-pip \
+python3-paraview \
+g++-multilib \
+gcc-multilib \
+zlib1g \
+zlib1g-dev \
+uidmap \
+squashfs-tools \
+squashfuse \
+fuse2fs \
+fuse-overlayfs \
+fakeroot \
+cryptsetup \
+golang \
+gocryptfs \
+texlive \
+texlive-base \
+texlive-bibtex-extra \
+texlive-binaries \
+texlive-extra-utils \
+texlive-font-utils \
+texlive-fonts-extra \
+texlive-fonts-recommended \
+texlive-formats-extra \
+texlive-lang-english \
+texlive-lang-european \
+texlive-latex-base \
+texlive-latex-extra \
+texlive-latex-recommended \
+texlive-science \
+texlive-pictures \
+texlive-pstricks \
+texlive-xetex \
+texlive-full \
+latexmk && \
+apt-get clean -y && \
+apt-get autoremove -y && \
+apt-get autoclean -y && \
+rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --upgrade \
+pip \
+jinja2 \
+jsonschema \
+jupyterlab \
+numpy \
+sympy \
+scipy \
+matplotlib \
+tikzplotlib \
+hpccm \
+black \
+h5py \
+mpmath \
+umbridge \
+clang-format \
+clang-tidy
+
+RUN curl -s -L https://api.github.com/repos/spack/spack/tarball | tar xzC $SPACK_ROOT --strip 1 && \
+spack install \
+environment-modules target=x86_64 \
+lmod target=x86_64 \
+m4 target=x86_64 autoconf target=x86_64 \
+gcc@11.4.0 build_type=Release languages=c,c++,fortran,lto target=x86_64 && . $SPACK_ROOT/share/spack/setup-env.sh && spack load gcc && spack compiler find
+
+RUN spack install \
+libxsmm +generator target=x86_64 \
+memkind target=x86_64 \
+blis target=x86_64 \
+openblas target=x86_64 \
+gdrcopy target=x86_64 \
+eigen+ipo build_type=Release target=x86_64 \
+boost@1.83.0 target=x86_64 \
+petsc+mpi+memkind+metis+cuda+hwloc+openmp target=x86_64 ^parmetis+int64+shared+ipo target=x86_64 ^openmpi+cuda fabrics=ucx target=x86_64 ^ucx+cuda ^metis+int64+real64+ipo+shared target=x86_64 \
+mpileaks ^openmpi+cuda fabrics=ucx target=x86_64 ^ucx+cuda \
+babelstream@develop+cuda cuda_arch=70 target=x86_64 \
+netcdf-cxx4+pic+shared target=x86_64 ^netcdf-c+mpi+shared target=x86_64 ^hdf5+fortran+threadsafe+mpi+shared target=x86_64 ^openmpi+cuda fabrics=ucx target=x86_64 ^ucx+cuda \
+netcdf-fortran+pic+shared target=x86_64 ^netcdf-c+mpi+shared target=x86_64 ^hdf5+fortran+threadsafe+mpi+shared target=x86_64 ^openmpi+cuda fabrics=ucx target=x86_64 ^ucx+cuda \
+parallel-netcdf+cxx+fortran+pic+shared target=x86_64 ^openmpi+cuda fabrics=ucx target=x86_64 ^ucx+cuda \
+easi+asagi target=x86_64 ^netcdf-c+mpi+shared target=x86_64 ^hdf5+fortran+threadsafe+mpi+shared target=x86_64 ^openmpi+cuda fabrics=ucx target=x86_64 ^ucx+cuda \
+py-pspamm target=x86_64 && \
+spack gc -y && \
+spack -L clean -a && \
+rm -rf /tmp/root/spack-stage/
+
+RUN echo "source $(spack location -i lmod)/lmod/lmod/init/bash" >> /etc/profile.d/spack.sh && \
+echo "source $(spack location -i environment-modules)/init/bash" >> /etc/profile.d/spack.sh && \
+echo "source $SPACK_ROOT/share/spack/setup-env.sh" >> /etc/profile.d/spack.sh && \
+echo "spack load m4" >> /etc/profile.d/spack.sh && \
+echo "spack load autoconf" >> /etc/profile.d/spack.sh && \
+echo "spack load gcc" >> /etc/profile.d/spack.sh && \
+echo "spack load libxsmm" >> /etc/profile.d/spack.sh && \
+echo "spack load memkind" >> /etc/profile.d/spack.sh && \
+echo "spack load blis" >> /etc/profile.d/spack.sh && \
+echo "spack load openblas" >> /etc/profile.d/spack.sh && \
+echo "spack load gdrcopy" >> /etc/profile.d/spack.sh && \
+echo "spack load eigen" >> /etc/profile.d/spack.sh && \
+echo "spack load boost@1.83.0" >> /etc/profile.d/spack.sh && \
+echo "spack load parmetis" >> /etc/profile.d/spack.sh && \
+echo "spack load petsc" >> /etc/profile.d/spack.sh && \
+echo "spack load mpileaks" >> /etc/profile.d/spack.sh && \
+echo "spack load babelstream" >> /etc/profile.d/spack.sh && \
+echo "spack load netcdf-cxx4" >> /etc/profile.d/spack.sh && \
+echo "spack load netcdf-fortran" >> /etc/profile.d/spack.sh && \
+echo "spack load parallel-netcdf" >> /etc/profile.d/spack.sh && \
+echo "spack load easi" >> /etc/profile.d/spack.sh && \
+echo "spack load py-pspamm" >> /etc/profile.d/spack.sh && \
+echo "spack unload python" >> /etc/profile.d/spack.sh && \
+echo "spack compiler find" >> /etc/profile.d/spack.sh
+
+ENV CC=gcc \
+CXX=g++ \
+FC=gfortran \
+I_MPI_CC=gcc \
+I_MPI_CXX=g++ \
+I_MPI_FC=gfortran \
+MPI_CC=mpicc\
+MPI_CXX=mpicxx \
+MPI_FC=mpif90
+
+ENTRYPOINT ["/bin/bash", "-l", "-c"]

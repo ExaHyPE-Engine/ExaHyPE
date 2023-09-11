@@ -9,7 +9,7 @@
 namespace peano4 {
   namespace grid {
     class PeanoCurve;
-    class AutomatonState;
+    struct AutomatonState;
   }
 }
 
@@ -188,4 +188,3 @@ class peano4::grid::PeanoCurve {
     static int getInputStackNumber(const AutomatonState& state);
     static int getOutputStackNumber(const AutomatonState& state);
 };
-

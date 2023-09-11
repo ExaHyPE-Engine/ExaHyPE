@@ -22,9 +22,11 @@
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
 
-//#ifdef UseFenv
-//#include "tarch/FenvWrapper.h"
-//#endif
+{% if FENV_ARGS is defined and FENV_ARGS != "" -%}
+#include <fenv.h>
+#pragma float_control(precise, on)
+#pragma STDC FENV_ACCESS ON
+{% endif -%}
 
 tarch::logging::Log _log("::");
 
@@ -115,9 +117,9 @@ int main(int argc, char** argv) {
     0
   );
 
-//#ifdef UseFenv
-  //tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-//#endif
+  {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
+  feenableexcept({{FENV_ARGS}} );
+  {% endif -%}
 
   #if PeanoDebug>=2
   tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();

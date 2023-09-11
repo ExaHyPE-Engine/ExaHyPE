@@ -45,7 +45,7 @@ class Project (object):
 
     self.solversteps  = peano4.solversteps.Steps(self)
 
-    self.main         = peano4.runner.DefaultSequence(self) 
+    self.main         = peano4.runner.DefaultSequence(self)
 
     self.is_generated         = False
     self.is_built             = False
@@ -55,6 +55,9 @@ class Project (object):
 
   def __str__(self):
     return "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
+
+  def set_fenv_handler(self, args):
+    self.main.d[ "FENV_ARGS" ] = args
 
   def cleanup(self):
     """!
@@ -75,7 +78,7 @@ class Project (object):
                overwrite=peano4.output.Overwrite.Default,
                throw_away_data_after_generation=False):
     """!
-    Generate all code. If you add stuff to your project after a 
+    Generate all code. If you add stuff to your project after a
     build, you have to (re-)generate the code. If you compile only
     once, you don't have to invoke this routine explicitly. It is
     lazily called by the other project routines - the latest before
@@ -87,14 +90,14 @@ class Project (object):
     subsequent generate calls enrich the output twice.
 
     throw_away_data_after_generation: Bool
-      The Peano 4 memory footprint can become quite substantial 
+      The Peano 4 memory footprint can become quite substantial
       effectively reducing the translation capabilities (as compilers
-      tend to require a lot of memory, too). So pass in True if you 
-      want the script to throw away the data structures (and run a 
+      tend to require a lot of memory, too). So pass in True if you
+      want the script to throw away the data structures (and run a
       garbage collection) after all files have been generated. Please
-      note that it invalidates both this object (and maybe another 
-      object that you've used to generate the present one - such as 
-      ExaHyPE). It really strips everything down to the stuff you 
+      note that it invalidates both this object (and maybe another
+      object that you've used to generate the present one - such as
+      ExaHyPE). It really strips everything down to the stuff you
       absolutely need to translate and run the code.
     """
     print( "generate all code ..." )
@@ -184,7 +187,7 @@ class Project (object):
         # Check the return code for linker errors
         # Raise exception with errors
         if process.returncode != 0:
-          linker_error_message = process.stdout.decode().strip() + "\n" + error_message
+          linker_error_message = process.stderr.decode().strip() + "\n" + error_message
           raise Exception(linker_error_message)
         print("compile completed successfully")
         self.is_built = True

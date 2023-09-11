@@ -1,125 +1,90 @@
-stages:
-  - build
-  - test
-  - benchmark
-  - simulate
-
 amd-build:
   stage: build
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/amd:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
   script:
     - pwd
     - ls
     - whoami
     - hostname
-    - lscpu
+    - echo $SINGULARITY_CACHEDIR
     - echo $CI_COMMIT_SHA
     - echo $CI_COMMIT_BRANCH
     - echo "Running CI with $(nproc) cores"
-    - bash .continuous_integration/configure.sh <<< $'4\n amdclang\n amdclang++\n 2\n 1\n'$
-    - make -j $(nproc)
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} python3 configure.py --exahype --swift --petsc --multithreading=omp
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} make -j $(nproc --all)
   artifacts:
     paths:
-      - /*
-  retry: 2
+      - ./*
+    exclude:
+      - ".git*"
+      - ".git/**/*"
+    expire_in: 2 hours
+  retry: 0
 
 amd-test:
   stage: test
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/amd:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
   needs:
     - job: amd-build
   script:
-    - src/unittests/UnitTests2d
-    - src/unittests/UnitTests3d
-  artifacts:
-    paths:
-      - /*
-  retry: 2
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} make check
+  retry: 0
 
-amd-benchmark-kernels:
-  stage: benchmark
+amd-tutorials:
+  stage: tutorials
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/amd:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
   needs:
-    - job: amd-test
+    - job: amd-build
   script:
-    - cd benchmarks/exahype2/euler/kernel-benchmarks
-    - python3 fv-rusanov-kernel-benchmarks.py
-    - ls
-  artifacts:
-    paths:
-      - /*
-  retry: 2
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/euler; python3 euler.py'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/euler; make -j'
 
-amd-benchmark-gauge-wave:
-  stage: benchmark
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/acoustic-wave; python3 acoustic-wave.py'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/acoustic-wave; make -j'
+
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/elastic-wave; python3 elastic-wave.py'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/elastic-wave; make -j'
+
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/advection; python3 advection.py'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/advection; make -j'
+  retry: 0
+
+amd-applications:
+  stage: applications
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/amd:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
   needs:
-    - job: amd-test
+    - job: amd-build
   script:
-    - cd benchmarks/exahype2/ccz4/gauge-wave
-    - python3 convergence-study.py -s fv
-    - ls
-  artifacts:
-    paths:
-      - /*
-  retry: 2
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; python3 euler.py --no-make --executable=euler'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; make -j'
 
-amd-simulate-acoustic-wave:
-  stage: simulate
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; python3 acoustic-wave.py --no-make --executable=acoustic-wave'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; make -j'
+
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; python3 elastic-wave.py --no-make --executable=elastic-wave'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; make -j'
+
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; python3 advection.py --no-make --executable=advection'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; make -j'
+  retry: 0
+
+amd-benchmarks:
+  stage: benchmarks
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/amd:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
   needs:
-    - job: amd-benchmark-kernels
-    - job: amd-benchmark-gauge-wave
+    - job: amd-build
   script:
-    - cd applications/exahype2/acoustic-wave
-    - python3 acoustic-wave.py -s FVRusanovGlobalAdaptiveEnclave
-    - ls
-  artifacts:
-    paths:
-      - /*
-  retry: 2
-
-amd-simulate-elastic-wave:
-  stage: simulate
-  allow_failure: false
-  tags:
-    - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/amd:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
-  needs:
-    - job: amd-benchmark-kernels
-    - job: amd-benchmark-gauge-wave
-  script:
-    - cd applications/exahype2/elastic-wave
-    - python3 elastic-wave.py -s FVRusanovGlobalAdaptiveEnclave
-    - ls
-  artifacts:
-    paths:
-      - /*
-  retry: 2
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py --no-make --executable=kernel-benchmarks'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; make -j'
+    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks
+  retry: 0

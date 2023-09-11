@@ -2,34 +2,27 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 #include "AutomatonState.h"
 #include "GridVertex.h"
 #include "GridStatistics.h"
 #include "GridControlEvent.h"
 #include "GridTraversalEventGenerator.h"
 
-
 #include "tarch/logging/Log.h"
 
-
 #include "peano4/stacks/STDVectorStack.h"
-
 
 #include "peano4/maps/STDStackMap.h"
 #include "peano4/maps/HierarchicalStackMap.h"
 
-
 #include <set>
 #include <bitset>
-
 
 namespace peano4 {
   namespace grid {
     class Spacetree;
     class TraversalObserver;
-    class GridTraversalEvent;
+    struct GridTraversalEvent;
 
     namespace tests {
       class SpacetreeTest;
@@ -41,14 +34,11 @@ namespace peano4 {
   }
 }
 
-
-
 /**
  * Represents one tree
  */
 class peano4::grid::Spacetree {
   public:
-
     /**
      * Periodic boundary conditions are technically realised as domain
      * decomposition, i.e. the vertices along the periodic boundaries carry
@@ -1049,5 +1039,3 @@ class peano4::grid::Spacetree {
 
     bool isInvolvedInJoinOrFork() const;
 };
-
-

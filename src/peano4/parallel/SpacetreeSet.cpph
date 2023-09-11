@@ -6,21 +6,16 @@
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/Spacetree.h"
 
-
-
 #ifdef UseSmartMPI
 #include "smartmpi.h"
 #endif
 
-
-
-
 template <class Container>
 void peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(
-  Container& stackContainer, int master, int worker
-) {
-}
-
+  [[maybe_unused]] Container& stackContainer,
+  [[maybe_unused]] int master,
+  [[maybe_unused]] int worker
+) {}
 
 template <class Container>
 void peano4::parallel::SpacetreeSet::deleteAllStacks(
@@ -31,7 +26,6 @@ void peano4::parallel::SpacetreeSet::deleteAllStacks(
   logDebug( "deleteAllStacks()", "delete all stacks of " << spacetreeId );
   stackContainer.clear(spacetreeId);
 }
-
 
 template <class Container>
 void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
@@ -133,19 +127,22 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
   logTraceOutWith2Arguments( "streamDataFromSplittingTreeToNewTree(...)", master, worker );
 }
 
-
 template <class Container>
 void peano4::parallel::SpacetreeSet::exchangeAllVerticalDataExchangeStacks(
-  Container& stackContainer,
-  int spacetreeId, int parentId
+  [[maybe_unused]] Container& stackContainer,
+  [[maybe_unused]] int spacetreeId,
+  [[maybe_unused]] int parentId
 ) {
   logTraceInWith2Arguments( "exchangeAllVerticalDataExchangeStacks(...)", spacetreeId, parentId );
   logTraceOutWith2Arguments( "exchangeAllVerticalDataExchangeStacks(...)", spacetreeId, parentId );
 }
 
-
 template <class Container>
-void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks( Container& stackContainer, int spacetreeId, bool symmetricDataCardinality ) {
+void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks(
+  [[maybe_unused]] Container& stackContainer,
+  [[maybe_unused]] int spacetreeId,
+  [[maybe_unused]] bool symmetricDataCardinality
+) {
   logTraceInWith2Arguments( "exchangeAllHorizontalDataExchangeStacks(...)", spacetreeId, symmetricDataCardinality );
   assertionMsg( symmetricDataCardinality, "haven't implemented the asymmetric case yet, but would be simple: Just need the integer messages as I do for the vertical data flow" );
   // Trigger all send and receives required
@@ -216,7 +213,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks( Co
       stackContainer.getForPush(targetId,targetStack)->clone( *stackContainer.getForPop(sourceStackKey) );
 
       #if PeanoDebug>0
-      const int comparisonStackForTarget = Node::getInstance().getOutputStackNumberForHorizontalDataExchange( spacetreeId );
+      [[maybe_unused]] const int comparisonStackForTarget = Node::getInstance().getOutputStackNumberForHorizontalDataExchange( spacetreeId );
 
       assertion8(
         stackContainer.getForPush(targetId,targetStack)->size() == stackContainer.getForPush(spacetreeId,comparisonStackForTarget)->size()
@@ -236,7 +233,6 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks( Co
   }
   logTraceOut( "exchangeAllHorizontalDataExchangeStacks(...)" );
 }
-
 
 template <class Container>
 void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Container& stackContainer, int spacetreeId ) {
@@ -271,7 +267,6 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
       }
     }
 
-
     tarch::mpi::Rank::getInstance().writeTimeOutWarning(
       "peano4::parallel::SpacetreeSet",
       "finishAllOutstandingSendsAndReceives(...)", spacetreeId, -1, -1
@@ -296,7 +291,6 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
   stackContainer.garbageCollection(spacetreeId);
   logTraceOutWith1Argument( "finishAllOutstandingSendsAndReceives(...)", spacetreeId );
 }
-
 
 template <class Container>
 void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks( Container& stackContainer, int spacetreeId ) {
@@ -324,4 +318,3 @@ void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks( Cont
   }
   logTraceOut( "exchangeAllPeriodicBoundaryDataStacks(...)");
 }
-

@@ -14,7 +14,7 @@ namespace swift2 {
      * per pair of local and active particles. The interaction functor may
      * modify the local particle. Besides the simple nested loop, the routine
      * ensures that no particle is updated twice if it belongs to two cells
-     * simulatenously.
+     * simultaneously.
      *
      * What the routine not does is to check if activeParticle!=localParticle,
      * i.e. please assume that the routine is also called for self-interaction
@@ -29,6 +29,7 @@ namespace swift2 {
      */
     template <typename Particle, typename ParticleContainer>
     void genericInteraction(
+      const peano4::datamanagement::CellMarker&                                          marker,
       const ParticleContainer&                                                           localParticles,
       const ParticleContainer&                                                           activeParticles,
       std::function<void(Particle* localParticle, const Particle* const activeParticle)> interaction
@@ -50,7 +51,8 @@ namespace swift2 {
      * This operation struggles to vectorise, as we have the statement
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     *   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle()) {
+     *   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle())
+     * {
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * in there. This if statement encapsulates quite a lot of operations. The
@@ -71,21 +73,25 @@ namespace swift2 {
      * It is not clear if this operation is faster than forceKernel, but it
      * delivers more flops due to the excessive vectorisation.
      *
-     * The big if in the straightforward forceKernel() is challenging for the
-     * vectoriser. Hence, I compute one scalar which is either set to 1.0 if we
-     * should update and otherwise 0.0. By multiplying all updates with this
-     * scalar, we can effectively mask out the kernel or keep its action. This
-     * works in the present case, as all updates are additive, i.e. we take the
-     * existing value and add something onto it.
+     * To make the function vectorisable, we had to apply a few tweaks compared
+     * to the non-vector counterpart. Most of these tweaks are now
+     * @ref swift_particle_new_solver "documented as part of Swift's generic solver documentation".
+     *
+     *
+     * ## Specific differences to other vector kernel
+     *
+     * As we know a priori that this function is only invoked on distinct junks
+     * of particles, we know that we'll compare the same particle against each
+     * other. Consequently, we may assume that the radius is never 0. This
+     * additional check can be omitted.
+     *
+     *
      *
      * @todo This routine does not support boundary particles. But we wanted to
      *   remove this flag anyway.
      */
     template <typename Particle>
-    void forceKernelVectorised(
-      Particle* __restrict__         localParticle,
-      const Particle* __restrict__   activeParticle
-    );
+    void forceKernelVectorised(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle);
 
     /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
@@ -106,6 +112,8 @@ namespace swift2 {
      * dx : Vector separating the two particles (x_loc - x_act)
      * r  : Distance between the two particles  (|| dx ||)
      *
+     * @todo Mladen: check docu once this is fixed.
+     *
      *
      * @param ParticleContainer Typicaly either
      *         std::list<Particle *>
@@ -115,7 +123,11 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeDensity(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
+    void computeDensity(
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
+    );
 
     /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii.
@@ -123,7 +135,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSearchRadius(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
     );
 
     /**
@@ -138,7 +152,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSmoothingLengths(
-      const ParticleContainer& localParticles, const ParticleContainer& activeParticles
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
     );
 
     /** Hydro Force calculation particle-particle kernel
@@ -162,7 +178,11 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeHydroForce(const ParticleContainer& localParticles, const ParticleContainer& activeParticles);
+    void computeHydroForce(
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localParticles,
+      const ParticleContainer&                  activeParticles
+    );
 
 
     /**
@@ -174,24 +194,31 @@ namespace swift2 {
      * if you use a @ref toolbox_particles_memorypool "memory pool" as it is
      * also discussed in the @ref page_swift_performance_optimisation "optimisation guidelines".
      *
-     *
      * The routine knows way more about the internal ordering of the particles
      * through the explicit arguments particlesAssociatedWithLocalVertices and
      * numberOfParticlesPerLocalVertex. It implicitly knows how the particles
      * are stored through the naming convention/the fact that you have to use
      * it with a memory pool. The Python class
-     * peano4.toolbox.particles.ParticleParticleInteraction_StackOfLists.ParticleParticleInteraction_StackOfLists
+     * peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles.ParticleParticleInteraction_StackOfListsOverStaticParticles
      * provides a lot of information how we construct the passed lists over
      * particles.
+     *
+     * Further to the optimised loops, the function calls forceKernelVectorised()
+     * instead of forceKernel() whenever it knows a priori that two particle
+     * ranges to not overlap. See forceKernelVectorised() for further remarks
+     * how we deliver vectorised kernels.
+     *
+     * See also @ref swift_particle_new_solver Create new solvers "Swift's discussion how to vectorise kernels"
+     * for further details.
      *
      */
     template <typename ParticleContainer>
     void computeHydroForce(
-      const peano4::datamanagement::CellMarker&  marker,
-      const ParticleContainer&                   particlesAssociatedWithLocalVertices,
-      const std::vector<int>&                    numberOfParticlesPerLocalVertex,
-      const ParticleContainer&                   activeParticles,
-      const std::vector<int>&                    numberOfActiveParticlesPerVertexAdded
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localVertices,
+      const std::vector<int>&                   numberOfParticlesPerVertex,
+      const ParticleContainer&                  activeParticles,
+      const std::vector<int>&                   numberOfActiveParticlesPerVertex
     );
   } // namespace kernels
 } // namespace swift2
