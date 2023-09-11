@@ -11,6 +11,9 @@ import sys
 import exahype2.grid
 import exahype2.solvers
 
+from exahype2.solvers.aderdg.ADERDG import ADERDG
+from exahype2.solvers.aderdg.kernelgenerator import Configuration
+
 
 class Project(object):
     """!
@@ -605,6 +608,25 @@ thus appreciate any citation of the original release paper
 
         self._project.output.makefile.set_mode(self._build_mode)
 
+        for solver in self._solvers:
+            if isinstance(solver, ADERDG):
+                pathToExaHyPERoot = Configuration.pathToExaHyPERoot
+                if solver._use_BLIS:
+                    archname = ""
+                    for root, dirs, files in os.walk(pathToExaHyPERoot+ "/submodules/blis/include"):
+                        archname = dirs[0]
+                        break
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/blis/include/" + archname)
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/blis/lib/" + archname + "/libblis.a")
+                    self._project.output.makefile.add_library("-lpthread")
+                elif solver._use_Eigen:
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/eigen")
+                elif solver._use_libxsmm_JIT:
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/libxsmmJIT/include")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/libxsmmJIT/lib/libxsmm.a")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/OpenBLAS/libopenblas.a")
+                    self._project.output.makefile.add_library("-lpthread")
+                break
         return self._project
 
 

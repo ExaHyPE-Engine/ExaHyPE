@@ -73,6 +73,15 @@ class Controller:
             if "useLibxsmm" in args
             else Configuration.useLibxsmm,
             "pathToLibxsmmGemmGenerator": Configuration.pathToLibxsmmGemmGenerator,
+            "useBLIS": args["useBLIS"]
+            if "useBLIS" in args
+            else Configuration.useBLIS,
+            "useEigen": args["useEigen"]
+            if "useEigen" in args
+            else Configuration.useEigen,
+            "useLibxsmmJIT": args["useLibxsmmJIT"]
+            if "useLibxsmmJIT" in args
+            else Configuration.useLibxsmmJIT,
             "runtimeDebug": Configuration.runtimeDebug,  # for debug
         }
 
