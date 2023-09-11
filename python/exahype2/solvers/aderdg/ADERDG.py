@@ -1098,7 +1098,7 @@ class ADERDG(object):
         d["PREDICTOR_COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions
         d["CORRECTOR_COMPUTATION_PRECISION"] = self._corrector_computation_precision
 
-        d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions
+        d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions[:]
         if self._corrector_computation_precision not in d["COMPUTATION_PRECISIONS"]:
             d["COMPUTATION_PRECISIONS"].append(self._corrector_computation_precision)
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])

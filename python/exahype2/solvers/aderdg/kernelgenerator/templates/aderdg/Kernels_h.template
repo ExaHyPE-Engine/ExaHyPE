@@ -21,7 +21,7 @@
 
 #include "tarch/la/Vector.h"
 
-{% if "std::float16_t" in computePrecisions or "std::bfloat16_t" in computePrecisions %}
+{% if "std::float16_t" in computePrecisions or "std::bfloat16_t" in computePrecisions or correctorStoragePrecision=="std::float16_t" or correctorStoragePrecision=="std::bfloat16_t" %}
 #include <stdfloat>
 {% endif %}
 
