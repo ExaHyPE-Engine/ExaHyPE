@@ -21,6 +21,7 @@
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/otter.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
@@ -945,7 +946,6 @@ void runBenchmarksOnDevice(int numberOfPatches) {
 
 int main(int argc, char** argv) {
   constexpr int ExitCodeSuccess          = 0;
-  constexpr int ExitCodeInvalidArguments = 2;
   constexpr int ExitCodeInvalidBuild     = 3;
 
   peano4::initParallelEnvironment(&argc, &argv);
@@ -958,16 +958,11 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidBuild;
   }
 
-  if (not exahype2::parseCommandLineArguments(argc, argv)) {
-    logError("main()", "Invalid command line arguments.");
-    return ExitCodeInvalidArguments;
-  }
-
   peano4::runTestsAndBenchmarks();
 
   repositories::startSimulation();
 
-  otterTraceInitialise();
+  OTTER_INITIALISE();
 
   tarch::logging::Statistics::getInstance().clear();
 
@@ -994,7 +989,7 @@ int main(int argc, char** argv) {
     std::stringstream msg;
     msg << "kernel-benchmarks-" << numberOfPatches << "-patches-"
         << tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
-    otterPhaseSwitch(msg.str().c_str());
+    OTTER_PHASE_SWITCH(msg.str().c_str());
 
     logInfo("main()", "========================================");
     logInfo("main()", "  Number of patches: " << numberOfPatches);
@@ -1012,7 +1007,7 @@ int main(int argc, char** argv) {
     logInfo("main()", "no accuracy checks were performed");
   }
 
-  otterTraceFinalise();
+  OTTER_FINALISE();
 
   delete[] validOutcome;
   repositories::finishSimulation();
