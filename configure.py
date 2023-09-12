@@ -3,7 +3,7 @@ import shlex
 import argparse
 import subprocess
 
-parser = argparse.ArgumentParser(description='Configure helper script for GNU autotools and CMake')
+parser = argparse.ArgumentParser(description='Configuration helper script for GNU Autotools and CMake')
 parser.add_argument('--cmake', help='Use CMake')
 parser.add_argument('-t', '--toolchain', choices=['gcc', 'llvm', 'nvidia', 'amd', 'intel'], help='Select toolchain')
 parser.add_argument('-cc', '--cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
