@@ -12,8 +12,8 @@ llvm-build:
     - echo $CI_COMMIT_SHA
     - echo $CI_COMMIT_BRANCH
     - echo "Running CI with $(nproc) cores"
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} python3 configure.py --exahype --swift --petsc --multithreading=omp
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} make -j $(nproc --all)
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} python3 configure.py -cc=clang -cxx=clang++ --exahype --swift --petsc --multithreading=omp
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} make -j $(nproc --all)
   artifacts:
     paths:
       - ./*
@@ -31,7 +31,7 @@ llvm-test:
   needs:
     - job: llvm-build
   script:
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} make check
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} make check
   retry: 0
 
 llvm-tutorials:
@@ -42,17 +42,17 @@ llvm-tutorials:
   needs:
     - job: llvm-build
   script:
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/euler; python3 euler.py'
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/euler; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/euler; python3 euler.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/euler; make -j'
 
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/acoustic-wave; python3 acoustic-wave.py'
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/acoustic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/acoustic-wave; python3 acoustic-wave.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/acoustic-wave; make -j'
 
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/elastic-wave; python3 elastic-wave.py'
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/elastic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/elastic-wave; python3 elastic-wave.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/elastic-wave; make -j'
 
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/advection; python3 advection.py'
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/advection; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/advection; python3 advection.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/advection; make -j'
   retry: 0
 
 llvm-applications:
@@ -63,17 +63,17 @@ llvm-applications:
   needs:
     - job: llvm-build
   script:
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; python3 euler.py --no-make --executable=euler'
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; python3 euler.py --no-make --executable=euler'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; make -j'
 
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; python3 acoustic-wave.py --no-make --executable=acoustic-wave'
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; python3 acoustic-wave.py --no-make --executable=acoustic-wave'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; make -j'
 
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; python3 elastic-wave.py --no-make --executable=elastic-wave'
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; python3 elastic-wave.py --no-make --executable=elastic-wave'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; make -j'
 
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; python3 advection.py --no-make --executable=advection'
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; python3 advection.py --no-make --executable=advection'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; make -j'
   retry: 0
 
 llvm-benchmarks:
@@ -84,7 +84,7 @@ llvm-benchmarks:
   needs:
     - job: llvm-build
   script:
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py --no-make --executable=kernel-benchmarks'
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; make -j'
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py --no-make --executable=kernel-benchmarks'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks
   retry: 0
