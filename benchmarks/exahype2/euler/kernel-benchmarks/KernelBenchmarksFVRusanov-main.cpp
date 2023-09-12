@@ -485,28 +485,25 @@ void submitSYCLKernels(int patches, int device, int thread) {
     .submit([&](auto& h) {
       h.host_task(
         [=](
-        ) { /*
+        ) { 
 runStatelessVariantOnDevice(
 patches, device,
 ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
 1, FVRusanovSolver::NumberOfUnknowns,
-FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>, "sycl,
-task-graph, AoS", thread
+FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>, "sycl, task-graph, AoS", thread
 );
 runStatelessVariantOnDevice(
 patches, device,
 ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
 1, FVRusanovSolver::NumberOfUnknowns,
-FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>, "sycl,
-task-graph, AoSoA", thread
+FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>, "sycl, task-graph, AoSoA", thread
 );
 runStatelessVariantOnDevice(
 patches, device,
 ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
 1, FVRusanovSolver::NumberOfUnknowns,
-FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>, "sycl,
-task-graph, SoA", thread
-);*/
+FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>, "sycl, task-graph, SoA", thread
+);
             runStatelessVariantOnDevice(
               patches,
               device,
@@ -737,6 +734,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
       thread
     );
   }
+  */
 
   tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
 #pragma omp parallel for
@@ -838,6 +836,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
       thread
     );
   }
+  */
 #elif defined(SharedTBB) and defined(GPUOffloadingSYCL)
   ::tbb::task_group taskGroup;
   for (int thread = 0; thread < tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
@@ -977,7 +976,7 @@ int main(int argc, char** argv) {
 
 #if defined(GPUOffloadingSYCL)
   if (tarch::accelerator::Device::getInstance().getNumberOfDevices() > 0) {
-    logWarning("main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark");
+    //logWarning("main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark");
   }
 #endif
 
@@ -987,7 +986,7 @@ int main(int argc, char** argv) {
   );
   logInfo("main()", "Dimensions: " << Dimensions);
 
-  int numberOfPatches = 1;
+  int numberOfPatches = 1024;
   if constexpr (WithScaling) {
     numberOfPatches = tarch::multicore::Core::getInstance().getNumberOfThreads();
   }
