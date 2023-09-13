@@ -43,17 +43,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_INLINES_HIDDEN YES)
 
-set(CMAKE_Fortran_STANDARD 90)
-set(CMAKE_Fortran_STANDARD_REQUIRED TRUE)
-set(CMAKE_Fortran_EXTENSIONS OFF)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
-set(LANGUAGES C CXX Fortran)
+set(LANGUAGES C CXX)
 project(
   ${META_PROJECT_NAME}
   DESCRIPTION ${META_PROJECT_DESCRIPTION}
@@ -164,9 +160,6 @@ if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
   target_link_libraries(project_options INTERFACE OpenMP::OpenMP_CXX)
-  if(CMAKE_Fortran_COMPILER)
-    target_link_libraries(project_options INTERFACE OpenMP::OpenMP_Fortran)
-  endif()
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
   target_link_libraries(project_options INTERFACE TBB::tbb)
@@ -319,9 +312,6 @@ if(WITH_MPI)
   target_compile_definitions(project_options INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
   target_compile_definitions(project_options INTERFACE Parallel)
   target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
-  if(CMAKE_Fortran_COMPILER)
-    target_link_libraries(project_options INTERFACE MPI::MPI_Fortran)
-  endif()
 endif()
 
 if(WITH_OTTER)
@@ -472,8 +462,6 @@ display_variable(CMAKE_C_COMPILER)
 display_variable(CMAKE_C_STANDARD)
 display_variable(CMAKE_CXX_COMPILER)
 display_variable(CMAKE_CXX_STANDARD)
-display_variable(CMAKE_Fortran_COMPILER)
-display_variable(CMAKE_Fortran_STANDARD)
 display_variable(CMAKE_BUILD_TYPE)
 display_variable(CMAKE_CONFIGURATION_TYPES)
 display_variable(CMAKE_CXX_FLAGS)

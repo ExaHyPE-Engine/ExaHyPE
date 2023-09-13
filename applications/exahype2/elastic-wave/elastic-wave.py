@@ -42,7 +42,7 @@ rkdg_rusanov_solvers = {
 solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
-solver = "FVRusanovGlobalAdaptive"
+solver = "RKDGRusanovGlobalFixed"
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,

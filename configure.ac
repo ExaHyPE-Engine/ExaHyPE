@@ -67,7 +67,7 @@ AC_CONFIG_MACRO_DIRS([m4])
 # Checks for programs
 #
 AC_PROG_CXX
-AC_PROG_FC
+#AC_PROG_FC
 
 AC_LANG(C++)
 
