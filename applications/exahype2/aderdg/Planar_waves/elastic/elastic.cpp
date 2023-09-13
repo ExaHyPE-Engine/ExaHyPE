@@ -120,7 +120,7 @@ void examples::exahype2::elastic::elastic::analyticalSolution(
   double k1(1.0);
   double k2(1.0);
 
-  double w(6*M_PI/std::sqrt(3.0));
+  double w(6*M_PI/std::sqrt(Dimensions));
 
   double val(cos( w*t - std::numbers::pi*(
     k0*x[0]
