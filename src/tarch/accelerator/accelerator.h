@@ -65,7 +65,10 @@ namespace tarch {
     ManagedSharedAcceleratorDeviceMemory
   };
 
- namespace internal {
+  std::string toString( MemoryLocation value );
+
+
+  namespace internal {
     void* allocateRawData(int size, MemoryLocation location);
   }
 
