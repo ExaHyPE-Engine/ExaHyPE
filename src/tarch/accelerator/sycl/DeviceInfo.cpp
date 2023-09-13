@@ -93,8 +93,9 @@ namespace tarch::accelerator::sycl {
     for (unsigned int i = 0; i < devices.size(); i++) {
       ::sycl::device&         device = devices[i];
       ::sycl::queue           queue(device);
-      ::sycl::buffer<bool, 1> a_sycl(&a, ::sycl::range<1>(1));
       std::cout << device.get_info<::sycl::info::device::name>() << std::endl;
+	  {
+      ::sycl::buffer<bool, 1> a_sycl(&a, ::sycl::range<1>(1));
 
       queue.submit([&](::sycl::handler& cgh) {
         ::sycl::stream   out(1024, 256, cgh);
@@ -105,6 +106,7 @@ namespace tarch::accelerator::sycl {
       });
 
       queue.wait();
+	  }
 
       offloadResults[i] = a;
       a                 = false;
