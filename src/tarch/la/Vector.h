@@ -167,8 +167,8 @@ struct tarch::la::Vector {
      */
     inline Scalar & operator[] (int index) InlineMethod {
         #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
-          assertion3 ( index >= 0, index, Size, toString(*this) );
-          assertion3 ( index < Size, index, Size, toString(*this) );
+          assertion3 ( index >= 0, index, Size, ::toString(*this) );
+          assertion3 ( index < Size, index, Size, ::toString(*this) );
         #endif
         return _values[index];
     }
@@ -186,8 +186,8 @@ struct tarch::la::Vector {
      */
     inline const Scalar & operator() (int index) const InlineMethod {
         #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
-          assertion3 ( index >= 0, index, Size, toString(*this) );
-          assertion3 ( index < Size, index, Size, toString(*this) );
+          assertion3 ( index >= 0, index, Size, ::toString(*this) );
+          assertion3 ( index < Size, index, Size, ::toString(*this) );
         #endif
         return _values[index];
     }
@@ -199,8 +199,8 @@ struct tarch::la::Vector {
      */
     inline Scalar & operator() (int index) InlineMethod {
        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
-        assertion3 ( index >= 0, index, Size, toString(*this) );
-        assertion3 ( index < Size, index, Size, toString(*this) );
+        assertion3 ( index >= 0, index, Size, ::toString(*this) );
+        assertion3 ( index < Size, index, Size, ::toString(*this) );
        #endif
        return _values[index];
      }
