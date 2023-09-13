@@ -17,6 +17,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
     bool                    evaluateNonconservativeProduct,
     bool                    evaluateSource,
     bool                    evaluateMaximumEigenvalueAfterTimeStep,
+    peano4::utils::LoopParallelism   loopParallelism,
     const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
     const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
     const TempDataEnumerator& fluxEnumerator,
@@ -39,86 +40,42 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
     constexpr int solversHaloSize = 1;
 
     for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
-      if (Dimensions==2 and evaluateSource) {
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        #if defined(SharedOMP)
-        #pragma omp simd
-        #endif
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+      if (evaluateSource) {
+        parallelDforWithDynamicScheduling(volume, numberOfVolumesPerAxisInPatch, loopParallelism) {
           internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x,y),
+            volume,
             patchData.t[patchIndex],
             patchData.dt[patchIndex],
             patchData.QOut[patchIndex],
             QOutEnumerator
           );
-        }
-      }
-      else if (Dimensions==3 and evaluateSource) {
-        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        #if defined(SharedOMP)
-        #pragma omp simd
-        #endif
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-          internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
-            patchData.QOut[patchIndex],
-            QOutEnumerator
-          );
-        }
-      }
-      else if (Dimensions==2) {
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        #if defined(SharedOMP)
-        #pragma omp simd collapse(2)
-        #endif
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-          internal::copySolution_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchIndex,
-            volumeIndex2d(x,y),
-            unknown,
-            patchData.QOut[patchIndex],
-            QOutEnumerator
-          );
-        }
+        } end_parallelDfor
       }
       else {
-        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        #if defined(SharedOMP)
-        #pragma omp simd collapse(2)
-        #endif
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-          internal::copySolution_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            unknown,
-            patchData.QOut[patchIndex],
-            QOutEnumerator
-          );
-        }
+        parallelDforWithDynamicScheduling(volume, numberOfVolumesPerAxisInPatch, loopParallelism) {
+          for (int unknown=0; unknown<unknowns; unknown++) {
+            internal::copySolution_LoopBody(
+              patchData.QIn[patchIndex],
+              QInEnumerator,
+              patchIndex,
+              volume,
+              unknown,
+              patchData.QOut[patchIndex],
+              QOutEnumerator
+            );
+          }
+        } end_parallelDfor
       }
 
-      if (Dimensions==2) {
+      #if Dimensions==2
+      parallelDforWithDynamicScheduling(volume, (tarch::la::Vector<2,int>({numberOfVolumesPerAxisInPatch+2*solversHaloSize,numberOfVolumesPerAxisInPatch})), loopParallelism)
+      end_parallelDfor
+      xxx
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
         #if defined(SharedOMP)
         #pragma omp simd
@@ -179,71 +136,75 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             QOutEnumerator
           );
         }
-      }
-      else {
-        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        #if defined(SharedOMP)
-        #pragma omp simd
-        #endif
-        for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++) {
-          internal::computeMaxEigenvalue_LoopBody<Solver>(
+      #elif Dimensions==3
+      parallelDforWithDynamicScheduling(
+        volume,
+        (tarch::la::Vector<3,int>({numberOfVolumesPerAxisInPatch+2*solversHaloSize,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch})),
+        loopParallelism
+      ) {
+        volume(0) -= solversHaloSize;
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
                 patchData.cellCentre[patchIndex],
                 patchData.cellSize[patchIndex],
                 patchIndex,
-                volumeIndex3d(x,y,z),
+                volume,
                 patchData.t[patchIndex], patchData.dt[patchIndex],
                 0,
                 tempEigenvalueX,
                 eigenvalueEnumerator
-          );
-        }
-        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-        for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
-        #if defined(SharedOMP)
-        #pragma omp simd
-        #endif
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-          internal::computeMaxEigenvalue_LoopBody<Solver>(
+        );
+      }
+      end_parallelDfor
+
+      parallelDforWithDynamicScheduling(
+        volume,
+        (tarch::la::Vector<3,int>({numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch+2*solversHaloSize,numberOfVolumesPerAxisInPatch})),
+        loopParallelism
+      ) {
+        volume(1) -= solversHaloSize;
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
                 patchData.cellCentre[patchIndex],
                 patchData.cellSize[patchIndex],
                 patchIndex,
-                volumeIndex3d(x,y,z),
+                volume,
                 patchData.t[patchIndex], patchData.dt[patchIndex],
                 1,
                 tempEigenvalueY,
                 eigenvalueEnumerator
-          );
-        }
-        for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        #if defined(SharedOMP)
-        #pragma omp simd
-        #endif
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-          internal::computeMaxEigenvalue_LoopBody<Solver>(
+        );
+      }
+      end_parallelDfor
+
+      parallelDforWithDynamicScheduling(
+        volume,
+        (tarch::la::Vector<3,int>({numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch+2*solversHaloSize})),
+        loopParallelism
+      ) {
+        volume(2) -= solversHaloSize;
+        internal::computeMaxEigenvalue_LoopBody<Solver>(
                 patchData.QIn[patchIndex],
                 QInEnumerator,
                 patchData.cellCentre[patchIndex],
                 patchData.cellSize[patchIndex],
                 patchIndex,
-                volumeIndex3d(x,y,z),
+                volume,
                 patchData.t[patchIndex], patchData.dt[patchIndex],
                 2,
                 tempEigenvalueZ,
                 eigenvalueEnumerator
-          );
-        }
-        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        #if defined(SharedOMP)
-        #pragma omp simd collapse(2)
-        #endif
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+        );
+      }
+      end_parallelDfor
+
+      parallelDforWithDynamicScheduling(
+        volume,
+        numberOfVolumesPerAxisInPatch,
+        loopParallelism
+      ) {
         for (int unknown = 0; unknown < unknowns; unknown++) {
           internal::updateSolutionWithEigenvalueDamping_LoopBody(
             patchData.QIn[patchIndex],
@@ -255,7 +216,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(x,y,z),
+            volume,
             unknown,
             patchData.dt[patchIndex],
             patchData.QOut[patchIndex],
@@ -263,6 +224,8 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
           );
         }
       }
+      end_parallelDfor
+      #endif
 
       if (evaluateFlux and Dimensions==2) {
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
@@ -612,7 +575,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_call
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
-  bool                    evaluateMaximumEigenvalueAfterTimeStep
+  bool                    evaluateMaximumEigenvalueAfterTimeStep,
+  peano4::utils::LoopParallelism   loopParallelism
 ) {
   /**
    * The halo size passed in by the user might differ from the one that we have to evaluate/
@@ -642,6 +606,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_call
     evaluateNonconservativeProduct,
     evaluateSource,
     evaluateMaximumEigenvalueAfterTimeStep,
+    loopParallelism,
     QInEnumerator,
     QOutEnumerator,
     fluxEnumerator,
@@ -672,7 +637,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls(
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
-  bool                    evaluateMaximumEigenvalueAfterTimeStep
+  bool                    evaluateMaximumEigenvalueAfterTimeStep,
+  peano4::utils::LoopParallelism   loopParallelism
 ) {
   /**
    * The halo size passed in by the user might differ from the one that we have to evaluate/
@@ -702,6 +668,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls(
     evaluateNonconservativeProduct,
     evaluateSource,
     evaluateMaximumEigenvalueAfterTimeStep,
+    loopParallelism,
     QInEnumerator,
     QOutEnumerator,
     fluxEnumerator,

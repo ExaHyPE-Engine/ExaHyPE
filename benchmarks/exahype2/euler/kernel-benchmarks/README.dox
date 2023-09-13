@@ -1,9 +1,8 @@
 /**
 
-@page benchmarks_exahype2_euler_kernel_benchmarks Benchmarks of Compute Kernels for the Euler Equations
+@page benchmarks_exahype2_euler_kernel_benchmarks Benchmarks of Compute Kernels for the Euler Equations with Finite Volumes
 
-To allow comparison, we use 1 thread, 2D patch with patch-size 8 to run the
-benchmark. 
+A suite of benchmark runs which assess the throughput of the Euler Finite Volume kernels.
 
 ExaHyPE 2's implementation of the Euler equations is shipped
 with a benchmark to assess the speed of the compute kernels.

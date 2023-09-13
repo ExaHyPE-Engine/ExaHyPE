@@ -14,7 +14,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
   Flux                    flux,
   NonconservativeProduct  nonconservativeProduct,
   Source                  source,
-  MaxEigenvalue           maxEigenvalue
+  MaxEigenvalue           maxEigenvalue,
+  peano4::utils::LoopParallelism   loopParallelism
 ) {
   static tarch::logging::Log _log( "exahype2::fv::rusanov" );
 

@@ -17,6 +17,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
     bool                    evaluateNonconservativeProduct,
     bool                    evaluateSource,
     bool                    evaluateMaximumEigenvalueAfterTimeStep,
+    peano4::utils::LoopParallelism   loopParallelism,
     const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
     const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
     const TempDataEnumerator& fluxEnumerator,
@@ -642,7 +643,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls(
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
-  bool                    evaluateMaximumEigenvalueAfterTimeStep
+  bool                    evaluateMaximumEigenvalueAfterTimeStep,
+  peano4::utils::LoopParallelism   loopParallelism
 ) {
   /**
    * The halo size passed in by the user might differ from the one that we have to evaluate/
@@ -672,6 +674,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_call_stack_static_calls(
       evaluateNonconservativeProduct,
       evaluateSource,
       evaluateMaximumEigenvalueAfterTimeStep,
+      loopParallelism,
       QInEnumerator,
       QOutEnumerator,
       fluxEnumerator,
@@ -703,7 +706,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls(
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
-  bool                    evaluateMaximumEigenvalueAfterTimeStep
+  bool                    evaluateMaximumEigenvalueAfterTimeStep,
+  peano4::utils::LoopParallelism   loopParallelism
 ) {
   /**
    * The halo size passed in by the user might differ from the one that we have to evaluate/
@@ -733,6 +737,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls(
       evaluateNonconservativeProduct,
       evaluateSource,
       evaluateMaximumEigenvalueAfterTimeStep,
+      loopParallelism,
       QInEnumerator,
       QOutEnumerator,
       fluxEnumerator,

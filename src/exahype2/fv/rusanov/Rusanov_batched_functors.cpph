@@ -15,6 +15,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
     NonconservativeProduct  nonconservativeProduct,
     Source                  source,
     MaxEigenvalue           maxEigenvalue,
+    peano4::utils::LoopParallelism   loopParallelism,
     const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
     const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
     const exahype2::enumerator::AoSLexicographicEnumerator& fluxEnumerator,
@@ -586,7 +587,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_functors(
   Flux                    flux,
   NonconservativeProduct  nonconservativeProduct,
   Source                  source,
-  MaxEigenvalue           maxEigenvalue
+  MaxEigenvalue           maxEigenvalue,
+  peano4::utils::LoopParallelism   loopParallelism
 ) {
   static tarch::logging::Log _log( "exahype2::fv::rusanov" );
 
@@ -624,6 +626,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_functors(
     nonconservativeProduct,
     source,
     maxEigenvalue,
+    loopParallelism,
     QInEnumerator,
     QOutEnumerator,
     fluxEnumerator,
