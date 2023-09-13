@@ -54,7 +54,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             patchData.QOut[patchIndex],
             QOutEnumerator
           );
-        } end_parallelDfor
+        } endParallelDfor
       }
       else {
         parallelDforWithDynamicScheduling(volume, numberOfVolumesPerAxisInPatch, loopParallelism) {
@@ -69,13 +69,13 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
               QOutEnumerator
             );
           }
-        } end_parallelDfor
+        } endParallelDfor
       }
 
       #if Dimensions==2
       parallelDforWithDynamicScheduling(volume, (tarch::la::Vector<2,int>({numberOfVolumesPerAxisInPatch+2*solversHaloSize,numberOfVolumesPerAxisInPatch})), loopParallelism)
-      end_parallelDfor
-      xxx
+      endParallelDfor
+      //xxx
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
         #if defined(SharedOMP)
         #pragma omp simd
@@ -156,7 +156,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
                 eigenvalueEnumerator
         );
       }
-      end_parallelDfor
+      endParallelDfor
 
       parallelDforWithDynamicScheduling(
         volume,
@@ -177,7 +177,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
                 eigenvalueEnumerator
         );
       }
-      end_parallelDfor
+      endParallelDfor
 
       parallelDforWithDynamicScheduling(
         volume,
@@ -198,7 +198,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
                 eigenvalueEnumerator
         );
       }
-      end_parallelDfor
+      endParallelDfor
 
       parallelDforWithDynamicScheduling(
         volume,
@@ -224,7 +224,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
           );
         }
       }
-      end_parallelDfor
+      endParallelDfor
       #endif
 
       if (evaluateFlux and Dimensions==2) {

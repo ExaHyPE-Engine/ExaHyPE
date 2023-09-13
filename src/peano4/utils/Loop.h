@@ -293,7 +293,7 @@ namespace peano4 {
  * Parallel version of dfor
  *
  * Don't use a { after the parallelDfor. It is included in the macro. Also
- * don't close it with a }. Instead, use the end_parallelDfor macro.
+ * don't close it with a }. Instead, use the endParallelDfor macro.
  *
  * This macro works great on the CPU. I recommend not to use it on the GPU,
  * where you usually have specialised parallel for realisations anyway.
@@ -325,10 +325,10 @@ namespace peano4 {
  *   ~~~~~~~~~~~~~~~~~~~~~~~~~~
  *   parallelDfor(i,3) {
  *     [...]
- *   } end_parallelDfor
+ *   } endParallelDfor
  *   parallelDfor(i,3) {
  *     [...]
- *   } end_parallelDfor
+ *   } endParallelDfor
  *   ~~~~~~~~~~~~~~~~~~~~~~~~~~
  *   as the corresponding vector iMax then would be declared twice.
  *
@@ -368,7 +368,18 @@ namespace peano4 {
 #define parallelDfor(counter, max) \
   parallelDforWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
 
+#define parallelFor(counter, max) \
+  parallelForWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
+
+
 #if Dimensions==2 and defined(SharedOMP)
+#define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
+  { \
+  _Pragma( "#pragma omp taskloop for if (loopParallelism==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "#pragma omp parallel for if (loopParallelism==::peano4::utils::LoopParallelism::ParallelFor)" ) \
+  for( int counter = 0; counter < max; counter++ ) {
+
+
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   { \
   tarch::la::Vector<Dimensions,int> counter##Max(max); \
@@ -378,7 +389,8 @@ namespace peano4 {
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) { \
     tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1 };
 
-#define end_parallelDfor }}
+#define endParallelFor }}
+#define endParallelDfor }}
 #elif Dimensions==3 and defined(SharedOMP)
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   { \
@@ -390,7 +402,7 @@ namespace peano4 {
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) { \
     tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
 
-#define end_parallelDfor }}
+#define endParallelDfor }}
 #elif Dimensions==2 and defined(SharedTBB)
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   tarch::la::Vector<Dimensions,int> max##Vector(max); \
@@ -404,7 +416,7 @@ namespace peano4 {
     for( int counter##2 = range.cols().begin();  counter##2 < range.cols().end();  counter##2++ ) { \
       tarch::la::Vector<Dimensions, int> counter = { counter##1, counter##2 };
 
-#define end_parallelDfor \
+#define endParallelDfor \
     } \
   });
 #elif Dimensions==3 and defined(SharedTBB)
@@ -422,7 +434,7 @@ namespace peano4 {
     for( int counter##2 = range.cols().begin();  counter##2 < range.cols().end();  counter##2++ ) { \
       tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
 
-#define end_parallelDfor \
+#define endParallelDfor \
     } \
   });
 #elif Dimensions==2 and defined(SharedSYCL)
@@ -435,7 +447,7 @@ namespace peano4 {
       [=](sycl::id<2> counter##Iterator) { \
         tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]) };
 
-#define end_parallelDfor \
+#define endParallelDfor \
       } \
     ); \
   }).wait();
@@ -450,7 +462,7 @@ namespace peano4 {
         tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]), static_cast<int>(counter##Iterator[2]) };
 
 
-#define end_parallelDfor \
+#define endParallelDfor \
       } \
     ); \
   }).wait();
@@ -459,7 +471,7 @@ namespace peano4 {
   for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
        peano4::utils::dInc(counter, max))
 
-#define end_parallelDfor }
+#define endParallelDfor }
 #endif
 
 
