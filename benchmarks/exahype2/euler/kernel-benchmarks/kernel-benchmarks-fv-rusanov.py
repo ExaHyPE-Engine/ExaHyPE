@@ -23,7 +23,7 @@ parser.add_argument("-ps",      "--patch-size",         dest="patch_size",      
 parser.add_argument("-mp",      "--max-patches",        dest="max_patches",       type=int,                     default=65536,              help="Maximal number of patches to study")
 parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=0.0,                help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
 parser.add_argument("-sym",     "--symbolic",           dest="symbolic",          action="store_true",          default=False,              help="Use the symbolic PDE description of the Euler equations.")
-parser.add_argument(            "--no-make",            dest="use_make",          action="store_true",                                      help="Do not compile the code after generation")
+parser.add_argument(            "--no-make",            dest="no_make",           action="store_true",                                      help="Do not compile the code after generation")
 parser.add_argument(            "--executable",         dest="executable",        type=str,                     default="kernel-benchmark-fv",  help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
 args = parser.parse_args()
 
@@ -60,7 +60,6 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
   pde_terms_without_state = True
 )
 
-sys.path.append('../../../../tutorials/exahype2/euler')
 sys.path.append('../../../../applications/exahype2/euler')
 
 if args.symbolic:
@@ -77,8 +76,8 @@ else:
     my_solver.set_implementation(
         initial_conditions    = exahype2.solvers.fv.PDETerms.Empty_Implementation,
         boundary_conditions   = exahype2.solvers.fv.PDETerms.Empty_Implementation,
-        flux                  = my_scenario.implementation_of_flux(),
-        eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
+        flux                  = "::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, F);",
+        eigenvalues           = "return ::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);",
         refinement_criterion  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
         source_term           = exahype2.solvers.fv.PDETerms.None_Implementation,
     )
@@ -87,7 +86,7 @@ else:
     else:
       my_solver.plot_description = "rho, u, v, w, e"
     my_solver.add_user_solver_includes("""
-#include "../../../../tutorials/exahype2/euler/EulerKernels.h"
+#include "../../../../applications/exahype2/euler/EulerKernels.h"
 """)
 
 
@@ -117,12 +116,7 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.output.makefile.add_cpp_file("KernelBenchmarksFVRusanov-main.cpp")
 my_project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "double")
 my_project.constants.export_constexpr_with_type("MaxPatches", str(args.max_patches), "int")
-my_project.constants.export_constexpr_with_type("EndTime", str(args.end_time), "int")
-my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
-
-if args.symbolic:
-  print("\nPDE is: ")
-  print(my_scenario.pde.__str__())
+my_project.build(make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True)
 
 print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")
