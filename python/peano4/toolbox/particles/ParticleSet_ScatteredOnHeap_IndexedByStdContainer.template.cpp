@@ -30,19 +30,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
           if (
             p->getParallelState()==DoFType::ParallelState::Local
           ) {
-            p->setParallelState( DoFType::ParallelState::Virtual );
-
             Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _container.begin(), _container.end());
             if ( iteratorToExistingCopy!=end() ) {
               logDebug( "merge(...)", "incoming particle " << p->toString() << " is local on other rank and will be virtual here. It replaces existing copy" );
               delete *iteratorToExistingCopy;
               _container.erase(iteratorToExistingCopy);
+              p->setParallelState( DoFType::ParallelState::Virtual );
               _container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfReplacedVirtualParticles++;
             }
             else {
               logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here" );
+              p->setParallelState( DoFType::ParallelState::Virtual );
               _container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfAddedVirtualParticles++;

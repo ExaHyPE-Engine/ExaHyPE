@@ -1,23 +1,12 @@
 documentation:
-  stage: build
+  stage: publish
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  image:
-    name: "${IMAGE_REGISTRY_USER}/gcc:${IMAGE_TAG}"
-    entrypoint: ["/bin/bash", "-l", "-c"]
+  dependencies: []
   script:
-    - pwd
-    - ls
-    - whoami
-    - hostname
-    - lscpu
-    - echo $CI_COMMIT_SHA
-    - echo $CI_COMMIT_BRANCH
-    - echo "Running CI with $(nproc) cores"
-    - cd documentation
-    - make pdf
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} doxygen documentation/Doxyfile
   artifacts:
     paths:
-      - documentation/guidebook/documentation.pdf
-  retry: 2
+      - ./doxygen-html/*
+  retry: 0

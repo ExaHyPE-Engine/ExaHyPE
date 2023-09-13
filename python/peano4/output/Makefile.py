@@ -370,6 +370,15 @@ did search for a file """
                 "CXXFLAGS",
                 "LDFLAGS",
                 "LIBS",
+                "CUDA_LIBS",
+                "NVCC",
+                "CUDA_PATH",
+                "CUDA_INCLUDE_FLAGS",
+                "NVCC_FLAGS_RELEASE",
+                "NVCC_FLAGS_STATS",
+                "NVCC_FLAGS_ASSERTS",
+                "NVCC_FLAGS_TRACE",
+                "NVCC_FLAGS_DEBUG"
             ]
 
             for line in input:
@@ -438,6 +447,16 @@ did search for a file """
             self.hfiles.remove(filename)
 
     def add_cu_file(self, filename, generated=False):
+        """
+        Adds a CUDA (.cu) file to the list of files. If the file is not generated, it is assumed that the
+        file was existing at time of the call (a generated file will be generated later) therefore we need
+        two separate lists for both files
+
+        :param filename: The name of the CUDA file to add.
+        :type filename: str
+        :param generated: Indicates whether the file is generated (True) or not (False). Default is False.
+        :type generated: bool
+        """
         if generated:
             if (
                 self.generated_cufiles.count(filename) == 0
@@ -466,6 +485,11 @@ did search for a file """
         All the standard Peano 4 routines rely on this function to add their
         generated files to the build environment. Nothing stops you however to
         add more files yourself.
+
+        Since the GPU code is templated, using CUDA backend means that the main file and the
+        subsequent compilation units need to be CUDA (.cu) files. To preserve backward 
+        compatability and seamless user experience; this call generates CUDA (.cu) files
+        instead of C++ (.cpp) files when using CUDA backend.
 
         filename: String
            Filename of a C++ file. They usually should have the .cpp/.cxx extension.
@@ -591,6 +615,22 @@ then this message can typically be ignored.
             self.add_Fortran_module(i)
 
     def generate(self, overwrite, directory):
+        """
+        Generates build files and other project-related files based on templates.
+
+        If using the Automake then a Makefile is generated, if using CMake then
+        a CMakeLists.txt for the generated application is generated. A 
+        GeneratedSubdirectories.cmake is generated to add the target to the project.
+        In the CMake backend a modified Makefile is produced where calling make will 
+        change directories and call the cmake's defined make command.
+
+        A .gitignore is also generated depending on the project files.
+
+        :param overwrite: Specifies whether existing files should be overwritten.
+        :type overwrite: bool
+        :param directory: The directory where the generated files will be placed.
+        :type directory: str
+        """
         cmake_build_dir = find_CMake_build_dir()
         self.d["CMAKE_BUILD_DIR"] = cmake_build_dir
         self.d["H_HEADERS"] = self.hfiles
@@ -605,6 +645,10 @@ then this message can typically be ignored.
         self.d["USING_CMAKE"] = cmake_build_dir != ""
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
+        # In the CMake backend we add a command that allows to build the generated application in the applicaiton directory
+        # To be able to do it, we need to change directory to project build directory and call make from there with the target name
+        # So that we do not build everything (all), and of course we need to propagate every make flag give with $(MAKEFLAGS)
+        # See the Makefile.template for the resulting command
         if cmake_build_dir != "":
             dist = caller_distance_to_build_root()
             command = 'cd '
@@ -614,7 +658,9 @@ then this message can typically be ignored.
                 command += '.'
             self.d["CMAKE_MAKE_COMMAND"] = command
 
-        # Anonymous function that generates the output_file_path from input_file_path template
+        # Anonymous function that generates the output_file_path from input_file_path template,
+        # As we might generate both for CMake (2 files) and Make (1 File) or only for Make
+        # We also use the anoynmous function to generate the .gitignore
         def generate_build_file(input_file_path, output_file_path):
             if write_file(overwrite, self.default_overwrite, output_file_path):
                 print("write " + output_file_path)
@@ -642,6 +688,7 @@ then this message can typically be ignored.
 
         file_dir = os.path.dirname(os.path.realpath(__file__))
 
+        # Pairs in the form of (input file, output file)
         template_output_pairs = list()
 
         template_output_pairs.append(
@@ -662,8 +709,9 @@ then this message can typically be ignored.
                 os.path.join(file_dir, "CMakeLists.txt.template"),
                 os.path.join(directory, "CMakeLists.txt"),)
 
-        # We do not want the same line multiple times as it creates build problems, so we read it into a set
-        # and do not write if the new executable entry is already inside.
+        # Currently we support 1 generated application at a time, 
+        # to add the generate applicaitons sub directory to the build tree
+        # we write it to a file called GeneratedSubdirectory.cmake in the build directory root
         if cmake_build_dir != "":
           generated_paths_filepath = self.d["GENERATED_SUBDIRECTORY_FULLPATH"]
 
@@ -674,6 +722,7 @@ then this message can typically be ignored.
 
         for template, output_file in template_output_pairs:
             generate_build_file(template, output_file)
-        
+
+        # Generate CMakeLists only if we are using the CMake backend (CMake build directory found)
         if cmake_build_dir != "":
           generate_build_file(cmake_list_output_pair[0], cmake_list_output_pair[1])

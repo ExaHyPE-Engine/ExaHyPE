@@ -44,6 +44,7 @@ class toolbox::loadbalancing::SpreadOut: public toolbox::loadbalancing::Abstract
     virtual ~SpreadOut();
 
     virtual void finishStep() override;
+
   private:
     static tarch::logging::Log  _log;
 

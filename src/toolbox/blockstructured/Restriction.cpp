@@ -6,22 +6,20 @@
 #include "tarch/Assertions.h"
 #include "tarch/la/DynamicMatrix.h"
 
-
 namespace {
   [[maybe_unused]] tarch::logging::Log _log( "toolbox::blockstructured" );
 }
 
 void toolbox::blockstructured::restrictCell_AoS_tensor_product(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       numberOfDoFsPerAxisInPatch,
-  int                                       unknowns,
-  const double* __restrict__                tangentialRestrictionMatrix1d,
-  double*                                   fineGridValues,
-  double*                                   coarseGridValues
+  [[maybe_unused]] const peano4::datamanagement::CellMarker& marker,
+  [[maybe_unused]] int                                       numberOfDoFsPerAxisInPatch,
+  [[maybe_unused]] int                                       unknowns,
+  [[maybe_unused]] const double* __restrict__                tangentialRestrictionMatrix1d,
+  [[maybe_unused]] double*                                   fineGridValues,
+  [[maybe_unused]] double*                                   coarseGridValues
 ) {
   assertionMsg( false, "@Han, we have to implement this one" );
 }
-
 
 void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
   const peano4::datamanagement::FaceMarker& marker,
@@ -37,7 +35,6 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_tensor_product(
   restrictInnerHalfOfHaloLayer_AoS_tensor_product( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, normalRestrictionMatrix1d, tangentialRestrictionMatrix1d, fineGridValues, coarseGridValues, true );
 }
 
-
 void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -51,10 +48,10 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
 ) {
   logTraceInWith3Arguments( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
-  const int    normal          = marker.getSelectedFaceNumber() % Dimensions;
+  const int normal = marker.getSelectedFaceNumber() % Dimensions;
 
-  dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
-    for (int iCoarse=0;   iCoarse<overlap;   iCoarse++) {
+  dfore(kCoarse, numberOfDoFsPerAxisInPatch, normal, 0) {
+    for (int iCoarse=0; iCoarse<overlap; iCoarse++) {
       tarch::la::Vector<Dimensions,int> dest = kCoarse;
       dest(normal) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? iCoarse + overlap: overlap - iCoarse - 1;
 
@@ -66,8 +63,8 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
       logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "coarse volume/dof " << dest << " prior to update: " << coarseGridValues[destLinearised*5+0] );
       assertion(  coarseGridValues[destLinearised*5+0]==coarseGridValues[destLinearised*5+0] );
 
-      dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
-        for (int iFine=0;   iFine<2*overlap;   iFine++) {
+      dfore(kFine, numberOfDoFsPerAxisInPatch, normal, 0) {
+        for (int iFine = 0; iFine < 2 * overlap; iFine++) {
           tarch::la::Vector<Dimensions,int> src  = kFine;
           src(normal) = ((marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside) ? iFine : 2 * overlap - iFine - 1;
           int srcLinearised = serialiseVoxelIndexInOverlap(
@@ -90,8 +87,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
               int index = col + row * 2 * overlap;
               weight *= normalRestrictionMatrix1d[ index ];
               logDebug( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)", "use normal matrix entry " << row << ", " << col << ", i.e. index " << index << ": " << normalRestrictionMatrix1d[ index ]);
-            }
-            else {
+            } else {
               assertion( marker.getRelativePositionWithinFatherCell()(d)>=0 );
               assertion( marker.getRelativePositionWithinFatherCell()(d)<3 );
 
@@ -130,7 +126,6 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_tensor_product(
   logTraceOut( "restrictInnerHalfOfHaloLayer_AoS_tensor_product(...)" );
 }
 
-
 void toolbox::blockstructured::restrictHaloLayer_AoS_inject(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -142,7 +137,6 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_inject(
   restrictInnerHalfOfHaloLayer_AoS_inject( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, false );
   restrictInnerHalfOfHaloLayer_AoS_inject( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, true );
 }
-
 
 void toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
   int                                       numberOfDoFsPerAxisInSourcePatch,
@@ -170,7 +164,6 @@ void toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
   }
 }
 
-
 void toolbox::blockstructured::restrictCell_AoS_inject(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -179,13 +172,13 @@ void toolbox::blockstructured::restrictCell_AoS_inject(
   double*                                   coarseGridValues
 ) {
   dfor(fineVolume,numberOfDoFsPerAxisInPatch) {
-    tarch::la::Vector<Dimensions,int>   fineVolumeWithintCoarsePatch = (fineVolume + marker.getRelativePositionWithinFatherCell() * numberOfDoFsPerAxisInPatch);
-    tarch::la::Vector<Dimensions,int>   coarseVolume;
+    tarch::la::Vector<Dimensions, int> fineVolumeWithintCoarsePatch = (fineVolume + marker.getRelativePositionWithinFatherCell() * numberOfDoFsPerAxisInPatch);
+    tarch::la::Vector<Dimensions, int> coarseVolume;
 
     bool restrictThisVolume = true;
-    for (int d=0; d<Dimensions; d++) {
-      restrictThisVolume &= (fineVolumeWithintCoarsePatch(d)%3)==1;
-      coarseVolume(d) = fineVolumeWithintCoarsePatch(3)/3;
+    for (int d = 0; d < Dimensions; d++) {
+      restrictThisVolume &= (fineVolumeWithintCoarsePatch(d) % 3) == 1;
+      coarseVolume(d) = fineVolumeWithintCoarsePatch(3) / 3;
     }
 
     if (restrictThisVolume) {
@@ -200,8 +193,6 @@ void toolbox::blockstructured::restrictCell_AoS_inject(
   }
 }
 
-
-
 void toolbox::blockstructured::restrictHaloLayer_AoS_averaging(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -213,7 +204,6 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_averaging(
   restrictInnerHalfOfHaloLayer_AoS_averaging( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, false );
   restrictInnerHalfOfHaloLayer_AoS_averaging( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, true );
 }
-
 
 void toolbox::blockstructured::restrictCell_AoS_averaging(
   const peano4::datamanagement::CellMarker& marker,
@@ -227,12 +217,12 @@ void toolbox::blockstructured::restrictCell_AoS_averaging(
     marker,
     numberOfDoFsPerAxisInPatch,
     [&](
-      tarch::la::Vector<Dimensions,int> coarseVolume,
-      tarch::la::Vector<Dimensions,int> fineVolume,
-      tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
-      tarch::la::Vector<Dimensions,double> fineVolumeCentre,
-      double coarseVolumeH,
-      double fineVolumeH
+      [[maybe_unused]] tarch::la::Vector<Dimensions, int> coarseVolume,
+      [[maybe_unused]] tarch::la::Vector<Dimensions, int> fineVolume,
+      [[maybe_unused]] tarch::la::Vector<Dimensions, double> coarseVolumeCentre,
+      [[maybe_unused]] tarch::la::Vector<Dimensions, double> fineVolumeCentre,
+      [[maybe_unused]] double coarseVolumeH,
+      [[maybe_unused]] double fineVolumeH
     ) -> void {
       int coarseVolumeLinearised = peano4::utils::dLinearised( coarseVolume, numberOfDoFsPerAxisInPatch );
       int fineVolumeLinearised   = peano4::utils::dLinearised( fineVolume, numberOfDoFsPerAxisInPatch );
@@ -243,8 +233,6 @@ void toolbox::blockstructured::restrictCell_AoS_averaging(
     }
   );
 }
-
-
 
 void toolbox::blockstructured::clearHaloLayerAoS(
   const peano4::datamanagement::FaceMarker& marker,
@@ -274,12 +262,11 @@ void toolbox::blockstructured::clearHaloLayerAoS(
   }
 }
 
-
 void toolbox::blockstructured::clearCell(
-  const peano4::datamanagement::CellMarker& marker,
-  int                                       numberOfDoFsPerAxisInPatch,
-  int                                       unknowns,
-  double*                                   values
+  [[maybe_unused]] const peano4::datamanagement::CellMarker& marker,
+  [[maybe_unused]] int                                       numberOfDoFsPerAxisInPatch,
+  [[maybe_unused]] int                                       unknowns,
+  [[maybe_unused]] double*                                   values
 ) {
   #if Dimensions==3
   for (int i=0; i<numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*unknowns; i++) {
@@ -289,7 +276,6 @@ void toolbox::blockstructured::clearCell(
     values[i] = 0.0;
   }
 }
-
 
 void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
   const peano4::datamanagement::FaceMarker& marker,
@@ -346,12 +332,12 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
       assertion3( coarseVolume(0)<numberOfDoFsPerAxisInPatch, kFine, iFine, marker );
       assertion3( coarseVolume(1)<numberOfDoFsPerAxisInPatch, kFine, iFine, marker );
 
-      tarch::la::Vector<Dimensions,double> volumeXCoarse = leftBottomCornerOfHaloCoarse
+      [[maybe_unused]] tarch::la::Vector<Dimensions, double> volumeXCoarse = leftBottomCornerOfHaloCoarse
             + volumeHCoarse * tarch::la::convertScalar<double>(coarseVolume)
-            + 0.5 * tarch::la::Vector<Dimensions,double>(volumeHCoarse);
-      tarch::la::Vector<Dimensions,double> volumeXFine = leftBottomCornerOfHaloFine
+            + 0.5 * tarch::la::Vector<Dimensions, double>(volumeHCoarse);
+      [[maybe_unused]] tarch::la::Vector<Dimensions, double> volumeXFine = leftBottomCornerOfHaloFine
             + volumeHFine * tarch::la::convertScalar<double>(fineVolume)
-            + 0.5 * tarch::la::Vector<Dimensions,double>(volumeHFine);
+            + 0.5 * tarch::la::Vector<Dimensions, double>(volumeHFine);
 
       int coarseVolumeLinearised = serialiseVoxelIndexInOverlap(
         coarseVolume,
@@ -370,18 +356,15 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
   logTraceOut( "restrictInnerHalfOfHaloLayer_AoS_averaging(...)" );
 }
 
-
-
-
-  void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_inject(
-    const peano4::datamanagement::FaceMarker& marker,
-    int                                       numberOfDoFsPerAxisInPatch,
-    int                                       overlap,
-    int                                       unknowns,
-    double*                                   fineGridValues,
-    double*                                   coarseGridValues,
-    bool                                      swapInsideOutside
-  ) {
+void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_inject(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues,
+  bool                                      swapInsideOutside
+) {
     logTraceInWith6Arguments( "restrictInnerHalfOfHaloLayer_AoS_inject(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues );
 
     assertion1( overlap==1 or overlap%3==1, overlap );
@@ -431,18 +414,16 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
     } // dfore loop, i.e. loop over submanifold
 
     logTraceOut( "restrictInnerHalfOfHaloLayer_AoS_restrict(...)" );
-  }
+}
 
-
-
-  void toolbox::blockstructured::internal::clearHalfOfHaloLayerAoS(
-    const peano4::datamanagement::FaceMarker& marker,
-    int                                       numberOfDoFsPerAxisInPatch,
-    int                                       overlap,
-    int                                       unknowns,
-    bool                                      clearInnerPart,
-    double*                                   value
-  ) {
+void toolbox::blockstructured::internal::clearHalfOfHaloLayerAoS(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  bool                                      clearInnerPart,
+  double*                                   value
+) {
     const int normal = marker.getSelectedFaceNumber() % Dimensions;
     const bool left  = (marker.getSelectedFaceNumber() < Dimensions) xor clearInnerPart;
 
@@ -463,8 +444,7 @@ void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
         }
       }
     }
-  }
-
+}
 
 void toolbox::blockstructured::internal::projectCells_AoS(
   const peano4::datamanagement::CellMarker& marker,
@@ -507,4 +487,4 @@ void toolbox::blockstructured::internal::projectCells_AoS(
     }
 
     logTraceOut( "projectCells_AoS(...)" );
-  }
+}

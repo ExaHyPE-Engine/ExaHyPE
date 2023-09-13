@@ -1,6 +1,5 @@
 #include "SingleDoFEnumerator.h"
 
-
 #if !defined(GPUOffloadingOMP)
 std::string exahype2::enumerator::SingleDoFEnumerator::toString() const {
   std::ostringstream msg;
@@ -31,4 +30,3 @@ std::string exahype2::enumerator::SingleDoFEnumerator::toString() const {
   return msg.str();
 }
 #endif
-

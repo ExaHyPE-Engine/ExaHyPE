@@ -1,9 +1,12 @@
+#include <cstdlib>
+
 #include "GPUCellData.h"
 #include "Rusanov.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
 #define NSEC_IN_SEC 1000000000.0
+
 
 template <
   typename Solver,
@@ -22,7 +25,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 ) {
 #if defined(GPUOffloadingSYCL)
   ::sycl::property_list prop_list{::sycl::property::queue::enable_profiling()};
-  ::sycl::queue         queue{::sycl::gpu_selector_v, prop_list};
+  ::sycl::queue         queue{::sycl::gpu_selector_v, prop_list}; // Queue is hard-coded to GPU
+  /* command_graph is currently in development (not working properly)
+  ::sycl::ext::oneapi::experimental::command_graph g(queue.get_context(), queue.get_device());
+  */
   //::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   constexpr int solversHaloSize = 1;
@@ -63,8 +69,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
   const std::size_t numberOfPatches = hostPatchData.numberOfCells;
   GPUCellData       patchData(hostPatchData, QInEnumerator, QOutEnumerator, queue);
-
-  ::sycl::event copySolutionEvent;
+  ::sycl::event     copySolutionEvent;
   if (Dimensions == 2 and evaluateSource) {
     copySolutionEvent = queue.submit([&](::sycl::handler& handle) {
       handle.parallel_for(
@@ -73,6 +78,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int patchIndex = i[0];
           int x          = i[1];
           int y          = i[2];
+
           internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
             patchData.QIn + patchIndex * QInEnumerator.size(),
             QInEnumerator,
@@ -96,6 +102,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int patchIndex = i[0];
           int x          = i[1];
           int y          = i[2];
+
           for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
             internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
@@ -121,6 +128,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int patchIndex = i[0];
           int x          = i[1];
           int y          = i[2];
+
           for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
             internal::copySolution_LoopBody(
               patchData.QIn + patchIndex * QInEnumerator.size(),
@@ -143,6 +151,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int patchIndex = i[0];
           int x          = i[1];
           int y          = i[2];
+
           for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
             for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
               internal::copySolution_LoopBody(
@@ -226,7 +235,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[1];
           int x          = i[2];
 
-          for (int unknown = 0; unknown < unknowns; unknown++) {
+          for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
             internal::updateSolutionWithEigenvalueDamping_LoopBody(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
@@ -343,7 +352,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-            for (int unknown = 0; unknown < unknowns; unknown++) {
+            for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
               internal::updateSolutionWithEigenvalueDamping_LoopBody(
                 patchData.QIn + patchIndex * QInEnumerator.size(),
                 QInEnumerator,
@@ -376,7 +385,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int patchIndex = i[0];
           int y          = i[1];
           int x          = i[2] - solversHaloSize;
-          // for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize); x++) {
+
           internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn + patchIndex * QInEnumerator.size(),
             QInEnumerator,
@@ -390,7 +399,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             tempFluxX,
             fluxEnumerator
           );
-          // }
         }
       );
     });
@@ -404,7 +412,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int x          = i[1];
           int y          = i[2] - solversHaloSize;
 
-          // for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch+solversHaloSize);  y++) {
           internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn + patchIndex * QInEnumerator.size(),
             QInEnumerator,
@@ -418,7 +425,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
             tempFluxY,
             fluxEnumerator
           );
-          //}
         }
       );
     });
@@ -434,7 +440,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int patchIndex = i[0];
           int x          = i[1];
           int y          = i[2];
-          for (int unknown = 0; unknown < unknowns; unknown++) {
+
+          for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
             internal::updateSolutionWithFlux_LoopBody(
               tempFluxX,
               tempFluxY,
@@ -549,7 +556,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-            for (int unknown = 0; unknown < unknowns; unknown++) {
+            for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
               internal::updateSolutionWithFlux_LoopBody(
                 tempFluxX,
                 tempFluxY,
@@ -631,7 +638,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int x          = i[1];
           int y          = i[2];
 
-          for (int unknown = 0; unknown < unknowns; unknown++) {
+          for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
             internal::updateSolutionWithNonconservativeFlux_LoopBody(
               tempNonconservativeProductX,
               tempNonconservativeProductY,
@@ -750,7 +757,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-            for (int unknown = 0; unknown < unknowns; unknown++) {
+            for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
               internal::updateSolutionWithNonconservativeFlux_LoopBody(
                 tempNonconservativeProductX,
                 tempNonconservativeProductY,
@@ -770,79 +777,127 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
       );
     });
   }
+
   ::sycl::event evalEigen;
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions == 2) {
     evalEigen = queue.submit([&](::sycl::handler& handle) {
       handle.depends_on(updateWithEigenvalue);
       handle.depends_on(updateWithFlux);
       handle.depends_on(updateWithNCP);
+      ::sycl::range<2> totalWorkitem{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch * numberOfPatches};
+      ::sycl::range<2> workgroupSize{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch};
 
-      handle.parallel_for(::sycl::range<1>{numberOfPatches}, [=](::sycl::item<1> i) {
-        int patchIndex = i[0];
+      handle.parallel_for(::sycl::nd_range<2>{totalWorkitem, workgroupSize}, [=](::sycl::nd_item<2> i) {
+        int patchIndex = i.get_group(1);
+        int y          = i.get_local_id(0);
+        int x          = i.get_local_id(1);
 
+        /* This is the slower (serial) version of the reduction
         double newMaxEigenvalue = 0.0;
         for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-          for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-            newMaxEigenvalue = std::max(
-              newMaxEigenvalue,
-              internal::reduceMaxEigenvalue_LoopBody<Solver>(
-                patchData.QOut + patchIndex * QOutEnumerator.size(),
-                QOutEnumerator,
-                patchData.cellCentre[patchIndex],
-                patchData.cellSize[patchIndex],
-                patchIndex,
-                volumeIndex2d(x, y),
-                patchData.t[patchIndex],
-                patchData.dt[patchIndex]
-              )
-            );
-          }
-
+        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+          newMaxEigenvalue = std::max(
+            newMaxEigenvalue,
+            internal::reduceMaxEigenvalue_LoopBody<Solver>(
+              patchData.QOut + patchIndex * QOutEnumerator.size(),
+              QOutEnumerator,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex2d(x,y),
+              patchData.t[patchIndex],
+              patchData.dt[patchIndex]
+            )
+          );
+        }
         patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+        */
+
+        patchData.maxEigenvalue[patchIndex] = ::sycl::reduce_over_group(
+          i.get_group(),
+          internal::reduceMaxEigenvalue_LoopBody<Solver>(
+            patchData.QOut + patchIndex * QOutEnumerator.size(),
+            QOutEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex2d(x, y),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex]
+          ),
+          ::sycl::maximum<>()
+        );
       });
-    }); //.wait();
-    evalEigen.wait();
+    });
   } else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    queue
-      .submit([&](::sycl::handler& handle) {
-        handle.depends_on(updateWithEigenvalue);
-        handle.depends_on(updateWithFlux);
-        handle.depends_on(updateWithNCP);
+    evalEigen = queue.submit([&](::sycl::handler& handle) {
+      handle.depends_on(updateWithEigenvalue);
+      handle.depends_on(updateWithFlux);
+      handle.depends_on(updateWithNCP);
+      ::sycl::range<3> totalWorkitem{
+        numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch * numberOfPatches};
+      ::sycl::range<3> workgroupSize{
+        numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch};
 
-        handle.parallel_for(::sycl::range<1>{numberOfPatches}, [=](::sycl::item<1> i) {
-          int patchIndex = i[0];
+      handle.parallel_for(::sycl::nd_range<3>{totalWorkitem, workgroupSize}, [=](::sycl::nd_item<3> i) {
+        int patchIndex = i.get_group(2);
+        int z          = i.get_local_id(0);
+        int y          = i.get_local_id(1);
+        int x          = i.get_local_id(2);
 
-          double newMaxEigenvalue = 0.0;
-          for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-            for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-              for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-                newMaxEigenvalue = std::max(
-                  newMaxEigenvalue,
-                  internal::reduceMaxEigenvalue_LoopBody<Solver>(
-                    patchData.QOut + patchIndex * QOutEnumerator.size(),
-                    QOutEnumerator,
-                    patchData.cellCentre[patchIndex],
-                    patchData.cellSize[patchIndex],
-                    patchIndex,
-                    volumeIndex3d(x, y, z),
-                    patchData.t[patchIndex],
-                    patchData.dt[patchIndex]
-                  )
-                );
-              }
-          patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
-        });
-      })
-      .wait();
+        /*
+        double newMaxEigenvalue = 0.0;
+        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
+          newMaxEigenvalue = std::max(
+            newMaxEigenvalue,
+            internal::reduceMaxEigenvalue_LoopBody<Solver>(
+              patchData.QOut + patchIndex * QOutEnumerator.size(),
+              QOutEnumerator,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex3d(x,y,z),
+              patchData.t[patchIndex],
+              patchData.dt[patchIndex]
+            )
+          );
+        }
+        patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
+  */
+
+        patchData.maxEigenvalue[patchIndex] = ::sycl::reduce_over_group(
+          i.get_group(),
+          internal::reduceMaxEigenvalue_LoopBody<Solver>(
+            patchData.QOut + patchIndex * QOutEnumerator.size(),
+            QOutEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex3d(x, y, z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex]
+          ),
+          ::sycl::maximum<>()
+        );
+      });
+    });
   } else {
     updateWithEigenvalue.wait();
     updateWithFlux.wait();
     updateWithNCP.wait();
   }
-  auto start    = copySolutionEvent.get_profiling_info<::sycl::info::event_profiling::command_start>();
-  auto stop     = evalEigen.get_profiling_info<::sycl::info::event_profiling::command_end>();
+
+  /* Prints out the time spent in kernel, without CPU-GPU data transfers
+  if (evaluateMaximumEigenvalueAfterTimeStep == true) {
+  evalEigen.wait();
+  auto start = copySolutionEvent.get_profiling_info<::sycl::info::event_profiling::command_start>();
+  auto stop = evalEigen.get_profiling_info<::sycl::info::event_profiling::command_end>();
   auto duration = static_cast<double>(stop - start) / NSEC_IN_SEC;
-  ::std::cout << "Batched kernel execution time: " << duration << "sec" << ::std::endl;
+  ::std::cout << "Batched kernel execution time with reduction:" << duration << ::std::endl;
+  }
+  */
 
   patchData.destroy(hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
 

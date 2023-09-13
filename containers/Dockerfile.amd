@@ -1,0 +1,176 @@
+FROM spack/ubuntu-jammy:latest as builder
+
+RUN mkdir /opt/spack-environment \
+&&  (echo spack: \
+&&   echo '  packages:' \
+&&   echo '    all:' \
+&&   echo '      target: [x86_64]' \
+&&   echo '' \
+&&   echo '  specs:' \
+&&   echo '  - py-pip' \
+&&   echo '  - py-black' \
+&&   echo '  - py-jinja2' \
+&&   echo '  - py-h5py' \
+&&   echo '  - py-hpccm' \
+&&   echo '  - py-sympy' \
+&&   echo '  - py-numpy' \
+&&   echo '  - py-mpmath' \
+&&   echo '  - py-jsonschema' \
+&&   echo '  - py-jupyterlab' \
+&&   echo '  - py-scipy' \
+&&   echo '  - py-matplotlib' \
+&&   echo '  - py-pspamm' \
+&&   echo '  - apptainer' \
+&&   echo '  - libxsmm +generator' \
+&&   echo '  - memkind' \
+&&   echo '  - blis' \
+&&   echo '  - boost' \
+&&   echo '  - openblas' \
+&&   echo '  - gdrcopy' \
+&&   echo '  - mesa' \
+&&   echo '  - llvm-amdgpu' \
+&&   echo '  - eigen+ipo build_type=Release' \
+&&   echo '  - hwloc+rocm amdgpu_target=gfx908' \
+&&   echo '  - mpich+rocm amdgpu_target=gfx908 ^ucx+rocm ^hwloc+rocm amdgpu_target=gfx908' \
+&&   echo '  - mpileaks ^mpich+rocm amdgpu_target=gfx908 ^ucx+rocm ^hwloc+rocm amdgpu_target=gfx908' \
+&&   echo '  - petsc+mpi+memkind+metis+rocm+hwloc+openmp amdgpu_target=gfx908 ^parmetis+int64+shared+ipo ^mpich+rocm amdgpu_target=gfx908 ^ucx+rocm ^metis+int64+real64+ipo+shared ^hwloc+rocm amdgpu_target=gfx908' \
+&&   echo '  - netcdf-cxx4+pic+shared ^netcdf-c+mpi+shared ^hdf5+fortran+threadsafe+mpi+shared ^mpich+rocm amdgpu_target=gfx908 ^ucx+rocm ^hwloc+rocm amdgpu_target=gfx908' \
+&&   echo '  - netcdf-fortran+pic+shared ^netcdf-c+mpi+shared ^hdf5+fortran+threadsafe+mpi+shared ^mpich+rocm amdgpu_target=gfx908 ^ucx+rocm ^hwloc+rocm amdgpu_target=gfx908' \
+&&   echo '  - parallel-netcdf+cxx+fortran+pic+shared ^mpich+rocm amdgpu_target=gfx908 ^ucx+rocm ^hwloc+rocm amdgpu_target=gfx908' \
+&&   echo '  - easi+asagi ^netcdf-c+mpi+shared ^hdf5+fortran+threadsafe+mpi+shared ^mpich+rocm amdgpu_target=gfx908 ^ucx+rocm ^hwloc+rocm amdgpu_target=gfx908' \
+&&   echo '' \
+&&   echo '  concretizer:' \
+&&   echo '    unify: true' \
+&&   echo '  config:' \
+&&   echo '    install_tree: /opt/software' \
+&&   echo '  view: /opt/views/view') > /opt/spack-environment/spack.yaml
+
+RUN cd /opt/spack-environment && spack env activate . && spack install --fail-fast && spack gc -y
+RUN cd /opt/spack-environment && spack env activate --sh -d . > activate.sh
+
+FROM ubuntu:22.04
+LABEL peano-framework.org=http://www.peano-framework.org/
+
+ENV FORCE_UNSAFE_CONFIGURE=1 \
+DEBIAN_FRONTEND=noninteractive \
+TZ=UTC \
+DISPLAY=host.docker.internal:0.0 \
+TERM=xterm
+
+COPY --from=builder /opt/spack-environment /opt/spack-environment
+COPY --from=builder /opt/software /opt/software
+
+# paths.view is a symlink, so copy the parent to avoid dereferencing and duplicating it
+COPY --from=builder /opt/views /opt/views
+
+RUN { \
+      echo '#!/bin/sh' \
+      && echo '.' /opt/spack-environment/activate.sh \
+      && echo 'exec "$@"'; \
+    } > /entrypoint.sh \
+&& chmod a+x /entrypoint.sh \
+&& ln -s /opt/views/view /opt/view
+
+RUN apt-get update -y && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+software-properties-common \
+apt-utils \
+build-essential \
+bash \
+wget \
+git \
+curl \
+ssh \
+subversion \
+tar \
+unzip \
+patch \
+gzip \
+bzip2 \
+file \
+gnupg \
+coreutils \
+mercurial \
+nano \
+pkg-config \
+tree \
+flex \
+automake \
+make \
+cmake \
+cmake-curses-gui \
+ccache \
+cppcheck \
+clang-tidy \
+clang-format \
+libtool \
+gcovr \
+vim \
+less \
+meld \
+gedit \
+gdb \
+strace \
+linux-tools-common \
+linux-tools-generic \
+valgrind \
+unifdef \
+ninja-build \
+meson \
+graphviz \
+doxygen \
+xorg-dev \
+mesa-utils \
+mesa-common-dev \
+freeglut3-dev \
+ca-certificates \
+libxml2-dev \
+libbz2-dev \
+libxslt1-dev \
+libelf-dev \
+libtbb-dev \
+libtbb2 \
+libsimde-dev \
+libcurl4-openssl-dev \
+libgl-dev \
+libgl1-mesa-dev \
+libglu1-mesa-dev \
+libglvnd-core-dev \
+libyaml-cpp-dev \
+nodejs \
+gcc \
+g++ \
+gfortran \
+libgomp1 \
+libnuma-dev \
+libnuma1 \
+g++-multilib \
+gcc-multilib \
+zlib1g \
+zlib1g-dev \
+texlive \
+texlive-base \
+texlive-bibtex-extra \
+texlive-binaries \
+texlive-extra-utils \
+texlive-font-utils \
+texlive-fonts-extra \
+texlive-fonts-recommended \
+texlive-formats-extra \
+texlive-lang-english \
+texlive-lang-european \
+texlive-latex-base \
+texlive-latex-extra \
+texlive-latex-recommended \
+texlive-science \
+texlive-pictures \
+texlive-pstricks \
+texlive-xetex \
+texlive-full \
+latexmk && \
+apt-get clean -y && \
+apt-get autoremove -y && \
+apt-get autoclean -y && \
+rm -rf /var/lib/apt/lists/*
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/bash"]

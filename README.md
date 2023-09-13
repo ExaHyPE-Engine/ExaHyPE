@@ -11,7 +11,7 @@ Peano is based upon the fact that spacetrees, a generalisation of the
 classical octree concept, yield a cascade of adaptive Cartesian grids.
 Consequently, any spacetree traversal is equivalent to an element-wise
 traversal of the hierarchy of the adaptive Cartesian grids. The software
-Peano  realises such a grid traversal and storage algorithm, and it provides
+Peano realises such a grid traversal and storage algorithm, and it provides
 hook-in points for applications performing per-element, per-vertex, and so
 forth operations on the grid. It also provides interfaces for dynamic
 load balancing, sophisticated geometry representations, and other features.
@@ -37,7 +37,7 @@ The most important ones are:
 * Python3 (optional but recommended; not required if you work only with the C++ baseline).
 * MPI (optional). MPI's multithreaded support is required.
 * Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading (optional).
-* CUDA, ROCm, Open SYCL or Intel oneAPI for GPU offloading (optional).
+* CUDA, ROCm, OpenSYCL or Intel oneAPI for GPU offloading (optional).
 * The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities (optional).
 * Doxygen if you want to create HTML pages of the documentation (optional).
 
@@ -45,20 +45,20 @@ The most important ones are:
 Peano's build process relies on GNU autotools or CMake.
 The build yields a couple of libraries and executables.
 Most codes then use Peano's Python API to build an application on top of the libraries.
-You obviously also can create a sole C++ application.
-The Python API actually yields such applications, too, i.e.,
+You also can create a sole C++ application.
+The Python API yields such applications, too, i.e.,
 Python is not required to run the simulations but only to construct them.
 
 You can find Docker images for each toolchain we support at [Dockerhub](https://hub.docker.com/u/peanoframework).
-In order to run a specific toolchain Docker image you can execute the following command:
+To run a specific toolchain Docker image you can execute the following command:
 
 ```shell
 docker run -it -v ${PWD}:/work --rm peanoframework/<toolchain> /bin/bash
 ```
 
-where `<toolchain>` needs to replaced by the toolchain you want to use.
+where `<toolchain>` needs to be replaced by the toolchain you want to use.
 
-If you want to use jupyterlab, you can add port forwarding to the Docker command from above:
+If you want to use JupyterLab, you can add port forwarding to the Docker command from above:
 
 ```shell
 docker run -it -v ${PWD}:/work -p 53155:53155 --rm peanoframework/<toolchain> /bin/bash
@@ -71,18 +71,18 @@ docker run -it -v ${PWD}:/work -p 53155:53155 --rm --gpus=all --privileged peano
 ```
 
 When you run the Docker container interactively with `--gpus` using the command above,
-you can quickly check whether GPU offloading is supported on your system by executing `./check_XXX_offload`.
+you can quickly check whether GPU offloading is supported on your system by executing `XXX_stream`,
+where `XXX` is the programming model.
 
-A [Python helper script](./.continuous_integration/configure.py) is available which can help to configure the project. It can be called from the root directory as follows:
+A [Python helper script](./configure.py) is available which can help to configure the project. It can be called as follows:
 
 ```shell
-python3 .continuous_integration/configure.py --help
+python3 configure.py --help
 ```
 
 For CMake, it is recommended to use `ccmake`.
-With this you can see all available options to enable/disable.
-
-For a detailed information on each flag please refer to the documentation.
+With this, you can see all available options to enable/disable.
+For detailed information on each flag please refer to the documentation.
 
 Invoke `make -jX` to use `X` threads to build the code.
 Peano is mainly a library collection, i.e.,

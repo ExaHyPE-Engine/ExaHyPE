@@ -1,17 +1,13 @@
 #include "tarch/logging/LogFilterFileReader.h"
 #include "tarch/logging/LogFilter.h"
 
-
 #include <fstream>
 #include <stdlib.h>
 #include <string>
 
-
 #include "tarch/logging/CommandLineLogger.h"
 
-
 tarch::logging::Log  tarch::logging::LogFilterFileReader::_log( "tarch::logging::LogFilterFileReader" );
-
 
 bool tarch::logging::LogFilterFileReader::interpretTokens( const std::string& levelToken, const std::string& classNameToken, const std::string& rankToken, const std::string& onOffToken, const std::string& phaseToken ) {
   bool result = true;
@@ -52,7 +48,6 @@ bool tarch::logging::LogFilterFileReader::interpretTokens( const std::string& le
   return result;
 }
 
-
 bool tarch::logging::LogFilterFileReader::parseLine(std::ifstream& file, const std::string& filename, const std::string& line, int linenumber) {
   std::string lineWithNewline = line + '\n';
 
@@ -88,8 +83,7 @@ bool tarch::logging::LogFilterFileReader::parseLine(std::ifstream& file, const s
   if (currentToken != NumberOfTokensPerLine) {
     logError( "parsePlainTextFile(string)", "syntax error in input file " << filename << ", line " << linenumber << ":" << line );
     return false;
-  }
-  else {
+  } else {
     bool result = interpretTokens(tokens[0],tokens[1],tokens[2],tokens[3],tokens[4]);
     if (not result) {
       logError( "parsePlainTextFile(string)", "syntax error in input file " << filename << ", line " << linenumber << ":" << line );
@@ -98,7 +92,6 @@ bool tarch::logging::LogFilterFileReader::parseLine(std::ifstream& file, const s
   }
 }
 
-
 std::string tarch::logging::LogFilterFileReader::trimLine( const std::string& line ) {
   std::size_t first = line.find_first_not_of(' ');
   if (first == std::string::npos)
@@ -106,7 +99,6 @@ std::string tarch::logging::LogFilterFileReader::trimLine( const std::string& li
   std::size_t last = line.find_last_not_of(' ');
   return line.substr(first, (last-first+1));
 }
-
 
 bool tarch::logging::LogFilterFileReader::parsePlainTextFile( const std::string& filename ) {
   bool result = true;
@@ -148,4 +140,3 @@ bool tarch::logging::LogFilterFileReader::parsePlainTextFile( const std::string&
 
   return result;
 }
-

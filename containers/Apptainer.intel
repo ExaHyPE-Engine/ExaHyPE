@@ -1,0 +1,184 @@
+Bootstrap: docker
+From: spack/ubuntu-jammy:latest
+Stage: build
+
+%post
+  # Create the manifest file for the installation in /opt/spack-environment
+  mkdir /opt/spack-environment && cd /opt/spack-environment
+  cat << EOF > spack.yaml
+spack:
+  packages:
+      all:
+        target: ['x86_64']
+
+  specs:
+  - py-pip
+  - py-black
+  - py-jinja2
+  - py-h5py
+  - py-hpccm
+  - py-sympy
+  - py-numpy
+  - py-mpmath
+  - py-jsonschema
+  - py-jupyterlab
+  - py-scipy
+  - py-matplotlib
+  - py-pspamm
+  - libxsmm +generator
+  - memkind
+  - blis
+  - boost
+  - openblas
+  - intel-oneapi-compilers
+  - intel-oneapi-mpi
+  - intel-oneapi-mkl
+  - eigen+ipo build_type=Release
+  - babelstream@develop+cuda cuda_arch=70
+  - mpileaks ^intel-oneapi-mpi
+  - petsc+mpi+memkind+metis+cuda+hwloc+openmp ^parmetis+int64+shared+ipo ^intel-oneapi-mpi ^metis+int64+real64+ipo+shared
+  - netcdf-cxx4+pic+shared ^netcdf-c+mpi+shared ^hdf5+fortran+threadsafe+mpi+shared ^intel-oneapi-mpi
+  - netcdf-fortran+pic+shared ^netcdf-c+mpi+shared ^hdf5+fortran+threadsafe+mpi+shared ^intel-oneapi-mpi
+  - parallel-netcdf+cxx+fortran+pic+shared ^intel-oneapi-mpi
+
+  concretizer:
+    unify: true
+  config:
+    install_tree: /opt/software
+  view: /opt/views/view
+EOF
+
+  # Install all the required software
+  . /opt/spack/share/spack/setup-env.sh
+  spack -e . concretize
+  spack -e . install
+  spack gc -y
+  spack env activate --sh -d . >> /opt/spack-environment/environment_modifications.sh
+
+Bootstrap: docker
+From: ubuntu:22.04
+Stage: final
+
+%environment
+  TZ=UTC
+  DEBIAN_FRONTEND=noninteractive
+
+%files from build
+  /opt/spack-environment /opt
+  /opt/software /opt
+  /opt/views /opt
+  /opt/spack-environment/environment_modifications.sh /opt/spack-environment/environment_modifications.sh
+
+%post
+  export TZ=UTC
+  export DEBIAN_FRONTEND=noninteractive
+
+  # Symlink the old view location
+  ln -s /opt/views/view /opt/view
+
+apt-get update -y && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+software-properties-common \
+apt-utils \
+build-essential \
+bash \
+wget \
+git \
+curl \
+ssh \
+subversion \
+tar \
+unzip \
+patch \
+gzip \
+bzip2 \
+file \
+gnupg \
+coreutils \
+mercurial \
+nano \
+pkg-config \
+tree \
+flex \
+automake \
+make \
+cmake \
+cmake-curses-gui \
+ccache \
+cppcheck \
+clang-tidy \
+clang-format \
+libtool \
+gcovr \
+vim \
+less \
+meld \
+gedit \
+gdb \
+strace \
+linux-tools-common \
+linux-tools-generic \
+valgrind \
+unifdef \
+ninja-build \
+meson \
+graphviz \
+doxygen \
+xorg-dev \
+mesa-utils \
+mesa-common-dev \
+freeglut3-dev \
+ca-certificates \
+libxml2-dev \
+libbz2-dev \
+libxslt1-dev \
+libelf-dev \
+libtbb-dev \
+libtbb2 \
+libsimde-dev \
+libcurl4-openssl-dev \
+libgl-dev \
+libgl1-mesa-dev \
+libglu1-mesa-dev \
+libglvnd-core-dev \
+libyaml-cpp-dev \
+nodejs \
+gcc \
+g++ \
+gfortran \
+libgomp1 \
+libnuma-dev \
+libnuma1 \
+g++-multilib \
+gcc-multilib \
+zlib1g \
+zlib1g-dev \
+texlive \
+texlive-base \
+texlive-bibtex-extra \
+texlive-binaries \
+texlive-extra-utils \
+texlive-font-utils \
+texlive-fonts-extra \
+texlive-fonts-recommended \
+texlive-formats-extra \
+texlive-lang-english \
+texlive-lang-european \
+texlive-latex-base \
+texlive-latex-extra \
+texlive-latex-recommended \
+texlive-science \
+texlive-pictures \
+texlive-pstricks \
+texlive-xetex \
+texlive-full \
+latexmk && \
+apt-get clean -y && \
+apt-get autoremove -y && \
+apt-get autoclean -y && \
+rm -rf /var/lib/apt/lists/*
+
+  # Modify the environment without relying on sourcing shell specific files at startup
+  cat /opt/spack-environment/environment_modifications.sh >> $SINGULARITY_ENVIRONMENT
+
+%labels
+  peano-framework.org http://www.peano-framework.org/

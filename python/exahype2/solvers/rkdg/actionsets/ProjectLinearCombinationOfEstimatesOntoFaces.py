@@ -6,36 +6,27 @@ from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 import peano4
 import jinja2
 
-
 from exahype2.solvers.ButcherTableau                import ButcherTableau
-
-
 
 from enum import Enum
 
-
 class FaceProjections(Enum):
   """
-  
   Different data can be projected onto the faces. In the simplest variant,
   only the solution is projected on the faces and the Riemann solver then
-  reconstructs the flux from the arising jump, i.e. the solution left and 
-  right of the face. There are more sophsticiated variants however which 
-  exploit the solution left and right plus additional data such as the 
-  gradient along the normal. 
-  
+  reconstructs the flux from the arising jump, i.e. the solution left and
+  right of the face. There are more sophisticated variants however which
+  exploit the solution left and right plus additional data such as the
+  gradient along the normal.
   """
   Solution = 1,
   SolutionAndGradient = 2,
   SolutionAndFluxExtrapolation = 3
-  
 
-def compute_number_of_face_projection_quantities( face_projections: FaceProjections ):
+def compute_number_of_face_projection_quantities(face_projections: FaceProjections):
   """
-  
   Translate the information what is projected onto the faces into a number
   how many quantities are to be held per face.
-  
   """
   if face_projections   == FaceProjections.Solution:
     return 1
@@ -46,8 +37,6 @@ def compute_number_of_face_projection_quantities( face_projections: FaceProjecti
   else: 
     assert False, "variant {} not handled".format( face_projections )
     return -1
-
-
 
 class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet):
   """
@@ -71,7 +60,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
                of the current Runge-Kutta trial. 
                
   We do not update the new and old time stamp on the face label. These
-  values are properly set in the ComputeFinalLinearCombination action set.                 
+  values are properly set in the ComputeFinalLinearCombination action set.
 
 
   ## Guards

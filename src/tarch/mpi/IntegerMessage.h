@@ -19,10 +19,6 @@
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/services/ServiceRepository.h"
-#include "peano4/grid/LoadStoreComputeFlag.h"
-#include "peano4/utils/Globals.h"
-#include "peano4/grid/TraversalObserver.h"
-
 
 
 namespace tarch{
@@ -48,6 +44,8 @@ struct tarch::mpi::IntegerMessage {
 
 
     #ifdef Parallel
+    PragmaPush
+    SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -67,7 +65,7 @@ struct tarch::mpi::IntegerMessage {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-
+    PragmaPop
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call

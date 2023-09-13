@@ -23,11 +23,8 @@ else()
 endif()
 
 set(META_PROJECT_NAME "Peano")
-set(META_PROJECT_DESCRIPTION
-  "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes"
-)
-set(META_AUTHOR_ORGANIZATION
-  "Durham University and Technische Universitaet Muenchen")
+set(META_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes")
+set(META_AUTHOR_ORGANIZATION "Durham University and Technische Universitaet Muenchen")
 set(META_AUTHOR_DOMAIN "www.peano-framework.org")
 set(META_VERSION_REVISION "${GIT_COMMIT_HASH_SHORT}")
 set(META_GIT_BRANCH "${GIT_BRANCH}")
@@ -46,26 +43,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_INLINES_HIDDEN YES)
 
-set(CMAKE_Fortran_STANDARD 90)
-set(CMAKE_Fortran_STANDARD_REQUIRED TRUE)
-set(CMAKE_Fortran_EXTENSIONS OFF)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
-set(OPT_WARNINGS_AS_ERRORS OFF CACHE BOOL "" FORCE)
-include(FetchContent)
-FetchContent_Declare(
-  _project_options
-  GIT_REPOSITORY https://github.com/aminya/project_options.git
-  GIT_TAG main
-)
-FetchContent_MakeAvailable(_project_options)
-
-set(LANGUAGES C CXX Fortran)
+set(LANGUAGES C CXX)
 project(
   ${META_PROJECT_NAME}
   DESCRIPTION ${META_PROJECT_DESCRIPTION}
@@ -74,11 +58,6 @@ project(
 file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 set(META_COMPILER_VERSION "${CMAKE_SYSTEM_NAME} ${CMAKE_CXX_COMPILER_ID} (${CMAKE_CXX_COMPILER_VERSION})")
 message(STATUS "Compiler is: ${META_COMPILER_VERSION}")
-
-include(${_project_options_SOURCE_DIR}/Index.cmake)
-include(${_project_options_SOURCE_DIR}/src/DynamicProjectOptions.cmake)
-dynamic_project_options()
-target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 
 include(GNUInstallDirs)
 set(DEFAULT_CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
@@ -89,6 +68,10 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 add_subdirectory(cmake)
 include(MessageUtils)
 include(Clang-Format)
+#include(Clang-Tidy)
+#include(Cppcheck)
+#include(Link-What-You-Use)
+#include(Coverage)
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
 include(ProcessorCount)
@@ -96,6 +79,8 @@ ProcessorCount(AVAILABLE_PROCESSOR_COUNT)
 find_package(Slurm)
 find_package(Threads REQUIRED)
 include(CTest)
+enable_testing()
+include(CMakeDependentOption)
 # https://stackoverflow.com/questions/31355692/how-do-i-enable-link-time-optimization-lto-with-cmake
 include(CheckIPOSupported)
 check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_ERROR)
@@ -106,11 +91,20 @@ else()
   message(STATUS "IPO/LTO not supported: ${IPO_ERROR}")
 endif()
 
+add_library(project_warnings INTERFACE)
+add_library(project_options INTERFACE)
+target_compile_features(project_options INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
+include(CompilerDefinitions)
+set_project_compiler_definitions(project_options)
+include(CompilerFlags)
+set_project_compiler_flags(project_warnings)
+target_compile_options(project_warnings INTERFACE "-w")
+include(LinkerFlags)
+set_project_linker_flags(project_options)
+
 include(CheckIncludeFiles)
 check_include_files(dlfcn.h HAVE_DLFCN_H)
 check_include_files(inttypes.h HAVE_INTTYPES_H)
-check_include_files(nvToolsExt.h HAVE_NVTOOLSEXT_H)
-check_include_files(omp.h HAVE_OMP_H)
 check_include_files(stdint.h HAVE_STDINT_H)
 check_include_files(stdio.h HAVE_STDIO_H)
 check_include_files(stdlib.h HAVE_STDLIB_H)
@@ -119,14 +113,6 @@ check_include_files(string.h HAVE_STRING_H)
 check_include_files(sys/stat.h HAVE_SYS_STAT_H)
 check_include_files(sys/types.h HAVE_SYS_TYPES_H)
 check_include_files(unistd.h HAVE_UNISTD_H)
-check_include_files(CL/sycl.hpp HAVE_CL_SYCL_HPP)
-
-# TODO:
-# Additionally check the headers defined above have C90 standards
-# Requires "stddef.h;float.h"
-# We also need free in stdlib, memchr in string
-# An example where how to implement the check is here:
-# https://github.com/LuaDist/libgd/tree/master/cmake/modules
 
 list(APPEND TOOLCHAINS
   " "
@@ -152,6 +138,8 @@ elseif(WITH_TOOLCHAIN STREQUAL "intel")
   target_link_libraries(project_options INTERFACE VT::VT)
   target_include_directories(project_options SYSTEM INTERFACE ${VT_INCLUDE_DIRS})
   target_link_directories(project_options INTERFACE ${VT_LIBRARIES_DIR})
+elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
+  check_include_files(nvToolsExt.h HAVE_NVTOOLSEXT_H)
 endif()
 
 list(APPEND MULTICORES_BACKENDS
@@ -170,10 +158,8 @@ if(WITH_MULTITHREADING)
 endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
+  check_include_files(omp.h HAVE_OMP_H)
   target_link_libraries(project_options INTERFACE OpenMP::OpenMP_CXX)
-  if(CMAKE_Fortran_COMPILER)
-    target_link_libraries(project_options INTERFACE OpenMP::OpenMP_Fortran)
-  endif()
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
   target_link_libraries(project_options INTERFACE TBB::tbb)
@@ -181,6 +167,8 @@ elseif(WITH_MULTITHREADING STREQUAL "cpp")
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   find_package(Threads REQUIRED)
   target_link_libraries(project_options INTERFACE Threads::Threads)
+elseif(WITH_MULTITHREADING STREQUAL "sycl")
+  check_include_files(CL/sycl.hpp HAVE_CL_SYCL_HPP)
 endif()
 
 list(APPEND ACCELERATOR_BACKENDS
@@ -308,9 +296,10 @@ option(WITH_PETSC "Build with PETSc support" OFF)
 option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
 option(WITH_VTK "Build with VTK support" OFF)
 option(WITH_HDF5 "Build with HDF5 support" OFF)
+option(WITH_NETCDF "Build with NetCDF support" OFF)
 option(ENABLE_EXAHYPE "Enable ExaHyPE2" OFF)
 option(ENABLE_SWIFT "Enable Swift2" OFF)
-option(ENABLE_FEM "Enable the finite elements toolbox" OFF)
+option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
 option(ENABLE_MULTIPRECISION "Enable the multi-precision toolbox" OFF)
 option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
 option(ENABLE_PARTICLES "Enable the particles toolbox" OFF)
@@ -323,9 +312,6 @@ if(WITH_MPI)
   target_compile_definitions(project_options INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
   target_compile_definitions(project_options INTERFACE Parallel)
   target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
-  if(CMAKE_Fortran_COMPILER)
-    target_link_libraries(project_options INTERFACE MPI::MPI_Fortran)
-  endif()
 endif()
 
 if(WITH_OTTER)
@@ -337,27 +323,34 @@ endif()
 if(WITH_PETSC)
   find_package(PETSc REQUIRED)
   target_compile_definitions(project_options INTERFACE UsePETSc)
-  target_link_system_libraries(project_options INTERFACE ${PETSc_LIBRARIES})
-  target_include_system_directories(project_options INTERFACE ${PETSc_INCLUDE_DIRS})
+  target_link_libraries(project_options INTERFACE ${PETSc_LIBRARIES})
+  target_include_directories(project_options INTERFACE ${PETSc_INCLUDE_DIRS})
 endif()
 
 if(WITH_LIBXSMM)
   find_package(LIBXSMM REQUIRED)
   target_compile_definitions(project_options INTERFACE UseLibXSMM)
-  target_link_system_libraries(project_options INTERFACE ${LIBXSMM_LIBRARIES})
-  target_include_system_directories(project_options INTERFACE ${LIBXSMM_INCLUDE_DIRS})
+  target_link_libraries(project_options INTERFACE ${LIBXSMM_LIBRARIES}) #target_link_system_libraries
+  target_include_directories(project_options INTERFACE ${LIBXSMM_INCLUDE_DIRS}) #target_include_system_directories
 endif()
 
 if(WITH_VTK)
   find_package(VTK REQUIRED)
   target_compile_definitions(project_options INTERFACE UseVTK)
-  target_link_system_libraries(project_options INTERFACE VTK::CommonCore)
+  target_link_libraries(project_options INTERFACE VTK::CommonCore)
 endif()
 
 if(WITH_HDF5)
   find_package(HDF5 REQUIRED)
   target_compile_definitions(project_options INTERFACE UseHDF5)
-  target_link_system_libraries(project_options INTERFACE HDF5::HDF5)
+  target_link_libraries(project_options INTERFACE HDF5::HDF5)
+endif()
+
+if(WITH_NETCDF)
+  find_package(NetCDF REQUIRED)
+  target_compile_definitions(project_options INTERFACE UseNetCDF)
+  target_link_libraries(project_options INTERFACE ${NETCDF_LIBRARIES} ${NETCDF_LIBRARIES_CXX})
+  target_include_directories(project_options INTERFACE ${NETCDF_INCLUDES})
 endif()
 
 if(ENABLE_EXAHYPE)
@@ -392,18 +385,56 @@ if (NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
 endif()
 
 find_package(Doxygen)
-if (DOXYGEN_FOUND)
+if(DOXYGEN_FOUND)
     set(DOXYGEN ${CMAKE_CURRENT_BINARY_DIR}/documentation/Doxyfile)
 
-    add_custom_target( documentation
+    add_custom_target(documentation
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Generating API documentation with Doxygen"
-        VERBATIM )
-endif (DOXYGEN_FOUND)
-
+        VERBATIM)
+endif(DOXYGEN_FOUND)
 
 add_subdirectory(src)
+
+#file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS "*/UnitTests/*")
+#foreach(SOURCE_FILE ${UNIT_TEST_SOURCES})
+#    get_filename_component(TEST_NAME ${SOURCE_FILE} NAME_WE)
+#    add_executable(${TEST_NAME} ${SOURCE_FILE})
+#    target_link_libraries(${TEST_NAME} PRIVATE TArch)
+#    set_target_properties(${TEST_NAME} PROPERTIES
+#        DEBUG_POSTFIX "d"
+#        SOVERSION ${TARCH_VERSION_MAJOR}
+#        VERSION ${TARCH_VERSION}
+#        CXX_STANDARD ${CMAKE_CXX_STANDARD}
+#    )
+#    add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
+#endforeach()
+
+#if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+#    add_coverage(
+#        NAME Coverage
+#        EXECUTABLE ctest -V
+#        EXCLUDE "/usr/*"
+#        GENHTML_ARGS -s --legend
+#    )
+#    add_coverage_cobertura(
+#        NAME CoverageCobertura
+#        EXECUTABLE ctest -V
+#    )
+#    add_coverage_gcovr(
+#        NAME CoverageGcovr
+#        EXECUTABLE ctest -V
+#    )
+#elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+#    add_coverage(
+#        TARGET TestRunnerTest
+#        SOURCES "${CMAKE_CURRENT_SOURCE_DIR}"
+#        CONTINUE_AFTER_CPP_EXCEPTION
+#        REPORT_FOR_PROJECT
+#        REPORT_FOR_TARGET
+#    )
+#endif()
 
 display_separator("Project Configuration Summary")
 display_variable(AVAILABLE_PROCESSOR_COUNT)
@@ -418,8 +449,9 @@ display_variable(WITH_PETSC)
 display_variable(WITH_LIBXSMM)
 display_variable(WITH_VTK)
 display_variable(WITH_HDF5)
+display_variable(WITH_NETCDF)
 display_variable(ENABLE_EXAHYPE)
-display_variable(ENABLE_FEM)
+display_variable(ENABLE_FINITEELEMENTS)
 display_variable(ENABLE_MULTIPRECISION)
 display_variable(ENABLE_LOADBALANCING)
 display_variable(ENABLE_PARTICLES)
@@ -430,8 +462,6 @@ display_variable(CMAKE_C_COMPILER)
 display_variable(CMAKE_C_STANDARD)
 display_variable(CMAKE_CXX_COMPILER)
 display_variable(CMAKE_CXX_STANDARD)
-display_variable(CMAKE_Fortran_COMPILER)
-display_variable(CMAKE_Fortran_STANDARD)
 display_variable(CMAKE_BUILD_TYPE)
 display_variable(CMAKE_CONFIGURATION_TYPES)
 display_variable(CMAKE_CXX_FLAGS)
@@ -457,7 +487,6 @@ display_variable(BUILD_SHARED_LIBS)
 display_variable(CMAKE_CXX_FLAGS_INIT)
 
 if(WITH_GPU STREQUAL "cuda")
-  display_subseparator("Options related to CUDA")
   display_variable(CMAKE_CUDA_FLAGS)
   display_variable(CMAKE_CUDA_FLAGS_RELEASE)
   display_variable(CMAKE_CUDA_FLAGS_DEBUG)

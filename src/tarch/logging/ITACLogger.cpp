@@ -65,8 +65,7 @@ void tarch::logging::ITACLogger::continueTrace() {
 }
 
 
-void tarch::logging::ITACLogger::indent( bool indent, const std::string& trace, const std::string& message ) {
-}
+void tarch::logging::ITACLogger::indent( bool, const std::string&, const std::string& ) {}
 
 
 std::string tarch::logging::ITACLogger::getTimeStampHumanReadable( long int timestampNanoseconds ) const {
@@ -100,8 +99,12 @@ std::string tarch::logging::ITACLogger::getTimeStampHumanReadable( long int time
 
 
 std::string tarch::logging::ITACLogger::constructMessageString(
-  std::string          messageType,
-  long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message
+  [[maybe_unused]] std::string messageType,
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
 ) {
   std::ostringstream result;
   result << getTimeStampHumanReadable(timestampNanoseconds)
@@ -167,7 +170,13 @@ void tarch::logging::ITACLogger::error(long int timestampNanoseconds, int rank, 
 }
 
 
-void tarch::logging::ITACLogger::traceIn(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ITACLogger::traceIn(
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
+) {
   #ifdef UseITAC
   if (not _firstTraceWritten) {
     _firstTraceWritten = true;
@@ -187,7 +196,13 @@ void tarch::logging::ITACLogger::traceIn(long int timestampNanoseconds, int rank
 }
 
 
-void tarch::logging::ITACLogger::traceOut(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::ITACLogger::traceOut(
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
+) {
   #ifdef UseITAC
   VT_end(_itacHandles[trace.c_str()]);
   #endif

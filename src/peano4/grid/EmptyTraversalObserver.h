@@ -2,19 +2,15 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "TraversalObserver.h"
 
-
 #include "tarch/logging/Log.h"
-
 
 namespace peano4 {
   namespace grid {
     class EmptyTraversalObserver;
   }
 }
-
 
 /**
  * Empty observer
@@ -56,4 +52,3 @@ class peano4::grid::EmptyTraversalObserver: public peano4::grid::TraversalObserv
     virtual TraversalObserver* clone(int spacetreeId) override;
     virtual std::vector< GridControlEvent > getGridControlEvents() const override;
 };
-

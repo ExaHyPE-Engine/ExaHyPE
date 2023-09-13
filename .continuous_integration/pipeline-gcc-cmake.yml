@@ -1,0 +1,87 @@
+gcc-build-cmake:
+  stage: build
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  script:
+    - pwd
+    - ls
+    - whoami
+    - hostname
+    - echo $SINGULARITY_CACHEDIR
+    - echo $CI_COMMIT_SHA
+    - echo $CI_COMMIT_BRANCH
+    - echo "Running CI with $(nproc) cores"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} python3 configure.py -cc=gcc -cxx=g++ --exahype --swift --multithreading=omp --cmake=build
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< ' cd build; make -j $(nproc --all)'
+  artifacts:
+    paths:
+      - ./build/*
+    expire_in: 2 hours
+  retry: 0
+
+gcc-test-cmake:
+  stage: test
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  needs:
+    - job: gcc-build-cmake
+  script:
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< ' cd build; ctest --verbose'
+  retry: 0
+
+gcc-tutorials-cmake:
+  stage: tutorials
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  needs:
+    - job: gcc-build-cmake
+  script:
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/euler; python3 euler.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/euler; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/acoustic-wave; python3 acoustic-wave.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/acoustic-wave; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/elastic-wave; python3 elastic-wave.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/elastic-wave; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/advection; python3 advection.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/advection; make -j'
+  retry: 0
+
+gcc-applications-cmake:
+  stage: applications
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  needs:
+    - job: gcc-build-cmake
+  script:
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; python3 euler.py --no-make --executable=euler'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; python3 acoustic-wave.py --no-make --executable=acoustic-wave'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; python3 elastic-wave.py --no-make --executable=elastic-wave'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; python3 advection.py --no-make --executable=advection'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; make -j'
+  retry: 0
+
+gcc-benchmarks-cmake:
+  stage: benchmarks
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  needs:
+    - job: gcc-build-cmake
+  script:
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py --no-make --executable=kernel-benchmarks'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} build/benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks
+  retry: 0

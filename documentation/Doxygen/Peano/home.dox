@@ -12,7 +12,7 @@
 \li \subpage page_peano_performance_optimisation
 \li \subpage tarch_accelerator_SYCL
 \li \subpage peano_python_api
-\li \subpage peano_amr_tex
+\li \subpage page_peano_amr
 \li \subpage peano_utilities
 
 

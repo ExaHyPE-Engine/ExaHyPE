@@ -11,7 +11,7 @@ def create_Riemann_solver_call(polynomial_basis,
   number_of_face_projections: Integer
     How many quantities are to be projected onto the face. If you pass in one,
     this means that only the left and right values are projected onto the face.
-    If you pass in two, we store the values plus the projections of the 
+    If you pass in two, we store the values plus the projections of the
     derivative along the normal per face.
   """
 

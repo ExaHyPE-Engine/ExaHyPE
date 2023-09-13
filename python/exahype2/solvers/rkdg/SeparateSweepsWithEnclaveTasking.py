@@ -13,17 +13,15 @@ import os
 
 from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import (
-    ReconstructPatchAndApplyFunctor,
-)
+from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     Template = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
-  if ( 
+  if (
     not marker.hasBeenRefined()
-    and 
+    and
     marker.hasBeenEnclaveCell()
     and
     {{PREDICATES[PREDICATE_NO]}}
@@ -33,7 +31,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     #elif Dimensions==3
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
-    
+
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
     if ( taskNumber>=0 ) {
       double maxEigenvalue; // not used here
@@ -78,24 +76,29 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
     """
-
     Two separate sweeps per Runge-Kutta sweep where volumetric operations
     are outsourced into dedicated tasks.
 
 
     ## Task priorities
+<<<<<<< HEAD
     
     Use the attributes self.enclave_task_priority to change the priority of the 
     task. This value can either be a string that C++ can evaluate into a 
     priority or a plain numerical value. I set it to 
     
-           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority"
+           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority-1"
                
+=======
+
+    Use the attributes self.enclave_task_priority to change the priority of the
+    task. This value can either be a string that C++ can evaluate into a
+    priority or a plain numerical value. I set it to
+
+           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority"
+
+>>>>>>> refs/remotes/origin/applications
     by default.
-    
-    
-
-
     """
 
     def __init__(
@@ -112,12 +115,10 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         pde_terms_without_state,
     ):
         """
-
         See superclass constructor for all the interesting info.
 
         It is important to notice that we still use the separate sweep template classes
         here.
-
         """
         super(SeparateSweepsWithEnclaveTasking, self).__init__(
             name,
@@ -137,33 +138,29 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self._fused_volumetric_kernel_call_cpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_cpu in your Python solver class."
         self._fused_volumetric_kernel_call_gpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_gpu in your Python solver class."
 
-        self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority"
+        self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
 
         self.create_action_sets()
         self.create_data_structures()
 
     def create_data_structures(self):
         """
-
         First, call the superclass' create_data_structures() to ensure that all
         the data structures are in place.
 
         The linear combination is to be computed if and only if
-
         """
         super(SeparateSweepsWithEnclaveTasking, self).create_data_structures()
 
     def create_action_sets(self):
         """
-
         Call superclass routine and then reconfigure the update cell call.
         Only the UpdateCell action set is specific to an enclave solver.
 
-        This operation is implicity called via the superconstructor.
+        This operation is implicitly called via the superconstructor.
 
         It is important that we add the action set at the right point. See
         add_actions_to_perform_time_step() for a discussion.
-
         """
         super(SeparateSweepsWithEnclaveTasking, self).create_action_sets()
 
@@ -224,7 +221,6 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
     def add_actions_to_perform_time_step(self, step):
         """
-
         Add enclave aspect to time stepping. If you study the superclass'
         routine add_actions_to_perform_time_step() and consider that this action
         set is invoked in the secondary grid sweep, then it becomes clear that
@@ -233,7 +229,6 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
         We need the result of the volumetric operation before we sum up this
         volumetric solution and the Riemann solution.
-
         """
         super(SeparateSweepsWithEnclaveTasking, self).add_actions_to_perform_time_step(
             step

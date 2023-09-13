@@ -20,7 +20,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(PythonInterp 3.6 REQUIRED)
 find_package(PythonLibs 3.6 REQUIRED)
-
+#find_package(Python3 COMPONENTS Interpreter Development)
 if(NOT(PYTHON_LIBRARY AND PYTHON_INCLUDE_DIR))
   message(FATAL_ERROR "Couldn't find any Python3 library")
 endif()
@@ -43,6 +43,9 @@ if(NOT ${MODE_LOWER} IN_LIST BUILD_MODES)
   message(FATAL_ERROR "Build mode of the generated project ${TARGET_NAME}'s build mode (${MODE}) is different than\
     the build of the configured CMake project. Please reconfigure the CMake project with -DCMAKE_BUILD_TYPE=${value_capitalized}")
 endif()
+
+capitalize(${MODE})
+set(CMAKE_BUILD_TYPE "${value_capitalized}" CACHE STRING "${BUILD_MODES}" FORCE)
 
 list(APPEND DEPENDS_CORE {% for item in CMAKE_CORE_LIBS -%} {{item+' '}} {%- endfor %})
 list(APPEND DEPENDS_OTHER {% for item in CMAKE_LIBS -%} {{item+' '}} {%- endfor %})
@@ -94,16 +97,19 @@ target_include_directories(${TARGET_NAME} PRIVATE
 
 # Link to full target libraries
 target_link_libraries(${TARGET_NAME} PRIVATE ${DEPENDS_FULL})
+
 # Libraries are generated at $cmake_binary_dir, just in case add it to the link directories.
 target_link_directories(${TARGET_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${DIMENSION} ${${MODE}_DEFINITIONS})
 target_link_options(${TARGET_NAME} PRIVATE ${${MODE}_LDFLAGS})
 target_link_libraries(${TARGET_NAME} PRIVATE project_options)
 
-if (NOT "${WITH_GPU}" STREQUAL "cuda")
+# This is due to a bug in project_options library, project_warnings fail with NVHPC compilers as host compilers
+if(NOT "${WITH_GPU}" STREQUAL "cuda")
   target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
 endif()
 
+# Link every toolbox, if they are enabled
 if (ENABLE_PARTICLES)
   target_link_libraries(${TARGET_NAME} PRIVATE ToolboxParticles${DIMENSION}d_${MODE_LOWER})
 endif()

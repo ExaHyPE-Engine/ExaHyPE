@@ -24,7 +24,7 @@
 #include "tarch/mpi/Rank.h"
 
 
-#include <experimental/filesystem> // or #include <filesystem>
+#include <filesystem>
 
 
 const std::string OutputFormatPeano = "peano";
@@ -34,12 +34,12 @@ const std::string OutputFormatVTU   = "vtu";
 void createDirectory( const std::string& directory ) {
   static tarch::logging::Log _log( "/" );
   if (
-    !std::experimental::filesystem::is_directory(directory)
+    !std::filesystem::is_directory(directory)
     ||
-    !std::experimental::filesystem::exists(directory)
+    !std::filesystem::exists(directory)
  ) {
     try {
-      std::experimental::filesystem::create_directory(directory);
+      std::filesystem::create_directory(directory);
       logInfo( "createDirectory(...)", "created directory " << directory );
     }
     catch (std::exception exc) {

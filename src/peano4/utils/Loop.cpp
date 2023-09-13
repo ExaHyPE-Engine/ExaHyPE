@@ -4,11 +4,15 @@
 namespace {
   int dLinearisedNotOptimised( const tarch::la::Vector<Dimensions,int> & counter, int max ) {
     int result = counter(Dimensions - 1);
+    #if !defined(SharedSYCL)
     assertion2(counter(Dimensions - 1) >= 0, counter, max);
     assertion2(counter(Dimensions - 1) < max, counter, max);
+    #endif
     for (int d = Dimensions - 2; d >= 0; d--) {
+      #if !defined(SharedSYCL)
       assertion2(counter(d) >= 0, counter(d), max);
       assertion2(counter(d) < max, counter(d), max);
+      #endif
       result = result * max + counter(d);
     }
     return result;
@@ -287,8 +291,10 @@ int peano4::utils::dCmp(const tarch::la::Vector<Dimensions,int>& counter, const 
 int peano4::utils::dCmp(const tarch::la::Vector<Dimensions,int>& counter, int max) {
   int result = true;
   for (int i=0; i<Dimensions; i++) {
+    #if !defined(SharedSYCL)
     assertion2( counter(i)<=max, counter,max );
     assertion2( counter(i)>=0,   counter,max );
+    #endif
     result &= (counter(i)<max);
   }
   return result;

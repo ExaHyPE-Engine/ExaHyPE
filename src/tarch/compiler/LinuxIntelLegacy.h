@@ -2,7 +2,6 @@
 // For a detailed description of the semantics of the settings, please
 // consult LinuxIntel.h which is the most elaborate documentation.
 
-
 /**
  * Switch off Optimisation
  *
@@ -15,9 +14,6 @@
  * To make define work, see the documentation of the test super class.
  */
 #define UseTestSpecificCompilerSettings
-
-
-#pragma once
 
 #define CompilerHasProcStat
 
@@ -32,8 +28,6 @@
 #endif
 
 //#define CompilerDefinesMPIMaxNameString
-
-
 
 #if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
 /**
@@ -60,6 +54,7 @@
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions
 
 #define OpenMPTaskGroup
-#define PRAGMA_PUSH
-#define SILENCE_UNKNOWN_ATTRIBUTE
-#define PRAGMA_POP
+
+#define PragmaPush
+#define SilenceUnknownAttribute
+#define PragmaPop

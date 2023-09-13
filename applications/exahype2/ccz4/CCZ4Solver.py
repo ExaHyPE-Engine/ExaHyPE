@@ -245,11 +245,18 @@ class AbstractCCZ4Solver(object):
         name,
         coordinates,
         project,
+        number_of_entries_between_two_db_flushes,
+        data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots,
         tracer_unknowns=None,
     ):
         """!
 
-        Add a tracer for the solver to the project solver
+        Add tracer to project
+        
+        Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+        some of the arguments. Most of them are simply piped through to this 
+        class.
 
         The tracer is given a name and initial coordinates (list of three-tuples).
         We need to know the underlying project as well, as we have to add the
@@ -260,10 +267,11 @@ class AbstractCCZ4Solver(object):
           particle_set=tracer_particles,
           solver=self,
           filename=name + "-" + self._name,
-          number_of_entries_between_two_db_flushes=5000,
+          number_of_entries_between_two_db_flushes=number_of_entries_between_two_db_flushes,
           output_precision=10,
-          data_delta_between_two_snapsots=1e16,
-          time_delta_between_two_snapsots=0.01
+          data_delta_between_two_snapsots = data_delta_between_two_snapsots,
+          time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+          clearDatabaseAfterFlush         = True,
           ))
         ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -289,6 +297,8 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
         patch_size,
         min_volume_h,
         max_volume_h,
+        use_heap_storage,
+        pde_terms_without_state
     ):
         AbstractCCZ4Solver.__init__(self)
         exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep.__init__(
@@ -319,11 +329,18 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
         name,
         coordinates,
         project,
+        number_of_entries_between_two_db_flushes,
+        data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots,
         tracer_unknowns=None,
     ):
         """!
 
         Add tracer to project
+        
+        Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+        some of the arguments. Most of them are simply piped through to this 
+        class.
 
         project: exahype2.Project
 
@@ -332,8 +349,11 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
             name,
             coordinates,
             project,
-            tracer_unknowns,
             self,
+            number_of_entries_between_two_db_flushes,
+            data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots,
+            tracer_unknowns,
         )
 
 
@@ -363,13 +383,17 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
 
     """
 
-    def __init__(
-        self, name, patch_size, min_volume_h, max_volume_h, use_heap_storage=False
-    ):
+    def __init__(self, 
+                 name, 
+                 patch_size, 
+                 min_volume_h, 
+                 max_volume_h, 
+                 use_heap_storage,
+                 pde_terms_without_state,
+                 ):
         """!
 
         Construct solver with enclave tasking and adaptive time stepping
-
 
 
         ## Attributes
@@ -394,6 +418,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
             min_volume_h=min_volume_h,
             max_volume_h=max_volume_h,
             time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation,
+            pde_terms_without_state=pde_terms_without_state
         )
         self._add_standard_includes()
 
@@ -423,11 +448,19 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
         name,
         coordinates,
         project,
+        number_of_entries_between_two_db_flushes,
+        data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots,
         tracer_unknowns=None,
     ):
         """!
 
         Add tracer to project
+        
+        Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+        some of the arguments. Most of them are simply piped through to this 
+        class.
+
 
         project: exahype2.Project
 
@@ -436,8 +469,11 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
             name,
             coordinates,
             project,
-            tracer_unknowns,
             self,
+            number_of_entries_between_two_db_flushes,
+            data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots,
+            tracer_unknowns,
         )
 
 
@@ -527,10 +563,19 @@ def add_tracer_to_FV_solver(
     name,
     coordinates,
     project,
-    tracer_unknowns,
     solver,
+    number_of_entries_between_two_db_flushes,
+    data_delta_between_two_snapsots,
+    time_delta_between_two_snapsots,
+    tracer_unknowns=None,
 ):
     """!
+
+    Add tracer to project
+    
+    Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+    some of the arguments. Most of them are simply piped through to this 
+    class.
 
     I realise this as a separate routine, as we need it for all FV flavours
 
@@ -583,10 +628,11 @@ def add_tracer_to_FV_solver(
         particle_set=tracer_particles,
         solver=solver,
         filename=name + "-" + solver._name,
-        number_of_entries_between_two_db_flushes=5000,
+        number_of_entries_between_two_db_flushes=number_of_entries_between_two_db_flushes,
         output_precision=10,
-        data_delta_between_two_snapsots=1e16,
-        time_delta_between_two_snapsots=0.01,
+        data_delta_between_two_snapsots = data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+        clearDatabaseAfterFlush         = True,
     )
     dump_into_database_action_set.priority = solver._action_set_update_cell.priority + 2
     project.add_action_set_to_timestepping(dump_into_database_action_set)
@@ -596,8 +642,11 @@ def add_tracer_to_FD4_solver(
     name,
     coordinates,
     project,
-    tracer_unknowns,
     solver,
+    number_of_entries_between_two_db_flushes,
+    data_delta_between_two_snapsots,
+    time_delta_between_two_snapsots,
+    tracer_unknowns,
 ):
     """!
 
@@ -651,10 +700,11 @@ def add_tracer_to_FD4_solver(
         particle_set=tracer_particles,
         solver=solver,
         filename=name + "-" + solver._name,
-        number_of_entries_between_two_db_flushes=5000,
+        number_of_entries_between_two_db_flushes=number_of_entries_between_two_db_flushes,
         output_precision=10,
-        data_delta_between_two_snapsots=1e16,
-        time_delta_between_two_snapsots=0.01,
+        data_delta_between_two_snapsots = data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+        clearDatabaseAfterFlush         = True,
     )
     dump_into_database_action_set.priority = (
         solver._action_set_compute_final_linear_combination.priority + 2
@@ -697,7 +747,8 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         rk_order,
         min_meshcell_h,
         max_meshcell_h,
-        use_heap_storage=False,
+        use_heap_storage,
+        pde_terms_without_state,
     ):
         """!
 
@@ -730,6 +781,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             max_meshcell_h=max_meshcell_h,
             time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
             / 16.0,
+            pde_terms_without_state = pde_terms_without_state,
         )
 
         self._add_standard_includes()
@@ -767,11 +819,18 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         name,
         coordinates,
         project,
+        number_of_entries_between_two_db_flushes,
+        data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots,
         tracer_unknowns=None,
     ):
         """!
 
         Add tracer to project
+        
+        Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+        some of the arguments. Most of them are simply piped through to this 
+        class.
 
         project: exahype2.Project
 
@@ -780,8 +839,11 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             name,
             coordinates,
             project,
-            tracer_unknowns,
             self,
+            number_of_entries_between_two_db_flushes,
+            data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots,
+            tracer_unknowns,
         )
 
 
@@ -851,11 +913,18 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
         name,
         coordinates,
         project,
+        number_of_entries_between_two_db_flushes,
+        data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots,
         tracer_unknowns=None,
     ):
         """!
 
         Add tracer to project
+        
+        Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+        some of the arguments. Most of them are simply piped through to this 
+        class.
 
         project: exahype2.Project
 
@@ -864,8 +933,11 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
             name,
             coordinates,
             project,
-            tracer_unknowns,
             self,
+            number_of_entries_between_two_db_flushes,
+            data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots,
+            tracer_unknowns,
         )
 
 
@@ -906,7 +978,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
     We have now a smaller number of real unknowns, i.e. only those guys who
     belong to the "original" second-order formulation. The remaining quantities
     compared to a first-order formulation are technically material or auxiliary
-    quantities. We model them as such, which allows ExaHyPE's data management
+    quantities. We model them as such, which allows ExaHyPE`s data management
     to deal more efficiently with them.
 
 
@@ -1037,11 +1109,18 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
         name,
         coordinates,
         project,
+        number_of_entries_between_two_db_flushes,
+        data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots,
         tracer_unknowns=None,
     ):
         """!
 
         Add tracer to project
+        
+        Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+        some of the arguments. Most of them are simply piped through to this 
+        class.
 
         project: exahype2.Project
 
@@ -1093,10 +1172,11 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             particle_set=tracer_particles,
             solver=self,
             filename=name + "-" + self._name,
-            number_of_entries_between_two_db_flushes=5000,
+            number_of_entries_between_two_db_flushes=number_of_entries_between_two_db_flushes,
             output_precision=10,
-            data_delta_between_two_snapsots=1e16,
-            time_delta_between_two_snapsots=0.01,
+            data_delta_between_two_snapsots = data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+            clearDatabaseAfterFlush         = True,
         )
         dump_into_database_action_set.priority = (
             self._action_set_compute_final_linear_combination.priority + 2
@@ -1226,11 +1306,18 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
         name,
         coordinates,
         project,
+        number_of_entries_between_two_db_flushes,
+        data_delta_between_two_snapsots,
+        time_delta_between_two_snapsots,
         tracer_unknowns=None,
     ):
         """!
 
         Add tracer to project
+        
+        Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
+        some of the arguments. Most of them are simply piped through to this 
+        class.
 
         At this point, we have not yet created the Peano 4 project. Therefore, we
         have not yet befilled the time stepping action set.
@@ -1270,10 +1357,11 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
             particle_set=tracer_particles,
             solver=self,
             filename=name + "-" + self._name,
-            number_of_entries_between_two_db_flushes=5000,
+            number_of_entries_between_two_db_flushes = number_of_entries_between_two_db_flushes,
             output_precision=10,
-            data_delta_between_two_snapsots=1e16,
-            time_delta_between_two_snapsots=0.01,
+            data_delta_between_two_snapsots = data_delta_between_two_snapsots,
+            time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+            clearDatabaseAfterFlush         = True,
         )
         dump_into_database_action_set.priority = (
             self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority
