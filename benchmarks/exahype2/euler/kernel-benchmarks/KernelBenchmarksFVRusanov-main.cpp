@@ -28,24 +28,22 @@
 #include "toolbox/loadbalancing/loadbalancing.h"
 
 
-#if defined(SharedTBB)
-#include <tbb/task_group.h>
-#endif
-
 using namespace benchmarks::exahype2::kernelbenchmarks;
 
 static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
 
 tarch::logging::Log _log("::");
 
-tarch::timing::Measurement gridConstructionMeasurement;
-tarch::timing::Measurement timeStepMeasurement;
-tarch::timing::Measurement plotMeasurement;
 
 double        validMaxEigenvalue = 0;
 double*       validOutcome       = nullptr;
-double        minTime            = 0;
-constexpr int N                  = 33554432 * 2;
+//double        minTime            = 0;
+//constexpr int N                  = 33554432 * 2;
+constexpr double TimeStamp    = 0.5;
+constexpr double TimeStepSize = 1e-6;
+constexpr double CellSize     = 0.1;
+constexpr double CellOffset   = 4.0;
+
 
 #if Dimensions == 2
 constexpr int NumberOfInputEntries = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2)
@@ -70,12 +68,14 @@ constexpr int NumberOfFiniteVolumesPerPatch = FVRusanovSolver::NumberOfFiniteVol
                                               * FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch;
 #endif
 
+
 /**
  * Set input data
  *
  * We really don't care if this makes any sense. Just make the data reasonably
- * smooth and ensure that all is positive, as there's for example density among
- * the values.
+ * smooth and ensure that all is positive, as there are density and energy
+ * among the unknowns. If they become negative or zero, the compute kernels do
+ * not make any sense anymore.
  */
 void initInputData(double* Q) {
   /*for (int i=0; i<NumberOfInputEntries/FVRusanovSolver::NumberOfUnknowns; i++) {
@@ -95,6 +95,8 @@ void initInputData(double* Q) {
 }
 
 /**
+ * Store outcome of one compute kernel
+ *
  * Make a persistent snapshot of a solution and assume, from hereon, that
  * this snapshot is the valid data. You can call this routine as often as
  * you want. Only the very first call will trigger a snapshot.
@@ -108,7 +110,10 @@ void storeOutcome(const double* Q, const double maxEigenvalue) {
   validMaxEigenvalue = maxEigenvalue;
 }
 
+
 /**
+ * Validate data against pre-stored simulation outcome
+ *
  * Works if and only if storeOutcome has been performed before.
  *
  * @return Tuple of maximum difference and total number of errors.
@@ -140,10 +145,6 @@ std::tuple<double, int> validateOutcome(double* Q, int patchIndex, const double 
   return {maxDifference, errors};
 }
 
-constexpr double TimeStamp    = 0.5;
-constexpr double TimeStepSize = 1e-6;
-constexpr double CellSize     = 0.1;
-constexpr double CellOffset   = 4.0;
 
 void reportRuntime( const std::string& kernelIdentificator, tarch::timing::Measurement timing, int patches ) {
   logInfo(
@@ -163,7 +164,10 @@ void reportRuntime( const std::string& kernelIdentificator, tarch::timing::Measu
  *
  * The way how we write down the functor kernels differs from the static ones.
  * We do not have the actual solver object, and therefore need a slightly
- * different signature. However,
+ * different signature. So basically, this is a copy-n-paste of the task's
+ * applyKernelToCell() function. Different to this one, we however do not
+ * free any allocated memory or wrap it manually into CellData. This is
+ * something that has to be done outside.
  */
 void kernelWithFunctor(
   ::exahype2::CellData & patchData,
@@ -174,71 +178,54 @@ void kernelWithFunctor(
 ) {
   ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
     patchData,
-  4,
-  1,
-  4,
-  0,
-   true ,
-   false ,
-   false ,
-   true ,
-  [&](
-    [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-    [[maybe_unused]] double                                       t,
-    [[maybe_unused]] double                                       dt,
-    [[maybe_unused]] int                                          normal,
-    [[maybe_unused]] double* __restrict__                         F // F[4]
-  )->void {
-
-    repositories::InstanceOfFVRusanovSolver.flux( Q, faceCentre, volumeH, t, dt, normal, F );
-
-  },
-  [&](
-    [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
-    [[maybe_unused]] const double* __restrict__                   deltaQ, // deltaQ[4+0]
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-    [[maybe_unused]] double                                       t,
-    [[maybe_unused]] double                                       dt,
-    [[maybe_unused]] int                                          normal,
-    [[maybe_unused]] double* __restrict__                         BTimesDeltaQ // BTimesDeltaQ[4]
-  )->void {
-
-  },
-  [&](
-    [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeX,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-    [[maybe_unused]] double                                       t,
-    [[maybe_unused]] double                                       dt,
-    [[maybe_unused]] double* __restrict__                         S // S[4]
-  )->void {
-
-  },
-  [&](
-    [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
-    [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-    [[maybe_unused]] double                                       t,
-    [[maybe_unused]] double                                       dt,
-    [[maybe_unused]] int                                          normal
-  )->double {
-    return repositories::InstanceOfFVRusanovSolver.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
-  }
-);
-
-  ::exahype2::fv::validatePatch(
-    targetPatch,
-    4,
-    0,
-    4,
-    0, // halo
-    std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-  ); // outcome has to be valid
-
-  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+    FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+    1,
+    FVRusanovSolver::NumberOfUnknowns,
+    FVRusanovSolver::NumberOfAuxiliaryVariables,
+    true ,
+    false ,
+    false ,
+    true ,
+    [&](
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      [[maybe_unused]] double* __restrict__                         F // F[4]
+    )->void {
+      repositories::InstanceOfFVRusanovSolver.flux( Q, faceCentre, volumeH, t, dt, normal, F );
+    },
+    [&](
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
+      [[maybe_unused]] const double* __restrict__                   deltaQ, // deltaQ[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      [[maybe_unused]] double* __restrict__                         BTimesDeltaQ // BTimesDeltaQ[4]
+    )->void {},
+    [&](
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeX,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] double* __restrict__                         S // S[4]
+    )->void {},
+    [&](
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal
+    )->double {
+      return repositories::InstanceOfFVRusanovSolver.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
+    }
+  );
 }
 
 
@@ -258,62 +245,14 @@ void kernelWithFunctor(
  * @param numberOfPatches Number of patches to study
  */
 void runBenchmarksOnHost(int numberOfPatches) {
-  auto runBaseline = [&](int currentThread, const int patches) -> void {
-    tarch::timing::Measurement timing;
-    for (int j=0; j<NumberOfSamples; j++) {
-      std::vector<double*> inputData;
-      std::vector<double*> outputData;
-      for (int i = 0; i < patches; i++) {
-        inputData.push_back(
-          tarch::allocateMemory<double>(NumberOfInputEntries, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory)
-        );
-        outputData.push_back(new double[NumberOfOutputEntries]);
-        initInputData(inputData[i]);
-      }
-
-      double               outputMaxEigenvalue = 0;
-      tarch::timing::Watch watch("::runBenchmarksOnHost", "runBaseline(...)", false);
-      for (int i = 0; i < patches; i++) {
-        outputMaxEigenvalue = tasks::FVRusanovSolverEnclaveTask::applyKernelToCell(
-          marker, TimeStamp, TimeStepSize, inputData[i], outputData[i]
-        );
-      }
-      watch.stop();
-      timing.setValue( watch.getCalendarTime() );
-
-      if constexpr (Accuracy > 0.0) {
-        int    errors        = 0;
-        double maxDifference = 0.0;
-        for (int i = 0; i < patches; i++) {
-          storeOutcome(outputData[i], outputMaxEigenvalue);
-          auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome(outputData[i], i, outputMaxEigenvalue);
-          errors += errorsPerPatch;
-          maxDifference = std::max(maxDifference, maxDifferencePerPatch);
-        }
-
-        if (errors > 0) {
-          logError(
-            "main()",
-            "max difference of outcome from baseline for all patches is "
-              << maxDifference << " (admissible accuracy=" << Accuracy << ")"
-              << " for " << errors << " entries"
-          );
-          std::abort();
-        }
-      }
-
-      for (int i = 0; i < patches; i++) {
-        // inputData is freed automatically by the kernel
-        delete[] outputData[i];
-      }
-    }
-
-    if (currentThread == 0) {
-      reportRuntime( "functor-based, no intra-kernel parallelisation", timing, patches );
-    }
-  };
+  peano4::grid::GridTraversalEvent event;
+  event.setX(CellOffset);
+  event.setH(CellSize);
+  peano4::datamanagement::CellMarker marker(event);
 
   /**
+   * Run a benchmark on the host
+   *
    * @see runBaseline
    */
   auto runKernelOnHost =
@@ -387,15 +326,14 @@ void runBenchmarksOnHost(int numberOfPatches) {
     }
   };
 
-  peano4::grid::GridTraversalEvent event;
-  event.setX(CellOffset);
-  event.setH(CellSize);
-  peano4::datamanagement::CellMarker marker(event);
-
   auto numberOfPatchesPerThread = numberOfPatches / tarch::multicore::Core::getInstance().getNumberOfThreads();
 
   parallelFor(thread,tarch::multicore::Core::getInstance().getNumberOfThreads()) {
     runKernelOnHost(
+      kernelWithFunctor,
+      "clueless",
+      thread,
+      numberOfPatchesPerThread
     );
 //    runBaseline(thread, numberOfPatchesPerThread);
 
@@ -545,6 +483,7 @@ void runStatelessVariantOnDevice(
   }
 
   if (currentThread == 0) {
+/*
     logInfo(
       "main()",
       "stateless kernels on device "
@@ -557,6 +496,7 @@ void runStatelessVariantOnDevice(
            ) * 100.0
         << " [%]"
     );
+*/
   }
 };
 

@@ -72,6 +72,43 @@ environment in specific ways. You might have to set some environment
 variables specifying the GPUs to use or core counts accordingly.
 The exact usage obviously depends strongly @ref page_compiler_specific_settings "on your software stack".
 
+## Example for complete test pipeline
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Clonning the repo
+git clone -b gpus-sycl-siam https://gitlab.lrz.de/hpcsoftware/Peano
+
+
+# Autotools command
+cd Peano libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
+
+automake --add-missing
+
+
+# To use with Intel LLVM
+./configure CC=clang CXX=clang++ CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" LIBS="-ltbb" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80"  --with-multithreading=tbb --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl 
+
+
+# To use with Intel proprietary compiler
+./configure CC=icx CXX=icpx LIBS=-ltbb LDFLAGS="-fsycl -g -tbb" CXXFLAGS="-tbb -O3 -fsycl" -with-multithreading=tbb -enable-exahype -enable-blockstructured -enable-loadbalancing -with-gpu=sycl 
+
+
+# Build the benchmark (with d=3 and p=8)
+cd benchmarks/exahype2/euler/kernel-benchmarks
+
+export PYTHONPATH=../../../../python
+
+python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 8
+
+
+#Run and plot the timings for AoS batched kernel kernel (select your device with --gpus, see available devices by entering sycl-ls to the terminal)
+for i in 8; do
+	./kernel-benchmarks-fv-rusanov-3d-patch-size-$i --threads 1 --gpus 2 > sycl-3d-ps$i.txt
+done
+
+python3 create-exahype-sycl-plot.py -f sycl-3d-ps8.txt -kv batched -t 50 -ds AoS -ps 8 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 # Outputs
 
