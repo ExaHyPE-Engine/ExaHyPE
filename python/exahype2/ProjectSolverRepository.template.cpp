@@ -375,9 +375,14 @@ void initLogFilters() {
 }
 
 void initSharedMemoryAndGPUEnvironment() {
+
+  {% if TIMEOUT>=0 %}
+  tarch::mpi::Rank::getInstance().setDeadlockTimeOut( {{TIMEOUT}} );
+  {% endif %}
   tarch::multicore::Core::getInstance().configure( {{NUMBER_OF_THREADS}} );
   tarch::accelerator::Device::getInstance().configure( { {{GPUS|join(",")}} } );
   tarch::multicore::setOrchestration( {{MULTICORE_ORCHESTRATION}} );
+
 }
 
 
