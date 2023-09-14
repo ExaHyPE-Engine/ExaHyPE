@@ -338,9 +338,29 @@ namespace peano4 {
  * OpenMP relies on pragmas around the nexted for loops, which is tricky as
  * parallelDfor itself is a pragma. I hijack the construct
  *
+ *              _Pragma( "my embedded pragma" )
+ *
+ * which is, to the best of my knowledge, a C99 instruction and not C++17. So I
+ * simply assume and hope that this works. Note that the _Pragma statement
+ * yields a #pragma, i.e. you are not allowed to write
+ *
  *              _Pragma( "#pragma my embedded pragma" )
  *
- * which is, to the best of my knowledge, a C99 instruction and not C++17.
+ * as this would unfold into
+ *
+ *              #pragma #pragma my embedded pragma
+ *
+ * Further to that, variables of the pragma are not replaced in the unfolded
+ * pragma. Therefore, I have to go this unorthodox way with the helper loop
+ * guard.
+ *
+ * For the available OpenMP variants, it neither makes sense to have parallel
+ * fors nor does it work properly:
+ *
+ * - If we run the kernel within a task (which we typically do), the task
+ *   cannot spawn out onto multiple cores.
+ * - I found no way to have multiple pragmas in a row where we toggle through
+ *   the options via if.
  *
  *
  * ## TBB
@@ -371,32 +391,35 @@ namespace peano4 {
 #define parallelFor(counter, max) \
   parallelForWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
 
-
-#if Dimensions==2 and defined(SharedOMP)
+#if defined(SharedOMP)
 #define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
   { \
-  _Pragma( "#pragma omp taskloop for if (loopParallelism==::peano4::utils::LoopParallelism::Subtasks)" ) \
-  _Pragma( "#pragma omp parallel for if (loopParallelism==::peano4::utils::LoopParallelism::ParallelFor)" ) \
+  auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
+  _Pragma( "omp taskloop if ( __loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter = 0; counter < max; counter++ ) {
 
 
+#define endParallelFor }}
+#endif
+
+
+#if Dimensions==2 and defined(SharedOMP)
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   { \
   tarch::la::Vector<Dimensions,int> counter##Max(max); \
-  _Pragma( "#pragma omp taskloop for collapse(2) if (loopParallelism==::peano4::utils::LoopParallelism::Subtasks)" ) \
-  _Pragma( "#pragma omp parallel for collapse(2) if (loopParallelism==::peano4::utils::LoopParallelism::ParallelFor)" ) \
+  auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
+  _Pragma( "omp taskloop collapse(2) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) { \
     tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1 };
 
-#define endParallelFor }}
 #define endParallelDfor }}
 #elif Dimensions==3 and defined(SharedOMP)
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   { \
   tarch::la::Vector<Dimensions,int> counter##Max(max); \
-  _Pragma( "#pragma omp taskloop for collapse(3) if (loopParallelism==::peano4::utils::LoopParallelism::Subtasks)" ) \
-  _Pragma( "#pragma omp parallel for collapse(3) if (loopParallelism==::peano4::utils::LoopParallelism::ParallelFor)" ) \
+  auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
+  _Pragma( "omp taskloop collapse(3) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) { \
