@@ -11,25 +11,28 @@
  * For the full license text, see LICENSE.txt
  **/ #}
 
-#include <mm_malloc.h> //g++
-
 #include "{{pathToOptKernel}}/Quadrature.h"
 
 // Use {{quadratureType}} quadrature
-double* {{codeNamespace}}::weights1;
-double* {{codeNamespace}}::weights2;
-double* {{codeNamespace}}::weights3;
-double* {{codeNamespace}}::weights4;
-double* {{codeNamespace}}::iweights1;
-double* {{codeNamespace}}::iweights3;
-double* {{codeNamespace}}::nodes;
+template <typename T> T* {{codeNamespace}}::Quadrature<T>::weights1;
+template <typename T> T* {{codeNamespace}}::Quadrature<T>::weights2;
+template <typename T> T* {{codeNamespace}}::Quadrature<T>::weights3;
+template <typename T> T* {{codeNamespace}}::Quadrature<T>::weights4;
+template <typename T> T* {{codeNamespace}}::Quadrature<T>::iweights1;
+template <typename T> T* {{codeNamespace}}::Quadrature<T>::iweights3;
+template <typename T> T* {{codeNamespace}}::Quadrature<T>::nodes;
 {% if kernelType=="limiter" %}
-double* {{codeNamespace}}::uh2lob;
-double* {{codeNamespace}}::dg2fv;
-double* {{codeNamespace}}::fv2dg;
+template <typename T> T* {{codeNamespace}}::Quadrature<T>::uh2lob;
+template <typename T> T* {{codeNamespace}}::Quadrature<T>::dg2fv;
+template <typename T> T* {{codeNamespace}}::Quadrature<T>::fv2dg;
 {% endif %}
 
-void {{codeNamespace}}::freeQuadratureNodesAndWeights() {
+{% for precision_number in range(0,computePrecisions|length) %}
+template class {{codeNamespace}}::Quadrature<{{computePrecisions[precision_number]}}>;
+{% endfor %}
+
+template<typename T>
+void {{codeNamespace}}::Quadrature<T>::freeQuadratureNodesAndWeights() {
   _mm_free(weights1);
   _mm_free(weights2);
   _mm_free(weights3);
@@ -44,18 +47,19 @@ void {{codeNamespace}}::freeQuadratureNodesAndWeights() {
 {% endif %}
 }
 
-void {{codeNamespace}}::initQuadratureNodesAndWeights() {
-  weights1  = (double *) _mm_malloc(sizeof(double)*{{w1Size }}, {{alignmentSize}}); //nDofPad
-  weights2  = (double *) _mm_malloc(sizeof(double)*{{w2Size }}, {{alignmentSize}}); //2D: nDofPad (==weight1), 3D: (nDof*nDof)Pad (== w1[i]*w1[j])
-  weights3  = (double *) _mm_malloc(sizeof(double)*{{w3Size }}, {{alignmentSize}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
-  weights4  = (double *) _mm_malloc(sizeof(double)*{{w4Size }}, {{alignmentSize}}); //2D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]), 3D: (nDof*nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]*w1[l])
-  iweights1 = (double *) _mm_malloc(sizeof(double)*{{w1Size }}, {{alignmentSize}}); //nDofPad
-  iweights3 = (double *) _mm_malloc(sizeof(double)*{{w3Size }}, {{alignmentSize}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
-  nodes     = (double *) _mm_malloc(sizeof(double)*{{nDofPad}}, {{alignmentSize}});
+template<typename T>
+void {{codeNamespace}}::Quadrature<T>::initQuadratureNodesAndWeights() {
+  weights1  = (T *) _mm_malloc(sizeof(T)*{{w1Size }}, {{alignmentSize}}); //nDofPad
+  weights2  = (T *) _mm_malloc(sizeof(T)*{{w2Size }}, {{alignmentSize}}); //2D: nDofPad (==weight1), 3D: (nDof*nDof)Pad (== w1[i]*w1[j])
+  weights3  = (T *) _mm_malloc(sizeof(T)*{{w3Size }}, {{alignmentSize}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
+  weights4  = (T *) _mm_malloc(sizeof(T)*{{w4Size }}, {{alignmentSize}}); //2D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]), 3D: (nDof*nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]*w1[l])
+  iweights1 = (T *) _mm_malloc(sizeof(T)*{{w1Size }}, {{alignmentSize}}); //nDofPad
+  iweights3 = (T *) _mm_malloc(sizeof(T)*{{w3Size }}, {{alignmentSize}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
+  nodes     = (T *) _mm_malloc(sizeof(T)*{{nDofPad}}, {{alignmentSize}});
 {% if kernelType=="limiter" %}
-  uh2lob    = (double *) _mm_malloc(sizeof(double)*{{uh2lobSize}}, {{alignmentSize}}); //nDof*nDofPad
-  dg2fv     = (double *) _mm_malloc(sizeof(double)*{{dg2fvSize }}, {{alignmentSize}}); //nDof*nDofLimPad
-  fv2dg     = (double *) _mm_malloc(sizeof(double)*{{fv2dgSize }}, {{alignmentSize}}); //nDofLim*nDofPad
+  uh2lob    = (T *) _mm_malloc(sizeof(T)*{{uh2lobSize}}, {{alignmentSize}}); //nDof*nDofPad
+  dg2fv     = (T *) _mm_malloc(sizeof(T)*{{dg2fvSize }}, {{alignmentSize}}); //nDof*nDofLimPad
+  fv2dg     = (T *) _mm_malloc(sizeof(T)*{{fv2dgSize }}, {{alignmentSize}}); //nDofLim*nDofPad
 {% endif %}
   
 {% for i in w1_seq %}
