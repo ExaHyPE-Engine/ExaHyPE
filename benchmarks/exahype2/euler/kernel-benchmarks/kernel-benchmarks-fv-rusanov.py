@@ -83,9 +83,9 @@ else:
         source_term           = exahype2.solvers.fv.PDETerms.None_Implementation,
     )
     if args.dim == 2:
-      my_solver.plot_description = "rho, u, v, E"
+      my_solver.plot_description = "rho, u, v, e"
     else:
-      my_solver.plot_description = "rho, u, v, w, E"
+      my_solver.plot_description = "rho, u, v, w, e"
     my_solver.add_user_solver_includes("""
 #include "../../../../applications/exahype2/euler/EulerKernels.h"
 """)
