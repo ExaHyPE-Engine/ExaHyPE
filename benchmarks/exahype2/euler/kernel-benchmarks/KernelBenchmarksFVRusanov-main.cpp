@@ -94,6 +94,8 @@ void initInputData(double* Q) {
   }
 }
 
+tarch::multicore::BooleanSemaphore  validateOutcomeSemaphore;
+
 /**
  * Store outcome of one compute kernel
  *
@@ -102,6 +104,7 @@ void initInputData(double* Q) {
  * you want. Only the very first call will trigger a snapshot.
  */
 void storeOutcome(const double* Q, const double maxEigenvalue) {
+  tarch::multicore::Lock lock(validateOutcomeSemaphore);
   if (validOutcome == nullptr) {
     validOutcome = new double[NumberOfOutputEntries];
     std::memcpy(validOutcome, Q, sizeof(double) * NumberOfOutputEntries);
@@ -119,6 +122,7 @@ void storeOutcome(const double* Q, const double maxEigenvalue) {
  * @return Tuple of maximum difference and total number of errors.
  */
 std::tuple<double, int> validateOutcome(double* Q, int patchIndex, const double maxEigenvalue) {
+  tarch::multicore::Lock lock(validateOutcomeSemaphore);
   int    index         = 0;
   int    errors        = 0;
   double maxDifference = 0.0;
@@ -149,7 +153,7 @@ std::tuple<double, int> validateOutcome(double* Q, int patchIndex, const double 
 void reportRuntime( const std::string& kernelIdentificator, tarch::timing::Measurement timing, int patches ) {
   logInfo(
     "reportRuntime()",
-    kernelIdentificator << ": " <<
+    kernelIdentificator <<
     "\t| " << timing.getValue() <<
     "\t| " << (timing.getValue() / patches / NumberOfFiniteVolumesPerPatch / NumberOfSamples) <<
     "\t| " << timing.toString() <<
@@ -169,14 +173,76 @@ void reportRuntime( const std::string& kernelIdentificator, tarch::timing::Measu
  * free any allocated memory or wrap it manually into CellData. This is
  * something that has to be done outside.
  */
-void kernelWithFunctor(
+void kernelWithFunctorPatchWise(
   ::exahype2::CellData & patchData,
   bool evaluateFlux,
   bool evaluateNonconservativeProduct,
   bool evaluateSource,
-  bool evaluateMaximumEigenvalueAfterTimeStep
+  bool evaluateMaximumEigenvalueAfterTimeStep,
+  ::peano4::utils::LoopParallelism loopParallelism
 ) {
   ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
+    patchData,
+    FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+    1,
+    FVRusanovSolver::NumberOfUnknowns,
+    FVRusanovSolver::NumberOfAuxiliaryVariables,
+    true ,
+    false ,
+    false ,
+    true ,
+    [&](
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      [[maybe_unused]] double* __restrict__                         F // F[4]
+    )->void {
+      repositories::InstanceOfFVRusanovSolver.flux( Q, faceCentre, volumeH, t, dt, normal, F );
+    },
+    [&](
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
+      [[maybe_unused]] const double* __restrict__                   deltaQ, // deltaQ[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal,
+      [[maybe_unused]] double* __restrict__                         BTimesDeltaQ // BTimesDeltaQ[4]
+    )->void {},
+    [&](
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeX,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] double* __restrict__                         S // S[4]
+    )->void {},
+    [&](
+      [[maybe_unused]] const double* __restrict__                   Q, // Q[4+0]
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
+      [[maybe_unused]] double                                       t,
+      [[maybe_unused]] double                                       dt,
+      [[maybe_unused]] int                                          normal
+    )->double {
+      return repositories::InstanceOfFVRusanovSolver.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
+    }
+  );
+}
+
+
+void kernelWithFunctorBatched(
+  ::exahype2::CellData & patchData,
+  bool evaluateFlux,
+  bool evaluateNonconservativeProduct,
+  bool evaluateSource,
+  bool evaluateMaximumEigenvalueAfterTimeStep,
+  ::peano4::utils::LoopParallelism loopParallelism
+) {
+  ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_functors(
     patchData,
     FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
     1,
@@ -262,80 +328,88 @@ void runBenchmarksOnHost(int numberOfPatches) {
         bool evaluateFlux,
         bool evaluateNonconservativeProduct,
         bool evaluateSource,
-        bool evaluateMaximumEigenvalueAfterTimeStep
+        bool evaluateMaximumEigenvalueAfterTimeStep,
+        ::peano4::utils::LoopParallelism loopParallelism
       )>                 kernel,
       const std::string& markerName,
       int                currentThread,
-      int                patches
+      int                patches,
+      ::peano4::utils::LoopParallelism loopParallelism
     ) -> void {
-    ::exahype2::CellData patchData(patches);
-    for (int i = 0; i < patches; i++) {
-      patchData.QIn[i]        = new double[NumberOfInputEntries];
-      patchData.t[i]          = TimeStamp;
-      patchData.dt[i]         = TimeStepSize;
-      patchData.QOut[i]       = new double[NumberOfOutputEntries];
-      patchData.cellCentre[i] = tarch::la::Vector<Dimensions, double>(CellOffset + 0.5 * CellSize);
-      patchData.cellSize[i]   = tarch::la::Vector<Dimensions, double>(CellSize);
-      initInputData(patchData.QIn[i]);
-    }
+    tarch::timing::Measurement timing;
+    for (int j=0; j<NumberOfSamples; j++) {
+      ::exahype2::CellData patchData(patches);
+      for (int i = 0; i < patches; i++) {
+        patchData.QIn[i]        = tarch::allocateMemory( NumberOfInputEntries, tarch::MemoryLocation::Heap );
+        patchData.t[i]          = TimeStamp;
+        patchData.dt[i]         = TimeStepSize;
+        patchData.QOut[i]       = tarch::allocateMemory( NumberOfOutputEntries, tarch::MemoryLocation::Heap );
+        patchData.cellCentre[i] = tarch::la::Vector<Dimensions, double>(CellOffset + 0.5 * CellSize);
+        patchData.cellSize[i]   = tarch::la::Vector<Dimensions, double>(CellSize);
+        initInputData(patchData.QIn[i]);
+      }
 
-    tarch::timing::Watch watch("::runBenchmarksOnHost", "runStatelessVariantOnHost(...)", false);
-    kernel(
-      patchData,
-      true,
-      false,
-      false,
-      true // computeCFL
-    );
-    watch.stop();
+      tarch::timing::Watch watch("::runBenchmarksOnHost", "runKernelOnHost(...)", false);
+      kernel(
+        patchData,
+        true,
+        false,
+        false,
+        true, // computeCFL
+        loopParallelism
+      );
+      watch.stop();
+      timing.setValue( watch.getCalendarTime() );
+
+      if constexpr (Accuracy > 0.0) {
+        storeOutcome(patchData.QOut[0], patchData.maxEigenvalue[0]);
+        int    errors        = 0;
+        double maxDifference = 0.0;
+        for (int i = 0; i < patches; i++) {
+          auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome(
+            patchData.QOut[i], i, patchData.maxEigenvalue[i]
+          );
+          errors += errorsPerPatch;
+          maxDifference = std::max(maxDifference, maxDifferencePerPatch);
+        }
+
+        if (errors > 0) {
+          logError(
+            "main()",
+            "max difference of outcome from "
+              << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")"
+              << " for " << errors << " entries"
+          );
+          std::abort();
+        }
+      }
+
+      for (int i = 0; i < patches; i++) {
+        tarch::freeMemory(patchData.QIn[i],tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+        tarch::freeMemory(patchData.QOut[i],tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+      }
+    }
 
     if (currentThread == 0) {
-      logInfo(
-        "main()",
-        "stateless kernels on host with "
-          << markerName << ": " << watch.getCalendarTime() << " / "
-          << (watch.getCalendarTime() / patches / NumberOfFiniteVolumesPerPatch)
-      );
-    }
-
-    if constexpr (Accuracy > 0.0) {
-      int    errors        = 0;
-      double maxDifference = 0.0;
-      for (int i = 0; i < patches; i++) {
-        auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome(
-          patchData.QOut[i], i, patchData.maxEigenvalue[i]
-        );
-        errors += errorsPerPatch;
-        maxDifference = std::max(maxDifference, maxDifferencePerPatch);
-      }
-
-      if (errors > 0) {
-        logError(
-          "main()",
-          "max difference of outcome from "
-            << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")"
-            << " for " << errors << " entries"
-        );
-        std::abort();
-      }
-    }
-
-    for (int i = 0; i < patches; i++) {
-      delete[] patchData.QIn[i];
-      delete[] patchData.QOut[i];
+      reportRuntime( markerName, timing, patches );
     }
   };
 
   auto numberOfPatchesPerThread = numberOfPatches / tarch::multicore::Core::getInstance().getNumberOfThreads();
 
-  parallelFor(thread,tarch::multicore::Core::getInstance().getNumberOfThreads()) {
-    runKernelOnHost(
-      kernelWithFunctor,
-      "clueless",
-      thread,
-      numberOfPatchesPerThread
-    );
-//    runBaseline(thread, numberOfPatchesPerThread);
+  parallelForWithDynamicScheduling(thread, tarch::multicore::Core::getInstance().getNumberOfThreads(), ::peano4::utils::LoopParallelism::Subtasks) {
+    runKernelOnHost( kernelWithFunctorPatchWise, "functors, patch-wise, no parallelism", thread, numberOfPatchesPerThread, ::peano4::utils::LoopParallelism::None );
+    runKernelOnHost( kernelWithFunctorPatchWise, "functors, patch-wise, parallel for  ",   thread, numberOfPatchesPerThread, ::peano4::utils::LoopParallelism::ParallelFor );
+    runKernelOnHost( kernelWithFunctorPatchWise, "functors, patch-wise, subtasks      ",   thread, numberOfPatchesPerThread, ::peano4::utils::LoopParallelism::Subtasks );
+
+    runKernelOnHost( kernelWithFunctorBatched,   "functors, batched, no parallelism   ", thread, numberOfPatchesPerThread, ::peano4::utils::LoopParallelism::None );
+    runKernelOnHost( kernelWithFunctorBatched,   "functors, batched, parallel for     ",   thread, numberOfPatchesPerThread, ::peano4::utils::LoopParallelism::ParallelFor );
+    runKernelOnHost( kernelWithFunctorBatched,   "functors, batched, subtasks         ",   thread, numberOfPatchesPerThread, ::peano4::utils::LoopParallelism::Subtasks );
+//    runKernelOnHost(kernelWithFunctor
+//      ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator>,
+//      "static calls, AoS", thread, numberOfPatchesPerThread, ::peano4::utils::LoopParallelism::Subtasks );
+  } endParallelFor
+
 
 /*
     runStatelessVariantOnHost(
@@ -411,8 +485,6 @@ void runBenchmarksOnHost(int numberOfPatches) {
       numberOfPatchesPerThread
     );
 */
-
-  } endParallelFor
 }
 
 void runStatelessVariantOnDevice(
@@ -993,6 +1065,12 @@ int main(int argc, char** argv) {
   logInfo("main()", "Dimensions: " << Dimensions);
   logInfo("main()", "Number of samples per measurement: " << NumberOfSamples);
 
+  #if defined(SharedOMP) or defined(GPUOffloadingOMP)
+  #pragma omp parallel
+  {
+  #pragma omp master
+  {
+  #endif
 
   for (int numberOfPatches = tarch::multicore::Core::getInstance().getNumberOfThreads(); numberOfPatches <= MaxPatches; numberOfPatches *= 2) {
     std::stringstream msg;
@@ -1009,6 +1087,10 @@ int main(int argc, char** argv) {
       runBenchmarksOnDevice(numberOfPatches);
     }
   }
+
+  #if defined(SharedOMP) or defined(GPUOffloadingOMP)
+  }}
+  #endif
 
   if constexpr (Accuracy > 0.0) {
     logInfo("main()", "all kernels yield the same outcome up to a accuracy of " << Accuracy << " unless reported otherwise" );

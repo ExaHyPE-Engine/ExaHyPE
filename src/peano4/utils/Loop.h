@@ -314,6 +314,20 @@ namespace peano4 {
  * annoying, but some LLVM front-ends otherwise get confused.
  *
  *
+ * The mapping onto your variables of choice is very similar to what we see a
+ * lot in CUDA and SYCL kernels. In the simplest case, you write
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * parallelDforWithDynamicScheduling(volume, ...) {
+ *   int firstIndex = volume(0);
+ *   int secondIndex = volume(1);
+ * } endParallelDfor
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * In this context, it is also interesting to study tarch::la::slice() which
+ * allows you to extract whole subvectors from the index vector in one rush.
+ *
+ *
  * ## Generic realisation remarks
  *
  * - I convert the max argument always into counter##Max and then work against
@@ -362,6 +376,12 @@ namespace peano4 {
  * - I found no way to have multiple pragmas in a row where we toggle through
  *   the options via if.
  *
+ * If we use a taskloop in OpenMP, the default visibility of all variables
+ * will be taskfirst. Furthermore, the created copies will be subject to a
+ * copy constructor and their destructor. This means that we alter the
+ * visibility when we switch from parallel for or no parallelisation into a
+ * taskloop. Therefore, I manually change the default visibility to shared.
+ *
  *
  * ## TBB
  *
@@ -369,7 +389,6 @@ namespace peano4 {
  * supports d-dimensional ranges: It has loop collapsing built-in. I use the
  * TBB ranges, embed a nested for loop into the range, and then puzzle the
  * counter of interest together from the ranges indices again.
- *
  *
  *
  * ## SYCL
@@ -385,46 +404,68 @@ namespace peano4 {
  * There is no dynamic scheduling version of the SYCL backend therefore.
  *
  */
+#define parallelFor(counter, max) \
+  parallelForWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
+
 #define parallelDfor(counter, max) \
   parallelDforWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
 
-#define parallelFor(counter, max) \
-  parallelForWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
+#if Dimensions==2
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelDforWithDynamicScheduling2d(counter, max, loopParallelism)
+
+#define parallelDPlusOneForWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelDforWithDynamicScheduling3d(counter, max, loopParallelism)
+#elif Dimensions==3
+#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelDforWithDynamicScheduling3d(counter, max, loopParallelism)
+
+#define parallelDPlusOneForWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelDforWithDynamicScheduling4d(counter, max, loopParallelism)
+#endif
+
+
+
+
 
 #if defined(SharedOMP)
 #define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
   { \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp taskloop if ( __loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "omp taskloop default(shared) if ( __loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter = 0; counter < max; counter++ ) {
 
-
-#define endParallelFor }}
-#endif
-
-
-#if Dimensions==2 and defined(SharedOMP)
-#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
+#define parallelDforWithDynamicScheduling2d(counter, max, loopParallelism) \
   { \
-  tarch::la::Vector<Dimensions,int> counter##Max(max); \
+  tarch::la::Vector<2,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp taskloop collapse(2) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "omp taskloop collapse(2) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) { \
-    tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1 };
+    tarch::la::Vector<2, int> counter = { counter##0, counter##1 };
 
-#define endParallelDfor }}
-#elif Dimensions==3 and defined(SharedOMP)
-#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
+#define parallelDforWithDynamicScheduling3d(counter, max, loopParallelism) \
   { \
-  tarch::la::Vector<Dimensions,int> counter##Max(max); \
+  tarch::la::Vector<3,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp taskloop collapse(3) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "omp taskloop collapse(3) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) { \
-    tarch::la::Vector<Dimensions, int> counter = { counter##0, counter##1, counter##2 };
+    tarch::la::Vector<3, int> counter = { counter##0, counter##1, counter##2 };
 
+#define parallelDforWithDynamicScheduling3d(counter, max, loopParallelism) \
+  { \
+  tarch::la::Vector<4,int> counter##Max(max); \
+  auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
+  _Pragma( "omp taskloop collapse(4) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
+  for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
+  for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
+  for( int counter##3 = 0; counter##3 < counter##Max(3); counter##3++ ) { \
+    tarch::la::Vector<4, int> counter = { counter##0, counter##1, counter##2, counter##3 };
+
+#define endParallelFor }}
 #define endParallelDfor }}
 #elif Dimensions==2 and defined(SharedTBB)
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \

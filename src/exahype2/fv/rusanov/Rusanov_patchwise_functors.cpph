@@ -84,19 +84,26 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
       }
     }
     else if (Dimensions==2) {
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        internal::copySolution_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          patchIndex,
-          volumeIndex2d(x,y),
-          unknown,
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-      }
+/*
+      parallelDforWithDynamicScheduling2d(volume,numberOfVolumesPerAxisInPatch,loopParallelism) {
+        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+*/
+      parallelDforWithDynamicScheduling2d(
+        volume,
+        {numberOfVolumesPerAxisInPatch,numberOfVolumesPerAxisInPatch,unknowns+auxiliaryVariables},
+        loopParallelism
+      ) {
+          internal::copySolution_LoopBody(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchIndex,
+            tarch::la::slice<Dimensions>(volume,0), // first Dimension entries
+            volume(Dimensions),                     // unknown
+            patchData.QOut[patchIndex],
+            QOutEnumerator
+          );
+        }
+      } endParallelDfor
     }
     else {
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
