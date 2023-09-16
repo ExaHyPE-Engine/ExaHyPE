@@ -80,7 +80,7 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   assertion(not tasks.empty());
 
   #if defined(OpenMPTaskGroup)
-  #pragma omp taskloop nogroup shared(tasks) priority(tarch::multicore::Task::DefaultPriority) untied
+  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
   #endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
   #if !defined(OpenMPTaskGroup)
