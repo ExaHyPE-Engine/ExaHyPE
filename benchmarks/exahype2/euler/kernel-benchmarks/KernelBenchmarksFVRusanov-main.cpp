@@ -310,7 +310,7 @@ void kernelWithFunctorBatched(
  *
  * @param numberOfPatches Number of patches to study
  */
-void runBenchmarksOnHost(int numberOfPatches) {
+void runBenchmarksOnHost(int numberOfPatches, int currentThread) {
   peano4::grid::GridTraversalEvent event;
   event.setX(CellOffset);
   event.setH(CellSize);
@@ -395,55 +395,55 @@ void runBenchmarksOnHost(int numberOfPatches) {
     }
   };
 
-  runKernelOnHost( kernelWithFunctorPatchWise, "functors, patch-wise, no parallelism", 0, numberOfPatches, ::peano4::utils::LoopParallelism::None );
-  runKernelOnHost( kernelWithFunctorPatchWise, "functors, patch-wise, parallel for  ",   0, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
-  runKernelOnHost( kernelWithFunctorPatchWise, "functors, patch-wise, subtasks      ",   0, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
+  runKernelOnHost( kernelWithFunctorPatchWise, "functors, patch-wise, no parallelism", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::None );
+  runKernelOnHost( kernelWithFunctorPatchWise, "functors, patch-wise, parallel for  ",   currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
+  runKernelOnHost( kernelWithFunctorPatchWise, "functors, patch-wise, subtasks      ",   currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
 
-  runKernelOnHost( kernelWithFunctorBatched,   "functors, batched, no parallelism   ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::None );
-  runKernelOnHost( kernelWithFunctorBatched,   "functors, batched, parallel for     ",   0, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
-  runKernelOnHost( kernelWithFunctorBatched,   "functors, batched, subtasks         ",   0, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
+  runKernelOnHost( kernelWithFunctorBatched,   "functors, batched, no parallelism   ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::None );
+  runKernelOnHost( kernelWithFunctorBatched,   "functors, batched, parallel for     ",   currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
+  runKernelOnHost( kernelWithFunctorBatched,   "functors, batched, subtasks         ",   currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
 
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator>,
-                     "static, patch-wise, AoS, no parallelism   ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::None );
+                     "static, patch-wise, AoS, no parallelism   ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::None );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator>,
-                     "static, patch-wise, AoS, parallel for     ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
+                     "static, patch-wise, AoS, parallel for     ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator>,
-                     "static, patch-wise, AoS, subtasks         ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
+                     "static, patch-wise, AoS, subtasks         ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
 
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::SoALexicographicEnumerator>,
-                     "static, patch-wise, SoA, no parallelism   ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::None );
+                     "static, patch-wise, SoA, no parallelism   ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::None );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::SoALexicographicEnumerator>,
-                     "static, patch-wise, SoA, parallel for     ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
+                     "static, patch-wise, SoA, parallel for     ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::SoALexicographicEnumerator>,
-                     "static, patch-wise, SoA, subtasks         ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
+                     "static, patch-wise, SoA, subtasks         ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
 
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator>,
-                     "static, patch-wise, AoSoA, no parallelism   ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::None );
+                     "static, patch-wise, AoSoA, no parallelism   ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::None );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator>,
-                     "static, patch-wise, AoSoA, parallel for     ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
+                     "static, patch-wise, AoSoA, parallel for     ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator>,
-                     "static, patch-wise, AoSoA, subtasks         ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
+                     "static, patch-wise, AoSoA, subtasks         ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
 
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator>,
-                     "static, batched, AoS, no parallelism   ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::None );
+                     "static, batched, AoS, no parallelism   ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::None );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator>,
-                     "static, batched, AoS, parallel for     ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
+                     "static, batched, AoS, parallel for     ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator>,
-                     "static, batched, AoS, subtasks         ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
+                     "static, batched, AoS, subtasks         ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
 
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::SoALexicographicEnumerator>,
-                     "static, batched, SoA, no parallelism   ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::None );
+                     "static, batched, SoA, no parallelism   ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::None );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::SoALexicographicEnumerator>,
-                     "static, batched, SoA, parallel for     ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
+                     "static, batched, SoA, parallel for     ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::SoALexicographicEnumerator>,
-                     "static, batched, SoA, subtasks         ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
+                     "static, batched, SoA, subtasks         ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
 
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator>,
-                     "static, batched, AoSoA, no parallelism   ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::None );
+                     "static, batched, AoSoA, no parallelism   ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::None );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator>,
-                     "static, batched, AoSoA, parallel for     ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
+                     "static, batched, AoSoA, parallel for     ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::ParallelFor );
   runKernelOnHost( ::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator>,
-                     "static, batched, AoSoA, subtasks         ", 0, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
+                     "static, batched, AoSoA, subtasks         ", currentThread, numberOfPatches, ::peano4::utils::LoopParallelism::Subtasks );
 }
 
 
@@ -1032,19 +1032,24 @@ int main(int argc, char** argv) {
   {
   #endif
 
-  for (int numberOfPatches = 1; numberOfPatches <= MaxPatches; numberOfPatches *= 2) {
-    std::stringstream msg;
-    msg << "kernel-benchmarks-" << numberOfPatches << "-patches-"
-        << tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
-    OTTER_PHASE_SWITCH(msg.str().c_str());
+  for (int launchingThreads=1; launchingThreads<=tarch::multicore::Core::getInstance().getNumberOfThreads(); launchingThreads++) {
+    for (int numberOfPatches = launchingThreads; numberOfPatches <= MaxPatches; numberOfPatches *= 2) {
+      parallelFor(currentThread, launchingThreads) {
+        std::stringstream msg;
+        msg << "kernel-benchmarks-" << numberOfPatches << "-patches-"
+            << tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
+        OTTER_PHASE_SWITCH(msg.str().c_str());
 
-    logInfo("main()", "========================================");
-    logInfo("main()", "  Number of patches: " << numberOfPatches);
-    logInfo("main()", "========================================");
+        logInfo("main()", "===============================================================" );
+        logInfo("main()", "  Number of threads launching compute kernels: " << launchingThreads);
+        logInfo("main()", "  Number of patches per thread/compute kernel launch: " << numberOfPatches);
+        logInfo("main()", "===============================================================" );
 
-    runBenchmarksOnHost(numberOfPatches);
-    if (tarch::accelerator::Device::getInstance().getNumberOfDevices() > 0) {
-      runBenchmarksOnDevice(numberOfPatches);
+        runBenchmarksOnHost(numberOfPatches, currentThread);
+        if (tarch::accelerator::Device::getInstance().getNumberOfDevices() > 0) {
+          runBenchmarksOnDevice(numberOfPatches);
+        }
+      } endParallelFor
     }
   }
 

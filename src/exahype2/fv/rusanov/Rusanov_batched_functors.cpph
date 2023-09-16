@@ -59,7 +59,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-      endParallelDfor }
+      } endParallelDfor
     }
     else {
       parallelDPlusTwoForWithDynamicScheduling(
@@ -78,7 +78,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-      endParallelDfor }
+      } endParallelDfor
     }
 
     // ================================
@@ -104,7 +104,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           tempEigenvalueX,
           eigenvalueEnumerator
       );
-    endParallelDfor }
+    } endParallelDfor
 
     parallelDPlusOneForWithDynamicScheduling(
       volume,
@@ -126,7 +126,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         tempEigenvalueY,
         eigenvalueEnumerator
       );
-    endParallelDfor }
+    } endParallelDfor
 
     #if Dimensions==3
     parallelDPlusOneForWithDynamicScheduling(
@@ -149,7 +149,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
             tempEigenvalueZ,
             eigenvalueEnumerator
       );
-    endParallelDfor }
+    } endParallelDfor
     #endif
 
     parallelDPlusTwoForWithDynamicScheduling(
@@ -175,7 +175,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
         patchData.QOut[patchIndex],
         QOutEnumerator
       );
-    endParallelDfor }
+    } endParallelDfor
 
     if (evaluateFlux) {
       parallelDPlusOneForWithDynamicScheduling(
@@ -199,7 +199,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           tempFluxX,
           fluxEnumerator
         );
-      endParallelDfor }
+      } endParallelDfor
 
       parallelDPlusOneForWithDynamicScheduling(
         volume,
@@ -222,7 +222,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           tempFluxY,
           fluxEnumerator
         );
-      endParallelDfor }
+      } endParallelDfor
 
       #if Dimensions==3
       parallelDPlusOneForWithDynamicScheduling(
@@ -246,7 +246,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           tempFluxZ,
           fluxEnumerator
         );
-      endParallelDfor }
+      } endParallelDfor
       #endif
 
       parallelDPlusTwoForWithDynamicScheduling(
@@ -268,7 +268,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-      endParallelDfor }
+      } endParallelDfor
     }
 
 
@@ -294,7 +294,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           tempNonconservativeProductX,
           ncpEnumerator
         );
-      endParallelDfor }
+      } endParallelDfor
 
       parallelDPlusOneForWithDynamicScheduling(
         volume,
@@ -317,7 +317,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           tempNonconservativeProductY,
           ncpEnumerator
         );
-      endParallelDfor }
+      } endParallelDfor
 
       #if Dimension==3
       parallelDPlusOneForWithDynamicScheduling(
@@ -341,7 +341,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           tempNonconservativeProductZ,
           ncpEnumerator
         );
-      endParallelDfor }
+      } endParallelDfor
       #endif
 
       parallelDPlusTwoForWithDynamicScheduling(
@@ -363,7 +363,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-      endParallelDfor }
+      } endParallelDfor
     }
 
     if (evaluateMaximumEigenvalueAfterTimeStep) {
@@ -386,7 +386,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           );
         }
         patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
-      endParallelFor }
+      } endParallelFor
     }
   }
 }}}}
