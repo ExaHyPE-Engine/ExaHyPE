@@ -686,6 +686,23 @@ namespace exahype2 {
         assertionMsg(false, "not supported");
         #endif
       }
+
+      namespace internal {
+        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables);
+        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesUnknowns(int numberOfVolumesPerAxisInPatch, int unknowns);
+
+        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesPatches(int numberOfVolumesPerAxisInPatch, int patches);
+        tarch::la::Vector<Dimensions+2,int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables, int patches);
+        tarch::la::Vector<Dimensions+2,int> rangeOverVolumesTimesUnknownsTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int patches);
+
+        tarch::la::Vector<Dimensions,int> rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch);
+        tarch::la::Vector<Dimensions,int> rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch);
+        tarch::la::Vector<3,int>          rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch);
+
+        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesPatchesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int patches);
+        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesPatchesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int patches);
+        tarch::la::Vector<3+1,int>          rangeOverVolumesTimesPatchesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int patches);
+      }
     }
   }
 }

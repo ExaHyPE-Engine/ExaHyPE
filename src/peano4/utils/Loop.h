@@ -311,7 +311,8 @@ namespace peano4 {
  *
  * By using a vector, you can have rectangular iteration ranges and not only
  * squares/cubes. The syntax with the additional brackets is a little bit
- * annoying, but some LLVM front-ends otherwise get confused.
+ * annoying, but some LLVM front-ends otherwise get confused. Try without
+ * them, but don't be surprised if it doesn't work.
  *
  *
  * The mapping onto your variables of choice is very similar to what we see a
@@ -416,12 +417,18 @@ namespace peano4 {
 
 #define parallelDPlusOneForWithDynamicScheduling(counter, max, loopParallelism) \
   parallelDforWithDynamicScheduling3d(counter, max, loopParallelism)
+
+#define parallelDPlusTwoForWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelDforWithDynamicScheduling4d(counter, max, loopParallelism)
 #elif Dimensions==3
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   parallelDforWithDynamicScheduling3d(counter, max, loopParallelism)
 
 #define parallelDPlusOneForWithDynamicScheduling(counter, max, loopParallelism) \
   parallelDforWithDynamicScheduling4d(counter, max, loopParallelism)
+
+#define parallelDPlusTwoForWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelDforWithDynamicScheduling5d(counter, max, loopParallelism)
 #endif
 
 
@@ -454,7 +461,7 @@ namespace peano4 {
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) { \
     tarch::la::Vector<3, int> counter = { counter##0, counter##1, counter##2 };
 
-#define parallelDforWithDynamicScheduling3d(counter, max, loopParallelism) \
+#define parallelDforWithDynamicScheduling4d(counter, max, loopParallelism) \
   { \
   tarch::la::Vector<4,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
@@ -464,6 +471,18 @@ namespace peano4 {
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
   for( int counter##3 = 0; counter##3 < counter##Max(3); counter##3++ ) { \
     tarch::la::Vector<4, int> counter = { counter##0, counter##1, counter##2, counter##3 };
+
+#define parallelDforWithDynamicScheduling5d(counter, max, loopParallelism) \
+  { \
+  tarch::la::Vector<5,int> counter##Max(max); \
+  auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
+  _Pragma( "omp taskloop collapse(5) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
+  for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
+  for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
+  for( int counter##3 = 0; counter##3 < counter##Max(3); counter##3++ ) \
+  for( int counter##4 = 0; counter##4 < counter##Max(4); counter##4++ ) { \
+    tarch::la::Vector<5, int> counter = { counter##0, counter##1, counter##2, counter##3, counter##4 };
 
 #define endParallelFor }}
 #define endParallelDfor }}
