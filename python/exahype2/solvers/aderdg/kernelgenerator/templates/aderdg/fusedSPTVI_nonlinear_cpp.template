@@ -277,15 +277,48 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
 {% if useLibxsmm %}
 #if defined(USE_IPO) && ! defined(UNSAFE_IPO)
   volatile pCompType doNotOptimizeAway_dudx_by_dt = dudxT_by_dx[0]; //used to prevent the compiler from optimizing temp array away. Needs to be volatile
-#endif   
+#endif
 {% endif %}
 {% endif %}
+
+{% if usePicardIterationSplitPrecisions %}
+  {{picardIterationPrecision}} lQi_picard[getlQiSize()]     __attribute__((aligned(16)));
+  {{picardIterationPrecision}} lFi_picard[getlFiSize()]     __attribute__((aligned(16)));
+  {{picardIterationPrecision}} rhs_picard[getlQiSize()]     __attribute__((aligned(16)));
+  {{picardIterationPrecision}} new_lQi_slice_picard[30]     __attribute__((aligned(16)));
+{% if useSourceOrNCP %}
+  {{picardIterationPrecision}} lSi_picard[getlSiSize()]     __attribute__((aligned(16)));
+{% else %}
+  {{picardIterationPrecision}}* lSi_picard    = nullptr;
+{% endif %}
+{% if useNCP or useViscousFlux %}
+  {{picardIterationPrecision}} gradQ_picard[getgradQSize()] __attribute__((aligned(16)));
+{% else %}
+  {{picardIterationPrecision}}* gradQ_picard  = nullptr;
+{% endif %}
+{% if useNCP or (useFlux and useCERKGuess)  or useViscousFlux %}
+  {{picardIterationPrecision}} dudxT_by_dx_picard[{{nDof*nDofPad}}] __attribute__((aligned({{alignmentSize}})));
+  // 0. precompute 1/dx * dudx_T. Assume dx[0] == dx[1] == dx[2]
+//  #pragma omp simd aligned(dudxT_by_dx,DGMatrices<pCompType>::dudx_T:{{alignmentSize}})
+  for(int it=0;it<{{nDof*nDofPad}};it++) {
+    dudxT_by_dx_picard[it] = inverseDx * DGMatrices<{{picardIterationPrecision}}>::dudx_T[it];
+  }
+{% if useLibxsmm %}
+#if defined(USE_IPO) && ! defined(UNSAFE_IPO)
+  volatile pCompType doNotOptimizeAway_dudx_by_dt_picard = dudxT_by_dx_picard[0]; //used to prevent the compiler from optimizing temp array away. Needs to be volatile
+#endif
+{% endif %} {# useLibxsmm #}
+{% endif %} {# useNCP or ... #}
+{% endif %} {# usePicardIterationSplitPrecisions #}
 
 {% if not useCERKGuess %}{# fallback trivial guess #}
   // 1. Trivial initial guess
   for (int t = 0; t < {{nDof}}; t++) {
     for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
       std::copy_n(&luh[{{nData}}*xyz], {{nData}}, &lQi[{{nDataPad}}*(xyz+{{nDof**nDim}}*t)]);
+      {% if usePicardIterationSplitPrecisions %}
+      std::copy_n(&luh[{{nData}}*xyz], {{nData}}, &lQi_picard[{{nDataPad}}*(xyz+{{nDof**nDim}}*t)]);
+      {% endif %}
     }
   }
 {% else %}{# useCERKGuess #}
@@ -348,9 +381,34 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
   constexpr int MaxIterations = {% if useCERKGuess %}{% if nDof-3 <= 1 %}1; //cannot be lower than 1{% else %}{{nDof-3}}; //nDof-3{% endif %}{% else %}{{2*nDof+1}};{% endif %}
 
   int iter = 0;
-  for (; iter < MaxIterations; iter++) {
 
-    // 4. Exit condition
+  {% if usePicardIterationSplitPrecisions %}
+  for (; iter < MaxIterations-1; iter++) {
+  {% else %}
+  for (; iter < MaxIterations; iter++) {
+  {% endif %}
+
+    {% if usePicardIterationSplitPrecisions %}
+    pCompType sq_res = picard_iteration<cStoreType,{{picardIterationPrecision}}>(
+      solver,
+      lQi_picard,
+      rhs_picard,
+      lFi_picard,
+      lSi_picard,   // for NCP or Source
+      gradQ_picard, // for NCP or Source or viscousFlux
+      new_lQi_slice_picard,
+      {% if useNCP or (useFlux and useCERKGuess)  or useViscousFlux %}
+      dudxT_by_dx_picard,
+      {% else %}
+      nullptr,
+      {% endif %}
+      luh,
+      volumeCentre,
+      dx,
+      timeStamp,
+      dt
+    );
+    {% else %}
     pCompType sq_res = picard_iteration<cStoreType,pCompType>(
       solver,
       lQi,
@@ -370,11 +428,49 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral(
       timeStamp,
       dt
     );
+    {% endif %}
+
+    // 4. Exit condition
     constexpr pCompType tol2 = 1e-7 * 1e-7;
     if (sq_res < tol2) {
       break;
     }
   }  // end iter
+
+  {% if usePicardIterationSplitPrecisions %}
+
+  // copy data over either way, as it will be required
+  std::copy_n(lQi_picard, getlQiSize(), lQi);
+  {% if useSourceOrNCP %}
+  std::copy_n(lSi_picard, getlSiSize(), lSi);
+  {% endif %}
+
+  // if the picard loop hasn't broken, e.g. the tolerance hasn't yet been reached, perform another iteration in full precision
+  //if(iter==MaxIterations-1){
+
+    picard_iteration<cStoreType,pCompType>(
+      solver,
+      lQi,
+      rhs,
+      lFi,
+      lSi,   // for NCP or Source
+      gradQ, // for NCP or Source or viscousFlux
+      new_lQi_slice,
+      {% if useNCP or (useFlux and useCERKGuess)  or useViscousFlux %}
+      dudxT_by_dx,
+      {% else %}
+      nullptr,
+      {% endif %}
+      luh,
+      volumeCentre,
+      dx,
+      timeStamp,
+      dt
+    );
+
+    iter++;
+  //}
+  {% endif %}
 
   //***********************
   //****** Predictor ******

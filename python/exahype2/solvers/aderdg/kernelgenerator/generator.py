@@ -60,6 +60,7 @@ def generate_aderdg_kernels(
     predictorStoragePrecision="double",
     correctorComputePrecision="double",
     correctorStoragePrecision="double",
+    precomputePicardPrecision=False
 ):
     InputConfig = {
         "kernelType": "aderdg",
@@ -105,6 +106,8 @@ def generate_aderdg_kernels(
             "predictorStoragePrecision": predictorStoragePrecision,
             "correctorComputePrecision": correctorComputePrecision,
             "correctorStoragePrecision": correctorStoragePrecision,
+            "usePicardIterationSplitPrecisions": precomputePicardPrecision if precomputePicardPrecision!=False else False,
+            "picardIterationPrecision": precomputePicardPrecision
         }
     )
 
