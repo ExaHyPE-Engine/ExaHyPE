@@ -110,6 +110,9 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         computation_precisions = self._predictor_computation_precisions[:]
         if self._corrector_computation_precision not in computation_precisions:
             computation_precisions.append(self._corrector_computation_precision)
+        if self._precompute_picard_precision!=False and self._precompute_picard_precision not in computation_precisions:
+            computation_precisions.append(self._precompute_picard_precision)
+
         self._abstract_solver_user_declarations = create_abstract_solver_declarations(
             self._flux_implementation,
             self._ncp_implementation,

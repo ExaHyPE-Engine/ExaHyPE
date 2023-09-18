@@ -168,10 +168,11 @@ class ADERDG(object):
         self._predictor_recompute = False
         self._initialize_patches = False
 
-        self._predictor_computation_precisions = [PrecisionType["double"]]
-        self._corrector_computation_precision = PrecisionType["double"]
+        self._predictor_computation_precisions      = [PrecisionType["double"]]
+        self._corrector_computation_precision       = PrecisionType["double"]
         self._solution_persistent_storage_precision = PrecisionType["double"]
-        self._use_half_precision = False
+        self._precompute_picard_precision = False
+        self._use_half_precision          = False
 
         #determines whether to hold respectively the cells and faces on the stack or heap (with smart pointers)
         self._hold_cell_data_on_heap_with_smart_pointer = False
@@ -852,6 +853,7 @@ class ADERDG(object):
             predictorStoragePrecision=self._corrector_computation_precision,
             correctorComputePrecision=self._corrector_computation_precision,
             correctorStoragePrecision=self._solution_persistent_storage_precision,
+            precomputePicardPrecision=self._precompute_picard_precision
         )
 
         """" 
@@ -1101,6 +1103,8 @@ class ADERDG(object):
         d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions[:]
         if self._corrector_computation_precision not in d["COMPUTATION_PRECISIONS"]:
             d["COMPUTATION_PRECISIONS"].append(self._corrector_computation_precision)
+        if self._precompute_picard_precision!=False and self._precompute_picard_precision not in d["COMPUTATION_PRECISIONS"]:
+            d["COMPUTATION_PRECISIONS"].append(self._precompute_picard_precision)
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])
         d["NUMBER_OF_PRECISIONS"] = len(d["COMPUTATION_PRECISIONS"])
 
@@ -1278,6 +1282,7 @@ class ADERDG(object):
         predictor_computation_precisions=["double"],
         corrector_computation_precision="double",
         solution_persistent_storage_precision="double",
+        precompute_picard_precision=False,
         precision_criterion_implementation=PDETerms.None_Implementation,
         riemann_solver_implementation=PDETerms.None_Implementation,
         hold_cell_data_on_heap_with_smart_pointer = False,
@@ -1287,7 +1292,7 @@ class ADERDG(object):
         use_CERK_guess=False,
         use_split_CK=False,
         predictor_recompute=False,
-        initialize_patches=False,
+        initialize_patches=False
     ):
         if polynomials is Polynomials.Gauss_Legendre:
             self._basis = GaussLegendreBasis(self._order + 1)
@@ -1314,6 +1319,8 @@ class ADERDG(object):
             corrector_computation_precision,
         ]
         precisions.extend(predictor_computation_precisions)
+        if precompute_picard_precision!=False:
+            precisions.append(precompute_picard_precision)
         for value in precisions:
             if value not in PrecisionType.keys():
                 raise AssertionError(
@@ -1333,6 +1340,10 @@ class ADERDG(object):
         self._solution_persistent_storage_precision = PrecisionType[
             solution_persistent_storage_precision
         ]
+
+        self._precompute_picard_precision = PrecisionType[
+            precompute_picard_precision
+        ] if precompute_picard_precision != False else False
 
         if precision_criterion_implementation is not PDETerms.None_Implementation:
             self._precision_criterion_implementation = (
