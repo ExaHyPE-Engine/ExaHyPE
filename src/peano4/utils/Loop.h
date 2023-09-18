@@ -492,10 +492,10 @@ namespace peano4 {
   #define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
     tbb::parallel_for( \
       tbb::blocked_range<int>( \
-        0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1, \
-    ), \
-    [&]( const tbb::blocked_range<int>&  range ) { \
-      for( int counter = range.begin();  counter < range.end();  counter++ ) \
+        0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1 \
+      ), \
+      [&]( const tbb::blocked_range<int>&  range ) { \
+        for( int counter = range.begin();  counter < range.end();  counter++ ) \
 
 
 #define parallelDforWithDynamicScheduling2d(counter, max, loopParallelism) \
@@ -566,12 +566,30 @@ namespace peano4 {
       for( int counter##5 = range.subrange(4).begin();  counter##5 < range.subrange(4).end();  counter##5++ ) { \
         tarch::la::Vector<5, int> counter = { counter##1, counter##2, counter##3, counter##4, counter##5 };
 
+  /**
+   * - the first curly bracket closes the functor
+   * - the second round bracket closes the tbb::parallel_for call
+   */
   #define endParallelFor \
       } \
-    });
+    );
+
+  /**
+   * - The first (curly) bracket closes the nested for loops within the
+   *   functor. We need brackets here - even if users decide to add only one
+   *   line - as the loop body defines the counter vector.
+   * - The second (curly) bracket closes the functor handed into the
+   *   blocked_range.
+   * - The third (round) bracket closes the parallel_for, which is a mere
+   *   function call. So it followed by a semicolon.
+   * - The fourth (curly) bracket closes the whole block into which the for
+   *   loop is embedded. This block not only hosts the loop, but also the
+   *   construction of the max vector and the actual loop ranges.
+   */
   #define endParallelDfor \
         } \
-      }); \
+        } \
+        ); \
     }
 #elif defined(SharedSYCL)
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \

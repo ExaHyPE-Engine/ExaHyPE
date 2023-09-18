@@ -380,7 +380,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
       }
       patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
     }
-  } endParallelDfor
+  } endParallelFor
 
   if (tempFluxX!=nullptr)               tarch::freeMemory(tempFluxX, tarch::MemoryLocation::Heap);
   if (tempFluxY!=nullptr)               tarch::freeMemory(tempFluxY, tarch::MemoryLocation::Heap);

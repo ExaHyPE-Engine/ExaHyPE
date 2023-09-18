@@ -355,9 +355,9 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         }
         patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
       }
-    }
-  } endParallelDfor
-}}}}
+    } endParallelFor
+} // end of function
+}}}} // four closing brackets for the namespaces
 
 template <
   typename Solver,
