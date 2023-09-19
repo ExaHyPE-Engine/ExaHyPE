@@ -1031,6 +1031,7 @@ int main(int argc, char** argv) {
 
 // tarch::logging::Statistics::getInstance().clear();
 
+  ::exahype2::setDefaultLogStatements();
   tarch::logging::CommandLineLogger::getInstance().setLogFormat(
     " ",       // const std::string& columnSeparator
     false,     // bool logTimeStamp,
