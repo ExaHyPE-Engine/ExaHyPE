@@ -592,25 +592,66 @@ namespace peano4 {
         ); \
     }
 #elif defined(SharedSYCL)
-#define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
-  tarch::la::Vector<Dimensions,int> max##Vector(max); \
-  xxx std::size_t counter##Range = max; \
-  tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
-    handle.parallel_for( \
-      sycl::range<2>{counter##Range,counter##Range}, \
-      [=](sycl::id<2> counter##Iterator) { \
-        tarch::la::Vector<Dimensions, int> counter = { static_cast<int>(counter##Iterator[0]), static_cast<int>(counter##Iterator[1]) };
+  #define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
+    tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
+      handle.parallel_for( \
+        sycl::range<1>{max}, \
+        [=](sycl::id<1> counter##Iterator) { \
+          int counter = counter##Iterator[0];
 
-#define endParallelDfor \
+
+  /**
+   * - The first (curly) bracket closes functor of the loop body.
+   * - The second (round) bracket closes the parallel_for, which is a mere
+   *   function call. So it is followed by a semicolon.
+   * - The third combination of a curly plus round bracket close the submit().
+   *   It also comprises the wait().
+   */
+  #define endParallelFor \
       } \
+      ); \
+      }).wait();
+
+
+  #define parallelDforWithDynamicScheduling2d(counter, max, loopParallelism) \
+    { \
+    tarch::la::Vector<2,sycl::size_t> counter##Max(max); \
+    tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
+      handle.parallel_for( \
+        sycl::range<2>{counter##Max(0),counter##Max(1)}, \
+        [=](sycl::id<2> counter##Iterator) { \
+          tarch::la::Vector<2, int> counter = { counter##Iterator[0], counter##Iterator[1] };
+
+  /**
+   * - The first (curly) bracket closes the functor.
+   * - The second (round) bracket closes the parallel_for, which is a mere
+   *   function call. So it followed by a semicolon.
+   * - The third combination of a curly plus round bracket close the submit().
+   *   This one is followed by a wait().
+   * - We have another curly bracket here as we also embed the counter##Max
+   *   thing into a scope. If we have two loops with the same counter name,
+   *   we don't want to run into a duplicate variable error.
+   */
+  #define endParallelDfor \
+    } \
     ); \
-  }).wait();
+    }).wait(); \
+    }
+
+
 #else
   #define parallelDfor(counter, max) \
     for (tarch::la::Vector<Dimensions, int> counter = peano4::utils::dStartVector(); peano4::utils::dCmp(counter, max); \
          peano4::utils::dInc(counter, max))
 
   #define endParallelDfor }
+
+
+  /**
+   * d2for is way more efficient than this version
+   */
+  #define parallelDforWithDynamicScheduling2d(counter, max, loopParallelism)
+
 #endif
 
 
