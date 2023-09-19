@@ -251,7 +251,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridConstructionStep();
@@ -274,7 +274,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridConstructionStep();
@@ -329,7 +329,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridConstructionStep();
@@ -371,7 +371,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridInitialisationStep();
@@ -398,7 +398,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishPlottingStep();
@@ -432,7 +432,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     tpsCalculator.update(watch.getCalendarTime());
