@@ -1,36 +1,59 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from .SingleSweep import SingleSweep
-
-from .PDETerms import PDETerms
-
-from typing import TypeVar, Generic, List
-
-T = TypeVar('T')
+from exahype2.solvers.fv.SingleSweep import SingleSweep
+from peano4.toolbox.blockstructured  import ReconstructedArrayMemoryLocation
+from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
+from .kernels                        import *
+from exahype2.solvers.fv             import PDETerms
 
 
-class UserDefinedRiemann( Generic[T] ):
+class UserDefinedRiemann( SingleSweep ):
   def __init__(self, 
-    name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size,
-    flux=PDETerms.User_Defined_Implementation, 
-    ncp=None, 
-    eigenvalues=PDETerms.User_Defined_Implementation, 
+    name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
+    flux=PDETerms.User_Defined_Implementation,
+    riemann_solver=PDETerms.User_Defined_Implementation,
+    eigenvalues=PDETerms.User_Defined_Implementation,
+    boundary_conditions=PDETerms.User_Defined_Implementation,
+    initial_conditions=PDETerms.User_Defined_Implementation,
+    refinement_criterion=PDETerms.Empty_Implementation,
     plot_grid_properties=False, 
-    pde_terms_without_state=False
+    overlap=1
   ):
-    super(T,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, plot_grid_properties) 
-    self._riemann_solver_implementation       = PDETerms.None_Implementation
-    self.set_implementation(riemann_solver=riemann_solver, pde_terms_without_state=self._pde_terms_without_state)
+    super().__init__(name, patch_size,overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, "riemann") 
+
+    self._time_step_relaxation = time_step_relaxation
+
+    self._user_defined_riemann_solver_implementation       = PDETerms.None_Implementation
+    self._flux_implementation                              = PDETerms.None_Implementation
+    self._ncp_implementation                               = PDETerms.None_Implementation
+    self._eigenvalues_implementation                       = PDETerms.None_Implementation
+    self._source_term_implementation                       = PDETerms.None_Implementation
+
+    self._compute_eigenvalue                               = True
+
+    self.set_implementation(flux=flux,
+                            riemann_solver=riemann_solver, 
+                            boundary_conditions=boundary_conditions,
+                            eigenvalues=eigenvalues,
+                            refinement_criterion=refinement_criterion,
+                            initial_conditions=initial_conditions, 
+                            pde_terms_without_state=False)
 
 
 
 
   def set_implementation(self,
-    riemann_solver=None,
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    memory_location         = None,
-    use_split_loop          = False,
-    pde_terms_without_state =False
+                        flux=None,
+                        riemann_solver=None,
+                        boundary_conditions=None,
+                        refinement_criterion=None,
+                        initial_conditions=None,
+                        eigenvalues=None,
+                        memory_location         = None,
+                        use_split_loop          = False,
+                        pde_terms_without_state = False,
+                        additional_action_set_includes = "",
+                        additional_user_includes       = ""
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -45,91 +68,45 @@ class UserDefinedRiemann( Generic[T] ):
       This routine should be the very last invoked by the constructor.
     """
     if flux                 is not None:  self._flux_implementation                       = flux
-    if ncp                  is not None:  self._ncp_implementation                        = ncp
+    if riemann_solver       is not None:  self._user_defined_riemann_solver_implementation= riemann_solver
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
     if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
-    if source_term          is not None:  self._source_term_implementation                = source_term
     if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
     if use_split_loop                  :  self._use_split_loop                            = use_split_loop
-    if pde_terms_without_state             :  self._pde_terms_without_state                       = pde_terms_without_state
-    if riemann_solver       is not None:  self._riemann_solver_implementation             = riemann_solver
+    if pde_terms_without_state         :  self._pde_terms_without_state                   = pde_terms_without_state
 
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete:
-      raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
+    self._compute_kernel_call = create_compute_Riemann_kernel_for_UserDefinedRiemann(
+      self._flux_implementation, self._user_defined_riemann_solver_implementation, True
+    )
+
+    if self._reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
+       self._reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
+       self._reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete:
+       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
+    
+    solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)
+
+    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._user_defined_riemann_solver_implementation, self._eigenvalues_implementation)
+    self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
+    self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._user_defined_riemann_solver_implementation, self._eigenvalues_implementation)
+    self._abstract_solver_user_definitions  += solver_code_snippets.create_abstract_solver_user_definitions()
+
+    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._user_defined_riemann_solver_implementation, self._eigenvalues_implementation)
+    self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._user_defined_riemann_solver_implementation, self._eigenvalues_implementation)
+
+    self._compute_time_step_size              = solver_code_snippets.create_compute_time_step_size()
+    self._compute_new_time_step_size          = solver_code_snippets.create_compute_new_time_step_size()
+
+    self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
+    self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
+    self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
+
+    super(UserDefinedRiemann,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
   
-    if self._riemann_solver_implementation!=PDETerms.None_Implementation and self._flux_implementation!=PDETerms.None_Implementation:
-      raise Exception( "you cannot specify a Riemann solver and a flux function" )
-    if self._riemann_solver_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-      raise Exception( "you cannot specify a Riemann solver and an ncp term" )
-    if self._riemann_solver_implementation!=PDETerms.None_Implementation and self._eigenvalues_implementation!=PDETerms.None_Implementation:
-      raise Exception( "you cannot specify a Riemann solver and an eigenvalue implementation (as you use a fixed time stepping scheme)" )
-
-    self.create_action_sets()
-
-
-
-
-        {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" and RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>"%}
-        repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem(
-          QL, QR,
-          x, dx, t, dt, 
-          normal,
-          FL, FR
-        );
-        {% elif RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-          {{RIEMANN_SOLVER_IMPLEMENTATION}}
-        {% else %}
-
-
-
-#  RiemannSolverCall_ClawPack = """
-#        double wave[{{NUMBER_OF_UNKNOWNS}}][{{NUMBER_OF_UNKNOWNS}}]; 
-#        double speed[{{NUMBER_OF_UNKNOWNS}}]; 
-#
-#        int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
-#        int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-#        int num_waves = {{NUMBER_OF_UNKNOWNS}}; 
-#
-#        {{CLAWPACK_RIEMANN_SOLVER}}_(
-#          {%if DISCRIMINATE_NORMAL %}
-#            &normal,
-#          {% endif %}   
-#          &num_eqn,
-#          &num_aux,
-#          &num_waves, 
-#          QL,                                 // double* q_l 
-#          QR,                                 // double* q_r
-#          QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
-#          QR+{{NUMBER_OF_UNKNOWNS}},          // double* aux_r
-#          wave,
-#          speed,
-#          FL,                                 // double* amdq
-#          FR                                  // double* apdq
-#        );
-#
-#        for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
-#          FL[i] = -FL[i];
-#        }
-#"""
-
-
-    {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    /**
-     * 1d Riemann solve
-     */
-    virtual void solveRiemannProblem(
-      const double * __restrict__ QL,
-      const double * __restrict__ QR,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      double                                       volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double * __restrict__ FL,
-      double * __restrict__ FR
-    ) {% if RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
-    {% endif %}
+  @property
+  def user_action_set_includes(self):
+    return super(UserDefinedRiemann, self).user_action_set_includes + """
+#include "exahype2/fv/riemann/Riemann.h"
+"""

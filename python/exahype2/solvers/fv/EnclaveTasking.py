@@ -297,7 +297,7 @@ class EnclaveTasking(FV):
     task. This value can either be a string that C++ can evaluate into a 
     priority or a plain numerical value. I set it to 
 
-           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority"
+           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority-1"
             
     by default.
 
@@ -347,7 +347,7 @@ class EnclaveTasking(FV):
 """
 
         self.add_user_action_set_includes(additional_includes)
-        self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority"
+        self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
 
 
     def _create_guards(self):

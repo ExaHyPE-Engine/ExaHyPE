@@ -2,15 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
-
 
 #include <functional>
 #include <string>
 #include <iostream>
-
 
 namespace exahype2 {
   namespace enumerator {
@@ -38,16 +35,19 @@ namespace exahype2 {
    *
    * @see Enumerator.h for a generic description of attribute semantics.
    */
-    #if defined(GPUOffloadingOMP)
-//      #pragma omp declare target
-    #endif
     struct SoALexicographicEnumerator {
-      SoALexicographicEnumerator(int numberOfPatches, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+      inline SoALexicographicEnumerator(
+        int numberOfPatches,
+        int numberOfVolumesPerAxisInPatch,
+        int haloSize,
+        int unknowns,
+        int numberOfAuxiliaryVariables
+      ):
         _numberOfPatches(numberOfPatches),
         _numberOfVolumesPerAxisInPatch(numberOfVolumesPerAxisInPatch),
         _haloSize(haloSize),
         _unknowns(unknowns),
-        _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables){}
+        _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables) {}
 
       /**
        * Access an index
@@ -55,18 +55,17 @@ namespace exahype2 {
        * The index always refers to the interior of the patches. So you can use negative
        * indices if you want.
        */
-      int operator()(
-        int patchIndex,
-        const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-        int unknown
+      inline int operator()(
+        [[maybe_unused]] int patchIndex,
+        [[maybe_unused]] const tarch::la::Vector<Dimensions,int>& volumeIndex,
+        [[maybe_unused]] int unknown
       ) const InlineMethod {
         if constexpr (Dimensions==2) {
           return                         unknown * _numberOfPatches * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                + (patchIndex % _numberOfPatches) *                    (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                +      (volumeIndex(1)+_haloSize) *                                                                   (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                +      (volumeIndex(0)+_haloSize);
-        }
-        else {
+        } else {
           return                         unknown * _numberOfPatches *  (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                + (patchIndex % _numberOfPatches) *                     (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                +      (volumeIndex(2)+_haloSize) *                                                                    (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
@@ -75,22 +74,20 @@ namespace exahype2 {
         }
       }
 
-      #if !defined(GPUOffloadingOMP)
+#if !defined(GPUOffloadingOMP)
       std::string toString() const;
-      #endif
-
+#endif
 
       /**
        * Returns the total size.
        */
-      int size() const InlineMethod {
+      inline int size() const InlineMethod {
         if constexpr (Dimensions==2) {
           return _numberOfPatches
               * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
               * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
               * (_unknowns+_numberOfAuxiliaryVariables);
-        }
-        else {
+        } else {
           return _numberOfPatches
               * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
               * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
@@ -99,18 +96,11 @@ namespace exahype2 {
         }
       }
 
-
       const int _numberOfPatches;
       const int _numberOfVolumesPerAxisInPatch;
       const int _haloSize;
       const int _unknowns;
       const int _numberOfAuxiliaryVariables;
     };
-    #if defined(GPUOffloadingOMP)
-//      #pragma omp end declare target
-    #endif
   }
 }
-
-
-

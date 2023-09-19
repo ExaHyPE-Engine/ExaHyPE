@@ -19,7 +19,7 @@ To understand what it is that we have executed, let us take a look at the file w
 
     euler.py
 
-As this is a Python script, should surprise no one that we start with the following:
+As this is a Python script, it should surprise no one that we start with the following:
 
     import peano4
     import exahype2
@@ -114,8 +114,13 @@ $$
                         \end{array} \right)
 $$
 
-## Three-dimensional Euler Equations
+t=0.0             |  t=1.0
+:-------------------------:|:-------------------------:
+![](Euler_2D_start.png)  |  ![](Euler_2D_end.png)
 
+-------------------------*The computed energy of the 2D Euler equations at times t=0.0 and t=1.0*-------------------------
+
+## Three-dimensional Euler Equations
 Finally, we can implement the Euler equations in three dimensions.
 
 The three-dimensional Euler equations are very similar to the two-dimensional equations:
@@ -162,7 +167,6 @@ $$
                     \sqrt[]{\frac{\gamma  p}{\rho}} \\
         \end{array} \right)
 $$
-
 
 t=0.0             |  t=1.0
 :-------------------------:|:-------------------------:

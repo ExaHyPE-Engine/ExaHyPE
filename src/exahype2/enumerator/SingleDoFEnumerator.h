@@ -25,14 +25,11 @@ namespace exahype2 {
      *   if you construct and enumerator over the input or output data, as
      *   there is one patch per cell.
      */
-    #if defined(GPUOffloadingOMP)
-//      #pragma omp declare target
-    #endif
     struct SingleDoFEnumerator {
       public:
-        SingleDoFEnumerator(int unknowns, int numberOfAuxiliaryVariables):
+        inline SingleDoFEnumerator(int unknowns, int numberOfAuxiliaryVariables):
           _unknowns(unknowns),
-          _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables){}
+          _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables) {}
 
         /**
          * Access an index
@@ -42,30 +39,24 @@ namespace exahype2 {
          *
          * @todo modulo Operator muss ich noch dokumentieren
          */
-        int operator()(
-          int patchIndex,
-          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-          int unknown
+        inline int operator()(
+          [[maybe_unused]] int patchIndex,
+          [[maybe_unused]] const tarch::la::Vector<Dimensions,int>& volumeIndex,
+          [[maybe_unused]] int unknown
         ) const InlineMethod {
           return unknown;
         }
 
-        #if !defined(GPUOffloadingOMP)
+#if !defined(GPUOffloadingOMP)
         std::string toString() const;
 #endif
 
-        int size() const {
+        inline int size() const {
           return (_unknowns+_numberOfAuxiliaryVariables);
         }
 
         const int _unknowns;
         const int _numberOfAuxiliaryVariables;
     };
-    #if defined(GPUOffloadingOMP)
-//      #pragma omp end declare target
-    #endif
   }
 }
-
-
-

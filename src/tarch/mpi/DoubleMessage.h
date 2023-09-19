@@ -44,6 +44,8 @@ struct tarch::mpi::DoubleMessage {
 
 
     #ifdef Parallel
+    PragmaPush
+    SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -63,7 +65,7 @@ struct tarch::mpi::DoubleMessage {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-
+    PragmaPop
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call

@@ -48,7 +48,7 @@ the function has rotation symmetry. Therefore, we discretise the domain into
 layers similar to an onion. We bucket the solution. In the example above, we 
 have four layers @f$ \rho _1, \rho _2, \rho _3, \rho _4 @f$. 
 That is, we write 
-@f$ \int -\pi G/\rho dx = @f$ \sum _{i} \int _{r_i,r_i+1} -\pi G/\rho V_i dr @f$ @f$,
+@f$ \int -\pi G/\rho dx = \sum _{i} \int _{r_i,r_i+1} -\pi G/\rho V_i dr @f$,
 where r is the radius away from the centre, and V is the volume of the 
 corresponding shell.
 Every time we have

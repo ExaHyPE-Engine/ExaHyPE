@@ -3,12 +3,11 @@ import shlex
 import argparse
 import subprocess
 
-parser = argparse.ArgumentParser(description='Configure helper script for GNU autotools and CMake')
+parser = argparse.ArgumentParser(description='Configuration helper script for GNU Autotools and CMake')
 parser.add_argument('--cmake', help='Use CMake')
 parser.add_argument('-t', '--toolchain', choices=['gcc', 'llvm', 'nvidia', 'amd', 'intel'], help='Select toolchain')
-parser.add_argument('--cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
-parser.add_argument('--cxx', type=str, default=os.environ.get('CXX'), help='C++ compiler to use')
-parser.add_argument('--fc', type=str, default=os.environ.get('FC'), help='Fortran compiler to use')
+parser.add_argument('-cc', '--cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
+parser.add_argument('-cxx', '--cxx', type=str, default=os.environ.get('CXX'), help='C++ compiler to use')
 parser.add_argument('--swift', action='store_true', help='Enable Swift')
 parser.add_argument('--particles', action='store_true', help='Enable particles support')
 parser.add_argument('--exahype', action='store_true', help='Enable ExaHyPE')
@@ -20,6 +19,7 @@ parser.add_argument('--libxsmm', action='store_true', help='Enable libxsmm suppo
 parser.add_argument('--multithreading', choices=['omp', 'tbb', 'sycl', 'cpp'], help='Enable multithreading support')
 parser.add_argument('--mpi', help='Enable MPI support')
 parser.add_argument('--gpu', choices=['omp', 'cuda', 'sycl', 'cpp', 'hip'], help='Enable GPU support')
+parser.add_argument('--cuda-path', type=str, help='Path to CUDA')
 parser.add_argument('--arch', choices=[
   'gfx906', 'gfx908', 'gfx90a', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
   'sm_70', 'sm_72', 'sm_75', 'sm_80', 'sm_86', 'sm_90',
@@ -28,9 +28,9 @@ parser.add_argument('--arch', choices=[
 args = parser.parse_args()
 
 cflags = ''
-#cxxflags = '-std=c++20 -W -Wall -Wextra'
 cxxflags = '-std=c++20 -w'
-fortranflags = ''
+#cxxflags = '-std=c++20 -W -Wall -Wextra'
+nvccflags = ''
 
 # Merge in any additional flags needed for the selected multithreading backend
 if args.multithreading == 'omp':
@@ -43,7 +43,7 @@ if args.multithreading == 'sycl':
   cxxflags += ' -fsycl'
 
 # Merge in any additional flags needed for the selected GPU backend
-if args.gpu and not args.toolchain:
+if args.gpu and not args.gpu == 'cuda' and not args.toolchain:
   print("Error: You need to specify a toolchain when using GPU support")
   exit(-1)
 
@@ -66,6 +66,9 @@ if args.gpu == 'omp' and args.toolchain == "gcc":
 if args.gpu == 'sycl' and args.toolchain == "intel":
   cxxflags += ' -fsycl -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
 
+if args.gpu == 'cuda':
+  nvccflags += f'-arch={args.arch}'  # arch flag is needed independent of toolchain
+
 # Call the ./configure script with the specified arguments
 configure_args = []
 if args.multithreading is not None:
@@ -80,6 +83,16 @@ if args.gpu is not None:
     configure_args.append(f'-DWITH_GPU_ARCH={args.arch}')
   else:
     configure_args.append(f'--with-gpu={args.gpu}')
+
+# CUDA path is only needed on automake builds
+# CMake automatically finds it
+if args.gpu == "cuda":
+  if args.cuda_path is not None:
+    if not args.cmake:
+      configure_args.append(f'--with-cuda={args.cuda_path}')
+  else:
+    print("Error: You need to specify the CUDA path when compiling with CUDA")
+    exit(-1)
 
 if args.mpi is not None:
   if args.cmake:
@@ -150,7 +163,6 @@ if args.cmake:
   env_vars = {
       "C": "{}".format(args.cc),
       "CXX": "{}".format(args.cxx),
-      "FC": "{}".format(args.fc),
   }
 
   # Create a string to display environment variables like in a terminal
@@ -174,8 +186,11 @@ else:
   env_vars = {
       "C": "{} {}".format(args.cc, cflags),
       "CXX": "{} {}".format(args.cxx, cxxflags),
-      "FC": "{} {}".format(args.fc, fortranflags),
   }
+
+  if args.gpu == "cuda":
+    if args.cuda_path:
+      env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.cuda_path, nvccflags)
 
   # Create a string to display environment variables like in a terminal
   env_vars_str = ' '.join(f'{key}="{value}"' for key, value in env_vars.items())

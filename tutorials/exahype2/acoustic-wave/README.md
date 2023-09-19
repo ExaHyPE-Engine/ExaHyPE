@@ -1,0 +1,81 @@
+# Tutorial: The Acoustic Wave Equation
+
+## Define and Build the Project
+Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the Acoustic Wave project:
+
+    python3 acoustic-wave.py
+
+Assuming this was successful, you should see several files have appeared in your working directory.
+We will ignore most of these for now but know that these contain the implementation of the ExaHyPE 2 project.
+One file, in particular, is of interest to us now: the file simply named acoustic-wave-* is the executable for our implementation.
+We will therefore run this executable file by using the following command:
+
+    ./acoustic-wave-<dimensions>d
+
+The solution folder contains the solution to our problem,
+which we will take a look at as soon as we have an understanding of how our problem is defined.
+
+To understand what it is that we have executed, let us take a look at the file which defined this project:
+
+    acoustic-wave.py
+
+As this is a Python script, it should surprise no one that we start with the following:
+
+    import peano4
+    import exahype2
+
+These merely import the necessary packages from Peano 4 and ExaHyPE 2
+which will let us define and build our project. For more details about
+the implementation, consider the comments in the Python script.
+
+## Two-dimensional Acoustic Wave Equation
+The acoustic wave equation describes the propagation of a wave through a material. This
+equation assumes that all movements are only small perturbations over the background flow
+field. They can be obtained by linearising the more general Euler equations over this background field. This clearly cannot work for complex flows, e.g., for supersonic “booms”.
+We describe our material by the parameters $`K_0`$, which is the so-called bulk-modulus and by the density $`\rho_0`$. Waves propagate through the material with a velocity of $`c=\sqrt{\rho K_0}`$.
+
+We solve here for velocity $`v`$ and pressure $`p`$ in one dimension
+
+$$
+    \partial_t \begin{pmatrix}
+                p\\v_x\\v_y
+               \end{pmatrix}
+               + \nabla \cdot F
+               \begin{pmatrix}
+                p\\v_x\\v_y
+               \end{pmatrix} = 0,
+$$
+
+where $`v_x, v_y`$ denote the velocity in $`x`$- and $`y`$-direction respectively.
+
+Further, the flux is given by:
+
+$$
+  F = \left[
+       \begin{pmatrix}
+                0 & K_0 & 0\\
+                \frac{1}{\rho_0} & 0 & 0\\
+                0 & 0 & 0
+               \end{pmatrix},
+              \begin{pmatrix}
+                0 & 0 & K_0\\
+                0 & 0 & 0\\
+                \frac{1}{\rho_0} & 0 & 0
+               \end{pmatrix} \right].
+$$
+
+The eigenvalues of the flux are $`-c`$, $`0`$ and $`c`$.
+These equations are telling us that the change in time of the velocity is proportional to the gradient of pressure.
+
+t=0.5             |  t=1.0
+:-------------------------:|:-------------------------:
+![](AcousticWave_2D_start.png)  |  ![](AcousticWave_2D_end.png)
+
+-------------------------*The computed pressure of the 2D acoustic wave equation at times t=0.5 and t=1.0*-------------------------
+
+## Three-dimensional Acoustic Wave Equation
+t=0.5             |  t=1.0
+:-------------------------:|:-------------------------:
+![](AcousticWave_3D_start.png)  |  ![](AcousticWave_3D_end.png)
+
+-------------------------*The computed pressure of the 3D acoustic wave equation at times t=0.5 and t=1.0*-------------------------

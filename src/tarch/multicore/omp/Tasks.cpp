@@ -1,10 +1,12 @@
 #include "tarch/multicore/Tasks.h"
 
+#include "config.h"
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/otter.h"
 #include "tarch/services/ServiceRepository.h"
 
 #ifdef UseSmartMPI
@@ -14,10 +16,6 @@
 #if defined(SharedOMP)
 
 namespace {
-  const int StandardPriority = 16;
-
-  const int BackgroundConsumerPriority = 1;
-
   int numberOfSpawnedTasks = 0;
 } // namespace
 
@@ -51,13 +49,13 @@ namespace {
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
   assertion(not tasks.empty());
 
-#if defined(OpenMPTaskGroup)
-#pragma omp taskloop nogroup shared(tasks) priority(StandardPriority) untied
-#endif
+  #if defined(OpenMPTaskGroup)
+  #pragma omp taskloop nogroup shared(tasks) priority(tarch::multicore::Task::DefaultPriority) untied
+  #endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-#if !defined(OpenMPTaskGroup)
-#pragma omp task
-#endif
+  #if !defined(OpenMPTaskGroup)
+  #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
+  #endif
     {
       while (tasks[i]->run()) {
         tarch::multicore::Core::getInstance().yield();
@@ -83,18 +81,18 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 
 int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
 
-void        tarch::multicore::native::spawnTask(Task* job) {
-#pragma omp atomic
+void  tarch::multicore::native::spawnTask(Task* job) {
+  #pragma omp atomic
   numberOfSpawnedTasks++;
 
-#pragma omp task priority(BackgroundConsumerPriority) untied
+  #pragma omp task priority(job->getPriority()) untied
   {
     while (job->run()) {
-#pragma omp taskyield
+      #pragma omp taskyield
     }
     delete job;
 
-#pragma omp atomic
+    #pragma omp atomic
     numberOfSpawnedTasks--;
   }
 }

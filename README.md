@@ -58,7 +58,7 @@ docker run -it -v ${PWD}:/work --rm peanoframework/<toolchain> /bin/bash
 
 where `<toolchain>` needs to be replaced by the toolchain you want to use.
 
-If you want to use jupyterlab, you can add port forwarding to the Docker command from above:
+If you want to use JupyterLab, you can add port forwarding to the Docker command from above:
 
 ```shell
 docker run -it -v ${PWD}:/work -p 53155:53155 --rm peanoframework/<toolchain> /bin/bash
@@ -71,7 +71,8 @@ docker run -it -v ${PWD}:/work -p 53155:53155 --rm --gpus=all --privileged peano
 ```
 
 When you run the Docker container interactively with `--gpus` using the command above,
-you can quickly check whether GPU offloading is supported on your system by executing `./check_XXX_offload`.
+you can quickly check whether GPU offloading is supported on your system by executing `XXX_stream`,
+where `XXX` is the programming model.
 
 A [Python helper script](./configure.py) is available which can help to configure the project. It can be called as follows:
 

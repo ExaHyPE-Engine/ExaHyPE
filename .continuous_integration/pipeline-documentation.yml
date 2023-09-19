@@ -5,7 +5,7 @@ documentation:
     - ${RUNNER_TAG}
   dependencies: []
   script:
-    - singularity exec --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} doxygen documentation/Doxyfile
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} doxygen documentation/Doxyfile
   artifacts:
     paths:
       - ./doxygen-html/*

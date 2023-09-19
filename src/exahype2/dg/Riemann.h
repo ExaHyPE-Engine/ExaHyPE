@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <vector>
 
 #include "DGUtils.h"
@@ -14,10 +13,6 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Loop.h"
 #include "peano4/utils/Globals.h"
-
-#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-
 
 /**
  * @page exahype2_dg_DG_AMD Discontinuous Galerkin adaptive mesh refinement
@@ -108,10 +103,7 @@
  *   any coarser face is already handled, even if we restrict and
  *   thus accummulate twice.
  * - Always interpolate the Riemann solution.
- *
- *
  */
-
 
 namespace exahype2 {
   namespace dg {
@@ -197,7 +189,6 @@ namespace exahype2 {
       double* __restrict__                       fineGridFaceQ
     );
 
-
     /**
      * Counterpart of interpolateRiemannSolution().
      *
@@ -250,7 +241,6 @@ namespace exahype2 {
       double* __restrict__                       coarseGridFaceQ
     );
 
-
     /**
      * Take polynomial within cell and project it onto the faces
      *
@@ -269,8 +259,6 @@ namespace exahype2 {
      *
      * The sketch above illustrates the ordering of the four faces for a p=1
      * discretisation where we have two dofs per direction per face per side.
-     *
-     *
      *
      * @param cellQ Pointer to cell data. The array has the size
      *   @f$ unknowns \times (order+1)^d@f$.
@@ -299,7 +287,6 @@ namespace exahype2 {
      *   lexicographically. This time, the first half of the entries are those
      *   from the adjacent cell below. The remaining entries are the projections
      *   from above.
-     *
      */
     void projectVolumetricDataOntoFaces(
       const double* __restrict__          cellQ,
@@ -312,7 +299,6 @@ namespace exahype2 {
       double* const __restrict__          faceQBottom,
       double* const __restrict__          faceQUp
     );
-
 
     /**
      * Set the whole solution projection on the face from left and right to zero
@@ -329,7 +315,6 @@ namespace exahype2 {
       double* __restrict__          faceQ
     );
 
-
     /**
      * @see clearSolutionProjection()
      */
@@ -338,7 +323,6 @@ namespace exahype2 {
       int                           unknowns,
       double* __restrict__          faceQ
     );
-
 
     /**
      * 3d counterpart to other projectVolumetricDataOntoFaces() variant.
@@ -357,7 +341,6 @@ namespace exahype2 {
       double* const __restrict__          faceQBack
     );
 
-
     void projectVolumetricDataAndGradientOntoFaces(
       const double* __restrict__          cellQ,
       int                                 order,
@@ -369,7 +352,6 @@ namespace exahype2 {
       double* const __restrict__          faceQBottom,
       double* const __restrict__          faceQUp
     );
-
 
     /**
      * 3d counterpart to other projectVolumetricDataOntoFaces() variant.
@@ -387,7 +369,6 @@ namespace exahype2 {
       double* const __restrict__          faceQFront,
       double* const __restrict__          faceQBack
     );
-
 
     /**
      * Given a numerical flux at the various faces, this computes and adds the Riemann
@@ -434,9 +415,8 @@ namespace exahype2 {
       double* __restrict__                cellQ
     );
 
-
     /**
-     * 3d counterpart of integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
+     * 3D counterpart of integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre()
      *
      * The routine relies on a left-handed coordinate system. So we have a cube
      * with a left and a right face. Those are the faxes 0 and 3
@@ -464,4 +444,3 @@ namespace exahype2 {
     );
   }
 }
-

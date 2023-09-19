@@ -21,14 +21,12 @@
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/otter.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
-// #ifdef UseFenv
-// #include "tarch/FenvWrapper.h"
-// #endif
 
 #if defined(SharedTBB)
 #include <tbb/task_group.h>
@@ -488,28 +486,25 @@ void submitSYCLKernels(int patches, int device, int thread) {
     .submit([&](auto& h) {
       h.host_task(
         [=](
-        ) { /*
+        ) { 
 runStatelessVariantOnDevice(
 patches, device,
 ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
 1, FVRusanovSolver::NumberOfUnknowns,
-FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>, "sycl,
-task-graph, AoS", thread
+FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSLexicographicEnumerator>, "sycl, task-graph, AoS", thread
 );
 runStatelessVariantOnDevice(
 patches, device,
 ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
 1, FVRusanovSolver::NumberOfUnknowns,
-FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>, "sycl,
-task-graph, AoSoA", thread
+FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::AoSoALexicographicEnumerator>, "sycl, task-graph, AoSoA", thread
 );
 runStatelessVariantOnDevice(
 patches, device,
 ::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls<FVRusanovSolver,FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
 1, FVRusanovSolver::NumberOfUnknowns,
-FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>, "sycl,
-task-graph, SoA", thread
-);*/
+FVRusanovSolver::NumberOfAuxiliaryVariables,exahype2::enumerator::SoALexicographicEnumerator>, "sycl, task-graph, SoA", thread
+);
             runStatelessVariantOnDevice(
               patches,
               device,
@@ -740,6 +735,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
       thread
     );
   }
+  */
 
   tarch::accelerator::omp::GPUMemoryManager::getInstance().clear();
 #pragma omp parallel for
@@ -841,6 +837,7 @@ void runBenchmarksOnDevice(int numberOfPatches) {
       thread
     );
   }
+  */
 #elif defined(SharedTBB) and defined(GPUOffloadingSYCL)
   ::tbb::task_group taskGroup;
   for (int thread = 0; thread < tarch::multicore::Core::getInstance().getNumberOfThreads(); thread++) {
@@ -949,7 +946,6 @@ void runBenchmarksOnDevice(int numberOfPatches) {
 
 int main(int argc, char** argv) {
   constexpr int ExitCodeSuccess          = 0;
-  constexpr int ExitCodeInvalidArguments = 2;
   constexpr int ExitCodeInvalidBuild     = 3;
 
   peano4::initParallelEnvironment(&argc, &argv);
@@ -957,25 +953,16 @@ int main(int argc, char** argv) {
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
-  // #ifdef UseFenv
-  //   tarch::feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-  // #endif
-
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
     return ExitCodeInvalidBuild;
-  }
-
-  if (not exahype2::parseCommandLineArguments(argc, argv)) {
-    logError("main()", "Invalid command line arguments.");
-    return ExitCodeInvalidArguments;
   }
 
   peano4::runTestsAndBenchmarks();
 
   repositories::startSimulation();
 
-  otterTraceInitialise();
+  OTTER_INITIALISE();
 
   tarch::logging::Statistics::getInstance().clear();
 
@@ -984,7 +971,7 @@ int main(int argc, char** argv) {
 
 #if defined(GPUOffloadingSYCL)
   if (tarch::accelerator::Device::getInstance().getNumberOfDevices() > 0) {
-    logWarning("main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark");
+    //logWarning("main()", "you might have to set ZE_SERIALIZE=1|2|3 before you start the benchmark");
   }
 #endif
 
@@ -994,7 +981,7 @@ int main(int argc, char** argv) {
   );
   logInfo("main()", "Dimensions: " << Dimensions);
 
-  int numberOfPatches = 1;
+  int numberOfPatches = 1024;
   if constexpr (WithScaling) {
     numberOfPatches = tarch::multicore::Core::getInstance().getNumberOfThreads();
   }
@@ -1002,7 +989,7 @@ int main(int argc, char** argv) {
     std::stringstream msg;
     msg << "kernel-benchmarks-" << numberOfPatches << "-patches-"
         << tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
-    otterPhaseSwitch(msg.str().c_str());
+    OTTER_PHASE_SWITCH(msg.str().c_str());
 
     logInfo("main()", "========================================");
     logInfo("main()", "  Number of patches: " << numberOfPatches);
@@ -1020,7 +1007,7 @@ int main(int argc, char** argv) {
     logInfo("main()", "no accuracy checks were performed");
   }
 
-  otterTraceFinalise();
+  OTTER_FINALISE();
 
   delete[] validOutcome;
   repositories::finishSimulation();
