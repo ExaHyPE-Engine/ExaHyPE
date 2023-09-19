@@ -33,6 +33,16 @@ namespace tarch {
      */
     template<int SizeLhs, int SizeRhs, typename Scalar>
     void slice(Vector<SizeLhs,Scalar>& toVector, const Vector<SizeRhs,Scalar>& fromVector, int fromIndexInToVector, int strideInToVector = 1);
+
+    /**
+     * Variant of the slice that I need in the for loops. This version
+     * equals slice().
+     */
+    template<int SizeLhs, int SizeRhs, typename Scalar>
+    Vector<SizeLhs,Scalar> expand(const Vector<SizeRhs,Scalar>& vector);
+
+    template<int SizeLhs, typename Scalar>
+    Vector<SizeLhs,Scalar> expand(const Scalar&  scalar);
   }
 }
 
