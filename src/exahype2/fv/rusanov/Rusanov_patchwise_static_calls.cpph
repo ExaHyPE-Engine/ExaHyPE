@@ -40,7 +40,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
      */
     constexpr int haloSize        = 1;
 
-    simtForWithDynamicScheduling(patchIndex,patchData.numberOfCells,loopParallelism) {
+    parallelForWithDynamicScheduling(patchIndex,patchData.numberOfCells,loopParallelism) {
       if (evaluateSource) {
         simtDforWithDynamicScheduling(volume, numberOfVolumesPerAxisInPatch, loopParallelism) {
           internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
@@ -355,7 +355,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         }
         patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
       }
-    } endSimtFor
+    } endParallelFor
 } // end of function
 }}}} // four closing brackets for the namespaces
 

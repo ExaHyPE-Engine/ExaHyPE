@@ -407,6 +407,12 @@ namespace peano4 {
  * SYCL kernels. Therefore, we do not support parallel for for SYCL. We do
  * support a SIMT parallel for for SYCL however.
  *
+ * SIMT loops are always to be embedded into parallel loops. We do not embed
+ * the other way round. Codes like the batched kernels will use SIMT loops
+ * right from the start. So it is important that the SIMT loops exploit
+ * parallelism. If we make compromises, we have to make compromises on the
+ * parallel loop level.
+ *
  */
 #define parallelFor(counter, max) \
   parallelForWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)

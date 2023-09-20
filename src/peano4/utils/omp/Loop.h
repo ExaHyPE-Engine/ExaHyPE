@@ -60,7 +60,7 @@
 #define simtForWithDynamicScheduling(counter, max, loopParallelism) \
   { \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp taskloop default(shared) if ( __loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "omp taskloop simd default(shared) if ( __loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter = 0; counter < max; counter++ ) {
 
 #define endSimtFor }}
@@ -70,7 +70,7 @@
   { \
   tarch::la::Vector<2,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp taskloop collapse(2) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "omp taskloop simd collapse(2) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) { \
     tarch::la::Vector<2, int> counter = { counter##0, counter##1 };
@@ -79,7 +79,7 @@
   { \
   tarch::la::Vector<3,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp taskloop collapse(3) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "omp taskloop simd collapse(3) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) { \
@@ -89,7 +89,7 @@
   { \
   tarch::la::Vector<4,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp taskloop collapse(4) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "omp taskloop simd collapse(4) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
@@ -100,7 +100,7 @@
   { \
   tarch::la::Vector<5,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp taskloop collapse(5) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+  _Pragma( "omp taskloop simd collapse(5) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \

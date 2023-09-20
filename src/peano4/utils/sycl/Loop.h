@@ -16,9 +16,6 @@
 
 
 
-
-
-
 #define parallelDforWithDynamicScheduling2d(counter, max, loopParallelism) \
   { \
   tarch::la::Vector<2,int> counter##Max(max); \
