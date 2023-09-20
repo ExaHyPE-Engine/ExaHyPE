@@ -290,6 +290,10 @@ void applications::exahype2::avalanche::SWESolver::sourceTerm(
 
     if(tarch::la::equals(ubar,0.0)){
       // std::cout<<"sourceTerm h>0 and ubar=0 at t="<<t<<std::endl;
+      const double hx = Q[NumberOfUnknowns + h_x]/volumeH(0);
+      const double hy = Q[NumberOfUnknowns + h_y]/volumeH(1);
+      const tarch::la::Vector<Dimensions, double> frictionVector = {tan(Zeta)-hx,-hy};
+      const double frictionVectorMagnitude = tarch::la::norm2(frictionVector);
       S[0] = 0.0;
       S[1] = Q[0] * Gravity * sin(Zeta) - Mu * Q[0] * Gravity * cos(Zeta);
       S[2] = 0.0;

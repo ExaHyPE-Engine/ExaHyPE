@@ -1,124 +1,132 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "AbstractSWESolver.h"
-#include "tarch/logging/Log.h"
-#include "peano4/utils/Loop.h"
+#include "exahype2/NonCriticalAssertions.h"
+#include "tarch/la/Vector.h"
+#include "tarch/la/ScalarOperations.h"
+#include <cmath>
 
-namespace applications {
-  namespace exahype2 {
-    namespace avalanche {
-
-      enum derivatives { u_x = 1, u_y, u_xx, u_yy, u_xy, v_x, v_y, v_xx, v_yy, v_xy };
-      enum unknowns { h = 0, hu, hv };
-
-      class SWESolver;
-
-    } // namespace avalanche
-  }   // namespace exahype2
-} // namespace applications
+enum derivatives { h_x=1, h_y, u_x, u_y, u_xx, u_yy, u_xy, v_x, v_y, v_xx, v_yy, v_xy };
+enum unknowns { h = 0, hu, hv };
 
 
-class applications::exahype2::avalanche::SWESolver: public applications::exahype2::avalanche::AbstractSWESolver {
-private:
-  static tarch::logging::Log _log;
+namespace exahype2::saintvenant {
 
-public:
-  /**
-   * Refinement criterion
-   *
-   * ExaHypE2 is guided by a maximum and minimum mesh (patch) size.
-   * All (dynamic) AMR is constrained by these values, i.e. if your
-   * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
-   * automatically refine. If you try to refine further than the
-   * minimum mesh size, ExaHyPE 2 will ignore any refinement.
-   *
-   * Consequently, you are fine if you work with a regular mesh:
-   * You set the maximum mesh size, and you leave everything else
-   * to Peano 4/ExaHyPE 2. If you want to have an adaptive mesh,
-   * use this routine to implement the refinement pattern.
-   *
-   * @param Q This is the (current) solution. The data is not set
-   *  to a valid value throughout grid construction. That is: If
-   *  t equals 0.0, you cannot assume that Q is properly initialised.
-   *  Therefore, Q usually is only evaluated by dynamic AMR codes
-   *  which make the solution follow
-   */
-  virtual ::exahype2::RefinementCommand refinementCriterion(
-    const double* __restrict__ Q, // Q[3+11],
-    const tarch::la::Vector<Dimensions, double>& volumeCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
-    double                                       t
-  ) override;
-
-
-  virtual void initialCondition(
-    double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& volumeCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
-    bool                                         gridIsConstructred
-  ) override;
-
-
-  virtual void boundaryConditions(
-    const double* __restrict__ Qinside, // Qinside[3+11]
-    double* __restrict__ Qoutside,      // Qoutside[3+11]
+  void boundaryConditions(
+    const double* __restrict__ Qinside, // Qinside[3+1]
+    double* __restrict__ Qoutside,      // Qoutside[3+1]
     const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
     double                                       t,
-    int                                          normal
-  ) override;
+    int                                          normal,
+    int                                          NumberOfUnknowns,
+    int                                          NumberOfAuxiliaryVariables
+  ) {
+  // Reflecting boundary conditions
+    Qoutside[0] = Qinside[0];
+    Qoutside[1] = -Qinside[1];
+    Qoutside[2] = -Qinside[2];
+    Qoutside[3] = Qinside[3];
+    Qoutside[4] = Qinside[4];
+    Qoutside[5] = Qinside[5];
+    Qoutside[6] = Qinside[6];
+    Qoutside[7] = Qinside[7];
+    Qoutside[8] = Qinside[8];
+    Qoutside[9] = Qinside[9];
+    Qoutside[10] = Qinside[10];
+    Qoutside[11] = Qinside[11];
+    Qoutside[12] = Qinside[12];
+    Qoutside[13] = Qinside[13];
+  
+  }
 
-
-public:
-  /**
-   * Determine max eigenvalue over Jacobian in a given point with solution values
-   * (states) Q. All parameters are in.
-   *
-   * @return Max eigenvalue. Result has to be positive, so we are actually speaking
-   *   about the maximum absolute eigenvalue.
-   */
-  virtual double maxEigenvalue(
-    const double* __restrict__ Q, // Q[3+11],
+  double maxEigenvalue(
+    const double* __restrict__ Q, // Q[3+1],
     const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
-    double                                       t,
-    double                                       dt,
-    int                                          normal
-  ) override;
-
-
-  virtual void flux(
-    const double* __restrict__ Q, // Q[3+11],
-    const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal,
-    double* __restrict__ F // F[3]
-  ) override;
+    int                                          NumberOfUnknowns,
+    int                                          NumberOfAuxiliaryVariables,
+    double                                       Zeta=0.0,
+    double                                       Gravity=9.81
+  ) {
 
+    if(tarch::la::greater(Q[0],0.0)){
+      assertion(Q[0] > 0);
+      double       result = 1.0;
+      const double ih     = 1.0 / Q[0]; // Inverse water height
+      const double c      = std::sqrt(Gravity * cos(Zeta) * Q[0]);
+      double       u      = 0.0;
+      // std::cout<<"max eigenvalue h>0 at t="<<t<<std::endl;
 
-  virtual void nonconservativeProduct(
-    const double* __restrict__ Q,      // Q[3+11],
-    const double* __restrict__ deltaQ, // deltaQ[3+11]
+      switch (normal) {
+      case 0: // x
+              // Q[1] is the momentum in x-direction but we need the velocity
+              // here. Therefore, multiply by the inverse water height (i.e., we
+              // divide by the height).
+        u      = ih * Q[1];
+        result = std::max(std::abs(u - c), std::abs(u + c));
+        break;
+      case 1: // y
+        u      = ih * Q[2];
+        result = std::max(std::abs(u - c), std::abs(u + c));
+        break;
+      }
+      return result;
+    }
+    // std::cout<<"max eigenvalue h=0 at t="<<t<<std::endl;
+    return 0.0;
+  }
+
+  void applications::exahype2::avalanche::SWESolver::flux(
+    const double* __restrict__ Q, // Q[3+1],
     const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal,
-    double* __restrict__ BTimesDeltaQ // BTimesDeltaQ[3]
-  ) override;
+    double* __restrict__ F, // F[3]
+    int                                          NumberOfUnknowns,
+    int                                          NumberOfAuxiliaryVariables,
+    double                                       Zeta=0.0,
+    double                                       Gravity=9.81,
+  ) {
+    if(tarch::la::greater(Q[0],0.0)){
+      const double ih = 1.0 / Q[0];
+      // std::cout<<"Flux h>0 at t="<<t<<std::endl;
 
-  virtual void sourceTerm(
-    const double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& volumeCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
-    double                                       t,
-    double                                       dt,
-    double* __restrict__ S
-  ) override;
+      switch (normal) {
+      case 0:
+        F[0] = Q[1];                                                       // hu_1
+        F[1] = ih * Q[1] * Q[1] + 0.5 * Gravity * cos(Zeta) * Q[0] * Q[0]; // h(u_1)^2 + 0.5*g*h**2
+        F[2] = ih * Q[1] * Q[2];                                           // hu_1u_2
+        break;
+      case 1:
+        F[0] = Q[2];                                                       // hu_2
+        F[1] = ih * Q[2] * Q[1];                                           // hu_1u_2
+        F[2] = ih * Q[2] * Q[2] + 0.5 * Gravity * cos(Zeta) * Q[0] * Q[0]; // h(u_2)^2 + 0.5*g*h**2
+        break;
+      }
 
-  static inline void extrapolateHalo(double* __restrict__ oldQWithHalo) {
+    }
+    else{
+      // std::cout<<"Flux h=0 at t="<<t<<std::endl;
+      switch (normal) {
+      case 0:
+        F[0] = 0.0;                                                       // hu_1
+        F[1] = 0.0; // h(u_1)^2 + 0.5*g*h**2
+        F[2] = 0.0;                                           // hu_1u_2
+        break;
+      case 1:
+        F[0] = 0.0;                                                       // hu_2
+        F[1] = 0.0;                                           // hu_1u_2
+        F[2] = 0.0; // h(u_2)^2 + 0.5*g*h**2
+        break;
+      }
+    }
+  }
+
+  void extrapolateHalo(double* __restrict__ oldQWithHalo, int NumberOfFiniteVolumesPerAxisPerPatch, int NumberOfUnknowns, int NumberOfAuxiliaryVariables) {
     // extrapolation
     tarch::la::Vector<Dimensions, int> topLeftCell     = {0, NumberOfFiniteVolumesPerAxisPerPatch + 1};
     tarch::la::Vector<Dimensions, int> topRightCell    = {NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1};
@@ -182,7 +190,7 @@ public:
     }
   }
 
-  static inline void calculateDerivatives(double* __restrict__ oldQWithHalo) {
+  void calculateDerivatives(double* __restrict__ oldQWithHalo, int NumberOfFiniteVolumesPerAxisPerPatch, int NumberOfUnknowns, int NumberOfAuxiliaryVariables) {
     // derivative calculation
     // backward difference for single derivatives
     // central difference for double derivatives
@@ -223,19 +231,24 @@ public:
           xRightYRightNeighbourCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
         );
 
+        const double hCurrentCell = oldQWithHalo[currentCellSerialized * totalVariables + h];
         const double uCurrentCell = (tarch::la::greater(oldQWithHalo[currentCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[currentCellSerialized * totalVariables + hu]/oldQWithHalo[currentCellSerialized * totalVariables + h] : 0.0);
         const double vCurrentCell = (tarch::la::greater(oldQWithHalo[currentCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[currentCellSerialized * totalVariables + hv]/oldQWithHalo[currentCellSerialized * totalVariables + h] : 0.0);
-
+        
+        const double hXLeftNeighbourCell = oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h];
         const double uXLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
         const double vXLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[xLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
 
+        const double hXRightNeighbourCell = oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h];
         const double uXRightNeighbourCell = (tarch::la::greater(oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h] : 0.0);
                                            
         const double vXRightNeighbourCell = (tarch::la::greater(oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[xRightNeighbourCellSerialized * totalVariables + h] : 0.0);
 
+        const double hYLeftNeighbourCell = oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h];
         const double uYLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
         const double vYLeftNeighbourCell = (tarch::la::greater(oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[yLeftNeighbourCellSerialized * totalVariables + h] : 0.0);
 
+        const double hYRightNeighbourCell = oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h];
         const double uYRightNeighbourCell = (tarch::la::greater(oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + hu]/oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h] : 0.0);
                                            
         const double vYRightNeighbourCell = (tarch::la::greater(oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[yRightNeighbourCellSerialized * totalVariables + h] : 0.0);
@@ -259,6 +272,14 @@ public:
                                                   
 
 
+        // h_x
+        oldQWithHalo[currentCellSerialized * totalVariables + NumberOfUnknowns + h_x]
+          = (hCurrentCell - hXLeftNeighbourCell);
+
+        // h_y
+        oldQWithHalo[currentCellSerialized * totalVariables + NumberOfUnknowns + h_y]
+          = (hCurrentCell - hYLeftNeighbourCell);
+          
         // u_x
         oldQWithHalo[currentCellSerialized * totalVariables + NumberOfUnknowns + u_x]
           = (uCurrentCell - uXLeftNeighbourCell);
@@ -301,4 +322,9 @@ public:
       }
     }
   }
-};
+
+
+  
+  
+
+}

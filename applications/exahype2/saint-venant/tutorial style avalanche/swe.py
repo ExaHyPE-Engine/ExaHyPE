@@ -22,7 +22,7 @@ import exahype2
 # We first create a new ExaHyPE2 project.
 # For this, we specify the (nested) namespaces, the name of our main file and our executable name.
 #
-my_project = exahype2.Project( ["applications", "exahype2", "avalanche"], "avalanche", ".", executable="avalanche" )
+my_project = exahype2.Project( ["applications", "exahype2", "avalanche"], "avalanche", executable="avalanche", directory="." )
 
 #
 # Add the Finite Volumes solver using named arguments.
@@ -33,7 +33,7 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   name                  = "SWESolver",
   patch_size            = 3,
   unknowns              = 3,
-  auxiliary_variables   = 11,
+  auxiliary_variables   = 13,
   min_volume_h          = 0.008,
   max_volume_h          = 0.08,
   time_step_relaxation  = 0.5
@@ -43,7 +43,7 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 # To see which variables (unknowns + auxiliary variables) we can visualise,
 # let's add a plot description for the variables to our solver.
 #
-my_solver.plot_description = "h, hu, hv, b, u_x, u_y, u_xx, u_yy, u_xy, v_x, v_y, v_xx, v_yy, v_xy"
+my_solver.plot_description = "h, hu, hv, b, h_x, h_y, u_x, u_y, u_xx, u_yy, u_xy, v_x, v_y, v_xx, v_yy, v_xy"
 
 my_solver._preprocess_reconstructed_patch = """
   SWESolver::extrapolateHalo(oldQWithHalo);
@@ -141,7 +141,7 @@ my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "
 # Additionally, we specify the build mode which you can also change to a different mode.
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-my_project.set_Peano4_installation( "../../../../", mode=peano4.output.CompileMode.Debug)
+my_project.set_Peano4_installation( "../../../../", mode=peano4.output.CompileMode.Release)
 
 #
 # We generate and grab the underlying core project of 'Peano4'.
