@@ -37,7 +37,7 @@ void tarch::la::slice(
 
 template<int SizeLhs, int SizeRhs, typename Scalar>
 tarch::la::Vector<SizeLhs,Scalar> tarch::la::expandOrSlice(const Vector<SizeRhs,Scalar>& vector) {
-  return slice(vector,0);
+  return slice<SizeLhs>(vector,0);
 }
 
 
