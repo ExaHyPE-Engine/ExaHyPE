@@ -36,12 +36,12 @@ void tarch::la::slice(
 
 
 template<int SizeLhs, int SizeRhs, typename Scalar>
-tarch::la::Vector<SizeLhs,Scalar> tarch::la::expand(const Vector<SizeRhs,Scalar>& vector) {
+tarch::la::Vector<SizeLhs,Scalar> tarch::la::expandOrSlice(const Vector<SizeRhs,Scalar>& vector) {
   return slice(vector,0);
 }
 
 
 template<int SizeLhs, typename Scalar>
-tarch::la::Vector<SizeLhs,Scalar> tarch::la::expand(const Scalar&  scalar) {
+tarch::la::Vector<SizeLhs,Scalar> tarch::la::expandOrSlice(const Scalar&  scalar) {
   return Vector<SizeLhs,Scalar>(scalar);
 }

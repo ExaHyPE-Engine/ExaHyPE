@@ -945,7 +945,7 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
 ) {
   assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
 
-  parallelDforWithDynamicScheduling( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch, parallelisation )
+  simtDforWithDynamicScheduling( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch, parallelisation )
     const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch) * unknowns;
     for (int unknown=0; unknown<unknowns; unknown++) {
       destinationValues[baseIndexDestination+unknown] = 0.0;
@@ -998,7 +998,7 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
         destinationValues[baseIndexDestination+unknown] += weight * sourceValues[baseIndexSource+unknown];
       }
     }
-  endParallelDfor
+  endSimtDfor
 }
 
 

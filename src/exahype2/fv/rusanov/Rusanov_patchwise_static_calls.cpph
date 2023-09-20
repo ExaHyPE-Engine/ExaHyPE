@@ -40,9 +40,9 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
      */
     constexpr int haloSize        = 1;
 
-    parallelForWithDynamicScheduling(patchIndex,patchData.numberOfCells,loopParallelism) {
+    simtForWithDynamicScheduling(patchIndex,patchData.numberOfCells,loopParallelism) {
       if (evaluateSource) {
-        parallelDforWithDynamicScheduling(volume, numberOfVolumesPerAxisInPatch, loopParallelism) {
+        simtDforWithDynamicScheduling(volume, numberOfVolumesPerAxisInPatch, loopParallelism) {
           internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -55,7 +55,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             patchData.QOut[patchIndex],
             QOutEnumerator
           );
-        } endParallelDfor
+        } endSimtfor
       }
       else {
         parallelDPlusOneForWithDynamicScheduling(
@@ -72,13 +72,13 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             patchData.QOut[patchIndex],
             QOutEnumerator
           );
-        } endParallelDfor
+        } endSimtfor
       }
 
       // ====================================================
       // Compute damping due to max eigenvalue
       // ====================================================
-      parallelDforWithDynamicScheduling(
+      simtDforWithDynamicScheduling(
         volume,
         internal::rangeOverVolumesPlusHaloInXDirection(numberOfVolumesPerAxisInPatch),
         loopParallelism
@@ -96,9 +96,9 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
               tempEigenvalueX,
               eigenvalueEnumerator
         );
-      } endParallelDfor
+      } endSimtfor
 
-      parallelDforWithDynamicScheduling(
+      simtDforWithDynamicScheduling(
         volume,
         internal::rangeOverVolumesPlusHaloInYDirection(numberOfVolumesPerAxisInPatch),
         loopParallelism
@@ -116,10 +116,10 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
               tempEigenvalueY,
               eigenvalueEnumerator
         );
-      } endParallelDfor
+      } endSimtfor
 
       #if Dimensions==3
-      parallelDforWithDynamicScheduling(
+      simtDforWithDynamicScheduling(
         volume,
         internal::rangeOverVolumesPlusHaloInZDirection(numberOfVolumesPerAxisInPatch),
         loopParallelism
@@ -137,7 +137,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
                 tempEigenvalueZ,
                 eigenvalueEnumerator
         );
-      } endParallelDfor
+      } endSimtfor
       #endif
 
       parallelDPlusOneForWithDynamicScheduling(
@@ -161,10 +161,10 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-      } endParallelDfor
+      } endSimtfor
 
       if (evaluateFlux) {
-        parallelDforWithDynamicScheduling(
+        simtDforWithDynamicScheduling(
           volume,
           internal::rangeOverVolumesPlusHaloInXDirection(numberOfVolumesPerAxisInPatch),
           loopParallelism
@@ -183,9 +183,9 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempFluxX,
             fluxEnumerator
           );
-        } endParallelDfor
+        } endSimtfor
 
-        parallelDforWithDynamicScheduling(
+        simtDforWithDynamicScheduling(
           volume,
           internal::rangeOverVolumesPlusHaloInYDirection(numberOfVolumesPerAxisInPatch),
           loopParallelism
@@ -204,10 +204,10 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempFluxY,
             fluxEnumerator
           );
-        } endParallelDfor
+        } endSimtfor
 
         #if Dimensions==3
-        parallelDforWithDynamicScheduling(
+        simtDforWithDynamicScheduling(
           volume,
           internal::rangeOverVolumesPlusHaloInZDirection(numberOfVolumesPerAxisInPatch),
           loopParallelism
@@ -226,7 +226,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempFluxZ,
             fluxEnumerator
           );
-        } endParallelDfor
+        } endSimtfor
         #endif
 
         parallelDPlusOneForWithDynamicScheduling(
@@ -246,11 +246,11 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             *(patchData.QOut + patchIndex),
             QOutEnumerator
           );
-        } endParallelDfor
+        } endSimtfor
       }
 
       if (evaluateNonconservativeProduct) {
-        parallelDforWithDynamicScheduling(
+        simtDforWithDynamicScheduling(
           volume,
           internal::rangeOverVolumesPlusHaloInXDirection(numberOfVolumesPerAxisInPatch),
           loopParallelism
@@ -269,10 +269,10 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempNonconservativeProductX,
             ncpEnumerator
           );
-        } endParallelDfor
+        } endSimtfor
 
 
-        parallelDforWithDynamicScheduling(
+        simtDforWithDynamicScheduling(
           volume,
           internal::rangeOverVolumesPlusHaloInYDirection(numberOfVolumesPerAxisInPatch),
           loopParallelism
@@ -291,10 +291,10 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempNonconservativeProductY,
             ncpEnumerator
           );
-        } endParallelDfor
+        } endSimtfor
 
         #if Dimensions==3
-        parallelDforWithDynamicScheduling(
+        simtDforWithDynamicScheduling(
           volume,
           internal::rangeOverVolumesPlusHaloInYDirection(numberOfVolumesPerAxisInPatch),
           loopParallelism
@@ -313,7 +313,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempNonconservativeProductZ,
             ncpEnumerator
           );
-        } endParallelDfor
+        } endSimtfor
         #endif
 
         parallelDPlusOneForWithDynamicScheduling(
@@ -333,7 +333,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
               *(patchData.QOut + patchIndex),
               QOutEnumerator
             );
-        } endParallelDfor
+        } endSimtfor
       }
 
       if (evaluateMaximumEigenvalueAfterTimeStep) {
@@ -355,7 +355,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
         }
         patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
       }
-    } endParallelFor
+    } endSimtFor
 } // end of function
 }}}} // four closing brackets for the namespaces
 

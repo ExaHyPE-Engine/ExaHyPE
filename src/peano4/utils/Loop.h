@@ -292,16 +292,20 @@ namespace peano4 {
 
 
 /**
- * Parallel version of dfor
+ * @page peano4_utils_Loop_parallel Parallel version of dfor
  *
- * Don't use a { after the parallelDfor. It is included in the macro. Also
- * don't close it with a }. Instead, use the endParallelDfor macro.
+ * We offer two main flavours of parallel dfor macros: the normal parallel dfor
+ * and a dfor mapping onto SIMT, i.e. bare of internal and external
+ * dependencies. The latter is subject to some restrictions: No grain
+ * size is specified, we have no dynamic control how the parallelism is
+ * realised, and the loop body has to follow certain conventions:
  *
- * This macro works great on the CPU. I recommend not to use it on the GPU,
- * where you usually have specialised parallel for realisations anyway.
- * However, nothing stops you from giving a try.
+ * - Don't use virtual function calls.
+ * - Take into account that the loop body works with copies of local variables
+ *   (you can still use pointers).
+ * - Don't use synchronisation primitives.
  *
- * The macro wants to have a C++ identifier counter. This counter will be a
+ * All macros want to have a C++ identifier counter. This counter will be a
  * well-defined integer vector within the loop body. The counters always
  * start at 0, but you can shift them obviously internally to have another
  * offset. The max argument is either an integer, or you can paste in a
@@ -315,7 +319,6 @@ namespace peano4 {
  * squares/cubes. The syntax with the additional brackets is a little bit
  * annoying, but some LLVM front-ends otherwise get confused. Try without
  * them, but don't be surprised if it doesn't work.
- *
  *
  * The mapping onto your variables of choice is very similar to what we see a
  * lot in CUDA and SYCL kernels. In the simplest case, you write
@@ -397,17 +400,18 @@ namespace peano4 {
  * ## SYCL
  *
  * Different to TBB, SYCL has this accelerator paradigm in mind, even though we
- * submit to the host queue. Therefore, we have to capture the variables via =.
- * Furthermore, the SYCL code does not really "see" that this thing is always
- * executed on the host. Therefore, I have to mark the dLinearised() routine as
- * GPU offloadable, which is a little bit annoying.
- *
- * SYCL is the one tasking back-end, where we cannot prescribe a minimal grain
- * size. We also cannot run the for loop sequentially with built-in mechanisms.
- * There is no dynamic scheduling version of the SYCL backend therefore.
+ * submit to the host queue. Therefore, we have to capture the variables via =,
+ * we have to ensure all routines (such as dLinearised() are marked as
+ * GPU offloadable), we do not have any dynamic scheduling, grain sizes, and so
+ * forth. Most importantly, we cannot call virtual functions or functors from
+ * SYCL kernels. Therefore, we do not support parallel for for SYCL. We do
+ * support a SIMT parallel for for SYCL however.
  *
  */
 #define parallelFor(counter, max) \
+  parallelForWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
+
+#define parallelSIMTFor(counter, max) \
   parallelForWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
 
 #define parallelDfor(counter, max) \
@@ -422,6 +426,15 @@ namespace peano4 {
 
 #define parallelDPlusTwoForWithDynamicScheduling(counter, max, loopParallelism) \
   parallelDforWithDynamicScheduling4d(counter, max, loopParallelism)
+
+#define parallelSIMTDforWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelSIMTDforWithDynamicScheduling2d(counter, max, loopParallelism)
+
+#define parallelSIMTDPlusOneForWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelSIMTDforWithDynamicScheduling3d(counter, max, loopParallelism)
+
+#define parallelSIMTDPlusTwoForWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelSIMTDforWithDynamicScheduling4d(counter, max, loopParallelism)
 #elif Dimensions==3
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   parallelDforWithDynamicScheduling3d(counter, max, loopParallelism)
@@ -431,6 +444,15 @@ namespace peano4 {
 
 #define parallelDPlusTwoForWithDynamicScheduling(counter, max, loopParallelism) \
   parallelDforWithDynamicScheduling5d(counter, max, loopParallelism)
+
+#define parallelSIMTDforWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelSIMTDforWithDynamicScheduling3d(counter, max, loopParallelism)
+
+#define parallelSIMTDPlusOneForWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelSIMTDforWithDynamicScheduling4d(counter, max, loopParallelism)
+
+#define parallelSIMTDPlusTwoForWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelSIMTDforWithDynamicScheduling5d(counter, max, loopParallelism)
 #endif
 
 
@@ -592,53 +614,7 @@ namespace peano4 {
         ); \
     }
 #elif defined(SharedSYCL)
-  /**
-   * The parallel for really maps onto tasks.
-   *
-   * @todo We do not have the tasks yet. But it has to be tasks, not SYCL, as
-   * SYCL is SIMT and not a parallel for.
-   */
-#define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
-  for( int counter = 0; counter < max; counter++ ) {
-
-#define parallelDforWithDynamicScheduling2d(counter, max, loopParallelism) \
-  { \
-  tarch::la::Vector<2,int> counter##Max(max); \
-  for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
-  for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) { \
-    tarch::la::Vector<2, int> counter = { counter##0, counter##1 };
-
-#define parallelDforWithDynamicScheduling3d(counter, max, loopParallelism) \
-  { \
-  tarch::la::Vector<3,int> counter##Max(max); \
-  for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
-  for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
-  for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) { \
-    tarch::la::Vector<3, int> counter = { counter##0, counter##1, counter##2 };
-
-#define parallelDforWithDynamicScheduling4d(counter, max, loopParallelism) \
-  { \
-  tarch::la::Vector<4,int> counter##Max(max); \
-  for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
-  for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
-  for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
-  for( int counter##3 = 0; counter##3 < counter##Max(3); counter##3++ ) { \
-    tarch::la::Vector<4, int> counter = { counter##0, counter##1, counter##2, counter##3 };
-
-#define parallelDforWithDynamicScheduling5d(counter, max, loopParallelism) \
-  { \
-  tarch::la::Vector<5,int> counter##Max(max); \
-  for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
-  for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
-  for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
-  for( int counter##3 = 0; counter##3 < counter##Max(3); counter##3++ ) \
-  for( int counter##4 = 0; counter##4 < counter##Max(4); counter##4++ ) { \
-    tarch::la::Vector<5, int> counter = { counter##0, counter##1, counter##2, counter##3, counter##4 };
-
-#define endParallelFor }
-#define endParallelDfor }}
-
-
+  #include "sycl/Loop.h"
 #else
   #define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
     for( int counter = 0; counter < max; counter++ ) {
