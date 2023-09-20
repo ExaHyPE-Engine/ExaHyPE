@@ -514,6 +514,28 @@ namespace peano4 {
   #define endParallelFor }
   #define endParallelDfor }}
 
+
+  #define simtForWithDynamicScheduling(counter, max, loopParallelism) \
+    parallelForWithDynamicScheduling(counter, max, loopParallelism)
+
+  #define endSimtFor \
+    endParallelFor
+
+  #define simtDforWithDynamicScheduling2d(counter, max, loopParallelism) \
+    parallelDforWithDynamicScheduling2d(counter, max, loopParallelism)
+
+  #define simtDforWithDynamicScheduling3d(counter, max, loopParallelism) \
+    parallelDforWithDynamicScheduling3d(counter, max, loopParallelism)
+
+  #define simtDforWithDynamicScheduling4d(counter, max, loopParallelism) \
+    parallelDforWithDynamicScheduling4d(counter, max, loopParallelism)
+
+  #define simtDforWithDynamicScheduling5d(counter, max, loopParallelism) \
+    parallelDforWithDynamicScheduling5d(counter, max, loopParallelism)
+
+  #define endSimtDfor \
+    endParallelDfor
+
 #endif
 
 
