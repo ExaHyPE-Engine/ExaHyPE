@@ -55,10 +55,10 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             patchData.QOut[patchIndex],
             QOutEnumerator
           );
-        } endSimtfor
+        } endSimtDfor
       }
       else {
-        parallelDPlusOneForWithDynamicScheduling(
+        simtDPlusOneForWithDynamicScheduling(
           volume,
           internal::rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables),
           loopParallelism
@@ -72,7 +72,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             patchData.QOut[patchIndex],
             QOutEnumerator
           );
-        } endSimtfor
+        } endSimtDfor
       }
 
       // ====================================================
@@ -96,7 +96,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
               tempEigenvalueX,
               eigenvalueEnumerator
         );
-      } endSimtfor
+      } endSimtDfor
 
       simtDforWithDynamicScheduling(
         volume,
@@ -116,7 +116,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
               tempEigenvalueY,
               eigenvalueEnumerator
         );
-      } endSimtfor
+      } endSimtDfor
 
       #if Dimensions==3
       simtDforWithDynamicScheduling(
@@ -137,10 +137,10 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
                 tempEigenvalueZ,
                 eigenvalueEnumerator
         );
-      } endSimtfor
+      } endSimtDfor
       #endif
 
-      parallelDPlusOneForWithDynamicScheduling(
+      simtDPlusOneForWithDynamicScheduling(
         volume,
         internal::rangeOverVolumesTimesUnknowns(numberOfVolumesPerAxisInPatch,unknowns),
         loopParallelism
@@ -161,7 +161,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-      } endSimtfor
+      } endSimtDfor
 
       if (evaluateFlux) {
         simtDforWithDynamicScheduling(
@@ -183,7 +183,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempFluxX,
             fluxEnumerator
           );
-        } endSimtfor
+        } endSimtDfor
 
         simtDforWithDynamicScheduling(
           volume,
@@ -204,7 +204,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempFluxY,
             fluxEnumerator
           );
-        } endSimtfor
+        } endSimtDfor
 
         #if Dimensions==3
         simtDforWithDynamicScheduling(
@@ -226,10 +226,10 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempFluxZ,
             fluxEnumerator
           );
-        } endSimtfor
+        } endSimtDfor
         #endif
 
-        parallelDPlusOneForWithDynamicScheduling(
+        simtDPlusOneForWithDynamicScheduling(
           volume,
           internal::rangeOverVolumesTimesUnknowns(numberOfVolumesPerAxisInPatch,unknowns),
           loopParallelism
@@ -246,7 +246,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             *(patchData.QOut + patchIndex),
             QOutEnumerator
           );
-        } endSimtfor
+        } endSimtDfor
       }
 
       if (evaluateNonconservativeProduct) {
@@ -269,7 +269,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempNonconservativeProductX,
             ncpEnumerator
           );
-        } endSimtfor
+        } endSimtDfor
 
 
         simtDforWithDynamicScheduling(
@@ -291,7 +291,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempNonconservativeProductY,
             ncpEnumerator
           );
-        } endSimtfor
+        } endSimtDfor
 
         #if Dimensions==3
         simtDforWithDynamicScheduling(
@@ -313,10 +313,10 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
             tempNonconservativeProductZ,
             ncpEnumerator
           );
-        } endSimtfor
+        } endSimtDfor
         #endif
 
-        parallelDPlusOneForWithDynamicScheduling(
+        simtDPlusOneForWithDynamicScheduling(
           volume,
           internal::rangeOverVolumesTimesUnknowns(numberOfVolumesPerAxisInPatch,unknowns),
           loopParallelism
@@ -333,7 +333,7 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
               *(patchData.QOut + patchIndex),
               QOutEnumerator
             );
-        } endSimtfor
+        } endSimtDfor
       }
 
       if (evaluateMaximumEigenvalueAfterTimeStep) {

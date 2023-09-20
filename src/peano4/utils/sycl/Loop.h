@@ -59,7 +59,7 @@
 
 
 
-#define parallelSIMTForWithDynamicScheduling(counter, max, loopParallelism) \
+#define simtForWithDynamicScheduling(counter, max, loopParallelism) \
   tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
     handle.parallel_for( \
       ::sycl::range<1>{static_cast<std::size_t>(max)}, \
@@ -74,7 +74,7 @@
  * - The third combination of a curly plus round bracket close the submit().
  *   It also comprises the wait().
  */
-#define endParallelSIMTFor \
+#define endSimtFor \
       } \
     ); \
   }).wait();
@@ -119,7 +119,7 @@
 
   #define simtDforWithDynamicScheduling5d(counter, max, loopParallelism) \
     { \
-    tarch::la::Vector<5,int> counter##Max(tarch::la::expandOrSlice<4>(max)); \
+    tarch::la::Vector<5,int> counter##Max(tarch::la::expandOrSlice<5>(max)); \
     tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
       handle.parallel_for( \
         ::sycl::range<3>{static_cast<std::size_t>(counter##Max(0)),static_cast<std::size_t>(counter##Max(1)),static_cast<std::size_t>(counter##Max(2))}, \

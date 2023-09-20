@@ -61,7 +61,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       } endSimtDfor
     }
     else {
-      parallelDPlusTwoForWithDynamicScheduling(
+      simtDPlusTwoForWithDynamicScheduling(
         volume,
         internal::rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, patchData.numberOfCells),
         loopParallelism
@@ -148,7 +148,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
     } endSimtDfor
     #endif
 
-    parallelDPlusTwoForWithDynamicScheduling(
+    simtDPlusTwoForWithDynamicScheduling(
       volume,
       internal::rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, patchData.numberOfCells),
       loopParallelism
@@ -242,7 +242,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       } endSimtDfor
       #endif
 
-      parallelDPlusTwoForWithDynamicScheduling(
+      simtDPlusTwoForWithDynamicScheduling(
         volume,
         internal::rangeOverVolumesTimesUnknownsTimesPatches(numberOfVolumesPerAxisInPatch, unknowns, patchData.numberOfCells),
         loopParallelism
@@ -334,7 +334,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
       } endSimtDfor
       #endif
 
-      parallelDPlusTwoForWithDynamicScheduling(
+      simtDPlusTwoForWithDynamicScheduling(
         volume,
         internal::rangeOverVolumesTimesUnknownsTimesPatches(numberOfVolumesPerAxisInPatch, unknowns, patchData.numberOfCells),
         loopParallelism
