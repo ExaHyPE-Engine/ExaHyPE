@@ -7,7 +7,7 @@ import peano4
 import exahype2
 
 dimensions                = 2
-cell_size                 = 0.1
+cell_size                 = 0.075
 amr_levels                = 3
 patch_size                = 3
 rk_order                  = 2
@@ -208,17 +208,17 @@ if args.scenario == "Avalanche":
   from avalanche import Avalanche
   my_scenario = Avalanche()
   my_solver._preprocess_reconstructed_patch = """
-  ::exahype2::saintvenant::extrapolateHalo(oldQWithHalo, NumberOfFiniteVolumesPerAxisPerPatch, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  ::exahype2::saintvenant::calculateDerivatives(oldQWithHalo, NumberOfFiniteVolumesPerAxisPerPatch, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  """
+  ::exahype2::saintvenant::extrapolateHalo(oldQWithHalo, {patch_size}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables} );
+  ::exahype2::saintvenant::calculateDerivatives(oldQWithHalo, {patch_size}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables} );
+  """.format(patch_size=patch_size, NumberOfUnknowns=args.dim + 1, NumberOfAuxiliaryVariables=13)
 
 my_solver.set_implementation(
     initial_conditions    = my_scenario.implementation_of_initial_conditions(),
     boundary_conditions   = my_scenario.implementation_of_boundary_conditions(),
     flux                  = my_scenario.implementation_of_flux(),
     eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
-    source_term           = my_scenario.implementation_of_sources(),
     ncp                   = my_scenario.implementation_of_ncp(),
+    source_term           = my_scenario.implementation_of_sources(),
     refinement_criterion  = my_scenario.implementation_of_refinement_criterion()   
 )
 
@@ -242,7 +242,7 @@ else:
   periodic_BC = [False, False, False]
 
 if args.dim == 2:
-  size                    = [4.0, 2.0]
+  size                    = [2.0, 2.0]
   offset                  = [0.0, 0.0]
 
 

@@ -5,6 +5,7 @@ class Avalanche:
     
 
     def __init__(self, Zeta=23, Zeta1=21, Zeta2=30.7, Zeta3=22.2, Beta=0.136, FrictionLengthScale=0.00065, Gravity=9.81, Pi=math.pi):
+        self.Pi = math.pi
         self.Zeta = Zeta*self.Pi/180
         self.Zeta1 = Zeta1*self.Pi/180
         self.Zeta2 = Zeta2*self.Pi/180
@@ -22,7 +23,7 @@ class Avalanche:
 
     def implementation_of_initial_conditions(self):
         return """
-        const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {0.15,0.35};
+        const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {0.15,1.0};
         const bool nearCentre = tarch::la::norm2(volumeCentre-granularMaterialCenter) < 0.1;
 
         Q[0] = (nearCentre ? 0.008 : 0.0 ); // Water height (h)
@@ -39,6 +40,8 @@ class Avalanche:
         Q[11] = 0.0;
         Q[12] = 0.0;
         Q[13] = 0.0;
+        Q[14] = 0.0;
+        Q[15] = 0.0;
         """
     
     def implementation_of_boundary_conditions(self):
@@ -48,20 +51,19 @@ class Avalanche:
     def implementation_of_flux(self):
 
         return """ 
-        ::exahype::saintvenant::flux(Q, faceCentre, t, dt, normal, F, NumberOfUnknowns, NumberOfAuxiliaryVariables,{Zeta}, {Gravity})
+        ::exahype2::saintvenant::flux(Q, faceCentre, t, dt, normal, F, NumberOfUnknowns, NumberOfAuxiliaryVariables,{Zeta}, {Gravity});
         """.format(Zeta=self.Zeta, Gravity=self.Gravity)
     
     def implementation_of_max_eigenvalue(self):
         return """
-        ::exahype::saintvenant::maxEigenvalue(Q, faceCentre, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, {Zeta}, {Gravity})
+        return ::exahype2::saintvenant::maxEigenvalue(Q, faceCentre, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, {Zeta}, {Gravity});
         """.format(Zeta=self.Zeta, Gravity=self.Gravity)
     
 
     def implementation_of_ncp(self):
-        return """
-        if(tarch::la::greater(Q[0],0.0)){
+        return """ 
+        if(tarch::la::greater(Q[0],0.0)){{
             const double ih = 1.0 / Q[0];
-            // std::cout<<"ncp h>0 at t="<<t<<std::endl;
             const double Nu = {Nu};
 
             // Partial Derivatives of unknowns
@@ -81,7 +83,7 @@ class Avalanche:
             const double vyy = (Q[NumberOfUnknowns + v_yy] - 0.5*deltaQ[NumberOfUnknowns + v_yy]) / (volumeH(1) * volumeH(1));
             const double vxy = (Q[NumberOfUnknowns + v_xy] - 0.5*deltaQ[NumberOfUnknowns + v_xy]) / (4 * volumeH(0) * volumeH(1));
 
-            switch (normal) {
+            switch (normal) {{
             case 0: // x
             BTimesDeltaQ[0] = -(volumeH(0) * 0.0);
             BTimesDeltaQ[1] = -(volumeH(0) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * ux + Q[0] * uxx));
@@ -92,12 +94,12 @@ class Avalanche:
             BTimesDeltaQ[1] = -(volumeH(1) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uyy + vxy)));
             BTimesDeltaQ[2] = -(volumeH(1) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * vy + Q[0] * vyy));
             break;
-            }
-        }
+            }}
+        }}
 
-        else{
+        else{{
             // std::cout<<"ncp h=0 at t="<<t<<std::endl;
-            switch (normal) {
+            switch (normal) {{
             case 0: // x
             BTimesDeltaQ[0] = 0.0;
             BTimesDeltaQ[1] = 0.0;
@@ -108,19 +110,17 @@ class Avalanche:
             BTimesDeltaQ[1] = 0.0;
             BTimesDeltaQ[2] = 0.0;
             break;
-            }
-        }
+            }}
+        }}
         """.format(Nu=self.Nu)
 
 
     def implementation_of_sources(self):
-        return"""
-        if(tarch::la::greater(Q[0],0.0)){
-            // std::cout<<"sourceTerm h>0 at t="<<t<<std::endl;
+        return """
+        if(tarch::la::greater(Q[0],0.0)){{    
             const double ih = 1.0 / Q[0];
             const double u  = ih * Q[1];
             const double v  = ih * Q[2];
-            // const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
             const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
             const double Gravity = {Gravity};
             const double Zeta = {Zeta};
@@ -135,6 +135,7 @@ class Avalanche:
             const double Nu = {Nu};
             const double Hstart = {Hstart};
             const double Hstop = {Hstop};
+            // std::cout<<"sourceTerm h>0 at t="<<t<<std::endl;
 
 
             const double Fr       = ubar / sqrt(Gravity * Q[0] * cos(Zeta));
@@ -143,51 +144,51 @@ class Avalanche:
             const double Hstar    = (Betastar + Tau) * Hstop / Beta;
             double       Mu       = 1.0;
 
-            if (Fr > Betastar) {
+            if (Fr > Betastar) {{
                 const double vstop  = (Q[0] * Beta) / (Fr + Tau);
                 const double Mustop = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
                 Mu                  = Mustop;
-            }
+            }}
 
-            else if (Fr > 0 && Fr <= Betastar) {
+            else if (Fr > 0 && Fr <= Betastar) {{
                 const double vstart  = Q[0];
                 const double vstop   = Q[0] * Beta / (Betastar + Tau);
                 const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
                 const double Mustop  = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
                 const double T       = Mustart + (Mustop - Mustart) * (Fr / Betastar);
                 Mu                   = T;
-            }
+            }}
 
-            else if (Fr == 0) {
+            else if (Fr == 0) {{
                 const double vstart  = Q[0];
                 const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
                 Mu                   = Mustart;
-            }
+            }}
 
-            if(tarch::la::equals(ubar,0.0)){
+            if(tarch::la::equals(ubar,0.0)){{
                 // std::cout<<"sourceTerm h>0 and ubar=0 at t="<<t<<std::endl;
                 const double hx = Q[NumberOfUnknowns + h_x]/volumeH(0);
                 const double hy = Q[NumberOfUnknowns + h_y]/volumeH(1);
-                const tarch::la::Vector<Dimensions, double> frictionVector = {tan(Zeta)-hx,-hy};
+                const tarch::la::Vector<Dimensions, double> frictionVector = {{tan(Zeta)-hx,-hy}};
                 const double frictionVectorMagnitude = tarch::la::norm2(frictionVector);
                 S[0] = 0.0;
                 S[1] = Q[0] * Gravity * sin(Zeta) - Mu * Q[0] * Gravity * cos(Zeta);
                 S[2] = 0.0;
-            }
-            else if(tarch::la::greater(ubar,0.0)){
+            }}
+            else if(tarch::la::greater(ubar,0.0)){{
                 // std::cout<<"sourceTerm h>0 ubar>0 at t="<<t<<std::endl;
                 S[0] = 0.0;
                 S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (u / ubar) * Q[0] * Gravity * cos(Zeta);
                 S[2] = -Mu * (v / ubar) * Q[0] * Gravity * cos(Zeta);
-            }
-        }
+            }}
+        }}
 
-        else{
+        else{{
             // std::cout<<"sourceTerm h=0 at t="<<t<<std::endl;
             S[0] = 0.0;
             S[1] = 0.0;
             S[2] = 0.0;
-        }
+        }}
         """.format(Gravity=self.Gravity, Zeta=self.Zeta, Zeta1=self.Zeta1, Zeta2=self.Zeta2, Zeta3=self.Zeta3, Beta=self.Beta, FrictionLengthScale=self.FrictionLengthScale, Mu1=self.Mu1, Mu2=self.Mu2, Mu3=self.Mu3, Nu=self.Nu, Hstart=self.Hstart, Hstop=self.Hstop)
 
 

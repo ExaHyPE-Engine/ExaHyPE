@@ -5,6 +5,7 @@
 #include "exahype2/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/la/ScalarOperations.h"
+#include "peano4/utils/Loop.h"
 #include <cmath>
 
 enum derivatives { h_x=1, h_y, u_x, u_y, u_xx, u_yy, u_xy, v_x, v_y, v_xx, v_yy, v_xy };
@@ -13,7 +14,7 @@ enum unknowns { h = 0, hu, hv };
 
 namespace exahype2::saintvenant {
 
-  void boundaryConditions(
+  static void boundaryConditions(
     const double* __restrict__ Qinside, // Qinside[3+1]
     double* __restrict__ Qoutside,      // Qoutside[3+1]
     const tarch::la::Vector<Dimensions, double>& faceCentre,
@@ -37,10 +38,11 @@ namespace exahype2::saintvenant {
     Qoutside[11] = Qinside[11];
     Qoutside[12] = Qinside[12];
     Qoutside[13] = Qinside[13];
-  
+    Qoutside[14] = Qinside[14];
+    Qoutside[15] = Qinside[15];  
   }
 
-  double maxEigenvalue(
+  static double maxEigenvalue(
     const double* __restrict__ Q, // Q[3+1],
     const tarch::la::Vector<Dimensions, double>& faceCentre,
     double                                       t,
@@ -79,7 +81,7 @@ namespace exahype2::saintvenant {
     return 0.0;
   }
 
-  void applications::exahype2::avalanche::SWESolver::flux(
+  static void flux(
     const double* __restrict__ Q, // Q[3+1],
     const tarch::la::Vector<Dimensions, double>& faceCentre,
     double                                       t,
@@ -89,7 +91,7 @@ namespace exahype2::saintvenant {
     int                                          NumberOfUnknowns,
     int                                          NumberOfAuxiliaryVariables,
     double                                       Zeta=0.0,
-    double                                       Gravity=9.81,
+    double                                       Gravity=9.81
   ) {
     if(tarch::la::greater(Q[0],0.0)){
       const double ih = 1.0 / Q[0];
@@ -126,7 +128,7 @@ namespace exahype2::saintvenant {
     }
   }
 
-  void extrapolateHalo(double* __restrict__ oldQWithHalo, int NumberOfFiniteVolumesPerAxisPerPatch, int NumberOfUnknowns, int NumberOfAuxiliaryVariables) {
+  static void extrapolateHalo(double* __restrict__ oldQWithHalo, int NumberOfFiniteVolumesPerAxisPerPatch, int NumberOfUnknowns, int NumberOfAuxiliaryVariables ) {
     // extrapolation
     tarch::la::Vector<Dimensions, int> topLeftCell     = {0, NumberOfFiniteVolumesPerAxisPerPatch + 1};
     tarch::la::Vector<Dimensions, int> topRightCell    = {NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1};
@@ -190,7 +192,7 @@ namespace exahype2::saintvenant {
     }
   }
 
-  void calculateDerivatives(double* __restrict__ oldQWithHalo, int NumberOfFiniteVolumesPerAxisPerPatch, int NumberOfUnknowns, int NumberOfAuxiliaryVariables) {
+  static void calculateDerivatives(double* __restrict__ oldQWithHalo, int NumberOfFiniteVolumesPerAxisPerPatch, int NumberOfUnknowns, int NumberOfAuxiliaryVariables) {
     // derivative calculation
     // backward difference for single derivatives
     // central difference for double derivatives
