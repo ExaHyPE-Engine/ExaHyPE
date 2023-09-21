@@ -1,6 +1,9 @@
 //
 // Included by peano4/utils/Loop.h. Do not use directly
 //
+// See docu in Loop.h in superdirectory.
+//
+//
 
 /**
  * Parallel for

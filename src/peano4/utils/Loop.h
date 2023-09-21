@@ -404,15 +404,20 @@ namespace peano4 {
  * we have to ensure all routines (such as dLinearised() are marked as
  * GPU offloadable), we do not have any dynamic scheduling, grain sizes, and so
  * forth. Most importantly, we cannot call virtual functions or functors from
- * SYCL kernels. Therefore, we do not support parallel for for SYCL. We do
- * support a SIMT parallel for for SYCL however.
+ * SYCL kernels.
+ *
+ * For all of these reasons, we do not support parallel for for SYCL, and we do
+ * not support SIMT parallelism either on the host. In theory, the latter should
+ * work straightforwardly, but I got major issues with copy constructors et al
+ * trying to go down this route, so I eventually dismissed it as a stupid idea.
  *
  * SIMT loops are always to be embedded into parallel loops. We do not embed
  * the other way round. Codes like the batched kernels will use SIMT loops
- * right from the start. So it is important that the SIMT loops exploit
+ * right from the start. So it would be important that the SIMT loops exploit
  * parallelism. If we make compromises, we have to make compromises on the
- * parallel loop level.
- *
+ * parallel loop level. Once SYCL abandons the need for call by value in the
+ * capture clause of the functors, we should be able to use the SYCLised simt
+ * macros for Peano's loops.
  */
 #define parallelFor(counter, max) \
   parallelForWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
@@ -471,8 +476,8 @@ namespace peano4 {
   #include "tbb/Loop.h"
 #elif defined(SharedCPP)
   #include "cpp/Loop.h"
-#elif defined(SharedSYCL)
-  #include "sycl/Loop.h"
+//#elif defined(SharedSYCL)
+//  #include "sycl/Loop.h"
 #else
   #define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
     for( int counter = 0; counter < max; counter++ ) {
