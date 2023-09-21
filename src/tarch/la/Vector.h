@@ -88,6 +88,46 @@ std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
  * a Vector instance. See the Rusanov.cpph kernels for examples where this
  * leads to uglier code than necessary. But it works.
  *
+ *
+ * ## SYCL
+ * 
+ * Our SYCL kernels seem to be fine without explicit support of the vector,
+ * but this is mainly due to the fact that SYCL offers its own range class, 
+ * and we construct our vectors typically from this range class. The other 
+ * application domain is the double vectors within the cell descriptors, 
+ * but we map those onto specialsed variants before we offload anyway, so 
+ * they are on the GPU prior to the kernel launch. In the future, it might
+ * be appropriate to add explicit copyable traits to to the class such that
+ * they can directly go to the GPU:
+ * 
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * #include "tarch/accelerator/sycl/Device.h"
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<2,double> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<3,double> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<4,double> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<5,double> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<2,int> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<3,int> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<4,int> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<5,int> >: std::true_type {};
+ * 
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * 
  */
 template <int Size, typename Scalar>
 struct tarch::la::Vector {
@@ -224,3 +264,4 @@ struct tarch::la::Vector {
 #include "tarch/la/VectorScalarOperations.h"
 #include "tarch/la/VectorVectorOperations.h"
 #include "tarch/la/VectorSlice.h"
+
