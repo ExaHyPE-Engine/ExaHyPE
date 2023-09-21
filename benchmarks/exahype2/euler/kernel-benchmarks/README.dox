@@ -125,6 +125,29 @@ single kernel launch (for multiple patches) is not able to exploit all threads,
 launching multiple kernels in parallel should improve the throughput.
 
 
+# Visualisation
+
+
+The directory hosts a script called visualisation.py which solely takes the 
+output piped into a file as input. It delivers plots similar to the two 
+below:
+
+@image html example-vis.png
+@image html example-vis-log.png
+
+These scatter plots report the throughput for particular combinations of 
+threads which launch kernels simultaenously and patches per kernel launch.
+We distinguish the time per kernel (y-axis) and the total time for all
+kernels (x-axis) and label one best-case configurations combining these
+two metrics (so something that's good in both metrics). 
+
+Plots like the one above highlight that some kernel realisations deliver 
+outcomes for their patches particularly quickly. They exhibit a small
+algorithmic latency. Other realisations are not that fast for their 
+patches, but are fairer and hence allow Peano to pipe more kernels 
+simultatenously through the system.
+
+
 
 # Example for complete test pipeline
 
