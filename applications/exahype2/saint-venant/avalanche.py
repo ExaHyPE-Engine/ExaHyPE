@@ -4,7 +4,7 @@ class Avalanche:
 
     
 
-    def __init__(self, Zeta=23, Zeta1=21, Zeta2=30.7, Zeta3=22.2, Beta=0.136, FrictionLengthScale=0.00065, Gravity=9.81, Pi=math.pi):
+    def __init__(self, Zeta=23.0, Zeta1=21.0, Zeta2=30.7, Zeta3=22.2, Beta=0.136, FrictionLengthScale=0.00065, Gravity=9.81):
         self.Pi = math.pi
         self.Zeta = Zeta*self.Pi/180
         self.Zeta1 = Zeta1*self.Pi/180
@@ -13,10 +13,9 @@ class Avalanche:
         self.Beta = Beta
         self.FrictionLengthScale = FrictionLengthScale
         self.Gravity = Gravity
-        self.Pi = Pi
-        self.Mu1 = math.tan(Zeta1)
-        self.Mu2 = math.tan(Zeta2)
-        self.Mu3 = math.tan(Zeta3)
+        self.Mu1 = math.tan(self.Zeta1)
+        self.Mu2 = math.tan(self.Zeta2)
+        self.Mu3 = math.tan(self.Zeta3)
         self.Nu = (2.0/9.0)*(self.FrictionLengthScale/self.Beta)*(self.Gravity*math.sin(self.Zeta)/math.sqrt(self.Gravity*math.cos(self.Zeta)))*(((self.Mu2-self.Mu1)/(math.tan(self.Zeta)-self.Mu1))-1)
         self.Hstart = self.FrictionLengthScale*(((self.Mu2-self.Mu1)/(math.tan(self.Zeta)-self.Mu3))-1)
         self.Hstop = self.FrictionLengthScale*(((self.Mu2-self.Mu1)/(math.tan(self.Zeta)-self.Mu1))-1)
