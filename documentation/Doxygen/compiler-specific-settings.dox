@@ -140,10 +140,26 @@ SYCL is directly supported via icpx. There are only a few things to do:
 - Translate your code with --with-multithreading=sycl and/or --with-gpu=sycl.
 - Add CXXFLAGS="... -fsycl" to your compiler flags. This way, all the headers
   of SYCL are known to icpx.
-- Add CXXFLAGS="... -fsycl" to your linker flags. This way, the linker will
-  automatically add all SYCL libraries.
+- Add LDFLAGS="... -fsycl" to your linker flags. This way, 
+  the linker will automatically add all SYCL libraries. Furthermore, it will 
+  know when it builds the final applications that it should embed both the 
+  device kernels and the CPU kernels into the executable. If you use 
+  LIBS="... -lsycl", the linking will succeed, but the very first time you 
+  invoke a SYCL kernel, you'll get a message similar to
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+terminate called after throwing an instance of 'sycl::_V1::runtime_error'
+  what():  No kernel named _ZTSZZN7toolbox15blockstructured64interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linearEiiiiiPKdPdN6peano45utils15LoopParallelismEENKUlRT_E_clIN4sycl3_V17handlerEEEDaS8_EUlNSC_2idILi3EEEE_ was found -46 (PI_ERROR_INVALID_KERNEL_NAME)
+Aborted (core dumped)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 - Ensure CXX=icpx points to the icpx compiler.
-- Reset the MPI compiler (see below).
+- Ensure CC=icpx points to the icpx compiler if you work with the autotools. 
+  This is not intuitive and actually quite a hack, but you need it to work:
+  `configure` will test if you C compiler is compatible with your linker 
+  flags. However, the `-fsycl` command is unknown to the default C compiler
+  (usually gcc) and your configure will fail miserably. By letting the C 
+  compiler variable point to the Intel C++ compiler, you ensure that the 
+  sanity check within the configuration phase passes.
+- Reset the MPI compiler (see below; if you want to use MPI).
 
 
 ### MPI
@@ -251,5 +267,4 @@ the OpenMP target instructions:
   
 
  */
-      std::size_t counter##Range = static_cast<std::size_t>(max);
-
+ 
