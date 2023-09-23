@@ -7,8 +7,8 @@ import dastgen2
 import os
 
 from .Solver                                    import Solver
-from petsc.actionsets.EnumerateVertices         import EnumerateVertices
-from petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
+from petsc.actionsets.EnumerateDofs             import EnumerateVertices
+from petsc.actionsets.InitDofs                  import InitVertexDoFs
 from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
 from petsc.actionsets.AssemblePETSCMatrix       import AssemblePetscMatrixOnVertices
 
@@ -86,13 +86,15 @@ I wanna see if this one applies to the solver or hte init
 
 
   def add_to_create_grid(self, observer):
-    observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h),False)
+    observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
     pass
 
   
   def add_to_enumerate(self, observer):
     pass
-  
+
+  def add_to_init_petsc(self, observer):
+    pass
   
   def add_to_enumerate_and_init_solution(self, observer):
     """!
@@ -185,3 +187,25 @@ I wanna see if this one applies to the solver or hte init
   @property
   def number_of_vertex_unknowns(self):
     return self._number_of_vertex_unknowns
+  
+  def get_solver_repository_snippets(self):
+    # nothing extra needed
+    header="""
+
+"""
+    cpp = """
+void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSolvers() {
+  {% for SOLVER in SOLVER_INSTANCES %}
+  {{SOLVER[1]}}.getLocalToGlobalMap().computeLocalToGlobalMap();
+  {% endfor %}
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom() {
+  int result = 0;
+  {% for SOLVER in SOLVER_INSTANCES %}
+  result += {{SOLVER[1]}}.getLocalToGlobalMap().getTotalNumberOfIndices();
+  {% endfor %}
+  return result;
+}
+"""
+    return header, cpp

@@ -997,7 +997,11 @@ FILE_PATTERNS          = *.h \
                          *.cpph \
                          *.py \
                          *.dox \
-                         *.html
+                         *.html \
+                         *.md   \
+                         *.cu \
+                         *.markdown \
+                         *.c
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
