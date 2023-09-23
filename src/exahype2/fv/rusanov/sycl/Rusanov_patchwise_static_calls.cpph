@@ -5,7 +5,7 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
-#define NSEC_IN_SEC 1000000000.0
+
 
 /*
 This implementation only submits one (huge) kernel
@@ -29,9 +29,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_usm_static_calls
   bool                  evaluateMaximumEigenvalueAfterTimeStep
 ) {
 #if defined(GPUOffloadingSYCL)
-  ::sycl::property_list prop_list{::sycl::property::queue::enable_profiling()};
-  ::sycl::queue         queue{::sycl::gpu_selector_v, prop_list}; // Queue is hard-coded to GPU
-  //::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   constexpr int solversHaloSize = 1;
 
@@ -654,15 +652,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_usm_static_calls
     );
   });
   event.wait();
-
-  /* Prints out kernel time without GPU-CPU data transfer
-  auto start = event.get_profiling_info<::sycl::info::event_profiling::command_start>();
-  auto stop = event.get_profiling_info<::sycl::info::event_profiling::command_end>();
-  auto duration = static_cast<double>(stop - start) / NSEC_IN_SEC;
-  if (evaluateMaximumEigenvalueAfterTimeStep == true) {
-    ::std::cout << "Patchwise kernel execution time with reduction:" << duration << ::std::endl;
-  }
-  */
 
   patchData.destroy(hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
 

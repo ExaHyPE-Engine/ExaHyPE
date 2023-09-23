@@ -613,7 +613,6 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidBuild;
   }
 
-  // @todo Should be commented in again
   // peano4::runTestsAndBenchmarks();
 
   OTTER_INITIALISE();
@@ -667,10 +666,6 @@ int main(int argc, char** argv) {
   OTTER_FINALISE();
 
   delete[] validOutcome;
-  //repositories::finishSimulation();
-  //repositories::DataRepository::shutdownDatatypes();
-  //tarch::multicore::shutdownSmartMPI();
-  //exahype2::shutdownNonCritialAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;
