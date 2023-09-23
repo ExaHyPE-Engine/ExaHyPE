@@ -275,7 +275,7 @@ class PredictionOnHangingCell_kernelgenerator(AbstractAderDGActionSet):
         );
         {% endif %}
 
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           lduh,
           &lFhbnd[2*d*fluxElementsPerFace],
           d, //direction
@@ -325,7 +325,7 @@ class PredictionOnHangingCell_kernelgenerator(AbstractAderDGActionSet):
         );
         {% endif %}
 
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           lduh,
           &lFhbnd[(2*d+1)*fluxElementsPerFace],
           d, //direction
@@ -345,6 +345,13 @@ class PredictionOnHangingCell_kernelgenerator(AbstractAderDGActionSet):
             
     }
 
+    generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
+      luh,
+      luh, 
+      lduh, 
+      timeStepSize
+    );
+
     {% if NUMBER_OF_PREDICTOR_PRECISIONS!=1 %}
       break;
       }
@@ -358,13 +365,6 @@ class PredictionOnHangingCell_kernelgenerator(AbstractAderDGActionSet):
         assert(false);
       }
     {% endif %}
-
-    generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
-      luh,
-      luh, 
-      lduh, 
-      timeStepSize
-    );
   
     repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, marker.h()(0) );
   }
@@ -400,7 +400,10 @@ class PredictionOnHangingCell_kernelgenerator(AbstractAderDGActionSet):
       d[ "USE_LSI" ]    = self._use_lsi
       d[ "USE_GRADQ" ]  = self._use_gradQ
       d[ "USE_PSI" ]    = self._use_psi
-      d[ "PRECISIONS_CAPITALIZED" ] = [x.replace(" ", "_").capitalize() for x in d["PREDICTOR_COMPUTATION_PRECISIONS"]]
+      d["PRECISIONS_CAPITALIZED"] = [
+          x.replace(" ", "_").replace("std::", "").capitalize()
+          for x in d["PREDICTOR_COMPUTATION_PRECISIONS"]
+      ]
       
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 

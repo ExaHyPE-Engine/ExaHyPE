@@ -11,30 +11,38 @@
  * For the full license text, see LICENSE.txt
  **/ #}
 
-#ifndef _EXAHYPE_{{guardNamespace}}_DGMATRICES_H_
-#define _EXAHYPE_{{guardNamespace}}_DGMATRICES_H_
+#pragma once
 
+#include <mm_malloc.h> //g++
 #include <set>
+{% if "std::float16_t" in computePrecisions or "std::bfloat16_t" in computePrecisions %}
+#include <stdfloat>
+{% endif %}
+
 
 {% for namespaceName in codeNamespaceList %}
 namespace {{namespaceName}} {
 {% endfor %}
 // All matrices are stored as column major array, _T denote a transposed
 
-void initDGMatrices();
-void freeDGMatrices();
+template <typename T>
+class DGMatrices{
+  public:
+    static void initDGMatrices();
+    static void freeDGMatrices();
 
-extern double *Kxi;
-extern double *Kxi_T;
-extern double *iK1_T; //note: the generic version of iK1 is actually transposed
-extern double *dudx;
-extern double *dudx_T;
-extern double *FLCoeff;
-extern double *FRCoeff;
-extern double ** fineGridProjector1d;
-extern double ** fineGridProjector1d_T_weighted; // [k][i*nDof+j] = fineGridProjector1d[k][j*nDof+i] * weight[j] / weight[i] / 3.0
+    static T *Kxi;
+    static T *Kxi_T;
+    static T *iK1_T; //note: the generic version of iK1 is actually transposed
+    static T *dudx;
+    static T *dudx_T;
+    static T *FLCoeff;
+    static T *FRCoeff;
+    static T ** fineGridProjector1d;
+    static T ** fineGridProjector1d_T_weighted; // [k][i*nDof+j] = fineGridProjector1d[k][j*nDof+i] * weight[j] / weight[i] / 3.0
+};
 
 {% for namespaceName in codeNamespaceList %}
 }
 {% endfor %}
-#endif /* _EXAHYPE_{{guardNamespace}}_DGMATRICES_H_ */
+

@@ -26,6 +26,7 @@ namespace exahype2 {
    * vector data are converted in SoA which makes it fairly straightforward
    * later to move them over to an accelerator.
    *
+   *
    * ## Memory responsibility
    *
    * The PatchData object is a meta object. It does not administer any major
@@ -33,6 +34,47 @@ namespace exahype2 {
    * reconstructed data, i.e. the patch data including the halos, by the user.
    * This happens for example in applyKernelToCell() where we create a
    * PatchData object over both allocated input and output data.
+   * 
+   * 
+   * As the PatchData does maintain some internal tables which are allocated
+   * in the constructor and freed in the destructor, I do not provide a copy
+   * constructor. This one is explicitly deleted. Some backends might require 
+   * a copy constructor one day
+   * 
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * exahype2::CellData::CellData( const CellData& copy ):
+   *   CellData(copy.numberOfCells) {
+   *   for (int i=0; i<numberOfCells; i++) {
+   *     QIn[i]           = copy.QIn[i];
+   *     cellCentre[i]    = copy.cellCentre[i];
+   *     cellSize[i]      = copy.cellSize[i];
+   *     t[i]             = copy.t[i];
+   *     dt[i]            = copy.dt[i];
+   *     id[i]            = copy.id[i];
+   *     QOut[i]          = copy.QOut[i];
+   *     maxEigenvalue[i] = copy.maxEigenvalue[i];
+   *   }
+   * }
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * 
+   * but for the time being, I do not offer such a variant.
+   * 
+   * 
+   * ## SYCL
+   * 
+   * If you use SYCL, you might be tempted to declare the class as copyable.
+   * This is factually wrong: the class is not trivially copyable.
+   * 
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * #if defined(SharedSYCL)
+   * #include "tarch/accelerator/sycl/Device.h"
+   * template<>
+   * struct sycl::is_device_copyable<exahype2::CellData>: std::true_type {};
+   * #endif
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * 
+   * hence makes the file compile, but in all tests that I ran the code then 
+   * did crash.
    */
   struct CellData {
     /**
@@ -88,6 +130,8 @@ namespace exahype2 {
     );
 
     CellData( int numberOfCells_ );
+
+    CellData( const CellData& copy ) = delete;
 
     ~CellData();
 

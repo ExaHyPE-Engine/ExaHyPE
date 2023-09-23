@@ -3,12 +3,11 @@ import shlex
 import argparse
 import subprocess
 
-parser = argparse.ArgumentParser(description='Configure helper script for GNU autotools and CMake')
+parser = argparse.ArgumentParser(description='Configuration helper script for GNU Autotools and CMake')
 parser.add_argument('--cmake', help='Use CMake')
 parser.add_argument('-t', '--toolchain', choices=['gcc', 'llvm', 'nvidia', 'amd', 'intel'], help='Select toolchain')
-parser.add_argument('--cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
-parser.add_argument('--cxx', type=str, default=os.environ.get('CXX'), help='C++ compiler to use')
-parser.add_argument('--fc', type=str, default=os.environ.get('FC'), help='Fortran compiler to use')
+parser.add_argument('-cc', '--cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
+parser.add_argument('-cxx', '--cxx', type=str, default=os.environ.get('CXX'), help='C++ compiler to use')
 parser.add_argument('--swift', action='store_true', help='Enable Swift')
 parser.add_argument('--particles', action='store_true', help='Enable particles support')
 parser.add_argument('--exahype', action='store_true', help='Enable ExaHyPE')
@@ -32,7 +31,6 @@ cflags = ''
 cxxflags = '-std=c++20 -w'
 #cxxflags = '-std=c++20 -W -Wall -Wextra'
 nvccflags = ''
-fortranflags = ''
 
 # Merge in any additional flags needed for the selected multithreading backend
 if args.multithreading == 'omp':
@@ -165,7 +163,6 @@ if args.cmake:
   env_vars = {
       "C": "{}".format(args.cc),
       "CXX": "{}".format(args.cxx),
-      "FC": "{}".format(args.fc),
   }
 
   # Create a string to display environment variables like in a terminal
@@ -189,7 +186,6 @@ else:
   env_vars = {
       "C": "{} {}".format(args.cc, cflags),
       "CXX": "{} {}".format(args.cxx, cxxflags),
-      "FC": "{} {}".format(args.fc, fortranflags),
   }
 
   if args.gpu == "cuda":

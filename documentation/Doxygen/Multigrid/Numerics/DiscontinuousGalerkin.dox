@@ -249,7 +249,7 @@ Effectively, our approach blows up the equation system to solve into
  \begin{bmatrix}
   A_{cc}  & A_{fc}  & 0 \\
   0       & id      & -A_{ff} \\
- -id      & A_{cf}  & 0      \\
+ -id      & 0       & A_{cf}      \\
  \end{bmatrix}
  \begin{bmatrix}
  x_{c} \\ x_f \\ x_\pm
@@ -288,7 +288,8 @@ columns, since this part has to "hit" @f$ x_f @f$.
 @f$ A_{ff} @f$ has @f$ |\mathbb{F}| \cdot (p+1)^{d-1} @f$ rows, and twice as many
 columns (note that @f$ | x_\pm| \ = \ 2 |x_f| @f$ ).
 Finally, @f$ A_{cf} @f$ has @f$ |\mathbb{C}| \cdot (p+1)^d @f$ rows and 
-@f$ |\mathbb{F}| \cdot (p+1)^{d-1} @f$ columns. 
+@f$ 2|\mathbb{F}| \cdot (p+1)^{d-1} @f$ columns, since this part "hits" 
+@f$ x_\pm @f$.
 
 Our global matrix is no longer square. We have 
 @f$ 2 |\mathbb{C}| \cdot (p+1)^d + |\mathbb{F}| \cdot (p+1)^{d-1} @f$ rows

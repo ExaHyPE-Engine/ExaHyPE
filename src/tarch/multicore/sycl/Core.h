@@ -21,6 +21,9 @@
 
 namespace tarch {
   namespace multicore {
+    /**
+     * @return SYCL queue for the host
+     */
     sycl::queue& getHostSYCLQueue();
   }
 }

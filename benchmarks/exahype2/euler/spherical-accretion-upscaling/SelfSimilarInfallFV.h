@@ -8,13 +8,13 @@
 //
 #pragma once
 
+#include "../../../../applications/exahype2/euler/EulerKernels.h"
 #include "AbstractSelfSimilarInfallFV.h"
 #include "tarch/logging/Log.h"
 
 #include "spherical-accretion/MassAccumulator.h"
 #include "spherical-accretion/GravityModel.h"
 
-#include "EulerKernels.h"
 
 
 namespace benchmarks {

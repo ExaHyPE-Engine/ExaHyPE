@@ -2,6 +2,8 @@
 \page peano_utilities Utilities
 
 
+\li \subpage peano4_utils_Loop_parallel
+
 ## Loop macros
 
 ### d-dimensional loops
