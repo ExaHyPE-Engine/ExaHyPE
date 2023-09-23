@@ -105,7 +105,7 @@ for (int xyz = 0; xyz < {{(nDof**nDim)-((nDof**nDim)%vectSize)}}; xyz+={{vectSiz
         {{inputQ}}+{{inputQ_iterator}},
         volumeCentre, //TODO, fix to node position
         dx,
-        timeStamp, //+nodes[t]*dt exact timestamp for node, 
+        timeStamp, //+Quadrature<pCompType>::nodes[t]*dt exact timestamp for node, 
         dt,
         d,
         F[d]

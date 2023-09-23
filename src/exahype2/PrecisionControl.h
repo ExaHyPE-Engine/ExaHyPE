@@ -8,7 +8,12 @@ namespace exahype2 {
     Double      = sizeof(double),
     Single      = sizeof(float),
     Float       = Single,
-    Half        = sizeof(double) / 2,
+    Half        = sizeof(float) / 2,
+    Float16_t   = Half,
+    FP16        = Half,
+    Bfloat      = -1,
+    Bfloat16_t  = Bfloat,
+    BF16        = Bfloat,
     Custom
   };
 

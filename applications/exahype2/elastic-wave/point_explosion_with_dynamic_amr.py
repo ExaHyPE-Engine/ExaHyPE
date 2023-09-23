@@ -15,10 +15,10 @@ class PointExplosionWithDynamicAMR(PointExplosion):
         auto result = ::exahype2::RefinementCommand::Keep;
         if (tarch::la::greater(t, 0.0)) {
           const double stress = Q[4];
-          if (pressure >= 5) {
+          if (stress >= 5) {
             result = ::exahype2::RefinementCommand::Refine;
           }
-          if (pressure < 5) {
+          if (stress < 5) {
             result = ::exahype2::RefinementCommand::Erase;
           }
         }

@@ -251,12 +251,12 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
 ):
   Task(taskType, priority),
   _taskFunctor(taskFunctor) {
-  OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
+  OTTER_POOL_DECL_BORROW(step_task, otter::label::step);
   OTTER_DEFINE_TASK(this_task, step_task, otter_add_to_pool, otter::label::TaskWithCopyOfFunctor);
 }
 
 bool tarch::multicore::TaskWithCopyOfFunctor::run() {
-  OTTER_REMOVE_FROM_POOL(this_task, otter::label::TaskWithCopyOfFunctor);
+  OTTER_POOL_DECL_POP(this_task, otter::label::TaskWithCopyOfFunctor);
   OTTER_TASK_START(this_task);
   bool result = _taskFunctor();
   OTTER_TASK_END(this_task);
@@ -268,12 +268,12 @@ tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(
 ):
   Task(taskType, priority),
   _taskFunctor(taskFunctor) {
-  OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
+  OTTER_POOL_DECL_BORROW(step_task, otter::label::step);
   OTTER_DEFINE_TASK(this_task, step_task, otter_add_to_pool, otter::label::TaskWithoutCopyOfFunctor);
 }
 
 bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
-  OTTER_REMOVE_FROM_POOL(this_task, otter::label::TaskWithoutCopyOfFunctor);
+  OTTER_POOL_DECL_POP(this_task, otter::label::TaskWithoutCopyOfFunctor);
   OTTER_TASK_START(this_task);
   bool result = _taskFunctor();
   OTTER_TASK_END(this_task);

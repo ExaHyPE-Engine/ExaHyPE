@@ -8,6 +8,8 @@
 #include "exahype2/CellData.h"
 #include "exahype2/VolumeIndex.h"
 
+#include "peano4/utils/Loop.h"
+
 #if defined(GPUOffloadingOMP) or defined(SharedOMP)
 #include "exahype2/fv/rusanov/omp/Rusanov.h"
 #endif
@@ -398,7 +400,8 @@ namespace exahype2 {
         Flux                    flux,
         NonconservativeProduct  nonconservativeProduct,
         Source                  source,
-        MaxEigenvalue           maxEigenvalue
+        MaxEigenvalue           maxEigenvalue,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -422,7 +425,8 @@ namespace exahype2 {
         Flux                    flux,
         NonconservativeProduct  nonconservativeProduct,
         Source                  source,
-        MaxEigenvalue           maxEigenvalue
+        MaxEigenvalue           maxEigenvalue,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -443,7 +447,8 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -464,7 +469,8 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -498,7 +504,8 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -518,7 +525,8 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -539,7 +547,8 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -566,7 +575,8 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -587,7 +597,8 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -614,7 +625,8 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       ) {
         timeStepWithRusanov_patchwise_heap_static_calls<
           Solver,
@@ -628,7 +640,8 @@ namespace exahype2 {
           evaluateFlux,
           evaluateNonconservativeProduct,
           evaluateSource,
-          evaluateMaximumEigenvalueAfterTimeStep
+          evaluateMaximumEigenvalueAfterTimeStep,
+          loopParallelism
         );
       }
 
@@ -646,7 +659,8 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -665,11 +679,29 @@ namespace exahype2 {
           evaluateFlux,
           evaluateNonconservativeProduct,
           evaluateSource,
-          evaluateMaximumEigenvalueAfterTimeStep
+          evaluateMaximumEigenvalueAfterTimeStep,
+          loopParallelism
         );
         #else
         assertionMsg(false, "not supported");
         #endif
+      }
+
+      namespace internal {
+        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables);
+        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesUnknowns(int numberOfVolumesPerAxisInPatch, int unknowns);
+
+        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesPatches(int numberOfVolumesPerAxisInPatch, int patches);
+        tarch::la::Vector<Dimensions+2,int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables, int patches);
+        tarch::la::Vector<Dimensions+2,int> rangeOverVolumesTimesUnknownsTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int patches);
+
+        tarch::la::Vector<Dimensions,int> rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch);
+        tarch::la::Vector<Dimensions,int> rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch);
+        tarch::la::Vector<3,int>          rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch);
+
+        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesPatchesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int patches);
+        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesPatchesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int patches);
+        tarch::la::Vector<3+1,int>          rangeOverVolumesTimesPatchesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int patches);
       }
     }
   }

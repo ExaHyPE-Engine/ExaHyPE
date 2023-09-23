@@ -29,7 +29,7 @@ class PointExplosion:
           t = sympy.symbols("t")
           force = M0 * t / (t0 * t0) * (sympy.exp(-t / t0))
 
-          max_h = sympy.symbols("MaxAdmissibleVolumeH")
+          max_h = sympy.symbols("MaxAdmissibleCellH")
           point_source = sympy.sqrt((10 - self.pde.x[0])**2 + (10 - self.pde.x[1])**2)
 
           self.pde.sources[0] = 0
@@ -76,7 +76,7 @@ class PointExplosion:
             return self.pde.implementation_of_flux()
         else:
             return """
-            ::exahype2::elasticwave::flux(Q, faceCentre, volumeH, t, dt, normal, 2.7, 6.0, 3.464, F);
+            ::exahype2::elasticwave::flux(Q, faceCentre, t, dt, normal, 2.7, 6.0, 3.464, F);
             """
 
 
@@ -85,7 +85,7 @@ class PointExplosion:
             return self.pde.implementation_of_max_eigenvalue()
         else:
             return """
-            return ::exahype2::elasticwave::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, 6.0);
+            return ::exahype2::elasticwave::maxEigenvalue(Q, faceCentre, t, dt, normal, 6.0);
             """
 
 
@@ -100,7 +100,7 @@ class PointExplosion:
             S[3] = 0.0;
             S[4] = 0.0;
 
-            const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({10, 10})) <= MaxAdmissibleVolumeH;
+            const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({10, 10})) <= MaxAdmissibleCellH;
             if (pointSource) {
               constexpr double t0 = 0.1;
               constexpr double M0 = 1000.0;
@@ -114,7 +114,7 @@ class PointExplosion:
         return """
         auto result = ::exahype2::RefinementCommand::Keep;
         if (tarch::la::equals(t, 0.0)) {
-          const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({10, 10})) <= MaxAdmissibleVolumeH;
+          const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({10, 10})) <= MaxAdmissibleCellH;
           if (pointSource) {
             result = ::exahype2::RefinementCommand::Refine;
           }

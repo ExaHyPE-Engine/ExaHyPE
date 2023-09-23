@@ -2,72 +2,43 @@
 
 @page benchmarks_exahype2_euler_kernel_benchmarks Benchmarks of Compute Kernels for the Euler Equations
 
-To allow comparison, we use 1 thread, 2D patch with patch-size 8 to run the
-benchmark. 
+A suite of benchmark runs which assess the throughput of the Euler Finite Volume kernels.
 
 ExaHyPE 2's implementation of the Euler equations is shipped
 with a benchmark to assess the speed of the compute kernels.
-The benchmark solely computes the throughput on one core or one GPU and thus
+The benchmark solely computes the throughput on the node or one GPU, respectively, and thus
 provides key information how efficient these core kernels perform on your system.
-It neglects other effects such as multithreading overhead or MPI data exchange, grid
+It neglects other effects such as multithreading orchestration overhead or MPI data exchange, grid
 management, time stepping behaviour, halo data exchange, and so forth.
-
-To run the benchmark, change into the benchmark's directory.
-The directory hosts a set of benchmarks which assess the sole performance of
-the individual kernels on the CPU and GPUs. While this might be of limited
+While this might be of limited
 relevance for large-scale runs, where scalability, IO overheads and other
 factors play a dominant role, it tells us what the core compute routines could,
-in theory, deliver. If you want to test your system with OpenMP offloading,
-e.g., you will need an additional `–with-gpu=omp`. Though the
-benchmarks in principle assess only the core performance of the
-compute kernels, they can mimick the concurrent offloading from
-multiple threads. To enable this feature, you have to activate
-multithreading, too (add `–with-multithreading=omp` for example).
-Run `./configure –help` for various combinations of GPU and
-multithreading back-ends. Finally, you will have to add additional
-flags on particular system. In particular the flags `CXX`, and
-`LDFLAGS` to pick your compiler, you compiler settings and your
-linker parameters. Chapter
-[\[chapter:selected-HPC-platforms\]](#chapter:selected-HPC-platforms){reference-type="ref"
-reference="chapter:selected-HPC-platforms"} discusses some popular
-choices. Skip this step if you have already completed it once.
+in theory, deliver. 
 
-The Python script generating and the benchmark supports different
-options and benchmark settings. Type in `–help` for additional
-information. The statement above assesses the kernel performance if
-only one thread is used. Offloading to the GPUs from multiple
-threads is notoriously tricky, while running a kernel benchmark on
-multiple cores stresses the interconnect. I therefore always
-recommend to start with the single core measurements. Finally,
-there's a `kernel-benchmark.md` markup file which describes further
-settings and also discusses built-in postprocessing options.
 
-The benchmark gives you the total runtime and cost per degree of freedom
-update (throughput) on one core or GPU, respectively. Data is provided
-for various patch sizes batched (fused) into one large patch assembly,
-for patches which exploit stateless operations, and different kernel
-realisations.
+To run the benchmark, change into the benchmark's directory. The directory 
+hosts a set of benchmarks which assess the sole performance of the individual
+kernels on the CPU and GPUs. These benchmarks are shipped through Python 
+scripts which should run out-of-the-box. Besides the benchmarking scripts 
+themselves, there are also some postprocessing scripts which help you to 
+produce fancy graphs.
 
-Baseline is what you get with most basic configuration and its
-flexible architecture, where users can tailor each PDE term towards
-their needs. The other variants exploit hints how to tune these
-computations and try out various optimisations, algorithmic
-reformulations and internal data formats for temporary data. Please note
-that we assess only the Euler equations here, i.e. we are extremely
-bandwidth-bound and induce almost no load. All GPU data comprise all
-data transfer and memory allocations on the GPU. They provide fair
-measurements and not raw compute figures. We have data for SYCL,
-OpenMP and C++  GPU benchmarks.
 
-## Build Benchmarks
+
+# Build and run benchmarks
+
 There are different benchmarks for the different solver types (e.g., Finite
 Volumes (FV) and Discontinuous Galerkin (DG)) and you have to build different executables
 for different patch sizes, orders or dimensions.
 
-### Finite Volumes Rusanov
+
+## Finite Volumes Rusanov
+
 To build the executables you can run following commands:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    export PYTHONPATH=../../../python
+
     python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 4
     python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 6
     python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 8
@@ -78,6 +49,7 @@ To build the executables you can run following commands:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Cleanup
+
 You can throw away all of the glue code after a successful build.
 This is triggered by:
 
@@ -88,180 +60,133 @@ This is triggered by:
 
 If you want to keep the executable, you will need to rename it.
 
-## Run Benchmarks
+
+## Run benchmarks
+
 All the benchmarks run out of the box without any user interaction once built.
+For most runs, you don't have to specify anything. 
+
+However, OpenMP, SYCL and other back-ends might want you to configure your 
+environment in specific ways. You might have to set some environment 
+variables specifying the GPUs to use or core counts accordingly.
+The exact usage obviously depends strongly @ref page_compiler_specific_settings "on your software stack".
+
+
+# Outputs
+
 All of them produce outputs in a similar way, so it is easier to interpret the
-outcomes. For most runs, you don't have to specify anything. However, you might
-want to call
+outcomes. All outcome is piped onto the terminal. It looks similar to 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-      ./my-benchmark --help
+===============================================================
+  Number of threads launching compute kernels: 2
+  Number of patches per thread/compute kernel launch: 2048
+===============================================================
+host, functors, patch-wise, no parallelism   | 0.200563      | 2.39089e-08   | 0.215852      | 1.28658e-08   | (avg=0.200563,#measurements=64,max=0.311483(value #13),min=0.190125(value #0),+55.3047%,-5.20435%,std-deviation=0.018537)     | (avg=0.215852,#measurements=64,max=0.319357(value #13),min=0.194862(value #0),+47.9522%,-9.72387%,std-deviation=0.0255064)
+host, functors, patch-wise, parallel for     | 0.200806      | 2.39379e-08   | 0.214535      | 1.27873e-08   | (avg=0.200806,#measurements=64,max=0.301395(value #36),min=0.192642(value #29),+50.0928%,-4.06561%,std-deviation=0.0146281)   | (avg=0.214535,#measurements=64,max=0.309672(value #36),min=0.201895(value #6),+44.3458%,-5.89195%,std-deviation=0.0180166)
+host, functors, patch-wise, subtasks         | 0.203034      | 2.42035e-08   | 0.216473      | 1.29028e-08   | (avg=0.203034,#measurements=64,max=0.318839(value #57),min=0.192776(value #36),+57.0378%,-5.05221%,std-deviation=0.023569)    | (avg=0.216473,#measurements=64,max=0.326912(value #57),min=0.2012(value #12),+51.0175%,-7.05526%,std-deviation=0.0269477)
+host, functors, batched, no parallelism      | 0.161613      | 1.92658e-08   | 0.17797       | 1.06078e-08   | (avg=0.161613,#measurements=64,max=0.286777(value #21),min=0.143154(value #11),+77.447%,-11.4219%,std-deviation=0.0230327)    | (avg=0.17797,#measurements=64,max=0.295708(value #21),min=0.15598(value #38),+66.1557%,-12.3563%,std-deviation=0.0264367)
+host, functors, batched, parallel for        | 0.157581      | 1.87852e-08   | 0.172964      | 1.03095e-08   | (avg=0.157581,#measurements=64,max=0.187071(value #54),min=0.144328(value #21),+18.714%,-8.41074%,std-deviation=0.00987685)   | (avg=0.172964,#measurements=64,max=0.248647(value #7),min=0.155253(value #27),+43.7564%,-10.2399%,std-deviation=0.0168561)
+host, functors, batched, subtasks            | 0.158552      | 1.89009e-08   | 0.172973      | 1.031e-08     | (avg=0.158552,#measurements=64,max=0.191554(value #36),min=0.145505(value #13),+20.8147%,-8.22878%,std-deviation=0.0102063)   | (avg=0.172973,#measurements=64,max=0.232613(value #44),min=0.156185(value #14),+34.4793%,-9.70569%,std-deviation=0.0154954)
+host, static, patch-wise, AoS, no parallelism        | 0.198548      | 2.36688e-08   | 0.211532      | 1.26083e-08   | (avg=0.198548,#measurements=64,max=0.255968(value #55),min=0.19398(value #35),+28.9196%,-2.30081%,std-deviation=0.00807871)          | (avg=0.211532,#measurements=64,max=0.330698(value #45),min=0.202723(value #17),+56.3351%,-4.16439%,std-deviation=0.0185749)
+host, static, patch-wise, AoS, parallel for          | 0.201388      | 2.40073e-08   | 0.211959      | 1.26338e-08   | (avg=0.201388,#measurements=64,max=0.252526(value #19),min=0.194176(value #18),+25.3926%,-3.58137%,std-deviation=0.0105479)          | (avg=0.211959,#measurements=64,max=0.260897(value #19),min=0.203012(value #18),+23.0883%,-4.22125%,std-deviation=0.0115763)
+host, static, patch-wise, AoS, subtasks              | 0.188723      | 2.24976e-08   | 0.230406      | 1.37333e-08   | (avg=0.188723,#measurements=64,max=0.245364(value #25),min=0.125243(value #40),+30.0125%,-33.6365%,std-deviation=0.0418451)          | (avg=0.230406,#measurements=64,max=0.254138(value #25),min=0.219803(value #63),+10.3002%,-4.60191%,std-deviation=0.00704119)
+host, static, patch-wise, SoA, no parallelism        | 0.200957      | 2.39559e-08   | 0.214007      | 1.27558e-08   | (avg=0.200957,#measurements=64,max=0.330422(value #6),min=0.19601(value #30),+64.4245%,-2.46173%,std-deviation=0.0166154)            | (avg=0.214007,#measurements=64,max=0.339868(value #6),min=0.204642(value #54),+58.8119%,-4.37606%,std-deviation=0.0228694)
+host, static, patch-wise, SoA, parallel for          | 0.202134      | 2.40962e-08   | 0.219515      | 1.30841e-08   | (avg=0.202134,#measurements=64,max=0.245362(value #7),min=0.195662(value #26),+21.386%,-3.20153%,std-deviation=0.00875163)           | (avg=0.219515,#measurements=64,max=0.3627(value #15),min=0.205485(value #27),+65.2281%,-6.3914%,std-deviation=0.0262641)
+host, static, patch-wise, SoA, subtasks              | 0.195796      | 2.33407e-08   | 0.23713       | 1.41341e-08   | (avg=0.195796,#measurements=64,max=0.263654(value #59),min=0.125698(value #54),+34.6573%,-35.8016%,std-deviation=0.0432795)          | (avg=0.23713,#measurements=64,max=0.271936(value #59),min=0.223204(value #15),+14.6781%,-5.87283%,std-deviation=0.0104714)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It enlists the standard ExaHyPE command line arguments that every code has. Most
-of them play no role here, but the thread count and the GPU filters do, i.e., you
-can ensure that we use a certain thread count only, and you can pick the GPUs
-that the benchmark should assess.
+We get sets of experiments for different combinations of number of threads that
+launch compute tasks and number of patches handled by launch. In the simple
+one-thread case, we make thread 0 of a multithreading environment submit 
+different kernels realisations for a certain number of patches. Some of these
+kernels are parallelised internally, others are not. Once these tests are 
+complete, we allow two threads to issue the same type of kernel in parallel.
+This way, we can stress test the system.
 
-Note the slightly different semantics of the GPU setting for SYCL and OpenMP:
-For SYCL, you explicitly have to specify which GPUs you want to use. You can
-pass all as argument, but you have to pass something. Otherwise, ExaHyPE will
-only use the host. OpenMP in contrast uses all the devices that are available
-by default.
+Per realisation, we get six measurements:
 
-### Finite Volumes Rusanov
-You can run the benchmarks as follows:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-    ./kernel-benchmarks-fv-rusanov-2d-patch-size-4 --threads 1 -gpus all
-    ./kernel-benchmarks-fv-rusanov-2d-patch-size-4 --threads 2 -gpus all
-    ./kernel-benchmarks-fv-rusanov-2d-patch-size-4 --threads 4 -gpus all
-    ./kernel-benchmarks-fv-rusanov-2d-patch-size-4 --threads 8 -gpus all
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-to obtain a first insight into how the throughput changes as more and more
-threads hit the GPUs with kernel invocations.
-
-A typical output reads as follows:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-========================================
-  Number of patches fused: 4
- ========================================
- baseline: 0.000141742 / 2.88504e-08
- stateless kernels on host with heap, patch-wise, AoS: 0.000156606 / 3.18758e-08
- stateless kernels on host with heap, patch-wise, AoSoA: 0.000114747 / 2.33558e-08
- stateless kernels on host with heap, patch-wise, SoA: 0.000114582 / 2.33222e-08
- stateless kernels on host with heap, patch-wise, in-situ: 3.5338e-05 / 7.19275e-09
- stateless kernels on host with heap, batched, AoS: 0.000116653 / 2.37437e-08
- stateless kernels on host with heap, batched, AoSoA: 0.000115959 / 2.36025e-08
- stateless kernels on host with heap, batched, SoA: 0.000114284 / 2.32616e-08
- stateless kernels on host with heap, batched, in-situ:  \end{terminal}
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The code takes multiple patches (here 4) and hands them over to one compute
-kernel, i.e. one compute kernel processes N patches in one rush. The code
-runs a baseline experiment first. This is the most generic numerical kernel
-that ExaHyPE 2 offers, and one that supports all kinds of side-effects and 
-polymorphism. After that, the benchmark assesses the speed of various kernel
-variants and gives you both the total runtime and the runtime per degree of
-freedom.
-
-## Visualisation of Results
-If you want to use the pre-manufactured visualisation scripts, you have to pipe
-the program output into a file, i.e.,
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-    python3 create-scaling-plot.py outputfile
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-## Science Case
-As sketched above, this code studies the kernel that takes one cell or
-patch (aka a small regular grid) and advances it in time by one time step.
-In ExaHyPE 2, this is a fundamental building block behind more complex
-solvers. Also, we use a very simple PDE (Euler) here, whereas a real
-simulation uses more complex PDEs.
-
-Our benchmark suite yields data this fundamental algorithmic building
-block, and it sets up scenarios where many of these patches are updated
-in parallel (on the host) and/or many sets of these update kernels are
-offloaded to the accelerator at the same time - potentially by multiple
-threads.
-
-Depending on the chosen backend (OpenMP or C++ or SYCL), we offer various
-implementations of the core computational kernels, and the different variants
-typically can be configured differently furthermore. Details on
-how things are realised can be found in the respective header files
-(e.g., Rusanov.h) in the subdirectories of the kernels that you use, i.e., within
-exahype2/solvers/fv/rusanov/... The discussion below however gives a
-high-level (algorithmic) overview what the individual kernels do compute
-step by step:
-
-### Finite Volumes
-
-The Finite Volumes solvers works with small regular grids (patches). A compute
-kernel is given a patch augmented by a halo layer of size one. In the real
-simulation, the halo layer is befilled with copies of data from neighbouring
-cells. With the halo, we can thus advance a patch in time without any
-synchronisation with a neighbour.
+1. The first one is the total time of a single kernel execution.
+2. The second entry is the update per degree of freedom within a single kernel.
+3. The third entry measures the total runtime of the parallel launching. This
+   time includes the setup and freeing of any temporal data structures. It also
+   measures until all threads have finished their work. Therefore, this value
+   should be always be bigger than the first one. However,
+4. the fourth entry gives us the time per degree of freedom update if we launch
+   multiple kernels in parallel.
+5. The fifth and sixth entry provide the raw data, so we can see the standard
+   deviation of the measurements. We also see that we usually sample each value
+   multiple times to eliminate noise.
+   
+If a single kernel invocation (for multiple patches) from one thread is able to
+exploit all cores already, then multiple launches of a kernel should either 
+deliver the same throughput or a worse one, as there's some overhead. If a 
+single kernel launch (for multiple patches) is not able to exploit all threads,
+launching multiple kernels in parallel should improve the throughput.
 
 
-@image html src/exahype2/fv/rusanov/Rusanov00.png
+# Visualisation
 
 
-So we are given the patch (grey) plus the halo cells (red, blue, yellow, green).
-We also pass in the white cells, though they have not meaning. They are just
-there to make all arrays simple. The patch consequently consists of (p+2)x(p+2)
-volumes (in 2D). Each volume holds five unknowns for Euler, i.e., the whole
-thing is encoded as SoA. The output of a patch kernel is the updated inner patch.
-As we work with GPU kernels which require high workload, we do not only update
-one patch in one go, but the kernel actually accepts a set of patches, i.e.,
-updates multiple patches in one rush.
+The directory hosts a script called visualisation.py which solely takes the 
+output piped into a file as input. It delivers plots similar to the two 
+below:
 
-The discussion of the actual Finite Volume update scheme can be found in the
-source code on the respective documentation page (or really any introductory
-book to the field). For the present benchmarks, it is important to understand
-what steps are produced. For each and every patch
+@image html example-vis.png
+@image html example-vis-log.png
 
-- we copy the old solution over into the output. That's the starting point and
-  if we had only this step, nothing would move yet. Next, we have to add the
-  actual moving fluid on top. For this,
-- we compute per finite volume, i.e., element within the patch, a couple of
-  quantities: fluxes, maximum eigenvalues, sources.
-- these results are then added via a linear combination to each and every
-  volume (array element).
+These scatter plots report the throughput for particular combinations of 
+threads which launch kernels simultaenously and patches per kernel launch.
+We distinguish the time per kernel (y-axis) and the total time for all
+kernels (x-axis) and label one best-case configurations combining these
+two metrics (so something that's good in both metrics). 
 
-Eventually, the whole code is a sequence of nested loops. The individual
-calculations are realised as template (and therefore aggressively inlined
-without any function call overhead) and dump their results into a temporary
-array. If the final linear combination requires a function @f$ flux_x @f$,
-the kernels first create a huge array (scratchpad) for the results. They
-then loop over all cells and compute @f$ flux_x @f$ as well as all other
-outcomes. These are then finally combined into the kernel outcome, and we
-can free the temporary data structure. Access to the temporary data structure
-can be via AoS or SoA (it might make sense to reorder the temporary data -
-we don't know yet) and as a kernel processes N patches in one go, it also
-makes this initial scratchpad so big that it can hold all the temporary data
-for the N patches.
+Plots like the one above highlight that some kernel realisations deliver 
+outcomes for their patches particularly quickly. They exhibit a small
+algorithmic latency. Other realisations are not that fast for their 
+patches, but are fairer and hence allow Peano to pipe more kernels 
+simultatenously through the system.
 
-The header files of the kernels (Rusanov.h) contain quite some documentation
-how individiual kernels are realised. I recommend always to start reading
-timeStepWithRusanov_piecewise_heap_static_calls() first, as it is the 1:1
-translation of the numerical scheme. Please note that our numerical kernels
-can handle quite "sophisticated" PDEs with non-conservative products and
-source terms. They are not used in the present benchmarks. In the kernels,
-there are booleans to switch the terms on and off. As they are templates,
-the compiler can eliminate dead code that's never used.
 
-All the kernels are sequential in the sense that they do not use multiple
-cores on the host. Several of these kernels however might run on multiple
-threads in parallel and hence interfer with each other performance-wisely.
-When we offload a bunch of patches to a GPU, the underlying kernel obviously
-has to exploit the GPU's concurrency. Again, we can simulate what happens
-if multiple threads try to fire kernels to the GPU at the same time.
 
-### Troubleshooting (with SYCL and the other back-ends)
+# Example for complete test pipeline
 
-Before you dive into details, only run with
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Clonning the repo
+git clone -b gpus-sycl-siam https://gitlab.lrz.de/hpcsoftware/Peano
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-     --threads 1 -gpus 0
-~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-i.e., with one thread and one GPU. If one thread and one GPU do not work,
-it makes no sense to continue if you know that this simple setup fails
-already.
+# Autotools command
+cd Peano libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
 
-The code is reasonably well-structured with only few places where the
-compute kernels are actually triggered. All the wrapper code around the
-kernels is in the main, and it is so simple that it should be easy to
-understand and definitely run with whatever system you employ.
+automake --add-missing
 
-If you find your code crashing, I recommend that you comment out the
-kernel calls. The SYCL calls for example can be found in the routine
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-     void submitSYCLKernels(int patches, int device, int thread) { ... }
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+# To use with Intel LLVM
+./configure CC=clang CXX=clang++ CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" LIBS="-ltbb" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80"  --with-multithreading=tbb --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl 
+
+
+# To use with Intel proprietary compiler
+./configure CC=icx CXX=icpx LIBS=-ltbb LDFLAGS="-fsycl -g -tbb" CXXFLAGS="-tbb -O3 -fsycl" -with-multithreading=tbb -enable-exahype -enable-blockstructured -enable-loadbalancing -with-gpu=sycl 
+
+
+# Build the benchmark (with d=3 and p=8)
+cd benchmarks/exahype2/euler/kernel-benchmarks
+
+export PYTHONPATH=../../../../python
+
+python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 8
+
+
+#Run and plot the timings for AoS batched kernel kernel (select your device with --gpus, see available devices by entering sycl-ls to the terminal)
+for i in 8; do
+	./kernel-benchmarks-fv-rusanov-3d-patch-size-$i --threads 1 --gpus 2 > sycl-3d-ps$i.txt
+done
+
+python3 create-exahype-sycl-plot.py -f sycl-3d-ps8.txt -kv batched -t 50 -ds AoS -ps 8 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
 
 */

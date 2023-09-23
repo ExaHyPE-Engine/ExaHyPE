@@ -1,8 +1,12 @@
+#include <cstdlib>
+
 #include "GPUCellData.h"
 #include "Rusanov.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
+#define NSEC_IN_SEC 1000000000.0
+
 
 template <
   typename Solver,
@@ -20,9 +24,14 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
   bool                  evaluateMaximumEigenvalueAfterTimeStep
 ) {
 #if defined(GPUOffloadingSYCL)
-  ::sycl::queue queue{::sycl::gpu_selector_v};
+  ::sycl::property_list prop_list{::sycl::property::queue::enable_profiling()};
+  ::sycl::queue         queue{::sycl::gpu_selector_v, prop_list}; // Queue is hard-coded to GPU
   //::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
-
+  /*
+  command_graph is an experimental feature developed by Codeplay
+  to reduce overhead when submitting multiple small tasks
+  ::sycl::ext::oneapi::experimental::command_graph g(queue.get_context(), queue.get_device());
+  */
   constexpr int solversHaloSize = 1;
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
@@ -61,6 +70,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
 
   const std::size_t numberOfPatches = hostPatchData.numberOfCells;
   GPUCellData       patchData(hostPatchData, QInEnumerator, QOutEnumerator, queue);
+  // g.begin_recording(queue);
 
   std::vector<::sycl::event> copySolutionEvent(numberOfPatches);
   if (Dimensions == 2 and evaluateSource) {
@@ -368,6 +378,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
     }
   }
 
+
   std::vector<::sycl::event> updateWithFluxEvent(numberOfPatches);
   std::vector<::sycl::event> computeFluxXEvent(numberOfPatches);
   std::vector<::sycl::event> computeFluxYEvent(numberOfPatches);
@@ -514,7 +525,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
             numberOfVolumesPerAxisInPatch,
             numberOfVolumesPerAxisInPatch},
           [=](::sycl::item<3> i) {
-            int z = i[0];
+            int z = i[0] - solversHaloSize;
             int y = i[1];
             int x = i[2];
 
@@ -775,8 +786,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
     }
   }
 
+  std::vector<::sycl::event> computeMaxEigenvalueAfterTimeStepEvent(numberOfPatches);
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions == 2) {
-    std::vector<::sycl::event> computeMaxEigenvalueAfterTimeStepEvent(numberOfPatches);
     for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
       computeMaxEigenvalueAfterTimeStepEvent[patchIndex] = queue.submit([&](::sycl::handler& handle) {
         handle.depends_on(updateWithEigenvalueEvent[patchIndex]);
@@ -806,10 +817,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
         });
       });
     }
-
     ::sycl::event::wait(computeMaxEigenvalueAfterTimeStepEvent);
   } else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    std::vector<::sycl::event> computeMaxEigenvalueAfterTimeStepEvent(numberOfPatches);
     for (int patchIndex = 0; patchIndex < numberOfPatches; patchIndex++) {
       computeMaxEigenvalueAfterTimeStepEvent[patchIndex] = queue.submit([&](::sycl::handler& handle) {
         handle.depends_on(updateWithEigenvalueEvent[patchIndex]);
@@ -846,6 +855,25 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_static_calls(
     ::sycl::event::wait(updateWithNCPEvent);
     ::sycl::event::wait(updateWithFluxEvent);
   }
+
+  /* Prints out kernel time without GPU-CPU data transfers
+  if (evaluateMaximumEigenvalueAfterTimeStep == true) {
+    ::sycl::event::wait( computeMaxEigenvalueAfterTimeStepEvent );
+    double duration = 0;
+    for (int i = 0; i < numberOfPatches; i++) {
+      auto start = copySolutionEvent[i].get_profiling_info<::sycl::info::event_profiling::command_start>();
+      auto stop =
+  computeMaxEigenvalueAfterTimeStepEvent[i].get_profiling_info<::sycl::info::event_profiling::command_end>(); duration
+  += stop - start;
+    }
+    ::std::cout << "Task graph kernel execution time with reduction:" << duration / (NSEC_IN_SEC*numberOfPatches) <<
+  ::std::endl;
+  }
+  */
+
+  // g.end_recording(queue);
+  // auto executable_graph = g.finalize();
+  // queue.submit([&](::sycl::handler& h) {h.ext_oneapi_graph(executable_graph);}).wait();
 
   patchData.destroy(hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
 

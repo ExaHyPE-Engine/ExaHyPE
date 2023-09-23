@@ -15,6 +15,7 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
     NonconservativeProduct  nonconservativeProduct,
     Source                  source,
     MaxEigenvalue           maxEigenvalue,
+    peano4::utils::LoopParallelism   loopParallelism,
     const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
     const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
     const exahype2::enumerator::AoSLexicographicEnumerator& fluxEnumerator,
@@ -38,10 +39,13 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
      */
     constexpr int solversHaloSize        = 1;
 
-    if (Dimensions==2 and evaluateSource) {
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+    if (evaluateSource) {
+      parallelDPlusOneForWithDynamicScheduling(
+        volume,
+        internal::rangeOverVolumesTimesPatches(numberOfVolumesPerAxisInPatch, patchData.numberOfCells),
+        loopParallelism
+      ) {
+        const int patchIndex = volume(Dimensions);
         internal::copySolutionAndAddSourceTerm_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -49,213 +53,138 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          tarch::la::slice<Dimensions>(volume,0),
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           patchData.QOut[patchIndex],
           QOutEnumerator
         );
-      }
+      } endParallelDfor
     }
-    else if (Dimensions==3 and evaluateSource) {
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-        internal::copySolutionAndAddSourceTerm_LoopBody(
+    else {
+      parallelDPlusTwoForWithDynamicScheduling(
+        volume,
+        internal::rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, patchData.numberOfCells),
+        loopParallelism
+      ) {
+        const int unknown    = volume(Dimensions);
+        const int patchIndex = volume(Dimensions+1);
+        internal::copySolution_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          source,
+          patchIndex,
+          tarch::la::slice<Dimensions>(volume,0),
+          unknown,
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      } endParallelDfor
+    }
+
+    // ================================
+    // eigenvalue damping
+    // ================================
+    parallelDPlusOneForWithDynamicScheduling(
+      volume,
+      internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(numberOfVolumesPerAxisInPatch, patchData.numberOfCells),
+      loopParallelism
+    ) {
+      volume(0) -= solversHaloSize;
+      const int patchIndex = volume(Dimensions);
+      internal::computeMaxEigenvalue_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          maxEigenvalue,
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-      }
-    }
-    else if (Dimensions==2) {
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        internal::copySolution_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          patchIndex,
-          volumeIndex2d(x,y),
-          unknown,
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-      }
-    }
-    else {
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-        internal::copySolution_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          patchIndex,
-          volumeIndex3d(x,y,z),
-          unknown,
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-      }
-    }
+          tarch::la::slice<Dimensions>(volume,0),
+          patchData.t[patchIndex], patchData.dt[patchIndex],
+          0,
+          tempEigenvalueX,
+          eigenvalueEnumerator
+      );
+    } endParallelDfor
 
+    parallelDPlusOneForWithDynamicScheduling(
+      volume,
+      internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(numberOfVolumesPerAxisInPatch, patchData.numberOfCells),
+      loopParallelism
+    ) {
+      volume(1) -= solversHaloSize;
+      const int patchIndex = volume(Dimensions);
+      internal::computeMaxEigenvalue_LoopBody(
+        patchData.QIn[patchIndex],
+        QInEnumerator,
+        maxEigenvalue,
+        patchData.cellCentre[patchIndex],
+        patchData.cellSize[patchIndex],
+        patchIndex,
+        tarch::la::slice<Dimensions>(volume,0),
+        patchData.t[patchIndex], patchData.dt[patchIndex],
+        1,
+        tempEigenvalueY,
+        eigenvalueEnumerator
+      );
+    } endParallelDfor
 
-    if (Dimensions==2) {
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
-        internal::computeMaxEigenvalue_LoopBody(
+    #if Dimensions==3
+    parallelDPlusOneForWithDynamicScheduling(
+      volume,
+      internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(numberOfVolumesPerAxisInPatch, patchData.numberOfCells),
+      loopParallelism
+    ) {
+      volume(2) -= solversHaloSize;
+      const int patchIndex = volume(Dimensions);
+      internal::computeMaxEigenvalue_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
             maxEigenvalue,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x,y),
+            tarch::la::slice<Dimensions>(volume,0),
             patchData.t[patchIndex], patchData.dt[patchIndex],
-            0,
-            tempEigenvalueX,
+            2,
+            tempEigenvalueZ,
             eigenvalueEnumerator
-        );
-      }
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-          internal::computeMaxEigenvalue_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            maxEigenvalue,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x,y),
-            patchData.t[patchIndex], patchData.dt[patchIndex],
-            1,
-            tempEigenvalueY,
-            eigenvalueEnumerator
-        );
-      }
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int unknown = 0; unknown < unknowns; unknown++) {
-        internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          tempEigenvalueX,
-          tempEigenvalueY,
-          tempEigenvalueZ,
-          eigenvalueEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y),
-          unknown,
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-      }
-    }
-    else {
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-        internal::computeMaxEigenvalue_LoopBody(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              maxEigenvalue,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x,y,z),
-              patchData.t[patchIndex], patchData.dt[patchIndex],
-              0,
-              tempEigenvalueX,
-              eigenvalueEnumerator
-        );
-      }
+      );
+    } endParallelDfor
+    #endif
 
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-            internal::computeMaxEigenvalue_LoopBody(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              maxEigenvalue,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x,y,z),
-              patchData.t[patchIndex], patchData.dt[patchIndex],
-              1,
-              tempEigenvalueY,
-              eigenvalueEnumerator
-        );
-      }
+    parallelDPlusTwoForWithDynamicScheduling(
+      volume,
+      internal::rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(numberOfVolumesPerAxisInPatch, unknowns, auxiliaryVariables, patchData.numberOfCells),
+      loopParallelism
+    ) {
+      const int unknown    = volume(Dimensions);
+      const int patchIndex = volume(Dimensions+1);
+      internal::updateSolutionWithEigenvalueDamping_LoopBody(
+        patchData.QIn[patchIndex],
+        QInEnumerator,
+        tempEigenvalueX,
+        tempEigenvalueY,
+        tempEigenvalueZ,
+        eigenvalueEnumerator,
+        patchData.cellCentre[patchIndex],
+        patchData.cellSize[patchIndex],
+        patchIndex,
+        tarch::la::slice<Dimensions>(volume,0),
+        unknown,
+        patchData.dt[patchIndex],
+        patchData.QOut[patchIndex],
+        QOutEnumerator
+      );
+    } endParallelDfor
 
-
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize; z++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        internal::computeMaxEigenvalue_LoopBody(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              maxEigenvalue,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x,y,z),
-              patchData.t[patchIndex], patchData.dt[patchIndex],
-              2,
-              tempEigenvalueZ,
-              eigenvalueEnumerator
-        );
-      }
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int unknown = 0; unknown < unknowns; unknown++) {
-        internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          tempEigenvalueX,
-          tempEigenvalueY,
-          tempEigenvalueZ,
-          eigenvalueEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y,z),
-          unknown,
-          patchData.dt[patchIndex],
-          patchData.QOut[patchIndex],
-          QOutEnumerator
-        );
-      }
-    }
-
-    if (evaluateFlux and Dimensions==2) {
-      logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate flux in x-direction" );
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
-      for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++) {
+    if (evaluateFlux) {
+      parallelDPlusOneForWithDynamicScheduling(
+        volume,
+        internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(numberOfVolumesPerAxisInPatch, patchData.numberOfCells),
+        loopParallelism
+      ) {
+        volume(0) -= solversHaloSize;
+        const int patchIndex = volume(Dimensions);
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -263,17 +192,22 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          tarch::la::slice<Dimensions>(volume,0),
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           0, // normal
           tempFluxX,
           fluxEnumerator
         );
-      }
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
-      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++) {
+      } endParallelDfor
+
+      parallelDPlusOneForWithDynamicScheduling(
+        volume,
+        internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(numberOfVolumesPerAxisInPatch, patchData.numberOfCells),
+        loopParallelism
+      ) {
+        volume(1) -= solversHaloSize;
+        const int patchIndex = volume(Dimensions);
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -281,38 +215,23 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          tarch::la::slice<Dimensions>(volume,0),
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           1, // normal
           tempFluxY,
           fluxEnumerator
         );
-      }
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int unknown=0; unknown<unknowns; unknown++) {
-        internal::updateSolutionWithFlux_LoopBody(
-          tempFluxX, tempFluxY, tempFluxZ,
-          fluxEnumerator,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y),
-          unknown,
-          patchData.dt[patchIndex],
-          *(patchData.QOut + patchIndex),
-          QOutEnumerator
-        );
-      }
-    }
-    else if (evaluateFlux and Dimensions==3) {
-      logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate flux in x-direction" );
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize; x++)
-      for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
-      for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) {
+      } endParallelDfor
+
+      #if Dimensions==3
+      parallelDPlusOneForWithDynamicScheduling(
+        volume,
+        internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(numberOfVolumesPerAxisInPatch, patchData.numberOfCells),
+        loopParallelism
+      ) {
+        volume(2) -= solversHaloSize;
+        const int patchIndex = volume(Dimensions);
         internal::computeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -320,76 +239,47 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
-          0, // normal
-          tempFluxX,
-          fluxEnumerator
-        );
-      }
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
-      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize;  y++)
-      for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++) {
-        internal::computeFlux_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          flux,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y,z),
-          patchData.t[patchIndex],
-          patchData.dt[patchIndex],
-          1, // normal
-          tempFluxY,
-          fluxEnumerator
-        );
-      }
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
-      for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
-      for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize;  z++) {
-        internal::computeFlux_LoopBody(
-          patchData.QIn[patchIndex],
-          QInEnumerator,
-          flux,
-          patchData.cellCentre[patchIndex],
-          patchData.cellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y,z),
+          tarch::la::slice<Dimensions>(volume,0),
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           2, // normal
           tempFluxZ,
           fluxEnumerator
         );
-      }
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int unknown=0; unknown<unknowns; unknown++) {
+      } endParallelDfor
+      #endif
+
+      parallelDPlusTwoForWithDynamicScheduling(
+        volume,
+        internal::rangeOverVolumesTimesUnknownsTimesPatches(numberOfVolumesPerAxisInPatch, unknowns, patchData.numberOfCells),
+        loopParallelism
+      ) {
+        const int unknown    = volume(Dimensions);
+        const int patchIndex = volume(Dimensions+1);
         internal::updateSolutionWithFlux_LoopBody(
           tempFluxX, tempFluxY, tempFluxZ,
           fluxEnumerator,
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
-          volumeIndex3d(x,y,z),
+          tarch::la::slice<Dimensions>(volume,0),
           unknown,
           patchData.dt[patchIndex],
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-      }
+      } endParallelDfor
     }
 
-    if (evaluateNonconservativeProduct and Dimensions==2) {
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++)
-      for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++) {
+
+    if (evaluateNonconservativeProduct) {
+      parallelDPlusOneForWithDynamicScheduling(
+        volume,
+        internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(numberOfVolumesPerAxisInPatch, patchData.numberOfCells),
+        loopParallelism
+      ) {
+        volume(0) -= solversHaloSize;
+        const int patchIndex = volume(Dimensions);
         internal::computeNonconservativeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -397,17 +287,22 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          tarch::la::slice<Dimensions>(volume,0),
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           0, // normal
           tempNonconservativeProductX,
           ncpEnumerator
         );
-      }
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
-      for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++) {
+      } endParallelDfor
+
+      parallelDPlusOneForWithDynamicScheduling(
+        volume,
+        internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(numberOfVolumesPerAxisInPatch, patchData.numberOfCells),
+        loopParallelism
+      ) {
+        volume(1) -= solversHaloSize;
+        const int patchIndex = volume(Dimensions);
         internal::computeNonconservativeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -415,117 +310,66 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          tarch::la::slice<Dimensions>(volume,0),
           patchData.t[patchIndex],
           patchData.dt[patchIndex],
           1, // normal
           tempNonconservativeProductY,
           ncpEnumerator
         );
-      }
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int unknown=0; unknown<unknowns; unknown++) {
+      } endParallelDfor
+
+      #if Dimension==3
+      parallelDPlusOneForWithDynamicScheduling(
+        volume,
+        internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(numberOfVolumesPerAxisInPatch, patchData.numberOfCells),
+        loopParallelism
+      ) {
+        volume(2) -= solversHaloSize;
+        const int patchIndex = volume(Dimensions);
+        internal::computeNonconservativeFlux_LoopBody(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          nonconservativeProduct,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          tarch::la::slice<Dimensions>(volume,0),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          2, // normal
+          tempNonconservativeProductZ,
+          ncpEnumerator
+        );
+      } endParallelDfor
+      #endif
+
+      parallelDPlusTwoForWithDynamicScheduling(
+        volume,
+        internal::rangeOverVolumesTimesUnknownsTimesPatches(numberOfVolumesPerAxisInPatch, unknowns, patchData.numberOfCells),
+        loopParallelism
+      ) {
+        const int unknown    = volume(Dimensions);
+        const int patchIndex = volume(Dimensions+1);
         internal::updateSolutionWithNonconservativeFlux_LoopBody(
           tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
           ncpEnumerator,
           patchData.cellCentre[patchIndex],
           patchData.cellSize[patchIndex],
           patchIndex,
-          volumeIndex2d(x,y),
+          tarch::la::slice<Dimensions>(volume,0),
           unknown,
           patchData.dt[patchIndex],
           *(patchData.QOut + patchIndex),
           QOutEnumerator
         );
-      }
-    }
-    else if (evaluateNonconservativeProduct and Dimensions==3) {
-        for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-        for (int x = -solversHaloSize; x < numberOfVolumesPerAxisInPatch+solversHaloSize-1; x++)
-        for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
-        for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
-          internal::computeNonconservativeFlux_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            nonconservativeProduct,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
-            0, // normal
-            tempNonconservativeProductX,
-            ncpEnumerator
-          );
-        }
-        for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-        for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
-        for (int y = -solversHaloSize; y < numberOfVolumesPerAxisInPatch+solversHaloSize-1; y++)
-        for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
-          internal::computeNonconservativeFlux_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            nonconservativeProduct,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
-            1, // normal
-            tempNonconservativeProductY,
-            ncpEnumerator
-          );
-        }
-        for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-        for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
-        for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
-        for (int z = -solversHaloSize; z < numberOfVolumesPerAxisInPatch+solversHaloSize-1; z++) {
-          internal::computeNonconservativeFlux_LoopBody(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            nonconservativeProduct,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
-            2, // normal
-            tempNonconservativeProductZ,
-            ncpEnumerator
-          );
-        }
-        for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++)
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-        for (int unknown=0; unknown<unknowns; unknown++) {
-          internal::updateSolutionWithNonconservativeFlux_LoopBody(
-            tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
-            ncpEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            unknown,
-            patchData.dt[patchIndex],
-            *(patchData.QOut + patchIndex),
-            QOutEnumerator
-          );
-        }
+      } endParallelDfor
     }
 
-
-    if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-      logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
+    if (evaluateMaximumEigenvalueAfterTimeStep) {
+      parallelForWithDynamicScheduling(patchIndex, patchData.numberOfCells, loopParallelism) {
         double newMaxEigenvalue = 0.0;
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+        dfor(volume,numberOfVolumesPerAxisInPatch) {
           newMaxEigenvalue = std::max(
             newMaxEigenvalue,
             internal::reduceMaxEigenvalue_LoopBody(
@@ -535,39 +379,14 @@ namespace exahype2{ namespace fv{ namespace rusanov{ namespace internal{
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
               patchIndex,
-              volumeIndex2d(x,y),
+              volume,
               patchData.t[patchIndex],
               patchData.dt[patchIndex]
             )
           );
         }
         patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
-      }
-    }
-    else if (evaluateMaximumEigenvalueAfterTimeStep) {
-      logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
-      for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
-        double newMaxEigenvalue = 0.0;
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-          newMaxEigenvalue = std::max(
-            newMaxEigenvalue,
-            internal::reduceMaxEigenvalue_LoopBody(
-              *(patchData.QOut + patchIndex),
-              QOutEnumerator,
-              maxEigenvalue,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x,y,z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex]
-            )
-          );
-        }
-        patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
-      }
+      } endParallelFor
     }
   }
 }}}}
@@ -586,7 +405,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_functors(
   Flux                    flux,
   NonconservativeProduct  nonconservativeProduct,
   Source                  source,
-  MaxEigenvalue           maxEigenvalue
+  MaxEigenvalue           maxEigenvalue,
+  peano4::utils::LoopParallelism   loopParallelism
 ) {
   static tarch::logging::Log _log( "exahype2::fv::rusanov" );
 
@@ -624,6 +444,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_functors(
     nonconservativeProduct,
     source,
     maxEigenvalue,
+    loopParallelism,
     QInEnumerator,
     QOutEnumerator,
     fluxEnumerator,

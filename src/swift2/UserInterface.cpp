@@ -26,6 +26,28 @@ bool swift2::commandlinesettings::enableDynamicLoadBalancing() {
 
 void swift2::setDefaultLogStatements() {
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
+      tarch::logging::LogFilter::FilterListEntry::TargetInfo,
+      tarch::logging::LogFilter::FilterListEntry::AnyRank,
+      "",
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+  ));
+  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
+      tarch::logging::LogFilter::FilterListEntry::TargetTrace,
+      tarch::logging::LogFilter::FilterListEntry::AnyRank,
+      "",
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+  ));
+  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
+      tarch::logging::LogFilter::FilterListEntry::TargetDebug,
+      tarch::logging::LogFilter::FilterListEntry::AnyRank,
+      "",
+      tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+      tarch::logging::LogFilter::FilterListEntry::AlwaysOn
+  ));
+
+  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
       tarch::logging::LogFilter::FilterListEntry::TargetDebug,
       tarch::logging::LogFilter::FilterListEntry::AnyRank,
       "peano4",
