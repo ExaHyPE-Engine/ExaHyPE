@@ -15,7 +15,7 @@ template <
   std::size_t unknowns,
   std::size_t auxiliaryVariables,
   typename TempDataEnumerator>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
+void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
   int                   targetDevice,
   ::exahype2::CellData& hostPatchData,
   bool                  evaluateFlux,
