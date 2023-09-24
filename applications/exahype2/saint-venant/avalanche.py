@@ -170,9 +170,12 @@ class Avalanche:
                 const double hy = Q[NumberOfUnknowns + h_y]/volumeH(1);
                 const tarch::la::Vector<Dimensions, double> frictionVector = {{tan(Zeta)-hx,-hy}};
                 const double frictionVectorMagnitude = tarch::la::norm2(frictionVector);
+                if(tarch::la::greater(Mu,frictionVectorMagnitude)){
+                    Mu = frictionVectorMagnitude;
+                }
                 S[0] = 0.0;
-                S[1] = Q[0] * Gravity * sin(Zeta) - Mu * Q[0] * Gravity * cos(Zeta);
-                S[2] = 0.0;
+                S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (frictionVector(0)/frictionVectorMagnitude) * Q[0] * Gravity * cos(Zeta);
+                S[2] = -Mu * (frictionVector(1)/frictionVectorMagnitude) * Q[0] * Gravity * cos(Zeta);
             }}
             else if(tarch::la::greater(ubar,0.0)){{
                 // std::cout<<"sourceTerm h>0 ubar>0 at t="<<t<<std::endl;
