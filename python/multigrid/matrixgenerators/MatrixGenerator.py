@@ -1,3 +1,5 @@
+# This file is part of the Peano multigrid project. For conditions of 
+# distribution and use, please see the copyright notice at www.peano-framework.org
 '''
 
 here we put in a base class for generating 
@@ -10,7 +12,7 @@ import numpy as np
 from numpy.polynomial.legendre  import leggauss
 from scipy.interpolate import lagrange
 
-class MatrixGeneratorBase:
+class MatrixGenerator:
   """!
   use this as a base class for generating matrices 
   that we pipe into the c++ code
@@ -35,8 +37,11 @@ class MatrixGeneratorBase:
     self.weights     = leggauss( self.poly_degree + 1 )
     self.weights2d   = [ w1*w2  for w1 in self.weights for w2 in self.weights]
     self.points2d    = [(p1,p2) for p1 in self.points  for p2 in self.points ]
-    #2d face normal for   0       1       2      3
-    self.faceNormals = [ [-1,0], [0,-1], [1,0], [0,1] ]
+    if dimensions==2:
+      self.faceNormals = [ [-1,0], [0,-1], [1,0], [0,1] ]
+    else:
+      assert False, "not yet implemented"
+      
 
   @staticmethod
   def convert1dPointTo2d(faceNo, point1d):

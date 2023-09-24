@@ -1,0 +1,21 @@
+/**
+
+ @page benchmarks_multigrid_petsc_poisson Poisson equation
+
+ We solve the Poisson equation 
+ 
+ @f$ -\Delta u = 2 \pi^2 \Pi _d \sin (\pi x_d) @f$ 
+ 
+ over the unit square or cube, respectively.
+
+
+ # Prepare the executable
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+ export PYTHONPATH=../../../../python/
+ python3 poisson.py -m release
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ 
+ */
+ 

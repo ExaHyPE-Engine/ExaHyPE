@@ -3,10 +3,7 @@
 from .Project import Project
 from .PETScMain import PETScMain
 
-import petsc.solvers
+import multigrid.petsc.solvers
 
-#import matrix generator base class
-import petsc.matrixgenerators
-
-print( "PETSc backend" )
+print( "Peano 4 - PETSc back-end" )
 

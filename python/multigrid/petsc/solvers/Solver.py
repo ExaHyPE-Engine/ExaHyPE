@@ -1,6 +1,8 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
-# use, please see the copyright notice at www.peano-framework.org
+# This file is part of the Peano multigrid project. For conditions of 
+# distribution and use, please see the copyright notice at www.peano-framework.org
 import peano4
+import dastgen2
+
 import numpy as np
 from numpy.polynomial.legendre  import leggauss
 from scipy.interpolate import lagrange
@@ -86,6 +88,17 @@ vertex for the first time of a mesh traversal, e.g.
     self._name = name
     self.min_h = min_h
     self.max_h = max_h
+    
+    self._vertex_petsc_data = peano4.datamodel.DaStGen2( name + "PETScData")
+    self._face_petsc_data   = peano4.datamodel.DaStGen2( name + "PETScData" )
+    self._cell_petsc_data   = peano4.datamodel.DaStGen2( name + "PETScData" )
+    
+    self._vertex_petsc_data.data.add_attribute( dastgen2.attributes.Integer( "unknown_base_number" ) )
+    self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Integer( "unknown_base_number" ) )
+    self._cell_petsc_data.data.add_attribute(   dastgen2.attributes.Integer( "unknown_base_number" ) )
+
+    self._vertex_petsc_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
+    self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
     pass
     
     
@@ -151,25 +164,39 @@ vertex for the first time of a mesh traversal, e.g.
     """
     assert False, "should not be called"
   
-  
-  @abstractmethod
-  def add_use_statements(self, observer):
-    """
-    
-    Add whatever action set you want to use to observer.
-    
-    """
-    assert False, "should not be called"
-
-
-  @abstractmethod
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
-    """
+    """!
     
-    Add whatever action set you want to use to observer.
+    Initialise index model 
+    
+    We build up a data model, which is really an index model in this case. 
+    Every vertex, face and cell can hold a data model which is only one integer.
+    This integer encodes the first index of a matrix unknown held by the
+    grid entity. For the plain DG code, there are no vertex unknowns. However,
+    we have two types of face indices: Those for the projection and those for 
+    the solution of the Riemann problem.
+    
+    You might want to overwrite this routine, but please ensure that you still
+    call this superclass implementation, too.
     
     """
-    assert False, "should not be called"
+    datamodel.add_vertex(self._vertex_petsc_data)
+    datamodel.add_face(self._face_petsc_data)
+    datamodel.add_cell(self._cell_petsc_data)
+    pass
+
+  def add_use_statements(self, observer):
+    """!
+    
+    Register the index numbers to be used in each and every mesh traversal. You
+    can overwrite the routine and add your own stuff. However, please ensure 
+    this routine still is invoked, too.    
+    
+    """
+    observer.use_vertex(self._vertex_petsc_data)
+    observer.use_face(self._face_petsc_data)
+    observer.use_cell(self._cell_petsc_data)
+    pass
 
 
   @abstractmethod    
@@ -208,34 +235,47 @@ Return the name of the object that will be created for this solver.
     return header, cpp
 
 
-  @abstractmethod
-  def initGaussLobatto(self):
-    """!
-    methods to init quadrature weights and points.
-    can be overridden but at time of writing two
-    classes use this exact same code.
+#  @abstractmethod
+#  def initGaussLobatto(self):
+#    """!
+#    methods to init quadrature weights and points.
+#    can be overridden but at time of writing two
+#    classes use this exact same code.
+#
+#    use numpy/scipy to calculate gaussian quadratures correctly
+#    returns: points, weights and an (n+1) * (n+1) array of 
+#    polynomial coefficients
+#    """
+#    #construct poly coeffs first
+#    coeffs = []
+#    x = np.linspace(-1,1, self.polynomial_degree + 1)
+#    for j in range(self.polynomial_degree + 1):
+#      y = np.zeros_like(x)
+#      y[j] = 1.0
+#      coeffs.append( list( lagrange(x,y).coeffs ) )
+#    
+#    #finally construct the points and weights
+#    points, weights = leggauss( self.polynomial_degree + 1 )
+#
+#    return points, weights, coeffs
 
-    use numpy/scipy to calculate gaussian quadratures correctly
-    returns: points, weights and an (n+1) * (n+1) array of 
-    polynomial coefficients
-    """
-    #construct poly coeffs first
-    coeffs = []
-    x = np.linspace(-1,1, self.polynomial_degree + 1)
-    for j in range(self.polynomial_degree + 1):
-      y = np.zeros_like(x)
-      y[j] = 1.0
-      coeffs.append( list( lagrange(x,y).coeffs ) )
-    
-    #finally construct the points and weights
-    points, weights = leggauss( self.polynomial_degree + 1 )
+#  def convertMatrixToInitList(self, matrix):
+#    output = "{ " + str(matrix[0,0])
+#    for el in matrix.flatten():
+#      output += f", {str(el)}"
+#    output += "}"
+#    return output
 
-    return points, weights, coeffs
 
-  def convertMatrixToInitList(self, matrix):
-    output = "{ " + str(matrix[0,0])
-    for el in matrix.flatten():
-      output += f", {str(el)}"
-    output += "}"
-    return output
+  @property
+  def number_of_matrix_entries_per_vertex(self):
+    raise NotImplementedError
+  
+  @property
+  def number_of_matrix_entries_per_face(self):
+    raise NotImplementedError
+  
+  @property
+  def number_of_matrix_entries_per_cell(self):
+    raise NotImplementedError
 

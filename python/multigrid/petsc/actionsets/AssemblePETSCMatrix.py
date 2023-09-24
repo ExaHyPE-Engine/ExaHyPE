@@ -464,8 +464,8 @@ class AssemblePETSCMatrixForMixed(ActionSet):
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
-    self.d["CELL_CARDINALITY"]   = solver.number_of_cell_unknowns
-    self.d["FACE_CARDINALITY"]   = solver.number_of_face_unknowns
+    self.d["CELL_CARDINALITY"]   = solver.number_of_matrix_entries_per_cell
+    self.d["FACE_CARDINALITY"]   = solver.number_of_matrix_entries_per_face
 
   def get_constructor_body(self):
     return f"""
