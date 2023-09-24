@@ -7,6 +7,7 @@ import peano4
 import exahype2
 
 dimensions                = 2
+auxuliary_variables       = 13
 cell_size                 = 0.075
 amr_levels                = 3
 patch_size                = 3
@@ -38,9 +39,15 @@ rkdg_rusanov_solvers = {
   "RKDGRusanovGlobalAdaptiveEnclave": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 }
 
+aderdg_rusanov_solvers = {
+  "ADERDGRusanovGlobalAdaptive":exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep
+
+}
+
 solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
+solvers.update(aderdg_rusanov_solvers)
 solver = "FVRusanovGlobalAdaptive"
 
 build_modes = {
@@ -138,7 +145,7 @@ if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
     name=solver_name,
     patch_size=args.patch_size,
     unknowns=args.dim + 1, # [h, hu, hv]
-    auxiliary_variables=13,
+    auxiliary_variables=auxuliary_variables,
     max_volume_h=args.max_cell_size,
     min_volume_h=args.max_cell_size * 3.0**(-args.amr_levels),
     time_step_relaxation=0.5,
@@ -165,7 +172,7 @@ elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
     name=solver_name,
     patch_size=args.patch_size,
     unknowns=args.dim + 1, # [h, hu, hv]
-    auxiliary_variables=13,
+    auxiliary_variables=auxuliary_variables,
     max_volume_h=args.max_cell_size,
     min_volume_h=min_h,
     normalised_time_step_size=admissible_time_step_size,
@@ -179,7 +186,7 @@ elif solver_type in rkdg_rusanov_solvers and "Adaptive" in solver_type:
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
     unknowns                  = args.dim + 1, # [h, hu, hv]
-    auxiliary_variables       = 13,
+    auxiliary_variables       = auxuliary_variables,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = args.max_cell_size * 3.0**(-args.amr_levels),
     time_step_relaxation      = 0.5
@@ -195,32 +202,71 @@ elif solver_type in rkdg_rusanov_solvers and "Fixed" in solver_type:
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
     unknowns                  = args.dim + 1, # [h, hu, hv,]
-    auxiliary_variables       = 13,
+    auxiliary_variables       = auxuliary_variables,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = min_h,
     time_step_size            = admissible_time_step_size,
   )
+
+elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
+  my_solver = solvers[solver_type](
+    name = solver_name,
+    order = 3,
+    unknowns = args.dim + 1
+    auxiliary_variables = auxuliary_variables,
+    min_cell_h = min_h,
+    max_cell_h = args.max_cell_size,
+    time_step_relaxation = 0.5,
+    ncp = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+  )
+
 if args.use_gpu:
   my_solver.set_pde_terms_without_state(True)
 
+user_includes = """
+  #include "SaintVenantKernels.h"
+  #include <cmath>
+  """
 
-if args.scenario == "Avalanche":
-  from avalanche import Avalanche
-  my_scenario = Avalanche()
-  my_solver._preprocess_reconstructed_patch = """
+preprocess_reconstructed_patch = """
   ::exahype2::saintvenant::extrapolateHalo(oldQWithHalo, {patch_size}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables} );
   ::exahype2::saintvenant::calculateDerivatives(oldQWithHalo, {patch_size}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables} );
   """.format(patch_size=patch_size, NumberOfUnknowns=args.dim + 1, NumberOfAuxiliaryVariables=13)
 
-my_solver.set_implementation(
-    initial_conditions    = my_scenario.implementation_of_initial_conditions(),
-    boundary_conditions   = my_scenario.implementation_of_boundary_conditions(),
-    flux                  = my_scenario.implementation_of_flux(),
-    eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
-    ncp                   = my_scenario.implementation_of_ncp(),
-    source_term           = my_scenario.implementation_of_sources(),
-    refinement_criterion  = my_scenario.implementation_of_refinement_criterion()   
-)
+
+if args.scenario == "Avalanche":
+  from avalanche import Avalanche
+  my_scenario = Avalanche(args.solver)
+  if "FV" in solver_type:
+    my_solver.add_user_solver_includes(user_includes)
+    my_solver._preprocess_reconstructed_patch = preprocess_reconstructed_patch
+    my_solver.set_implementation(
+      initial_conditions    = my_scenario.implementation_of_initial_conditions(),
+      boundary_conditions   = my_scenario.implementation_of_boundary_conditions(),
+      flux                  = my_scenario.implementation_of_flux(),
+      eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
+      ncp                   = my_scenario.implementation_of_ncp(),
+      source_term           = my_scenario.implementation_of_sources(),
+      refinement_criterion  = my_scenario.implementation_of_refinement_criterion()   
+    )
+    
+  
+  elif "ADERDG" in solver_type:
+    my_solver.user_solver_includes = user_includes
+    my_solver.set_preprocess_reconstructed_patch_kernel(preprocess_reconstructed_patch)
+    my_solver.set_implementation(
+      initial_conditions    = my_scenario.implementation_of_initial_conditions(),
+      boundary_conditions   = my_scenario.implementation_of_boundary_conditions(),
+      flux                  = my_scenario.implementation_of_flux(),
+      ncp                   = my_scenario.implementation_of_ncp(),
+      source_term           = my_scenario.implementation_of_sources(),
+      refinement_criterion  = my_scenario.implementation_of_refinement_criterion()   
+    )
+
+
+
+
 
 if args.symbolic:
   my_solver.plot_description = my_scenario.pde.unknown_identifier_for_plotter()
@@ -228,10 +274,7 @@ else:
   if args.dim == 2:
     my_solver.plot_description = "h, hu, hv, b, h_x, h_y, u_x, u_y, u_xx, u_yy, u_xy, v_x, v_y, v_xx, v_yy, v_xy"
   
-  my_solver.add_user_solver_includes("""
-#include "SaintVenantKernels.h"
-#include <cmath>
-""")
+  
                                     
 
 my_project.add_solver(my_solver)

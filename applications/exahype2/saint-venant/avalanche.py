@@ -4,7 +4,8 @@ class Avalanche:
 
     
 
-    def __init__(self, Zeta=23.0, Zeta1=21.0, Zeta2=30.7, Zeta3=22.2, Beta=0.136, FrictionLengthScale=0.00065, Gravity=9.81):
+    def __init__(self, solver="FVRusanovGlobalAdaptive", Zeta=23.0, Zeta1=21.0, Zeta2=30.7, Zeta3=22.2, Beta=0.136, FrictionLengthScale=0.00065, Gravity=9.81):
+        self.solver = solver
         self.Pi = math.pi
         self.Zeta = Zeta*self.Pi/180
         self.Zeta1 = Zeta1*self.Pi/180
@@ -21,9 +22,9 @@ class Avalanche:
         self.Hstop = self.FrictionLengthScale*(((self.Mu2-self.Mu1)/(math.tan(self.Zeta)-self.Mu1))-1)
 
     def implementation_of_initial_conditions(self):
-        return """
+        initial_condition_string_template =  """
         const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {0.15,1.0};
-        const bool nearCentre = tarch::la::norm2(volumeCentre-granularMaterialCenter) < 0.1;
+        const bool nearCentre = tarch::la::norm2({volumeCentre}-granularMaterialCenter) < 0.1;
 
         Q[0] = (nearCentre ? 0.008 : 0.0 ); // Water height (h)
         Q[1] = 0.0; // x-momentum (hu)
@@ -42,6 +43,10 @@ class Avalanche:
         Q[14] = 0.0;
         Q[15] = 0.0;
         """
+        if "FV" in self.solver:
+            return initial_condition_string_template.format(volumeCentre="volumeCentre")
+        elif "ADERDG" in self.solver:
+            return initial_condition_string_template.format(volumeCentre="x")
     
     def implementation_of_boundary_conditions(self):
         return """
@@ -49,18 +54,30 @@ class Avalanche:
         """
     def implementation_of_flux(self):
 
-        return """ 
-        ::exahype2::saintvenant::flux(Q, faceCentre, t, dt, normal, F, NumberOfUnknowns, NumberOfAuxiliaryVariables,{Zeta}, {Gravity});
-        """.format(Zeta=self.Zeta, Gravity=self.Gravity)
+        flux_string_template = """ 
+        ::exahype2::saintvenant::flux(Q, {faceCentre}, t, dt, normal, F, NumberOfUnknowns, NumberOfAuxiliaryVariables,{Zeta}, {Gravity});
+        """
+        
+        if "FV" in self.solver:
+            return flux_string_template.format(faceCentre="faceCentre",Zeta=self.Zeta, Gravity=self.Gravity)
+        elif "ADERDG" in self.solver:
+            return flux_string_template.format(faceCentre="volumeX",Zeta=self.Zeta, Gravity=self.Gravity)
+        
     
     def implementation_of_max_eigenvalue(self):
-        return """
-        return ::exahype2::saintvenant::maxEigenvalue(Q, faceCentre, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, {Zeta}, {Gravity});
-        """.format(Zeta=self.Zeta, Gravity=self.Gravity)
+        max_eigenvalue_string_template =  """
+        return ::exahype2::saintvenant::maxEigenvalue(Q, {faceCentre}, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, {Zeta}, {Gravity});
+        """
+
+        if "FV" in self.solver:
+            return max_eigenvalue_string_template.format(faceCentre="faceCentre",Zeta=self.Zeta, Gravity=self.Gravity)
+        elif "ADERDG" in self.solver:
+            return max_eigenvalue_string_template.format(faceCentre="volumeX",Zeta=self.Zeta, Gravity=self.Gravity)
+
     
 
     def implementation_of_ncp(self):
-        return """ 
+        implementation_of_ncp_string_template = """ 
         if(tarch::la::greater(Q[0],0.0)){{
             const double ih = 1.0 / Q[0];
             const double Nu = {Nu};
@@ -84,14 +101,14 @@ class Avalanche:
 
             switch (normal) {{
             case 0: // x
-            BTimesDeltaQ[0] = -(volumeH(0) * 0.0);
-            BTimesDeltaQ[1] = -(volumeH(0) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * ux + Q[0] * uxx));
-            BTimesDeltaQ[2] = -(volumeH(0) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uxy + vxx)));
+            {BTimesDeltaQ}[0] = -(volumeH(0) * 0.0);
+            {BTimesDeltaQ}[1] = -(volumeH(0) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * ux + Q[0] * uxx));
+            {BTimesDeltaQ}[2] = -(volumeH(0) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uxy + vxx)));
             break;
             case 1: // y
-            BTimesDeltaQ[0] = -(volumeH(1) * 0.0);
-            BTimesDeltaQ[1] = -(volumeH(1) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uyy + vxy)));
-            BTimesDeltaQ[2] = -(volumeH(1) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * vy + Q[0] * vyy));
+            {BTimesDeltaQ}[0] = -(volumeH(1) * 0.0);
+            {BTimesDeltaQ}[1] = -(volumeH(1) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uyy + vxy)));
+            {BTimesDeltaQ}[2] = -(volumeH(1) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * vy + Q[0] * vyy));
             break;
             }}
         }}
@@ -100,18 +117,23 @@ class Avalanche:
             // std::cout<<"ncp h=0 at t="<<t<<std::endl;
             switch (normal) {{
             case 0: // x
-            BTimesDeltaQ[0] = 0.0;
-            BTimesDeltaQ[1] = 0.0;
-            BTimesDeltaQ[2] = 0.0;
+            {BTimesDeltaQ}[0] = 0.0;
+            {BTimesDeltaQ}[1] = 0.0;
+            {BTimesDeltaQ}[2] = 0.0;
             break;
             case 1: // y
-            BTimesDeltaQ[0] = 0.0;
-            BTimesDeltaQ[1] = 0.0;
-            BTimesDeltaQ[2] = 0.0;
+            {BTimesDeltaQ}[0] = 0.0;
+            {BTimesDeltaQ}[1] = 0.0;
+            {BTimesDeltaQ}[2] = 0.0;
             break;
             }}
         }}
-        """.format(Nu=self.Nu)
+        """
+        if "FV" in self.solver:
+            return implementation_of_ncp_string_template.format(BTimesDeltaQ="BTimesDeltaQ",Nu=self.Nu)
+        elif "ADERDG" in self.solver:
+            return implementation_of_ncp_string_template.format(BTimesDeltaQ="BgradQ",Nu=self.Nu)
+        
 
 
     def implementation_of_sources(self):
