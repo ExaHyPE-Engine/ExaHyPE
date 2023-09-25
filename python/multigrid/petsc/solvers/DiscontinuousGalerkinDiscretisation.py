@@ -11,7 +11,7 @@ from .Solver                                    import Solver
 
 from multigrid.petsc.actionsets.EnumerateDofs             import EnumerateDofs
 from multigrid.petsc.actionsets.InitDofs                  import InitCellDoFs
-from multigrid.petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScCellSolutionOnVerticesBackOntoMesh
+from multigrid.petsc.actionsets.ProjectPETScSolutionOnCellsBackOntoMesh import ProjectPETScSolutionOnCellsBackOntoMesh
 from multigrid.petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMixed
 
 
@@ -99,6 +99,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     observer.use_cell(self._cell_pde_data)
     pass
 
+
   def add_to_plot(self, observer):
     """!
     
@@ -110,31 +111,30 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     """
     observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
       filename       = "solution-" + self._name,
-      cell_unknown   = self._cellDof,
+      cell_unknown   = self._cell_pde_data,
       getter         = "getValue().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_cell   = self._cell_unknowns,
-      guard_predicate              = "true", 
+      number_of_unknows_per_cell   = self.number_of_matrix_entries_per_cell,
+      guard_predicate              = "not marker.isRefined()", 
       ))
 
     observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
       filename       = "rhs-" + self._name,
-      cell_unknown   = self._cellDof,
+      cell_unknown   = self._cell_pde_data,
       getter         = "getRhs().data()",
       description    = "b",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_cell   = self._cell_unknowns,
-      guard_predicate              = "true", 
+      number_of_unknows_per_cell   = self.number_of_matrix_entries_per_cell,
+      guard_predicate              = "not marker.isRefined()", 
       ))
     pass
+
 
   def add_to_create_grid(self, observer):
     observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
     pass
 
-  def add_to_enumerate(self, observer):
-    pass
   
   def add_to_enumerate_and_init_solution(self, observer):
     """!
@@ -157,7 +157,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     pass
 
   def add_to_map_solution_onto_mesh(self, observer):
-    observer.add_action_set( ProjectPETScCellSolutionOnVerticesBackOntoMesh(self) )
+    observer.add_action_set( ProjectPETScSolutionOnCellsBackOntoMesh(self) )
     pass
     
   def add_implementation_files_to_project(self, namespace, output):
@@ -183,23 +183,21 @@ class DiscontinuousGalerkinDiscretisation(Solver):
 
     dictionary = {
         "SOLVER_INCLUDES": "",
-        "MIN_H": self.min_h,
-        "MAX_H": self.max_h,
-        "VERTEX_CARDINALITY": self._vertex_unknowns,
-        "CELL_CARDINALITY"  : self._cell_unknowns,
-        "CELL_DOFS"         : self._cell_dofs,
-        "CELL_DOF_UNKNOWNS" : self.unknowns_per_cell_dof,
-        "FACE_CARDINALITY"  : self._face_unknowns,
-        "FACE_DOFS"         : self._face_dofs,
-        "FACE_DOF_UNKNOWNS" : self.unknowns_per_face_dof,
+        "MIN_H"             : self.min_h,
+        "MAX_H"             : self.max_h,
+#        "CELL_DOFS"         : self._cell_dofs,
+#        "CELL_DOF_UNKNOWNS" : self.unknowns_per_cell_dof,
+#        "FACE_CARDINALITY"  : self._face_unknowns,
+#        "FACE_DOFS"         : self._face_dofs,
+#        "FACE_DOF_UNKNOWNS" : self.unknowns_per_face_dof,
         "POLYNOMIAL_DEGREE":  self.polynomial_degree,
         }
 
     dictionary["MATRICES"] = f"""
-    const tarch::la::Matrix < {self.cellCellMassMatrix.shape[0]}, {self.cellCellMassMatrix.shape[1]}, double >  _cellCellMassMatrix = {self.convertMatrixToInitList(self.cellCellMassMatrix)};
-    const tarch::la::Matrix < {self.cellCellSystemMatrix.shape[0]}, {self.cellCellSystemMatrix.shape[1]}, double >  _cellCellSystemMatrix = {self.convertMatrixToInitList(self.cellCellSystemMatrix)};
-    const tarch::la::Matrix < {self.cellToFaceMatrix.shape[0]}, {self.cellToFaceMatrix.shape[1]}, double >  _cellToFaceMatrix = {self.convertMatrixToInitList(self.cellToFaceMatrix)};
-    const tarch::la::Matrix < {self.FaceFaceMatrix.shape[0]}, {self.FaceFaceMatrix.shape[1]}, double >  _faceFaceMatrix = {self.convertMatrixToInitList(self.FaceFaceMatrix)};
+    const tarch::la::Matrix < {self.cellCellMassMatrix.shape[0]}, {self.cellCellMassMatrix.shape[1]}, double >  _cellCellMassMatrix = {self._convertMatrixToInitList(self.cellCellMassMatrix)};
+    const tarch::la::Matrix < {self.cellCellSystemMatrix.shape[0]}, {self.cellCellSystemMatrix.shape[1]}, double >  _cellCellSystemMatrix = {self._convertMatrixToInitList(self.cellCellSystemMatrix)};
+    const tarch::la::Matrix < {self.cellToFaceMatrix.shape[0]}, {self.cellToFaceMatrix.shape[1]}, double >  _cellToFaceMatrix = {self._convertMatrixToInitList(self.cellToFaceMatrix)};
+    const tarch::la::Matrix < {self.FaceFaceMatrix.shape[0]}, {self.FaceFaceMatrix.shape[1]}, double >  _faceFaceMatrix = {self._convertMatrixToInitList(self.FaceFaceMatrix)};
     """
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

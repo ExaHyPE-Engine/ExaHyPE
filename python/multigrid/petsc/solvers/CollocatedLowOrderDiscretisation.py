@@ -6,11 +6,11 @@ import dastgen2
 
 import os
 
-from .Solver                                    import Solver
-from petsc.actionsets.EnumerateDofs             import EnumerateVertices
-from petsc.actionsets.InitDofs                  import InitVertexDoFs
-from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
-from petsc.actionsets.AssemblePETSCMatrix       import AssemblePetscMatrixOnVertices
+from .Solver                                              import Solver
+from multigrid.petsc.actionsets.EnumerateDofs             import EnumerateDofs
+from multigrid.petsc.actionsets.InitDofs                  import InitVertexDoFs
+from multigrid.petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
+from multigrid.petsc.actionsets.AssemblePETSCMatrix       import AssemblePetscMatrixOnVertices
 
 from abc import abstractmethod
 
@@ -29,30 +29,40 @@ class CollocatedLowOrderDiscretisation(Solver):
   """
   def __init__(self,
                name,
-               number_of_vertex_unknowns,
+               unknowns,
+               dimensions,
                min_h,
                max_h,
-               stencil):
+               cell_system_matrix,
+               cell_mass_matrix,
+               ):
     """!
    
- Test comment (C)
-    
-I wanna see if this one applies to the solver or hte init
-   
+    Collocated low-order (d-linear) Finite Elements 
+       
     """
     super( CollocatedLowOrderDiscretisation, self ).__init__( name,
                                                               min_h,
                                                               max_h
                                                               )
-    self._number_of_vertex_unknowns = number_of_vertex_unknowns
-    self._vertexDof = peano4.datamodel.DaStGen2( name )
-    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(number_of_vertex_unknowns) ) )
-    self._vertexDof.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(number_of_vertex_unknowns) ) )
-    self._vertexDof.data.add_attribute( dastgen2.attributes.Integer( "number" ) )
-    self._vertexDof.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["DoF", "Dirichlet"] ) )
+    self._unknowns  = unknowns
+    self._vertex_pde_data = peano4.datamodel.DaStGen2( name )
+    self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(unknowns) ) )
+    self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(unknowns) ) )
 
-    self.stencil = stencil
+    self.cell_system_matrix = cell_system_matrix
+    self.cell_mass_matrix   = cell_mass_matrix
     pass
+
+
+  def add_to_Peano4_datamodel( self, datamodel, verbose ):
+    super( CollocatedLowOrderDiscretisation, self ).add_to_Peano4_datamodel(datamodel,verbose)
+    datamodel.add_vertex(self._vertex_pde_data)
+  
+  
+  def add_use_statements(self, observer):
+    super( CollocatedLowOrderDiscretisation, self ).add_use_statements(observer)
+    observer.use_vertex( self._vertex_pde_data )
 
 
   def add_to_plot(self, observer):
@@ -66,20 +76,20 @@ I wanna see if this one applies to the solver or hte init
     """
     observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
       filename       = "solution-" + self._name,
-      vertex_unknown = self._vertexDof,
+      vertex_unknown = self._vertex_pde_data,
       getter         = "getValue().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_vertex = self._number_of_vertex_unknowns,
+      number_of_unknows_per_vertex = self._unknowns,
       guard_predicate              = "true", 
       ))
     observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
       filename       = "rhs-" + self._name,
-      vertex_unknown = self._vertexDof,
+      vertex_unknown = self._vertex_pde_data,
       getter         = "getRhs().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_vertex = self._number_of_vertex_unknowns,
+      number_of_unknows_per_vertex = self._unknowns,
       guard_predicate              = "true", 
       ))
     pass
@@ -90,12 +100,6 @@ I wanna see if this one applies to the solver or hte init
     pass
 
   
-  def add_to_enumerate(self, observer):
-    pass
-
-  def add_to_init_petsc(self, observer):
-    pass
-  
   def add_to_enumerate_and_init_solution(self, observer):
     """!
     
@@ -105,8 +109,8 @@ I wanna see if this one applies to the solver or hte init
     to the observer.
     
     """
+    observer.add_action_set( EnumerateDofs(self) )
     observer.add_action_set( InitVertexDoFs(self) ) 
-    observer.add_action_set( EnumerateVertices(self) ) 
     pass
   
   
@@ -115,18 +119,13 @@ I wanna see if this one applies to the solver or hte init
     pass
   
 
+  def add_to_init_petsc(self, observer):
+    pass
+
+
   def add_to_map_solution_onto_mesh(self, observer):
     observer.add_action_set( ProjectPETScSolutionOnVerticesBackOntoMesh(self) )
     pass
-  
-  
-  def add_use_statements(self, observer):
-    observer.use_vertex( self._vertexDof )
-    pass
-
-
-  def add_to_Peano4_datamodel( self, datamodel, verbose ):
-    datamodel.add_vertex(self._vertexDof)
 
 
   def add_implementation_files_to_project(self, namespace, output):
@@ -184,9 +183,37 @@ I wanna see if this one applies to the solver or hte init
     output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
 
+
   @property
-  def number_of_vertex_unknowns(self):
-    return self._number_of_vertex_unknowns
+  def number_of_matrix_entries_per_vertex(self):
+    """!
+    
+    Nothing is associated with the vertex. There's nothing to be done here.
+    
+    """
+    return self._unknowns
+  
+  @property
+  def number_of_matrix_entries_per_face(self):
+    """!
+    
+    In the DG scheme, we have a projection from the left and we have a 
+    projection from the right. These values are proper projections, i.e.
+    they do not carry any semantics. Then we have to solve the Riemann
+    problem, and need one more unknown to store the outcome of that one.
+    
+    """
+    return 0
+  
+  @property
+  def number_of_matrix_entries_per_cell(self):
+    """!
+    
+    This is the actual unknowns per cell
+    
+    """
+    return 0
+
   
   def get_solver_repository_snippets(self):
     # nothing extra needed

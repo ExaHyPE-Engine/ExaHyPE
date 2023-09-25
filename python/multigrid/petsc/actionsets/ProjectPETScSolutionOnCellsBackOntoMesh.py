@@ -59,7 +59,7 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
-    self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
+    self.d["CELL_CARDINALITY"]       = solver.number_of_matrix_entries_per_cell
 
 
 

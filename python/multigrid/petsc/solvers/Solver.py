@@ -132,6 +132,13 @@ vertex for the first time of a mesh traversal, e.g.
 
   @abstractmethod
   def add_to_init_petsc(self, observer):
+    """!
+    
+    Add whatever action set you want to use here. I am not sure if there is a 
+    real grid traversal tied to this step. So maybe nothing is called. Has to 
+    be checked. Anyway, most solvers leave this one blank.
+    
+    """
     assert False, "should not be called"
   
   
@@ -259,13 +266,19 @@ Return the name of the object that will be created for this solver.
 #
 #    return points, weights, coeffs
 
-#  def convertMatrixToInitList(self, matrix):
-#    output = "{ " + str(matrix[0,0])
-#    for el in matrix.flatten():
-#      output += f", {str(el)}"
-#    output += "}"
-#    return output
-
+  def _convertMatrixToInitList(self, matrix):
+    """!
+    
+    Simple conversion routine which takes a Python matrix and converts it into 
+    a C++ initialiser list. Is used by subclasses to construct the respective
+    dictionaries for their solvers.
+    
+    """
+    output = "{ " + str(matrix[0,0])
+    for el in matrix.flatten():
+      output += f", {str(el)}"
+    output += "}"
+    return output
 
   @property
   def number_of_matrix_entries_per_vertex(self):

@@ -30,7 +30,7 @@ assert args.degree == 1, "not ready for degree 2 yet"
 assert args.dimensions == 2, "not ready for 3d yet"
 
 project = multigrid.petsc.Project(project_name = "hybridPoisson", 
-                                  namespace = [ "benchmarks", "multigrid", "petsc", "hp" ]
+                                  namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
                                   ) 
 
                         
