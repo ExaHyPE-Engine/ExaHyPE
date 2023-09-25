@@ -7,7 +7,7 @@ import peano4
 import exahype2
 
 dimensions                = 2
-auxuliary_variables       = 13
+auxiliary_variables       = 13
 cell_size                 = 0.075
 amr_levels                = 3
 patch_size                = 3
@@ -57,7 +57,7 @@ build_modes = {
   "Stats":peano4.output.CompileMode.Stats,
   "Debug":peano4.output.CompileMode.Debug,
 }
-build_mode = "Release"
+build_mode = "Debug"
 
 storage_types = {
   "CallStack":exahype2.solvers.fv.Storage.CallStack,
@@ -138,14 +138,14 @@ solver_name = "SaintVenantSolver" + str(args.scenario) + str(solver_type)
 if args.use_gpu:
   solver_name += "GPU"
 
-
+unknowns = args.dim + 1 
 my_solver = None
 if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
   my_solver = solvers[solver_type](
     name=solver_name,
     patch_size=args.patch_size,
     unknowns=args.dim + 1, # [h, hu, hv]
-    auxiliary_variables=auxuliary_variables,
+    auxiliary_variables=auxiliary_variables,
     max_volume_h=args.max_cell_size,
     min_volume_h=args.max_cell_size * 3.0**(-args.amr_levels),
     time_step_relaxation=0.5,
@@ -172,7 +172,7 @@ elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
     name=solver_name,
     patch_size=args.patch_size,
     unknowns=args.dim + 1, # [h, hu, hv]
-    auxiliary_variables=auxuliary_variables,
+    auxiliary_variables=auxiliary_variables,
     max_volume_h=args.max_cell_size,
     min_volume_h=min_h,
     normalised_time_step_size=admissible_time_step_size,
@@ -186,7 +186,7 @@ elif solver_type in rkdg_rusanov_solvers and "Adaptive" in solver_type:
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
     unknowns                  = args.dim + 1, # [h, hu, hv]
-    auxiliary_variables       = auxuliary_variables,
+    auxiliary_variables       = auxiliary_variables,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = args.max_cell_size * 3.0**(-args.amr_levels),
     time_step_relaxation      = 0.5
@@ -202,18 +202,19 @@ elif solver_type in rkdg_rusanov_solvers and "Fixed" in solver_type:
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
     unknowns                  = args.dim + 1, # [h, hu, hv,]
-    auxiliary_variables       = auxuliary_variables,
+    auxiliary_variables       = auxiliary_variables,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = min_h,
     time_step_size            = admissible_time_step_size,
   )
 
 elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
+  min_h = args.max_cell_size * 3.0**(-args.amr_levels)
   my_solver = solvers[solver_type](
     name = solver_name,
     order = 3,
-    unknowns = args.dim + 1
-    auxiliary_variables = auxuliary_variables,
+    unknowns = args.dim + 1,
+    auxiliary_variables = auxiliary_variables,
     min_cell_h = min_h,
     max_cell_h = args.max_cell_size,
     time_step_relaxation = 0.5,
@@ -232,12 +233,12 @@ user_includes = """
 preprocess_reconstructed_patch = """
   ::exahype2::saintvenant::extrapolateHalo(oldQWithHalo, {patch_size}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables} );
   ::exahype2::saintvenant::calculateDerivatives(oldQWithHalo, {patch_size}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables} );
-  """.format(patch_size=patch_size, NumberOfUnknowns=args.dim + 1, NumberOfAuxiliaryVariables=13)
+  """.format(patch_size=patch_size, NumberOfUnknowns=args.dim + 1, NumberOfAuxiliaryVariables=auxiliary_variables)
 
 
 if args.scenario == "Avalanche":
   from avalanche import Avalanche
-  my_scenario = Avalanche(args.solver)
+  my_scenario = Avalanche(solver=args.solver, unknowns=unknowns, auxiliary_variables=auxiliary_variables)
   if "FV" in solver_type:
     my_solver.add_user_solver_includes(user_includes)
     my_solver._preprocess_reconstructed_patch = preprocess_reconstructed_patch
@@ -261,6 +262,7 @@ if args.scenario == "Avalanche":
       flux                  = my_scenario.implementation_of_flux(),
       ncp                   = my_scenario.implementation_of_ncp(),
       source_term           = my_scenario.implementation_of_sources(),
+      eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
       refinement_criterion  = my_scenario.implementation_of_refinement_criterion()   
     )
 
@@ -325,7 +327,7 @@ import subprocess
 output_patch_file = "''' + str(solution_dir) + '''/solution-''' + str(solver_name) + '''.peano-patch-file"
 if os.path.isfile(output_patch_file):
     subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
+        "python3", "../../../../python/peano4/visualisation/render.py",
         str(output_patch_file),
     ])
 ''')

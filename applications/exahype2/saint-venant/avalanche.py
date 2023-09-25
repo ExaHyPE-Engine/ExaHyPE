@@ -4,7 +4,9 @@ class Avalanche:
 
     
 
-    def __init__(self, solver="FVRusanovGlobalAdaptive", Zeta=23.0, Zeta1=21.0, Zeta2=30.7, Zeta3=22.2, Beta=0.136, FrictionLengthScale=0.00065, Gravity=9.81):
+    def __init__(self, unknowns, auxiliary_variables, solver="FVRusanovGlobalAdaptive", Zeta=23.0, Zeta1=21.0, Zeta2=30.7, Zeta3=22.2, Beta=0.136, FrictionLengthScale=0.00065, Gravity=9.81):
+        self.unknowns = unknowns
+        self.auxiliary_variables = auxiliary_variables
         self.solver = solver
         self.Pi = math.pi
         self.Zeta = Zeta*self.Pi/180
@@ -23,7 +25,7 @@ class Avalanche:
 
     def implementation_of_initial_conditions(self):
         initial_condition_string_template =  """
-        const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {0.15,1.0};
+        const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{0.15,1.0}};
         const bool nearCentre = tarch::la::norm2({volumeCentre}-granularMaterialCenter) < 0.1;
 
         Q[0] = (nearCentre ? 0.008 : 0.0 ); // Water height (h)
@@ -50,29 +52,30 @@ class Avalanche:
     
     def implementation_of_boundary_conditions(self):
         return """
-        ::exahype2::saintvenant::boundaryConditions(Qinside, Qoutside, faceCentre, t, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-        """
+        ::exahype2::saintvenant::boundaryConditions(Qinside, Qoutside, faceCentre, t, normal, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables});
+        """.format(NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables)
+    
     def implementation_of_flux(self):
 
         flux_string_template = """ 
-        ::exahype2::saintvenant::flux(Q, {faceCentre}, t, dt, normal, F, NumberOfUnknowns, NumberOfAuxiliaryVariables,{Zeta}, {Gravity});
+        ::exahype2::saintvenant::flux(Q, {faceCentre}, t, dt, normal, F, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables},{Zeta}, {Gravity});
         """
         
         if "FV" in self.solver:
-            return flux_string_template.format(faceCentre="faceCentre",Zeta=self.Zeta, Gravity=self.Gravity)
+            return flux_string_template.format(faceCentre="faceCentre", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables,Zeta=self.Zeta, Gravity=self.Gravity)
         elif "ADERDG" in self.solver:
-            return flux_string_template.format(faceCentre="volumeX",Zeta=self.Zeta, Gravity=self.Gravity)
+            return flux_string_template.format(faceCentre="volumeX", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables, Zeta=self.Zeta, Gravity=self.Gravity)
         
     
     def implementation_of_max_eigenvalue(self):
         max_eigenvalue_string_template =  """
-        return ::exahype2::saintvenant::maxEigenvalue(Q, {faceCentre}, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, {Zeta}, {Gravity});
+        return ::exahype2::saintvenant::maxEigenvalue(Q, {faceCentre}, t, dt, normal, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}, {Zeta}, {Gravity});
         """
 
         if "FV" in self.solver:
-            return max_eigenvalue_string_template.format(faceCentre="faceCentre",Zeta=self.Zeta, Gravity=self.Gravity)
+            return max_eigenvalue_string_template.format(faceCentre="faceCentre", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables,Zeta=self.Zeta, Gravity=self.Gravity)
         elif "ADERDG" in self.solver:
-            return max_eigenvalue_string_template.format(faceCentre="volumeX",Zeta=self.Zeta, Gravity=self.Gravity)
+            return max_eigenvalue_string_template.format(faceCentre="volumeX", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables, Zeta=self.Zeta, Gravity=self.Gravity)
 
     
 
@@ -81,6 +84,7 @@ class Avalanche:
         if(tarch::la::greater(Q[0],0.0)){{
             const double ih = 1.0 / Q[0];
             const double Nu = {Nu};
+            const int NumberOfUnknowns = {NumberOfUnknowns};
 
             // Partial Derivatives of unknowns
             // Retrieving true value from average value and deltaQ
@@ -130,9 +134,9 @@ class Avalanche:
         }}
         """
         if "FV" in self.solver:
-            return implementation_of_ncp_string_template.format(BTimesDeltaQ="BTimesDeltaQ",Nu=self.Nu)
+            return implementation_of_ncp_string_template.format(BTimesDeltaQ="BTimesDeltaQ",Nu=self.Nu, NumberOfUnknowns=self.unknowns)
         elif "ADERDG" in self.solver:
-            return implementation_of_ncp_string_template.format(BTimesDeltaQ="BgradQ",Nu=self.Nu)
+            return implementation_of_ncp_string_template.format(BTimesDeltaQ="BgradQ",Nu=self.Nu, NumberOfUnknowns=self.unknowns)
         
 
 
@@ -188,13 +192,14 @@ class Avalanche:
 
             if(tarch::la::equals(ubar,0.0)){{
                 // std::cout<<"sourceTerm h>0 and ubar=0 at t="<<t<<std::endl;
+                const int NumberOfUnknowns = {NumberOfUnknowns};
                 const double hx = Q[NumberOfUnknowns + h_x]/volumeH(0);
                 const double hy = Q[NumberOfUnknowns + h_y]/volumeH(1);
                 const tarch::la::Vector<Dimensions, double> frictionVector = {{tan(Zeta)-hx,-hy}};
                 const double frictionVectorMagnitude = tarch::la::norm2(frictionVector);
-                if(tarch::la::greater(Mu,frictionVectorMagnitude)){
+                if(tarch::la::greater(Mu,frictionVectorMagnitude)){{
                     Mu = frictionVectorMagnitude;
-                }
+                }}
                 S[0] = 0.0;
                 S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (frictionVector(0)/frictionVectorMagnitude) * Q[0] * Gravity * cos(Zeta);
                 S[2] = -Mu * (frictionVector(1)/frictionVectorMagnitude) * Q[0] * Gravity * cos(Zeta);
@@ -213,7 +218,7 @@ class Avalanche:
             S[1] = 0.0;
             S[2] = 0.0;
         }}
-        """.format(Gravity=self.Gravity, Zeta=self.Zeta, Zeta1=self.Zeta1, Zeta2=self.Zeta2, Zeta3=self.Zeta3, Beta=self.Beta, FrictionLengthScale=self.FrictionLengthScale, Mu1=self.Mu1, Mu2=self.Mu2, Mu3=self.Mu3, Nu=self.Nu, Hstart=self.Hstart, Hstop=self.Hstop)
+        """.format(Gravity=self.Gravity, Zeta=self.Zeta, Zeta1=self.Zeta1, Zeta2=self.Zeta2, Zeta3=self.Zeta3, Beta=self.Beta, FrictionLengthScale=self.FrictionLengthScale, Mu1=self.Mu1, Mu2=self.Mu2, Mu3=self.Mu3, Nu=self.Nu, Hstart=self.Hstart, Hstop=self.Hstop, NumberOfUnknowns=self.unknowns)
 
 
     def implementation_of_refinement_criterion(self):
