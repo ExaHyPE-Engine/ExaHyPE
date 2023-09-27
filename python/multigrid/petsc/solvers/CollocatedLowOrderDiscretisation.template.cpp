@@ -1,15 +1,4 @@
 #include "{{CLASSNAME}}.h"
-constexpr double pi = 3.14159265358979323846264338328;
-
-double initRhs(
-  const tarch::la::Vector<Dimensions, double>&  x
-){
-  double rhs = Dimensions * pi * pi;
-  for (int i = 0; i < Dimensions; i++){
-    rhs *= std::sin( pi * x[i] );
-  }
-  return rhs;  
-}
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
@@ -33,6 +22,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::vertexInit(
   const tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
   {% endif %}
 ) {
-  value = 0.0;
-  rhs = initRhs(x);
+  // @todo add your stuff here
 }
+
+
+{% if CELL_RHS_MATRIX==[] %}
+tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRhsMatrix(
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize
+) {
+  // @todo add your stuff here
+}
+{% endif %}
+
+
+{% if CELL_LHS_MATRIX==[] %}
+tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLhsMatrix(
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize
+) {
+  // @todo add your stuff here
+}
+{% endif %}

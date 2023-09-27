@@ -59,6 +59,29 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       {% endif %}
     ) = 0;
 
+    /**
+     * Called after assembly is complete.
+     *
+     * Usually means we can now actually compute the local-global mapping. Up
+     * to this point, we normally know only the thread-local local-global
+     * indices, which we still have to shift and combine with all the other
+     * mappings around.
+     */
+    void finishAssembly();
+
+    virtual tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > getLhsMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    )
+    {% if CELL_LHS_MATRIX==[] %} = 0 {% endif %};
+
+
+    virtual tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > getRhsMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    )
+    {% if CELL_RHS_MATRIX==[] %} = 0 {% endif %};
+
     ::petsc::LocalToGlobalMap&  getLocalToGlobalMap();
   protected:
     static tarch::logging::Log  _log;
