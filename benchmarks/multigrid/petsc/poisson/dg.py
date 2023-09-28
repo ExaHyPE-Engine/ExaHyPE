@@ -29,7 +29,7 @@ args = parser.parse_args()
 assert args.degree == 1, "not ready for degree 2 yet"
 assert args.dimensions == 2, "not ready for 3d yet"
 
-project = multigrid.petsc.Project(project_name = "hybridPoisson", 
+project = multigrid.petsc.Project(project_name = "DG", 
                                   namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
                                   ) 
 
@@ -40,7 +40,7 @@ matrices = multigrid.matrixgenerators.GaussLobattoMatrixGenerator(polynomial_deg
                                                                   unknowns_per_face_dof = 1,  # for DG, this has to equal unknowns_per_cell_dof
                                                                   )
                         
-solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "Poisson",
+solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
                                                                      unknowns             = 1,                      # unknowns_per_cell_dof,
                                                                      dimensions           = args.dimensions,

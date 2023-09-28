@@ -27,7 +27,7 @@ args = parser.parse_args()
 
 assert args.dimensions == 2, "not ready for 3d yet"
 
-project = multigrid.petsc.Project(project_name = "hybridPoisson", 
+project = multigrid.petsc.Project(project_name = "HybridPoisson", 
                                   namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
                                   ) 
 
@@ -36,13 +36,13 @@ matrices = multigrid.matrixgenerators.DLinear(dimensions              = args.dim
                                               unknowns_per_vertex_dof = 1,
                                               )
                         
-solver = multigrid.petsc.solvers.CollocatedLowOrderDiscretisation(name                 = "Poisson",
+solver = multigrid.petsc.solvers.CollocatedLowOrderDiscretisation(name                 = "CollocatedPoisson",
                                                                   unknowns             = 1,                      # unknowns_per_cell_dof,
                                                                   dimensions           = args.dimensions,
                                                                   min_h                = args.meshsize,
                                                                   max_h                = args.meshsize,
-                                                                  cell_system_matrix   = matrices.getCellSystemMatrixForLaplacian(),
-                                                                  cell_mass_matrix     = matrices.getCellIdentityMatrix(),
+                                                                  cell_lhs_matrix      = matrices.getCellSystemMatrixForLaplacian(),
+                                                                  cell_rhs_matrix      = matrices.getCellIdentityMatrix(),
                                                                   )
 
 project.add_solver( solver )
