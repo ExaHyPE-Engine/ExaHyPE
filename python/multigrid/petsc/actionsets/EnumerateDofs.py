@@ -15,82 +15,70 @@ class EnumerateDofs(ActionSet):
   
   
   TemplateEnumerateVertex = """
-  // @todo Not nice. Neither fworking for 3d nor using the tarch::la nor using the constants.h
-    auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & vertex ) -> bool{
-      bool xIsOnBoundary = ( vertex[0] < 1E-10 or  vertex[0] > 1 - 1E-10);
-      bool yIsOnBoundary = ( vertex[1] < 1E-10 or  vertex[1] > 1 - 1E-10);
-      return (xIsOnBoundary and yIsOnBoundary);
+    auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & x ) -> bool{
+      bool isOnBoundary = false;
+      for (int d=0; d<Dimensions; d++) {
+        isOnBoundary |= tarch::la::smallerEquals( x(d), DomainOffset(d) );
+        isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
+      }
+      return isOnBoundary;
     };
   
   if ( not marker.willBeRefined() ) { 
-    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-
     switch ( isOnBoundary(marker.x()) ){
       case true:
-        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Dirichlet );
+        fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Boundary );
         break;
       case false:
-        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::DoF );
+        fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior );
         break;
     }
 
     {% if VERTEX_CARDINALITY>0 %}
-    fineGridVertex{{SOLVER_NAME}}.setNumber( _localMap.reserveIndex( {{VERTEX_CARDINALITY}} ) );
+    fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localVertexMap.reserveIndex( {{VERTEX_CARDINALITY}} ) );
     {% else %}
-    fineGridVertex{{SOLVER_NAME}}.setNumber( -1 ) );
+    fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
     {% endif %}
-    
-    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
 """
 
   
   TemplateEnumerateFace = """
   auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double >&  x) -> bool {
-    for (int i=0; i<Dimensions; i++){
-    // @todo Not nice. Should use the greaterEquals macro from tarch::la, and also should use the constants from Constants.h
-      if ( x[i] < 1E-10 or x[i] > 1 - 1E-10 )
-        return true;
-    }
-    return false;
+      bool isOnBoundary = false;
+      for (int d=0; d<Dimensions; d++) {
+        isOnBoundary |= tarch::la::smallerEquals( x(d), DomainOffset(d) );
+        isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
+      }
+      return isOnBoundary;
   };
   
   if ( not marker.willBeRefined()  ) { 
-    logTraceIn( "touchFaceFirstTime(...)---InitialCondition" );
-
     switch ( isOnBoundary(marker.x()) ){
       case true:
-        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Dirichlet );
+        fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Boundary );
         break;
       case false:
-        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::DoF );
+        fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Interior );
         break;
     }
 
     {% if FACE_CARDINALITY>0 %}
-    fineGridFace{{SOLVER_NAME}}.setNumber( _localMap.reserveIndex( {{FACE_CARDINALITY}} ) );
+    fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
     {% else %}
-    fineGridFace{{SOLVER_NAME}}.setNumber( -1 ) );
+    fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
     {% endif %}
-    
-
-    logTraceOut( "touchFaceFirstTime(...)---InitialCondition" );
   } 
 """
 
   
   TemplateEnumerateCell = """
   if ( not marker.willBeRefined()  ) { 
-    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-
     {% if CELL_CARDINALITY>0 %}
-    fineGridCell{{SOLVER_NAME}}.setNumber( _localMap.reserveIndex( {{CELL_CARDINALITY}} ) );
+    fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localCellMap.reserveIndex( {{CELL_CARDINALITY}} ) );
     {% else %}
-    fineGridCell{{SOLVER_NAME}}.setNumber( -1 ) );
+    fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
     {% endif %}
-    
-
-    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
 """
 
