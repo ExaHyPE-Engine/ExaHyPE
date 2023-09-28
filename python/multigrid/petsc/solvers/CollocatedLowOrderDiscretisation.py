@@ -26,32 +26,18 @@ class AssemblePetscMatrixOnVertices(ActionSet):
   I am aware the code below is very bad. Much of it needs changing.
   But for now it stays while development on other projects continues
   """
-  TemplateInitCell = """
+  TemplateTouchCellFirstTime = """
   //init a vector to collect global indices, and recall their position in the 
   //enumeration so we can apply the stencil correctly
   std::vector<int> enumeratedIndices(TwoPowerD, -1);
 
-  // hard-code some factors that we divide by when entering values into our matrix
-  // if two vertices match, then we divide by 4
-  // if they're adjacent, divide by 2
-  // if opposite, divide by 1
-  static constexpr double sameVertex     = 4.0;
-  static constexpr double adjacentVertex = 2.0;
-  static constexpr double oppositeVertex = 1.0;
-
-  for (int i=0; i<TwoPowerD ; i++){
-    if (fineGridVertices{{SOLVER_NAME}}(i).getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
-      //TODO work out why using marker.willBeRefined() here causes only 1 iteration to be taken
-      // whereas bodging to say fineGridVertices{{SOLVER_NAME}}(i).getNumber() < repositories::getTotalDegreesOfFreedom()
-      // causes it to do 84 iters
-      and not marker.willBeRefined()
-    ) {
+  for (int i=0; i<TwoPowerD ; i++) {
+    if (fineGridVertices{{SOLVER_NAME}}PETScData(i).getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
       //get a global index
-      std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertices{{SOLVER_NAME}}(i).getNumber());
+      std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertices{{SOLVER_NAME}}PETScData(i).getUnknownBaseNumber());
       int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
       enumeratedIndices[i] = globalIndex;
     }
-
   }
 
   //next, loop twice over TwoPowerD, so we can correctly fill the petsc matrix.
@@ -64,86 +50,29 @@ class AssemblePetscMatrixOnVertices(ActionSet):
   */
   // this geometry is crucial to getting the correct entries from the stencil
 
-  double h2 = marker.h()[0] * marker.h()[0];
-  double matrixEntry;
-
-
-
-  for (int i=0; i<TwoPowerD; i++){
-    for (int j=0; j<TwoPowerD; j++){
-    if (enumeratedIndices[i] != -1 and enumeratedIndices[j] != -1){
-      if (i == j){
-        //hardcode the index, what we want is the middle of the matrix
-        matrixEntry = _stencil(1,1) / sameVertex / h2;
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], matrixEntry);
-        assertion(matrixEntry == 2.0/3/h2);
-
+  for (int i=0; i<TwoPowerD; i++) {
+    for (int j=0; j<TwoPowerD; j++) {
+      if (enumeratedIndices[i] != -1 and enumeratedIndices[j] != -1) {
+        auto lhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
+        auto rhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
+ 
+        repositories::instanceOfPetsc.incrementDoubleAtIndexij(
+          enumeratedIndices[i], 
+          enumeratedIndices[j], 
+          lhsMatrixEntry(enumeratedIndices[i], enumeratedIndices[j])
+        );
       }
-
-      // if they add up to 3, then they must be opposites
-      else if (i + j == 3){
-        if(i==0){
-          //we want the top right entry
-          matrixEntry = _stencil(0,2) / oppositeVertex / h2;
-        }
-        if(i==1){
-          //top left
-          matrixEntry = _stencil(0,0) / oppositeVertex / h2;
-        }
-        if(i==2){
-          //bottom right
-          matrixEntry = _stencil(2,2) / oppositeVertex / h2;          
-        }
-        if(i==3){
-          //bottom left
-          matrixEntry = _stencil(2,0) / oppositeVertex / h2;
-        }
-
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], matrixEntry);
-        assertion(matrixEntry == -1.0/3/h2);
-      }
-
-      //final two cases
-      else{
-        if( abs(i-j)==2 ){
-          if (i>j){
-            //look up
-            matrixEntry = _stencil(0,1) / adjacentVertex / h2;
-          }
-          else if(i<j){
-            //look down
-            matrixEntry = _stencil(2,1) / adjacentVertex / h2;
-          }
-        }
-
-        else{
-          if (i<j){
-            //look to the right
-            matrixEntry = _stencil(0,2) / adjacentVertex / h2;
-          }
-          if(i>j){
-            //look to the left
-            matrixEntry = _stencil(0,0) / adjacentVertex / h2;
-          }
-        }
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(enumeratedIndices[i], enumeratedIndices[j], matrixEntry);    
-        assertion(matrixEntry==  -1.0/6/h2);
-      }
-    }
-
     }
   }
   
   """
 
-  TemplateInitVertex="""
+  TemplateTouchVertexFirstTime="""
   //here we send the value, rhs from the mesh to petsc
 
-  if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet
-      and not marker.willBeRefined()
-  ){
+  if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
     //first, get global index
-    std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}.getNumber());
+    std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
 
     //get the val, rhs that was present in the mesh
@@ -200,7 +129,7 @@ Provide C++ code snippet for peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX
 Provide C++ code snippet for peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME  
   
 Only touchVertexFirstTime is an event where this action set actually
-does something: It inserts the template TemplateInitVertex and 
+does something: It inserts the template TemplateTouchVertexFirstTime and 
 replaces it with entries from the dictionary. The latter is befilled
 in init().
 
@@ -210,10 +139,10 @@ appropriate template into each.
     """
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
+      result = jinja2.Template(self.TemplateTouchCellFirstTime).render(**self.d)
       pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.TemplateInitVertex).render(**self.d)
+      result = jinja2.Template(self.TemplateTouchVertexFirstTime).render(**self.d)
       pass 
     return result
 
@@ -255,15 +184,14 @@ Consult petsc.Project for details
 #include "tarch/la/Matrix.h"
 """
 
-#  def get_attributes(self):
-#    """!
-#    
-#    
-#    """
-#    return f"""
-#  int _spacetreeId;    
-#  const tarch::la::Matrix<3,3,double> _stencil = {self.d["STENCIL"]};
-#"""
+  def get_attributes(self):
+    """!
+    
+    
+    """
+    return f"""
+  int _spacetreeId;    
+"""
       
   def get_constructor_body(self):
     """!
