@@ -71,17 +71,22 @@ class DLinear(MatrixGenerator):
     needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
     so normalise by h
     '''
-    dim    = self._cell_dofs * self.unknowns_per_vertex_dof
-    output = np.zeros((dim,dim))
-    for i in range( self._cell_dofs ):
-      for j in range( self._cell_dofs ):
-        for k in range( self.unknowns_per_vertex_dof     ):
-          pass
-          # They are all the same, but they don't have to be!
-          # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
-          #output[3*i+1, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # phi_x-u coupling
-          #output[3*i+2, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # phi_y-u coupling
-          #output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
-          #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
-    return output
+    #dim    = self._cell_dofs * self.unknowns_per_vertex_dof
+    #output = np.zeros((dim,dim))
+    #for i in range( self._cell_dofs ):
+    #  for j in range( self._cell_dofs ):
+    #    for k in range( self.unknowns_per_vertex_dof     ):
+    #      pass
+    #      # They are all the same, but they don't have to be!
+    #      # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
+    #      #output[3*i+1, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # phi_x-u coupling
+    #      #output[3*i+2, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # phi_y-u coupling
+    #      #output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
+    #      #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
+    #return output
+    return [ [ 2.0/3.0,   -0.5/3.0,   -0.5/3.0,   -1.0/3.0],
+             [-0.5/3.0,    2.0/3.0,   -1.0/3.0,   -0.5/3.0],
+             [-0.5/3.0,   -1.0/3.0,    2.0/3.0,   -0.5/3.0],
+             [-1.0/3.0,   -0.5/3.0,   -0.5/3.0,    2.0/3.0]
+           ]
   
