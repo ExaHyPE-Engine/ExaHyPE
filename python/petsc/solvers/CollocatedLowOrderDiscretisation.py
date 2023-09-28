@@ -189,7 +189,9 @@ I wanna see if this one applies to the solver or hte init
     return self._number_of_vertex_unknowns
   
   def get_solver_repository_snippets(self):
-    # nothing extra needed
+    '''
+    need to define functions that get 
+    '''
     header="""
 
 """
@@ -206,6 +208,20 @@ int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom()
   result += {{SOLVER[1]}}.getLocalToGlobalMap().getTotalNumberOfIndices();
   {% endfor %}
   return result;
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalMatrixRows()
+{
+  //nothing fancy here. we can just return the 
+  //total number of dofs
+  return getTotalNumberOfDegreesOfFreedom();
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalMatrixCols()
+{
+  //nothing fancy here. we can just return the 
+  //total number of dofs
+  return getTotalNumberOfDegreesOfFreedom();
 }
 """
     return header, cpp

@@ -34,15 +34,15 @@ namespace {{N}} {
     
     void computeLocalToGlobalMapsForAllSolvers();
 
-    /**
-    * this name is a little outdated.
-    * should this be vertexDofs or should its function be altered?
-    */
     int getTotalNumberOfDegreesOfFreedom();
     
     /**
-    * for now, use this to count the total number of faces
+    * these functions are needed in the main. so we 
+    * declare them here and define them in the 
+    * solver-specific snippets
     */
+    int getGlobalMatrixRows();
+    int getGlobalMatrixCols();
     
     /**
     * use this snippet to insert something project-specific. 
