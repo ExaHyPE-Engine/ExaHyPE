@@ -19,12 +19,12 @@ def convertStencilToElementMatrix2d(stencil):
   TwoPowerD  = 2 ** 2
   result     = np.zeros((TwoPowerD, TwoPowerD))
 
-  #replicating dfor2(i)
   AAi = 0
   BBi = 0
   AAj = 0
   BBj = 0
 
+  #replicating dfor2(i)
   for iScalar in range(TwoPowerD):
     i    = [0 for _ in range(Dimensions)]
     i[0] = AAi
@@ -32,6 +32,7 @@ def convertStencilToElementMatrix2d(stencil):
     AAi  = int(not AAi)
     BBi  = int( not( AAi ^ BBi ) )
 
+    #replicating dfor2(j)
     for jScalar in range(TwoPowerD):
       j    = [0 for _ in range(Dimensions)]
       j[0] = AAj
