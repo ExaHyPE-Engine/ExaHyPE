@@ -10,7 +10,7 @@ import os
 from .Solver                                    import Solver
 
 from multigrid.petsc.actionsets.EnumerateDofs             import EnumerateDofs
-from multigrid.petsc.actionsets.InitDofs                  import InitCellDoFs
+from multigrid.petsc.actionsets.InitVertexDofs                  import InitCellDoFs
 from multigrid.petsc.actionsets.ProjectPETScSolutionOnCellsBackOntoMesh import ProjectPETScSolutionOnCellsBackOntoMesh
 from multigrid.petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMixed
 

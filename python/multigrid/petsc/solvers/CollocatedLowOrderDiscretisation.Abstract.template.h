@@ -9,10 +9,8 @@
 #pragma once
 
 
-{{SOLVER_INCLUDES}}
-
-
 #include "tarch/la/Vector.h"
+#include "tarch/la/Matrix.h"
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/accelerator/accelerator.h"
@@ -22,6 +20,9 @@
 #include "petsc/LocalToGlobalMap.h"
 
 #include "Constants.h"
+
+
+{{SOLVER_INCLUDES}}
 
 
 {% for item in NAMESPACE -%}

@@ -24,7 +24,7 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
   static tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > result = {
       {{CELL_LHS_MATRIX[0]| join(", ")}}
       {% for ROW in CELL_LHS_MATRIX[1:] %}
-        ,{{ROW | join(", ")}} {% if ROW!=CELL_LHS_MATRIX[-1] %},{% endif %}
+        ,{{ROW | join(", ")}}
       {% endfor %}
   };
   return result;

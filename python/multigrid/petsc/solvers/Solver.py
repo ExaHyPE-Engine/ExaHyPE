@@ -93,12 +93,13 @@ vertex for the first time of a mesh traversal, e.g.
     self._face_petsc_data   = peano4.datamodel.DaStGen2( name + "PETScData" )
     self._cell_petsc_data   = peano4.datamodel.DaStGen2( name + "PETScData" )
     
-    self._vertex_petsc_data.data.add_attribute( dastgen2.attributes.Integer( "unknown_base_number" ) )
-    self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Integer( "unknown_base_number" ) )
-    self._cell_petsc_data.data.add_attribute(   dastgen2.attributes.Integer( "unknown_base_number" ) )
+    self._vertex_petsc_data.data.add_attribute( dastgen2.attributes.Integer( "unknownBaseNumber" ) )
+    self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Integer( "unknownBaseNumber" ) )
+    self._cell_petsc_data.data.add_attribute(   dastgen2.attributes.Integer( "unknownBaseNumber" ) )
 
-    self._vertex_petsc_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
-    self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior"] ) )
+    self._vertex_petsc_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse"] ) )
+    self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse"] ) )
+    self._cell_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Interior", "Coarse"] ) )
     pass
     
     
@@ -234,8 +235,11 @@ Return the name of the object that will be created for this solver.
   @abstractmethod
   def get_solver_repository_snippets(self):
     """!
-    returns a snippet to go into the header
-    and another to go into the cpp
+    
+    Add instructions to the global repository implementations
+    
+    Returns a snippet to go into the header and another to go into the cpp.
+    
     """
     header = """ """
     cpp    = """ """
@@ -292,3 +296,14 @@ Return the name of the object that will be created for this solver.
   def number_of_matrix_entries_per_cell(self):
     raise NotImplementedError
 
+  @abstractmethod
+  def create_readme_descriptor(self):
+      """!
+      
+      Should really be abstract and properly be initialised
+      
+      @todo Has to be implemented properly, i.e. should at least report on the
+            type and the name of the solver
+            
+      """
+      return "Yet to be written"

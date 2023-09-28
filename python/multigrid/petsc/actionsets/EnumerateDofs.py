@@ -39,7 +39,13 @@ class EnumerateDofs(ActionSet):
     {% else %}
     fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
     {% endif %}
-  } 
+  }
+  else {
+    fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+    {% if VERTEX_CARDINALITY>0 %}
+    fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
+    {% endif %}
+  }
 """
 
   
@@ -69,17 +75,30 @@ class EnumerateDofs(ActionSet):
     fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
     {% endif %}
   } 
+  else {
+    fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+    {% if FACE_CARDINALITY>0 %}
+    fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
+    {% endif %}
+  }
 """
 
   
   TemplateEnumerateCell = """
   if ( not marker.willBeRefined()  ) { 
+    fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Interior );
     {% if CELL_CARDINALITY>0 %}
     fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localCellMap.reserveIndex( {{CELL_CARDINALITY}} ) );
     {% else %}
     fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
     {% endif %}
   } 
+  else {
+    fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+    {% if CELL_CARDINALITY>0 %}
+    fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
+    {% endif %}
+  }
 """
 
   
@@ -92,7 +111,7 @@ class EnumerateDofs(ActionSet):
 
   def __init__(self,
                solver):
-    """!
+    """!A
     
 Enumerate vertex-associated degrees of freedom
     

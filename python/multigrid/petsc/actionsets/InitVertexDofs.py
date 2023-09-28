@@ -25,39 +25,20 @@ the solver in the first place. This happens in get_includes().
   
   """
   TemplateInitVertex = """
-
-
-  if ( not marker.willBeRefined() ) { 
-    logTraceIn( "touchVertexFirstTime(...)---InitialCondition" );
-    
-    //give the vertices a type, if they won't be refined 
-    switch ( isOnBoundary(marker.x()) ){
-      case true:
-        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Dirichlet );
-        break;
-      case false:
-        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::DoF );
-        break;
-    }
-
-    //init two doubles; pass these by reference into init()
+  if ( fineGridVertex{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+    {% if VERTEX_CARDINALITY>1 %}
+    {% else %}
     double value, rhs;
-    
+    {% endif %}
     repositories::{{SOLVER_INSTANCE}}.vertexInit(
       marker.x(),
       marker.h(),
       value,
       rhs
     );
-
-    if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet){
-      //place these values into the mesh
-      fineGridVertex{{SOLVER_NAME}}.setValue(0, value);
-      fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);
-
-    }
-  logTraceOut( "touchVertexFirstTime(...)---InitialCondition" );
-}
+    fineGridVertex{{SOLVER_NAME}}.setValue(value);
+    fineGridVertex{{SOLVER_NAME}}.setRhs(rhs);
+  }
 """
   
   def __init__(self,

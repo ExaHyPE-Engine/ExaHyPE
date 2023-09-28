@@ -19,26 +19,28 @@ corresponding entry in the solution vector reads like.
   
   """
   
-  
+#      if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet){
+#      //place these values into the mesh
+#      fineGridVertex{{SOLVER_NAME}}.setValue(0, value);
+#      fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);#
+#
+ #   }
+
   TemplateInitVertex = """
   if ( not marker.willBeRefined()
       and
       // we only gave it an index if it was not on the boundary
-      fineGridVertexPoisson.getType() != vertexdata::Poisson::Type::Dirichlet 
+      fineGridVertexPoisson.getType() == vertexdata::Poisson::Type::Interior 
    ) { 
-    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-
     for (int i=0; i<{{VERTEX_CARDINALITY}}; i++) {
       std::pair<int,int> localIndex( _spacetreeId, fineGridVertex{{SOLVER_NAME}}.getNumber()+i );
       int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
 
       // ask our instance of Petsc the value stored in the solution vector here.
       double val = repositories::instanceOfPetsc.getX(globalIndex);
-      fineGridVertex{{SOLVER_NAME}}.setValue(0, val);
+      fineGridVertex{{SOLVER_NAME}}.setValue(i, val);
 
     }
-    
-    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
 """
   
@@ -59,7 +61,7 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
-    self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
+    self.d["VERTEX_CARDINALITY"]     = solver.number_of_matrix_entries_per_vertex
 
 
 

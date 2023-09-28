@@ -47,7 +47,7 @@ mark these steps as private via a leading underscore.
   
 ## Attributes
   
-  - _solver_instances: [String,String]
+  - _solvers: [Solver]
       List of tuples of typename and names of solvers that this project should use simultaneously.
   
   
@@ -71,7 +71,7 @@ mark these steps as private via a leading underscore.
     self._executable_name = executable
     self._output_path   = "./"
     
-    self._solver_instances = []
+    self._solvers = []
 
     self.algorithm_step_create_grid                  = peano4.solversteps.Step( "CreateGrid",                False )
     self.algorithm_step_enumerate_and_init_solution  = peano4.solversteps.Step( "EnumerateAndInitSolution",  False )
@@ -139,8 +139,9 @@ the build mode. The values for these parameters step from set_Peano4_installatio
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
     self._project.output.makefile.set_dimension(self._dimensions)
     self._project.output.makefile.set_executable_name(self._executable_name)
-
     self._project.output.makefile.set_mode(self._build_mode)
+
+    self.__export_constants()
 
 
   def set_global_simulation_parameters(self,
@@ -229,13 +230,13 @@ This yet has to be written.
   def __generate_solver_repository(self):
     """!
 
-     type_name_of_solver_instances: [String]
+     type_name_of_solvers: [String]
        Name of the solvers that we should instantiate and use in the main.
     
     
     """
     dictionary = {}
-    dictionary[ "SOLVER_INSTANCES"] = self._solver_instances
+    dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
     
     '''
     put in a guard clause to skip over CollocatedLowOrderDiscretisation
@@ -269,7 +270,7 @@ This yet has to be written.
       
   def __generate_data_repository(self):
     dictionary = {}
-    dictionary[ "SOLVER_INSTANCES"]  = self._solver_instances
+    dictionary[ "SOLVER_INSTANCES"]  = self._solvers
 
 
     templatefile_prefix = os.path.dirname(__file__) + "/petscData/"
@@ -302,21 +303,10 @@ This yet has to be written.
     print( str(solver) )
 
     #let's add in some extra project-specific snippets
+    # @todo raus
     self.solver_repository_snippet_header, \
     self.solver_repository_snippet_cpp     \
       = solver.get_solver_repository_snippets()
-
-    #add in points, weight and poly coeffs, but only if
-    #this class has the attribute. We put in a guard clause
-    #for CollacatedLowOrderDiscretisation.
-
-#    if hasattr(solver, 'quadrature_points'):
-      #if it has one, it should have all the others
-#      self.quadrature_points = solver.quadrature_points
-#      self.weights           = solver.weights
-#      self.poly_coeffs       = solver.poly_coeffs
-#      self.polynomial_degree = solver.polynomial_degree
-#      self.dimensions        = solver.dimensions
       
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
     
@@ -336,16 +326,86 @@ This yet has to be written.
 
     solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
     
-    self._solver_instances.append( (solver.typename(), solver.instance_name()) )
+    self._solvers.append( solver )
     pass
 
-  @staticmethod
-  def convertArrayToCppVector(array):
-    output = "{" + str(array[0])
-    for el in array[1:]:
-      output += f", {str(el)}"
-    output += "}"
-    return output
+
+  def __export_constants(self):
+        """
+        We export ExaHyPE's constants. Besides the constants from ExaHyPE,
+        I also export some parameters from Peano onto the ExaHyPE constants
+        file. Therefore, it is important that you parse the configure output
+        before we export the constants.
+        """
+        self._project.constants.clear()
+        offset_string = "{" + str(self._domain_offset[0])
+        size_string = "{" + str(self._domain_size[0])
+        for i in range(1, self._dimensions):
+            offset_string += ","
+            size_string += ","
+            offset_string += str(self._domain_offset[i])
+            size_string += str(self._domain_size[i])
+        offset_string += "}"
+        size_string += "}"
+        self._project.constants.add_include("""#include <bitset>""")
+        self._project.constants.add_include("""#include "tarch/la/Vector.h" """)
+        self._project.constants.add_include("""#include "peano4/utils/Globals.h" """)
+        self._project.constants.export_const_with_type(
+            "DomainOffset", offset_string, "tarch::la::Vector<Dimensions,double>"
+        )
+        self._project.constants.export_const_with_type(
+            "DomainSize", size_string, "tarch::la::Vector<Dimensions,double>"
+        )
+        self._project.constants.export("PlotterPrecision", str(self._plotter_precision))
+
+        build_string = "python3 "
+        for i in sys.argv:
+            build_string += " "
+            build_string += i
+        self._project.constants.export_string("BuildInformation", build_string)
+        self._project.constants.export_string(
+            "ConfigureInformation", self._project.output.makefile.configure_call
+        )
+
+        self._project.output.readme.add_package_description(
+            """
+
+### Peano's multigrid extension
+
+This is yet to be written, and we need to have a paper on our work.
+
+       @article{Reinarz:2020:ExaHyPE,
+         title = {ExaHyPE: An engine for parallel dynamically adaptive simulations of wave problems},
+         journal = {Computer Physics Communications},
+         volume = {254},
+         pages = {107251},
+         year = {2020},
+         issn = {0010-4655},
+         doi = {https://doi.org/10.1016/j.cpc.2020.107251},
+         url = {https://www.sciencedirect.com/science/article/pii/S001046552030076X},
+         author = {Anne Reinarz and Dominic E. Charrier and Michael Bader and Luke Bovard and Michael Dumbser and Kenneth Duru and Francesco Fambri and Alice-Agnes Gabriel and Jean-Matthieu Gallard and Sven K\"oppel and Lukas Krenz and Leonhard Rannabauer and Luciano Rezzolla and Philipp Samfass and Maurizio Tavelli and Tobias Weinzierl},
+         keywords = {Hyperbolic, PDE, ADER-DG, Finite volumes, AMR, MPI, TBB, MPI+X},
+         abstract = {ExaHyPE (An Exascale Hyperbolic PDE Engine) is a software engine for solving systems of first-order hyperbolic partial differential equations (PDEs). Hyperbolic PDEs are typically derived from the conservation laws of physics and are useful in a wide range of application areas. Applications powered by ExaHyPE can be run on a student's laptop, but are also able to exploit thousands of processor cores on state-of-the-art supercomputers. The engine is able to dynamically increase the accuracy of the simulation using adaptive mesh refinement where required. Due to the robustness and shock capturing abilities of ExaHyPE's numerical methods, users of the engine can simulate linear and non-linear hyperbolic PDEs with very high accuracy. Users can tailor the engine to their particular PDE by specifying evolved quantities, fluxes, and source terms. A complete simulation code for a new hyperbolic PDE can often be realised within a few hours - a task that, traditionally, can take weeks, months, often years for researchers starting from scratch. In this paper, we showcase ExaHyPE's workflow and capabilities through real-world scenarios from our two main application areas: seismology and astrophysics.
+           Program summary
+           Program title: ExaHyPE-Engine Program Files doi: http://dx.doi.org/10.17632/6sz8h6hnpz.1 Licensing provisions: BSD 3-clause Programming languages: C++, Python, Fortran Nature of Problem: The ExaHyPE PDE engine offers robust algorithms to solve linear and non-linear hyperbolic systems of PDEs written in first order form. The systems may contain both conservative and non-conservative terms. Solution method: ExaHyPE employs the discontinuous Galerkin (DG) method combined with explicit one-step ADER (arbitrary high-order derivative) time-stepping. An a-posteriori limiting approach is applied to the ADER-DG solution, whereby spurious solutions are discarded and recomputed with a robust, patch-based finite volume scheme. ExaHyPE uses dynamical adaptive mesh refinement to enhance the accuracy of the solution around shock waves, complex geometries, and interesting features.
+         }
+       }
+"""
+        )
+
+        for i in self._solvers:
+            self._project.output.readme.add_entry(
+                i.create_readme_descriptor()
+            )
+
+
+#  @staticmethod
+#  def convertArrayToCppVector(array):
+#    output = "{" + str(array[0])
+#    for el in array[1:]:
+#      output += f", {str(el)}"
+#    output += "}"
+#    return output
 
 #  def get_dict_for_quad_points(self):
 #    '''
