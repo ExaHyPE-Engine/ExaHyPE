@@ -54,8 +54,8 @@ class AssemblePetscMatrixOnVertices(ActionSet):
     for (int j=0; j<TwoPowerD; j++) {
       if (enumeratedIndices[i] != -1 and enumeratedIndices[j] != -1) {
         auto lhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
-        auto rhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
- 
+
+// @todo Sollte der Loeser selber halten
         repositories::instanceOfPetsc.incrementDoubleAtIndexij(
           enumeratedIndices[i], 
           enumeratedIndices[j], 
@@ -64,7 +64,24 @@ class AssemblePetscMatrixOnVertices(ActionSet):
       }
     }
   }
-  
+
+  // rhs
+  auto   rhs = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
+  for (int i=0; i<TwoPowerD; i++) {
+    if (fineGridVertices{{SOLVER_NAME}}PETScData(i).getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
+      double rhsContribution = 0.0;
+      for (int j=0; j<TwoPowerD; j++) {
+        double rhsValue = fineGridVertices{{SOLVER_NAME}}(j).getRhs(0);
+        rhsContribution += rhs(i,j) * rhsValue;
+      }
+      // @todo increment 
+      repositories::instanceOfPetsc.insertValueAndRHS(
+        0.0,
+        rhsContribution,
+        enumeratedIndices[i]
+      );
+    }
+  }
   """
 
   TemplateTouchVertexFirstTime="""

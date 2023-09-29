@@ -15,14 +15,16 @@ class EnumerateDofs(ActionSet):
   
   
   TemplateEnumerateVertex = """
-    auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & x ) -> bool{
-      bool isOnBoundary = false;
-      for (int d=0; d<Dimensions; d++) {
-        isOnBoundary |= tarch::la::smallerEquals( x(d), DomainOffset(d) );
-        isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
-      }
-      return isOnBoundary;
-    };
+  auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & x ) -> bool{
+    bool isOnBoundary = false;
+    for (int d=0; d<Dimensions; d++) {
+      isOnBoundary |= tarch::la::smallerEquals( x(d), DomainOffset(d) );
+      isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
+    }
+    return isOnBoundary;
+  };
+
+  fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
   
   if ( not marker.willBeRefined() ) { 
     switch ( isOnBoundary(marker.x()) ){
@@ -31,20 +33,14 @@ class EnumerateDofs(ActionSet):
         break;
       case false:
         fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior );
+        {% if VERTEX_CARDINALITY>0 %}
+        fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localVertexMap.reserveIndex( {{VERTEX_CARDINALITY}} ) );
+        {% endif %}
         break;
     }
-
-    {% if VERTEX_CARDINALITY>0 %}
-    fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localVertexMap.reserveIndex( {{VERTEX_CARDINALITY}} ) );
-    {% else %}
-    fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
-    {% endif %}
   }
   else {
     fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse );
-    {% if VERTEX_CARDINALITY>0 %}
-    fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
-    {% endif %}
   }
 """
 
@@ -58,6 +54,8 @@ class EnumerateDofs(ActionSet):
       }
       return isOnBoundary;
   };
+
+  fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
   
   if ( not marker.willBeRefined()  ) { 
     switch ( isOnBoundary(marker.x()) ){
@@ -66,38 +64,29 @@ class EnumerateDofs(ActionSet):
         break;
       case false:
         fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Interior );
+        {% if FACE_CARDINALITY>0 %}
+        fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
+        {% endif %}
         break;
     }
-
-    {% if FACE_CARDINALITY>0 %}
-    fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
-    {% else %}
-    fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
-    {% endif %}
   } 
   else {
     fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Coarse );
-    {% if FACE_CARDINALITY>0 %}
-    fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
-    {% endif %}
   }
 """
 
   
   TemplateEnumerateCell = """
+  fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
+  
   if ( not marker.willBeRefined()  ) { 
     fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Interior );
     {% if CELL_CARDINALITY>0 %}
     fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localCellMap.reserveIndex( {{CELL_CARDINALITY}} ) );
-    {% else %}
-    fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
     {% endif %}
   } 
   else {
     fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Coarse );
-    {% if CELL_CARDINALITY>0 %}
-    fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
-    {% endif %}
   }
 """
 

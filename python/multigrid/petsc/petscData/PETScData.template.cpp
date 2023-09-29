@@ -10,8 +10,8 @@
 void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
   logTraceInWith1Argument( "initMatrixAndVectors()", dofs );
   setDoFs( dofs );
-  // init petsc
-  // PetscInitialize(PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR);
+
+  //  MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
 
   //matrix size, set it to number of dofs
   PetscInt n = _dofs;

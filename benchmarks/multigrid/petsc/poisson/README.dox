@@ -13,7 +13,7 @@
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~
  export PYTHONPATH=../../../../python/
- python3 collocated_low_order.py -m release
+ python3 fem.py -m release
  ~~~~~~~~~~~~~~~~~~~~~~~~~
  
  # Visualise the outcome

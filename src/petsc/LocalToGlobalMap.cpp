@@ -66,5 +66,6 @@ void petsc::LocalToGlobalMap::computeLocalToGlobalMap() {
 
 
 int petsc::LocalToGlobalMap::getTotalNumberOfIndices() const {
+  assertion(_totalNumberOfIndices<=4);
   return _totalNumberOfIndices;
 }
