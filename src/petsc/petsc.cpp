@@ -14,6 +14,6 @@ namespace {
 }
 
 void petsc::initParallelEnvironment([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv) {
-  PetscInitialize(argc, argv, (char *)0/*PETSC_NULLPTR*/, PETSC_NULLPTR);
+  PetscInitialize(argc, argv, PETSC_NULLPTR, PETSC_NULLPTR);
   logInfo( "initParallelEnvironment(...)", "PETSc is initialised" );
 }
