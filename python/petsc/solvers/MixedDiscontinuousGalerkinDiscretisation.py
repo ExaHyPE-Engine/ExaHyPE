@@ -367,6 +367,16 @@ class MixedDiscontinuousGalerkinDiscretisation(Solver):
      );
 """
     cpp = """
+int {{NAMESPACE | join("::")}}::repositories::getGlobalMatrixRows()
+{
+  return getTotalFaceDofs() + getTotalCellDofs();
+}
+
+int {{NAMESPACE | join("::")}}::repositories::getGlobalMatrixCols()
+{
+  return getTotalFaceDofs() + getTotalCellDofs();
+}
+
 void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSolvers() {
   {% for SOLVER in SOLVER_INSTANCES %}
   {{SOLVER[1]}}.getFaceLocalToGlobalMap().computeLocalToGlobalMap();
