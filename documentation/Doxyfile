@@ -998,7 +998,6 @@ FILE_PATTERNS          = *.h \
                          *.py \
                          *.dox \
                          *.html \
-                         *.md   \
                          *.cu \
                          *.markdown \
                          *.c

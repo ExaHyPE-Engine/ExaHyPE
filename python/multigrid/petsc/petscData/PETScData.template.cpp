@@ -1,0 +1,202 @@
+#include "PETScData.h"
+
+/**
+* todo - change this class to use CLASS_NAME, cf the abstract poisson tempaltes etc
+*/
+
+{{NAMESPACE | join("::")}}::PetscData::PetscData() {}
+{{NAMESPACE | join("::")}}::PetscData::~PetscData() {}
+
+void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
+  logTraceInWith1Argument( "initMatrixAndVectors()", dofs );
+  setDoFs( dofs );
+
+  //  MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
+
+  //matrix size, set it to number of dofs
+  PetscInt n = _dofs;
+
+  MatCreate(PETSC_COMM_WORLD, &_A);
+  MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, n, n);
+  MatSetFromOptions(_A);
+  MatSetUp(_A);
+
+  //next, do same with the two vectors...
+  //create both vectors
+  VecCreate(PETSC_COMM_WORLD, &_x);
+  VecCreate(PETSC_COMM_WORLD, &_b);
+
+  VecSetSizes(_x, PETSC_DECIDE, n);
+  VecSetSizes(_b, PETSC_DECIDE, n);
+
+  VecSetFromOptions(_x);
+  VecSetFromOptions(_b);
+
+  VecSetUp(_x);
+  VecSetUp(_b);
+
+  //explicitly set the diagonals to be 0!
+  int tempRowArray[1];
+  double zero[1] = {0};
+
+  for (int i=0; i<dofs; i++){
+    tempRowArray[0] = i;
+    insertLocalMatrix( 1, tempRowArray, 1, tempRowArray, zero );
+  }
+  
+  logTraceOut( "initMatrixAndVectors()" );
+}
+
+void {{NAMESPACE | join("::")}}::PetscData::setDoFs(int dofs){
+  _dofs = dofs;
+}
+
+int {{NAMESPACE | join("::")}}::PetscData::getDoFs() const{
+  return _dofs;
+}
+
+void {{NAMESPACE | join("::")}}::PetscData::convertToStdVector(){
+  //get size of vec
+  PetscInt size;
+  VecGetSize(_x, &size);
+
+  _xAsStdVector.resize(size);
+
+  //temp array to hold the values 
+  PetscScalar y[size];
+
+  //temp array to hold the indices we request
+  PetscInt ix[size];
+  for (int i=0; i<size; i++)
+    ix[i] = i;
+
+  //ask petsc
+  VecGetValues( _x, size, ix, y );
+
+  //put these into _xAsStdVector
+  _xAsStdVector.insert( _xAsStdVector.begin(), &y[0], &y[size] );
+}
+
+std::vector<double> {{NAMESPACE | join("::")}}::PetscData::getX() const{
+  return _xAsStdVector;
+}
+
+double {{NAMESPACE | join("::")}}::PetscData::getX(int i) const{
+  //check if we have populated it yet
+  if ( !_xAsStdVector.size() )
+    return -1;
+  return _xAsStdVector[i];
+}
+
+void {{NAMESPACE | join("::")}}::PetscData::insertDoubleAtIndexij(int i, int j, double val){
+  MatSetValue(_A, i, j, val, INSERT_VALUES);
+}
+
+//storing doubles to be placed into A
+void {{NAMESPACE | join("::")}}::PetscData::incrementDoubleAtIndexij( int i, int j, double val ){
+  MatSetValue(_A, i, j, val, ADD_VALUES);
+}
+
+
+void {{NAMESPACE | join("::")}}::PetscData::insertValueAndRHS(double val, double rhs, int index){
+  // insert "val" into _x 
+  VecSetValue(_x, index, val, INSERT_VALUES);
+
+  // insert "rhs" into _b
+  VecSetValue(_b, index, rhs, INSERT_VALUES);
+}
+
+void {{NAMESPACE | join("::")}}::PetscData::assemble(){
+  
+  //assemble matrices
+  MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY);
+  MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);
+
+  //assemble vectors
+  VecAssemblyBegin(_x);
+  VecAssemblyEnd(_x);
+  VecAssemblyBegin(_b);
+  VecAssemblyEnd(_b);
+
+  //print out our contents
+  // MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
+  // PetscViewer viewer;
+  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"mat.xml",&viewer);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  // MatView(_A, viewer);
+  
+  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"rhs.xml",&viewer);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  // VecView(_b, viewer);
+  // PetscViewerDestroy(&viewer);
+}
+
+void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
+  // for now, we stuff everything into this method
+  Vec         u; // exact soln
+  KSP         ksp;     /* KSP context */
+  PC          pc;      /* PC context */
+  PetscReal   norm;    /* norm of solution error */
+
+  //don't know what this does
+  PetscFunctionBeginUser;
+
+  /*
+     Create linear solver context
+  */
+  KSPCreate(PETSC_COMM_WORLD, &ksp);
+
+  /*
+     Set operators. Here the matrix that defines the linear system
+     also serves as the preconditioning matrix.
+  */
+  KSPSetOperators(ksp, _A, _A);
+  KSPGetPC(ksp, &pc);
+
+  //set runtime options
+  KSPSetFromOptions(ksp);
+
+  PCSetType(pc, PCNONE); //no preconditioner
+  KSPSetType(ksp, KSPGMRES);
+  KSPSetUp(ksp);
+  KSPSetTolerances(ksp, 1.e-7, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
+
+  //solve against the "exact" solution u
+  KSPSolve(ksp, _b, _x);
+
+  KSPConvergedReason reason;
+  KSPGetConvergedReason(ksp, &reason);
+
+  PetscInt its;
+  KSPGetIterationNumber(ksp, &its);
+  logInfo("petscSolve()", "number of iterations was " << (int)its);
+  logInfo("petscSolve()", "converged for reason " << KSPConvergedReasons[reason]);
+
+  //tidy up temp objects
+  KSPDestroy(&ksp);
+
+  // PetscViewer viewer;
+  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"solution.xml",&viewer);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  // VecView(_x, viewer);
+
+  return;
+}
+
+void {{NAMESPACE | join("::")}}::PetscData::petscDestroy(){
+  logInfo("petscDestroy()", "tidying up petsc objects");
+  //tidy up _A
+  MatDestroy(&_A);
+
+  //tidy up _x and _b
+  VecDestroy(&_x);
+  VecDestroy(&_b);
+
+  /*
+  most petsc scripts call PetscFinalize(), but this
+  may interfere with the way peano handles mpi.
+  for now, it stays commented out.
+  */
+  // PetscFinalize();
+  return;
+}

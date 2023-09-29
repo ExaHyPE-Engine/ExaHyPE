@@ -18,6 +18,13 @@ class petsc::LocalToGlobalMap {
     static constexpr int RankGlobalTreeNumber = -1;
 
     /**
+     * Is used by enumeration such that boundary Dirichlet points, for example,
+     * have a properly initialised number, even though they do not carry an
+     * unknown.
+     */
+    static constexpr int NoDegreeOfFreedom = -1;
+
+    /**
      * Creates an empty map for tree treeNumber
      *
      * The code creates one global map per rank. This one has the tree number
