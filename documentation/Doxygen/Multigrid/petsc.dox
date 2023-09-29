@@ -15,12 +15,15 @@
  can compile with PETSc and link appropriately:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-./configure CXXFLAGS="... -I$PETSC_DIR/include" LDFLAGS="... -L$PETSC_DIR/lib" $LIBS="... -lpetsc"
+./configure CXXFLAGS="... -I$PETSC_DIR/include" LDFLAGS="... -Wl,-rpath,$PETSC_DIR/lib -L$PETSC_DIR/lib" $LIBS="... -lpetsc"
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
  Where PETSC_DIR points to your PETSc installation as passed into prefix 
  (see remarks below). 
  Alteratively, replace PETSC_DIR with the path from above directly.
+ Please do not omit the -Wl,... parts. If you do so, your code will link,
+ but you'll get seg fault the very moment you try to allocate any PETSc
+ object.
  Once the flags are in, any
  Peano Python script will pick up the right paths automatically. 
  
@@ -104,7 +107,7 @@ sophisticated calls such as
    make PETSC_DIR=/path/to/petsc PETSC_ARCH=system_architecture all
   ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-but most of the time, I don't need these. 
+\but most of the time, I don't need these. 
 
 
 From hereon, we will use a variable PETSC_DIR which is the prefix directory.
@@ -127,7 +130,8 @@ might even be worth adding PETSC_DIR and PETSC_ARCH to .bashrc / .bash_profile.
  and LIBS should be sufficient. However, you might need some more complex
  manipulations. Key insight here is that, depending on how PETSc itself is 
  built, it will itself need further libraries. You can find a lot of these
- in the file $PETSC_DIR/lib/petsc/conf/variables.
+ in the file $PETSC_DIR/lib/petsc/conf/variables. The build command also 
+ reports on those just after the compile has finished.
  
  If you need further flags, you typically add
 
