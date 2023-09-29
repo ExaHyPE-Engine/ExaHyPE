@@ -27,12 +27,15 @@ corresponding entry in the solution vector reads like.
  #   }
 
   TemplateTouchVertexFirstTime = """
-  if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
+  if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
     std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
 
     for (int i=0; i<{{VERTEX_CARDINALITY}}; i++){
-      fineGridVertex{{SOLVER_NAME}}.setValue(i,repositories::instanceOfPetsc.getX(globalIndex + i));
+      fineGridVertex{{SOLVER_NAME}}.setValue(
+        i,
+        repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().get(globalIndex+i)
+      );
     }
   }
 """

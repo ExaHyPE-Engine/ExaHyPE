@@ -214,7 +214,7 @@ The function runs through various steps:
 
     self.__configure_makefile()
     self.__generate_solver_repository()
-    self.__generate_data_repository()
+    #self.__generate_data_repository()
 
     self._project.output.readme.add_package_description( """
 
@@ -249,9 +249,6 @@ This yet has to be written.
       #"dictionary" here.
       dictionary.update(self.get_dict_for_quad_points()) 
 
-    dictionary["HEADER_EXTRA"] = self.solver_repository_snippet_header
-    dictionary["CPP_EXTRA"]    = self.solver_repository_snippet_cpp
-
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"
     generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -267,26 +264,6 @@ This yet has to be written.
     self._project.output.add( generated_repository_files )
     self._project.output.makefile.add_h_file(   "repositories/SolverRepository.h", generated=True )
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp", generated=True )
-      
-  def __generate_data_repository(self):
-    dictionary = {}
-    dictionary[ "SOLVER_INSTANCES"]  = self._solvers
-
-
-    templatefile_prefix = os.path.dirname(__file__) + "/petscData/"
-    template_name       = templatefile_prefix + "PETScData.template"
-    generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      template_name + ".h",
-      template_name + ".cpp",
-      "PETScData",
-      self._project.namespace,
-      "PETScdata",
-      dictionary,
-      True,
-      True)
-    self._project.output.add( generated_repository_files )
-    self._project.output.makefile.add_h_file(   "PETScdata/PETScData.h" )
-    self._project.output.makefile.add_cpp_file( "PETScdata/PETScData.cpp" )
 
 
   def add_solver( self, solver ):
@@ -302,12 +279,6 @@ This yet has to be written.
     print( "---------------------------------------")
     print( str(solver) )
 
-    #let's add in some extra project-specific snippets
-    # @todo raus
-    self.solver_repository_snippet_header, \
-    self.solver_repository_snippet_cpp     \
-      = solver.get_solver_repository_snippets()
-      
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
     
     solver.add_use_statements(self.algorithm_step_create_grid)

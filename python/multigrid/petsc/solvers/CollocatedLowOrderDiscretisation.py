@@ -55,8 +55,7 @@ class AssemblePetscMatrixOnVertices(ActionSet):
       if (enumeratedIndices[i] != -1 and enumeratedIndices[j] != -1) {
         auto lhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
 
-// @todo Sollte der Loeser selber halten
-        repositories::instanceOfPetsc.incrementDoubleAtIndexij(
+        repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().increment(
           enumeratedIndices[i], 
           enumeratedIndices[j], 
           lhsMatrixEntry(i,j)
@@ -74,11 +73,9 @@ class AssemblePetscMatrixOnVertices(ActionSet):
         double rhsValue = fineGridVertices{{SOLVER_NAME}}(j).getRhs(0);
         rhsContribution += rhs(i,j) * rhsValue;
       }
-      // @todo increment 
-      repositories::instanceOfPetsc.insertValueAndRHS(
-        0.0,
-        rhsContribution,
-        enumeratedIndices[i]
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().increment(
+        enumeratedIndices[i],
+        rhsContribution
       );
     }
   }
@@ -95,11 +92,11 @@ class AssemblePetscMatrixOnVertices(ActionSet):
     assertion3(globalIndex>=0, globalIndex, marker.toString(), fineGridVertex{{SOLVER_NAME}}PETScData.toString() );
 
     //get the val, rhs that was present in the mesh
-    double val = fineGridVertex{{SOLVER_NAME}}.getValue(0);
+//    double val = fineGridVertex{{SOLVER_NAME}}.getValue(0);
     double rhs = fineGridVertex{{SOLVER_NAME}}.getRhs(0);
 
     //send these to petsc
-    repositories::instanceOfPetsc.insertValueAndRHS(val, rhs, globalIndex);
+    repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(globalIndex, rhs);
 
   }
   """
@@ -433,26 +430,3 @@ class CollocatedLowOrderDiscretisation(Solver):
     """
     return 0
 
-  
-  def get_solver_repository_snippets(self):
-    # nothing extra needed
-    # @todo Does this work for multiple solvers?
-    header="""
-
-"""
-    cpp = """
-void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSolvers() {
-  {% for SOLVER in SOLVER_INSTANCES %}
-  {{SOLVER[1]}}.getLocalToGlobalMap().computeLocalToGlobalMap();
-  {% endfor %}
-}
-
-int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom() {
-  int result = 0;
-  {% for SOLVER in SOLVER_INSTANCES %}
-  result += {{SOLVER[1]}}.getLocalToGlobalMap().getTotalNumberOfIndices();
-  {% endfor %}
-  return result;
-}
-"""
-    return header, cpp

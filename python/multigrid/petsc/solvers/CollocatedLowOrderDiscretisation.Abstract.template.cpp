@@ -27,9 +27,9 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
         ,{{ROW | join(", ")}}
       {% endfor %}
   };
-  return 1.0/cellSize(0) * result * tarch::la::volume(cellSize);
+  return tarch::la::volume(cellSize) / cellSize(0) / cellSize(0) * result;
 }
-{% endif %};
+{% endif %}
 
 
 {% if CELL_RHS_MATRIX!=[] %}
@@ -43,13 +43,18 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
         ,{{ROW | join(", ")}}
       {% endfor %}
   };
-  return result * tarch::la::volume(cellSize);
+  return tarch::la::volume(cellSize) * result;
 }
-{% endif %};
+{% endif %}
 
 
 ::petsc::LocalToGlobalMap&  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLocalToGlobalMap() {
   return _localToGlobalMap;
+}
+
+
+::petsc::LinearEquationSystem&  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLinearEquationSystem() {
+  return _linearEquationSystem;
 }
 
 

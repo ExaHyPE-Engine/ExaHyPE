@@ -20,5 +20,7 @@ namespace petsc {
    * @see peano4::initParallelEnvironment()
    */
   void initParallelEnvironment([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv);
+
+  void shutdownParallelEnvironment();
 }
 

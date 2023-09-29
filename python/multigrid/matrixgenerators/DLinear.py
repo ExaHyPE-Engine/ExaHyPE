@@ -41,7 +41,15 @@ class DLinear(MatrixGenerator):
     dim    = self._cell_dofs * self.unknowns_per_vertex_dof
     output = np.zeros((dim,dim))
     for i in range(dim):
-      output[i,i] = 1.0
+      output[i,i] = 2**(-self.dimensions)
+    return output
+
+      
+  def getLumpedMassMatrix(self):
+    dim    = self._cell_dofs * self.unknowns_per_vertex_dof
+    output = np.zeros((dim,dim))
+    for i in range(dim):
+      output[i,i] = 2**(-self.dimensions)
     return output
 
       

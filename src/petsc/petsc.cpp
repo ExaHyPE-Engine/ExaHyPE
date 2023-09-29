@@ -17,3 +17,9 @@ void petsc::initParallelEnvironment([[maybe_unused]] int* argc, [[maybe_unused]]
   PetscInitialize(argc, argv, PETSC_NULLPTR, PETSC_NULLPTR);
   logInfo( "initParallelEnvironment(...)", "PETSc is initialised" );
 }
+
+
+void petsc::shutdownParallelEnvironment() {
+  PetscFinalize();
+}
+
