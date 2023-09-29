@@ -27,7 +27,7 @@ args = parser.parse_args()
 
 assert args.dimensions == 2, "not ready for 3d yet"
 
-project = multigrid.petsc.Project(project_name = "HybridPoisson", 
+project = multigrid.petsc.Project(project_name = "CollocatedFEM", 
                                   namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
                                   ) 
 

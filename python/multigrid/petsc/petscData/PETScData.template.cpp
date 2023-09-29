@@ -11,7 +11,7 @@ void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
   logTraceInWith1Argument( "initMatrixAndVectors()", dofs );
   setDoFs( dofs );
   // init petsc
-  PetscInitialize(PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR);
+  // PetscInitialize(PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR);
 
   //matrix size, set it to number of dofs
   PetscInt n = _dofs;

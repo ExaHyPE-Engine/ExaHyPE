@@ -5,6 +5,7 @@ if UsePETSc
 endif
 
 PETScSources = \
+  petsc.cpp \
   LocalToGlobalMap.cpp \
   UnitTests.cpp
 

@@ -1,18 +1,24 @@
 #include "{{MAIN_NAME}}.h"
+
 #include "observers/Assemble.h"
 #include "observers/CreateGrid.h"
 #include "observers/EnumerateAndInitSolution.h"
 #include "observers/MapSolutionOntoMesh.h"
 #include "observers/Plot.h"
 #include "observers/Solve.h"
+
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
-#include "petsc/UnitTests.h"
-#include "repositories/DataRepository.h"
-#include "repositories/StepRepository.h"
-#include "tarch/UnitTests.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
+
+#include "petsc/petsc.h"
+#include "petsc/UnitTests.h"
+
+#include "repositories/DataRepository.h"
+#include "repositories/StepRepository.h"
+
+#include "tarch/UnitTests.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/LogFilterFileReader.h"
@@ -23,6 +29,7 @@
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
+
 #include "toolbox/finiteelements/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
@@ -190,6 +197,7 @@ void step() {
         const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
         logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
         repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
+        logInfo( "step()", "PETSc successfully initialised" );
         
         watch.stop();
         initMeasurement.setValue( watch.getCalendarTime() );
@@ -262,7 +270,10 @@ int main(int argc, char** argv) {
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
 
+  PetscFunctionBeginUser;
+
   peano4::initParallelEnvironment(&argc, &argv);
+  petsc::initParallelEnvironment(&argc, &argv);
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
@@ -276,7 +287,7 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidBuild;
   }
 
-  if (not tarch::logging::LogFilterFileReader::parsePlainTextFile("petsc.log-filter")) {
+  if (not tarch::logging::LogFilterFileReader::parsePlainTextFile("multigrid.log-filter")) {
     logWarning(
       "main()", "no petsc.log-filter file found or file has been corrupted. Use default logging configuration"
     );

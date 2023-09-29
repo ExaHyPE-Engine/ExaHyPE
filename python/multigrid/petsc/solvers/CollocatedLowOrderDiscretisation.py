@@ -59,7 +59,7 @@ class AssemblePetscMatrixOnVertices(ActionSet):
         repositories::instanceOfPetsc.incrementDoubleAtIndexij(
           enumeratedIndices[i], 
           enumeratedIndices[j], 
-          lhsMatrixEntry(enumeratedIndices[i], enumeratedIndices[j])
+          lhsMatrixEntry(i,j)
         );
       }
     }
@@ -70,10 +70,12 @@ class AssemblePetscMatrixOnVertices(ActionSet):
   TemplateTouchVertexFirstTime="""
   //here we send the value, rhs from the mesh to petsc
 
-  if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
+  if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
     //first, get global index
     std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
+    
+    assertion3(globalIndex>=0, globalIndex, marker.toString(), fineGridVertex{{SOLVER_NAME}}PETScData.toString() );
 
     //get the val, rhs that was present in the mesh
     double val = fineGridVertex{{SOLVER_NAME}}.getValue(0);
