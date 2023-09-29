@@ -16,6 +16,14 @@
  python3 collocated_low_order.py -m release
  ~~~~~~~~~~~~~~~~~~~~~~~~~
  
+ # Visualise the outcome
+ 
+ To visualise the outcome, most people translate the resulting Peano patch file
+ into paraview with a command similar to
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+ /opt/paraview/bin/pvpython ~/git/Peano/python/peano4/visualisation/render.py --filter-fine-grid solution-CollocatedPoisson.peano-patch-file
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
  
  */
  
