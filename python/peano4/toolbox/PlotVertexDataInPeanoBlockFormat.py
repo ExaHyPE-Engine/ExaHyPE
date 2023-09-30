@@ -58,6 +58,8 @@ class PlotVertexDataInPeanoBlockFormat(ActionSet):
         Has to match to the getter.
         
     """
+    super( PlotVertexDataInPeanoBlockFormat, self ).__init__()
+
     self.d = {}
     self.d[ "FILENAME" ]            = filename
     self.d[ "VERTEX_UNKNOWN_NAME" ] = vertex_unknown.name

@@ -73,6 +73,15 @@ class Controller:
             if "useLibxsmm" in args
             else Configuration.useLibxsmm,
             "pathToLibxsmmGemmGenerator": Configuration.pathToLibxsmmGemmGenerator,
+            "useBLIS": args["useBLIS"]
+            if "useBLIS" in args
+            else Configuration.useBLIS,
+            "useEigen": args["useEigen"]
+            if "useEigen" in args
+            else Configuration.useEigen,
+            "useLibxsmmJIT": args["useLibxsmmJIT"]
+            if "useLibxsmmJIT" in args
+            else Configuration.useLibxsmmJIT,
             "runtimeDebug": Configuration.runtimeDebug,  # for debug
         }
 
@@ -128,9 +137,12 @@ class Controller:
                     else "double",
                     "correctorStoragePrecision": args["correctorStoragePrecision"]
                     if "correctorStoragePrecision" in args
-                    else "double",
+                    else "double"
                 }
             )
+            self.config["computePrecisions"] = self.config["predictorComputePrecisions"][:]
+            if self.config["correctorComputePrecision"] not in self.config["computePrecisions"]:
+                self.config["computePrecisions"].append(self.config["correctorComputePrecision"])
             self.config["useSourceOrNCP"] = (
                 self.config["useSource"] or self.config["useNCP"]
             )

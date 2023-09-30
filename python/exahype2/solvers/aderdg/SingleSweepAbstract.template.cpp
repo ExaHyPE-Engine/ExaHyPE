@@ -47,8 +47,10 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
 
   {% if USE_KERNEL_GENERATOR==True %}
   //initialise nodes, weights and matrices for use of the kernels
-  generated::kernels::AderDG::{{LINEARITY}}::initQuadratureNodesAndWeights();
-  generated::kernels::AderDG::{{LINEARITY}}::initDGMatrices();
+  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}    
+  generated::kernels::AderDG::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
+  generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
+  {% endfor %}
   {% endif %}
   
   //setting coarsestMeshLevel and maxAdaptiveMeshLevel
@@ -91,8 +93,10 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
 
   {% if USE_KERNEL_GENERATOR==True %}
   //free the generated nodes, weights and matrices
-  generated::kernels::AderDG::{{LINEARITY}}::freeQuadratureNodesAndWeights();
-  generated::kernels::AderDG::{{LINEARITY}}::freeDGMatrices();
+  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}  
+  generated::kernels::AderDG::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
+  generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
+  {% endfor %}
   {% endif %}
 }
 
@@ -350,8 +354,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       break;
   }
 
-  {{START_TIME_STEP_IMPLEMENTATION}}
-
   if (_solverState==SolverState::Prediction) {
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
@@ -376,6 +378,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
     _cellUpdates    = 0;
   }
+
+  {{START_TIME_STEP_IMPLEMENTATION}}
 
   logInfo( "startTimeStep(...)", "phase " + toString(_solverState) );
 
