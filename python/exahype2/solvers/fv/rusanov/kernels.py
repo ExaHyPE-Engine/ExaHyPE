@@ -163,13 +163,13 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     );
   """
   elif solver_variant == SolverVariant.Multicore:
-    raise False
-    template += """_multicore_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>(
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>(
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
+      peano4::utils::LoopParallelism::Subtasks
     );
   """
   elif solver_variant == SolverVariant.AcceleratorWithExplicitCopy:
