@@ -13,24 +13,76 @@
 #include <petscsys.h>
 #include <petscksp.h>
 
+#include <numeric> //for std iota
+
 
 namespace petsc {
   class LinearEquationSystem;
 }
 
-
+/**
+* Class to capture all of the PETSc objects needed by some experiements.
+* The default constructor will set the number of "dofs" to be -1. The
+* initialisation of most of the PETSc objects are deferred until the 
+* true number of dofs is known, so as not to interfere with Peano's
+* MPI handing.
+* 
+* This class supports creating a (square) matrix (member variable _A),
+* a RHS vector (_b), and a member variable _x, which will have the 
+* solution written into it. 
+* 
+* The intended workflow is as follows:
+*   - Call the constructor at some early stage during the main function
+*   - Use Peano to establish how many true degrees of freedom you wish to have
+*   - Send this number into the init() routine. This will set the sizes of the PETSc matrices and vectors
+*   - Use the increment() function to insert values into the matrix and rhs vector. There is an overload for each. The solution vector currently is set to all zeros.
+*   - Handover to PETSc to solve by calling the solve() routine. We currently use no preconditioner and a GMRES solver. These options can be seen in the body of solve()
+*   - Use the get() routine to inspect the solution vector at each index.
+*
+*
+*/
 class petsc::LinearEquationSystem{
   public:
+    /**
+    * Trivial constructor. Sets the dofs to be -1. Modify this in init()
+    */
     LinearEquationSystem();
     virtual ~LinearEquationSystem();
 
+    /**
+    * Overload to print the matrix to terminal
+    */
     void printMatrix();
+    /**
+    * Overload to print the matrix to file
+    * \param std::string filename
+    */
     void printMatrix(std::string filename);
+
+    /**
+    * Overload to print the rhs to terminal
+    */
     void printRhs();
+    /**
+    * Overload to print the rhs to file
+    * \param std::string filename
+    */
     void printRhs(std::string filename);
+
+    /**
+    * Overload to print the solution to terminal
+    */
     void printX();
+    /**
+    * Overload to print the solution to terminal
+    * \param std::string filename
+    */
     void printX(std::string filename);
 
+    /**
+    * Returns number of DoFs in the system. Equivalent to number 
+    * of rows in the matrix, and number of entries in the solution/rhs vector
+    */
     int getDoFs() const;
 
     /**
@@ -40,130 +92,73 @@ class petsc::LinearEquationSystem{
     */
     void init( int dofs );
 
-    //method to convert petsc vec to std array
-    //for now, just for the solution vector
-//    void convertToStdVector();
-
+    /**
+    * Getter method to inspect the value of the solution vector at a 
+    * given index. Only call after solve() has completed.
+    * \param int i
+    */
     double get(int i) const;
 
     /**
-     * method to send doubles to petsc as we receive them
+     * Overload to insert val into the matrix, at given row, column position
+     * \param int row - row index of where we insert
+     * \param int col - col index of where we insert
+     * \param double val - value to insert
     */
     void insert(int row, int col, double val);
+
+    /**
+     * Overload to increment existing val in the matrix, at given row, column position
+     * \param int row - row index of where we insert
+     * \param int col - col index of where we insert
+     * \param double val - value to insert
+    */  
     void increment(int row, int col, double val);
 
-    void insert(int row, double val);
-    void increment(int row, double val);
-/*
-
-
-
-    *
-    * method to insert values into matrix based on stencil
-    * \param indices - the indices of the DoFs in question
-    * \param values  - logically 2d array of doubles
-              the length of values should be equal to indices.size() * indices.size()
-              intention is to call this function with tarch::la::Matrix::data(), which
-              will return a pointer to the first value in this matrix. Ideally this matrix
-              will be the intended stencil for this cell/face/vertex
-
-      IMPLEMENTATION IS IN THE HEADER SO THE TEMPLATES WORK
-
-//    template <int rows, int columns>
-//    void insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const tarch::la::Matrix<rows,columns,double>& stencil ){
-
-  *
-  in order of appearance, the params are:
-    1. _A, our petsc matrix
-    2. the number of rows we wish to insert into
-    3. a pointer to the start of an array containing the indices of the rows we wish to insert into
-      here we just use the address of the start of the std::vector we pass in
-    4. the number of cols we wish to insert into
-    5. a pointer to the start of an array containing the indices of the cols we wish to insert into
-      here we use same as above
-    6. a logically 2d array of doubles to insert. we get this from tarch::la::Matrix::data()
-    7. insert policy. let's use ADD_VALUES (equivalent to +=)
-
-
-    if (rowIndices.size() != stencil.rows() 
-        or
-        colIndices.size() != stencil.cols()
-    )
-      throw std::runtime_error("mismatched stencil!");
-    MatSetValues( _A, rowIndices.size(), &rowIndices[0], colIndices.size(), &colIndices[0], stencil.data(), ADD_VALUES );
-    }
-
-
-    same as above, but dangerous
-
-    void insertLocalMatrix( const int rows, const int* rowIndices, const int cols, const int* colIndices, const double* values ){
-      MatSetValues( _A, rows, rowIndices, cols, colIndices, values, ADD_VALUES );
-    }
-
-
-  *
-    inserting a vector of doubles into our rhs vector
-
-    template <int cellDofs>
-    void insertRHS( const tarch::la::Vector<cellDofs,double> dofs, const int& globalIndex ){
-      
-      tarch::la::Vector<cellDofs, int> indices;
-      std::iota( indices.data(), indices.data() + indices.size(), globalIndex );
-
-
-      the params here are, in order of appearance:
-        - _b, our rhs vector
-        - the number of entries we want to add
-        - array containing each of the indices we insert into
-        - array containing the data we insert there
-        - insert policy. ADD_VALUES is equivalent to +=
-
-      VecSetValues( _b, dofs.size(), indices.data(), dofs.data(), ADD_VALUES );
-    }
-
-
-    inserting vector of doubles to "u"
-
-    template <int cellDofs>
-    void insertX( const tarch::la::Vector<cellDofs,double> dofs, const int& globalIndex ){
-      tarch::la::Vector<cellDofs, int> indices;
-      std::iota( indices.data(), indices.data() + indices.size(), globalIndex );
-
-
-      the params here are, in order of appearance:
-        - _x, our solution vector
-        - the number of entries we want to add
-        - array containing each of the indices we insert into
-        - array containing the data we insert there
-        - insert policy. ADD_VALUES is equivalent to +=
-
-      VecSetValues( _x, dofs.size(), indices.data(), dofs.data(), ADD_VALUES );
-    
-    }
-
-
-    *
-    * method to insert value and rhs into the _x and _b vectors 
-    * respectively. 
-
-    void insertValueAndRHS(double val, double rhs, int index);
-
-*/
     /**
-     * Assemble vectors and matrices
+     * Overload to insert val into the rhs vector, at given row position
+     * \param int row - row index of where we insert
+     * \param double val - value to insert
     */
-//    void assemble();
+    void insert(int row, double val);
 
     /**
-    * method to hand over to petsc and solve.
+     * Overload to increment existing val in the rhs vector, at given row position
+     * \param int row - row index of where we insert
+     * \param double val - value to insert
+    */
+    void increment(int row, double val);
+
+
+    /**
+    * Method to insert a tarch::la::Matrix into the PETSc matrix. 
+    * The (0,0) entry of the supplied matrix will be placed at (row, col)
+    * in the PETSc matrix. We put the implementation in the header
+    * so that the templates work.
+    * \param int row - starting row where we wish to insert
+    * \param int col - starting col where we wish to insert
+    * \param const tarch::la::Matrix<rows,columns,double>& stencil 
+    */
+    template <int rows, int columns>
+    void insertMatrix(int row, int col, const tarch::la::Matrix<rows,columns,double>& stencil){
+      // get a array of row indices we want to insert into, beginning
+      // with the argument "row"
+      int rowIndices[ stencil.rows() ];
+      std::iota(rowIndices, rowIndices + stencil.rows(), row);
+
+      // same for columns
+      int colIndices[ stencil.cols() ];
+      std::iota(colIndices, colIndices + stencil.cols(), col);
+
+      // send to petsc
+      MatSetValues( _A, stencil.rows(), rowIndices, stencil.cols(), colIndices, stencil.data(), ADD_VALUES );
+
+    }
+
+    /**
+    * Method to hand over to petsc and solve.
     */
     void solve();
-
-    /**
-    * method to tidy up _A, _x and _b
-    */
-//    void petscDestroy();
-
 
   private:
     static tarch::logging::Log  _log;
@@ -173,11 +168,5 @@ class petsc::LinearEquationSystem{
     Mat  _A;
     Vec  _x;
     Vec  _b;
-
-    /**
-     * initialise a vector to store x for now, so we can interrogate them 
-     * when we want to map solution back onto mesh
-    */
-//    std::vector<double> _xAsStdVector;
 
 };

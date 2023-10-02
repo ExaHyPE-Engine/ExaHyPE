@@ -14,12 +14,12 @@ petsc::LinearEquationSystem::LinearEquationSystem():
 
 petsc::LinearEquationSystem::~LinearEquationSystem() {
   if (_dofs>0) {
-      //tidy up _A
-      MatDestroy(&_A);
+    //tidy up _A
+    MatDestroy(&_A);
 
-      //tidy up _x and _b
-      VecDestroy(&_x);
-      VecDestroy(&_b);
+    //tidy up _x and _b
+    VecDestroy(&_x);
+    VecDestroy(&_b);
   }
 }
 
@@ -124,7 +124,7 @@ void petsc::LinearEquationSystem::increment( int row, int col, double val ){
 
 void petsc::LinearEquationSystem::insert(int row, double val){
   // insert "val" into _x 
-//  VecSetValue(_x, index, val, INSERT_VALUES);
+  VecSetValue(_x, row, 0.0, INSERT_VALUES);
 
   // insert "rhs" into _b
   VecSetValue(_b, row, val, INSERT_VALUES);
@@ -190,10 +190,5 @@ void petsc::LinearEquationSystem::solve(){
 
   //tidy up temp objects
   KSPDestroy(&ksp);
-
-  // PetscViewer viewer;
-  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"solution.xml",&viewer);
-  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
-  // VecView(_x, viewer);
 
 }
