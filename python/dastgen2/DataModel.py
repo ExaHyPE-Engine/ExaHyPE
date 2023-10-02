@@ -136,6 +136,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
   """
 
     def _get_constructor_arguments(self):
+        """
+        Generates the list of constructor arguments needed to fully
+        instantiate an object of the class the datamodel generates.
+        """
         result = "("
         is_first = True
         for attribute in self._attributes:
@@ -243,7 +247,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 output.write(self._Header_Template_With_Data_Store.format(**d))
             else:
                 output.write(self._Header_Template_Without_Data_Store.format(**d))
-                
+
             self.__generate_accessors(output, False)
             output.write("\n\n\n")
 
@@ -344,21 +348,21 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 output.write("#endif \n")
         output.write("}\n\n\n")
 
-    def __generate_accessors(self, 
+    def __generate_accessors(self,
                              output,
                              is_cpp_file
                              ):
         """!
-        
+
         Generate getter/setter functions.
-        
-        Generate all the setters and getters and use get_methods() to 
+
+        Generate all the setters and getters and use get_methods() to
         construct them for the individual attributes.
-        
+
         output: File
-        
+
         is_cpp_file: Boolean
-        
+
         """
         for attribute in self._attributes:
             if attribute.expose_in_header_file != is_cpp_file:

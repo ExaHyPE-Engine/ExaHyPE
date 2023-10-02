@@ -15,8 +15,8 @@ class Model(object):
 
 
   def __str__(self):
-    return "(#cells=" + str(len(self.cell_data)) + ",#faces="  + str(len(self.face_data)) + ",#vertices=" + str(len(self.vertex_data)) + ",#global-objects=" + str(len(self.global_data)) + ")" 
-   
+    return "(#cells=" + str(len(self.cell_data)) + ",#faces="  + str(len(self.face_data)) + ",#vertices=" + str(len(self.vertex_data)) + ",#global-objects=" + str(len(self.global_data)) + ")"
+
 
   def add_cell(self,submodel):
     submodel.configure(self.namespace, DoFAssociation.Cell)
@@ -66,4 +66,4 @@ class Model(object):
     self.global_data = []
 
 
-    
+

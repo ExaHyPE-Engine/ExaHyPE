@@ -36,21 +36,25 @@ class Integer(Attribute):
 
         if self._is_static:
             if for_declaration:
-                getter = ("get" + accessor_name + "()", "static int")
+                getter = ("get" + accessor_name + "() const", "static int")
             else:
-                getter = ("get" + accessor_name + "()", "int")
+                getter = ("get" + accessor_name + "() const", "int")
 
         elif self._is_const_static:
             if for_declaration:
+                # No 'const' here: static member function cannot have 'const' qualifier
                 getter = ("get" + accessor_name + "()", "static int")
             else:
+                # No 'static' here: 'static' can only be specified inside the class definition
+                # No 'const' here either: function definition will then differ from that in declaration
                 getter = ("get" + accessor_name + "()", "int")
 
         elif self._is_const:
-            getter = ("get" + accessor_name + "()", "int")
+            raise NotImplementedError("standalone 'const' qualifier needs checking and verifying.")
+            #  getter = ("get" + accessor_name + "() const", "const int")
 
         elif self._is_constexpr:
-            getter = ("get" + accessor_name + "()", "constexpr int")
+            getter = ("get" + accessor_name + "() const", "constexpr int")
 
         else:
             # default case.

@@ -217,6 +217,14 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.data.add_attribute(self.hleft)
         self.data.add_attribute(self.hright)
 
+        #  self.data.add_attribute(dastgen2.attributes.String("myString", initval='"Hello there"'))
+        self.data.add_attribute(dastgen2.attributes.Integer("myInteger0", qualifier=dastgen2.attributes.Attribute.Qualifier.NONE))
+        self.data.add_attribute(dastgen2.attributes.Integer("myInteger1", initval=11, qualifier=dastgen2.attributes.Attribute.Qualifier.NONE))
+        # Not implemented yet
+        #  self.data.add_attribute(dastgen2.attributes.Integer("myConstInteger", initval=12, qualifier=dastgen2.attributes.Attribute.Qualifier.CONST))
+        self.data.add_attribute(dastgen2.attributes.Integer("myConstStaticInteger", initval=13, qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC))
+        self.data.add_attribute(dastgen2.attributes.Integer("myConstExprInteger", initval=14, qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR))
+
         # Newton-Raphson iterations ----------------------------------------------------
         self.smoothL_prev = dastgen2.attributes.Double("smoothingLengthPrevious")
         self.wcount = dastgen2.attributes.Double("wcount")
