@@ -38,6 +38,7 @@ class Integer(Attribute):
             if for_declaration:
                 getter = ("get" + accessor_name + "() const", "static int")
             else:
+                # No 'static' here: 'static' can only be specified inside the class definition
                 getter = ("get" + accessor_name + "() const", "int")
 
         elif self._is_const_static:
