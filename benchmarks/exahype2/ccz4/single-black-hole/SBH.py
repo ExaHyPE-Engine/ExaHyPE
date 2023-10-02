@@ -11,6 +11,8 @@ import numpy as np
 import jinja2
 
 
+import exahype2.solvers.fv.rusanov.kernels
+
 from enum import Enum
 
 # See comments in README.dox
@@ -30,6 +32,12 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 
 
 BlackHoleRegion = 0.1
+
+
+class KernelParallelisation(Enum):
+    NONE         = "::peano4::utils::LoopParallelism::None"
+    PARALLEL_FOR = "::peano4::utils::LoopParallelism::ParallelFor"
+    SUBTASKS     = "::peano4::utils::LoopParallelism::Subtasks"
 
 
 class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
@@ -52,6 +60,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
                  name,
                  patch_size,
                  amend_priorities: bool,
+                 parallelisation_of_kernels:       KernelParallelisation,
                  ):
         """!
 
@@ -89,6 +98,28 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
 
         if amend_priorities:
           self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority+1"
+
+        if parallelisation_of_kernels == KernelParallelisation.SUBTASKS:
+          #self._compute_kernel_call            = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
+          #  self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+          #  compute_max_eigenvalue_of_next_time_step=True, 
+          #  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.WithVirtualFunctions,
+          #  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.PatchWiseAoSHeap
+          #  )
+    
+            self._fused_compute_kernel_call_cpu  = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
+              self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+              compute_max_eigenvalue_of_next_time_step=True, 
+              solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.Multicore,
+              kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.PatchWiseAoSHeap
+              )
+
+          #self._fused_compute_kernel_call_gpu  = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
+          #  self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
+          #  compute_max_eigenvalue_of_next_time_step=True, 
+          #  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.AcceleratorWithExplicitCopy,
+          #  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.GenericAoS
+          #  )
 
         self.set_implementation(
             initial_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -195,19 +226,13 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
        action set.
 
     """
-
-    class InterpolationParallelisation(Enum):
-        NONE         = "::peano4::utils::LoopParallelism::None"
-        PARALLEL_FOR = "::peano4::utils::LoopParallelism::ParallelFor"
-        SUBTASKS     = "::peano4::utils::LoopParallelism::Subtasks"
-
-
     def __init__(self, 
                  name, 
                  patch_size,
                  min_cell_size, 
                  max_cell_size,
-                 parallelisation_of_interpolation: InterpolationParallelisation
+                 parallelisation_of_interpolation: KernelParallelisation,
+                 parallelisation_of_kernels:       KernelParallelisation,
                  ):
         self._name_without_FD4_extension       = name
         self._parallelisation_of_interpolation = parallelisation_of_interpolation
@@ -238,6 +263,10 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
             boundary_conditions=exahype2.solvers.fv.PDETerms.None_Implementation,
         )
         self.add_all_solver_constants()
+                
+        if parallelisation_of_kernels == KernelParallelisation.SUBTASKS:
+            print( "WARNING: Unfortunately, we have not yet written parallelised kernels for FD4")
+            pass
         
         update_solver_parameters_for_single_black_hole(self)
   

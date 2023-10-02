@@ -244,13 +244,16 @@ such as the Finite Volume Rusanov solver however provide factory methods to
 construct kernels which might come in handy.
 
 
-Not that the fused variants are used if and only if we can be sure that a compute 
+Note that the fused variants are used if and only if we can be sure that a compute 
 task does not require any synchronisity. They are used for
 enclave tasking codes only, and only if you have switched to stateless kernel 
 updates before (see recommendations above). As a consequence, these guys are 
 fairly save kernels to replace with a parallelised implementation, as you can 
 be sure that no data races arise.
 
+
+Nothing stops you from picking an alternative implementation for _compute_kernel_call
+as well. Just validate that you do not introduce any data races.
 
 
 

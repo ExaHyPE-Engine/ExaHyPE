@@ -14,8 +14,8 @@ from .kernels import create_solver_definitions
 
 from exahype2.solvers.fv.FixedSubcyclingTimeSteppingCodeSnippets import FixedSubcyclingTimeSteppingCodeSnippets
 
-from exahype2.solvers.fv.kernels import SolverVariant    
-from exahype2.solvers.fv.kernels import KernelVariant    
+from .kernels import SolverVariant    
+from .kernels import KernelVariant    
 
 from exahype2.solvers.fv.kernels import create_halo_layer_construction_with_interpolation_for_reconstructed_patch
 

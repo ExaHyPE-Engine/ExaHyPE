@@ -521,7 +521,7 @@ clarifies, this minimal tree size is not used for the initial decomposition
 (this is where the 8 steps in), but it is used afterwards.
 
 
-### Code tuning
+### High level code tuning
 
 The lionshare of the compute time is burnt within the Finite Volume patches.
 I followed a series of optimisation steps to get this part of the code faster:
@@ -543,42 +543,11 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
    how to obtain meaningful optimisation reports. However, it will result in 
    many warnings, as the compiler will be unable to inline and consequently
    vectorise the required static functions. 
-4. Tracing with Otter reveals that the Finite Volume and FD4 patches are 
-   spawned as enclave tasks. However, they drop in in totally random order
-   and the expensive Finite Volume tasks run risk not to run in parallel but
-   to be sequentialised. The section "Concurrency analysis with default task orchestration"
-   below provides details. 
-   I hence introduce a tailored task orchestration:
-   
-   - Add the main cpp file to the repository.
-   - Remove the default flags, i.e. do not call exahype2::parseCommandLineArguments().
-     The "new" code does not accept any arguments. 
-   - Introduce a new class MulticoreOrchestration. It inherits from 
-     tarch::multicore::orchestration::Strategy.
-   - Create an instance of this class and invoke tarch::multicore::setOrchestration() 
-     to activate it.
-   - Add the file to the project, such that the makefile picks it up:
-     ~~~~~~~~~~~~~~~~~~~~~~~~~~
-    peano4_project.output.makefile.add_cpp_file(
-        "MulticoreOrchestration.cpp"
-    )
-     ~~~~~~~~~~~~~~~~~~~~~~~~~~
-   Consult the documentation of the MulticoreOrchestration for information on 
-   its behaviour. 
-5. One might naively think that we next have to optimise the FV kernels 
-   themselves. While this is certainly a reasonable approach, we see that the 
-   majority of the runtime is now spent in the interpolation of the FD4 
-   solver. The higher order FD scheme is too expensive and notably serialises 
-   things. Studying the call stack reveals that this interpolation does not 
-   occur at the AMR boundaries, but it is the interpolation within the limited
-   region which slows down the calculation. Therefore, I started to tune the
-   routine toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear().
-   All the (OpenMP) parallelisation in there is a result of this benchmark.
    
 
 
 ### Concurrency analysis with default task orchestration   
-   
+
    
    When we visualise the CPU occupation, we get an image similar to the one
    below.
@@ -609,6 +578,42 @@ solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
    updates of the limited regions are computed in parallel. Still, we see those
    massive imbalances.
    
+Tracing with Otter confirms that the Finite Volume and FD4 patches are 
+   spawned as enclave tasks. However, they drop in in totally random order
+   and the expensive Finite Volume tasks run risk not to run in parallel but
+   to be sequentialised. 
+   I hence introduce a tailored task orchestration:
+   
+   - Introduce a new class MulticoreOrchestration. It inherits from 
+     tarch::multicore::orchestration::Strategy.
+   - Create an instance of this class and invoke tarch::multicore::setOrchestration() 
+     to activate it.
+   - Add the file to the project, such that the makefile picks it up:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+        project.set_load_balancing( "tarch::multicore::orchestration::Hardcoded::createNative()" )
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Consult the documentation of the MulticoreOrchestration for information on 
+   its behaviour. 
+   
+
+### Optimise the actual compute kernels
+
+We see that the 
+   majority of the runtime is now spent in the interpolation of the FD4 
+   solver. The higher order FD scheme is too expensive and notably serialises 
+   things. Studying the call stack reveals that this interpolation does not 
+   occur at the AMR boundaries, but it is the interpolation within the limited
+   region which slows down the calculation. Therefore, I started to tune the
+   routine toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_linear().
+   All the (OpenMP) parallelisation in there is a result of this benchmark.
+   These optimisations are to be enabled explicitly by the scheduler.
+   
+I next try to do the same thing with the FV kernel. Here, we follow the recipes
+of @ref page_exahype_performance_optimisation "the page describing how to make our compute kernels use all cores".
+In line with the description in there, we exploit the fact that we know that 
+all patches can be updated in an embarrassingly parallel way. Furthermore, we 
+know that literally all patches will be stateless. 
 
 
 
