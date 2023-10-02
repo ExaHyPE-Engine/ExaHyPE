@@ -55,9 +55,10 @@ class Boolean(Attribute):
 
         return methods
 
-    def get_plain_C_attributes(self):
+    def get_plain_C_attributes(self, for_constructor=False):
         typestring = "bool"
         namestring = "_" + self._name
+
         # add const/static qualifiers and initialization values, if needed
         if self._is_static:
             typestring = "inline static bool"
@@ -71,6 +72,13 @@ class Boolean(Attribute):
         elif self._is_constexpr:
             typestring = "constexpr static bool"
             namestring += " = " + str(self._initval)
+        else:
+            # default case
+            # If an initial value is provided, add it
+            # However, only add it if we need it for a definition,
+            # not as optional argument for constructor method
+            if self._initval is not None and not for_constructor:
+                namestring += " = " + str(self._initval)
 
         if self.compress:
             packstring = "[[clang::pack]]"

@@ -150,14 +150,20 @@ expose_in_header_file: Boolean
         this behaviour.
 
         """
-        return self.get_plain_C_attributes()
+        return self.get_plain_C_attributes(for_constructor=True)
 
     @abc.abstractmethod
-    def get_plain_C_attributes(self):
+    def get_plain_C_attributes(self, for_constructor=False):
         """!
 
         Return list of n-tuples. The tuple can either host two, three or
         four entries.
+
+        for_constructor: bool
+            whether the return value of this function is intended for use
+            in the constructor method of the DataModel. If true, will omit
+            (optionally provided) initialization values in the attribute
+            string.
 
 
         ### Two entries

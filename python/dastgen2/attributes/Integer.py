@@ -69,23 +69,37 @@ class Integer(Attribute):
 
         return methods
 
-    def get_plain_C_attributes(self):
+    def get_plain_C_attributes(self, for_constructor=False):
         typestring = "int"
         namestring = "_" + self._name
+
         # add const/static qualifiers and initialization values, if needed
         if self._is_static:
             typestring = "inline static int"
             if self._initval is not None:
                 namestring += " = " + str(self._initval)
+
         elif self._is_const_static:
             typestring = "inline const static int"
             namestring += " = " + str(self._initval)
+
         elif self._is_const:
             raise NotImplementedError
+
         elif self._is_constexpr:
             typestring = "constexpr static int"
             namestring += " = " + str(self._initval)
 
+        else:
+            # default case
+            # If an initial value is provided, add it
+            # However, only add it if we need it for a definition,
+            # not as optional argument for constructor method
+            if self._initval is not None and not for_constructor:
+                namestring += " = " + str(self._initval)
+
+
+        # Set up compression/packaging
         if self._min_value is None and self._max_value is None:
             return [(namestring, typestring, "")]
         else:
