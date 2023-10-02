@@ -1,17 +1,48 @@
-#include "PETScData.h"
+#include "LinearEquationSystem.h"
 
-/**
-* todo - change this class to use CLASS_NAME, cf the abstract poisson tempaltes etc
-*/
+#include <petscmat.h>
+#include <petscvec.h>
 
-{{NAMESPACE | join("::")}}::PetscData::PetscData() {}
-{{NAMESPACE | join("::")}}::PetscData::~PetscData() {}
 
-void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
+tarch::logging::Log  petsc::LinearEquationSystem::_log( "petsc::LinearEquationSystem" );
+
+
+petsc::LinearEquationSystem::LinearEquationSystem():
+  _dofs(-1) {
+}
+
+
+petsc::LinearEquationSystem::~LinearEquationSystem() {
+  if (_dofs>0) {
+      //tidy up _A
+      MatDestroy(&_A);
+
+      //tidy up _x and _b
+      VecDestroy(&_x);
+      VecDestroy(&_b);
+  }
+}
+
+
+void petsc::LinearEquationSystem::printMatrixToTerminal() {
+  MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
+}
+
+
+void petsc::LinearEquationSystem::printRhsToTerminal() {
+  VecView(_b, PETSC_VIEWER_STDOUT_WORLD);
+}
+
+
+void petsc::LinearEquationSystem::printXToTerminal() {
+  VecView(_x, PETSC_VIEWER_STDOUT_WORLD);
+}
+
+
+void petsc::LinearEquationSystem::init( int dofs ){
   logTraceInWith1Argument( "initMatrixAndVectors()", dofs );
-  setDoFs( dofs );
 
-  //  MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
+  _dofs = dofs;
 
   //matrix size, set it to number of dofs
   PetscInt n = _dofs;
@@ -36,26 +67,25 @@ void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
   VecSetUp(_b);
 
   //explicitly set the diagonals to be 0!
-  int tempRowArray[1];
-  double zero[1] = {0};
+//  int tempRowArray[1];
+//  double zero[1] = {0};
 
-  for (int i=0; i<dofs; i++){
-    tempRowArray[0] = i;
-    insertLocalMatrix( 1, tempRowArray, 1, tempRowArray, zero );
-  }
-  
+//  for (int i=0; i<dofs; i++){
+//    tempRowArray[0] = i;
+//    insertLocalMatrix( 1, tempRowArray, 1, tempRowArray, zero );
+//  }
+
   logTraceOut( "initMatrixAndVectors()" );
 }
 
-void {{NAMESPACE | join("::")}}::PetscData::setDoFs(int dofs){
-  _dofs = dofs;
-}
 
-int {{NAMESPACE | join("::")}}::PetscData::getDoFs() const{
+int petsc::LinearEquationSystem::getDoFs() const{
   return _dofs;
 }
 
-void {{NAMESPACE | join("::")}}::PetscData::convertToStdVector(){
+
+/*
+void petsc::LinearEquationSystem::convertToStdVector(){
   //get size of vec
   PetscInt size;
   VecGetSize(_x, &size);
@@ -76,38 +106,60 @@ void {{NAMESPACE | join("::")}}::PetscData::convertToStdVector(){
   //put these into _xAsStdVector
   _xAsStdVector.insert( _xAsStdVector.begin(), &y[0], &y[size] );
 }
+*/
 
-std::vector<double> {{NAMESPACE | join("::")}}::PetscData::getX() const{
+/*
+std::vector<double> petsc::LinearEquationSystem::getX() const{
   return _xAsStdVector;
 }
+*/
 
-double {{NAMESPACE | join("::")}}::PetscData::getX(int i) const{
+double petsc::LinearEquationSystem::get(int i) const {
+  assertion1( i>=0, i );
+
   //check if we have populated it yet
-  if ( !_xAsStdVector.size() )
-    return -1;
-  return _xAsStdVector[i];
+  PetscInt    ix[] = {i};
+  PetscScalar result[1];
+  VecGetValues(
+    _x,
+    1, // size,
+    ix,
+    result
+  );
+  return result[0];
 }
 
-void {{NAMESPACE | join("::")}}::PetscData::insertDoubleAtIndexij(int i, int j, double val){
-  MatSetValue(_A, i, j, val, INSERT_VALUES);
+
+void petsc::LinearEquationSystem::insert(int row, int col, double val){
+  MatSetValue(_A, row, col, val, INSERT_VALUES);
 }
+
 
 //storing doubles to be placed into A
-void {{NAMESPACE | join("::")}}::PetscData::incrementDoubleAtIndexij( int i, int j, double val ){
-  MatSetValue(_A, i, j, val, ADD_VALUES);
+void petsc::LinearEquationSystem::increment( int row, int col, double val ){
+  MatSetValue(_A, row, col, val, ADD_VALUES);
 }
 
 
-void {{NAMESPACE | join("::")}}::PetscData::insertValueAndRHS(double val, double rhs, int index){
+void petsc::LinearEquationSystem::insert(int row, double val){
   // insert "val" into _x 
-  VecSetValue(_x, index, val, INSERT_VALUES);
+//  VecSetValue(_x, index, val, INSERT_VALUES);
 
   // insert "rhs" into _b
-  VecSetValue(_b, index, rhs, INSERT_VALUES);
+  VecSetValue(_b, row, val, INSERT_VALUES);
 }
 
-void {{NAMESPACE | join("::")}}::PetscData::assemble(){
-  
+
+void petsc::LinearEquationSystem::increment(int row, double val){
+  // insert "val" into _x
+  VecSetValue(_x, row, 0.0, INSERT_VALUES);
+
+  // insert "rhs" into _b
+  VecSetValue(_b, row, val, ADD_VALUES);
+}
+
+
+void petsc::LinearEquationSystem::solve(){
   //assemble matrices
   MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);
@@ -118,28 +170,11 @@ void {{NAMESPACE | join("::")}}::PetscData::assemble(){
   VecAssemblyBegin(_b);
   VecAssemblyEnd(_b);
 
-  //print out our contents
-  // MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
-  // PetscViewer viewer;
-  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"mat.xml",&viewer);
-  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
-  // MatView(_A, viewer);
-  
-  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"rhs.xml",&viewer);
-  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
-  // VecView(_b, viewer);
-  // PetscViewerDestroy(&viewer);
-}
-
-void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
   // for now, we stuff everything into this method
   Vec         u; // exact soln
   KSP         ksp;     /* KSP context */
   PC          pc;      /* PC context */
   PetscReal   norm;    /* norm of solution error */
-
-  //don't know what this does
-  PetscFunctionBeginUser;
 
   /*
      Create linear solver context
@@ -180,23 +215,4 @@ void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
   // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
   // VecView(_x, viewer);
 
-  return;
-}
-
-void {{NAMESPACE | join("::")}}::PetscData::petscDestroy(){
-  logInfo("petscDestroy()", "tidying up petsc objects");
-  //tidy up _A
-  MatDestroy(&_A);
-
-  //tidy up _x and _b
-  VecDestroy(&_x);
-  VecDestroy(&_b);
-
-  /*
-  most petsc scripts call PetscFinalize(), but this
-  may interfere with the way peano handles mpi.
-  for now, it stays commented out.
-  */
-  // PetscFinalize();
-  return;
 }

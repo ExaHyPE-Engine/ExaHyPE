@@ -1,11 +1,6 @@
-/**
- *
- * for now we use the project name as a prefix for
- * the template
- *
- * */
-
-
+// This file is part of the Peano's PETSc extension. For conditions of
+// distribution and use, please see the copyright notice at
+// www.peano-framework.org
 #pragma once
 
 #include "tarch/logging/Log.h"
@@ -14,49 +9,59 @@
 #include "tarch/logging/LogFilterFileReader.h"
 #include "tarch/la/Matrix.h"
 
+#include <petscmat.h>
+#include <petscsys.h>
 #include <petscksp.h>
 #include <vector>
 #include <numeric> //for std::iota
 
-extern tarch::logging::Log _log;
 
-namespace {{NAMESPACE | join("::")}}{
-  class PetscData;
+namespace petsc {
+  class LinearEquationSystem;
 }
 
-class {{NAMESPACE | join("::")}}::PetscData{
+
+class petsc::LinearEquationSystem{
   public:
-    PetscData();
-    virtual ~PetscData();
+    LinearEquationSystem();
+    virtual ~LinearEquationSystem();
+
+    void printMatrixToTerminal();
+    void printRhsToTerminal();
+    void printXToTerminal();
 
     int getDoFs() const;
-    void setDoFs(int dofs);
 
     /**
      * method to intialise the matrix and two vectors
      * each we _dofs entries
      * \param int dofs
     */
-    void initMatrixAndVectors( int dofs );
+    void init( int dofs );
+
     //method to convert petsc vec to std array
     //for now, just for the solution vector
-    void convertToStdVector();
+//    void convertToStdVector();
 
     /**
      * getter methods to retrieve values inside the solution vector
     */
-    std::vector<double> getX() const;
-    double getX(int i) const;
+//    std::vector<double> getX() const;
+    double get(int i) const;
 
     /**
      * method to send doubles to petsc as we receive them
     */
-    void insertDoubleAtIndexij(int i, int j, double val);
-    void incrementDoubleAtIndexij(int i, int j, double val);
-    void applyStencilToA(int numRows, int rowIndices, int numCols, int colIndices, double values[], double scale);
+    void insert(int row, int col, double val);
+    void increment(int row, int col, double val);
+
+    void insert(int row, double val);
+    void increment(int row, double val);
+/*
 
 
-    /**
+
+    *
     * method to insert values into matrix based on stencil
     * \param indices - the indices of the DoFs in question
     * \param values  - logically 2d array of doubles
@@ -66,11 +71,11 @@ class {{NAMESPACE | join("::")}}::PetscData{
               will be the intended stencil for this cell/face/vertex
 
       IMPLEMENTATION IS IN THE HEADER SO THE TEMPLATES WORK
-    */
-    template <int rows, int columns>
-    void insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const tarch::la::Matrix<rows,columns,double>& stencil ){
 
-  /**
+//    template <int rows, int columns>
+//    void insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const tarch::la::Matrix<rows,columns,double>& stencil ){
+
+  *
   in order of appearance, the params are:
     1. _A, our petsc matrix
     2. the number of rows we wish to insert into
@@ -82,7 +87,7 @@ class {{NAMESPACE | join("::")}}::PetscData{
     6. a logically 2d array of doubles to insert. we get this from tarch::la::Matrix::data()
     7. insert policy. let's use ADD_VALUES (equivalent to +=)
 
-  */
+
     if (rowIndices.size() != stencil.rows() 
         or
         colIndices.size() != stencil.cols()
@@ -91,88 +96,91 @@ class {{NAMESPACE | join("::")}}::PetscData{
     MatSetValues( _A, rowIndices.size(), &rowIndices[0], colIndices.size(), &colIndices[0], stencil.data(), ADD_VALUES );
     }
 
-    /*
+
     same as above, but dangerous
-    */
+
     void insertLocalMatrix( const int rows, const int* rowIndices, const int cols, const int* colIndices, const double* values ){
       MatSetValues( _A, rows, rowIndices, cols, colIndices, values, ADD_VALUES );
     }
 
 
-  /**
+  *
     inserting a vector of doubles into our rhs vector
-  */
+
     template <int cellDofs>
     void insertRHS( const tarch::la::Vector<cellDofs,double> dofs, const int& globalIndex ){
       
       tarch::la::Vector<cellDofs, int> indices;
       std::iota( indices.data(), indices.data() + indices.size(), globalIndex );
 
-      /*
+
       the params here are, in order of appearance:
         - _b, our rhs vector
         - the number of entries we want to add
         - array containing each of the indices we insert into
         - array containing the data we insert there
         - insert policy. ADD_VALUES is equivalent to +=
-      */
+
       VecSetValues( _b, dofs.size(), indices.data(), dofs.data(), ADD_VALUES );
     }
 
-    /*
+
     inserting vector of doubles to "u"
-    */
+
     template <int cellDofs>
     void insertX( const tarch::la::Vector<cellDofs,double> dofs, const int& globalIndex ){
       tarch::la::Vector<cellDofs, int> indices;
       std::iota( indices.data(), indices.data() + indices.size(), globalIndex );
 
-      /*
+
       the params here are, in order of appearance:
         - _x, our solution vector
         - the number of entries we want to add
         - array containing each of the indices we insert into
         - array containing the data we insert there
         - insert policy. ADD_VALUES is equivalent to +=
-      */
+
       VecSetValues( _x, dofs.size(), indices.data(), dofs.data(), ADD_VALUES );
     
     }
 
 
-    /**
+    *
     * method to insert value and rhs into the _x and _b vectors 
     * respectively. 
-    */
+
     void insertValueAndRHS(double val, double rhs, int index);
 
+*/
     /**
      * Assemble vectors and matrices
     */
-    void assemble();
+//    void assemble();
 
     /**
     * method to hand over to petsc and solve.
     */
-    void petscSolve();
+    void solve();
 
     /**
     * method to tidy up _A, _x and _b
     */
-    void petscDestroy();
+//    void petscDestroy();
 
 
   private:
+    static tarch::logging::Log  _log;
+
     int _dofs;
 
-    //Ax = b
-    Mat _A;
-    Vec _x, _b;
+    Mat  _A;
+    Vec  _x;
+    Vec  _b;
 
     /**
      * initialise a vector to store x for now, so we can interrogate them 
      * when we want to map solution back onto mesh
     */
-    std::vector<double> _xAsStdVector;
+//    std::vector<double> _xAsStdVector;
 
 };

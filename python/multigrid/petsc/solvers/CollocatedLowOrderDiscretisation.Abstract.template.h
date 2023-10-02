@@ -18,6 +18,7 @@
 #include "peano4/utils/Globals.h"
 
 #include "petsc/LocalToGlobalMap.h"
+#include "petsc/LinearEquationSystem.h"
 
 #include "Constants.h"
 
@@ -83,7 +84,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     )
     {% if CELL_RHS_MATRIX==[] %} = 0 {% endif %};
 
-    ::petsc::LocalToGlobalMap&  getLocalToGlobalMap();
+    ::petsc::LocalToGlobalMap&      getLocalToGlobalMap();
+    ::petsc::LinearEquationSystem&  getLinearEquationSystem();
   protected:
     static tarch::logging::Log  _log;
 
@@ -92,7 +94,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 
-    ::petsc::LocalToGlobalMap  _localToGlobalMap;
+    ::petsc::LocalToGlobalMap      _localToGlobalMap;
+    ::petsc::LinearEquationSystem  _linearEquationSystem;
 };
 
 

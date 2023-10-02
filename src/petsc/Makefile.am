@@ -6,6 +6,7 @@ endif
 
 PETScSources = \
   petsc.cpp \
+  LinearEquationSystem.cpp \
   LocalToGlobalMap.cpp \
   UnitTests.cpp
 

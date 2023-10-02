@@ -194,9 +194,7 @@ void step() {
         watch.start();
 
         repositories::computeLocalToGlobalMapsForAllSolvers();
-        const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
-        logInfo( "step()", "total no of dofs="  << totalNumberOfDegreesOfFreedom );
-        repositories::instanceOfPetsc.initMatrixAndVectors( totalNumberOfDegreesOfFreedom );
+        repositories::initMatricesAndVectors();
         logInfo( "step()", "PETSc successfully initialised" );
         
         watch.stop();
@@ -212,7 +210,7 @@ void step() {
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
 
         //assemble the matrix
-        repositories::instanceOfPetsc.assemble();
+//        repositories::instanceOfPetsc.assemble();
         watch.stop();
         assembleMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -222,10 +220,9 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
 
         watch.start();
-        // solve
-        repositories::instanceOfPetsc.petscSolve();
-
+        repositories::solve();
         watch.stop();
+
         solveMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
@@ -237,11 +234,11 @@ void step() {
         watch.start();
 
         //move data from petsc to c++
-        repositories::instanceOfPetsc.convertToStdVector();
+//        repositories::instanceOfPetsc.convertToStdVector();
         
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         
-        repositories::instanceOfPetsc.petscDestroy();
+//        repositories::instanceOfPetsc.petscDestroy();
         watch.stop();
         mapSolutionOntoMeshMeasurement.setValue( watch.getCalendarTime() );
       }
@@ -269,8 +266,6 @@ int main(int argc, char** argv) {
   const int ExitCodeUnitTestsFailed  = 1;
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
-
-  PetscFunctionBeginUser;
 
   peano4::initParallelEnvironment(&argc, &argv);
   petsc::initParallelEnvironment(&argc, &argv);
