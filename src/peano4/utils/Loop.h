@@ -250,6 +250,9 @@ namespace peano4 {
 }
 
 
+std::string toString( peano4::utils::LoopParallelism );
+
+
 /**
  * d-dimensional Loop
  *
@@ -1027,3 +1030,4 @@ static const int lookupzfor3[8][27][3] = {
 #define endzfor \
   } \
   }
+
