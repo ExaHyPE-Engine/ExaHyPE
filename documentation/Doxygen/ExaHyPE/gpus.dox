@@ -32,7 +32,7 @@ effects does not mean that all cells have to be side effect-free.
 
 
 
-## Compile with GPU support
+# Compile with GPU support
 
 Configure ExaHyPE with the argument `--with-gpu=xxx` and select an
 appropriate GPU programming model. Rebuild the whole Peano core. 
@@ -47,7 +47,7 @@ If you are "only" interested in the most aggressive vectorisation of your
 kernels, you can skip this part.
 
 
-## Switch to stateless compute kernels
+# Enable stateless compute kernels
 
 For the aggressive vectorisation and the offloading, you have to use
 an ExaHyPE solver which has support for GPUs and you ahve to instruct it that 
@@ -167,14 +167,25 @@ your compiler struggles with the inlining, you might be forced either
 
 ## Alter compute kernel
 
+@todo This is yet to be written
 
-## If required: mask out cells which are not a fit
+Feel free to reset
 
-patchCanUseStatelessPDETerms() yields, by default, true.
+        self._fused_compute_kernel_call_cpu
+        
+in your solver class and to switch to a faster kernel realisation variant. 
+Such a switch follows the @ref  page_exahype_performance_optimisation "The code does not use all cores" discussion.
+
+
+## Mask out cells which are not a fit
+
+patchCanUseStatelessPDETerms() yields, by default, true. So all compute kernels
+end up on the GPU if they are embedded into enclave tasks. You migth want to 
+alter this, and keep some kernels on the host.
 
 
 
-##### Finally, pick a threading backend which supports GPU offloading.
+# Pick a threading backend which supports GPU offloading.
 
 The default threading model of  does not support task fusion or the
 offloading to GPUs. If you run the code with `–help`, it will report on
