@@ -110,7 +110,7 @@ if __name__ == "__main__":
             "tailored",
             "parallel-for",
             "subtasks",
-            "subtasks-and-fv-parallelisation"
+            "subtasks-and-kernel-parallelisation"
         ],
         required=True,
         help="Task scheduler flavours",
@@ -178,7 +178,7 @@ if __name__ == "__main__":
         enable_higher_priority_for_FV_tasks = True
         parallelise_interpolation           = KernelParallelisation.SUBTASKS
         fv_kernel_parallelisation           = KernelParallelisation.NONE
-    elif args.scheduler == "subtasks-and-fv-parallelisation":
+    elif args.scheduler == "subtasks-and-kernel-parallelisation":
         project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
         parallelise_interpolation           = KernelParallelisation.SUBTASKS

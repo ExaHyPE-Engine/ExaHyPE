@@ -182,19 +182,30 @@ amend the prefix accordingly.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export PREFIX=tbb or openmp or sycl
 
-mkdir results
-
-for SCHEDULER in native-no-priorities native tailored parallel-for subtasks
+for SCHEDULER in native-no-priorities native tailored parallel-for subtasks subtasks-and-kernel-parallelisation
 do
   for TREES in 1 6 8 12
   do
     OUTPUT=$PREFIX-without-amr-$SCHEDULER-$TREES-trees
     python3 performance-studies.py -s fd4-rk1-limited-ps-3 --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
-    ./$OUTPUT > results/$OUTPUT.txt
     
     OUTPUT=$PREFIX-with-amr-$SCHEDULER-$TREES-trees
     python3 performance-studies.py -s fd4-rk1-limited-ps-3 --amr --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
-    ./$OUTPUT > results/$OUTPUT.txt  
+  done
+done
+
+export RESULTS_FOLDER=results
+mkdir $RESULTS_FOLDER
+
+for SCHEDULER in native-no-priorities native tailored parallel-for subtasks subtasks-and-kernel-parallelisation
+do
+  for TREES in 1 6 8 12
+  do
+    OUTPUT=$PREFIX-without-amr-$SCHEDULER-$TREES-trees
+    ./$OUTPUT > $RESULTS_FOLDER/$OUTPUT.txt
+    
+    OUTPUT=$PREFIX-with-amr-$SCHEDULER-$TREES-trees
+    ./$OUTPUT > $RESULTS_FOLDER/$OUTPUT.txt  
   done
 done
 
@@ -217,7 +228,7 @@ for AMR in without-amr with-amr
 do
   for TREES in 1 6 8 12
   do
-    for SCHEDULER in native-no-priorities native tailored parallel-for subtasks
+    for SCHEDULER in native-no-priorities native tailored parallel-for subtasks subtasks-and-kernel-parallelisation
     do
       FILE=results/$PREFIX-$AMR-$SCHEDULER-$TREES-trees.txt
       echo $FILE >> $OUTPUT
