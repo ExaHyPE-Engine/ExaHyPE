@@ -1,0 +1,8 @@
+/**
+
+@page multigrid_benchmarks Benchmarks
+
+\li \subpage benchmarks_multigrid_petsc_poisson
+
+
+*/
