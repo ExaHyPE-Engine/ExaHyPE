@@ -69,8 +69,41 @@
 /**
  * SIMT loop macro for OpenMP
  *
- * I originally wanted to have the omp taskloop outside of the nested for
+ * I originally wanted to have one single OpenMP macro outside of the nested
+ * for loops in combination with a collapse statement. So something similar
+ * to
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * { \
+ *   tarch::la::Vector<5,int> counter##Max(max); \
+ *   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
+ *   _Pragma( "omp taskloop simd collapse(5) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+ *   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
+ *   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
+ *   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
+ *   for( int counter##3 = 0; counter##3 < counter##Max(3); counter##3++ ) \
+ *   for( int counter##4 = 0; counter##4 < counter##Max(4); counter##4++ ) { \
+ *     tarch::la::Vector<5, int> counter = { counter##0, counter##1, counter##2, counter##3, counter##4 };
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * This will make the code crash.
+ * the omp taskloop outside of the nested for
  * loops and to use the simt.
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * { \
+ *   tarch::la::Vector<5,int> counter##Max(max); \
+ *   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
+ *   _Pragma( "omp taskloop collapse(4) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+ *   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
+ *   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
+ *   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
+ *   for( int counter##3 = 0; counter##3 < counter##Max(3); counter##3++ ) { \
+ *     _Pragma( "omp simd if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopParallelism::Subtasks)" ) \
+ *     for( int counter##4 = 0; counter##4 < counter##Max(4); counter##4++ ) { \
+ *       tarch::la::Vector<5, int> counter = { counter##0, counter##1, counter##2, counter##3, counter##4 };
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
  */
 #define simtDforWithDynamicScheduling2d(counter, max, loopParallelism) \
   { \
