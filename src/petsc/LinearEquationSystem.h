@@ -12,8 +12,6 @@
 #include <petscmat.h>
 #include <petscsys.h>
 #include <petscksp.h>
-#include <vector>
-#include <numeric> //for std::iota
 
 
 namespace petsc {
@@ -26,9 +24,12 @@ class petsc::LinearEquationSystem{
     LinearEquationSystem();
     virtual ~LinearEquationSystem();
 
-    void printMatrixToTerminal();
-    void printRhsToTerminal();
-    void printXToTerminal();
+    void printMatrix();
+    void printMatrix(std::string filename);
+    void printRhs();
+    void printRhs(std::string filename);
+    void printX();
+    void printX(std::string filename);
 
     int getDoFs() const;
 
@@ -43,10 +44,6 @@ class petsc::LinearEquationSystem{
     //for now, just for the solution vector
 //    void convertToStdVector();
 
-    /**
-     * getter methods to retrieve values inside the solution vector
-    */
-//    std::vector<double> getX() const;
     double get(int i) const;
 
     /**

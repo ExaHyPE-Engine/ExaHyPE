@@ -24,20 +24,40 @@ petsc::LinearEquationSystem::~LinearEquationSystem() {
 }
 
 
-void petsc::LinearEquationSystem::printMatrixToTerminal() {
+void petsc::LinearEquationSystem::printMatrix() {
   MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
 }
 
+void petsc::LinearEquationSystem::printMatrix(std::string filename) {
+  PetscViewer viewer;
+  PetscViewerASCIIOpen(PETSC_COMM_WORLD, filename.c_str(), &viewer);
+  PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  MatView(_A, viewer);
+  PetscViewerDestroy(&viewer);
+}
 
-void petsc::LinearEquationSystem::printRhsToTerminal() {
+void petsc::LinearEquationSystem::printRhs() {
   VecView(_b, PETSC_VIEWER_STDOUT_WORLD);
 }
 
-
-void petsc::LinearEquationSystem::printXToTerminal() {
+void petsc::LinearEquationSystem::printRhs(std::string filename) {
+  PetscViewer viewer;
+  PetscViewerASCIIOpen(PETSC_COMM_WORLD, filename.c_str(), &viewer);
+  PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  VecView(_b, viewer);
+  PetscViewerDestroy(&viewer);
+}
+void petsc::LinearEquationSystem::printX() {
   VecView(_x, PETSC_VIEWER_STDOUT_WORLD);
 }
 
+void petsc::LinearEquationSystem::printX(std::string filename) {
+  PetscViewer viewer;
+  PetscViewerASCIIOpen(PETSC_COMM_WORLD, filename.c_str(), &viewer);
+  PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  VecView(_x, viewer);
+  PetscViewerDestroy(&viewer);
+}
 
 void petsc::LinearEquationSystem::init( int dofs ){
   logTraceInWith1Argument( "initMatrixAndVectors()", dofs );
@@ -66,15 +86,6 @@ void petsc::LinearEquationSystem::init( int dofs ){
   VecSetUp(_x);
   VecSetUp(_b);
 
-  //explicitly set the diagonals to be 0!
-//  int tempRowArray[1];
-//  double zero[1] = {0};
-
-//  for (int i=0; i<dofs; i++){
-//    tempRowArray[0] = i;
-//    insertLocalMatrix( 1, tempRowArray, 1, tempRowArray, zero );
-//  }
-
   logTraceOut( "initMatrixAndVectors()" );
 }
 
@@ -83,36 +94,6 @@ int petsc::LinearEquationSystem::getDoFs() const{
   return _dofs;
 }
 
-
-/*
-void petsc::LinearEquationSystem::convertToStdVector(){
-  //get size of vec
-  PetscInt size;
-  VecGetSize(_x, &size);
-
-  _xAsStdVector.resize(size);
-
-  //temp array to hold the values 
-  PetscScalar y[size];
-
-  //temp array to hold the indices we request
-  PetscInt ix[size];
-  for (int i=0; i<size; i++)
-    ix[i] = i;
-
-  //ask petsc
-  VecGetValues( _x, size, ix, y );
-
-  //put these into _xAsStdVector
-  _xAsStdVector.insert( _xAsStdVector.begin(), &y[0], &y[size] );
-}
-*/
-
-/*
-std::vector<double> petsc::LinearEquationSystem::getX() const{
-  return _xAsStdVector;
-}
-*/
 
 double petsc::LinearEquationSystem::get(int i) const {
   assertion1( i>=0, i );
