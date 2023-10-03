@@ -43,7 +43,7 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
         ,{{ROW | join(", ")}}
       {% endfor %}
   };
-  return tarch::la::volume(cellSize) * result;
+  return result;
 }
 {% endif %}
 
