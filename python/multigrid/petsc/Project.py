@@ -214,7 +214,6 @@ The function runs through various steps:
 
     self.__configure_makefile()
     self.__generate_solver_repository()
-    #self.__generate_data_repository()
 
     self._project.output.readme.add_package_description( """
 
@@ -298,6 +297,7 @@ This yet has to be written.
     solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
     
     self._solvers.append( solver )
+
     pass
 
 

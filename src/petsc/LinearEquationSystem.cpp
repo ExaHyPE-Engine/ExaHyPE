@@ -13,14 +13,7 @@ petsc::LinearEquationSystem::LinearEquationSystem():
 
 
 petsc::LinearEquationSystem::~LinearEquationSystem() {
-  if (_dofs>0) {
-    //tidy up _A
-    MatDestroy(&_A);
 
-    //tidy up _x and _b
-    VecDestroy(&_x);
-    VecDestroy(&_b);
-  }
 }
 
 
@@ -191,4 +184,15 @@ void petsc::LinearEquationSystem::solve(){
   //tidy up temp objects
   KSPDestroy(&ksp);
 
+}
+
+void petsc::LinearEquationSystem::cleanUpPetscObjects(){
+  if (_dofs>0) {
+    //tidy up _A
+    MatDestroy(&_A);
+
+    //tidy up _x and _b
+    VecDestroy(&_x);
+    VecDestroy(&_b);
+  }
 }

@@ -40,7 +40,6 @@ class PETScMain(peano4.runner.DefaultSequence):
     self.d[ "DomainOffset" ] += "}"
     self.d[ "DomainSize" ]   += "}"
 
-
   def _get_header_file_template(self):
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )    
     return templatefile_prefix+".template.h"

@@ -160,6 +160,16 @@ class petsc::LinearEquationSystem{
     */
     void solve();
 
+    /**
+    * Method to clean up PETSc objects. Call this in some late stage 
+    * during the main function. We would ideally put these in the 
+    * destructor of this class, but the destructor is typically called
+    * after Peano has already cleaned up its MPI routines. This causes
+    * a (trivial) MPI error at the very end of execution. For now, we
+    * put this stuff here so as not to cause any issues.
+    */
+    void cleanUpPetscObjects();
+
   private:
     static tarch::logging::Log  _log;
 
