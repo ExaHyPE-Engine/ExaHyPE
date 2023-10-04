@@ -97,7 +97,32 @@ class tarch::logging::Statistics {
      *
      * I do append the extension (csv) and a rank identifier myself, i.e. each
      * rank will write a csv file of its own. The format of the csv file is
-     * discussed above.
+     * discussed above. The name is not 100% correct, as the routine also
+     * erases snapshot data which is not required anymore, as we have dumped
+     * it on disk.
+     *
+     * ## Realisation
+     *
+     * Each data entry hosts a long list of snapshots which are chronologically
+     * ordered. That is, we have
+     *
+     *
+     *       first-stats:  0.4xa, 0.7b, 0.8c, 1.2d
+     *       second-stats: 0.3xe, 0.5f, 0.9g
+     *
+     * In the map. The code runs through all stats iteratively, until no more
+     * stats are in the file, i.e. until we have dumped all data. In a first
+     * step per iteration, we find the minimum time stamp that has to be
+     * dumped. If there are no data left, this one is max and therefore we
+     * can terminate.
+     *
+     * As long as there are entries, now have a valid cut off time stamp t.
+     * We run over all entries in our database next. In the example above, that
+     * would be two of them. We only ever have to study the first entry within
+     * a sequence of events, as they are chronologically ordered. If the time
+     * stamp of this first entry is smaller or equal to our cut-off, we dump
+     * it and then remove it from the data set.
+     *
      */
     void writeToCSV( std::string  filename = "statistics" );
 
@@ -146,6 +171,9 @@ class tarch::logging::Statistics {
       LogMessage() = default;
     };
 
+    /**
+     * Mapping from identifier who wrote stats (key) onto DataSet.
+     */
     std::map< std::string, DataSet >     _dataSetMap;
     std::map< std::string, LogMessage >  _logMessageMap;
 

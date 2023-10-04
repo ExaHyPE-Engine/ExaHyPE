@@ -175,17 +175,21 @@ void tarch::logging::Statistics::writeToCSV( [[maybe_unused]] std::string filena
 
   double t = 0.0;
   while (t<std::numeric_limits<double>::max()) {
-
     // find minimum time stamp over both types of logs
-    t = std::numeric_limits<double>::max();
+    t   = std::numeric_limits<double>::max();
+
+    auto computeT = [&](double currentT) {
+      t  =  std::min( t,  currentT );
+    };
+
     for (auto& p: _dataSetMap) {
       if (not p.second._data.empty()) {
-        t = std::min( t, std::get<0>(p.second._data.front()) );
+        computeT( std::get<0>(p.second._data.front()) );
       }
     } 
     for (auto& p: _logMessageMap) {
       if (not p.second._data.empty()) {
-        t = std::min( t, std::get<0>(p.second._data.front()) );
+        computeT( std::get<0>(p.second._data.front()) );
       }
     }
 
@@ -196,7 +200,7 @@ void tarch::logging::Statistics::writeToCSV( [[maybe_unused]] std::string filena
         if (
           not p.second._data.empty()
           and
-          std::get<0>(p.second._data.front()) < t + _maxTimeInBetweenTwoMeasurements
+          tarch::la::smallerEquals( std::get<0>(p.second._data.front()), t )
         ) {
           file << ", (" << std::get<1>(p.second._data.front())
               << "/" << std::get<2>(p.second._data.front())
@@ -213,7 +217,7 @@ void tarch::logging::Statistics::writeToCSV( [[maybe_unused]] std::string filena
         if (
           not pp.second._data.empty()
           and
-          std::get<0>(pp.second._data.front()) < t + _maxTimeInBetweenTwoMeasurements
+          tarch::la::smallerEquals( std::get<0>(pp.second._data.front()), t )
         ) {
           file << ", \"" << std::get<1>(pp.second._data.front()) << "\" ";
           pp.second._data.erase(pp.second._data.begin());
