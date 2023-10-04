@@ -9,3 +9,4 @@ from .ExplicitEulerDynamicSearchRadius import ExplicitEulerDynamicSearchRadius
 from .ExplicitEulerFixedSearchRadius import ExplicitEulerFixedSearchRadius
 from .LeapfrogFixedSearchRadius import LeapfrogFixedSearchRadius
 from .SPHLeapfrogFixedSearchRadius import SPHLeapfrogFixedSearchRadius
+from .DastgenTestDummyParticle import DastgenTestDummyParticle
