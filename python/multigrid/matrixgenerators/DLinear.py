@@ -39,19 +39,27 @@ class DLinear(MatrixGenerator):
     
   def getCellIdentityMatrix(self):
     dim    = self._cell_dofs * self.unknowns_per_vertex_dof
-    output = np.zeros((dim,dim))
-    for i in range(dim):
-      output[i,i] = 2**(-self.dimensions)
+    #           identity matrix
+    output = np.eye(dim,dim) * 2**(-self.dimensions)
     return output
 
       
   def getLumpedMassMatrix(self):
-    dim    = self._cell_dofs * self.unknowns_per_vertex_dof
-    output = np.zeros((dim,dim))
-    for i in range(dim):
-      output[i,i] = 2**(-self.dimensions)
+    """!
+    Get this working for 2d. 
+    What about 3d? If we select an index for the first dimension
+    and then sum over the other two (ie call np.sum( massMatrix[i,] ))
+    it will just add up all elements along the 2 other dimensions, as
+    if we flattened it. Is this what we want?
+    """
+    #get mass matrix
+    massMatrix = self.getCellMassMatrix
+    output     = np.zeros_like(massMatrix)
+    for i in range( output.shape[0] ):
+      #this line is 2d only
+      output[i,i] = np.sum( massMatrix[i,] )
     return output
-
+    
       
   def getCellMassMatrix(self):
     '''!

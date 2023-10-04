@@ -91,8 +91,7 @@ class AssemblePetscMatrixOnVertices(ActionSet):
     
     assertion3(globalIndex>=0, globalIndex, marker.toString(), fineGridVertex{{SOLVER_NAME}}PETScData.toString() );
 
-    //get the val, rhs that was present in the mesh
-//    double val = fineGridVertex{{SOLVER_NAME}}.getValue(0);
+    //get the rhs that was present in the mesh
     double rhs = fineGridVertex{{SOLVER_NAME}}.getRhs(0);
 
     //send these to petsc
@@ -114,29 +113,11 @@ object this solver will produce.
 solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
   degrees of freedom are assigned exclusively to the vertices.
 
-stencil:
-  list of lists which we will flatten into an intializer list,
-  and transform into a tarch::la::Matrix
-    
     """
-    #pass in stencil as a list of lists
-    #convert it to a flat list for passing as std::initializer_list
-    #stencil=[item for sublist in stencil for item in sublist]
-
     super( AssemblePetscMatrixOnVertices, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
-    #self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
-
-    #self.d["STENCIL"]         = "{" + str(stencil[0])
-    #for el in stencil[1:]:
-    #  self.d["STENCIL"] += ", "
-    #  self.d["STENCIL"] += str(el)
-    #self.d["STENCIL"] += "}"
-
-
-
 
   def get_body_of_operation(self,operation_name):
     """!
