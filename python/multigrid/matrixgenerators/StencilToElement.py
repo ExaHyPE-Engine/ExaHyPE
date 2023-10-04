@@ -15,7 +15,7 @@ def convertStencilToElementMatrix3d(stencil):
 
   Much of this code is identical to 2d version. We could 
   even reuse this for the 2d version with clever indexing,
-  but it is better not to take such risks
+  but it the code is much more readable this way.
   """
   # assert stencil.shape == (3,3,3)
 
