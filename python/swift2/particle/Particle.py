@@ -123,7 +123,7 @@ class Particle(peano4.toolbox.particles.Particle):
         self.min_h = min_h
         self.max_h = max_h
 
-        pass
+        return
 
     @abstractmethod
     def algorithm_steps(self):
