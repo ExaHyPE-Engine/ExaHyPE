@@ -102,7 +102,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
       
       //negative face
       if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           lduh,
           fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace,
           d, //direction
@@ -113,7 +113,7 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
 
       //positive face      
       if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()){
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
           lduh,
           fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value,
           d, //direction

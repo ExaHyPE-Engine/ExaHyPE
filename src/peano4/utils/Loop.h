@@ -250,6 +250,9 @@ namespace peano4 {
 }
 
 
+std::string toString( peano4::utils::LoopParallelism );
+
+
 /**
  * d-dimensional Loop
  *
@@ -470,7 +473,7 @@ namespace peano4 {
 
 
 
-#if defined(SharedOMP)
+#if defined(SharedOMP) and defined(OpenMPTaskGroup)
   #include "omp/Loop.h"
 #elif defined(SharedTBB)
   #include "tbb/Loop.h"
@@ -1027,3 +1030,4 @@ static const int lookupzfor3[8][27][3] = {
 #define endzfor \
   } \
   }
+

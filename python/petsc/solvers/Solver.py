@@ -1,7 +1,9 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 import peano4
-
+import numpy as np
+from numpy.polynomial.legendre  import leggauss
+from scipy.interpolate import lagrange
 
 from abc import abstractmethod
 
@@ -106,7 +108,6 @@ vertex for the first time of a mesh traversal, e.g.
     """
     assert False, "should not be called"
 
-  
   @abstractmethod
   def add_to_enumerate_and_init_solution(self, observer):
     """!
@@ -114,6 +115,10 @@ vertex for the first time of a mesh traversal, e.g.
     Add whatever action set you want to use to observer.
     
     """
+    assert False, "should not be called"
+
+  @abstractmethod
+  def add_to_init_petsc(self, observer):
     assert False, "should not be called"
   
   
@@ -192,4 +197,45 @@ Return the name of the object that will be created for this solver.
     """
     return "instanceOf" + self.typename()  
 
+  @abstractmethod
+  def get_solver_repository_snippets(self):
+    """!
+    returns a snippet to go into the header
+    and another to go into the cpp
+    """
+    header = """ """
+    cpp    = """ """
+    return header, cpp
+
+
+  @abstractmethod
+  def initGaussLobatto(self):
+    """!
+    methods to init quadrature weights and points.
+    can be overridden but at time of writing two
+    classes use this exact same code.
+
+    use numpy/scipy to calculate gaussian quadratures correctly
+    returns: points, weights and an (n+1) * (n+1) array of 
+    polynomial coefficients
+    """
+    #construct poly coeffs first
+    coeffs = []
+    x = np.linspace(-1,1, self.polynomial_degree + 1)
+    for j in range(self.polynomial_degree + 1):
+      y = np.zeros_like(x)
+      y[j] = 1.0
+      coeffs.append( list( lagrange(x,y).coeffs ) )
+    
+    #finally construct the points and weights
+    points, weights = leggauss( self.polynomial_degree + 1 )
+
+    return points, weights, coeffs
+
+  def convertMatrixToInitList(self, matrix):
+    output = "{ " + str(matrix[0,0])
+    for el in matrix.flatten():
+      output += f", {str(el)}"
+    output += "}"
+    return output
 

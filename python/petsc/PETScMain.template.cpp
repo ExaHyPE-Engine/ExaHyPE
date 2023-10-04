@@ -66,43 +66,58 @@ bool selectNextAlgorithmicStep() {
     int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
     auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 
-    switch (stepName) {
-    case repositories::StepRepository::Steps::CreateGrid: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::EnumerateAndInitSolution)
-      );
-    } break;
-    case repositories::StepRepository::Steps::EnumerateAndInitSolution: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::InitPETSc)
-      );
-    } break;
-    case repositories::StepRepository::Steps::InitPETSc: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::Assemble)
-      );
-    } break;
-    case repositories::StepRepository::Steps::Assemble: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::Solve)
-      );
-    } break;
-    case repositories::StepRepository::Steps::Solve: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::MapSolutionOntoMesh)
-      );
-    } break;
-    case repositories::StepRepository::Steps::MapSolutionOntoMesh: {
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::Plot)
-      );
-    } break;
-    case repositories::StepRepository::Steps::Plot: {
-      continueToSolve = false;
-    } break;
-    case repositories::StepRepository::Steps::Undef:
-      assertion(false);
-      break;
+    switch ( stepName ) {
+      case repositories::StepRepository::Steps::CreateGrid:
+        {
+            peano4::parallel::Node::getInstance().setNextProgramStep(
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::EnumerateAndInitSolution )
+            );
+        }
+        break;
+     
+      case repositories::StepRepository::Steps::EnumerateAndInitSolution:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitPETSc )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::InitPETSc:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Assemble )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::Assemble:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::Solve:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::MapSolutionOntoMesh )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::MapSolutionOntoMesh:
+        {
+          peano4::parallel::Node::getInstance().setNextProgramStep(
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+          );
+        }
+        break;
+      case repositories::StepRepository::Steps::Plot:
+        {
+          continueToSolve = false;
+        }
+        break;
+      case repositories::StepRepository::Steps::Undef:
+        assertion(false);
+        break;
     }
   } else {
     static tarch::la::Vector<Dimensions, double> minH = tarch::la::Vector<Dimensions, double>(
@@ -141,103 +156,104 @@ void step() {
 
   static int creepingNumberOfLocalCells = 0;
 
-  switch (stepName) {
-  case repositories::StepRepository::Steps::CreateGrid: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid");
+  switch ( stepName ) {
+    case repositories::StepRepository::Steps::CreateGrid:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
 
-    observers::CreateGrid observer;
-    watch.start();
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
-    createGridMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::EnumerateAndInitSolution: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("enumerate-and-init-solution");
+        observers::CreateGrid  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        createGridMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    
+    case repositories::StepRepository::Steps::EnumerateAndInitSolution:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate-and-init-solution" );
 
-    observers::EnumerateAndInitSolution observer;
-    watch.start();
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
-    enumerateMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::InitPETSc: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("init-PETSc");
+        observers::EnumerateAndInitSolution  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        enumerateMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::InitPETSc:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-PETSc" );
 
-    watch.start();
+        watch.start();
 
-    repositories::computeLocalToGlobalMapsForAllSolvers();
-    const int totalNumberOfDegreesOfFreedom = repositories::getTotalNumberOfDegreesOfFreedom();
-    logInfo("step()", "total no of dofs=" << totalNumberOfDegreesOfFreedom);
+        repositories::computeLocalToGlobalMapsForAllSolvers();
+        const int matrixRows = repositories::getGlobalMatrixRows();
+        const int matrixCols = repositories::getGlobalMatrixCols();
+        logInfo( "step()", "total no of rows="  << matrixRows );
+        logInfo( "step()", "total no of cols="  << matrixCols );
+        repositories::instanceOfPetsc.initMatrixAndVectors( matrixRows, matrixCols );
+        
+        watch.stop();
+        initMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::Assemble:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "assemble" );
 
-    { % if Project_Name == "HDG" % }
-    const int totalNumberOfFaceDofs = repositories::getTotalFaceDofs();
-    const int totalNumberOfCellDofs = repositories::getTotalCellDofs();
-    const int totalDofs             = totalNumberOfFaceDofs + totalNumberOfCellDofs;
-    logInfo("step()", "total no of face dofs=" << totalNumberOfFaceDofs);
-    logInfo("step()", "total no of cell dofs=" << totalNumberOfCellDofs);
-    logInfo("step()", "initialising petsc matrix with " << totalDofs << " dofs");
-    repositories::instanceOfPetsc.initMatrixAndVectors(totalDofs);
+        observers::Assemble  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
 
-    { % else % } repositories::instanceOfPetsc.initMatrixAndVectors(totalNumberOfDegreesOfFreedom);
-    { % endif % }
+        //assemble the matrix
+        repositories::instanceOfPetsc.assemble();
+        watch.stop();
+        assembleMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::Solve:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
 
-    watch.stop();
-    initMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::Assemble: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("assemble");
+        watch.start();
+        // solve
+        repositories::instanceOfPetsc.petscSolve();
 
-    observers::Assemble observer;
-    watch.start();
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        solveMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::MapSolutionOntoMesh:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "map-solution-onto-mesh" );
 
-    // assemble the matrix
-    repositories::instanceOfPetsc.assemble();
-    watch.stop();
-    assembleMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::Solve: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("solve");
+        observers::MapSolutionOntoMesh  observer;
+        watch.start();
 
-    watch.start();
-    { % if Project_Name == "Poisson" % }
-    // solve
-    repositories::instanceOfPetsc.petscSolve();
-    { % endif % }
+        //move data from petsc to c++
+        repositories::instanceOfPetsc.convertToStdVector();
+        
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        
+        repositories::instanceOfPetsc.petscDestroy();
+        watch.stop();
+        mapSolutionOntoMeshMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::Plot:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
 
-    watch.stop();
-    solveMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::MapSolutionOntoMesh: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("map-solution-onto-mesh");
-
-    observers::MapSolutionOntoMesh observer;
-    watch.start();
-
-    // move data from petsc to c++
-    { % if Project_Name == "Poisson" % }
-    repositories::instanceOfPetsc.convertToStdVector();
-    { % endif % }
-
-    peano4::parallel::SpacetreeSet::getInstance()
-      .traverse(observer);
-
-    repositories::instanceOfPetsc.petscDestroy();
-    watch.stop();
-    mapSolutionOntoMeshMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::Plot: {
-    tarch::logging::LogFilter::getInstance().switchProgramPhase("plot");
-
-    observers::Plot observer;
-    watch.start();
-    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    watch.stop();
-    plotMeasurement.setValue(watch.getCalendarTime());
-  } break;
-  case repositories::StepRepository::Steps::Undef:
-    assertion(false);
-    break;
+        observers::Plot  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        plotMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::Undef:
+      assertion(false);
+      break;
   }
 }
 

@@ -11,8 +11,12 @@
  * For the full license text, see LICENSE.txt
  **/ #}
 
-#ifndef _EXAHYPE_{{guardNamespace}}_QUADRATURE_H_
-#define _EXAHYPE_{{guardNamespace}}_QUADRATURE_H_
+#pragma once
+
+#include <mm_malloc.h> //g++
+{% if "std::float16_t" in computePrecisions or "std::bfloat16_t" in computePrecisions %}
+#include <stdfloat>
+{% endif %}
 
 // Use {{quadratureType}} quadrature
 
@@ -20,25 +24,28 @@
 namespace {{namespaceName}} {
 {% endfor %}
 
-void initQuadratureNodesAndWeights();
-void freeQuadratureNodesAndWeights();
+template<typename T>
+class Quadrature{
+  public:
+    static void initQuadratureNodesAndWeights();
+    static void freeQuadratureNodesAndWeights();
 
-extern double *nodes;
-extern double *weights1;
-extern double *weights2;
-extern double *weights3;
-extern double *weights4;
-extern double *iweights1;
-extern double *iweights3;
+    static T *nodes;
+    static T *weights1;
+    static T *weights2;
+    static T *weights3;
+    static T *weights4;
+    static T *iweights1;
+    static T *iweights3;
 
-{% if kernelType=="limiter" %}
-// limiter projection matrices
-extern double* uh2lob;
-extern double* dg2fv;
-extern double* fv2dg;
-{% endif %}
+    {% if kernelType=="limiter" %}
+    // limiter projection matrices
+    static T* uh2lob;
+    static T* dg2fv;
+    static T* fv2dg;
+    {% endif %}
+};
 
 {% for namespaceName in codeNamespaceList %}
 }
 {% endfor %}
-#endif /* _EXAHYPE_{{guardNamespace}}_QUADRATURE_H_ */

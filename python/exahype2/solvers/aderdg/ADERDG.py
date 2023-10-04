@@ -158,6 +158,9 @@ class ADERDG(object):
         self._basis = GaussLegendreBasis(order + 1)
         self._use_kernel_generator = True
         self._use_libxsmm = False
+        self._use_BLIS = False
+        self._use_Eigen = False
+        self._use_libxsmm_JIT = False
         self._use_vectorized_PDE = False
         self._architecture = "noarch"
         self._use_CERK_Guess = False
@@ -837,6 +840,9 @@ class ADERDG(object):
                 True if self._polynomials is Polynomials.Gauss_Lobatto else False
             ),
             useLibxsmm=self._use_libxsmm,
+            useBLIS=self._use_BLIS,
+            useEigen=self._use_Eigen,
+            useLibxsmmJIT=self._use_libxsmm_JIT,
             useVectPDE=self._use_vectorized_PDE,
             architecture=self._architecture,
             useCERKGuess=self._use_CERK_Guess,
@@ -1092,7 +1098,7 @@ class ADERDG(object):
         d["PREDICTOR_COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions
         d["CORRECTOR_COMPUTATION_PRECISION"] = self._corrector_computation_precision
 
-        d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions
+        d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions[:]
         if self._corrector_computation_precision not in d["COMPUTATION_PRECISIONS"]:
             d["COMPUTATION_PRECISIONS"].append(self._corrector_computation_precision)
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])
@@ -1266,6 +1272,9 @@ class ADERDG(object):
         polynomials=Polynomials.Gauss_Legendre,
         use_kernel_generator=True,
         use_libxsmm=False,
+        use_BLIS=False,
+        use_Eigen=False,
+        use_libxsmm_JIT=False,
         predictor_computation_precisions=["double"],
         corrector_computation_precision="double",
         solution_persistent_storage_precision="double",
@@ -1296,6 +1305,9 @@ class ADERDG(object):
 
         self._use_kernel_generator = use_kernel_generator
         self._use_libxsmm = use_libxsmm
+        self._use_BLIS = use_BLIS
+        self._use_Eigen = use_Eigen
+        self._use_libxsmm_JIT = use_libxsmm_JIT
 
         precisions = [
             solution_persistent_storage_precision,
@@ -1306,7 +1318,7 @@ class ADERDG(object):
             if value not in PrecisionType.keys():
                 raise AssertionError(
                     "one of the chosen precisions was not a valid choice. valid choices are: "
-                    + PrecisionType.keys()
+                    + ", ".join(PrecisionType.keys())
                 )
             if PrecisionType[value]=="std::float16_t" or PrecisionType[value]=="std::bfloat16_t":
               self._use_half_precision = True

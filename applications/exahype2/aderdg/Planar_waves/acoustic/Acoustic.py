@@ -11,11 +11,17 @@ from exahype2.solvers.aderdg.ADERDG import ADERDG
 from exahype2.solvers.aderdg.SingleSweep import SingleSweep
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
-dimensions          = 3
-min_level           = 2
+dimensions          = 2
+min_level           = 3
 max_depth           = 0
 order               = 3
 e_t                 = 2*sqrt(dimensions) #end_time
+
+precision = "float"
+# precision = "half_c++23"
+# precision = "bfloat"
+# precision = "double"
+put_data_on_heap = False
 
 offset              = [-1.0, -1.0, -1.0][0:dimensions]
 size                = [2.0, 2.0, 2.0][0:dimensions]
@@ -27,14 +33,12 @@ min_h               = max_h / (3.0**max_depth)
 project = exahype2.Project( ["exahype2", "acoustic"], ".", executable="PlanarAcoustic_level_"+str(min_level)+"_order_"+str(order) )
 
 theSolver=GlobalAdaptiveTimeStep(
-  name="acousticSolver",  order=3,
+  name="acousticSolver",  order=order,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
   min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9,
   flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
   )
 
-precision = "float"
-put_data_on_heap = False
 
 theSolver.add_kernel_optimizations(
   is_linear=True
@@ -53,7 +57,7 @@ theSolver.add_error_measurement(error_measurement_implementation="""
   double k1 = 1.0;
   double k2 = 1.0;
 
-  double w = 6*M_PI/std::sqrt(3.0);
+  double w = 6*M_PI/std::sqrt(Dimensions);
 
   double val = cos( w*t - std::numbers::pi*( 
     k0*x[0]
@@ -71,36 +75,6 @@ theSolver.add_error_measurement(error_measurement_implementation="""
 )
 
 project.add_solver(theSolver)
-
-# tracer_particles = project.add_tracer( name="Tracer_acoustic",attribute_count=4 )
-# init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
-#     particle_set=tracer_particles, coordinates=[[0.0,0.0,0.0][0:dimensions],[0.25,0.25,0.25][0:dimensions],
-#                                                 [0.5,0.5,0.5][0:dimensions],[0.75,0.75,0.75][0:dimensions]])
-# init_action_set.priority = 0
-# project.add_action_set_to_initialisation( init_action_set )
-
-# tracer_action_set=exahype2.tracer.DiscontinuousGalerkinTracing(
-#   tracer_particles,
-#   theSolver,
-#   project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
-# )
-# tracer_action_set.priority = 1
-# project.add_action_set_to_timestepping(tracer_action_set)
-# project.add_action_set_to_initialisation(tracer_action_set)
-
-# dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
-#   particle_set=tracer_particles,
-#   solver=theSolver,
-#   filename="Tracer-acoustic",
-# #  number_of_entries_between_two_db_flushes=1000,
-#   output_precision=8,
-#   data_delta_between_two_snapsots=1e16,
-#   position_delta_between_two_snapsots=1e16,
-#   time_delta_between_two_snapsots=0.001
-#   )
-
-# dump_action_set.priority = 3
-# project.add_action_set_to_timestepping(dump_action_set)
 
 
 build_mode = peano4.output.CompileMode.Release
@@ -124,6 +98,6 @@ project.set_load_balancing( "toolbox::loadbalancing::SpreadOutHierarchically", "
 project.set_Peano4_installation( "../../../../../", build_mode )
 peano4_project = project.generate_Peano4_project("False")
 
-peano4_project.build(make_clean_first=True, number_of_parallel_builds=12)
+peano4_project.build(make_clean_first=True, number_of_parallel_builds=32)
 
 
