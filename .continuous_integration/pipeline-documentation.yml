@@ -10,3 +10,13 @@ documentation:
     paths:
       - ./doxygen-html/*
   retry: 0
+
+pages:
+  stage: publish
+  script:
+    #make public directory. This will be visible to outside world
+    - mkdir public
+    #copy the doxygen stuff into it
+    - cp -r doxygen-html/* public/
+  artifacts:
+    - public
