@@ -19,4 +19,5 @@ pages:
     #copy the doxygen stuff into it
     - cp -r doxygen-html/* public/
   artifacts:
-    - public
+    paths:
+      - public
