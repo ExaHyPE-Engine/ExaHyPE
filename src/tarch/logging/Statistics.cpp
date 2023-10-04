@@ -165,6 +165,16 @@ void tarch::logging::Statistics::writeToCSV( [[maybe_unused]] std::string filena
 
   filename += ".csv";
 
+  // only for stats
+  int totalNumberOfEntries = 0;
+  for (auto& p: _dataSetMap) {
+    totalNumberOfEntries += p.second._data.size();
+  }
+  for (auto& p: _logMessageMap) {
+    totalNumberOfEntries += p.second._data.size();
+  }
+  logInfo( "writeToCSV(string)", "write statistics to file " << filename << " (total no of entries=" << totalNumberOfEntries << ")" );
+
   std::ofstream file( filename );
   file << "t";
   for (auto& p: _dataSetMap) {
@@ -239,7 +249,6 @@ void tarch::logging::Statistics::writeToCSV( [[maybe_unused]] std::string filena
 
   // close output file
   file.close();
-  logInfo( "writeToCSV(string)", "wrote statistics to file " << filename );
   #else
   logWarning( "writeToCSV(string)", "no statistics available. Recompile with -DTrackStatistics for runtime sampling" );
   #endif
