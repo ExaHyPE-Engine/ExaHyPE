@@ -3,6 +3,8 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
 
+#include "tarch/la/ScalarOperations.h"
+
 #include <fstream>
 
 
