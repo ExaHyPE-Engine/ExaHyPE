@@ -256,6 +256,14 @@ class Attribute(object):
 
         return decString
 
+    def get_accessor_name(self):
+        """!
+        Generate the accessor name used throughout dastgen2 to
+        create variables, function names, etc.
+        """
+        accessor_name = self._name[0].capitalize() + self._name[1:]
+        return accessor_name
+
     @abc.abstractmethod
     def get_method_body(self, signature):
         """!

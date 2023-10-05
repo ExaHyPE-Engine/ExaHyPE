@@ -30,7 +30,7 @@ class Boolean(Attribute):
         return
 
     def get_methods(self, _full_qualified_class_name, for_declaration=True):
-        accessor_name = self._name[:1].title() + self._name[1:]
+        accessor_name = self.get_accessor_name()
         methods = []
 
         if self._is_static:

@@ -189,7 +189,6 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         d["ATTRIBUTE_DECLARATIONS"] = ""
         for attribute in self._attributes:
             d["ATTRIBUTE_DECLARATIONS"] += attribute.get_attribute_declaration_string()
-            print("ADDED", attribute.get_attribute_declaration_string())
 
         d["METHOD_DECLARATIONS"] = ""
         for attribute in self._attributes:
