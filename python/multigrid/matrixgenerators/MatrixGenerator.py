@@ -166,12 +166,72 @@ class MatrixGenerator:
     '''
     return [ arrayProduct(array) for array in product( *weights ) ]
   
-  def getPolynomial(self, index):
+  def convertIndexToDim(self, index, dim=-1):
     """!
-    Promote 1d polynomials to many dimensions
-    by taking products. 
+    This method helps with indexing. Typically,
+    for polynomial degree p, we have (p+1) nodal
+    points per coordinate axis, for a total of
+    @f$ p^d @f$. This method converts an index
+    in the range @f$ (0, ..., p^d) @f$ into a
+    tuple of (x,y,z) coordinates.
     """
-    raise NotImplementedError
+    #support converting index to any dimension. default to max
+    if dim==-1:
+      dim=self.Dimensions
+    assert index in range(self.poly_degree ** dim), "index outside of range!"
+    output = [0 for _ in range(dim)]
+    for d in range(dim-1,-1,-1):
+      pToD      = self.poly_degree**(d)
+      output[d] = (index - index%pToD) // pToD
+      index     = index % pToD
+    return output
+    
+  # def getPolynomial(self, index, dim=-1):
+  #   """!
+  #   Promote 1d polynomials to many dimensions
+  #   by taking products.
+
+  #   Recursively defined.
+  #   """
+  #   raise NotImplementedError
+  #   if dim == -1: 
+  #     dim = self.Dimensions
+
+  #   #base case, dim == 1
+  #   if dim == 1:
+  #     return self.polynomials1d[index]
+  #   #recursive
+  #   else:
+  #     '''
+  #     if we are looking for a 3d polynomial, then what we do here
+  #     is return get1dPoly(z) * getPoly2d(x,y)
+  #     '''
+  #     #work backwards; get index in highest dimension
+  #     pToD            = self.poly_degree ** (dim-1)
+  #     highestDimIndex = (index - index%pToD) // pToD
+  #     index           = index % pToD
+  #     dim             = dim - 1
+  #     print(f"dim={dim}, returning lambda")
+  #     return lambda x,y: self.getPolynomial(index)(x) * self.polynomials1d[highestDimIndex](y)
+
+  def evalPolynomial(self, index, point, dim=-1):
+    """!
+    Method to evaluate a d-dimensional polynomial at the supplied
+    point. We convert an index into a d-dimensional tuple, and
+    evaluate each corresponding poynomial in each dimension.
+    \param index - an index in the range @f$ 0, ... , polynomial_degree ** Dimensions @f$
+    \param point - a tuple with the (x,y,z) coordinates that we wish to evaluate at. len(point) must match dim
+    \param dim   - dimensions we wish to use. 
+    """
+    if dim == -1:
+      dim = self.Dimensions
+    assert len(point) == dim, "We must have same number of coordinates as number of dimensions!"
+    index = self.convertIndexToDim(index, dim)
+    output = 1
+    for i in range(dim):
+      #evaluate polynomial at given point
+      output *= self.polynomials1d[i]( point[i] )
+    return output
 
   @abstractmethod
   def getCellSystemMatrixForLaplacian(self):
@@ -200,3 +260,4 @@ class MatrixGenerator:
     
     """
     raise NotImplementedError
+
