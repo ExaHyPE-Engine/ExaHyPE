@@ -90,6 +90,9 @@ already with a rather long initialisation and grid construction phase. However,
 it is possible to benchmark it once you disable plots, the tracers, and you use
 an unreasonable coarse mesh. 
 
+
+## Single node performance data studying task orchestration and kernel variants
+
 We use the single black hole setup for various different benchmarks focusing on
 different aspects and variations. All of them use a similar set of executables,
 which you can compile via 
@@ -113,11 +116,6 @@ done
 
 The script above will give you all required executables (and likely some more) 
 that you need to reproduce the data below.
-
-
-## Single node performance data studying task orchestration and kernel variants
-
-
 Below are some performance data which I collected on my local workstation. They 
 provide a first look-n-feel of what the code behaves.
 
@@ -240,8 +238,33 @@ echo wrote all data to $OUTPUT
 
 ## Upscaling studies
 
+For any upscaling studies, we nee a finer mesh. The kernel benchmarks from 
+above just use a way too coarse mesh to yield any meaningful scalability 
+data.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PREFIX=tbb or omp or sycl
+export CELL_SIZE=1.8    # 0.6 is maybe better
+
+for SCHEDULER in native-no-priorities native tailored parallel-for subtasks subtasks-and-kernel-parallelisation
+do
+  for TREES in 1 6 8 12
+  do
+    OUTPUT=$PREFIX-without-amr-$SCHEDULER-$TREES-trees
+    python3 performance-studies.py -s fd4-rk1-limited-ps-6 --cell-size $CELL_SIZE --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
+    
+    OUTPUT=$PREFIX-with-amr-$SCHEDULER-$TREES-trees
+    python3 performance-studies.py -s fd4-rk1-limited-ps-6 --cell-size $CELL_SIZE --amr --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
+  done
+done
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 The upscaling studies are triggered by the script below, which you might want 
-to embed into a Slurm script to really acquire the data quickly:  
+to embed into a Slurm script to really acquire the data quickly. This one
+obviously works for OpenMP (omp) only. For TBB and SYCL, you will have to 
+alter the Python script, as you cannot set the number of cores used through 
+OMP_NUM_THREADS.
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -296,8 +319,63 @@ done
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
- 
+The script distributes the data into several subdirectories. 
+We have to collocate them into one archive per measurement 
+and then we can apply our out-of-the-box scripts:
 
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PREFIX=omp 
+export TREES=8
+
+for SCHEDULER in native subtasks subtasks-and-kernel-parallelisation
+do
+  rm $PREFIX-$SCHEDULER-without-amr-$TREES-trees.tar.gz
+  rm $PREFIX-$SCHEDULER-with-amr-$TREES-trees.tar.gz
+  
+  tar -cf $PREFIX-$SCHEDULER-without-amr-$TREES-trees.tar --files-from /dev/null
+  tar -cf $PREFIX-$SCHEDULER-with-amr-$TREES-trees.tar    --files-from /dev/null
+
+  for THREADS in 1 2 4 8 16 24 32 40 48 56 64 80 96 128
+  do
+    cp results-$THREADS-threads/$PREFIX-without-amr-$SCHEDULER-$TREES-trees.txt $THREADS-threads.txt
+    tar -rf $PREFIX-$SCHEDULER-without-amr-$TREES-trees.tar $THREADS-threads.txt
+    cp results-$THREADS-threads/$PREFIX-with-amr-$SCHEDULER-$TREES-trees.txt $THREADS-threads.txt
+    tar -rf $PREFIX-$SCHEDULER-with-amr-$TREES-trees.tar    $THREADS-threads.txt
+  done
+  
+  gzip $PREFIX-$SCHEDULER-without-amr-$TREES-trees.tar
+  gzip $PREFIX-$SCHEDULER-with-amr-$TREES-trees.tar
+done
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Get the tar archives. After that, we can use the out-of-the-box Peano scripts
+to generate the plots
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PREFIX=omp 
+export TREES=8
+
+OUTPUT=$PREFIX-$TREES-trees-without-amr
+python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --max-cores-per-rank=-1 --log-x --log-y --output $OUTPUT \
+  --label "native tasking, subtasks, subtasks and parallel kernels" --title "No AMR" \
+  $PREFIX-native-without-amr-$TREES-trees.tar.gz \
+  $PREFIX-subtasks-without-amr-$TREES-trees.tar.gz \
+  $PREFIX-subtasks-and-kernel-parallelisation-without-amr-$TREES-trees.tar.gz
+
+OUTPUT=$PREFIX-$TREES-trees-with-amr
+python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --max-cores-per-rank=-1 --log-x --log-y --output $OUTPUT \
+  --label "native tasking, subtasks, subtasks and parallel kernels" --title "With AMR" \
+  $PREFIX-native-without-amr-$TREES-trees.tar.gz \
+  $PREFIX-subtasks-without-amr-$TREES-trees.tar.gz \
+  $PREFIX-subtasks-and-kernel-parallelisation-without-amr-$TREES-trees.tar.gz
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which clearly showcase that the kernel parallelisation pays off even though 
+the overall scalability is poor with the present rather coarse mesh:
+
+@image html omp-8-trees-with-amr.png 
 
 # Production runs
 
