@@ -11,12 +11,17 @@ class Boolean(Attribute):
         qualifier=Attribute.Qualifier.NONE,
         initval=None,
     ):
+        # Do we need to expose this attribute in the header file?
+        # Only necessary for functions that will be inlined, i.e. constexpr
+        expose = qualifier == Attribute.Qualifier.CONSTEXPR
+
         Attribute.__init__(
             self,
             name,
             ifdefs,
             qualifier=qualifier,
             initval=initval,
+            expose_in_header_file=expose,
         )
 
         self.compress = True
@@ -27,21 +32,26 @@ class Boolean(Attribute):
 
         if self._is_static:
             if for_declaration:
+                # No 'const' here: static member function cannot have 'const' qualifier
                 getter = ("get" + accessor_name + "()", "static bool")
             else:
+                # No 'static' here: 'static' can only be specified inside the class definition
                 getter = ("get" + accessor_name + "()", "bool")
 
         elif self._is_const_static:
             if for_declaration:
+                # No 'const' here: static member function cannot have 'const' qualifier
                 getter = ("get" + accessor_name + "()", "static bool")
             else:
+                # No 'static' here: 'static' can only be specified inside the class definition
+                # No 'const' here either: function definition will then differ from that in declaration
                 getter = ("get" + accessor_name + "()", "bool")
 
         elif self._is_const:
-            getter = ("get" + accessor_name + "()", "bool")
+            getter = ("get" + accessor_name + "() const", "const bool")
 
         elif self._is_constexpr:
-            getter = ("get" + accessor_name + "()", "constexpr bool")
+            getter = ("get" + accessor_name + "() const", "constexpr bool")
 
         else:
             # default case.
@@ -64,14 +74,19 @@ class Boolean(Attribute):
             typestring = "inline static bool"
             if self._initval is not None:
                 namestring += " = " + str(self._initval)
+
         elif self._is_const_static:
             typestring = "inline const static bool"
             namestring += " = " + str(self._initval)
+
         elif self._is_const:
-            raise NotImplementedError
+            typestring = "const bool"
+            namestring += " = " + str(self._initval)
+
         elif self._is_constexpr:
             typestring = "constexpr static bool"
             namestring += " = " + str(self._initval)
+
         else:
             # default case
             # If an initial value is provided, add it

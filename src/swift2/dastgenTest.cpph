@@ -9,16 +9,85 @@ template <typename ParticleContainer>
 void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
 
   for (auto particle : localParticles) {
+    checkBooleans(particle);
+    // checkDoubles(particle);
+    // checkEnums(particle);
     checkIntegers(particle);
+    // checkStrings(particle);
+
+    // checkBooleanArray(particle);
+    // checkDoubleArray(particle);
+    // checkIntegerArray(particle);
+    // checkStringArray(particle);
+
+
+    // peano stuff...
   }
 }
+
+
+template <typename Particle>
+void dastgenTest::checkBooleans(Particle& particle) {
+
+  // First set some values, where applicable.
+  const bool initval_bool = false;
+  bool       var_bool;
+
+
+  // default case booleans
+  // ----------------------
+
+  particle->setMyBoolean(initval_bool);
+  // set to the same value again to avoid race conditions.
+  // We're mainly testing whether all this compiles anyway.
+  particle->setMyStaticBoolean(particle->getMyStaticBoolean());
+
+  // Check getters, and that the expected initial values are correct
+  var_bool = particle->getMyBoolean();
+  assert(var_bool == initval_bool);
+  var_bool = particle->getMyInitvalBoolean();
+  assert(var_bool == true);
+  var_bool = particle->getMyStaticBoolean();
+  assert(var_bool == true);
+  var_bool = particle->getMyConstBoolean();
+  assert(var_bool == true);
+  var_bool = particle->getMyConstStaticBoolean();
+  assert(var_bool == true);
+  var_bool = particle->getMyConstExprBoolean();
+  assert(var_bool == true);
+
+
+  // booleans + ifdef
+  // ----------------------
+
+#if PeanoDebug > 0
+  particle->setMyDebugBoolean(initval_bool);
+  // set to the same value again to avoid race conditions.
+  // We're mainly testing whether all this compiles anyway.
+  particle->setMyStaticDebugBoolean(particle->getMyStaticDebugBoolean());
+
+  // Check getters, and that the expected initial values are correct
+  var_bool = particle->getMyDebugBoolean();
+  assert(var_bool == initval_bool);
+  var_bool = particle->getMyInitvalDebugBoolean();
+  assert(var_bool == true);
+  var_bool = particle->getMyStaticDebugBoolean();
+  assert(var_bool == true);
+  var_bool = particle->getMyConstDebugBoolean();
+  assert(var_bool == true);
+  var_bool = particle->getMyConstStaticDebugBoolean();
+  assert(var_bool == true);
+  var_bool = particle->getMyConstExprDebugBoolean();
+  assert(var_bool == true);
+#endif
+}
+
 
 template <typename Particle>
 void dastgenTest::checkIntegers(Particle& particle) {
 
   // First set some values, where applicable.
-  const int initval_int        = 4321;
-  const int static_initval_int = 54321;
+  const int initval_int = 4321;
   int       var_int;
 
 
@@ -97,23 +166,23 @@ void dastgenTest::checkIntegers(Particle& particle) {
   // ------------------------------------
 
 #if PeanoDebug > 0
-  particle->setMyDebugCompressedInteger(initval_int);
+  particle->setMyDebugInteger(initval_int);
   // set to the same value again to avoid race conditions.
   // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticDebugCompressedInteger(particle->getMyStaticDebugCompressedInteger());
+  particle->setMyStaticDebugInteger(particle->getMyStaticDebugInteger());
 
   // Check getters, and that the expected initial values are correct
-  var_int = particle->getMyDebugCompressedInteger();
+  var_int = particle->getMyDebugInteger();
   assert(var_int == initval_int);
-  var_int = particle->getMyInitvalDebugCompressedInteger();
+  var_int = particle->getMyInitvalDebugInteger();
   assert(var_int == 123);
-  var_int = particle->getMyStaticDebugCompressedInteger();
+  var_int = particle->getMyStaticDebugInteger();
   assert(var_int == 1234);
-  var_int = particle->getMyConstDebugCompressedInteger();
+  var_int = particle->getMyConstDebugInteger();
   assert(var_int == 12345);
-  var_int = particle->getMyConstStaticDebugCompressedInteger();
+  var_int = particle->getMyConstStaticDebugInteger();
   assert(var_int == 123456);
-  var_int = particle->getMyConstExprDebugCompressedInteger();
+  var_int = particle->getMyConstExprDebugInteger();
   assert(var_int == 1234567);
 #endif
 }

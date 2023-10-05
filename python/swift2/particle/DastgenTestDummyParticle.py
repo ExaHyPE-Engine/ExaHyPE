@@ -35,14 +35,18 @@ class DastgenTestDummyParticle(Particle):
             max_h,
         )
 
-        self.generate_integer_attributes(compress=False, ifdefs=False)
-        self.generate_integer_attributes(compress=False, ifdefs=True)
-        self.generate_integer_attributes(compress=True, ifdefs=False)
-        self.generate_integer_attributes(compress=True, ifdefs=True)
+        # Generate the data attributes.
+        self._generate_boolean_attributes(ifdefs=False)
+        self._generate_boolean_attributes(ifdefs=True)
+
+        self._generate_integer_attributes(compress=False, ifdefs=False)
+        self._generate_integer_attributes(compress=False, ifdefs=True)
+        self._generate_integer_attributes(compress=True, ifdefs=False)
+        self._generate_integer_attributes(compress=True, ifdefs=True)
 
         return
 
-    def generate_integer_attributes(self, compress: bool, ifdefs: bool):
+    def _generate_integer_attributes(self, compress: bool, ifdefs: bool):
         """!
         Generate integer attributes.
 
@@ -135,6 +139,79 @@ class DastgenTestDummyParticle(Particle):
                 qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
                 min_value=min_value,
                 max_value=max_value,
+                ifdefs=defs,
+            )
+        )
+
+        return
+
+    def _generate_boolean_attributes(self, ifdefs: bool):
+        """!
+        Generate boolean attributes.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
+        var_basename = "Boolean"
+        if ifdefs:
+            var_basename = "DebugBoolean"
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            defs = ["PeanoDebug > 0"]
+
+        # NOTE: initial values, where provided, are hardcoded to be checked
+        # for equality in the test. If you modify them, the test will fail.
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "my" + var_basename,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myInitval" + var_basename,
+                initval="true",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myStatic" + var_basename,
+                initval="true",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                ifdefs=defs,
+            )
+        )
+        # Not implemented yet
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myConst" + var_basename,
+                initval="true",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST,
+                ifdefs=defs,
+            )
+        )
+
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myConstStatic" + var_basename,
+                initval="true",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myConstExpr" + var_basename,
+                initval="true",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
                 ifdefs=defs,
             )
         )
