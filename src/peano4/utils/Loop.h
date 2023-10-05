@@ -470,7 +470,7 @@ namespace peano4 {
 
 
 
-#if defined(SharedOMP)
+#if defined(SharedOMP) and defined(OpenMPTaskGroup)
   #include "omp/Loop.h"
 #elif defined(SharedTBB)
   #include "tbb/Loop.h"
