@@ -4,7 +4,6 @@ import numpy as np
 
 import peano4
 import swift2
-import swift2.sphtools as sphtools
 import dastgen2
 
 import shutil
@@ -27,27 +26,11 @@ parser.add_argument(
     help="Verbose",
 )
 parser.add_argument(
-    "-cs",
-    "--cell-size",
-    dest="cell_size",
-    type=float,
-    default=0.3,
-    help="Cell size (default 0.3)",
-)
-parser.add_argument(
     "-pd",
     "--peano-dir",
     dest="peanodir",
     default="../../../..",
     help="Peano4 directory",
-)
-parser.add_argument(
-    "-asserts",
-    "--asserts",
-    dest="asserts",
-    action="store_true",
-    default=False,
-    help="Switch on assertions",
 )
 args = parser.parse_args()
 
@@ -65,17 +48,18 @@ project = swift2.Project(
 
 # Initialise the Dummy particle --------------------------------------------------
 dimensions = 2  # Peano dimensions
+cell_size = 0.3
 
 
 particle = swift2.particle.DastgenTestDummyParticle(
     "dummyPart",
     particles_per_cell=20,
-    min_h=args.cell_size / 100,
-    max_h=args.cell_size,
+    min_h=cell_size / 100,
+    max_h=cell_size,
 )
 
 # Additional Particle Parameters -----------------------------------------------
-hydro_h_max = args.cell_size / 2
+hydro_h_max = cell_size / 2
 particle.h_hydro_max = hydro_h_max
 
 # Add particle to project --------------------------------------------
