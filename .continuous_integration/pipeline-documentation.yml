@@ -19,9 +19,9 @@ pages:
     #make public directory. This will be visible to outside world
     - mkdir public
     #copy the doxygen stuff into it
-    - cp -r doxygen-html/* public/
-  dependencies:
-    - documentation
+    - cp -r ./doxygen-html/* public/
+  needs:
+    - job: documentation
   artifacts:
     paths:
       - public
