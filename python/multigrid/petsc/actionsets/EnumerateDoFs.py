@@ -6,7 +6,7 @@ import peano4
 import jinja2
 
 
-class EnumerateDofs(ActionSet):
+class EnumerateDoFs(ActionSet):
   """!
 
   Enumerate the vertices, cells and face entries
@@ -112,7 +112,7 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
   degrees of freedom are assigned exclusively to the vertices.
     
     """
-    super( EnumerateDofs, self ).__init__()
+    super( EnumerateDoFs, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()

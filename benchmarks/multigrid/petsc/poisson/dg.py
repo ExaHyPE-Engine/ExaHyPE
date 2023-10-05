@@ -21,7 +21,7 @@ parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-deg", "--degree",             dest="degree",         type=int, default=1, help="Polynomial degree")
+parser.add_argument("-deg", "--degree",             dest="degree",         type=int, required=True, help="Polynomial degree")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.1, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
@@ -34,11 +34,11 @@ project = multigrid.petsc.Project(project_name = "DG",
                                   ) 
 
                         
-matrices = multigrid.matrixgenerators.GaussLobattoMatrixGenerator(polynomial_degree     = args.degree,
-                                                                  dimensions            = args.dimensions,
-                                                                  unknowns_per_cell_dof = 1,
-                                                                  unknowns_per_face_dof = 1,  # for DG, this has to equal unknowns_per_cell_dof
-                                                                  )
+matrices = multigrid.matrixgenerators.GaussLobatto(polynomial_degree      = args.degree,
+                                                   dimensions             = args.dimensions,
+                                                   unknowns_per_cell_node = 1,
+                                                   unknowns_per_face_node = 1,  # for DG, this has to equal unknowns_per_cell_dof
+                                                   )
                         
 solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
@@ -46,10 +46,11 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      dimensions           = args.dimensions,
                                                                      min_h                = args.meshsize,
                                                                      max_h                = args.meshsize,
-                                                                     cellCellMassMatrix   = matrices.getCellCellMassMatrix(),     #12x12
-                                                                     cellCellSystemMatrix = matrices.getCellCellSystemMatrixForLaplacian(),   #12x12
-                                                                     cellToFaceMatrix     = matrices.getCellToFaceMatrix(),       #32x12
-                                                                     faceFaceMatrix       = matrices.getFaceFaceMatrix(),         #8x8
+                                                                     cell_cell_mass_matrix   = matrices.getCellCellMassMatrix(),     
+                                                                     cell_cell_system_matrix = matrices.getCellCellSystemMatrixForLaplacian(),
+                                                                     cell_to_face_matrix     = matrices.getCellToFaceMatrix(),       
+                                                                     face_face_matrix        = matrices.getFaceFaceMatrix(),         
+                                                                     cell_rhs_matrix         = matrices.getCellIdentityMatrix(),
                                                                      )
 
 project.add_solver( solver )

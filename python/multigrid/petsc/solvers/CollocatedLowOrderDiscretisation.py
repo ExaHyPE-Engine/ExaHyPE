@@ -8,8 +8,8 @@ import dastgen2
 import os
 
 from .Solver                                              import Solver
-from multigrid.petsc.actionsets.EnumerateDofs             import EnumerateDofs
-from multigrid.petsc.actionsets.InitVertexDofs                             import InitVertexDoFs
+from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
+from multigrid.petsc.actionsets.InitVertexDoFs                             import InitVertexDoFs
 from multigrid.petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
 
 from abc import abstractmethod
@@ -19,7 +19,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 
-class AssemblePetscMatrixOnVertices(ActionSet):
+class AssemblePetscMatrix(ActionSet):
   """!
   Trigger assembly of PETSc matrix, using values from mesh
 
@@ -123,7 +123,7 @@ stencil:
     #convert it to a flat list for passing as std::initializer_list
     #stencil=[item for sublist in stencil for item in sublist]
 
-    super( AssemblePetscMatrixOnVertices, self ).__init__()
+    super( AssemblePetscMatrix, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
@@ -323,13 +323,13 @@ class CollocatedLowOrderDiscretisation(Solver):
     to the observer.
     
     """
-    observer.add_action_set( EnumerateDofs(self) )
+    observer.add_action_set( EnumerateDoFs(self) )
     observer.add_action_set( InitVertexDoFs(self) ) 
     pass
   
   
   def add_to_assemble(self, observer):
-    observer.add_action_set( AssemblePetscMatrixOnVertices(self) )
+    observer.add_action_set( AssemblePetscMatrix(self) )
     pass
   
 
