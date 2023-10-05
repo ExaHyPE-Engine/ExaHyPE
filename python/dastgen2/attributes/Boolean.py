@@ -11,6 +11,7 @@ class Boolean(Attribute):
         qualifier=Attribute.Qualifier.NONE,
         initval=None,
     ):
+
         # Do we need to expose this attribute in the header file?
         # Only necessary for functions that will be inlined, i.e. constexpr
         expose = qualifier == Attribute.Qualifier.CONSTEXPR

@@ -20,6 +20,7 @@ class Integer(Attribute):
           is given by the precompiler.
 
         """
+
         # Do we need to expose this attribute in the header file?
         # Only necessary for functions that will be inlined, i.e. constexpr
         expose = qualifier == Attribute.Qualifier.CONSTEXPR
