@@ -35,40 +35,41 @@ class Attribute(object):
         CONST_STATIC = 3
         CONSTEXPR = 4
 
-    def __init__(self,
-                 name,
-                 ifdefs=[],
-                 qualifier=Qualifier.NONE,
-                 initval=None,
-                 expose_in_header_file=False,
-                 ):
+    def __init__(
+        self,
+        name,
+        ifdefs=[],
+        qualifier=Qualifier.NONE,
+        initval=None,
+        expose_in_header_file=False,
+    ):
         """
 
-name: String
-  This is a plain string which has to follow the C++ naming conventions, i.e.
-  it is case-sensitive and may not contain any special characters besides the
-  underscore. If also has to be unique within the enclosing data model.
-  However, this uniqueness is a C++ constraint. A DaStGen model can hold the
-  same attribute multiple times, as long as their ifdefs are different and
-  hence mask them out, i.e. ensure that only version is "active" at any
-  compile run.
+        name: String
+          This is a plain string which has to follow the C++ naming conventions, i.e.
+          it is case-sensitive and may not contain any special characters besides the
+          underscore. If also has to be unique within the enclosing data model.
+          However, this uniqueness is a C++ constraint. A DaStGen model can hold the
+          same attribute multiple times, as long as their ifdefs are different and
+          hence mask them out, i.e. ensure that only version is "active" at any
+          compile run.
 
-ifdefs: [String]
-  A set of strings which have to hold at compile time to determine if this
-  attribute does exist or not.
+        ifdefs: [String]
+          A set of strings which have to hold at compile time to determine if this
+          attribute does exist or not.
 
-qualifier: Qualifier
-  An additional qualifier.
+        qualifier: Qualifier
+          An additional qualifier.
 
-initval
-  Initial value. The type depends on underlying type. But you can always pass
-  in a string that evaluates to the correct type.
+        initval
+          Initial value. The type depends on underlying type. But you can always pass
+          in a string that evaluates to the correct type.
 
-expose_in_header_file: Boolean
-  Flag that determines if an attribute's setters and getters should have an
-  implementation within the header or if the generated C++ code should strictly
-  separate declaration and definition and stick the latter into a separate
-  implementation and hence object file.
+        expose_in_header_file: Boolean
+          Flag that determines if an attribute's setters and getters should have an
+          implementation within the header or if the generated C++ code should strictly
+          separate declaration and definition and stick the latter into a separate
+          implementation and hence object file.
 
         """
         self._name = name
@@ -157,7 +158,10 @@ expose_in_header_file: Boolean
         """!
 
         Return list of n-tuples. The tuple can either host two, three or
-        four entries.
+        four entries. The list itself may contain arbitrary many tuples, as
+        one attribute logically can map onto multiple technical attributes.
+        For example, when declaring an array, also declare an integer variable
+        containing its length.
 
         for_constructor: bool
             whether the return value of this function is intended for use
@@ -224,11 +228,10 @@ expose_in_header_file: Boolean
         decString = ""
         decString += construct_ifdef_string(self.ifdefs)
 
-        for (
-            subattribute
-        ) in (
-            self.get_plain_C_attributes()
-        ):  # one attribute logically can map onto multiple technical attributes
+        # one attribute logically can map onto multiple technical attributes
+        # for example, when declaring an array, also declare an integer variable
+        # containing its length
+        for subattribute in self.get_plain_C_attributes(for_constructor=False):
             if len(subattribute) == 4:
                 decString += construct_ifdef_string(subattribute[3])
                 decString += (

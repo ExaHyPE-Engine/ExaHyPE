@@ -1,13 +1,32 @@
 #pragma once
 #include <iostream>
 
+// #define GETTER(NAME) particle->get##NAME()
+// #define SETTER(NAME, VAL) particle->set##NAME((VAL))
+
+
 template <typename ParticleContainer>
 void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
 
-  // for (auto particle: localParticles) {
-  //   // std::cout << particle->toString() << std::endl;
-  //   std::cout << particle->getSearchRadius() << std::endl;
-  // }
+  for (auto particle : localParticles) {
+
+    // INTEGERS
+    // ------------------------------
+
+    // First set some values, where applicable.
+    int integer = 4321;
+    particle->setMyInteger(integer);
+
+    // Check getters, and that the expected initial values are correct
+    int intval;
+    intval = particle->getMyInteger();
+    assert(intval == integer);
+    intval = particle->getMyInitvalInteger();
+    assert(intval == 123456);
+    intval = particle->getMyConstStaticInteger();
+    assert(intval == 1234567);
+    // intval = particle->getMyConstExprInteger();
+  }
 }
 
 
