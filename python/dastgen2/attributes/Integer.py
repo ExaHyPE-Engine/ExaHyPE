@@ -36,6 +36,8 @@ class Integer(Attribute):
         self._min_value = min_value
         self._max_value = max_value
 
+        return
+
     def get_methods(self, _full_qualified_class_name, for_declaration=True):
         accessor_name = self._name[:1].title() + self._name[1:]
         methods = []
