@@ -95,7 +95,7 @@ different aspects and variations. All of them use a similar set of executables,
 which you can compile via 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-export PREFIX=tbb or openmp or sycl
+export PREFIX=tbb or omp or sycl
 
 for SCHEDULER in native-no-priorities native tailored parallel-for subtasks subtasks-and-kernel-parallelisation
 do
@@ -194,7 +194,7 @@ Below is a script that creates all data points in one go. You will have to
 amend the prefix accordingly.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-export PREFIX=tbb or openmp or sycl
+export PREFIX=tbb or omp or sycl
 export RESULTS_FOLDER=results
 mkdir $RESULTS_FOLDER
 
@@ -218,7 +218,7 @@ of interest as follows:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-export PREFIX=tbb or openmp or sycl
+export PREFIX=tbb or omp or sycl
 
 OUTPUT=results/$PREFIX.txt
 echo $PREFIX > $OUTPUT
