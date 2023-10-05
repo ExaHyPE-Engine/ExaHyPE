@@ -25,3 +25,6 @@ pages:
   artifacts:
     paths:
       - public
+  rules:
+    #only do this on p4
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
