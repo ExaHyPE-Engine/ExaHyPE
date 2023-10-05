@@ -49,7 +49,7 @@ class DastgenTestDummyParticle(Particle):
         self._generate_integer_attributes(compress=True, ifdefs=False)
         self._generate_integer_attributes(compress=True, ifdefs=True)
 
-        #  self._generate_string_attributes(ifdefs=False)
+        self._generate_string_attributes(ifdefs=False)
         #  self._generate_string_attributes(ifdefs=True)
 
         return
@@ -386,14 +386,15 @@ class DastgenTestDummyParticle(Particle):
                 ifdefs=defs,
             )
         )
-        #  self.data.add_attribute(
-        #      dastgen2.attributes.String(
-        #          "myConstStatic" + var_basename,
-        #          initval="const_static_initval",
-        #          qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
-        #          ifdefs=defs,
-        #      )
-        #  )
+        self.data.add_attribute(
+            dastgen2.attributes.String(
+                "myConstStatic" + var_basename,
+                initval="const_static_initval",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
+                ifdefs=defs,
+            )
+        )
+        # Not implemented yet
         #  self.data.add_attribute(
         #      dastgen2.attributes.String(
         #          "myConstExpr" + var_basename,
@@ -402,7 +403,7 @@ class DastgenTestDummyParticle(Particle):
         #          ifdefs=defs,
         #      )
         #  )
-        #
+
         return
 
     def algorithm_steps(self):
