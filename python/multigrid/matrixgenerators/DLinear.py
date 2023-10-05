@@ -6,7 +6,7 @@ from   scipy.interpolate import lagrange
 
 import peano4
 
-from   .MatrixGenerator import MatrixGenerator
+from   MatrixGenerator import MatrixGenerator
 
 
 
@@ -34,13 +34,13 @@ class DLinear(MatrixGenerator):
     
   @property
   def _cell_dofs(self):
-    return 2**(self.dimensions)
+    return 2**(self.Dimensions)
  
     
   def getCellIdentityMatrix(self):
     dim    = self._cell_dofs * self.unknowns_per_vertex_dof
     #           identity matrix
-    output = np.eye(dim,dim) * 2**(-self.dimensions)
+    output = np.eye(dim,dim) * 2**(-self.Dimensions)
     return output
 
       

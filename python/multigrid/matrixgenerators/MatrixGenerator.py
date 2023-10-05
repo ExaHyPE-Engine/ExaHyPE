@@ -105,7 +105,7 @@ class MatrixGenerator:
     points, weights = leggauss( self.poly_degree + 1 )
     return weights
 
-  def getPointsForDimension(self, dim=self.Dimensions):
+  def getPointsForDimension(self, dim):
     """!
     We promote the 1D quadrature points
     in into the dimensions of our problem
@@ -136,7 +136,7 @@ class MatrixGenerator:
     '''
     return [ *product( *points ) ]
 
-  def getWeightsForDimension(self, dim=self.Dimensions):
+  def getWeightsForDimension(self, dim):
     """!
     We promote the 1D quadrature weights
     in into the dimensions of our problem
