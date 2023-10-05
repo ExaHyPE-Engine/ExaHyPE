@@ -39,10 +39,179 @@ class DastgenTestDummyParticle(Particle):
         self._generate_boolean_attributes(ifdefs=False)
         self._generate_boolean_attributes(ifdefs=True)
 
+        self._generate_double_attributes(compress=False, ifdefs=False)
+        self._generate_double_attributes(compress=False, ifdefs=True)
+        self._generate_double_attributes(compress=True, ifdefs=False)
+        self._generate_double_attributes(compress=True, ifdefs=True)
+
         self._generate_integer_attributes(compress=False, ifdefs=False)
         self._generate_integer_attributes(compress=False, ifdefs=True)
         self._generate_integer_attributes(compress=True, ifdefs=False)
         self._generate_integer_attributes(compress=True, ifdefs=True)
+
+        return
+
+    def _generate_boolean_attributes(self, ifdefs: bool):
+        """!
+        Generate boolean attributes.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
+        var_basename = "Boolean"
+        if ifdefs:
+            var_basename = "DebugBoolean"
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            defs = ["PeanoDebug > 0"]
+
+        # NOTE: initial values, where provided, are hardcoded to be checked
+        # for equality in the test. If you modify them, the test will fail.
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "my" + var_basename,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myInitval" + var_basename,
+                initval="true",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myStatic" + var_basename,
+                initval="true",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                ifdefs=defs,
+            )
+        )
+        # Not implemented yet
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myConst" + var_basename,
+                initval="true",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST,
+                ifdefs=defs,
+            )
+        )
+
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myConstStatic" + var_basename,
+                initval="true",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myConstExpr" + var_basename,
+                initval="true",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
+                ifdefs=defs,
+            )
+        )
+
+        return
+
+    def _generate_double_attributes(self, compress: bool, ifdefs: bool):
+        """!
+        Generate double attributes.
+
+        compress: Boolean
+            if True, enable compression.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
+        var_basename = "Double"
+        if compress and not ifdefs:
+            var_basename = "CompressedDouble"
+        if ifdefs and not compress:
+            var_basename = "DebugDouble"
+        if ifdefs and compress:
+            var_basename = "DebugCompressedDouble"
+
+        # Set compression values
+        valid_mantissa_bits = None
+        if compress:
+            valid_mantissa_bits = 23
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            defs = ["PeanoDebug > 0"]
+
+        # NOTE: initial values, where provided, are hardcoded to be checked
+        # for equality in the test. If you modify them, the test will fail.
+        self.data.add_attribute(
+            dastgen2.attributes.Double(
+                "my" + var_basename,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                valid_mantissa_bits=valid_mantissa_bits,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Double(
+                "myInitval" + var_basename,
+                initval=4.0,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                valid_mantissa_bits=valid_mantissa_bits,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Double(
+                "myStatic" + var_basename,
+                initval=8.0,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                valid_mantissa_bits=valid_mantissa_bits,
+                ifdefs=defs,
+            )
+        )
+        # Not implemented yet
+        self.data.add_attribute(
+            dastgen2.attributes.Double(
+                "myConst" + var_basename,
+                initval=16.0,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST,
+                valid_mantissa_bits=valid_mantissa_bits,
+                ifdefs=defs,
+            )
+        )
+
+        self.data.add_attribute(
+            dastgen2.attributes.Double(
+                "myConstStatic" + var_basename,
+                initval=32.0,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
+                valid_mantissa_bits=valid_mantissa_bits,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Double(
+                "myConstExpr" + var_basename,
+                initval=64.0,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
+                valid_mantissa_bits=valid_mantissa_bits,
+                ifdefs=defs,
+            )
+        )
 
         return
 
@@ -139,79 +308,6 @@ class DastgenTestDummyParticle(Particle):
                 qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
                 min_value=min_value,
                 max_value=max_value,
-                ifdefs=defs,
-            )
-        )
-
-        return
-
-    def _generate_boolean_attributes(self, ifdefs: bool):
-        """!
-        Generate boolean attributes.
-
-        ifdefs: Boolean
-            if True, add debug ifdefs to the attributes.
-        """
-
-        # Set the variable basename, so we get different
-        # variable names for each possible case.
-        var_basename = "Boolean"
-        if ifdefs:
-            var_basename = "DebugBoolean"
-
-        # Set ifdefs
-        defs = []
-        if ifdefs:
-            defs = ["PeanoDebug > 0"]
-
-        # NOTE: initial values, where provided, are hardcoded to be checked
-        # for equality in the test. If you modify them, the test will fail.
-        self.data.add_attribute(
-            dastgen2.attributes.Boolean(
-                "my" + var_basename,
-                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
-                ifdefs=defs,
-            )
-        )
-        self.data.add_attribute(
-            dastgen2.attributes.Boolean(
-                "myInitval" + var_basename,
-                initval="true",
-                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
-                ifdefs=defs,
-            )
-        )
-        self.data.add_attribute(
-            dastgen2.attributes.Boolean(
-                "myStatic" + var_basename,
-                initval="true",
-                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
-                ifdefs=defs,
-            )
-        )
-        # Not implemented yet
-        self.data.add_attribute(
-            dastgen2.attributes.Boolean(
-                "myConst" + var_basename,
-                initval="true",
-                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST,
-                ifdefs=defs,
-            )
-        )
-
-        self.data.add_attribute(
-            dastgen2.attributes.Boolean(
-                "myConstStatic" + var_basename,
-                initval="true",
-                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
-                ifdefs=defs,
-            )
-        )
-        self.data.add_attribute(
-            dastgen2.attributes.Boolean(
-                "myConstExpr" + var_basename,
-                initval="true",
-                qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
                 ifdefs=defs,
             )
         )
