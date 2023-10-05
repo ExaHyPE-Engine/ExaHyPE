@@ -106,6 +106,7 @@ if args.type=="global-adaptive":
 poisson_solver = petsc.solvers.CollocatedLowOrderDiscretisation(
     "Poisson",
     1,
+    args.dimensions,
     args.meshsize,
     args.meshsize,
     matrices.getCellSystemMatrixForLaplacian(),
