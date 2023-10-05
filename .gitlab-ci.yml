@@ -18,13 +18,13 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "ccz4-cpp"'
 
 stages:
+  - publish
   - build
   - test
   - tutorials
   - applications
   - benchmarks
   - formatting
-  - publish
 
 include:
   - .continuous_integration/pipeline-amd.yml
