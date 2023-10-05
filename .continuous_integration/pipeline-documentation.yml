@@ -11,7 +11,7 @@ documentation:
   retry: 0
 
 pages:
-  stage: publish
+  stage: deploy
   allow_failure: false
   tags:
     - ${RUNNER_TAG}

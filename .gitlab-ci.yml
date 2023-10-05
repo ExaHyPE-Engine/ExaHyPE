@@ -19,6 +19,7 @@ workflow:
 
 stages:
   - publish
+  - deploy
   - build
   - test
   - tutorials
