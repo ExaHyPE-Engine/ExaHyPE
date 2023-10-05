@@ -17,7 +17,7 @@ modes = {
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("-cs", "--cell-size",              dest="h",              type=float, required=True, help="Mesh size")
 parser.add_argument("-j",  "--parallel-builds",        dest="j",              type=int, default=-1, help="Parallel builds. Set to 0 to disable compile or to -1 to use all cores")
-parser.add_argument("-d",  "--dim",                    dest="dim",            type=int, default=2, help="Dimensions")
+parser.add_argument("-d",  "--dimensions",                    dest="dimensions",            type=int, default=2, help="Dimensions")
 parser.add_argument("-m",  "--mode",                   dest="mode",                     default="release", help="|".join(modes.keys()))
 parser.add_argument("-et", "--end-time",               dest="end_time",                 type=float, default=1.0, help="Number of timesteps")
 parser.add_argument("-pd", "--peano-dir",              dest="peanodir",                 default="../../../../", help="Peano4 directory")
@@ -28,8 +28,8 @@ parser.add_argument("-v",   "--verbose",               dest="verbose",          
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions")
 args = parser.parse_args()
 
-if args.dim not in [2,3]:
-    print("Error, dimension must be 2 or 3, you supplied {}".format(args.dim))
+if args.dimensions not in [2,3]:
+    print("Error, dimension must be 2 or 3, you supplied {}".format(args.dimensions))
     import sys
     sys.exit(1)
 
@@ -38,7 +38,7 @@ if args.mode not in modes:
     import sys
     sys.exit(1)
 
-print("\nConfiguring {}D Euler problem. Buildmode is {}, nbuilds={}.\n".format(args.dim, args.mode, args.j))
+print("\nConfiguring {}D Euler problem. Buildmode is {}, nbuilds={}.\n".format(args.dimensions, args.mode, args.j))
 
 #
 # Create a project and configure it to end up in a subnamespace (and thus
@@ -180,7 +180,7 @@ else {
 }
 """
 
-if args.dim == 2:
+if args.dimensions == 2:
   size                    = [1.0, 1.0]
   offset                  = [0.0, 0.0]
 else:
@@ -191,7 +191,7 @@ else:
 # Lets configure some global parameters
 #
 project.set_global_simulation_parameters(
-  dimensions = args.dim,
+  dimensions = args.dimensions,
   offset = offset,
   size = size,
   min_end_time = args.end_time,
