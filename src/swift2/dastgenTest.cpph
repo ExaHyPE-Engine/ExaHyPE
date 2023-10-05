@@ -14,21 +14,27 @@ void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
     // ------------------------------
 
     // First set some values, where applicable.
-    int integer = 4321;
-    particle->setMyInteger(integer);
+    int initval_int        = 4321;
+    int static_initval_int = 54321;
+    int var_int;
+    particle->setMyInteger(initval_int);
+    // set to the same value again to avoid race conditions.
+    // We're mainly testing whether all this compiles anyway.
+    particle->setMyStaticInteger(particle->getMyStaticInteger());
 
     // Check getters, and that the expected initial values are correct
-    int intval;
-    intval = particle->getMyInteger();
-    assert(intval == integer);
-    intval = particle->getMyInitvalInteger();
-    assert(intval == 123456);
-    intval = particle->getMyStaticInteger();
-    assert(intval == 1234567);
-    intval = particle->getMyConstStaticInteger();
-    assert(intval == 12345678);
-    intval = particle->getMyConstExprInteger();
-    assert(intval == 123456789);
+    var_int = particle->getMyInteger();
+    assert(var_int == initval_int);
+    var_int = particle->getMyInitvalInteger();
+    assert(var_int == 123);
+    var_int = particle->getMyStaticInteger();
+    assert(var_int == 1234);
+    var_int = particle->getMyConstInteger();
+    assert(var_int == 12345);
+    var_int = particle->getMyConstStaticInteger();
+    assert(var_int == 123456);
+    var_int = particle->getMyConstExprInteger();
+    assert(var_int == 1234567);
   }
 }
 

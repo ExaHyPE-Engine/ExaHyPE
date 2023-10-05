@@ -147,10 +147,9 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 attribute._is_static
                 or attribute._is_const_static
                 or attribute._is_constexpr
+                or attribute._is_const
             ):
                 continue
-            elif attribute._is_const:
-                raise NotImplementedError
             for entry in attribute.get_constructor_arguments():
                 if not is_first:
                     result += ", "
@@ -190,6 +189,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         d["ATTRIBUTE_DECLARATIONS"] = ""
         for attribute in self._attributes:
             d["ATTRIBUTE_DECLARATIONS"] += attribute.get_attribute_declaration_string()
+            print("ADDED", attribute.get_attribute_declaration_string())
 
         d["METHOD_DECLARATIONS"] = ""
         for attribute in self._attributes:
@@ -271,11 +271,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 attribute._is_static
                 or attribute._is_const_static
                 or attribute._is_constexpr
+                or attribute._is_const
             ):
                 # no need to copy static class fields.
                 continue
-            elif attribute._is_const:
-                raise NotImplementedError
 
             if attribute.ifdefs != []:
                 output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))

@@ -20,12 +20,17 @@ class Integer(Attribute):
           is given by the precompiler.
 
         """
+        # Do we need to expose this attribute in the header file?
+        # Only necessary for functions that will be inlined, i.e. constexpr
+        expose = qualifier == Attribute.Qualifier.CONSTEXPR
+
         Attribute.__init__(
             self,
             name,
             ifdefs,
             qualifier=qualifier,
             initval=initval,
+            expose_in_header_file=expose,
         )
         self._min_value = min_value
         self._max_value = max_value
@@ -36,10 +41,11 @@ class Integer(Attribute):
 
         if self._is_static:
             if for_declaration:
-                getter = ("get" + accessor_name + "() const", "static int")
+                # No 'const' here: static member function cannot have 'const' qualifier
+                getter = ("get" + accessor_name + "()", "static int")
             else:
                 # No 'static' here: 'static' can only be specified inside the class definition
-                getter = ("get" + accessor_name + "() const", "int")
+                getter = ("get" + accessor_name + "()", "int")
 
         elif self._is_const_static:
             if for_declaration:
@@ -51,8 +57,7 @@ class Integer(Attribute):
                 getter = ("get" + accessor_name + "()", "int")
 
         elif self._is_const:
-            raise NotImplementedError("standalone 'const' qualifier needs checking and verifying.")
-            #  getter = ("get" + accessor_name + "() const", "const int")
+            getter = ("get" + accessor_name + "() const", "const int")
 
         elif self._is_constexpr:
             getter = ("get" + accessor_name + "() const", "constexpr int")
@@ -84,7 +89,8 @@ class Integer(Attribute):
             namestring += " = " + str(self._initval)
 
         elif self._is_const:
-            raise NotImplementedError
+            typestring = "const int"
+            namestring += " = " + str(self._initval)
 
         elif self._is_constexpr:
             typestring = "constexpr static int"
@@ -97,7 +103,6 @@ class Integer(Attribute):
             # not as optional argument for constructor method
             if self._initval is not None and not for_constructor:
                 namestring += " = " + str(self._initval)
-
 
         # Set up compression/packaging
         if self._min_value is None and self._max_value is None:

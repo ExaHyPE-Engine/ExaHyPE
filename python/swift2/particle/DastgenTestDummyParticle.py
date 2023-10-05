@@ -35,78 +35,74 @@ class DastgenTestDummyParticle(Particle):
             max_h,
         )
 
+        self.generate_integer_attributes(compress=False, ifdefs=False)
+
+        return
+
+    def generate_integer_attributes(self, compress: bool, ifdefs: bool):
+        """!
+        Generate integer attributes.
+
+        compress: Boolean
+            if True, enable compression.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        var_basename = "Integer"
+        if compress and not ifdefs:
+            var_basename = "CompressedInteger"
+        if ifdefs and not compress:
+            var_basename = "DebugInteger"
+        if ifdefs and compress:
+            var_basename = "DebugCompressedInteger"
+
         # NOTE: initial values, where provided, are hardcoded to be checked
         # for equality in the test. If you modify them, the test will fail.
         self.data.add_attribute(
             dastgen2.attributes.Integer(
-                "myInteger", qualifier=dastgen2.attributes.Attribute.Qualifier.NONE
-            )
-        )
-        self.data.add_attribute(
-            dastgen2.attributes.Integer(
-                "myInitvalInteger",
-                initval=123456,
+                "my" + var_basename,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
             )
         )
         self.data.add_attribute(
             dastgen2.attributes.Integer(
-                "myStaticInteger",
-                initval=1234567,
+                "myInitval" + var_basename,
+                initval=123,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Integer(
+                "myStatic" + var_basename,
+                initval=1234,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
             )
         )
         # Not implemented yet
-        #  self.data.add_attribute(dastgen2.attributes.Integer("myConstInteger", initval=12, qualifier=dastgen2.attributes.Attribute.Qualifier.CONST))
         self.data.add_attribute(
             dastgen2.attributes.Integer(
-                "myConstStaticInteger",
-                initval=12345678,
+                "myConst" + var_basename,
+                initval=12345,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST,
+            )
+        )
+
+        self.data.add_attribute(
+            dastgen2.attributes.Integer(
+                "myConstStatic" + var_basename,
+                initval=123456,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
             )
         )
         self.data.add_attribute(
             dastgen2.attributes.Integer(
-                "myConstExprInteger",
-                initval=123456789,
+                "myConstExpr" + var_basename,
+                initval=1234567,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
             )
         )
-
-        #  self.data.add_attribute(
-        #      dastgen2.attributes.Boolean(
-        #          "myBoolean0", qualifier=dastgen2.attributes.Attribute.Qualifier.NONE
-        #      )
-        #  )
-        #  self.data.add_attribute(
-        #      dastgen2.attributes.Boolean(
-        #          "myBoolean1",
-        #          initval="true",
-        #          qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
-        #      )
-        #  )
-        # Not implemented yet
-        #  self.data.add_attribute(dastgen2.attributes.Boolean("myConstBoolean", initval=12, qualifier=dastgen2.attributes.Attribute.Qualifier.CONST))
-        #  self.data.add_attribute(
-        #      dastgen2.attributes.Boolean(
-        #          "myConstStaticBoolean",
-        #          initval="false",
-        #          qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
-        #      )
-        #  )
-        #  self.data.add_attribute(
-        #      dastgen2.attributes.Boolean(
-        #          "myConstExprBoolean",
-        #          initval="true",
-        #          qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
-        #      )
-        #  )
-        #
-        #  self.data.add_attribute(dastgen2.attributes.String("myString0", qualifier=dastgen2.attributes.Attribute.Qualifier.NONE))
-        #  self.data.add_attribute(dastgen2.attributes.Integer("myInteger1", initval=11, qualifier=dastgen2.attributes.Attribute.Qualifier.NONE))
-        # Not implemented yet
-        #  self.data.add_attribute(dastgen2.attributes.Integer("myConstInteger", initval=12, qualifier=dastgen2.attributes.Attribute.Qualifier.CONST))
-        #  self.data.add_attribute(dastgen2.attributes.Integer("myConstStaticInteger", initval=13, qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC))
 
         return
 
