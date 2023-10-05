@@ -20,6 +20,8 @@ pages:
     - mkdir public
     #copy the doxygen stuff into it
     - cp -r doxygen-html/* public/
+  dependencies:
+    - documentation
   artifacts:
     paths:
       - public
