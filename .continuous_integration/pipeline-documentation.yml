@@ -3,7 +3,6 @@ documentation:
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  dependencies: []
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} doxygen documentation/Doxyfile
   artifacts:
@@ -13,6 +12,9 @@ documentation:
 
 pages:
   stage: publish
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
   script:
     #make public directory. This will be visible to outside world
     - mkdir public
