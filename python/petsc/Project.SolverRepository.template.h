@@ -43,21 +43,14 @@ namespace {{N}} {
     /**
     * for now, use this to count the total number of faces
     */
-    {% if SOLVER_INSTANCES[0][0]=="HDG" %}
-
-    int getTotalFaceDofs();
-    int getTotalCellDofs();
-
+    
     /**
-    * we order the matrix so that cell-cell coupling sits
-    * in the top left, with face-face coupling in the bottom right
+    * use this snippet to insert something project-specific. 
+    * the Solver.py has an abstract method get_solver_repository_snippets
+    * overload this with a jinja template.
     */
-    int getGlobalCellIndex(std::pair<int,int> localIndex);
-    int getGlobalFaceIndex(std::pair<int,int> localIndex);
-    {% endif %}
-
+    {{HEADER_EXTRA}}
   }
 {% for N in NAMESPACE %}
 }
 {% endfor %}
-

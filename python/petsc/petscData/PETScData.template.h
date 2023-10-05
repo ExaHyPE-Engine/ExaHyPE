@@ -16,6 +16,7 @@
 
 #include <petscksp.h>
 #include <vector>
+#include <numeric> //for std::iota
 
 extern tarch::logging::Log _log;
 
@@ -28,15 +29,22 @@ class {{NAMESPACE | join("::")}}::PetscData{
     PetscData();
     virtual ~PetscData();
 
-    int getDoFs() const;
-    void setDoFs(int dofs);
+    void setRows(int rows);
+    int  getRows() const;
+    void setCols(int cols);
+    int  getCols() const;
 
     /**
-     * method to intialise the matrix and two vectors
-     * each we _dofs entries
-     * \param int dofs
+    overload to init petsc matrix
+    when we have a square matrix
     */
-    void initMatrixAndVectors( int dofs );
+    void initMatrixAndVectors( int rows );
+
+    /*
+    overload to have different numbers of columns and
+    rows in global petsc matrix
+    */
+    void initMatrixAndVectors( int rows, int cols );
     //method to convert petsc vec to std array
     //for now, just for the solution vector
     void convertToStdVector();
@@ -52,8 +60,6 @@ class {{NAMESPACE | join("::")}}::PetscData{
     */
     void insertDoubleAtIndexij(int i, int j, double val);
     void incrementDoubleAtIndexij(int i, int j, double val);
-    void applyStencilToA(int numRows, int rowIndices, int numCols, int colIndices, double values[], double scale);
-
 
     /**
     * method to insert values into matrix based on stencil
@@ -66,8 +72,8 @@ class {{NAMESPACE | join("::")}}::PetscData{
 
       IMPLEMENTATION IS IN THE HEADER SO THE TEMPLATES WORK
     */
-    template <int rows, int columns>
-    void insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const tarch::la::Matrix<rows,columns,double>& stencil ){
+    template <int rows, int cols>
+    void insertLocalMatrix( const std::vector< int >& rowIndices, const std::vector< int >& colIndices, const tarch::la::Matrix<rows,cols,double>& stencil ){
 
   /**
   in order of appearance, the params are:
@@ -89,6 +95,71 @@ class {{NAMESPACE | join("::")}}::PetscData{
       throw std::runtime_error("mismatched stencil!");
     MatSetValues( _A, rowIndices.size(), &rowIndices[0], colIndices.size(), &colIndices[0], stencil.data(), ADD_VALUES );
     }
+
+    /*
+    same as above, but dangerous
+    */
+    void insertLocalMatrix( const int rows, const int* rowIndices, const int cols, const int* colIndices, const double* values ){
+      MatSetValues( _A, rows, rowIndices, cols, colIndices, values, ADD_VALUES );
+    }
+
+    /*
+    adding an overload to take away the need to provide the whole array
+    of indices. instead, just pass in the index where you want to begin
+    the top left of this mini matrix you insert.
+    */
+    template <int rows, int cols>
+    void insertLocalMatrix( const int startRow, const int startCol, const tarch::la::Matrix<rows,cols,double>& localMatrix)
+    {
+      //get indices we want to send to petsc
+      int rowIndices[localMatrix.rows()]; std::iota( rowIndices, rowIndices + localMatrix.rows(), startRow );
+      int colIndices[localMatrix.cols()]; std::iota( colIndices, colIndices + localMatrix.cols(), startCol );
+
+      //use the other overload
+      insertLocalMatrix( localMatrix.rows(), rowIndices, localMatrix.cols(), colIndices, localMatrix.data() );
+
+    }
+
+  /**
+    inserting a vector of doubles into our rhs vector
+  */
+    template <int cellDofs>
+    void insertRHS( const tarch::la::Vector<cellDofs,double> dofs, const int& globalIndex ){
+      
+      tarch::la::Vector<cellDofs, int> indices;
+      std::iota( indices.data(), indices.data() + indices.size(), globalIndex );
+
+      /*
+      the params here are, in order of appearance:
+        - _b, our rhs vector
+        - the number of entries we want to add
+        - array containing each of the indices we insert into
+        - array containing the data we insert there
+        - insert policy. ADD_VALUES is equivalent to +=
+      */
+      VecSetValues( _b, dofs.size(), indices.data(), dofs.data(), ADD_VALUES );
+    }
+
+    /*
+    inserting vector of doubles to "u"
+    */
+    template <int cellDofs>
+    void insertX( const tarch::la::Vector<cellDofs,double> dofs, const int& globalIndex ){
+      tarch::la::Vector<cellDofs, int> indices;
+      std::iota( indices.data(), indices.data() + indices.size(), globalIndex );
+
+      /*
+      the params here are, in order of appearance:
+        - _x, our solution vector
+        - the number of entries we want to add
+        - array containing each of the indices we insert into
+        - array containing the data we insert there
+        - insert policy. ADD_VALUES is equivalent to +=
+      */
+      VecSetValues( _x, dofs.size(), indices.data(), dofs.data(), ADD_VALUES );
+    
+    }
+
 
     /**
     * method to insert value and rhs into the _x and _b vectors 
@@ -113,7 +184,8 @@ class {{NAMESPACE | join("::")}}::PetscData{
 
 
   private:
-    int _dofs;
+    int _rows;
+    int _cols;
 
     //Ax = b
     Mat _A;
