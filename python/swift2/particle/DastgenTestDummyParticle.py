@@ -36,6 +36,9 @@ class DastgenTestDummyParticle(Particle):
         )
 
         self.generate_integer_attributes(compress=False, ifdefs=False)
+        self.generate_integer_attributes(compress=False, ifdefs=True)
+        self.generate_integer_attributes(compress=True, ifdefs=False)
+        self.generate_integer_attributes(compress=True, ifdefs=True)
 
         return
 
@@ -50,6 +53,8 @@ class DastgenTestDummyParticle(Particle):
             if True, add debug ifdefs to the attributes.
         """
 
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
         var_basename = "Integer"
         if compress and not ifdefs:
             var_basename = "CompressedInteger"
@@ -58,12 +63,27 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and compress:
             var_basename = "DebugCompressedInteger"
 
+        # Set compression values
+        min_value = None
+        max_value = None
+        if compress:
+            min_value = 0
+            max_value = 2097152
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            defs = ["PeanoDebug > 0"]
+
         # NOTE: initial values, where provided, are hardcoded to be checked
         # for equality in the test. If you modify them, the test will fail.
         self.data.add_attribute(
             dastgen2.attributes.Integer(
                 "my" + var_basename,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                min_value=min_value,
+                max_value=max_value,
+                ifdefs=defs,
             )
         )
         self.data.add_attribute(
@@ -71,6 +91,9 @@ class DastgenTestDummyParticle(Particle):
                 "myInitval" + var_basename,
                 initval=123,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                min_value=min_value,
+                max_value=max_value,
+                ifdefs=defs,
             )
         )
         self.data.add_attribute(
@@ -78,6 +101,9 @@ class DastgenTestDummyParticle(Particle):
                 "myStatic" + var_basename,
                 initval=1234,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                min_value=min_value,
+                max_value=max_value,
+                ifdefs=defs,
             )
         )
         # Not implemented yet
@@ -86,6 +112,9 @@ class DastgenTestDummyParticle(Particle):
                 "myConst" + var_basename,
                 initval=12345,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.CONST,
+                min_value=min_value,
+                max_value=max_value,
+                ifdefs=defs,
             )
         )
 
@@ -94,6 +123,9 @@ class DastgenTestDummyParticle(Particle):
                 "myConstStatic" + var_basename,
                 initval=123456,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
+                min_value=min_value,
+                max_value=max_value,
+                ifdefs=defs,
             )
         )
         self.data.add_attribute(
@@ -101,6 +133,9 @@ class DastgenTestDummyParticle(Particle):
                 "myConstExpr" + var_basename,
                 initval=1234567,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
+                min_value=min_value,
+                max_value=max_value,
+                ifdefs=defs,
             )
         )
 

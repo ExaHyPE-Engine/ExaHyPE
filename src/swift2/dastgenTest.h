@@ -10,6 +10,9 @@ namespace dastgenTest {
   template <typename ParticleContainer>
   void checkDastgen(ParticleContainer& localParticles);
 
+  template <typename Particle>
+  void checkIntegers(Particle& particle);
+
   /**
    * A dummy function to move the simulation forward in time.
    * The time step size is hard-coded such that the sim runs

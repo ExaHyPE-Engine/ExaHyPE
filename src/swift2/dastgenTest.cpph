@@ -9,33 +9,113 @@ template <typename ParticleContainer>
 void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
 
   for (auto particle : localParticles) {
-
-    // INTEGERS
-    // ------------------------------
-
-    // First set some values, where applicable.
-    int initval_int        = 4321;
-    int static_initval_int = 54321;
-    int var_int;
-    particle->setMyInteger(initval_int);
-    // set to the same value again to avoid race conditions.
-    // We're mainly testing whether all this compiles anyway.
-    particle->setMyStaticInteger(particle->getMyStaticInteger());
-
-    // Check getters, and that the expected initial values are correct
-    var_int = particle->getMyInteger();
-    assert(var_int == initval_int);
-    var_int = particle->getMyInitvalInteger();
-    assert(var_int == 123);
-    var_int = particle->getMyStaticInteger();
-    assert(var_int == 1234);
-    var_int = particle->getMyConstInteger();
-    assert(var_int == 12345);
-    var_int = particle->getMyConstStaticInteger();
-    assert(var_int == 123456);
-    var_int = particle->getMyConstExprInteger();
-    assert(var_int == 1234567);
+    checkIntegers(particle);
   }
+}
+
+template <typename Particle>
+void dastgenTest::checkIntegers(Particle& particle) {
+
+  // First set some values, where applicable.
+  const int initval_int        = 4321;
+  const int static_initval_int = 54321;
+  int       var_int;
+
+
+  // default case integers
+  // ----------------------
+
+  particle->setMyInteger(initval_int);
+  // set to the same value again to avoid race conditions.
+  // We're mainly testing whether all this compiles anyway.
+  particle->setMyStaticInteger(particle->getMyStaticInteger());
+
+  // Check getters, and that the expected initial values are correct
+  var_int = particle->getMyInteger();
+  assert(var_int == initval_int);
+  var_int = particle->getMyInitvalInteger();
+  assert(var_int == 123);
+  var_int = particle->getMyStaticInteger();
+  assert(var_int == 1234);
+  var_int = particle->getMyConstInteger();
+  assert(var_int == 12345);
+  var_int = particle->getMyConstStaticInteger();
+  assert(var_int == 123456);
+  var_int = particle->getMyConstExprInteger();
+  assert(var_int == 1234567);
+
+
+  // integers + ifdefs
+  // ----------------------
+
+#if PeanoDebug > 0
+  particle->setMyDebugInteger(initval_int);
+  // set to the same value again to avoid race conditions.
+  // We're mainly testing whether all this compiles anyway.
+  particle->setMyStaticDebugInteger(particle->getMyStaticDebugInteger());
+
+  // Check getters, and that the expected initial values are correct
+  var_int = particle->getMyDebugInteger();
+  assert(var_int == initval_int);
+  var_int = particle->getMyInitvalDebugInteger();
+  assert(var_int == 123);
+  var_int = particle->getMyStaticDebugInteger();
+  assert(var_int == 1234);
+  var_int = particle->getMyConstDebugInteger();
+  assert(var_int == 12345);
+  var_int = particle->getMyConstStaticDebugInteger();
+  assert(var_int == 123456);
+  var_int = particle->getMyConstExprDebugInteger();
+  assert(var_int == 1234567);
+#endif
+
+
+  // integers + compression
+  // ----------------------
+
+  particle->setMyCompressedInteger(initval_int);
+  // set to the same value again to avoid race conditions.
+  // We're mainly testing whether all this compiles anyway.
+  particle->setMyStaticCompressedInteger(particle->getMyStaticCompressedInteger());
+
+  // Check getters, and that the expected initial values are correct
+  var_int = particle->getMyCompressedInteger();
+  assert(var_int == initval_int);
+  var_int = particle->getMyInitvalCompressedInteger();
+  assert(var_int == 123);
+  var_int = particle->getMyStaticCompressedInteger();
+  assert(var_int == 1234);
+  var_int = particle->getMyConstCompressedInteger();
+  assert(var_int == 12345);
+  var_int = particle->getMyConstStaticCompressedInteger();
+  assert(var_int == 123456);
+  var_int = particle->getMyConstExprCompressedInteger();
+  assert(var_int == 1234567);
+
+
+  // integers + ifdefs + compression
+  // ------------------------------------
+
+#if PeanoDebug > 0
+  particle->setMyDebugCompressedInteger(initval_int);
+  // set to the same value again to avoid race conditions.
+  // We're mainly testing whether all this compiles anyway.
+  particle->setMyStaticDebugCompressedInteger(particle->getMyStaticDebugCompressedInteger());
+
+  // Check getters, and that the expected initial values are correct
+  var_int = particle->getMyDebugCompressedInteger();
+  assert(var_int == initval_int);
+  var_int = particle->getMyInitvalDebugCompressedInteger();
+  assert(var_int == 123);
+  var_int = particle->getMyStaticDebugCompressedInteger();
+  assert(var_int == 1234);
+  var_int = particle->getMyConstDebugCompressedInteger();
+  assert(var_int == 12345);
+  var_int = particle->getMyConstStaticDebugCompressedInteger();
+  assert(var_int == 123456);
+  var_int = particle->getMyConstExprDebugCompressedInteger();
+  assert(var_int == 1234567);
+#endif
 }
 
 

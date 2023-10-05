@@ -69,11 +69,13 @@ class Attribute(object):
         self._initval = initval
         self.expose_in_header_file = expose_in_header_file
 
-        if (self._is_const_static or self._is_constexpr) and self._initval is None:
+        if (
+            self._is_const_static or self._is_constexpr or self._is_const
+        ) and self._initval is None:
             raise ValueError(
                 "Attribute",
                 self._name,
-                ": You need to provide an initialisation value for a static attribute",
+                ": You need to provide an initialisation value for a const attribute",
             )
 
     @property
