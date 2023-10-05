@@ -23,6 +23,10 @@ class MatrixGenerator:
   overwritten in child class, but some will come
   with default behaviour.
 
+  Warning - we didn't write the getFunctions in a
+  functional way, and so eval integral cannot
+  accept derivatives at this time
+
   """
   def __init__(self,
                dimensions,
@@ -105,7 +109,7 @@ class MatrixGenerator:
     points, weights = leggauss( self.poly_degree + 1 )
     return weights
 
-  def getPointsForDimension(self, dim):
+  def getPointsForDimension(self, dim=-1):
     """!
     We promote the 1D quadrature points
     in into the dimensions of our problem
@@ -116,6 +120,8 @@ class MatrixGenerator:
     We may need to produce arrays of points 
     for number of dimensions which is less 
     """
+    if dim==-1:
+      dim=self.Dimensions
     #make array of length dim, where each 
     #entry is a copy of self.points1d
     points = [self.points1d for _ in range(dim)]
@@ -148,7 +154,7 @@ class MatrixGenerator:
     def arrayProduct(array):
       output = 1
       for el in array: output *= el
-      return array
+      return output
 
     #create an array of length dim, where each
     #each entry of the array is a copy of the 1d weights
@@ -178,10 +184,10 @@ class MatrixGenerator:
     #support converting index to any dimension. default to max
     if dim==-1:
       dim=self.Dimensions
-    assert index in range(self.poly_degree ** dim), "index outside of range!"
+    assert index in range((self.poly_degree+1) ** dim), "index outside of range!"
     output = [0 for _ in range(dim)]
     for d in range(dim-1,-1,-1):
-      pToD      = self.poly_degree**(d)
+      pToD      = (self.poly_degree+1)**(d)
       output[d] = (index - index%pToD) // pToD
       index     = index % pToD
     return output
@@ -228,10 +234,27 @@ class MatrixGenerator:
     assert len(point) == dim, "We must have same number of coordinates as number of dimensions!"
     index = self.convertIndexToDim(index, dim)
     output = 1
-    for i in range(dim):
+    for i,p in zip(index, point):
       #evaluate polynomial at given point
-      output *= self.polynomials1d[i]( point[i] )
+      val = self.polynomials1d[i]( p )
+      output *= val
     return output
+
+  def evalIntegral(self, indices, dim=-1, factor=1):
+    if dim == -1:
+      dim = self.Dimensions
+    points  = self.getPointsForDimension(dim)
+    weights = self.getWeightsForDimension(dim)
+    output  = 0
+
+    for p, w in zip(points, weights):
+      localEval  = 1
+      for index in indices:
+        # do the following for each polynomial in array of indices
+        localEval *= self.evalPolynomial( index, p, dim )
+      # aggregate
+      output += w * localEval
+    return output * factor
 
   @abstractmethod
   def getCellSystemMatrixForLaplacian(self):

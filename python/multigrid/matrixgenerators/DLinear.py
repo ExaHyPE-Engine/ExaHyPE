@@ -20,15 +20,17 @@ class DLinear(MatrixGenerator):
   classes. Most of the stuff in here in hard-coded, so only well-suited for
   relatively primitive solvers. You might want to specialise these routines,
   switch to a more sophisticated matrix generator, or abandon the idea of a
-  matrix generator alltogether.
+  matrix generator altogether.
     
   '''
   def __init__(self,
                dimensions,
-               unknowns_per_vertex_dof,
+               poly_degree=1,
+               unknowns_per_vertex_dof=1,
                ):
 
-    super( DLinear, self ).__init__(dimensions, 
+    super( DLinear, self ).__init__(dimensions,
+                                    poly_degree,
                                    )
     self.unknowns_per_vertex_dof = unknowns_per_vertex_dof
     
@@ -53,7 +55,7 @@ class DLinear(MatrixGenerator):
     if we flattened it. Is this what we want?
     """
     #get mass matrix
-    massMatrix = self.getCellMassMatrix
+    massMatrix = self.getCellMassMatrix()
     output     = np.zeros_like(massMatrix)
     for i in range( output.shape[0] ):
       #this line is 2d only
@@ -70,12 +72,19 @@ class DLinear(MatrixGenerator):
     The resulting matrix has to be scaled by @f$ h^d @f$.
 
     '''
-    dim    = self._cell_dofs * self.unknowns_per_vertex_dof
+    # dim    = self._cell_dofs * self.unknowns_per_vertex_dof
+    # output = np.zeros((dim,dim))
+    # for i in range( self._cell_dofs ):
+    #   for j in range( self._cell_dofs ):
+    #     for k in range( self.unknowns_per_cell_dof ):
+    #       output[self.unknowns_per_cell_dof*i+k, self.unknowns_per_cell_dof*j+k] += self.evaluateIntegral2d(functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ]) # phi_x-phi_x coupling 
+    # return output
+    dim    = (self.poly_degree + 1) ** self.Dimensions
     output = np.zeros((dim,dim))
-    for i in range( self._cell_dofs ):
-      for j in range( self._cell_dofs ):
-        for k in range( self.unknowns_per_cell_dof ):
-          output[self.unknowns_per_cell_dof*i+k, self.unknowns_per_cell_dof*j+k] += self.evaluateIntegral2d(functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ]) # phi_x-phi_x coupling 
+
+    for i in range(output.shape[0]):
+      for j in range(output.shape[1]):
+        output[i,j] = self.evalIntegral([i,j])
     return output
 
   def getCellSystemMatrixForLaplacian(self):
@@ -100,9 +109,11 @@ class DLinear(MatrixGenerator):
     #      #output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
     #      #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
     #return output
-    return [ [ 2.0/3.0,   -0.5/3.0,   -0.5/3.0,   -1.0/3.0],
-             [-0.5/3.0,    2.0/3.0,   -1.0/3.0,   -0.5/3.0],
-             [-0.5/3.0,   -1.0/3.0,    2.0/3.0,   -0.5/3.0],
-             [-1.0/3.0,   -0.5/3.0,   -0.5/3.0,    2.0/3.0]
-           ]
   
+    # return [ [ 2.0/3.0,   -0.5/3.0,   -0.5/3.0,   -1.0/3.0],
+    #          [-0.5/3.0,    2.0/3.0,   -1.0/3.0,   -0.5/3.0],
+    #          [-0.5/3.0,   -1.0/3.0,    2.0/3.0,   -0.5/3.0],
+    #          [-1.0/3.0,   -0.5/3.0,   -0.5/3.0,    2.0/3.0]
+    #        ]
+    # dim    = self._cell_dofs * self.unknowns_per_vertex_dof
+    return None
