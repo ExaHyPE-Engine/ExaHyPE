@@ -12,16 +12,6 @@ class Attribute(object):
 
     This is the superclass of all attributes tied
 
-    is_static: bool
-      if True, make attribute static.
-
-    is_const_static: bool
-      if True make attribute const and static.
-
-    initval: str or None
-      if is_static or is_const_static are True, then provide initialisation
-      value via this parameter. This is optional is is_static = True, but
-      mandatory if is_const_static = True.
     """
 
     class Qualifier(Enum):
@@ -58,10 +48,10 @@ class Attribute(object):
           A set of strings which have to hold at compile time to determine if this
           attribute does exist or not.
 
-        qualifier: Qualifier
+        qualifier: self.Qualifier
           An additional qualifier.
 
-        initval
+        initval: str or None
           Initial value. The type depends on underlying type. But you can always pass
           in a string that evaluates to the correct type.
 

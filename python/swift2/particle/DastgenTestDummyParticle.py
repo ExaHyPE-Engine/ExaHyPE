@@ -49,19 +49,26 @@ class DastgenTestDummyParticle(Particle):
                 qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
             )
         )
+        self.data.add_attribute(
+            dastgen2.attributes.Integer(
+                "myStaticInteger",
+                initval=1234567,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+            )
+        )
         # Not implemented yet
         #  self.data.add_attribute(dastgen2.attributes.Integer("myConstInteger", initval=12, qualifier=dastgen2.attributes.Attribute.Qualifier.CONST))
         self.data.add_attribute(
             dastgen2.attributes.Integer(
                 "myConstStaticInteger",
-                initval=1234567,
+                initval=12345678,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
             )
         )
         self.data.add_attribute(
             dastgen2.attributes.Integer(
                 "myConstExprInteger",
-                initval=12345678,
+                initval=123456789,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
             )
         )

@@ -23,9 +23,12 @@ void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
     assert(intval == integer);
     intval = particle->getMyInitvalInteger();
     assert(intval == 123456);
-    intval = particle->getMyConstStaticInteger();
+    intval = particle->getMyStaticInteger();
     assert(intval == 1234567);
-    // intval = particle->getMyConstExprInteger();
+    intval = particle->getMyConstStaticInteger();
+    assert(intval == 12345678);
+    intval = particle->getMyConstExprInteger();
+    assert(intval == 123456789);
   }
 }
 

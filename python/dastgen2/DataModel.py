@@ -203,9 +203,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 d["METHOD_DECLARATIONS"] += "    "
                 if attribute.expose_in_header_file:
                     d["METHOD_DECLARATIONS"] += " inline "
-                d["METHOD_DECLARATIONS"] += (
-                    method[1] + "   " + method[0] + ";\n"
-                )
+                d["METHOD_DECLARATIONS"] += method[1] + "   " + method[0] + ";\n"
             if attribute.ifdefs != []:
                 d["METHOD_DECLARATIONS"] += "#endif \n"
 
@@ -250,7 +248,6 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
             self.__generate_accessors(output, False)
             output.write("\n\n\n")
-
 
     def __generate_constructor_definition(self, output):
         """
@@ -348,10 +345,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 output.write("#endif \n")
         output.write("}\n\n\n")
 
-    def __generate_accessors(self,
-                             output,
-                             is_cpp_file
-                             ):
+    def __generate_accessors(self, output, is_cpp_file):
         """!
 
         Generate getter/setter functions.
@@ -359,9 +353,12 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         Generate all the setters and getters and use get_methods() to
         construct them for the individual attributes.
 
-        output: File
+        output: File object
+            File object that will be written to.
 
-        is_cpp_file: Boolean
+        is_cpp_file: Boolean.
+            True if the output is intended to be the .cpp file. False if it's
+            the header file.
 
         """
         for attribute in self._attributes:
@@ -372,12 +369,12 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                     self._full_qualified_name, for_declaration=False
                 ):
                     output.write(
-                      method[1]
-                      + "   "
-                      + self._full_qualified_name
-                      + "::"
-                      + method[0]
-                      + " {\n"
+                        method[1]
+                        + "   "
+                        + self._full_qualified_name
+                        + "::"
+                        + method[0]
+                        + " {\n"
                     )
                     output.write(attribute.get_method_body(method[0]))
                     output.write("}\n\n\n")
@@ -423,5 +420,5 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 output.write(aspect.get_implementation(self._full_qualified_name))
 
     def expose_all_attributes_in_header_file(self):
-       for i in self._attributes:
-           i.expose_in_header_file = True
+        for i in self._attributes:
+            i.expose_in_header_file = True
