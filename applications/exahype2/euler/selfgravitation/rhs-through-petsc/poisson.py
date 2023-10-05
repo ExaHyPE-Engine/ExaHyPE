@@ -44,10 +44,6 @@ if args.mode not in modes:
 
 print("\nConfiguring {}D Euler problem. Buildmode is {}, nbuilds={}.\n".format(args.dimensions, args.mode, args.j))
 
-#generate matrices
-matrices = DLinear(args.dimensions,
-                   args.unknowns_per_vertex_dof)
-
 #
 # Create a project and configure it to end up in a subnamespace (and thus
 # subdirectory).
@@ -71,6 +67,12 @@ auxiliary_variables = 0
 
 euler_solver   = None
 poisson_solver = None
+
+# @todo: Trying to think in a modularised way:
+# there is MG code somewhere which I have to use and
+# assuming that we need different local stiffness matrices for LHS for different types of solvers
+matrices = None
+
 if args.type=="global-fixed":
   euler_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
     "Euler",
@@ -83,6 +85,8 @@ if args.type=="global-fixed":
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
+  # class DLinearFixedTimeStep(DLinear) # just the LHS matrix modification?
+  matrices = DLinearFixedTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
 if args.type=="global-adaptive":
   euler_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     "Euler",
@@ -95,8 +99,10 @@ if args.type=="global-adaptive":
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
+  # class DLinearFixedTimeStep(DLinear) # just the LHS matrix modification?
+  matrices = DLinearAdaptiveTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
 
-# for now, just testing one poisson solver
+# @todo: Or is it about an individual CollocatedLowOrderDiscretisation for every type of solver?
 poisson_solver = petsc.solvers.CollocatedLowOrderDiscretisation(
     "Poisson",
     1,
