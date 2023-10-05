@@ -130,8 +130,6 @@ initialisation_snippet = """
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0);
       particle->setSearchRadius( GridSize_x / 2.0);
-
-      std::cout << "CALLING IC STUFF " << particle->getSearchRadius() << std::endl;
 """
 
 #  Finally, pass this configuration to the initialisation script

@@ -49,6 +49,9 @@ class DastgenTestDummyParticle(Particle):
         self._generate_integer_attributes(compress=True, ifdefs=False)
         self._generate_integer_attributes(compress=True, ifdefs=True)
 
+        #  self._generate_string_attributes(ifdefs=False)
+        #  self._generate_string_attributes(ifdefs=True)
+
         return
 
     def _generate_boolean_attributes(self, ifdefs: bool):
@@ -90,12 +93,18 @@ class DastgenTestDummyParticle(Particle):
         self.data.add_attribute(
             dastgen2.attributes.Boolean(
                 "myStatic" + var_basename,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Boolean(
+                "myStaticInitval" + var_basename,
                 initval="true",
                 qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
                 ifdefs=defs,
             )
         )
-        # Not implemented yet
         self.data.add_attribute(
             dastgen2.attributes.Boolean(
                 "myConst" + var_basename,
@@ -104,7 +113,6 @@ class DastgenTestDummyParticle(Particle):
                 ifdefs=defs,
             )
         )
-
         self.data.add_attribute(
             dastgen2.attributes.Boolean(
                 "myConstStatic" + var_basename,
@@ -177,13 +185,20 @@ class DastgenTestDummyParticle(Particle):
         self.data.add_attribute(
             dastgen2.attributes.Double(
                 "myStatic" + var_basename,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                valid_mantissa_bits=valid_mantissa_bits,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Double(
+                "myStaticInitval" + var_basename,
                 initval=8.0,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
                 valid_mantissa_bits=valid_mantissa_bits,
                 ifdefs=defs,
             )
         )
-        # Not implemented yet
         self.data.add_attribute(
             dastgen2.attributes.Double(
                 "myConst" + var_basename,
@@ -193,7 +208,6 @@ class DastgenTestDummyParticle(Particle):
                 ifdefs=defs,
             )
         )
-
         self.data.add_attribute(
             dastgen2.attributes.Double(
                 "myConstStatic" + var_basename,
@@ -272,6 +286,15 @@ class DastgenTestDummyParticle(Particle):
         self.data.add_attribute(
             dastgen2.attributes.Integer(
                 "myStatic" + var_basename,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                min_value=min_value,
+                max_value=max_value,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.Integer(
+                "myStaticInitval" + var_basename,
                 initval=1234,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
                 min_value=min_value,
@@ -279,7 +302,6 @@ class DastgenTestDummyParticle(Particle):
                 ifdefs=defs,
             )
         )
-        # Not implemented yet
         self.data.add_attribute(
             dastgen2.attributes.Integer(
                 "myConst" + var_basename,
@@ -290,7 +312,6 @@ class DastgenTestDummyParticle(Particle):
                 ifdefs=defs,
             )
         )
-
         self.data.add_attribute(
             dastgen2.attributes.Integer(
                 "myConstStatic" + var_basename,
@@ -312,6 +333,76 @@ class DastgenTestDummyParticle(Particle):
             )
         )
 
+        return
+
+    def _generate_string_attributes(self, ifdefs: bool):
+        """!
+        Generate string attributes.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
+        var_basename = "String"
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            var_basename = "DebugString"
+            defs = ["PeanoDebug > 0"]
+
+        # NOTE: initial values, where provided, are hardcoded to be checked
+        # for equality in the test. If you modify them, the test will fail.
+        self.data.add_attribute(
+            dastgen2.attributes.String(
+                "my" + var_basename,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.String(
+                "myInitval" + var_basename,
+                initval="initval",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.String(
+                "myStatic" + var_basename,
+                initval="static_initval",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.String(
+                "myConst" + var_basename,
+                initval="const_initval",
+                qualifier=dastgen2.attributes.Attribute.Qualifier.CONST,
+                ifdefs=defs,
+            )
+        )
+        #  self.data.add_attribute(
+        #      dastgen2.attributes.String(
+        #          "myConstStatic" + var_basename,
+        #          initval="const_static_initval",
+        #          qualifier=dastgen2.attributes.Attribute.Qualifier.CONST_STATIC,
+        #          ifdefs=defs,
+        #      )
+        #  )
+        #  self.data.add_attribute(
+        #      dastgen2.attributes.String(
+        #          "myConstExpr" + var_basename,
+        #          initval="constexpr_initval",
+        #          qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
+        #          ifdefs=defs,
+        #      )
+        #  )
+        #
         return
 
     def algorithm_steps(self):
