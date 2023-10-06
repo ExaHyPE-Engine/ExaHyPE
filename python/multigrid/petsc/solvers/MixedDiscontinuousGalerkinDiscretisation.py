@@ -14,7 +14,7 @@ from scipy.interpolate import lagrange
 from .Solver                                    import Solver
 from petsc.actionsets.EnumerateDofs             import EnumerateVerticesGeneral, EnumerateCellsAndFaces
 from petsc.actionsets.InitDofs                  import InitVertexDoFs, InitFaceAndCellDoFs
-from petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScCellSolutionOnVerticesBackOntoMesh
+from petsc.actionsets.ProjectPETScSolutionOntoMesh import ProjectPETScCellSolutionOnVerticesBackOntoMesh
 from petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMixed
 
 from abc import abstractmethod
