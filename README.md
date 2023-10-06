@@ -43,7 +43,7 @@ The most important ones are:
 
 # Quickstart
 ```shell
-python3 configure.py && make -j && make check
+python3 configure.py -cc=g++ -cxx=gcc && make -j && make check
 ```
 
 Invoke `make -jX` to use `X` threads to build the code.
