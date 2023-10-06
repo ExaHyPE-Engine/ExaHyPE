@@ -34,7 +34,7 @@ class Enumeration(Attribute):
     ):
         if qualifier != Attribute.Qualifier.NONE:
             raise NotImplementedError(
-                f"Attribute {name}: This data type can't work with qualifiers (yet)"
+                f"Attribute {name}: This data type can't work with qualifiers"
             )
         Attribute.__init__(
             self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval
@@ -75,7 +75,7 @@ class Enumeration(Attribute):
             ("set" + accessor_name + "(" + accessor_name + " value)", "void"),
         ]
 
-    def get_plain_C_attributes(self):
+    def get_plain_C_attributes(self, for_constructor=False):
         if self.compress:
             return [("_" + self._name, self._enum_name(), "[[clang::pack]]")]
         else:

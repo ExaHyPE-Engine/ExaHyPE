@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <type_traits>
 
 // #define GETTER(NAME) particle->get##NAME()
 // #define SETTER(NAME, VAL) particle->set##NAME((VAL))
@@ -11,7 +12,7 @@ void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
   for (auto particle : localParticles) {
     checkBooleans(particle);
     checkDoubles(particle);
-    // checkEnums(particle);
+    checkEnums(particle);
     checkIntegers(particle);
     checkStrings(particle);
 
@@ -260,6 +261,34 @@ void dastgenTest::checkDoubles(Particle& particle) {
   var_double = particle->getMyConstExprDebugCompressedDouble();
   assert(var_double == 64.);
 #endif
+}
+
+
+template <typename Particle>
+void dastgenTest::checkEnums(Particle& particle) {
+
+  // Default enums
+  // ----------------
+
+  using enu = std::remove_pointer<Particle>::type::MyEnum;
+
+  enu e1 = enu::Baz;
+  particle->setMyEnum(e1);
+  enu e2 = particle->getMyEnum();
+  assert(e2 == e1);
+
+  // enums + debug
+  // ----------------
+
+#if PeanoDebug > 0
+  using enuD = std::remove_pointer<Particle>::type::MyDebugEnum;
+
+  enuD eD1 = enuD::Baz;
+  particle->setMyDebugEnum(eD1);
+  enuD eD2 = particle->getMyDebugEnum();
+  assert(eD2 == eD1);
+#endif
+
 }
 
 

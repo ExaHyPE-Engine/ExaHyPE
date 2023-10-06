@@ -10,11 +10,13 @@ namespace dastgenTest {
   template <typename ParticleContainer>
   void checkDastgen(ParticleContainer& localParticles);
 
+
   /**
    * Perform all the checks on a particle's boolean members
    */
   template <typename Particle>
   void checkBooleans(Particle& particle);
+
 
   /**
    * Perform all the checks on a particle's double members
@@ -22,17 +24,20 @@ namespace dastgenTest {
   template <typename Particle>
   void checkDoubles(Particle& particle);
 
+
   /**
    * Perform all the checks on a particle's enum members
    */
   template <typename Particle>
   void checkEnums(Particle& particle);
 
+
   /**
    * Perform all the checks on a particle's integer members
    */
   template <typename Particle>
   void checkIntegers(Particle& particle);
+
 
   /**
    * Perform all the checks on a particle's string members
@@ -47,17 +52,20 @@ namespace dastgenTest {
   template <typename Particle>
   void checkBooleanArrays(Particle& particle);
 
+
   /**
    * Perform all the checks on a particle's double array members
    */
   template <typename Particle>
   void checkDoubleArrays(Particle& particle);
 
+
   /**
    * Perform all the checks on a particle's integer array members
    */
   template <typename Particle>
   void checkIntegerArrays(Particle& particle);
+
 
   /**
    * Perform all the checks on a particle's string arrays members
