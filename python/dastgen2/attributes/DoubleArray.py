@@ -33,22 +33,14 @@ class DoubleArray(Double):
             raise NotImplementedError(
                 f"Attribute {name}: This data type can't work with qualifiers (yet)"
             )
+        if initval is not None:
+            raise NotImplementedError(
+                f"Attribute {name}: Can't generate arrays with initial values (yet)."
+            )
         Double.__init__(self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval)
 
-        self._cardinality = cardinality
+        self._cardinality = str(cardinality)
         self._valid_mantissa_bits = valid_mantissa_bits
-
-    def get_methods(self, _full_qualified_class_name, for_declaration=True):
-        accessor_name = self._name[:1].title() + self._name[1:]
-        return [
-            ("get" + accessor_name + "() const", "const double*"),
-            (
-                "set" + accessor_name + "(double value[" + self._cardinality + "])",
-                "void",
-            ),
-            ("get" + accessor_name + "(int index) const", "double"),
-            ("set" + accessor_name + "(int index, double value)", "void"),
-        ]
 
     def use_default_copy_constructor(self):
         """
@@ -59,7 +51,19 @@ class DoubleArray(Double):
         """
         return False
 
-    def get_plain_C_attributes(self):
+    def get_methods(self, _full_qualified_class_name, for_declaration=True):
+        accessor_name = self._name[:1].title() + self._name[1:]
+        return [
+            ("get" + accessor_name + "() const", "const double*"),
+            (
+                "set" + accessor_name + "(const double value[" + self._cardinality + "])",
+                "void",
+            ),
+            ("get" + accessor_name + "(int index) const", "double"),
+            ("set" + accessor_name + "(int index, double value)", "void"),
+        ]
+
+    def get_plain_C_attributes(self, for_constructor=False):
         if self._valid_mantissa_bits != None:
             return [
                 (

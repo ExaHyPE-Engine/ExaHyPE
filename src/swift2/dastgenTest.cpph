@@ -18,7 +18,7 @@ void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
     checkStrings(particle);
 
     checkBooleanArrays(particle);
-    // checkDoubleArrays(particle);
+    checkDoubleArrays(particle);
     checkIntegerArrays(particle);
 
     // peano stuff...
@@ -599,6 +599,83 @@ void dastgenTest::checkBooleanArrays(Particle& particle) {
   bool_var = particle->getMyCompressedDebugBooleanArray();
   for (int i = 0; i < CARD; i++) {
     assert(bool_var[i] == particle->getMyCompressedDebugBooleanArray(i));
+  }
+#endif
+}
+
+
+template <typename Particle>
+void dastgenTest::checkDoubleArrays(Particle& particle) {
+
+  double init_double[CARD] = {1., 2., 3., 4., 5., 6., 7., 8.};
+
+  // Default Double Array
+  // -------------------------
+
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyDoubleArray(i, i + 10.);
+    assert(particle->getMyDoubleArray(i) == i + 10.);
+  }
+
+  // getter/setter with array
+  particle->setMyDoubleArray(init_double);
+  const double* double_var1 = particle->getMyDoubleArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(double_var1[i] == particle->getMyDoubleArray(i));
+  }
+
+
+  // Double Array + debug
+  // -------------------------
+
+#if PeanoDebug > 0
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyDebugDoubleArray(i, i + 11.);
+    assert(particle->getMyDebugDoubleArray(i) == i + 11.);
+  }
+
+  // getter/setter with array
+  particle->setMyDebugDoubleArray(init_double);
+  const double* double_var2 = particle->getMyDebugDoubleArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(double_var2[i] == particle->getMyDebugDoubleArray(i));
+  }
+#endif
+
+  // Double Array + compress
+  // -------------------------
+
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyCompressedDoubleArray(i, i + 12.);
+    assert(particle->getMyCompressedDoubleArray(i));
+  }
+
+  // getter/setter with array
+  particle->setMyCompressedDoubleArray(init_double);
+  const double* double_var3 = particle->getMyCompressedDoubleArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(double_var3[i] == particle->getMyCompressedDoubleArray(i));
+  }
+
+
+  // Double Array + debug + compression
+  // ------------------------------------
+
+#if PeanoCompressedDebug > 0
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyCompressedDebugDoubleArray(i, i + 13.);
+    assert(particle->getMyCompressedDebugDoubleArray(i));
+  }
+
+  // getter/setter with array
+  particle->setMyCompressedDebugDoubleArray(init_double);
+  const double* double_var4 = particle->getMyCompressedDebugDoubleArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(double_var4[i] == particle->getMyCompressedDebugDoubleArray(i));
   }
 #endif
 }

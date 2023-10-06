@@ -65,6 +65,11 @@ class DastgenTestDummyParticle(Particle):
         self._generate_integer_array_attributes(compress=False, ifdefs=True)
         self._generate_integer_array_attributes(compress=True, ifdefs=True)
 
+        self._generate_double_array_attributes(compress=False, ifdefs=False)
+        self._generate_double_array_attributes(compress=True, ifdefs=False)
+        self._generate_double_array_attributes(compress=False, ifdefs=True)
+        self._generate_double_array_attributes(compress=True, ifdefs=True)
+
         return
 
     def _generate_boolean_attributes(self, ifdefs: bool):
@@ -533,6 +538,49 @@ class DastgenTestDummyParticle(Particle):
                 qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
                 min_value=None,
                 max_value=None,
+                ifdefs=defs,
+            )
+        )
+
+        return
+
+    def _generate_double_array_attributes(self, compress: bool, ifdefs: bool):
+        """!
+        Generate double-array attributes.
+
+        compress: Boolean
+            if True, enable compression.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
+        var_basename = "DoubleArray"
+        if compress and not ifdefs:
+            var_basename = "CompressedDoubleArray"
+        if ifdefs and not compress:
+            var_basename = "DebugDoubleArray"
+        if ifdefs and compress:
+            var_basename = "DebugCompressedDoubleArray"
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            defs = ["PeanoDebug > 0"]
+
+        # Set compression values
+        valid_mantissa_bits = None
+        if compress:
+            valid_mantissa_bits = 23
+
+        self.data.add_attribute(
+            dastgen2.attributes.DoubleArray(
+                "my" + var_basename,
+                cardinality=8,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                valid_mantissa_bits=valid_mantissa_bits,
                 ifdefs=defs,
             )
         )
