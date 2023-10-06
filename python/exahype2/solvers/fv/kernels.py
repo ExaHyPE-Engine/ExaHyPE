@@ -1,37 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from enum import Enum
-
-class SolverVariant(Enum):
-  WithVirtualFunctions = 0
-  Stateless            = 1
-  Multicore            = 2
-  """
-  The default accelerator version that you should use
-  """
-  AcceleratorWithExplicitCopy = 3
-  AcceleratorWithManagedRemoteMemory = 4
-
-class KernelVariant(Enum):
-  PatchWiseAoSStack                = 10
-  PatchWiseAoSoAStack              = 11
-  PatchWiseSoAStack                = 12
-  PatchWiseAoSHeap                 = 20
-  PatchWiseAoSoAHeap               = 21
-  PatchWiseSoAHeap                 = 22
-  BatchedAoSStack                  = 30
-  BatchedAoSoAStack                = 31
-  BatchedSoAStack                  = 32
-  BatchedAoSHeap                   = 40
-  BatchedAoSoAHeap                 = 41
-  BatchedSoAHeap                   = 42
-  TaskGraphAoSHeap                 = 60
-  TaskGraphAoSoAHeap               = 61
-  TaskGraphSoAHeap                 = 62
-  GenericAoS                       = 70
-  GenericAoSoA                     = 71
-  GenericSoA                       = 72
-
 def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(solver):
   """
   This is a straightforward modification of ReconstructPatchAndApplyFunctor._Template_TouchCellFirstTime_Fill_Halos

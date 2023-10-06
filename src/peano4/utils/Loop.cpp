@@ -1,6 +1,8 @@
 #include "Loop.h"
 
 
+
+
 namespace {
   int dLinearisedNotOptimised( const tarch::la::Vector<Dimensions,int> & counter, int max ) {
     int result = counter(Dimensions - 1);
@@ -340,4 +342,19 @@ tarch::la::Vector<Dimensions,int> peano4::utils::dStartVector( int max, const pe
     }
   }
   return result;
+}
+
+
+
+std::string toString( peano4::utils::LoopParallelism arg ) {
+  switch (arg) {
+    case peano4::utils::LoopParallelism::None:
+      return "none";
+    case peano4::utils::LoopParallelism::ParallelFor:
+      return "parallel-for";
+    case peano4::utils::LoopParallelism::Subtasks:
+      return "subtasks";
+  }
+  assertion(false);
+  return "<undef>";
 }
