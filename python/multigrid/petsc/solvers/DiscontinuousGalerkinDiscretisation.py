@@ -178,7 +178,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
                cell_to_face_matrix,
                face_face_Riemann_problem_matrix,
                face_to_cell_matrix,
-               position_of_nodes_within_unit_cube,
+               quadrature_points_in_unit_interval,
                ):
     """!
    
@@ -201,11 +201,11 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     self.face_face_Riemann_problem_matrix   = face_face_Riemann_problem_matrix
     self.face_to_cell_matrix                = face_to_cell_matrix
 
-    self.position_of_nodes_within_unit_cube = position_of_nodes_within_unit_cube
+    self.quadrature_points_in_unit_interval = quadrature_points_in_unit_interval
     
     self._cell_pde_data   = peano4.datamodel.DaStGen2( name )
-    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self.unknowns) ) )
-    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self.unknowns) ) )
+    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self.number_of_matrix_entries_per_cell) ) )
+    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self.number_of_matrix_entries_per_cell) ) )
     
     pass
 
@@ -332,7 +332,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
         "CELL_TO_FACE_MATRIX":       self.cell_to_face_matrix,
         "FACE_FACE_RIEMANN_PROBLEM_MATRIX":      self.face_face_Riemann_problem_matrix,
         "FACE_TO_CELL_MATRIX":                   self.face_to_cell_matrix,
-        "POSITION_OF_NODES_WITHIN_UNIT_CUBE":    self.position_of_nodes_within_unit_cube,
+        "QUADRATURE_POINTS_IN_UNIT_INTERVAL":    self.quadrature_points_in_unit_interval,
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

@@ -43,7 +43,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
-    static const double         positionOfNodesWithinUnitCube[];
+    static const double         QuadraturePointsInUnitInterval[];
 
     static constexpr int        Order    = {{POLYNOMIAL_DEGREE}};
     static constexpr int        Unknowns = {{UNKNOWNS}};
@@ -68,7 +68,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
      */
     virtual void initNode(
       const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
+      const tarch::la::Vector<Dimensions, double>&  cellH,
       {% if UNKNOWNS==1 %}
       double&                                       value,
       double&                                       rhs

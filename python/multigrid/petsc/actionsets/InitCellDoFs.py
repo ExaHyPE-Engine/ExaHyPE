@@ -9,35 +9,32 @@ import jinja2
 class InitCellDoFs(ActionSet):
   """!
 
-Initialise degrees of freedom associated with the mesh
-    
-This simple action set plugs into the situations where we touch a vertex
-for the first time throughout a mesh traversal. Of these events, it ignores
-all those for refined vertices, i.e. it solely handles the unrefined 
-vertices in the spacetree. If focuses on the fine grid. The same is done
-for the cells and the vertices.
-
-The injected code snippet is simple and basically asks if a vertex will be 
-refined. If not, it invokes the initialisation routine of the solver. For
-this, the action set has to know the typename and the instance name of the 
-solver. Besides the actual behaviour, the action set also has to include
-the solver in the first place. This happens in get_includes().
-  
+Initialise degrees of freedom associated with cells
+      
   """
-  TemplateInitVertex = """
-  if ( fineGridVertex{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
-    {% if VERTEX_CARDINALITY>1 %}
-    {% else %}
-    double value, rhs;
-    {% endif %}
-    repositories::{{SOLVER_INSTANCE}}.vertexInit(
-      marker.x(),
-      marker.h(),
-      value,
-      rhs
-    );
-    fineGridVertex{{SOLVER_NAME}}.setValue(value);
-    fineGridVertex{{SOLVER_NAME}}.setRhs(rhs);
+  TemplateInitCell = """
+  if ( fineGridCell{{SOLVER_NAME}}PETScData.getType() != celldata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+    int dof = 0;
+    dfor( k, {{POLYNOMIAL_DEGREE+1}} ) {
+      {% if UNKNOWNS>1 %}
+      xxxx
+      {% else %}
+      double value, rhs;
+      tarch::la::Vector<Dimensions,double> x = marker.getOffset();
+      for (int d=0; d<Dimensions; d++) {
+        x(d) += repositories::{{SOLVER_INSTANCE}}.QuadraturePointsInUnitInterval[ k(d) ] * marker.h()(d);
+      }
+      repositories::{{SOLVER_INSTANCE}}.initNode(
+        x,
+        marker.h(),
+        value,
+        rhs
+      );
+      fineGridCell{{SOLVER_NAME}}.setValue(dof,value);
+      fineGridCell{{SOLVER_NAME}}.setRhs(dof,rhs);
+      dof++;
+      {% endif %}
+    }
   }
 """
   
@@ -58,9 +55,8 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
-    self.d["VERTEX_CARDINALITY"] = solver.number_of_matrix_entries_per_vertex
-    self.d["FACE_CARDINALITY"]   = solver.number_of_matrix_entries_per_face
-    self.d["CELL_CARDINALITY"]   = solver.number_of_matrix_entries_per_cell
+    self.d["UNKNOWNS"]           = solver.unknowns
+    self.d["POLYNOMIAL_DEGREE"]  = solver.polynomial_degree
 
 
   def get_body_of_operation(self,operation_name):
@@ -75,8 +71,8 @@ in init().
     
     """
     result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.TemplateInitVertex).render(**self.d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
       pass 
     return result
 
@@ -110,10 +106,12 @@ in init().
   def get_includes(self):
     """!
    
-Consult petsc.Project for details
-    
-"""    
+    We need the solver repository in this action set, as we directly access
+    the solver object. We also need access to Peano's d-dimensional loops.
+         
+    """    
     return """
 #include "repositories/SolverRepository.h"
+#include "peano4/utils/Loop.h"
 """
 
