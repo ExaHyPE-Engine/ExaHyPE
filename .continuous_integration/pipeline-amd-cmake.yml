@@ -81,7 +81,7 @@ amd-benchmarks-cmake:
   needs:
     - job: amd-build-cmake
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py --no-make --executable=kernel-benchmarks'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 --no-make --executable=kernel-benchmarks'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; make -j'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} build/benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks
   retry: 0

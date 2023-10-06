@@ -53,7 +53,7 @@ you might want to skip the install command and work directly against the librari
 Use `python3 configure.py --help` to see the available options to configure and build.
 
 # Build Process
-Peano's build process relies on GNU autotools or CMake.
+Peano's build process relies on GNU Autotools or CMake.
 The build yields a couple of libraries and executables.
 Most codes then use Peano's Python API to build an application on top of the libraries.
 You also can create a sole C++ application.
