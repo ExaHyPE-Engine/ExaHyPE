@@ -44,6 +44,9 @@ class DastgenTestDummyParticle(Particle):
         self._generate_double_attributes(compress=True, ifdefs=False)
         self._generate_double_attributes(compress=True, ifdefs=True)
 
+        self._generate_enum_attributes(ifdefs=False)
+        self._generate_enum_attributes(ifdefs=True)
+
         self._generate_integer_attributes(compress=False, ifdefs=False)
         self._generate_integer_attributes(compress=False, ifdefs=True)
         self._generate_integer_attributes(compress=True, ifdefs=False)
@@ -223,6 +226,35 @@ class DastgenTestDummyParticle(Particle):
                 initval=64.0,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.CONSTEXPR,
                 valid_mantissa_bits=valid_mantissa_bits,
+                ifdefs=defs,
+            )
+        )
+
+        return
+
+    def _generate_enum_attributes(self, ifdefs: bool):
+        """!
+        Generate enum attributes.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
+        var_basename = "Enum"
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            var_basename = "DebugEnum"
+            defs = ["PeanoDebug > 0"]
+
+        self.data.add_attribute(
+            dastgen2.attributes.Enumeration(
+                "my" + var_basename,
+                variants=["Foo", "Bar", "Baz", "Last"],
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
                 ifdefs=defs,
             )
         )

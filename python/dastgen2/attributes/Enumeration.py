@@ -66,13 +66,23 @@ class Enumeration(Attribute):
         return result
 
     def get_methods(self, _full_qualified_name, for_declaration=True):
-        accessor_name = self._name[:1].title() + self._name[1:]
+        accessor_name = self.get_accessor_name()
+
+        toStringQualifier = "const"
+        if for_declaration:
+            toStringQualifier = "const static"
+
         return [
             (
                 "get" + accessor_name + "() const",
                 _full_qualified_name + "::" + accessor_name,
             ),
             ("set" + accessor_name + "(" + accessor_name + " value)", "void"),
+            # This method provides a way to get enums as strings.
+            (
+                "cast" + accessor_name + "ToString(" + accessor_name + " value)",
+                toStringQualifier + " std::string",
+            ),
         ]
 
     def get_plain_C_attributes(self, for_constructor=False):
@@ -90,6 +100,8 @@ class Enumeration(Attribute):
             return "  return _" + self._name + ";\n"
         elif signature.startswith("set") and not self.use_data_store:
             return "  _" + self._name + " = value;\n"
+        elif signature.startswith("cast") and not self.use_data_store:
+            return self._get_to_string_method_body()
         else:
             assert False
         return ""
@@ -97,24 +109,40 @@ class Enumeration(Attribute):
     def get_native_MPI_type(self):
         return [("MPI_INT", 1)]
 
-    def get_to_string(self):
+    def _get_to_string_method_body(self):
         """
+        This function generates the method body for the castAttrToString(value)
+        method. The idea is to have an easy way to access enum variants as
+        strings for meaningful printouts, such as in the yourDataModel.toString()
+        method.
 
-        Return string representation of attribute.
-
+        For developing and debugging purposes, it can be useful to have a way
+        of accessing these names, so this method gets a standalone definition.
         """
-        result = ""
+        result = "  std::ostringstream out;\n  out "
+
         for i in self._variants:
-            if self._variants.index(i) != 0:
-                result += " << "
-            if self.use_data_store:
-                result += "(_dataStore._" + self._name + "=="
-            else:
-                result += "(_" + self._name + "=="
+            result += " << "
+            result += "(value =="
             result += self._enum_name()
             result += "::"
             result += i
             result += '? "'
             result += i
             result += '" : "") '
+        result += ";\n"
+        result += "  return out.str();\n"
+
         return result
+
+    def get_to_string(self):
+        """
+        This function generates the method body which is called in
+        yourDataModel.toString() method.
+        """
+        accessor_name = self.get_accessor_name()
+        varname = "_" + self.name
+        if self.use_data_store:
+            varname = "_dataStore._" + self._name
+
+        return "cast" + accessor_name + "ToString(" + varname + ")"

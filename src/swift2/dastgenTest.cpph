@@ -277,6 +277,14 @@ void dastgenTest::checkEnums(Particle& particle) {
   enu e2 = particle->getMyEnum();
   assert(e2 == e1);
 
+  // check casting to string for all enum variants
+  std::string teststring;
+  for (int i = 0; i != static_cast<int>(enu::Last); i++) {
+    enu e      = static_cast<enu>(i);
+    teststring = std::remove_pointer<Particle>::type::castMyEnumToString(e);
+  }
+
+
   // enums + debug
   // ----------------
 
@@ -287,8 +295,13 @@ void dastgenTest::checkEnums(Particle& particle) {
   particle->setMyDebugEnum(eD1);
   enuD eD2 = particle->getMyDebugEnum();
   assert(eD2 == eD1);
-#endif
 
+  // check casting to string for all enum variants
+  for (int i = 0; i != static_cast<int>(enuD::Last); i++) {
+    enuD e     = static_cast<enuD>(i);
+    teststring = std::remove_pointer<Particle>::type::castMyDebugEnumToString(e);
+  }
+#endif
 }
 
 
