@@ -38,10 +38,7 @@ class AssemblePetscMatrix(ActionSet):
     Yet to be written
         
     """
-    #pass in stencil as a list of lists
-    #convert it to a flat list for passing as std::initializer_list
-    #stencil=[item for sublist in stencil for item in sublist]
-
+    
     super( AssemblePetscMatrix, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()

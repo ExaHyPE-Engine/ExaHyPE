@@ -20,23 +20,20 @@ corresponding entry in the solution vector reads like.
   """
   
   
-  TemplateInitVertex = """
-  if ( not marker.willBeRefined()
-      and
-      // we only gave it an index if it was not on the boundary
-      fineGridVertexPoisson.getType() != vertexdata::Poisson::Type::Dirichlet 
-   ) { 
+  TemplateInitCell = """
+  if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
 
-    for (int i=0; i<{{VERTEX_CARDINALITY}}; i++) {
-      std::pair<int,int> localIndex( _spacetreeId, fineGridVertex{{SOLVER_NAME}}.getNumber()+i );
-      int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
+    std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber() );
+    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
 
-      // ask our instance of Petsc the value stored in the solution vector here.
-      double val = repositories::instanceOfPetsc.getX(globalIndex);
-      fineGridVertex{{SOLVER_NAME}}.setValue(0, val);
-
+    tarch::la::Vector<{{CELL_CARDINALITY}}, double> cellDofs;
+    for (int i=0; i<{{CELL_CARDINALITY}}; i++){
+      cellDofs[i] = repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().get(globalIndex + i);
     }
+
+    //place this vector into the mesh
+    fineGridCell{{SOLVER_NAME}}.setValue(cellDofs);
     
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
@@ -75,8 +72,8 @@ in init().
     
     """
     result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.TemplateInitVertex).render(**self.d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
       pass 
     return result
 
@@ -140,6 +137,7 @@ basically initialise the _localMap with the correct tree number.
     return """
   _spacetreeId = treeNumber;
 """
+
 
 class ProjectPETScSolutionOnVerticesBackOntoMesh(ActionSet):
   """!
