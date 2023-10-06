@@ -9,8 +9,8 @@ import os
 
 from .Solver                                              import Solver
 from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
-from multigrid.petsc.actionsets.InitCellDoFs                               import InitCellDoFs
-from multigrid.petsc.actionsets.ProjectPETScSolutionOnCellsBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
+from multigrid.petsc.actionsets.InitCellDoFs              import InitCellDoFs
+from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
 
 from abc import abstractmethod
 
