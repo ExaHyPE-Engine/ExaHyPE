@@ -23,7 +23,9 @@ corresponding entry in the solution vector reads like.
   TemplateInitCell = """
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-
+    
+    // Commenting out so that we don't get compilation errors, as we are halfway through making changes
+    /*
     std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber() );
     int globalIndex = repositories::{{SOLVER_INSTANCE}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
 
@@ -35,6 +37,8 @@ corresponding entry in the solution vector reads like.
     //place this vector into the mesh
     fineGridCell{{SOLVER_NAME}}.setValue(cellDofs);
     
+    */
+
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
 """
@@ -152,13 +156,6 @@ corresponding entry in the solution vector reads like.
   
   """
   
-#      if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Dirichlet){
-#      //place these values into the mesh
-#      fineGridVertex{{SOLVER_NAME}}.setValue(0, value);
-#      fineGridVertex{{SOLVER_NAME}}.setRhs(0, rhs);#
-#
- #   }
-
   TemplateTouchVertexFirstTime = """
   if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
     std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());

@@ -253,7 +253,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
       number_of_unknows_per_cell   = self.number_of_matrix_entries_per_cell,
-      guard_predicate              = "not marker.isRefined()", 
+      guard_predicate              = "not marker.hasBeenRefined()", 
       ))
 
     observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
@@ -263,7 +263,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
       description    = "b",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
       number_of_unknows_per_cell   = self.number_of_matrix_entries_per_cell,
-      guard_predicate              = "not marker.isRefined()", 
+      guard_predicate              = "not marker.hasBeenRefined()", 
       ))
     pass
 
