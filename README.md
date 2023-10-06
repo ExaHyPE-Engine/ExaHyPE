@@ -32,7 +32,7 @@ We however use a whole set of tools around it.
 The most important ones are:
 
 * C++17/C++20-compatible C++ compiler (required).
-* GNU autotools (automake) to set up the system (required).
+* GNU Autotools (automake) to set up the system (required).
 * CMake > 3.20 (required).
 * Python3 (optional but recommended; not required if you work only with the C++ baseline).
 * MPI (optional). MPI's multithreaded support is required.
