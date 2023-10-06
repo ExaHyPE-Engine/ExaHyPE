@@ -29,7 +29,7 @@ class PointExplosion:
           M0 = sympy.symbols("M0")
           t = sympy.symbols("t")
 
-          max_h = sympy.symbols("MaxAdmissibleVolumeH")
+          max_h = sympy.symbols("MaxAdmissibleCellH")
           force = M0 * sympy.exp(-((t - t0) * (t - t0)) / (2.0 * sigma * sigma))
 
           if dimensions == 2:
@@ -110,9 +110,9 @@ class PointExplosion:
             #endif
 
             #if Dimensions == 2
-            const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({5, 5})) <= MaxAdmissibleVolumeH;
+            const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({5, 5})) <= MaxAdmissibleCellH;
             #else
-            const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({5, 5, 5})) <= MaxAdmissibleVolumeH;
+            const bool pointSource = tarch::la::norm2(volumeCentre - tarch::la::Vector<Dimensions, double>({5, 5, 5})) <= MaxAdmissibleCellH;
             #endif
 
             if (pointSource) {

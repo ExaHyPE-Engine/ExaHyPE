@@ -151,8 +151,9 @@ if use_symbolic_description:
 else:
   # Otherwise, we just call our pre-defined C++ kernels from the 'EulerKernels' header file.
   my_solver.add_user_solver_includes("""
-#include "EulerKernels.h"
+#include "applications/exahype2/euler/EulerKernels.h"
 """)
+
 
   my_solver.set_implementation(
     initial_conditions="""

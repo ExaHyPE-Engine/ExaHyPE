@@ -232,6 +232,20 @@ Brief doxygen cheat sheet
 
 \endverbatim
 
+## Comments 
+
+We use html-style comments.
+
+\verbatim
+
+<!--
+
+Anything in here is ignored by doxygen.
+
+-->
+
+\endverbatim
+
 ## Headings
 
 Bold headings such as the one above are created with two hash symbols. This creates
@@ -250,6 +264,7 @@ You can either use tilde (~):
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 double answer;
+int    counter;
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Under the hood:
@@ -257,6 +272,7 @@ Under the hood:
 \verbatim
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 double answer;
+int    counter;
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 \endverbatim
 

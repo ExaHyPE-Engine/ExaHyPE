@@ -24,14 +24,14 @@ void {{codeNamespace}}::solutionUpdate(
   const double dt
 ) {
 #ifdef __INTEL_COMPILER
-  __assume_aligned(iweights3, {{alignmentSize}});
+  __assume_aligned(Quadrature<compType>::iweights3, {{alignmentSize}});
   __assume_aligned(luh,       {{alignmentSize}}); //luh    should be aligned, see Solver.h
   __assume_aligned(luhOld,    {{alignmentSize}}); //luhOld should be aligned, see Solver.h
   __assume_aligned(lduh,      {{alignmentSize}}); //lduh   should be aligned, see Solver.h
 #endif
 
   for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
-    const compType coeff = dt*iweights3[xyz];
+    const compType coeff = dt*Quadrature<compType>::iweights3[xyz];
     #pragma omp simd aligned(luh,luhOld,lduh:{{alignmentSize}})
     for (int n = 0; n < {{nVar}}; n++) { //update only the variables, lduh contains no parameters
       luh[xyz*{{nData}}+n] = luhOld[xyz*{{nData}}+n] + coeff*lduh[xyz*{{nVarPad}}+n]; //simd+fma
@@ -40,18 +40,10 @@ void {{codeNamespace}}::solutionUpdate(
  
 }
 
-{% for precision_num in range(0,predictorComputePrecisions|length) %}
+{% for precision_num in range(0,computePrecisions|length) %}
 template void {{codeNamespace}}::solutionUpdate( 
   {{correctorStoragePrecision}}* __restrict__ luh,
   const {{correctorStoragePrecision}}* __restrict__ const luhOld,
-  const {{predictorComputePrecisions[precision_num]}}* __restrict__ const lduh, 
+  const {{computePrecisions[precision_num]}}* __restrict__ const lduh, 
   const double dt);
-{% endfor %}  
-
-{% if correctorComputePrecision not in predictorComputePrecisions%}
-template void {{codeNamespace}}::solutionUpdate( 
-  {{correctorStoragePrecision}}* __restrict__ luh,
-  const {{correctorStoragePrecision}}* __restrict__ const luhOld,
-  const {{correctorComputePrecision}}* __restrict__ const lduh, 
-  const double dt);
-{% endif %}{# if correctorComputePrecision != predictorComputePrecision #}
+{% endfor %}

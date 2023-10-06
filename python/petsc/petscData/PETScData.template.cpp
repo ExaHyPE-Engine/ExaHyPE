@@ -7,17 +7,17 @@
 {{NAMESPACE | join("::")}}::PetscData::PetscData() {}
 {{NAMESPACE | join("::")}}::PetscData::~PetscData() {}
 
-void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
+void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int rows, int cols )
+{
   logTraceInWith1Argument( "initMatrixAndVectors()", dofs );
-  setDoFs( dofs );
+  setRows( rows );
+  setCols( cols );
   // init petsc
   PetscInitialize(PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR, PETSC_NULLPTR);
 
-  //matrix size, set it to number of dofs
-  PetscInt n = _dofs;
-
   MatCreate(PETSC_COMM_WORLD, &_A);
-  MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, n, n);
+  //init matrix. last two arguments are number of rows and columns
+  MatSetSizes(_A, PETSC_DECIDE, PETSC_DECIDE, getRows(), getCols());
   MatSetFromOptions(_A);
   MatSetUp(_A);
 
@@ -26,23 +26,39 @@ void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int dofs ){
   VecCreate(PETSC_COMM_WORLD, &_x);
   VecCreate(PETSC_COMM_WORLD, &_b);
 
-  VecSetSizes(_x, PETSC_DECIDE, n);
-  VecSetSizes(_b, PETSC_DECIDE, n);
+  VecSetSizes(_x, PETSC_DECIDE, getCols());
+  VecSetSizes(_b, PETSC_DECIDE, getCols());
 
   VecSetFromOptions(_x);
   VecSetFromOptions(_b);
 
   VecSetUp(_x);
   VecSetUp(_b);
+
   logTraceOut( "initMatrixAndVectors()" );
 }
 
-void {{NAMESPACE | join("::")}}::PetscData::setDoFs(int dofs){
-  _dofs = dofs;
+/**
+use this if you want a square system
+*/
+void {{NAMESPACE | join("::")}}::PetscData::initMatrixAndVectors( int rows ){
+  initMatrixAndVectors(rows, rows);
 }
 
-int {{NAMESPACE | join("::")}}::PetscData::getDoFs() const{
-  return _dofs;
+void {{NAMESPACE | join("::")}}::PetscData::setRows(int rows){
+  _rows = rows;
+}
+
+int {{NAMESPACE | join("::")}}::PetscData::getRows() const{
+  return _rows;
+}
+
+void {{NAMESPACE | join("::")}}::PetscData::setCols(int cols){
+  _cols = cols;
+}
+
+int {{NAMESPACE | join("::")}}::PetscData::getCols() const{
+  return _cols;
 }
 
 void {{NAMESPACE | join("::")}}::PetscData::convertToStdVector(){
@@ -57,8 +73,7 @@ void {{NAMESPACE | join("::")}}::PetscData::convertToStdVector(){
 
   //temp array to hold the indices we request
   PetscInt ix[size];
-  for (int i=0; i<size; i++)
-    ix[i] = i;
+  std::iota(ix, ix + size, 0);
 
   //ask petsc
   VecGetValues( _x, size, ix, y );
@@ -110,6 +125,15 @@ void {{NAMESPACE | join("::")}}::PetscData::assemble(){
 
   //print out our contents
   // MatView(_A, PETSC_VIEWER_STDOUT_WORLD);
+  // PetscViewer viewer;
+  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"mat.xml",&viewer);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  // MatView(_A, viewer);
+  
+  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"rhs.xml",&viewer);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  // VecView(_b, viewer);
+  // PetscViewerDestroy(&viewer);
 }
 
 void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
@@ -122,10 +146,6 @@ void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
   //don't know what this does
   PetscFunctionBeginUser;
 
-  // //do the copy
-  // VecDuplicate(_b, &u);
-  // VecCopy(_b, u);
-
   /*
      Create linear solver context
   */
@@ -136,38 +156,35 @@ void {{NAMESPACE | join("::")}}::PetscData::petscSolve(){
      also serves as the preconditioning matrix.
   */
   KSPSetOperators(ksp, _A, _A);
-  
-  // KSPGetPC(ksp, &pc);
-  // PCSetType(pc, PCBJACOBI);
+  KSPGetPC(ksp, &pc);
 
   //set runtime options
   KSPSetFromOptions(ksp);
 
-  //the rest comes from the block with isbjacobi. we just do this once
+  PCSetType(pc, PCNONE); //no preconditioner
+  KSPSetType(ksp, KSPGMRES);
   KSPSetUp(ksp);
-  KSPGetPC(ksp, &pc);
-
-  //inside second else block
-  PCSetType(pc, PCBJACOBI);
-  KSPSetType(ksp, KSPCG);
   KSPSetTolerances(ksp, 1.e-7, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
 
   //solve against the "exact" solution u
   KSPSolve(ksp, _b, _x);
 
-  //check error
-  //the line below is why we were getting negatives! _x = _x - _b  
-  // VecAXPY(_x, -1, _b);
-  // VecNorm(_x, NORM_2, &norm);
+  KSPConvergedReason reason;
+  KSPGetConvergedReason(ksp, &reason);
 
   PetscInt its;
   KSPGetIterationNumber(ksp, &its);
   logInfo("petscSolve()", "number of iterations was " << (int)its);
+  logInfo("petscSolve()", "converged for reason " << KSPConvergedReasons[reason]);
 
   //tidy up temp objects
   KSPDestroy(&ksp);
-  // PCDestroy(&pc);
-  // VecDestroy(&u);
+
+  // PetscViewer viewer;
+  // PetscViewerASCIIOpen(PETSC_COMM_WORLD,"solution.xml",&viewer);
+  // PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_XML);
+  // VecView(_x, viewer);
+
   return;
 }
 

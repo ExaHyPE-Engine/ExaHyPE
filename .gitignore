@@ -296,7 +296,14 @@ UnitTests3d*
 *.pvd
 *.err
 *.out
+/documentation/
 
+*.o.*
+*.trs*
+*.xml
+*.def
+
+builds/
 # Misc
 .DS_Store
 /Debug/

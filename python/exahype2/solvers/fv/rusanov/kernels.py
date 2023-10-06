@@ -1,9 +1,40 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 import jinja2
+from enum import Enum
 
-from exahype2.solvers.fv.kernels import SolverVariant
-from exahype2.solvers.fv.kernels import KernelVariant
+
+class SolverVariant(Enum):
+  WithVirtualFunctions = 0
+  Stateless            = 1
+  Multicore            = 2
+  """
+  The default accelerator version that you should use
+  """
+  AcceleratorWithExplicitCopy = 3
+  AcceleratorWithManagedRemoteMemory = 4
+
+
+class KernelVariant(Enum):
+  PatchWiseAoSStack                = 10
+  PatchWiseAoSoAStack              = 11
+  PatchWiseSoAStack                = 12
+  PatchWiseAoSHeap                 = 20
+  PatchWiseAoSoAHeap               = 21
+  PatchWiseSoAHeap                 = 22
+  BatchedAoSStack                  = 30
+  BatchedAoSoAStack                = 31
+  BatchedSoAStack                  = 32
+  BatchedAoSHeap                   = 40
+  BatchedAoSoAHeap                 = 41
+  BatchedSoAHeap                   = 42
+  TaskGraphAoSHeap                 = 60
+  TaskGraphAoSoAHeap               = 61
+  TaskGraphSoAHeap                 = 62
+  GenericAoS                       = 70
+  GenericAoSoA                     = 71
+  GenericSoA                       = 72
+
 
 def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
                                               ncp_implementation,
@@ -132,12 +163,13 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     );
   """
   elif solver_variant == SolverVariant.Multicore:
-    template += """_multicore_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>(
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>(
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
+      peano4::utils::LoopParallelism::Subtasks
     );
   """
   elif solver_variant == SolverVariant.AcceleratorWithExplicitCopy:
@@ -403,7 +435,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-#if !defined(GPUOffloadingSYCL)
+//#if !defined(GPUOffloadingSYCL)
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
@@ -418,7 +450,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
   {% endif %}
 }
-#endif
+//#endif
 {% endif %}
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}

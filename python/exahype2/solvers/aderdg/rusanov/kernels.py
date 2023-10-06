@@ -157,7 +157,7 @@ def create_start_time_step_implementation_for_adaptive_time_stepping():
         + predicate
         + """) {
     logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
+    logInfo( "startTimeStep()", "t            = " << _minTimeStamp );
     logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
     logInfo( "startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep << " (volume size)");
     logInfo( "startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep << " (volume size)" );
@@ -206,7 +206,8 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
     }
     else {
       const double minVolumeSize = _minCellHThisTimeStep;
-      _admissibleTimeStepSize = CFL * PNPM / _maxEigenvalue; //the max eigenvalue here is already the sum of the eigenvalues in each directionscaled with the volume size in that direction
+      //the max eigenvalue here is already the sum of the eigenvalues in each direction scaled with the volume size in that direction
+      _admissibleTimeStepSize = std::min( MinTerminalTime-_minTimeStampThisTimeStep,CFL * PNPM / _maxEigenvalue);
       if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
         ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
       }

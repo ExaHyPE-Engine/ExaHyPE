@@ -47,10 +47,10 @@ void {{codeNamespace}}::boundaryConditions(
   
   for (int jj = 0; jj < {{nDof3D}}; jj++) {  // loop over dof, loop removed by compiler if 2D
 {% if nDim == 3 %}
-    x[d2] = cellCentre[d2] + cellSize[d2] * (nodes[jj] - 0.5);
+    x[d2] = cellCentre[d2] + cellSize[d2] * (Quadrature<cCompType>::nodes[jj] - 0.5);
 {% endif %}
     for (int ii = 0; ii < {{nDof}}; ii++) {  // loop over dof
-      x[d1] = cellCentre[d1] + cellSize[d1] * (nodes[ii] - 0.5); 
+      x[d1] = cellCentre[d1] + cellSize[d1] * (Quadrature<cCompType>::nodes[ii] - 0.5); 
 {% if useViscousFlux %}
   // Remove padding to use the same user function as generic kernel
   cCompType gradQ_PDE[{{nVar*nDim}}]; 

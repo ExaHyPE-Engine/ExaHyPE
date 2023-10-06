@@ -7,6 +7,7 @@ import dastgen2
 
 import os
 import sys
+import itertools
 
 from petsc.PETScMain import PETScMain
 
@@ -236,6 +237,20 @@ This yet has to be written.
     dictionary = {}
     dictionary[ "SOLVER_INSTANCES"] = self._solver_instances
     
+    '''
+    put in a guard clause to skip over CollocatedLowOrderDiscretisation
+    if it has one, it should have the others
+    '''
+
+
+    if hasattr(self, 'quadrature_points'):
+      #this function returns a dict. use it to update 
+      #"dictionary" here.
+      dictionary.update(self.get_dict_for_quad_points()) 
+
+    dictionary["HEADER_EXTRA"] = self.solver_repository_snippet_header
+    dictionary["CPP_EXTRA"]    = self.solver_repository_snippet_cpp
+
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"
     generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -254,7 +269,9 @@ This yet has to be written.
       
   def __generate_data_repository(self):
     dictionary = {}
-    dictionary[ "SOLVER_INSTANCES"] = self._solver_instances
+    dictionary[ "SOLVER_INSTANCES"]  = self._solver_instances
+
+
     templatefile_prefix = os.path.dirname(__file__) + "/petscData/"
     template_name       = templatefile_prefix + "PETScData.template"
     generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -283,6 +300,23 @@ This yet has to be written.
     print( "Create data for solver " +solver._name  )
     print( "---------------------------------------")
     print( str(solver) )
+
+    #let's add in some extra project-specific snippets
+    self.solver_repository_snippet_header, \
+    self.solver_repository_snippet_cpp     \
+      = solver.get_solver_repository_snippets()
+
+    #add in points, weight and poly coeffs, but only if
+    #this class has the attribute. We put in a guard clause
+    #for CollacatedLowOrderDiscretisation.
+
+    if hasattr(solver, 'quadrature_points'):
+      #if it has one, it should have all the others
+      self.quadrature_points = solver.quadrature_points
+      self.weights           = solver.weights
+      self.poly_coeffs       = solver.poly_coeffs
+      self.polynomial_degree = solver.polynomial_degree
+      self.dimensions        = solver.dimensions
       
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
     
@@ -295,6 +329,7 @@ This yet has to be written.
 
     solver.add_to_create_grid                (self.algorithm_step_create_grid)
     solver.add_to_enumerate_and_init_solution(self.algorithm_step_enumerate_and_init_solution)
+    solver.add_to_init_petsc                 (self._algorithm_step_init_petsc)
     solver.add_to_assemble                   (self.algorithm_step_assemble)
     solver.add_to_map_solution_onto_mesh     (self.algorithm_step_map_solution_onto_mesh)
     solver.add_to_plot                       (self.algorithm_step_plot)
@@ -304,4 +339,88 @@ This yet has to be written.
     self._solver_instances.append( (solver.typename(), solver.instance_name()) )
     pass
 
+  @staticmethod
+  def convertArrayToCppVector(array):
+    output = "{" + str(array[0])
+    for el in array[1:]:
+      output += f", {str(el)}"
+    output += "}"
+    return output
 
+  def get_dict_for_quad_points(self):
+    '''
+    use this method to generate a dict that contains all the 
+    strings for quad weights and quadpoints etc. we then merge it
+    into the dict that we use for the solver repo
+
+    below is a little bit of dark python magic. 
+    basically, we have a 1d array of weights and points that looks like:
+    
+    [w0, w1, w2, ... , wn]
+    [p0, p1, p2, ... , pn]
+
+    we need to convert this to 2d. so we go:
+
+    pn |
+    ...|
+    ...|
+    ...|  ETC
+    p2 |
+    p1 |(p0,p1) 
+    p0 |(p0,p0) (p1,p0) (p2,p0)    (pn,p0)
+    -----------------------------------------
+        p0      p1      p2     ... pn
+
+    and:
+
+    wn |
+    ...|
+    ...|
+    ...|  ETC
+    w2 |
+    w1 | w0*w1 
+    w0 | w0*w0  w1*w0  w2*w0      wn*w0
+    -----------------------------------------
+        w0      w1      w2     ... wn
+
+    below is some awful python code to do just that. it works in any dimension.
+
+    we paste this into the code as:
+      a std::vector of length (n+1)^d for points,  each containing 1 std::vector for (pi, pj,pk)
+      a std::vector of length (n+1)^d for weights, each containing 1 double for wi*wj*wk  
+
+    we could have done this as [w1*w2   for w1 in self.weights for w2 in self.weights]
+    or                         [(p1,p2) for p1 in self.points  for p2 in self.points ]
+    but this works in any dimensions
+    ''' 
+
+    #dummy function to return the product of all elements in an array 
+    def productOfArray(array):
+      output = 1
+      for el in array: output *= el
+      return output
+
+    dictionary = {}
+
+    quad_points = list( itertools.product( *( [ self.quadrature_points for _ in range(self.dimensions)] ) ) )
+    # dictionary[ "QUADRATURE_POINTS"] = self.convertArrayToCppVector(self.quadrature_points)
+    #we have an array of arrays
+    dictionary[ "QUADRATURE_POINTS"] = "{ "
+    for array in quad_points:
+      dictionary[ "QUADRATURE_POINTS"] += self.convertArrayToCppVector( array )
+      dictionary[ "QUADRATURE_POINTS"] += ", \n"
+    dictionary[ "QUADRATURE_POINTS"]   += " }"
+    
+    weights = [productOfArray(el) for el in itertools.product( *( [ self.weights for _ in range(self.dimensions)] ) )]
+    #                                       ^create cartesian product
+    dictionary[ "WEIGHTS"]           = self.convertArrayToCppVector(weights)
+    
+    #slightly more fiddly; we have an array of arrays
+    dictionary[ "POLY_COEFFS"]       = "{ "
+    for array in self.poly_coeffs:
+      dictionary[ "POLY_COEFFS"] += self.convertArrayToCppVector( array )
+      dictionary[ "POLY_COEFFS"] += ", \n"
+    dictionary[ "POLY_COEFFS"]   += " }"
+
+    dictionary["POLY_DEGREE"]  = self.polynomial_degree
+    return dictionary
