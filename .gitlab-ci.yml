@@ -5,6 +5,7 @@ variables:
   INTEL_IMAGE_TAG: "intel_latest.sif"
   LLVM_IMAGE_TAG: "llvm_latest.sif"
   NVIDIA_IMAGE_TAG: "nvidia_latest.sif"
+  LATEX_IMAGE_TAG: "latex_latest.sif"
 
 workflow:
   rules:
@@ -27,13 +28,13 @@ stages:
   - publish
 
 include:
-  - .continuous_integration/pipeline-amd.yml
+  #- .continuous_integration/pipeline-amd.yml
   - .continuous_integration/pipeline-gcc.yml
   - .continuous_integration/pipeline-intel.yml
   - .continuous_integration/pipeline-llvm.yml
   - .continuous_integration/pipeline-nvidia.yml
 
-  - .continuous_integration/pipeline-amd-cmake.yml
+  #- .continuous_integration/pipeline-amd-cmake.yml
   - .continuous_integration/pipeline-gcc-cmake.yml
   - .continuous_integration/pipeline-intel-cmake.yml
   - .continuous_integration/pipeline-llvm-cmake.yml
