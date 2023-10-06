@@ -75,10 +75,10 @@ class DastgenTestDummyParticle(Particle):
         self._generate_peano_double_array_attributes(compress=False, ifdefs=True)
         self._generate_peano_double_array_attributes(compress=True, ifdefs=True)
 
-        #  self._generate_peano_integer_array_attributes(compress=False, ifdefs=False)
-        #  self._generate_peano_integer_array_attributes(compress=True, ifdefs=False)
-        #  self._generate_peano_integer_array_attributes(compress=False, ifdefs=True)
-        #  self._generate_peano_integer_array_attributes(compress=True, ifdefs=True)
+        self._generate_peano_integer_array_attributes(compress=False, ifdefs=False)
+        self._generate_peano_integer_array_attributes(compress=True, ifdefs=False)
+        self._generate_peano_integer_array_attributes(compress=False, ifdefs=True)
+        self._generate_peano_integer_array_attributes(compress=True, ifdefs=True)
 
         return
 
