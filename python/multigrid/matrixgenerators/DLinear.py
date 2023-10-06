@@ -41,7 +41,7 @@ class DLinear(MatrixGenerator):
     
   def getCellIdentityMatrix(self):
     dim    = self._cell_dofs * self.unknowns_per_vertex_dof
-    #           identity matrix
+    #           identity matrix. quite a funny one from numpy devs
     output = np.eye(dim,dim) * 2**(-self.Dimensions)
     return output
 
@@ -72,19 +72,12 @@ class DLinear(MatrixGenerator):
     The resulting matrix has to be scaled by @f$ h^d @f$.
 
     '''
-    # dim    = self._cell_dofs * self.unknowns_per_vertex_dof
-    # output = np.zeros((dim,dim))
-    # for i in range( self._cell_dofs ):
-    #   for j in range( self._cell_dofs ):
-    #     for k in range( self.unknowns_per_cell_dof ):
-    #       output[self.unknowns_per_cell_dof*i+k, self.unknowns_per_cell_dof*j+k] += self.evaluateIntegral2d(functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ]) # phi_x-phi_x coupling 
-    # return output
     dim    = (self.poly_degree + 1) ** self.Dimensions
     output = np.zeros((dim,dim))
 
     for i in range(output.shape[0]):
       for j in range(output.shape[1]):
-        output[i,j] = self.evalIntegral([i,j])
+        output[i,j] = self.evalIntegral(functions=[self.getPolynomial(i), self.getPolynomial(j)])
     return output
 
   def getCellSystemMatrixForLaplacian(self):
@@ -95,25 +88,14 @@ class DLinear(MatrixGenerator):
     
     needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
     so normalise by h
+
+    @todo sign is wrong...
     '''
-    #dim    = self._cell_dofs * self.unknowns_per_vertex_dof
-    #output = np.zeros((dim,dim))
-    #for i in range( self._cell_dofs ):
-    #  for j in range( self._cell_dofs ):
-    #    for k in range( self.unknowns_per_vertex_dof     ):
-    #      pass
-    #      # They are all the same, but they don't have to be!
-    #      # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
-    #      #output[3*i+1, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # phi_x-u coupling
-    #      #output[3*i+2, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # phi_y-u coupling
-    #      #output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
-    #      #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
-    #return output
-  
-    # return [ [ 2.0/3.0,   -0.5/3.0,   -0.5/3.0,   -1.0/3.0],
-    #          [-0.5/3.0,    2.0/3.0,   -1.0/3.0,   -0.5/3.0],
-    #          [-0.5/3.0,   -1.0/3.0,    2.0/3.0,   -0.5/3.0],
-    #          [-1.0/3.0,   -0.5/3.0,   -0.5/3.0,    2.0/3.0]
-    #        ]
-    # dim    = self._cell_dofs * self.unknowns_per_vertex_dof
-    return None
+    dim    = (self.poly_degree + 1) ** self.Dimensions
+    output = np.zeros((dim,dim))
+
+    for i in range(output.shape[0]):
+      for j in range(output.shape[1]):
+        output[i,j] += self.evalIntegral(functions=[self.getPolynomial(i), self.getDeriv(j, 0)])
+        output[i,j] += self.evalIntegral(functions=[self.getPolynomial(i), self.getDeriv(j, 1)])
+    return output

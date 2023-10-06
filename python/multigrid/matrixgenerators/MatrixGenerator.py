@@ -44,6 +44,7 @@ class MatrixGenerator:
     a lower dimension of polynomial is required
     '''
     self.polynomials1d = self.getPolynomial1d()
+    self.derivatives1d = [ p.deriv() for p in self.getPolynomial1d() ]
     self.points1d      = self.getPoints1d()
     self.weights1d     = self.getWeights1d()
 
@@ -192,12 +193,19 @@ class MatrixGenerator:
       index     = index % pToD
     return output
     
-  def getPolynomial(self, index, dim=-1, list_of_polys=[]):
+  def getPolynomial(self, index, dim=-1):
     """!
     Promote 1d polynomials to many dimensions
     by taking products.
 
-    Recursively defined.
+    We pass in an index and a dimension, which will, by default
+    be set to the number of dimensions of the problem.
+
+    The index should be betweeen 0 and (self.poly_degree)^self.Dimensions
+
+    We convert the index into a tuple (x,y,z) of indices, pull
+    out appropriate polynomials and return a function object.
+    This function object will expect dim arguments.
     """
     if dim == -1: 
       dim = self.Dimensions
@@ -207,6 +215,41 @@ class MatrixGenerator:
     indices =   self.convertIndexToDim(index, dim)
     polys   = [ self.polynomials1d[i] for i in indices ]
 
+    #define function object to return:
+    def returnFunc(*args):
+      assert(len(args)==dim), f"Supplied {len(args)} args to a {dim}d function!"
+      out = 1
+      for i, arg in enumerate(args):
+        # dummy evaluation of i'th polynomial
+        out *= polys[i](arg)
+      return out
+
+    #return this function object
+    return returnFunc
+
+  def getDeriv(self, index, dimForDeriv, dim=-1):
+    """!
+    dimForDeriv is the singular dimension that we wanna take a polyderiv in
+
+    Behaves the same as getPolynomial, except in that in the specified 
+    dimension, we take a derivative rather than the poly itself
+    """
+    if dim == -1: 
+      dim = self.Dimensions
+    assert dimForDeriv in range(dim), f"dimForDeriv={dimForDeriv}, dim={dimForDeriv}"
+
+
+    # the indices of the polynomials we wanna fetch
+    # warning: will misfire if "index" not in correct range for dim
+    indices = self.convertIndexToDim(index, dim)
+    polys   = []
+    for i, index in enumerate(indices):
+      if i == dimForDeriv:
+        # get poly deriv instead
+        polys.append( self.derivatives1d[index] )
+      else:
+        polys.append( self.polynomials1d[index] )
+    
     #define function object to return:
     def returnFunc(*args):
       assert(len(args)==dim), f"Supplied {len(args)} args to a {dim}d function!"
@@ -240,7 +283,7 @@ class MatrixGenerator:
       output *= val
     return output
 
-  def evalIntegral(self, indices, dim=-1, factor=1):
+  def evalIntegral(self, functions, dim=-1, factor=1):
     if dim == -1:
       dim = self.Dimensions
     points  = self.getPointsForDimension(dim)
@@ -249,9 +292,11 @@ class MatrixGenerator:
 
     for p, w in zip(points, weights):
       localEval  = 1
-      for index in indices:
-        # do the following for each polynomial in array of indices
-        localEval *= self.evalPolynomial( index, p, dim )
+      for func in functions:
+        # do the following for each function we pass in
+        # need to unpack p since this function will expect
+        # 3 arguments for 3d, etc...
+        localEval *= func( *p )
       # aggregate
       output += w * localEval
     return output * factor
