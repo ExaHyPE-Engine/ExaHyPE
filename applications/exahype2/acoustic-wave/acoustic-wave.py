@@ -225,7 +225,7 @@ else:
   else:
     my_solver.plot_description = "p, u, v, w"
   my_solver.add_user_solver_includes("""
-#include "../../../tutorials/exahype2/acoustic-wave/AcousticWaveKernels.h"
+#include "AcousticWaveKernels.h"
 """)
 
 my_project.add_solver(my_solver)
