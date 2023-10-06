@@ -218,19 +218,26 @@ rendered once again as source code. You have to remove the indentation sometimes
 that this mainly affects the Python code, but not the C++ documentation.
 
 
-Brief doxygen cheat sheet
-======================
+# Brief doxygen cheat sheet
 
-Creating new chapters within the page (note what appears in the dropdown on the left
-hand side) is done with the "=" symbol. The above chapter above is written under 
-the hood as:
+New chapters are created with the ''' # ''' symbol. This will make "Brief doxygen cheat sheet"
+in the sidebar, as a drop-down menu within the current page.
 
 \verbatim
-
-Brief doxygen cheat sheet
-======================
-
+# Brief doxygen cheat sheet
 \endverbatim
+
+## Headings 
+
+You can nest drop-down menus. Add a second sub-level with two hash signs. Note the appearance
+of "Headings" in the drop-down menu on the left. 
+
+\verbatim
+## Headings 
+\endverbatim
+
+You can even keep this going. Create a third nested level with three hash symbols ( ''' ### '''' )
+and so on.
 
 ## Comments 
 
@@ -246,15 +253,6 @@ Anything in here is ignored by doxygen.
 
 \endverbatim
 
-## Headings
-
-Bold headings such as the one above are created with two hash symbols. This creates
-a "secondary" chapter.
-The above line, under the hood, reads:
-
-\verbatim
-## Headings
-\endverbatim
 
 ## Code snippets
 
