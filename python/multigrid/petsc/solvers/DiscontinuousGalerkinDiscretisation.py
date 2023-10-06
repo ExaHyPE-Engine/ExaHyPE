@@ -20,84 +20,14 @@ from peano4.solversteps.ActionSet import ActionSet
 
 class AssemblePetscMatrix(ActionSet):
   """!
-  Trigger assembly of PETSc matrix, using values from mesh
 
-  I am aware the code below is very bad. Much of it needs changing.
-  But for now it stays while development on other projects continues
+  Trigger assembly of PETSc matrix and also assemble rhs vector
+
   """
   TemplateTouchCellFirstTime = """
-  //init a vector to collect global indices, and recall their position in the 
-  //enumeration so we can apply the stencil correctly
-  std::vector<int> enumeratedIndices(TwoPowerD, -1);
-
-  for (int i=0; i<TwoPowerD ; i++) {
-    if (fineGridVertices{{SOLVER_NAME}}PETScData(i).getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
-      //get a global index
-      std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertices{{SOLVER_NAME}}PETScData(i).getUnknownBaseNumber());
-      int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
-      enumeratedIndices[i] = globalIndex;
-    }
-  }
-
-  //next, loop twice over TwoPowerD, so we can correctly fill the petsc matrix.
-  //calling our increment function 16 times is temporary; this can be done with 
-  //one call to PETSc. While in development, we do it the dumb way.
-  //recall that the vertices are enumerated in the following way:
-  /*
-  2 3
-  0 1
-  */
-  // this geometry is crucial to getting the correct entries from the stencil
-
-  for (int i=0; i<TwoPowerD; i++) {
-    for (int j=0; j<TwoPowerD; j++) {
-      if (enumeratedIndices[i] != -1 and enumeratedIndices[j] != -1) {
-        auto lhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
-
-        repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().increment(
-          enumeratedIndices[i], 
-          enumeratedIndices[j], 
-          lhsMatrixEntry(i,j)
-        );
-      }
-    }
-  }
-
-  // rhs
-  auto   rhs = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
-  for (int i=0; i<TwoPowerD; i++) {
-    if (fineGridVertices{{SOLVER_NAME}}PETScData(i).getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
-      double rhsContribution = 0.0;
-      for (int j=0; j<TwoPowerD; j++) {
-        double rhsValue = fineGridVertices{{SOLVER_NAME}}(j).getRhs(0);
-        rhsContribution += rhs(i,j) * rhsValue;
-      }
-      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().increment(
-        enumeratedIndices[i],
-        rhsContribution
-      );
-    }
-  }
   """
 
-  TemplateTouchVertexFirstTime="""
-  //here we send the value, rhs from the mesh to petsc
-
-  if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
-    //first, get global index
-    std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
-    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
-    
-    assertion3(globalIndex>=0, globalIndex, marker.toString(), fineGridVertex{{SOLVER_NAME}}PETScData.toString() );
-
-    //get the val, rhs that was present in the mesh
-//    double val = fineGridVertex{{SOLVER_NAME}}.getValue(0);
-    double rhs = fineGridVertex{{SOLVER_NAME}}.getRhs(0);
-
-    //send these to petsc
-    repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(globalIndex, rhs);
-
-  }
+  TemplateTouchFaceFirstTime="""
   """
   
   def __init__(self,
@@ -105,18 +35,8 @@ class AssemblePetscMatrix(ActionSet):
                ):
     """!
     
-Initialise vertex-associated degrees of freedom
-    
-The initialisation requires a solver object, as we have to know what C++
-object this solver will produce.
-
-solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
-  degrees of freedom are assigned exclusively to the vertices.
-
-stencil:
-  list of lists which we will flatten into an intializer list,
-  and transform into a tarch::la::Matrix
-    
+    Yet to be written
+        
     """
     #pass in stencil as a list of lists
     #convert it to a flat list for passing as std::initializer_list
@@ -126,15 +46,6 @@ stencil:
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
-    #self.d["VERTEX_CARDINALITY"]     = solver.number_of_vertex_unknowns
-
-    #self.d["STENCIL"]         = "{" + str(stencil[0])
-    #for el in stencil[1:]:
-    #  self.d["STENCIL"] += ", "
-    #  self.d["STENCIL"] += str(el)
-    #self.d["STENCIL"] += "}"
-
-
 
 
   def get_body_of_operation(self,operation_name):
@@ -156,8 +67,8 @@ appropriate template into each.
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.TemplateTouchCellFirstTime).render(**self.d)
       pass 
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.TemplateTouchVertexFirstTime).render(**self.d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      result = jinja2.Template(self.TemplateTouchFaceFirstTime).render(**self.d)
       pass 
     return result
 

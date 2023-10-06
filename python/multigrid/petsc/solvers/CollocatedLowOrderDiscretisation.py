@@ -21,10 +21,9 @@ from peano4.solversteps.ActionSet import ActionSet
 
 class AssemblePetscMatrix(ActionSet):
   """!
-  Trigger assembly of PETSc matrix, using values from mesh
 
-  I am aware the code below is very bad. Much of it needs changing.
-  But for now it stays while development on other projects continues
+  Trigger assembly of PETSc matrix and project rhs values from mesh onto rhs vector entries
+
   """
   TemplateTouchCellFirstTime = """
   //init a vector to collect global indices, and recall their position in the 
