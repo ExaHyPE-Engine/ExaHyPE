@@ -21,7 +21,7 @@ void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
     checkDoubleArrays(particle);
     checkIntegerArrays(particle);
 
-    // peano stuff...
+    checkPeanoDoubleArrays(particle);
   }
 }
 
@@ -753,6 +753,83 @@ void dastgenTest::checkIntegerArrays(Particle& particle) {
   const int* integer_var4 = particle->getMyCompressedDebugIntegerArray();
   for (int i = 0; i < CARD; i++) {
     assert(integer_var4[i] == particle->getMyCompressedDebugIntegerArray(i));
+  }
+#endif
+}
+
+
+template <typename Particle>
+void dastgenTest::checkPeanoDoubleArrays(Particle& particle) {
+
+  double init_double[CARD] = {1., 2., 3., 4., 5., 6., 7., 8.};
+
+  // Default Double Array
+  // -------------------------
+
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyPeanoDoubleArray(i, i + 10.);
+    assert(particle->getMyPeanoDoubleArray(i) == i + 10.);
+  }
+
+  // getter/setter with array
+  particle->setMyPeanoDoubleArray(init_double);
+  const tarch::la::Vector<CARD, double> double_var1 = particle->getMyPeanoDoubleArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(double_var1[i] == particle->getMyPeanoDoubleArray(i));
+  }
+
+
+  // Double Array + debug
+  // -------------------------
+
+#if PeanoDebug > 0
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyDebugDoubleArray(i, i + 11.);
+    assert(particle->getMyDebugDoubleArray(i) == i + 11.);
+  }
+
+  // getter/setter with array
+  particle->setMyDebugDoubleArray(init_double);
+  const tarch::la::Vector<CARD, double> double_var2 = particle->getMyDebugDoubleArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(double_var2[i] == particle->getMyDebugDoubleArray(i));
+  }
+#endif
+
+  // Double Array + compress
+  // -------------------------
+
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyCompressedDoubleArray(i, i + 12.);
+    assert(particle->getMyCompressedDoubleArray(i));
+  }
+
+  // getter/setter with array
+  particle->setMyCompressedDoubleArray(init_double);
+  const tarch::la::Vector<CARD, double> double_var3 = particle->getMyCompressedDoubleArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(double_var3[i] == particle->getMyCompressedDoubleArray(i));
+  }
+
+
+  // Double Array + debug + compression
+  // ------------------------------------
+
+#if PeanoCompressedDebug > 0
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyCompressedDebugDoubleArray(i, i + 13.);
+    assert(particle->getMyCompressedDebugDoubleArray(i));
+  }
+
+  // getter/setter with array
+  particle->setMyCompressedDebugDoubleArray(init_double);
+  const tarch::la::Vector<CARD, double> double_var4 = particle->getMyCompressedDebugDoubleArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(double_var4[i] == particle->getMyCompressedDebugDoubleArray(i));
   }
 #endif
 }

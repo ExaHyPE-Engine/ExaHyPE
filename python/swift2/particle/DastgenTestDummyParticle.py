@@ -60,15 +60,25 @@ class DastgenTestDummyParticle(Particle):
         self._generate_boolean_array_attributes(compress=False, ifdefs=True)
         self._generate_boolean_array_attributes(compress=True, ifdefs=True)
 
+        self._generate_double_array_attributes(compress=False, ifdefs=False)
+        self._generate_double_array_attributes(compress=True, ifdefs=False)
+        self._generate_double_array_attributes(compress=False, ifdefs=True)
+        self._generate_double_array_attributes(compress=True, ifdefs=True)
+
         self._generate_integer_array_attributes(compress=False, ifdefs=False)
         self._generate_integer_array_attributes(compress=True, ifdefs=False)
         self._generate_integer_array_attributes(compress=False, ifdefs=True)
         self._generate_integer_array_attributes(compress=True, ifdefs=True)
 
-        self._generate_double_array_attributes(compress=False, ifdefs=False)
-        self._generate_double_array_attributes(compress=True, ifdefs=False)
-        self._generate_double_array_attributes(compress=False, ifdefs=True)
-        self._generate_double_array_attributes(compress=True, ifdefs=True)
+        self._generate_peano_double_array_attributes(compress=False, ifdefs=False)
+        self._generate_peano_double_array_attributes(compress=True, ifdefs=False)
+        self._generate_peano_double_array_attributes(compress=False, ifdefs=True)
+        self._generate_peano_double_array_attributes(compress=True, ifdefs=True)
+
+        #  self._generate_peano_integer_array_attributes(compress=False, ifdefs=False)
+        #  self._generate_peano_integer_array_attributes(compress=True, ifdefs=False)
+        #  self._generate_peano_integer_array_attributes(compress=False, ifdefs=True)
+        #  self._generate_peano_integer_array_attributes(compress=True, ifdefs=True)
 
         return
 
@@ -580,6 +590,93 @@ class DastgenTestDummyParticle(Particle):
                 "my" + var_basename,
                 cardinality=8,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                valid_mantissa_bits=valid_mantissa_bits,
+                ifdefs=defs,
+            )
+        )
+
+        return
+
+    def _generate_peano_integer_array_attributes(self, compress: bool, ifdefs: bool):
+        """!
+        Generate peano4 integer-array attributes.
+
+        compress: Boolean
+            if True, enable compression.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
+        var_basename = "PeanoIntegerArray"
+        if compress and not ifdefs:
+            var_basename = "CompressedPeanoIntegerArray"
+        if ifdefs and not compress:
+            var_basename = "DebugPeanoIntegerArray"
+        if ifdefs and compress:
+            var_basename = "DebugCompressedPeanoIntegerArray"
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            defs = ["PeanoDebug > 0"]
+
+        # Set compression values
+        min_value = None
+        max_value = None
+        if compress:
+            min_value = 0
+            max_value = 2097152
+
+        self.data.add_attribute(
+            peano4.dastgen2.Peano4IntegerArray(
+                "my" + var_basename,
+                cardinality=8,
+                min_value=None,
+                max_value=None,
+                ifdefs=defs,
+            )
+        )
+
+        return
+
+    def _generate_peano_double_array_attributes(self, compress: bool, ifdefs: bool):
+        """!
+        Generate peano4 double-array attributes.
+
+        compress: Boolean
+            if True, enable compression.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
+        var_basename = "PeanoDoubleArray"
+        if compress and not ifdefs:
+            var_basename = "CompressedPeanoDoubleArray"
+        if ifdefs and not compress:
+            var_basename = "DebugPeanoDoubleArray"
+        if ifdefs and compress:
+            var_basename = "DebugCompressedPeanoDoubleArray"
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            defs = ["PeanoDebug > 0"]
+
+        # Set compression values
+        valid_mantissa_bits = None
+        if compress:
+            valid_mantissa_bits = 23
+
+        self.data.add_attribute(
+            peano4.dastgen2.Peano4DoubleArray(
+                "my" + var_basename,
+                cardinality=8,
                 valid_mantissa_bits=valid_mantissa_bits,
                 ifdefs=defs,
             )

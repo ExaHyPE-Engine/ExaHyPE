@@ -68,6 +68,20 @@ namespace dastgenTest {
 
 
   /**
+   * Perform all the checks on a particle's double array members
+   */
+  template <typename Particle>
+  void checkPeanoDoubleArrays(Particle& particle);
+
+
+  /**
+   * Perform all the checks on a particle's integer array members
+   */
+  template <typename Particle>
+  void checkPeanoIntegerArrays(Particle& particle);
+
+
+  /**
    * Perform all the checks on a particle's string arrays members
    */
   template <typename Particle>
