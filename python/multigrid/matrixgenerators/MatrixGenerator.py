@@ -192,33 +192,33 @@ class MatrixGenerator:
       index     = index % pToD
     return output
     
-  # def getPolynomial(self, index, dim=-1):
-  #   """!
-  #   Promote 1d polynomials to many dimensions
-  #   by taking products.
+  def getPolynomial(self, index, dim=-1, list_of_polys=[]):
+    """!
+    Promote 1d polynomials to many dimensions
+    by taking products.
 
-  #   Recursively defined.
-  #   """
-  #   raise NotImplementedError
-  #   if dim == -1: 
-  #     dim = self.Dimensions
+    Recursively defined.
+    """
+    if dim == -1: 
+      dim = self.Dimensions
 
-  #   #base case, dim == 1
-  #   if dim == 1:
-  #     return self.polynomials1d[index]
-  #   #recursive
-  #   else:
-  #     '''
-  #     if we are looking for a 3d polynomial, then what we do here
-  #     is return get1dPoly(z) * getPoly2d(x,y)
-  #     '''
-  #     #work backwards; get index in highest dimension
-  #     pToD            = self.poly_degree ** (dim-1)
-  #     highestDimIndex = (index - index%pToD) // pToD
-  #     index           = index % pToD
-  #     dim             = dim - 1
-  #     print(f"dim={dim}, returning lambda")
-  #     return lambda x,y: self.getPolynomial(index)(x) * self.polynomials1d[highestDimIndex](y)
+    # the indices of the polynomials we wanna fetch
+    # warning: will misfire if "index" not in correct range for dim
+    indices =   self.convertIndexToDim(index, dim)
+    polys   = [ self.polynomials1d[i] for i in indices ]
+
+    #define function object to return:
+    def returnFunc(*args):
+      assert(len(args)==dim), f"Supplied {len(args)} args to a {dim}d function!"
+      out = 1
+      for i, arg in enumerate(args):
+        # dummy evaluation of i'th polynomial
+        out *= polys[i](arg)
+      return out
+
+    #return this function object
+    return returnFunc
+
 
   def evalPolynomial(self, index, point, dim=-1):
     """!
