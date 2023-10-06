@@ -222,7 +222,7 @@ if args.symbolic:
 else:
   my_solver.plot_description = "u, v, sxx, syy, sxy"
   my_solver.add_user_solver_includes("""
-#include "../../../tutorials/exahype2/elastic-wave/ElasticWaveKernels.h"
+#include "ElasticWaveKernels.h"
 """)
 
 my_project.add_solver(my_solver)
