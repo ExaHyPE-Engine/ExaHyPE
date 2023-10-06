@@ -19,6 +19,10 @@ class IntegerArray(Integer):
             raise NotImplementedError(
                 f"Attribute {name}: This data type can't work with qualifiers (yet)"
             )
+        if initval is not None:
+            raise NotImplementedError(
+                f"Attribute {name}: Can't generate arrays with initial values (yet)."
+            )
         Integer.__init__(
             self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval
         )
@@ -40,12 +44,15 @@ class IntegerArray(Integer):
         accessor_name = self._name[:1].title() + self._name[1:]
         return [
             ("get" + accessor_name + "() const", "const int*"),
-            ("set" + accessor_name + "(const int value[" + self._cardinality + "])", "void"),
+            (
+                "set" + accessor_name + "(const int value[" + self._cardinality + "])",
+                "void",
+            ),
             ("get" + accessor_name + "(int index) const", "int"),
             ("set" + accessor_name + "(int index, int value)", "void"),
         ]
 
-    def get_plain_C_attributes(self):
+    def get_plain_C_attributes(self, for_constructor=False):
         if self._min_value != None or self._max_value != None:
             return [
                 (

@@ -60,6 +60,11 @@ class DastgenTestDummyParticle(Particle):
         self._generate_boolean_array_attributes(compress=False, ifdefs=True)
         self._generate_boolean_array_attributes(compress=True, ifdefs=True)
 
+        self._generate_integer_array_attributes(compress=False, ifdefs=False)
+        self._generate_integer_array_attributes(compress=True, ifdefs=False)
+        self._generate_integer_array_attributes(compress=False, ifdefs=True)
+        self._generate_integer_array_attributes(compress=True, ifdefs=True)
+
         return
 
     def _generate_boolean_attributes(self, ifdefs: bool):
@@ -482,6 +487,52 @@ class DastgenTestDummyParticle(Particle):
                 cardinality=8,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
                 compress=compress,
+                ifdefs=defs,
+            )
+        )
+
+        return
+
+    def _generate_integer_array_attributes(self, compress: bool, ifdefs: bool):
+        """!
+        Generate integer-array attributes.
+
+        compress: Boolean
+            if True, enable compression.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
+        var_basename = "IntegerArray"
+        if compress and not ifdefs:
+            var_basename = "CompressedIntegerArray"
+        if ifdefs and not compress:
+            var_basename = "DebugIntegerArray"
+        if ifdefs and compress:
+            var_basename = "DebugCompressedIntegerArray"
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            defs = ["PeanoDebug > 0"]
+
+        # Set compression values
+        min_value = None
+        max_value = None
+        if compress:
+            min_value = 0
+            max_value = 2097152
+
+        self.data.add_attribute(
+            dastgen2.attributes.IntegerArray(
+                "my" + var_basename,
+                cardinality=8,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                min_value=None,
+                max_value=None,
                 ifdefs=defs,
             )
         )
