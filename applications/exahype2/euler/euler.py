@@ -241,7 +241,7 @@ else:
   else:
     my_solver.plot_description = "rho, u, v, w, e"
   my_solver.add_user_solver_includes("""
-#include "../../../tutorials/exahype2/euler/EulerKernels.h"
+#include "EulerKernels.h"
 """)
 
 my_project.add_solver(my_solver)
