@@ -19,6 +19,11 @@ const double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::QuadraturePointsInUnitIn
 }
 
 
+::petsc::LocalToGlobalMap&  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLocalToGlobalMap() {
+  return _localToGlobalMap;
+}
+
+
 ::petsc::LinearEquationSystem&  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLinearEquationSystem() {
   return _linearEquationSystem;
 }
