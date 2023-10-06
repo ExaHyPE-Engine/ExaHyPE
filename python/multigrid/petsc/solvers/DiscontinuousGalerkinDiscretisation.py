@@ -265,8 +265,9 @@ class DiscontinuousGalerkinDiscretisation(Solver):
                cell_cell_mass_matrix,
                cell_cell_system_matrix,
                cell_to_face_matrix,
-               face_face_matrix,
-               cell_rhs_matrix,
+               face_face_Riemann_problem_matrix,
+               face_to_cell_matrix,
+               position_of_nodes_within_unit_cube,
                ):
     """!
    
@@ -286,9 +287,10 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     self.cell_cell_mass_matrix    = cell_cell_mass_matrix
     self.cell_cell_system_matrix  = cell_cell_system_matrix
     self.cell_to_face_matrix      = cell_to_face_matrix
-    self.face_face_matrix         = face_face_matrix
-    self.cell_rhs_matrix          = cell_rhs_matrix
+    self.face_face_Riemann_problem_matrix   = face_face_Riemann_problem_matrix
+    self.face_to_cell_matrix                = face_to_cell_matrix
 
+    self.position_of_nodes_within_unit_cube = position_of_nodes_within_unit_cube
     
     self._cell_pde_data   = peano4.datamodel.DaStGen2( name )
     self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self.unknowns) ) )
@@ -413,12 +415,13 @@ class DiscontinuousGalerkinDiscretisation(Solver):
         "MIN_H"             : self.min_h,
         "MAX_H"             : self.max_h,
         "POLYNOMIAL_DEGREE":  self.polynomial_degree,
-        "UNKNOWNS":        self.unknowns,
+        "UNKNOWNS":           self.unknowns,
         "CELL_CELL_MASS_MATRIX":     self.cell_cell_mass_matrix,
         "CELL_CELL_SYSTEM_MATRIX":   self.cell_cell_system_matrix,
         "CELL_TO_FACE_MATRIX":       self.cell_to_face_matrix,
-        "FACE_FACE_MATRIX":          self.face_face_matrix,
-        "CELL_RHS_MATRIX":           self.cell_rhs_matrix,
+        "FACE_FACE_RIEMANN_PROBLEM_MATRIX":      self.face_face_Riemann_problem_matrix,
+        "FACE_TO_CELL_MATRIX":                   self.face_to_cell_matrix,
+        "POSITION_OF_NODES_WITHIN_UNIT_CUBE":    self.position_of_nodes_within_unit_cube,
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

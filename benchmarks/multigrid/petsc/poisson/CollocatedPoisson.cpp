@@ -20,6 +20,7 @@ void benchmarks::multigrid::petsc::poisson::CollocatedPoisson::vertexInit(
   
 ) {
   //divide by 2 to achieve correct scaling
+  // @todo TW: I'm not sure this dividion is correct
   rhs = Dimensions * tarch::la::PI * tarch::la::PI / 2;
   for (int i = 0; i < Dimensions; i++){
 
