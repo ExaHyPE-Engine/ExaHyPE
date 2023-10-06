@@ -328,11 +328,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 attribute._is_static
                 or attribute._is_const_static
                 or attribute._is_constexpr
+                or attribute._is_const
             ):
                 # no need to copy static class fields.
                 continue
-            elif attribute._is_const:
-                raise NotImplementedError
             if attribute.ifdefs != []:
                 output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))
             uppercase_name = attribute.name[0].upper() + attribute.name[1:]

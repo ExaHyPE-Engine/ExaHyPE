@@ -4,6 +4,7 @@
 
 // #define GETTER(NAME) particle->get##NAME()
 // #define SETTER(NAME, VAL) particle->set##NAME((VAL))
+#define CARD 8 // default array cardinality
 
 
 template <typename ParticleContainer>
@@ -16,9 +17,9 @@ void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
     checkIntegers(particle);
     checkStrings(particle);
 
-    // checkBooleanArray(particle);
-    // checkDoubleArray(particle);
-    // checkIntegerArray(particle);
+    checkBooleanArrays(particle);
+    // checkDoubleArrays(particle);
+    // checkIntegerArrays(particle);
 
     // checkStringArray(particle);
 
@@ -524,6 +525,84 @@ void dastgenTest::checkStrings(Particle& particle) {
   assert(var_str.compare("const_static_initval\0") == 0);
 
   // constexpr left out for now. Not working yet. Not needed atm.
+#endif
+}
+
+
+template <typename Particle>
+void dastgenTest::checkBooleanArrays(Particle& particle) {
+
+  std::bitset<CARD> init_bool = static_cast<std::bitset<CARD>>(511);
+  std::bitset<CARD> bool_var;
+
+  // Default Bool Array
+  // -------------------------
+
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyBooleanArray(i, true);
+    assert(particle->getMyBooleanArray(i));
+  }
+
+  // getter/setter with array
+  particle->setMyBooleanArray(init_bool);
+  bool_var = particle->getMyBooleanArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(bool_var[i] == particle->getMyBooleanArray(i));
+  }
+
+
+  // Bool Array + debug
+  // -------------------------
+
+#if PeanoDebug > 0
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyDebugBooleanArray(i, true);
+    assert(particle->getMyDebugBooleanArray(i));
+  }
+
+  // getter/setter with array
+  particle->setMyDebugBooleanArray(init_bool);
+  bool_var = particle->getMyDebugBooleanArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(bool_var[i] == particle->getMyDebugBooleanArray(i));
+  }
+#endif
+
+  // Bool Array + compress
+  // -------------------------
+
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyCompressedBooleanArray(i, true);
+    assert(particle->getMyCompressedBooleanArray(i));
+  }
+
+  // getter/setter with array
+  particle->setMyCompressedBooleanArray(init_bool);
+  bool_var = particle->getMyCompressedBooleanArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(bool_var[i] == particle->getMyCompressedBooleanArray(i));
+  }
+
+
+  // Bool Array + debug + compression
+  // ------------------------------------
+
+#if PeanoCompressedDebug > 0
+  // getter/setter with index
+  for (int i = 0; i < CARD; i++) {
+    particle->setMyCompressedDebugBooleanArray(i, true);
+    assert(particle->getMyCompressedDebugBooleanArray(i));
+  }
+
+  // getter/setter with array
+  particle->setMyCompressedDebugBooleanArray(init_bool);
+  bool_var = particle->getMyCompressedDebugBooleanArray();
+  for (int i = 0; i < CARD; i++) {
+    assert(bool_var[i] == particle->getMyCompressedDebugBooleanArray(i));
+  }
 #endif
 }
 

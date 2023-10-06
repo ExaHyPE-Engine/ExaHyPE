@@ -55,6 +55,11 @@ class DastgenTestDummyParticle(Particle):
         self._generate_string_attributes(ifdefs=False)
         self._generate_string_attributes(ifdefs=True)
 
+        self._generate_boolean_array_attributes(compress=False, ifdefs=False)
+        self._generate_boolean_array_attributes(compress=True, ifdefs=False)
+        self._generate_boolean_array_attributes(compress=False, ifdefs=True)
+        self._generate_boolean_array_attributes(compress=True, ifdefs=True)
+
         return
 
     def _generate_boolean_attributes(self, ifdefs: bool):
@@ -442,6 +447,44 @@ class DastgenTestDummyParticle(Particle):
         #          ifdefs=defs,
         #      )
         #  )
+
+        return
+
+    def _generate_boolean_array_attributes(self, compress: bool, ifdefs: bool):
+        """!
+        Generate boolean-array attributes.
+
+        compress: Boolean
+            if True, enable compression.
+
+        ifdefs: Boolean
+            if True, add debug ifdefs to the attributes.
+        """
+
+        # Set the variable basename, so we get different
+        # variable names for each possible case.
+        var_basename = "BooleanArray"
+        if compress and not ifdefs:
+            var_basename = "CompressedBooleanArray"
+        if ifdefs and not compress:
+            var_basename = "DebugBooleanArray"
+        if ifdefs and compress:
+            var_basename = "DebugCompressedBooleanArray"
+
+        # Set ifdefs
+        defs = []
+        if ifdefs:
+            defs = ["PeanoDebug > 0"]
+
+        self.data.add_attribute(
+            dastgen2.attributes.BooleanArray(
+                "my" + var_basename,
+                cardinality=8,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                compress=compress,
+                ifdefs=defs,
+            )
+        )
 
         return
 
