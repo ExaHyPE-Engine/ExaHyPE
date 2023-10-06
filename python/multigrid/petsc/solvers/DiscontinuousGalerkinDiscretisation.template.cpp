@@ -27,7 +27,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initNode(
 
 
 {% if CELL_CELL_MASS_MATRIX==[] %}
-tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMassMatrix(
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMassMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
@@ -37,7 +37,7 @@ tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > {{NAMESPACE | join("::")}}
 
 
 {% if CELL_CELL_SYSTEM_MATRIX==[] %}
-tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSystemMatrix(
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSystemMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
@@ -47,7 +47,7 @@ tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > {{NAMESPACE | join("::")}}
 
 
 {% if CELL_TO_FACE_MATRIX==[] %}
-tarch::la::Matrix< NodesPerFace*Unknowns*FacesPerCell, DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getProjectionOfCellDataOntoFace(
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Unknowns*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FacesPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getProjectionOfCellDataOntoFace(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
@@ -57,7 +57,7 @@ tarch::la::Matrix< NodesPerFace*Unknowns*FacesPerCell, DoFsPerCell, double > {{N
 
 
 {% if FACE_TO_CELL_MATRIX==[] %}
-tarch::la::Matrix< DoFsPerCell, NodesPerFace*Unknowns*FacesPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getProjectionOfRiemannSolutionOntoCell(
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Unknowns*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FacesPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getProjectionOfRiemannSolutionOntoCell(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
@@ -67,7 +67,7 @@ tarch::la::Matrix< DoFsPerCell, NodesPerFace*Unknowns*FacesPerCell, double > {{N
 
 
 {% if FACE_FACE_RIEMANN_PROBLEM_MATRIX==[] %}
-tarch::la::Matrix< NodesPerFace*Unknowns, 2*NodesPerFace*Unknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRiemannSolver(
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Unknowns, 2*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Unknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRiemannSolver(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {

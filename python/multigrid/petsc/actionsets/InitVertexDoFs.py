@@ -25,7 +25,7 @@ the solver in the first place. This happens in get_includes().
   
   """
   TemplateInitVertex = """
-  if ( fineGridVertex{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+  if ( fineGridCell{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
     {% if VERTEX_CARDINALITY>1 %}
     {% else %}
     double value, rhs;
@@ -36,8 +36,8 @@ the solver in the first place. This happens in get_includes().
       value,
       rhs
     );
-    fineGridVertex{{SOLVER_NAME}}.setValue(value);
-    fineGridVertex{{SOLVER_NAME}}.setRhs(rhs);
+    fineGridCell{{SOLVER_NAME}}.setValue(value);
+    fineGridCell{{SOLVER_NAME}}.setRhs(rhs);
   }
 """
   
@@ -110,10 +110,14 @@ in init().
   def get_includes(self):
     """!
    
-Consult petsc.Project for details
+    Add some additional includes
     
-"""    
+    We need the solver repository here as we access hte solver object, and we
+    also need access to all of Peano's d-dimensional for loops.
+    
+    """    
     return """
 #include "repositories/SolverRepository.h"
+#include "peano4/utils/Loop.h"
 """
 

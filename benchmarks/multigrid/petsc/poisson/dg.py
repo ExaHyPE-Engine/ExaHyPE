@@ -51,7 +51,7 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      cell_to_face_matrix     = matrices.getCellToFaceMatrix(),       
                                                                      face_face_Riemann_problem_matrix        = matrices.getFaceFaceMatrix(),   # todo bad name    
                                                                      face_to_cell_matrix     = matrices.getCellIdentityMatrix(), # @todo Wrong
-                                                                     position_of_nodes_within_unit_cube = [ [0.0,0.0], [1.0,0.0], [0.0,1.0], [1.0,1.0] ],
+                                                                     quadrature_points_in_unit_interval = [ 0.0,1.0 ],
                                                                      )
 
 project.add_solver( solver )
