@@ -107,24 +107,28 @@ class String(Attribute):
         # add const/static qualifiers and initialization values, if needed
         if self._is_static:
             typestring = "inline static char"
-            lengthtype = "static int"
+            lengthtype = "inline static int"
 
             if self._initval is not None:
                 namestring += " = " + self._initval
                 # initval is sanitized at this point. Take away 4:
-                # 2 aposprophe's, and 2 extra '\' to escape the NULL char
+                # 2 aposprophes, and 2 extra '\' to escape the NULL char
                 lengthval = len(self._initval) - 4
                 lengthtype = "inline static int"
 
         elif self._is_const_static:
             typestring = "inline const static char"
             namestring += " = " + self._initval
+            # initval is sanitized at this point. Take away 4:
+            # 2 aposprophes, and 2 extra '\' to escape the NULL char
             lengthval = len(self._initval) - 4
             lengthtype = "inline const static int"
 
         elif self._is_const:
             typestring = "const char"
             namestring += " = " + self._initval
+            # initval is sanitized at this point. Take away 4:
+            # 2 aposprophes, and 2 extra '\' to escape the NULL char
             lengthval = len(self._initval) - 4
             lengthtype = "const int"
 
@@ -142,9 +146,15 @@ class String(Attribute):
             # not as optional argument for constructor method
             if self._initval is not None and not for_constructor:
                 namestring += " = " + self._initval
+                # initval is sanitized at this point. Take away 4:
+                # 2 aposprophes, and 2 extra '\' to escape the NULL char
+                lengthval = len(self._initval) - 4
 
+        # construct name of integer which contains string's length
         lengthstring = "_" + self._name + "Length"
         if lengthval is not None:
+            # if lengthval has a value, it means that we are using
+            # some intial value. So add the correct value of the length.
             lengthstring += " = " + str(lengthval)
 
         return [

@@ -13,7 +13,7 @@ void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
     checkDoubles(particle);
     // checkEnums(particle);
     checkIntegers(particle);
-    // checkStrings(particle);
+    checkStrings(particle);
 
     // checkBooleanArray(particle);
     // checkDoubleArray(particle);
@@ -39,24 +39,33 @@ void dastgenTest::checkBooleans(Particle& particle) {
   // ----------------------
 
   particle->setMyBoolean(initval_bool);
-  particle->setMyStaticBoolean(initval_bool);
-  // set to the same value again to avoid race conditions.
-  // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticInitvalBoolean(particle->getMyStaticInitvalBoolean());
-
-  // Check getters, and that the expected initial values are correct
   var_bool = particle->getMyBoolean();
   assert(var_bool == initval_bool);
+
   var_bool = particle->getMyInitvalBoolean();
   assert(var_bool == true);
+  // Test setter here too
+  particle->setMyInitvalBoolean(true);
+  var_bool = particle->getMyInitvalBoolean();
+  assert(var_bool == true);
+
+  particle->setMyStaticBoolean(initval_bool);
   var_bool = particle->getMyStaticBoolean();
   assert(var_bool == initval_bool);
+
   var_bool = particle->getMyStaticInitvalBoolean();
   assert(var_bool == true);
+  // Test setter here too
+  particle->setMyStaticInitvalBoolean(particle->getMyStaticInitvalBoolean());
+  var_bool = particle->getMyStaticInitvalBoolean();
+  assert(var_bool == true);
+
   var_bool = particle->getMyConstBoolean();
   assert(var_bool == true);
+
   var_bool = particle->getMyConstStaticBoolean();
   assert(var_bool == true);
+
   var_bool = particle->getMyConstExprBoolean();
   assert(var_bool == true);
 
@@ -65,27 +74,38 @@ void dastgenTest::checkBooleans(Particle& particle) {
   // ----------------------
 
 #if PeanoDebug > 0
-  particle->setMyDebugBoolean(initval_bool);
-  particle->setMyStaticDebugBoolean(initval_bool);
-  // set to the same value again to avoid race conditions.
-  // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticInitvalDebugBoolean(particle->getMyStaticInitvalDebugBoolean());
 
-  // Check getters, and that the expected initial values are correct
+  particle->setMyDebugBoolean(initval_bool);
   var_bool = particle->getMyDebugBoolean();
   assert(var_bool == initval_bool);
+
   var_bool = particle->getMyInitvalDebugBoolean();
   assert(var_bool == true);
+  // Test setter here too
+  particle->setMyInitvalDebugBoolean(true);
+  var_bool = particle->getMyInitvalDebugBoolean();
+  assert(var_bool == true);
+
+  particle->setMyStaticDebugBoolean(initval_bool);
   var_bool = particle->getMyStaticDebugBoolean();
   assert(var_bool == initval_bool);
+
   var_bool = particle->getMyStaticInitvalDebugBoolean();
   assert(var_bool == true);
+  // Test setter here too
+  particle->setMyStaticInitvalDebugBoolean(particle->getMyStaticInitvalDebugBoolean());
+  var_bool = particle->getMyStaticInitvalDebugBoolean();
+  assert(var_bool == true);
+
   var_bool = particle->getMyConstDebugBoolean();
   assert(var_bool == true);
+
   var_bool = particle->getMyConstStaticDebugBoolean();
   assert(var_bool == true);
+
   var_bool = particle->getMyConstExprDebugBoolean();
   assert(var_bool == true);
+
 #endif
 }
 
@@ -101,24 +121,33 @@ void dastgenTest::checkDoubles(Particle& particle) {
   // ----------------------
 
   particle->setMyDouble(initval_double);
-  // set to the same value again to avoid race conditions.
-  // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticDouble(initval_double);
-  particle->setMyStaticInitvalDouble(particle->getMyStaticInitvalDouble());
-
-  // Check getters, and that the expected initial values are correct
   var_double = particle->getMyDouble();
   assert(var_double == initval_double);
+
   var_double = particle->getMyInitvalDouble();
   assert(var_double == 4.);
+  // Test setter here too
+  particle->setMyInitvalDouble(4.);
+  var_double = particle->getMyInitvalDouble();
+  assert(var_double == 4.);
+
+  particle->setMyStaticDouble(initval_double);
   var_double = particle->getMyStaticDouble();
   assert(var_double == initval_double);
+
   var_double = particle->getMyStaticInitvalDouble();
   assert(var_double == 8.);
+  // Test setter here too
+  particle->setMyStaticInitvalDouble(particle->getMyStaticInitvalDouble());
+  var_double = particle->getMyStaticInitvalDouble();
+  assert(var_double == 8.);
+
   var_double = particle->getMyConstDouble();
   assert(var_double == 16.);
+
   var_double = particle->getMyConstStaticDouble();
   assert(var_double == 32.);
+
   var_double = particle->getMyConstExprDouble();
   assert(var_double == 64.);
 
@@ -127,25 +156,35 @@ void dastgenTest::checkDoubles(Particle& particle) {
   // ----------------------
 
 #if PeanoDebug > 0
-  particle->setMyDebugDouble(initval_double);
-  // set to the same value again to avoid race conditions.
-  // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticDebugDouble(initval_double);
-  particle->setMyStaticDebugDouble(particle->getMyStaticDebugDouble());
 
-  // Check getters, and that the expected initial values are correct
+  particle->setMyDebugDouble(initval_double);
   var_double = particle->getMyDebugDouble();
   assert(var_double == initval_double);
+
   var_double = particle->getMyInitvalDebugDouble();
   assert(var_double == 4.);
+  // Test setter here too
+  particle->setMyInitvalDebugDouble(4.);
+  var_double = particle->getMyInitvalDebugDouble();
+  assert(var_double == 4.);
+
+  particle->setMyStaticDebugDouble(initval_double);
   var_double = particle->getMyStaticDebugDouble();
   assert(var_double == initval_double);
+
   var_double = particle->getMyStaticInitvalDebugDouble();
   assert(var_double == 8.);
+  // Test setter here too
+  particle->setMyStaticInitvalDebugDouble(particle->getMyStaticInitvalDebugDouble());
+  var_double = particle->getMyStaticInitvalDebugDouble();
+  assert(var_double == 8.);
+
   var_double = particle->getMyConstDebugDouble();
   assert(var_double == 16.);
+
   var_double = particle->getMyConstStaticDebugDouble();
   assert(var_double == 32.);
+
   var_double = particle->getMyConstExprDebugDouble();
   assert(var_double == 64.);
 #endif
@@ -155,24 +194,33 @@ void dastgenTest::checkDoubles(Particle& particle) {
   // ----------------------
 
   particle->setMyCompressedDouble(initval_double);
-  // set to the same value again to avoid race conditions.
-  // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticCompressedDouble(initval_double);
-  particle->setMyStaticInitvalCompressedDouble(particle->getMyStaticInitvalCompressedDouble());
-
-  // Check getters, and that the expected initial values are correct
   var_double = particle->getMyCompressedDouble();
   assert(var_double == initval_double);
+
   var_double = particle->getMyInitvalCompressedDouble();
   assert(var_double == 4.);
+  // Test setter here too
+  particle->setMyInitvalCompressedDouble(4.);
+  var_double = particle->getMyInitvalCompressedDouble();
+  assert(var_double == 4.);
+
+  particle->setMyStaticCompressedDouble(initval_double);
   var_double = particle->getMyStaticCompressedDouble();
   assert(var_double == initval_double);
+
   var_double = particle->getMyStaticInitvalCompressedDouble();
   assert(var_double == 8.);
+  // Test setter here too
+  particle->setMyStaticInitvalCompressedDouble(particle->getMyStaticInitvalCompressedDouble());
+  var_double = particle->getMyStaticInitvalCompressedDouble();
+  assert(var_double == 8.);
+
   var_double = particle->getMyConstCompressedDouble();
   assert(var_double == 16.);
+
   var_double = particle->getMyConstStaticCompressedDouble();
   assert(var_double == 32.);
+
   var_double = particle->getMyConstExprCompressedDouble();
   assert(var_double == 64.);
 
@@ -181,25 +229,34 @@ void dastgenTest::checkDoubles(Particle& particle) {
   // ------------------------------------
 
 #if PeanoDebug > 0
-  particle->setMyDebugDouble(initval_double);
-  // set to the same value again to avoid race conditions.
-  // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticDebugCompressedDouble(initval_double);
-  particle->setMyStaticInitvalDebugCompressedDouble(particle->getMyStaticInitvalDebugCompressedDouble());
-
-  // Check getters, and that the expected initial values are correct
-  var_double = particle->getMyDebugDouble();
+  particle->setMyDebugCompressedDouble(initval_double);
+  var_double = particle->getMyDebugCompressedDouble();
   assert(var_double == initval_double);
+
   var_double = particle->getMyInitvalDebugCompressedDouble();
   assert(var_double == 4.);
+  // Test setter here too
+  particle->setMyInitvalDebugCompressedDouble(4.);
+  var_double = particle->getMyInitvalDebugCompressedDouble();
+  assert(var_double == 4.);
+
+  particle->setMyStaticDebugCompressedDouble(initval_double);
   var_double = particle->getMyStaticDebugCompressedDouble();
   assert(var_double == initval_double);
+
   var_double = particle->getMyStaticInitvalDebugCompressedDouble();
   assert(var_double == 8.);
+  // Test setter here too
+  particle->setMyStaticInitvalDebugCompressedDouble(particle->getMyStaticInitvalDebugCompressedDouble());
+  var_double = particle->getMyStaticInitvalDebugCompressedDouble();
+  assert(var_double == 8.);
+
   var_double = particle->getMyConstDebugCompressedDouble();
   assert(var_double == 16.);
+
   var_double = particle->getMyConstStaticDebugCompressedDouble();
   assert(var_double == 32.);
+
   var_double = particle->getMyConstExprDebugCompressedDouble();
   assert(var_double == 64.);
 #endif
@@ -218,24 +275,33 @@ void dastgenTest::checkIntegers(Particle& particle) {
   // ----------------------
 
   particle->setMyInteger(initval_int);
-  // set to the same value again to avoid race conditions.
-  // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticInteger(initval_int);
-  particle->setMyStaticInitvalInteger(particle->getMyStaticInitvalInteger());
-
-  // Check getters, and that the expected initial values are correct
   var_int = particle->getMyInteger();
   assert(var_int == initval_int);
+
   var_int = particle->getMyInitvalInteger();
   assert(var_int == 123);
+  // Test setter here too
+  particle->setMyInitvalInteger(123);
+  var_int = particle->getMyInitvalInteger();
+  assert(var_int == 123);
+
+  particle->setMyStaticInteger(initval_int);
   var_int = particle->getMyStaticInteger();
   assert(var_int == initval_int);
+
   var_int = particle->getMyStaticInitvalInteger();
   assert(var_int == 1234);
+  // Test setter here too
+  particle->setMyStaticInitvalInteger(particle->getMyStaticInitvalInteger());
+  var_int = particle->getMyStaticInitvalInteger();
+  assert(var_int == 1234);
+
   var_int = particle->getMyConstInteger();
   assert(var_int == 12345);
+
   var_int = particle->getMyConstStaticInteger();
   assert(var_int == 123456);
+
   var_int = particle->getMyConstExprInteger();
   assert(var_int == 1234567);
 
@@ -245,24 +311,33 @@ void dastgenTest::checkIntegers(Particle& particle) {
 
 #if PeanoDebug > 0
   particle->setMyDebugInteger(initval_int);
-  particle->setMyStaticDebugInteger(initval_int);
-  // set to the same value again to avoid race conditions.
-  // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticInitvalDebugInteger(particle->getMyStaticInitvalDebugInteger());
-
-  // Check getters, and that the expected initial values are correct
   var_int = particle->getMyDebugInteger();
   assert(var_int == initval_int);
+
   var_int = particle->getMyInitvalDebugInteger();
   assert(var_int == 123);
+  // Test setter here too
+  particle->setMyInitvalDebugInteger(123);
+  var_int = particle->getMyInitvalDebugInteger();
+  assert(var_int == 123);
+
+  particle->setMyStaticDebugInteger(initval_int);
   var_int = particle->getMyStaticDebugInteger();
   assert(var_int == initval_int);
+
   var_int = particle->getMyStaticInitvalDebugInteger();
   assert(var_int == 1234);
+  // Test setter here too
+  particle->setMyStaticInitvalDebugInteger(particle->getMyStaticInitvalDebugInteger());
+  var_int = particle->getMyStaticInitvalDebugInteger();
+  assert(var_int == 1234);
+
   var_int = particle->getMyConstDebugInteger();
   assert(var_int == 12345);
+
   var_int = particle->getMyConstStaticDebugInteger();
   assert(var_int == 123456);
+
   var_int = particle->getMyConstExprDebugInteger();
   assert(var_int == 1234567);
 #endif
@@ -272,24 +347,33 @@ void dastgenTest::checkIntegers(Particle& particle) {
   // ----------------------
 
   particle->setMyCompressedInteger(initval_int);
-  // set to the same value again to avoid race conditions.
-  // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticCompressedInteger(initval_int);
-  particle->setMyStaticInitvalCompressedInteger(particle->getMyStaticInitvalCompressedInteger());
-
-  // Check getters, and that the expected initial values are correct
   var_int = particle->getMyCompressedInteger();
   assert(var_int == initval_int);
+
   var_int = particle->getMyInitvalCompressedInteger();
   assert(var_int == 123);
+  // Test setter here too
+  particle->setMyInitvalCompressedInteger(123);
+  var_int = particle->getMyInitvalCompressedInteger();
+  assert(var_int == 123);
+
+  particle->setMyStaticCompressedInteger(initval_int);
   var_int = particle->getMyStaticCompressedInteger();
   assert(var_int == initval_int);
+
   var_int = particle->getMyStaticInitvalCompressedInteger();
   assert(var_int == 1234);
+  // Test setter here too
+  particle->setMyStaticInitvalCompressedInteger(particle->getMyStaticInitvalCompressedInteger());
+  var_int = particle->getMyStaticInitvalCompressedInteger();
+  assert(var_int == 1234);
+
   var_int = particle->getMyConstCompressedInteger();
   assert(var_int == 12345);
+
   var_int = particle->getMyConstStaticCompressedInteger();
   assert(var_int == 123456);
+
   var_int = particle->getMyConstExprCompressedInteger();
   assert(var_int == 1234567);
 
@@ -299,26 +383,105 @@ void dastgenTest::checkIntegers(Particle& particle) {
 
 #if PeanoDebug > 0
   particle->setMyDebugCompressedInteger(initval_int);
-  // set to the same value again to avoid race conditions.
-  // We're mainly testing whether all this compiles anyway.
-  particle->setMyStaticDebugCompressedInteger(initval_int);
-  particle->setMyStaticInitvalDebugCompressedInteger(particle->getMyStaticInitvalCompressedInteger());
-
-  // Check getters, and that the expected initial values are correct
   var_int = particle->getMyDebugCompressedInteger();
   assert(var_int == initval_int);
+
   var_int = particle->getMyInitvalDebugCompressedInteger();
   assert(var_int == 123);
+  // Test setter here too
+  particle->setMyInitvalDebugCompressedInteger(123);
+  var_int = particle->getMyInitvalDebugCompressedInteger();
+  assert(var_int == 123);
+
+  particle->setMyStaticDebugCompressedInteger(initval_int);
   var_int = particle->getMyStaticDebugCompressedInteger();
   assert(var_int == initval_int);
+
   var_int = particle->getMyStaticInitvalDebugCompressedInteger();
   assert(var_int == 1234);
+  // Test setter here too
+  particle->setMyStaticInitvalDebugCompressedInteger(particle->getMyStaticInitvalDebugCompressedInteger());
+  var_int = particle->getMyStaticInitvalDebugCompressedInteger();
+  assert(var_int == 1234);
+
   var_int = particle->getMyConstDebugCompressedInteger();
   assert(var_int == 12345);
+
   var_int = particle->getMyConstStaticDebugCompressedInteger();
   assert(var_int == 123456);
+
   var_int = particle->getMyConstExprDebugCompressedInteger();
   assert(var_int == 1234567);
+#endif
+}
+
+
+template <typename Particle>
+void dastgenTest::checkStrings(Particle& particle) {
+
+  std::string var_str;
+  std::string initval_str = "In a hole in the ground there lived a hobbit";
+
+
+  // Default strings
+  // -----------------
+
+  particle->setMyString(initval_str);
+  var_str = particle->getMyString();
+  assert(var_str.compare(initval_str) == 0);
+
+  var_str = particle->getMyInitvalString();
+  assert(var_str.compare("initval\0") == 0);
+  // Test setter here too
+  particle->setMyInitvalString("initval\0");
+  var_str = particle->getMyInitvalString();
+  assert(var_str.compare("initval\0") == 0);
+
+  var_str = particle->getMyStaticInitvalString();
+  assert(var_str.compare("static_initval\0") == 0);
+  // Test setter here too
+  particle->setMyStaticInitvalString("static_initval\0");
+  var_str = particle->getMyStaticInitvalString();
+  assert(var_str.compare("static_initval\0") == 0);
+
+  var_str = particle->getMyConstString();
+  assert(var_str.compare("const_initval\0") == 0);
+
+  var_str = particle->getMyConstStaticString();
+  assert(var_str.compare("const_static_initval\0") == 0);
+
+  // constexpr left out for now. Not working yet. Not needed atm.
+
+
+  // strings + ifdefs
+  // -----------------
+
+#if PeanoDebug > 0
+  particle->setMyDebugString(initval_str);
+  var_str = particle->getMyDebugString();
+  assert(var_str.compare(initval_str) == 0);
+
+  var_str = particle->getMyInitvalDebugString();
+  assert(var_str.compare("initval\0") == 0);
+  // Test setter here too
+  particle->setMyInitvalDebugString("initval\0");
+  var_str = particle->getMyInitvalDebugString();
+  assert(var_str.compare("initval\0") == 0);
+
+  var_str = particle->getMyStaticInitvalDebugString();
+  assert(var_str.compare("static_initval\0") == 0);
+  // Test setter here too
+  particle->setMyStaticInitvalDebugString("static_initval\0");
+  var_str = particle->getMyStaticInitvalDebugString();
+  assert(var_str.compare("static_initval\0") == 0);
+
+  var_str = particle->getMyConstDebugString();
+  assert(var_str.compare("const_initval\0") == 0);
+
+  var_str = particle->getMyConstStaticDebugString();
+  assert(var_str.compare("const_static_initval\0") == 0);
+
+  // constexpr left out for now. Not working yet. Not needed atm.
 #endif
 }
 

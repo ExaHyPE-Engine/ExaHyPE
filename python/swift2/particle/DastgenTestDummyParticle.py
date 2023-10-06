@@ -50,7 +50,7 @@ class DastgenTestDummyParticle(Particle):
         self._generate_integer_attributes(compress=True, ifdefs=True)
 
         self._generate_string_attributes(ifdefs=False)
-        #  self._generate_string_attributes(ifdefs=True)
+        self._generate_string_attributes(ifdefs=True)
 
         return
 
@@ -373,6 +373,13 @@ class DastgenTestDummyParticle(Particle):
         self.data.add_attribute(
             dastgen2.attributes.String(
                 "myStatic" + var_basename,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                ifdefs=defs,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.String(
+                "myStaticInitval" + var_basename,
                 initval="static_initval",
                 qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
                 ifdefs=defs,
