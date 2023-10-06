@@ -43,7 +43,7 @@ The most important ones are:
 
 # Quickstart
 ```shell
-python3 configure.py -cc=g++ -cxx=gcc && make -j && make check
+python3 configure.py -cc=gcc -cxx=g++ && make -j && make check
 ```
 
 Invoke `make -jX` to use `X` threads to build the code.
@@ -72,7 +72,6 @@ For detailed information on each flag please refer to the documentation.
 ## Autotools
 ```shell
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-
 ./configure && make -j && make check
 ```
 
