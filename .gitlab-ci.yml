@@ -1,11 +1,12 @@
 variables:
   RUNNER_TAG: "peano-dine-runner"
+  BASE_IMAGE_TAG: "base_latest.sif"
+  LATEX_IMAGE_TAG: "latex_latest.sif"
   AMD_IMAGE_TAG: "amd_latest.sif"
   GCC_IMAGE_TAG: "gcc_latest.sif"
   INTEL_IMAGE_TAG: "intel_latest.sif"
   LLVM_IMAGE_TAG: "llvm_latest.sif"
   NVIDIA_IMAGE_TAG: "nvidia_latest.sif"
-  LATEX_IMAGE_TAG: "latex_latest.sif"
 
 workflow:
   rules:
