@@ -88,7 +88,7 @@ parser.add_argument("--trees",                         dest="trees",          ty
 
 parser.add_argument(            "--make",                                     action="store_true",                                    help="Compile the code after generation")
 parser.add_argument(            "--no-make",           dest="use_make",       action="store_false",                                   help="Do not compile the code after generation")
-parser.set_defaults(make=True)
+parser.set_defaults(use_make=use_make)
 parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
 args = parser.parse_args()
 
