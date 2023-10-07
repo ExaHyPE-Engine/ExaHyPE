@@ -244,20 +244,31 @@ data.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 export PREFIX=tbb or omp or sycl
-export CELL_SIZE=1.8    # 0.6 is maybe better
+export CELL_SIZE=1.8
+export END_TIME=0.01
 
 for SCHEDULER in native-no-priorities native tailored parallel-for subtasks subtasks-and-kernel-parallelisation
 do
-  for TREES in 1 6 8 12
+  #for TREES in 1 6 8 12
+  for TREES in 8
   do
-    OUTPUT=$PREFIX-without-amr-$SCHEDULER-$TREES-trees
-    python3 performance-studies.py -s fd4-rk1-limited-ps-6 --cell-size $CELL_SIZE --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
+    #OUTPUT=$PREFIX-without-amr-$SCHEDULER-$TREES-trees
+    #python3 performance-studies.py -s fd4-rk1-limited-ps-6 --cell-size $CELL_SIZE --scheduler $SCHEDULER --trees $TREES -et $END_TIME --output $OUTPUT
     
     OUTPUT=$PREFIX-with-amr-$SCHEDULER-$TREES-trees
-    python3 performance-studies.py -s fd4-rk1-limited-ps-6 --cell-size $CELL_SIZE --amr --scheduler $SCHEDULER --trees $TREES --output $OUTPUT
+    python3 performance-studies.py -s fd4-rk1-limited-ps-6 --cell-size $CELL_SIZE --amr --scheduler $SCHEDULER --trees $TREES -et $END_TIME --output $OUTPUT
   done
 done
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+I have played around with a lot of different parameter settings. Some of them
+are summarised below for a normal setup as we find it on Hamilton:
+
+Description     | Cell size | End time | Patch size | Remarks
+----------------|-----------|----------|------------|----------
+Minimal setup   | 1.8       | 1e-2     |          3 | You cannot see AMR here. Scales only up to 4-8 cores, as it is too small. Despite the small patch size (6 is production-mode level), we see the impact of the lack of scaling.
+One node setup  | 0.6       | 1e-3     |          6 | This setup is already too big to be solved without AMR on a single node. We see that normal, native tasking performs best.
+One node setpu  | 0.1       | 1e-4     | 
 
 
 The upscaling studies are triggered by the script below, which you might want 
@@ -363,9 +374,9 @@ python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --max-cores-p
   $PREFIX-subtasks-without-amr-$TREES-trees.tar.gz \
   $PREFIX-subtasks-and-kernel-parallelisation-without-amr-$TREES-trees.tar.gz
 
-OUTPUT=$PREFIX-$TREES-trees-with-amr
+export OUTPUT=$PREFIX-$TREES-trees-with-amr
 python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --max-cores-per-rank=-1 --log-x --log-y --output $OUTPUT \
-  --label "native tasking, subtasks, subtasks and parallel kernels" --title "With AMR" \
+  --label "native tasking, subtasks, subtasks and parallel kernels" --title "AMR, patch size 3, cell size 1.8" \
   $PREFIX-native-without-amr-$TREES-trees.tar.gz \
   $PREFIX-subtasks-without-amr-$TREES-trees.tar.gz \
   $PREFIX-subtasks-and-kernel-parallelisation-without-amr-$TREES-trees.tar.gz
@@ -375,7 +386,8 @@ python3 ../../../../python/exahype2/postprocessing/plot-scaling.py --max-cores-p
 which clearly showcase that the kernel parallelisation pays off even though 
 the overall scalability is poor with the present rather coarse mesh:
 
-@image html omp-8-trees-with-amr.png 
+@image html omp-8-trees-with-amr-cs-1.8-ps-3.png
+@image html omp-8-trees-with-amr-cs-0.6-ps-6.png
 
 # Production runs
 

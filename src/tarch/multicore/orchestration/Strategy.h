@@ -65,6 +65,8 @@ public:
   static constexpr int EndOfBSPSection = -1;
 
   /**
+   * How many tasks shall system hold back from tasking runtime in user-defined queues
+   *
    * Tell the runtime system how many tasks to hold back: If there
    * are more tasks than the result, the tasking system will map them
    * onto native tasks. As long as we have fewer tasks than this
@@ -72,14 +74,29 @@ public:
    * queue and not pass them on. Holding tasks back gives us the
    * opportunity to fuse tasks, and it reduces pressure from the
    * underlying task system. It also is an implicit priorisation, i.e.
-   * tasks that we hold back are ready yet have low priority.
+   * tasks that we hold back are ready, but as we do not pass them
+   * on to the tasking runtime, they implicitly have ultra-low
+   * priority.
    *
-   * Is not const, as I want strategies give the opportunity to adopt
-   * decisions after each call.
+   * The routine is not const, as I want strategies give the opportunity to
+   * adopt decisions after each call.
    *
    * This routine is called once per task spawned (to know if we
    * maybe should immediately map it onto a native task), and then
-   * an arbitrary number of times for the end of the BSP section.
+   * at each end of the BSP section. When it is called for a particular
+   * task, we pass in a proper task type. That is, the decision of the
+   * strategy may depend on the type of the task for which we ask. At
+   * the end of a BSP section, we pass in
+   * tarch::multicore::orchestration::Strategy::EndOfBSPSection instead of a
+   * particular task type.
+   *
+   * tarch::multicore::spawnAndWait() is the routine which triggers the query
+   * for the end of a BSP section. If we have N tasks and N is bigger than the
+   * result of this outine, it will map tasks onto native tasks through
+   * internal::mapPendingTasksOntoNativeTasks().
+   *
+   * tarch::multicore::spawnTask() is the routine which queries this routine
+   * for each and every task.
    *
    *
    * @param taskType Either actual task type if we get a task or
