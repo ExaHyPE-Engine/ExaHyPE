@@ -637,7 +637,7 @@ int main(int argc, char** argv) {
   }
 
 
-  for (int launchingThreads=1; launchingThreads<=tarch::multicore::Core::getInstance().getNumberOfThreads(); launchingThreads*=2) {
+  for (int launchingThreads=1; launchingThreads<=/*tarch::multicore::Core::getInstance().getNumberOfThreads()*/1; launchingThreads*=2) {
     for (int numberOfPatches = launchingThreads; numberOfPatches <= MaxPatches; numberOfPatches *= 2) {
       std::stringstream msg;
       msg << "kernel-benchmarks-" << numberOfPatches << "-patches-"
