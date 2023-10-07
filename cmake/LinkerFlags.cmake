@@ -5,7 +5,7 @@ function(set_project_linker_flags project_name)
   )
 
   set(LLVM_LINKER_FLAGS
-    -flto
+    #-flto
   )
 
   set(GNU_LINKER_FLAGS

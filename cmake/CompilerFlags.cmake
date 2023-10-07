@@ -42,8 +42,8 @@ function(set_project_compiler_flags project_name)
     -Wunused-variable
     -Wunused-parameter
     -Woverloaded-virtual # Warn if you overload (not override) a virtual function.
-    #-pedantic
-    #-Wpedantic # Warn if non-standard C++ is used.
+    -pedantic
+    -Wpedantic # Warn if non-standard C++ is used.
     -Wconversion # Warn on type conversions that may lose data.
     -Wparentheses
     -Wmultichar
@@ -59,8 +59,8 @@ function(set_project_compiler_flags project_name)
     -Wnull-dereference # Warn if a null dereference is detected.
     -Wdouble-promotion # Warn if float is implicit promoted to double.
     -Wformat=2 # Warn on security issues around functions that format output (i.e., printf).
-    -flto # https://stackoverflow.com/questions/31688069/requirements-to-use-flto
-    -ffat-lto-objects # https://stackoverflow.com/questions/13799452/what-is-the-difference-in-gcc-between-lto-and-fat-lto-objects
+    #-flto # https://stackoverflow.com/questions/31688069/requirements-to-use-flto
+    #-ffat-lto-objects # https://stackoverflow.com/questions/13799452/what-is-the-difference-in-gcc-between-lto-and-fat-lto-objects
     #-fno-elide-constructors # Disables RVO. For testing purposes only, should be disabled in production code. https://shaharmike.com/cpp/rvo/
     $<$<CONFIG:Debug>:-O0;-ggdb;-fno-elide-constructors>
   )
@@ -73,7 +73,6 @@ function(set_project_compiler_flags project_name)
     -Wlogical-op # Warn about logical operations being used where bitwise were probably wanted.
     -Wuseless-cast # Warn if you perform a cast to the same type.
     #-m64
-    #-fopenmp
     #-ipo
     #-fp-model precise
   )
