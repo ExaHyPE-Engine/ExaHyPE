@@ -77,6 +77,8 @@ function(set_project_compiler_flags project_name)
     #-fp-model precise
   )
 
+  set(NVHPC_COMPILER_FLAGS)
+
   if(MSVC)
     set(COMPILER_FLAGS ${MSVC_COMPILER_FLAGS})
   elseif(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
@@ -85,6 +87,8 @@ function(set_project_compiler_flags project_name)
     set(COMPILER_FLAGS ${GNU_COMPILER_FLAGS})
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     set(COMPILER_FLAGS ${LLVM_COMPILER_FLAGS})
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+    set(COMPILER_FLAGS ${NVHPC_COMPILER_FLAGS})
   else()
     message(AUTHOR_WARNING "No compiler flags set for '${CMAKE_CXX_COMPILER_ID}' compiler.")
   endif()
