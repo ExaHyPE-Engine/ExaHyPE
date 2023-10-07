@@ -29,7 +29,7 @@ function(set_project_compiler_flags project_name)
     $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/GF>>
   )
 
-  set(CLANG_COMPILER_FLAGS
+  set(LLVM_COMPILER_FLAGS
     -W
     -Wall
     -Wextra # Reasonable and standard.
@@ -65,8 +65,8 @@ function(set_project_compiler_flags project_name)
     $<$<CONFIG:Debug>:-O0;-ggdb;-fno-elide-constructors>
   )
 
-  set(GCC_COMPILER_FLAGS
-    ${CLANG_COMPILER_FLAGS}
+  set(GNU_COMPILER_FLAGS
+    ${LLVM_COMPILER_FLAGS}
     -Wmisleading-indentation # Warn if indentation implies blocks where blocks do not exist.
     -Wduplicated-cond # Warn if if/else chain has duplicated conditions.
     -Wduplicated-branches # Warn if if/else branches have duplicated code.
@@ -81,9 +81,11 @@ function(set_project_compiler_flags project_name)
   if(MSVC)
     set(COMPILER_FLAGS ${MSVC_COMPILER_FLAGS})
   elseif(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-    set(COMPILER_FLAGS ${CLANG_COMPILER_FLAGS})
+    set(COMPILER_FLAGS ${LLVM_COMPILER_FLAGS})
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(COMPILER_FLAGS ${GCC_COMPILER_FLAGS})
+    set(COMPILER_FLAGS ${GNU_COMPILER_FLAGS})
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    set(COMPILER_FLAGS ${LLVM_COMPILER_FLAGS})
   else()
     message(AUTHOR_WARNING "No compiler flags set for '${CMAKE_CXX_COMPILER_ID}' compiler.")
   endif()
