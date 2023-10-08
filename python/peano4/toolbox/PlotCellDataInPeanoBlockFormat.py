@@ -6,6 +6,20 @@ import jinja2
 
 
 class PlotCellDataInPeanoBlockFormat(ActionSet):
+  """!
+  
+  This writer writes a fixed number of unknown per cell
+  
+  Originally, I had considered this plotter to be used if you have a Finite 
+  Volume-type discretisation with N unknowns associated to a cell. However, it
+  turns out that there might be other use cases: People might want to add N
+  unknowns but actually specify that these unknowns are distributed in a certain
+  way. So you can alter the meta information, but per default it is set to one
+  vector of entries per cell. If you want to visualise patch data, I still
+  recommend to use the tailored patch data writer, which plays nicely together
+  with the Python data model.
+  
+  """
   NoMetaFile     = "no-meta-file"
   CountTimeSteps = "count-time-steps"
   CastToDouble   = -1
@@ -52,12 +66,15 @@ class PlotCellDataInPeanoBlockFormat(ActionSet):
     
     self.d = {}
     self.d[ "FILENAME" ]            = filename
-    self.d[ "CELL_UNKNOWN_NAME" ] = cell_unknown.name
+    self.d[ "CELL_UNKNOWN_NAME" ]   = cell_unknown.name
     self.d[ "GETTER" ]              = getter
     self.d[ "NUMBER_OF_UNKNOWNS_PER_CELL" ] = number_of_unknows_per_cell
+    self.d[ "NODES_PER_AXIS" ]              = 1
     self.d[ "DESCRIPTION" ]         = description
     self.d[ "TIMESTAMP" ]           = time_stamp_evaluation
     self.d[ "GUARD_PREDICATE" ]    = guard_predicate
+    self.d[ "META_DATA" ]          = ""
+    self.d[ "ARRANGEMENT_OF_POINTS_IN_REFERENCE_ELEMENT" ]  = None
     self.additional_includes       = additional_includes
         
 
@@ -90,7 +107,37 @@ class PlotCellDataInPeanoBlockFormat(ActionSet):
   _writer     = nullptr;
 """
 
+
+  def switch_unknown_arrangement(self, 
+                                 total_number_of_unknows_per_cell,
+                                 nodes_per_axis,
+                                 meta_data,
+                                 arrangement_of_points_in_reference_element
+                                 ):
+    """!
     
+    Switch the arrangement of the unknowns within a cell
+    
+    By default, all data are associated with the whole cell, i.e sit "at the 
+    same location". You can alter this, by basically saying that your data
+    topologically resembles a Cartesian grid embedded into the cell. In this
+    case, the number of unknowns tied to a cell is a multiple of the 
+    number_of_unknows_per_node.
+    
+    meta_data: String 
+      Pass in the empty string if you want
+      
+    arrangement_of_points_in_reference_element: None or [Float]
+    
+    """  
+    assert total_number_of_unknows_per_cell%nodes_per_axis==0, "{} x {}".format( total_number_of_unknows_per_cell, nodes_per_axis )
+    assert total_number_of_unknows_per_cell%(nodes_per_axis*nodes_per_axis)==0
+    self.d[ "NUMBER_OF_UNKNOWNS_PER_CELL" ] = total_number_of_unknows_per_cell
+    self.d[ "NODES_PER_AXIS" ]              = nodes_per_axis 
+    self.d[ "META_DATA" ]                   = meta_data
+    self.d[ "ARRANGEMENT_OF_POINTS_IN_REFERENCE_ELEMENT" ]  = arrangement_of_points_in_reference_element
+
+
   def get_destructor_body(self):
     return ""
 
@@ -159,16 +206,33 @@ if ( {{GUARD_PREDICATE}} ) {
   );    
   {% endif %}
     
+  {% if ARRANGEMENT_OF_POINTS_IN_REFERENCE_ELEMENT!=None %}
+  double mapping[] = { {{ARRANGEMENT_OF_POINTS_IN_REFERENCE_ELEMENT|join(",") }} };
   _dataWriter = _writer->createCellDataWriter( 
     "{{CELL_UNKNOWN_NAME}}", 
-    1,
+    {{NODES_PER_AXIS}},                                          
     {% if NUMBER_OF_UNKNOWNS_PER_CELL<0 %}
-    1,
+    1,                                          // records per cell
     {% else %}
     {{NUMBER_OF_UNKNOWNS_PER_CELL}},
     {% endif %}
-    "{{DESCRIPTION}}" 
+    "{{DESCRIPTION}}",
+    "{{META_DATA}}",
+    mapping
   );
+  {% else %}
+  _dataWriter = _writer->createCellDataWriter( 
+    "{{CELL_UNKNOWN_NAME}}", 
+    {{NODES_PER_AXIS}},                                          
+    {% if NUMBER_OF_UNKNOWNS_PER_CELL<0 %}
+    1,                                          // records per cell
+    {% else %}
+    {{NUMBER_OF_UNKNOWNS_PER_CELL}},
+    {% endif %}
+    "{{DESCRIPTION}}",
+    "{{META_DATA}}"
+  );
+  {% endif %}
 """
 
 

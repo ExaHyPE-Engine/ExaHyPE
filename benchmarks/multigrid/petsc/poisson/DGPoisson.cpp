@@ -23,7 +23,7 @@ void benchmarks::multigrid::petsc::poisson::DGPoisson::initNode(
   for (int i = 0; i < Dimensions; i++){
 
     //we add scaling by cell width here
-    rhs *= std::sin( tarch::la::PI * x[i] ) * h[i];
+    rhs *= std::sin( tarch::la::PI * x[i] );
   }
   value = 0.0;
 }

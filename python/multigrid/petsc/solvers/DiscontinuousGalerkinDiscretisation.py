@@ -246,25 +246,52 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     solution and right-hand side. 
     
     """
-    observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
+    solution_plotter = peano4.toolbox.PlotCellDataInPeanoBlockFormat(
       filename       = "solution-" + self._name,
       cell_unknown   = self._cell_pde_data,
       getter         = "getValue().data()",
       description    = "u",
-      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
+      time_stamp_evaluation        = peano4.toolbox.PlotCellDataInPeanoBlockFormat.NoMetaFile, 
       number_of_unknows_per_cell   = self.number_of_matrix_entries_per_cell,
       guard_predicate              = "not marker.hasBeenRefined()", 
-      ))
+      )
 
-    observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
+    rhs_plotter = peano4.toolbox.PlotCellDataInPeanoBlockFormat(
       filename       = "rhs-" + self._name,
       cell_unknown   = self._cell_pde_data,
       getter         = "getRhs().data()",
       description    = "b",
-      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
+      time_stamp_evaluation        = peano4.toolbox.PlotCellDataInPeanoBlockFormat.NoMetaFile, 
       number_of_unknows_per_cell   = self.number_of_matrix_entries_per_cell,
       guard_predicate              = "not marker.hasBeenRefined()", 
-      ))
+      )
+    
+    arrangement_of_points_in_reference_element = []
+    if self.dimensions==2:
+      for y in range(0,self.polynomial_degree+1):
+        for x in range(0,self.polynomial_degree+1):
+          arrangement_of_points_in_reference_element.append( self.quadrature_points_in_unit_interval[x] )
+          arrangement_of_points_in_reference_element.append( self.quadrature_points_in_unit_interval[y] )
+    else:
+      for z in range(0,self.polynomial_degree+1):
+        for y in range(0,self.polynomial_degree+1):
+          for x in range(0,self.polynomial_degree+1):
+            arrangement_of_points_in_reference_element.append( self.quadrature_points_in_unit_interval[x] )
+            arrangement_of_points_in_reference_element.append( self.quadrature_points_in_unit_interval[y] )
+            arrangement_of_points_in_reference_element.append( self.quadrature_points_in_unit_interval[z] )
+    
+    solution_plotter.switch_unknown_arrangement(total_number_of_unknows_per_cell = self.number_of_matrix_entries_per_cell,
+                                                nodes_per_axis                   = self.polynomial_degree+1,
+                                                meta_data                        = "Solution created by PETSc",
+                                                arrangement_of_points_in_reference_element = arrangement_of_points_in_reference_element
+                                                )
+    rhs_plotter.switch_unknown_arrangement(total_number_of_unknows_per_cell = self.number_of_matrix_entries_per_cell,
+                                                nodes_per_axis                   = self.polynomial_degree+1,
+                                                meta_data                        = "",
+                                                arrangement_of_points_in_reference_element = arrangement_of_points_in_reference_element
+                                                )
+    observer.add_action_set( solution_plotter )
+    observer.add_action_set( rhs_plotter )
     pass
 
 
