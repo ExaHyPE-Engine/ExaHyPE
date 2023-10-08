@@ -709,7 +709,7 @@ then this message can typically be ignored.
                 os.path.join(directory, "CMakeLists.txt"),)
 
         # Currently we support 1 generated application at a time.
-        # To add the generate application sub directory to the CMake build tree,
+        # To add the generated application sub directory to the CMake build tree,
         # we write it to a file called GeneratedSubdirectory.cmake in the build directory root.
         if cmake_build_dir != "":
           generated_paths_filepath = self.d["GENERATED_SUBDIRECTORY_FULLPATH"]
