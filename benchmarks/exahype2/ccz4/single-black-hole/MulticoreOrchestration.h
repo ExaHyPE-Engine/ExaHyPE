@@ -62,7 +62,8 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
     int _nestedBSPLevels;
 
     /**
-     * Maximum number of finite volume tasks in the system
+     * Maximum number of finite volume tasks in the system. I don't use this
+     * value at the moment, but might want to use it for GPUs.
      *
      * @see startBSPSection()
      */

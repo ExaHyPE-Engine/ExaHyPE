@@ -78,8 +78,28 @@ public:
    * on to the tasking runtime, they implicitly have ultra-low
    * priority.
    *
+   * My data suggest that it is a very delicate decision to hold back
+   * tasks, as you run risk all the time that you starve threads even
+   * though work would be available. I recommend to hold back tasks -
+   * in line with the text above - iff
+   *
+   * - your tasking runtime struggles to handle many jobs. This happens with
+   *   OpenMP for example as you have implicit scheudling points, i.e. OpenMP
+   *   is allowed to process spawned tasks immediately. GNU does this one the
+   *   number of tasks exceeds a certain threshold. You don't want this in
+   *   Peano, so you can hold tasks back.
+   * - you want to fuse tasks and offload them en block to the GPU. This is a
+   *   reasonable motivation as kernel launches are extremely expensive. In
+   *   this case, hold up to N tasks back if you fuse N tasks in one bash,
+   *   but do not hold back any tasks if you are outside of a BSP section, as
+   *   no new tasks will be created anymore and you want the tasks to be done.
+   *
+   * ## Realisation
+   *
    * The routine is not const, as I want strategies give the opportunity to
    * adopt decisions after each call.
+   *
+   * ## Invocation pattern
    *
    * This routine is called once per task spawned (to know if we
    * maybe should immediately map it onto a native task), and then
