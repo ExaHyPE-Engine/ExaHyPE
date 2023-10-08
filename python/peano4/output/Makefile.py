@@ -69,26 +69,25 @@ MODE            = {{MODE}}
 
 ### MPI parallelisation
 
-Peano's distributed memory parallelisation is based upon plain space-filling 
-curves which are used first to split the cells among the ranks, and, after   
-that, to split the cells into chunks and deploy them onto cores (if shared   
-memory is used). There is no particularly novel contribution/paper on this   
-aspect of the code. The paper that is (algorithmically) most interesting is  
-an old EuroPar publication:                                                 
-
+Peano's distributed memory parallelisation is based upon plain space-filling
+curves which are used first to split the cells among the ranks, and, after
+that, to split the cells into chunks and deploy them onto cores (if shared
+memory is used). There is no particularly novel contribution/paper on this
+aspect of the code. The paper that is (algorithmically) most interesting is
+an old EuroPar publication:
 
        @InProceedings{Bungartz:2006:Parallelisation,
-         author={Bungartz, Hans-Joachim and Mehl, Miriam and Weinzierl, Tobias}, 
-         editor={Nagel, Wolfgang E. and Walter, Wolfgang V. and Lehner, Wolfgang}, 
-         title={A Parallel Adaptive Cartesian PDE Solver Using Space--Filling Curves},  
-         booktitle={Euro-Par 2006 Parallel Processing}, 
-         year={2006}, 
-         publisher={Springer Berlin Heidelberg}, 
-         address={Berlin, Heidelberg}, 
-         pages={1064--1074}, 
+         author={Bungartz, Hans-Joachim and Mehl, Miriam and Weinzierl, Tobias},
+         editor={Nagel, Wolfgang E. and Walter, Wolfgang V. and Lehner, Wolfgang},
+         title={A Parallel Adaptive Cartesian PDE Solver Using Space--Filling Curves},
+         booktitle={Euro-Par 2006 Parallel Processing},
+         year={2006},
+         publisher={Springer Berlin Heidelberg},
+         address={Berlin, Heidelberg},
+         pages={1064--1074},
          abstract={In this paper, we present a parallel multigrid PDE solver working on adaptive hierarchical cartesian grids. The presentation is restricted to the linear elliptic operator of second order, but extensions are possible and have already been realised as prototypes. Within the solver the handling of the vertices and the degrees of freedom associated to them is implemented solely using stacks and iterates of a Peano space--filling curve. Thus, due to the structuredness of the grid, two administrative bits per vertex are sufficient to store both geometry and grid refinement information. The implementation and parallel extension, using a space--filling curve to obtain a load balanced domain decomposition, will be formalised. In view of the fact that we are using a multigrid solver of linear complexity {\\$}{\\backslash}mathcal{\\{}O{\\}}(n){\\$}, it has to be ensured that communication cost and, hence, the parallel algorithm's overall complexity do not exceed this linear behaviour.}, 
-         isbn={978-3-540-37784-9} 
-       } 
+         isbn={978-3-540-37784-9}
+       }
 
 {% endif %}
 {% if SharedOMP %}
@@ -99,20 +98,20 @@ Peano 4 run uses a wrapper around OpenMP to obtain a high task efficiency.
 The wrapper can be read as user-level threading implemented on top of OpenMP's
 tasking mechanism. It is described in
 
-       @article{Schulz:2021:Tasking,   
+       @article{Schulz:2021:Tasking,
          title = {Task inefficiency patterns for a wave equation solver},
-         journal = {IWOMP},   "
-         year = {2021},   
+         journal = {IWOMP},"
+         year = {2021},
          author = {Holger Schulz and Gonzalo Brito Gadeschi and Oleksandr Rudyy and Tobias Weinzierl},
-      } 
+      }
 
 {% endif %}
 
 {% if SharedOMP %}
 
-Peano relies on a mixture of classic domain decomposition and task-based  
-parallelism. The domain decomposition provides the baseline performance,  
-and the tasking adds the big flexibility and scalability gain on top. The 
+Peano relies on a mixture of classic domain decomposition and task-based
+parallelism. The domain decomposition provides the baseline performance,
+and the tasking adds the big flexibility and scalability gain on top. The
 key publication discussing the overall idea and algorithmic ingredients is
 the SISC paper
 
@@ -487,7 +486,7 @@ did search for a file """
         add more files yourself.
 
         Since the GPU code is templated, using CUDA backend means that the main file and the
-        subsequent compilation units need to be CUDA (.cu) files. To preserve backward 
+        subsequent compilation units need to be CUDA (.cu) files. To preserve backward
         compatability and seamless user experience; this call generates CUDA (.cu) files
         instead of C++ (.cpp) files when using CUDA backend.
 
@@ -590,12 +589,12 @@ did search for a file """
             )
         if module_file in self.d["FORTRAN_MODULES"] and not force:
             print(
-                """Fortran module file 
+                """Fortran module file
 """
                 + module_file
                 + """
-is already in module file list. Did not add it once more. You can overwrite 
-this default behaviour via the force attribute in add_Fortran_module(). If 
+is already in module file list. Did not add it once more. You can overwrite
+this default behaviour via the force attribute in add_Fortran_module(). If
 you create multiple Peano 4 makefiles in a row (as you change parameters, e.g.)
 then this message can typically be ignored.
 """
@@ -619,9 +618,9 @@ then this message can typically be ignored.
         Generates build files and other project-related files based on templates.
 
         If using the Automake then a Makefile is generated, if using CMake then
-        a CMakeLists.txt for the generated application is generated. A 
+        a CMakeLists.txt for the generated application is generated. A
         GeneratedSubdirectories.cmake is generated to add the target to the project.
-        In the CMake backend a modified Makefile is produced where calling make will 
+        In the CMake backend a modified Makefile is produced where calling make will
         change directories and call the cmake's defined make command.
 
         A .gitignore is also generated depending on the project files.
@@ -709,9 +708,9 @@ then this message can typically be ignored.
                 os.path.join(file_dir, "CMakeLists.txt.template"),
                 os.path.join(directory, "CMakeLists.txt"),)
 
-        # Currently we support 1 generated application at a time, 
-        # to add the generate applicaitons sub directory to the build tree
-        # we write it to a file called GeneratedSubdirectory.cmake in the build directory root
+        # Currently we support 1 generated application at a time.
+        # To add the generate application sub directory to the CMake build tree,
+        # we write it to a file called GeneratedSubdirectory.cmake in the build directory root.
         if cmake_build_dir != "":
           generated_paths_filepath = self.d["GENERATED_SUBDIRECTORY_FULLPATH"]
 
