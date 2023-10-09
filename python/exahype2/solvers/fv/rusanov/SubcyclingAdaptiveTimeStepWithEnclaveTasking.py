@@ -16,8 +16,8 @@ from .kernels import create_compute_time_step_size_kernel_for_adaptive_time_step
 from .kernels import create_compute_new_time_step_size_kernel_for_adaptive_time_stepping
 from .kernels import create_constructor_implementation_for_adaptive_time_stepping
 
-from exahype2.solvers.fv.kernels import SolverVariant    
-from exahype2.solvers.fv.kernels import KernelVariant    
+from .kernels import SolverVariant    
+from .kernels import KernelVariant    
 
 from .kernels import create_abstract_solver_user_declarations_for_adaptive_time_stepping
 from .kernels import create_abstract_solver_user_definitions_for_adaptive_time_stepping
