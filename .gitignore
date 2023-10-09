@@ -106,6 +106,10 @@ src/stamp-h1
 # (which is called by configure script))
 Makefile
 
+# CMake cache file and supporting files
+CMakeCache.txt
+/CMakeFiles
+
 .vscode/*
 .vscode/settings.json
 .vscode/tasks.json
