@@ -29,7 +29,7 @@ function(set_project_compiler_flags project_name)
     $<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:Release>:/GF>>
   )
 
-  set(CLANG_COMPILER_FLAGS
+  set(LLVM_COMPILER_FLAGS
     -W
     -Wall
     -Wextra # Reasonable and standard.
@@ -42,8 +42,8 @@ function(set_project_compiler_flags project_name)
     -Wunused-variable
     -Wunused-parameter
     -Woverloaded-virtual # Warn if you overload (not override) a virtual function.
-    #-pedantic
-    #-Wpedantic # Warn if non-standard C++ is used.
+    -pedantic
+    -Wpedantic # Warn if non-standard C++ is used.
     -Wconversion # Warn on type conversions that may lose data.
     -Wparentheses
     -Wmultichar
@@ -59,31 +59,36 @@ function(set_project_compiler_flags project_name)
     -Wnull-dereference # Warn if a null dereference is detected.
     -Wdouble-promotion # Warn if float is implicit promoted to double.
     -Wformat=2 # Warn on security issues around functions that format output (i.e., printf).
-    -flto # https://stackoverflow.com/questions/31688069/requirements-to-use-flto
-    -ffat-lto-objects # https://stackoverflow.com/questions/13799452/what-is-the-difference-in-gcc-between-lto-and-fat-lto-objects
+    #-flto # https://stackoverflow.com/questions/31688069/requirements-to-use-flto
+    #-ffat-lto-objects # https://stackoverflow.com/questions/13799452/what-is-the-difference-in-gcc-between-lto-and-fat-lto-objects
     #-fno-elide-constructors # Disables RVO. For testing purposes only, should be disabled in production code. https://shaharmike.com/cpp/rvo/
     $<$<CONFIG:Debug>:-O0;-ggdb;-fno-elide-constructors>
   )
 
-  set(GCC_COMPILER_FLAGS
-    ${CLANG_COMPILER_FLAGS}
+  set(GNU_COMPILER_FLAGS
+    ${LLVM_COMPILER_FLAGS}
     -Wmisleading-indentation # Warn if indentation implies blocks where blocks do not exist.
     -Wduplicated-cond # Warn if if/else chain has duplicated conditions.
     -Wduplicated-branches # Warn if if/else branches have duplicated code.
     -Wlogical-op # Warn about logical operations being used where bitwise were probably wanted.
     -Wuseless-cast # Warn if you perform a cast to the same type.
     #-m64
-    #-fopenmp
     #-ipo
     #-fp-model precise
   )
 
+  set(NVHPC_COMPILER_FLAGS)
+
   if(MSVC)
     set(COMPILER_FLAGS ${MSVC_COMPILER_FLAGS})
   elseif(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-    set(COMPILER_FLAGS ${CLANG_COMPILER_FLAGS})
+    set(COMPILER_FLAGS ${LLVM_COMPILER_FLAGS})
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(COMPILER_FLAGS ${GCC_COMPILER_FLAGS})
+    set(COMPILER_FLAGS ${GNU_COMPILER_FLAGS})
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    set(COMPILER_FLAGS ${LLVM_COMPILER_FLAGS})
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+    set(COMPILER_FLAGS ${NVHPC_COMPILER_FLAGS})
   else()
     message(AUTHOR_WARNING "No compiler flags set for '${CMAKE_CXX_COMPILER_ID}' compiler.")
   endif()
