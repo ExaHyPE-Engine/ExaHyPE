@@ -336,6 +336,57 @@ done
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+I use another script to acquire multi-node data:
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#!/bin/bash
+#SBATCH --job-name=upscaling
+#SBATCH -p multi
+#SBATCH --nodes=1
+#SBATCH -n 1
+#SBATCH -c 128
+#SBATCH --time=48:00:00
+#SBATCH --mail-type=END
+#SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
+#SBATCH --array=1,2,4,8,16,24,32,40,48,56,64,80,96,128
+
+source /etc/profile.d/modules.sh
+
+# adopt to your build/system
+module purge
+module load oneapi/2022.2
+export FLAVOUR_NOCONFLICT=1
+module load gcc
+module load intelmpi
+export I_MPI_CXX=icpx
+
+
+
+# switch to tbb or sycl
+export PREFIX=omp
+export TREES=8
+
+
+export RESULTS_FOLDER=results-$SLURM_NTASKS-nodes
+
+mkdir $RESULTS_FOLDER
+for CELL_SIZE in 1.8 0.6 0.1
+do
+  for SCHEDULER in native subtasks subtasks-and-kernel-parallelisation
+  do
+    OUTPUT=$PREFIX-without-amr-$SCHEDULER-$TREES-trees-$CELL_SIZE
+    echo run $OUTPUT 
+    ./$OUTPUT > $RESULTS_FOLDER/$OUTPUT.txt
+
+    OUTPUT=$PREFIX-with-amr-$SCHEDULER-$TREES-trees-$CELL_SIZE
+    echo run $OUTPUT
+    ./$OUTPUT > $RESULTS_FOLDER/$OUTPUT.txt
+  done
+done
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 ### Data gathering
 
 The script distributes the data into several subdirectories. 
