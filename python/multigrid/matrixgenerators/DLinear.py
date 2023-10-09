@@ -96,6 +96,6 @@ class DLinear(MatrixGenerator):
 
     for i in range(output.shape[0]):
       for j in range(output.shape[1]):
-        output[i,j] += self.evalIntegral(functions=[self.getPolynomial(i), self.getDeriv(j, 0)])
-        output[i,j] += self.evalIntegral(functions=[self.getPolynomial(i), self.getDeriv(j, 1)])
+        output[i,j] += self.evalIntegral(functions=[self.getDeriv(i, 0), self.getDeriv(j, 0)])
+        output[i,j] += self.evalIntegral(functions=[self.getDeriv(i, 1), self.getDeriv(j, 1)])
     return output
