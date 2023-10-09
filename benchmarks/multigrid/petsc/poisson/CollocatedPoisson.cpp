@@ -19,12 +19,11 @@ void benchmarks::multigrid::petsc::poisson::CollocatedPoisson::vertexInit(
   double&                                       rhs
   
 ) {
-  //divide by 2 to achieve correct scaling
-  rhs = Dimensions * tarch::la::PI * tarch::la::PI / 2;
+  rhs = Dimensions * tarch::la::PI * tarch::la::PI;
   for (int i = 0; i < Dimensions; i++){
 
     //we add scaling by cell width here
-    rhs *= std::sin( tarch::la::PI * x[i] ) * h[i];
+    rhs *= std::sin( tarch::la::PI * x[i] );
   }
   value = 0.0;
 }

@@ -37,7 +37,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
                precision=3,
                select_dofs = None,
                dataType="double"):
-    """
+    """!
+    
+      Construct the block plotter
     
       plot_cell_data: Boolean
         Shall I plot cell data or vertex data. If you map the patches onto

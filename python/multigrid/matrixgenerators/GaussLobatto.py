@@ -15,27 +15,32 @@ class GaussLobatto(DGMatrixGenerator):
   
   Simple matrix generator assuming that we use a Gauss Lobatto unknown layout
   
-  use this class to pre-generate matrices to be used 
-  in Peano as far as possible. 
+  If you use this class, you assuem that a cell hosts @f$ (p+1)^d @f$
+  nodes carrying Legendre polynomials. As you use a Gauss Lobatto layout,
+  the "outer" nodes will end up on the cell faces. Each node can hold a
+  fixed number of unknowns. If you multiply the number of nodes per cell
+  with the corresponding number of unknowns, you get the degrees of freedom
+  within a global assembly matrix which correspond to volumetric data. 
+  
   '''
   def __init__(self,
                dimensions,
                polynomial_degree,
-               unknowns_per_cell_dof,
-               unknowns_per_face_dof):
+               unknowns_per_cell_node,
+               unknowns_per_face_node):
 
     super( GaussLobatto, self ).__init__(dimensions, 
                                          )
-    self.poly_degree = poly_degree
-    self.unknowns_per_cell_dof = unknowns_per_cell_dof
-    self.unknowns_per_face_dof = unknowns_per_face_dof
+    self.polynomial_degree = polynomial_degree
+    self.unknowns_per_cell_node = unknowns_per_cell_node
+    self.unknowns_per_face_node = unknowns_per_face_node
 
-    self.celldofs    = ( self.poly_degree + 1 ) ** (self.dimensions)
-    self.facedofs    = ( self.poly_degree + 1 ) ** (self.dimensions - 1)
+    self.celldofs    = ( self.polynomial_degree + 1 ) ** (self.dimensions)
+    self.facedofs    = ( self.polynomial_degree + 1 ) ** (self.dimensions - 1)
 
     self.polynomials = self.set_polynomials()
     self.points,\
-    self.weights     = leggauss( self.poly_degree + 1 )
+    self.weights     = leggauss( self.polynomial_degree + 1 )
     self.weights2d   = [ w1*w2  for w1 in self.weights for w2 in self.weights]
     self.points2d    = [(p1,p2) for p1 in self.points  for p2 in self.points ]
     if dimensions==2:
@@ -43,6 +48,14 @@ class GaussLobatto(DGMatrixGenerator):
     else:
       assert False, "not yet implemented"
     
+  def getCellIdentityMatrix(self):
+    dim    = self.celldofs * self.unknowns_per_cell_node
+    output = np.zeros((dim,dim))
+    for i in range(dim):
+      output[i,i] = 2**(-self.dimensions)
+    return output
+
+      
   def getCellCellMassMatrix(self):
     '''!
     
@@ -52,12 +65,12 @@ class GaussLobatto(DGMatrixGenerator):
     The resulting matrix has to be scaled by @f$ h^d @f$.
 
     '''
-    dim    = self.celldofs * self.unknowns_per_cell_dof
+    dim    = self.celldofs * self.unknowns_per_cell_node
     output = np.zeros((dim,dim))
     for i in range( self.celldofs ):
       for j in range( self.celldofs ):
-        for k in range( self.unknowns_per_cell_dof ):
-          output[self.unknowns_per_cell_dof*i+k, self.unknowns_per_cell_dof*j+k] += self.evaluateIntegral2d(functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ]) # phi_x-phi_x coupling 
+        for k in range( self.unknowns_per_cell_node ):
+          output[self.unknowns_per_cell_node*i+k, self.unknowns_per_cell_node*j+k] += self.evaluateIntegral2d(functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ]) # phi_x-phi_x coupling 
     return output
 
   def getCellCellSystemMatrixForLaplacian(self):
@@ -69,11 +82,11 @@ class GaussLobatto(DGMatrixGenerator):
     needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
     so normalise by h
     '''
-    dim    = self.celldofs * self.unknowns_per_cell_dof
+    dim    = self.celldofs * self.unknowns_per_cell_node
     output = np.zeros((dim,dim))
     for i in range( self.celldofs ):
       for j in range( self.celldofs ):
-        for k in range( self.unknowns_per_cell_dof ):
+        for k in range( self.unknowns_per_cell_node ):
           pass
           # They are all the same, but they don't have to be!
           # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
@@ -84,26 +97,26 @@ class GaussLobatto(DGMatrixGenerator):
     return output
 
   def getCellToFaceMatrix(self):
-    faceDim = self.facedofs * self.unknowns_per_face_dof * 2 * self.dimensions * 2 # * 2 at the end since we are glueing together 2 faces
-    cellDim = self.celldofs * self.unknowns_per_cell_dof
+    faceDim = self.facedofs * self.unknowns_per_face_node * 2 * self.dimensions * 2 # * 2 at the end since we are glueing together 2 faces
+    cellDim = self.celldofs * self.unknowns_per_cell_node
     return np.zeros((faceDim,cellDim))
   
   def getFaceFaceMatrix(self):
-    dim = self.facedofs * self.unknowns_per_face_dof * 2 # * 2 at the end since we are glueing together 2 faces
+    dim = self.facedofs * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
     return np.eye(dim,dim)
 
   def set_polynomials(self):
     polys = []
-    x = np.linspace(-1,1, self.poly_degree + 1)
-    for j in range(self.poly_degree + 1):
+    x = np.linspace(-1,1, self.polynomial_degree + 1)
+    for j in range(self.polynomial_degree + 1):
       y = np.zeros_like(x)
       y[j] = 1.0
       polys.append( lagrange(x,y) )
     return polys
 
   def convertIndexTo2d(self, index):
-    x = index %  ( self.poly_degree + 1 )
-    y = index // ( self.poly_degree + 1 )
+    x = index %  ( self.polynomial_degree + 1 )
+    y = index // ( self.polynomial_degree + 1 )
     return [x,y]
 
   def getPoly1d(self,index):
@@ -111,7 +124,7 @@ class GaussLobatto(DGMatrixGenerator):
     returns the 1d poly at the given index.
     you should treat the returned object like a function!
     '''
-    assert 0 <= index <= self.poly_degree
+    assert 0 <= index <= self.polynomial_degree
     return self.polynomials[index]
  
   def getPoly2d(self,index):

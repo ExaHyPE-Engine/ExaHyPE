@@ -25,7 +25,6 @@ parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       defau
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
-assert args.dimensions == 2, "not ready for 3d yet"
 
 project = multigrid.petsc.Project(project_name = "CollocatedFEM", 
                                   namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]

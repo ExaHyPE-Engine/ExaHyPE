@@ -9,9 +9,6 @@
 #pragma once
 
 
-{{SOLVER_INCLUDES}}
-
-
 #include "tarch/la/Vector.h"
 #include "tarch/la/Matrix.h"
 #include "tarch/logging/Log.h"
@@ -21,8 +18,12 @@
 #include "peano4/utils/Globals.h"
 
 #include "petsc/LocalToGlobalMap.h"
+#include "petsc/LinearEquationSystem.h"
 
 #include "Constants.h"
+
+
+{{SOLVER_INCLUDES}}
 
 
 {% for item in NAMESPACE -%}
@@ -42,57 +43,89 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
+    static const double         QuadraturePointsInUnitInterval[];
+
+    static constexpr int        Order    = {{POLYNOMIAL_DEGREE}};
+    static constexpr int        Unknowns = {{UNKNOWNS}};
+
+    static constexpr int        FacesPerCell = 2 * Dimensions;
+
+    #if Dimensions==2
+    static constexpr int     NodesPerCell = (Order+1) * (Order+1);
+    static constexpr int     NodesPerFace = (Order+1);
+    #else
+    static constexpr int     NodesPerCell = (Order+1) * (Order+1) * (Order+1);
+    static constexpr int     NodesPerFace = (Order+1) * (Order+1);
+    #endif
+
+    static constexpr int     DoFsPerCell = Unknowns * NodesPerCell;
+
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
 
-    {{MATRICES}}
-    
     /**
      * Initialise a vertex degree of freedom
      */
-    virtual void vertexInit(
+    virtual void initNode(
       const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      {% if VERTEX_CARDINALITY==1 %}
+      const tarch::la::Vector<Dimensions, double>&  cellH,
+      {% if UNKNOWNS==1 %}
       double&                                       value,
       double&                                       rhs
       {% else %}
-      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
-      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
+      tarch::la::Vector< {{UNKNOWNS}}, double >&  value,
+      tarch::la::Vector< {{UNKNOWNS}}, double >&  rhs
       {% endif %}
     ) = 0;
 
     /**
-    * Initialise cell dofs
-    *
-    */
-    virtual void cellInit(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      // for now, just use value, rhs. not sure what this will be in 
-      // future.
-      // TODO see if this works if we pass by ref instead of const ref
-      tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  value,
-      tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs  
-    ) = 0;
+     * Called after assembly is complete.
+     *
+     * Usually means we can now actually compute the local-global mapping. Up
+     * to this point, we normally know only the thread-local local-global
+     * indices, which we still have to shift and combine with all the other
+     * mappings around.
+     */
+    void finishAssembly();
 
-    /**
-    * Initialise face dofs
-    *
-    */
-    virtual void faceInit(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      // for now, just use value, rhs. not sure what this will be in 
-      // future.
-      // TODO see if this works if we pass by ref instead of const ref
-      tarch::la::Vector< {{FACE_CARDINALITY}}, double >&  value,
-      tarch::la::Vector< {{FACE_CARDINALITY}}, double >&  rhs  
-    ) = 0;
 
-    ::petsc::LocalToGlobalMap&  getFaceLocalToGlobalMap();
-    ::petsc::LocalToGlobalMap&  getCellLocalToGlobalMap();
-    ::petsc::LocalToGlobalMap&  getVertexLocalToGlobalMap();
+    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getMassMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    )
+    {% if CELL_CELL_MASS_MATRIX==[] %} = 0 {% endif %};
+
+
+    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getSystemMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    )
+    {% if CELL_CELL_SYSTEM_MATRIX==[] %} = 0 {% endif %};
+
+
+    virtual tarch::la::Matrix< NodesPerFace*Unknowns*FacesPerCell, DoFsPerCell, double > getProjectionOfCellDataOntoFace(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    )
+    {% if CELL_TO_FACE_MATRIX==[] %} = 0 {% endif %};
+
+
+    virtual tarch::la::Matrix< DoFsPerCell, NodesPerFace*Unknowns*FacesPerCell, double > getProjectionOfRiemannSolutionOntoCell(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    )
+    {% if FACE_TO_CELL_MATRIX==[] %} = 0 {% endif %};
+
+
+    virtual tarch::la::Matrix< NodesPerFace*Unknowns, 2*NodesPerFace*Unknowns, double > getRiemannSolver(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    )
+    {% if FACE_FACE_RIEMANN_PROBLEM_MATRIX==[] %} = 0 {% endif %};
+
+
+    ::petsc::LocalToGlobalMap&      getLocalToGlobalMap();
+    ::petsc::LinearEquationSystem&  getLinearEquationSystem();
   protected:
     static tarch::logging::Log  _log;
 
@@ -101,9 +134,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 
-    ::petsc::LocalToGlobalMap  _faceLocalToGlobalMap;
-    ::petsc::LocalToGlobalMap  _cellLocalToGlobalMap;
-    ::petsc::LocalToGlobalMap  _vertexLocalToGlobalMap;
+    ::petsc::LocalToGlobalMap      _localToGlobalMap;
+    ::petsc::LinearEquationSystem  _linearEquationSystem;
 
 };
 

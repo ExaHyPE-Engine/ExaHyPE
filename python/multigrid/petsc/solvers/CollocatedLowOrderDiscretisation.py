@@ -8,9 +8,9 @@ import dastgen2
 import os
 
 from .Solver                                              import Solver
-from multigrid.petsc.actionsets.EnumerateDofs             import EnumerateDofs
-from multigrid.petsc.actionsets.InitVertexDofs                             import InitVertexDoFs
-from multigrid.petsc.actionsets.ProjectPETScSolutionOnVerticesBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
+from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
+from multigrid.petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
+from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
 
 from abc import abstractmethod
 
@@ -19,12 +19,11 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 
-class AssemblePetscMatrixOnVertices(ActionSet):
+class AssemblePetscMatrix(ActionSet):
   """!
-  Trigger assembly of PETSc matrix, using values from mesh
 
-  I am aware the code below is very bad. Much of it needs changing.
-  But for now it stays while development on other projects continues
+  Trigger assembly of PETSc matrix and project rhs values from mesh onto rhs vector entries
+
   """
   TemplateTouchCellFirstTime = """
   //init a vector to collect global indices, and recall their position in the 
@@ -114,7 +113,11 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
   degrees of freedom are assigned exclusively to the vertices.
 
     """
-    super( AssemblePetscMatrixOnVertices, self ).__init__()
+    #pass in stencil as a list of lists
+    #convert it to a flat list for passing as std::initializer_list
+    #stencil=[item for sublist in stencil for item in sublist]
+
+    super( AssemblePetscMatrix, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
@@ -274,7 +277,7 @@ class CollocatedLowOrderDiscretisation(Solver):
       vertex_unknown = self._vertex_pde_data,
       getter         = "getValue().data()",
       description    = "u",
-      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
+      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.NoMetaFile, 
       number_of_unknows_per_vertex = self._unknowns,
       guard_predicate              = "true", 
       ))
@@ -283,7 +286,7 @@ class CollocatedLowOrderDiscretisation(Solver):
       vertex_unknown = self._vertex_pde_data,
       getter         = "getRhs().data()",
       description    = "u",
-      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
+      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.NoMetaFile, 
       number_of_unknows_per_vertex = self._unknowns,
       guard_predicate              = "true", 
       ))
@@ -304,13 +307,13 @@ class CollocatedLowOrderDiscretisation(Solver):
     to the observer.
     
     """
-    observer.add_action_set( EnumerateDofs(self) )
+    observer.add_action_set( EnumerateDoFs(self) )
     observer.add_action_set( InitVertexDoFs(self) ) 
     pass
   
   
   def add_to_assemble(self, observer):
-    observer.add_action_set( AssemblePetscMatrixOnVertices(self) )
+    observer.add_action_set( AssemblePetscMatrix(self) )
     pass
   
 

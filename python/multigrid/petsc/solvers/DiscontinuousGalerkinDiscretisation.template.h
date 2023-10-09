@@ -43,46 +43,64 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     virtual ~{{CLASSNAME}}();
 
     /**
-     * Initialise a vertex degree of freedom
+     * Initialise a degree of freedom
      *
      * @todo Please add your documentation here
      */
-    void vertexInit(
+    /**
+     * Initialise a vertex degree of freedom
+     */
+    virtual void initNode(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      {% if VERTEX_CARDINALITY==1 %}
+      {% if UNKNOWNS==1 %}
       double&                                       value,
       double&                                       rhs
       {% else %}
-      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
-      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
+      tarch::la::Vector< {{UNKNOWNS}}, double >&  value,
+      tarch::la::Vector< {{UNKNOWNS}}, double >&  rhs
       {% endif %}
     ) override;
 
-    void cellInit(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      // for now, just use value, rhs. not sure what this will be in 
-      // future.
-      // TODO see if this works if we pass by ref instead of const ref
-      tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  value,
-      tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs  
-    ) override;
 
-    /**
-    * Initialise face dofs
-    *
-    */
-    void faceInit(
-      const tarch::la::Vector<Dimensions, double>&  x,
-      const tarch::la::Vector<Dimensions, double>&  h,
-      // for now, just use value, rhs. not sure what this will be in 
-      // future.
-      // TODO see if this works if we pass by ref instead of const ref
-      tarch::la::Vector< {{FACE_CARDINALITY}}, double >&  value,
-      tarch::la::Vector< {{FACE_CARDINALITY}}, double >&  rhs  
+    {% if CELL_CELL_MASS_MATRIX==[] %}
+    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getMassMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
     ) override;
+    {% endif %}
 
+
+    {% if CELL_CELL_SYSTEM_MATRIX==[] %}
+    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getSystemMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) override;
+    {% endif %}
+
+
+    {% if CELL_TO_FACE_MATRIX==[] %}
+    virtual tarch::la::Matrix< NodesPerFace*Unknowns*FacesPerCell, DoFsPerCell, double > getProjectionOfCellDataOntoFace(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) override;
+    {% endif %}
+
+
+    {% if FACE_TO_CELL_MATRIX==[] %}
+    virtual tarch::la::Matrix< DoFsPerCell, NodesPerFace*Unknowns*FacesPerCell, double > getProjectionOfRiemannSolutionOntoCell(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) override;
+    {% endif %}
+
+
+    {% if FACE_FACE_RIEMANN_PROBLEM_MATRIX==[] %}
+    virtual tarch::la::Matrix< NodesPerFace*Unknowns, 2*NodesPerFace*Unknowns, double > getRiemannSolver(
+      const tarch::la::Vector<Dimensions, double>&  faceCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    ) override;
+    {% endif %}
 };
 
 
