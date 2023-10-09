@@ -6,6 +6,7 @@
 
 #include "tarch/logging/Log.h"
 
+#include "toolbox/loadbalancing/loadbalancing.h"
 #include "toolbox/loadbalancing/AbstractLoadBalancing.h"
 
 
