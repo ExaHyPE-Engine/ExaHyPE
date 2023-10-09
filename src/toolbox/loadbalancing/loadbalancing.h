@@ -3,6 +3,10 @@
 #pragma once
 
 
+#include "toolbox/loadbalancing/metrics/CellCount.h"
+#include "toolbox/loadbalancing/metrics/CustomCellWeight.h"
+
+
 /**
  * @page toolbox_loadbalancing Loadbalancing toolbox
  *
