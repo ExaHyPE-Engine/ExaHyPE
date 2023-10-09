@@ -24,8 +24,8 @@ std::string toolbox::loadbalancing::SpreadOutHierarchically::toString( Action ac
 }
 
 
-toolbox::loadbalancing::SpreadOutHierarchically::SpreadOutHierarchically(Configuration* configuration, bool deleteInDestructor):
-  AbstractLoadBalancing( configuration ,deleteInDestructor ),
+toolbox::loadbalancing::SpreadOutHierarchically::SpreadOutHierarchically(Configuration* configuration, CostMetrics*   costMetrics ):
+  AbstractLoadBalancing( configuration, costMetrics),
   _stepsToWaitForNextLoadBalancingDecision(0) {
   assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
@@ -248,7 +248,7 @@ void toolbox::loadbalancing::SpreadOutHierarchically::updateLoadBalancing() {
 
 void toolbox::loadbalancing::SpreadOutHierarchically::finishStep() {
   _statistics.updateGlobalView();
-  _costMetrics.updateGlobalView();
+  _costMetrics->updateGlobalView();
   _blacklist.update();
 
   if ( _statistics.hasConsistentViewOfWorld() ) {

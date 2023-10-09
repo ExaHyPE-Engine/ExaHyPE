@@ -12,7 +12,7 @@ tarch::logging::Log  toolbox::loadbalancing::Hardcoded::_log( "toolbox::loadbala
 
 
 toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore):
-  AbstractLoadBalancing( nullptr, false ),
+  AbstractLoadBalancing( nullptr, nullptr ),
   _currentTimeStamp(0),
   _handOutOnePartitionPerCore(handOutOnePartitionPerCore) {
   assertionEquals4( timeStamps.size(),       numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );

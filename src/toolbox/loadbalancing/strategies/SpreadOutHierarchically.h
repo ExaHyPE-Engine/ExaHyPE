@@ -12,6 +12,8 @@
 
 #include "AbstractLoadBalancing.h"
 
+#include "toolbox/loadbalancing/metrics/CellCount.h"
+
 
 namespace toolbox {
   namespace loadbalancing {
@@ -52,7 +54,7 @@ class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalan
 
     static std::string toString( Action action );
 
-    SpreadOutHierarchically(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
+    SpreadOutHierarchically(Configuration* configuration = new DefaultConfiguration(), CostMetrics*   costMetrics = new toolbox::loadbalancing::metrics::CellCount());
     virtual ~SpreadOutHierarchically();
 
     virtual void finishStep() override;

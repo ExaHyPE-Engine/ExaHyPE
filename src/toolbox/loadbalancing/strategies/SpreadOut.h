@@ -12,6 +12,7 @@
 
 #include "AbstractLoadBalancing.h"
 
+#include "toolbox/loadbalancing/metrics/CellCount.h"
 
 namespace toolbox {
   namespace loadbalancing {
@@ -40,7 +41,10 @@ namespace toolbox {
  */
 class toolbox::loadbalancing::SpreadOut: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
-    SpreadOut(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
+    SpreadOut(
+      Configuration* configuration = new DefaultConfiguration(),
+      CostMetrics*   costMetrics   = new toolbox::loadbalancing::metrics::CellCount()
+    );
     virtual ~SpreadOut();
 
     virtual void finishStep() override;

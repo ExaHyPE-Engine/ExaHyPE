@@ -16,8 +16,8 @@
 tarch::logging::Log  toolbox::loadbalancing::RecursiveBipartition::_log( "toolbox::loadbalancing::RecursiveBipartition" );
 
 
-toolbox::loadbalancing::RecursiveBipartition::RecursiveBipartition(Configuration* configuration, bool deleteInDestructor):
-  AbstractLoadBalancing( configuration, deleteInDestructor ),
+toolbox::loadbalancing::RecursiveBipartition::RecursiveBipartition(Configuration* configuration, CostMetrics*   costMetrics ):
+  AbstractLoadBalancing( configuration, costMetrics ),
   _roundRobinToken(0) {
   assertion( configuration!=nullptr );
   _state = State::SwitchedOff;
@@ -181,7 +181,7 @@ void toolbox::loadbalancing::RecursiveBipartition::updateLoadBalancing() {
 
 void toolbox::loadbalancing::RecursiveBipartition::finishStep() {
   _statistics.updateGlobalView();
-  _costMetrics.updateGlobalView();
+  _costMetrics->updateGlobalView();
   _blacklist.update();
 
   updateLoadBalancing();

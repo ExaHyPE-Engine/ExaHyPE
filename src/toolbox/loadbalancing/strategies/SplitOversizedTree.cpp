@@ -16,8 +16,8 @@
 tarch::logging::Log  toolbox::loadbalancing::SplitOversizedTree::_log( "toolbox::loadbalancing::SplitOversizedTree" );
 
 
-toolbox::loadbalancing::SplitOversizedTree::SplitOversizedTree(Configuration* configuration, bool deleteInDestructor):
-  AbstractLoadBalancing( configuration, deleteInDestructor ),
+toolbox::loadbalancing::SplitOversizedTree::SplitOversizedTree(Configuration* configuration, CostMetrics*   costMetrics):
+  AbstractLoadBalancing( configuration, costMetrics ),
   _roundRobinToken(0) {
   assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
@@ -185,7 +185,7 @@ void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
 
 void toolbox::loadbalancing::SplitOversizedTree::finishStep() {
   _statistics.updateGlobalView();
-  _costMetrics.updateGlobalView();
+  _costMetrics->updateGlobalView();
   _blacklist.update();
 
   updateLoadBalancing();

@@ -1,5 +1,6 @@
 #include "NoLoadBalancing.h"
 #include "loadbalancing.h"
+#include "toolbox/loadbalancing/metrics/CellCount.h"
 
 #include "tarch/Assertions.h"
 
@@ -8,15 +9,15 @@
 
 
 toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing():
-  NoLoadBalancing( nullptr, false ) {
+  NoLoadBalancing( nullptr, nullptr ) {
 }
 
 
 toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing(
   Configuration* configuration,
-  bool deleteInDestructor
+  CostMetrics*   costMetrics
 ):
-  AbstractLoadBalancing( configuration, deleteInDestructor ) {
+  AbstractLoadBalancing( configuration, costMetrics ) {
   _state = State::SwitchedOff;
   _statistics.notifyOfStateChange(_state);
 }
@@ -24,7 +25,7 @@ toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing(
 
 void toolbox::loadbalancing::NoLoadBalancing::finishStep() {
   _statistics.updateGlobalView();
-  _costMetrics.updateGlobalView();
+  _costMetrics->updateGlobalView();
   _blacklist.update();
 }
 

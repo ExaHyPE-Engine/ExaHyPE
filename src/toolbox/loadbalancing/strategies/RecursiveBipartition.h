@@ -12,6 +12,8 @@
 
 #include "AbstractLoadBalancing.h"
 
+#include "toolbox/loadbalancing/metrics/CellCount.h"
+
 
 namespace toolbox {
   namespace loadbalancing {
@@ -46,7 +48,7 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * The ownership of the pointer goes over to the recursive subdivision
      * instance, i.e. you don't have to delete the passed object.
      */
-    RecursiveBipartition(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
+    RecursiveBipartition(Configuration* configuration = new DefaultConfiguration(), CostMetrics*   costMetrics = new toolbox::loadbalancing::metrics::CellCount() );
     virtual ~RecursiveBipartition();
 
     /**

@@ -17,7 +17,9 @@ toolbox::loadbalancing::AbstractLoadBalancing::AbstractLoadBalancing(
   _statistics(),
   _configuration(configuration),
   _costMetrics(costMetrics),
-  _state( State::Undefined ) {}
+  _state( State::Undefined ) {
+  assertion( _costMetrics!=nullptr );
+}
 
 toolbox::loadbalancing::AbstractLoadBalancing::~AbstractLoadBalancing() {
   if (_configuration!=nullptr) {
@@ -34,7 +36,7 @@ std::string toolbox::loadbalancing::AbstractLoadBalancing::toString() const {
 
   msg << "(state=" << ::toString( _state )
       << ",statistics=" << _statistics.toString()
-      << ",cost-metrics=" << _costMetrics.toString()
+      << ",cost-metrics=" << _costMetrics->toString()
       << ",blacklist=" << _blacklist.toString()
       << ")";
 
@@ -89,7 +91,8 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::fitsIntoMemory([[maybe_unuse
 
 
 void toolbox::loadbalancing::AbstractLoadBalancing::finishSimulation() {
-  _statistics.waitForGlobalStatisticsExchange();
+  _statistics.waitForGlobalDataExchange();
+  _costMetrics->waitForGlobalDataExchange();
 }
 
 

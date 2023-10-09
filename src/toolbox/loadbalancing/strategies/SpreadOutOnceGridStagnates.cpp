@@ -9,8 +9,8 @@
 tarch::logging::Log  toolbox::loadbalancing::SpreadOutOnceGridStagnates::_log( "toolbox::loadbalancing::SpreadOutOnceGridStagnates" );
 
 
-toolbox::loadbalancing::SpreadOutOnceGridStagnates::SpreadOutOnceGridStagnates(Configuration* configuration, bool deleteInDestructor):
-  AbstractLoadBalancing( configuration, deleteInDestructor ),
+toolbox::loadbalancing::SpreadOutOnceGridStagnates::SpreadOutOnceGridStagnates(Configuration* configuration, CostMetrics*   costMetrics ):
+  AbstractLoadBalancing( configuration, costMetrics ),
   _previousNumberOfCells(-1),
   _numberOfStableGridIterations(0) {
   assertion( configuration!=nullptr );
@@ -133,7 +133,7 @@ void toolbox::loadbalancing::SpreadOutOnceGridStagnates::updateLoadBalancing() {
 
 void toolbox::loadbalancing::SpreadOutOnceGridStagnates::finishStep() {
   _statistics.updateGlobalView();
-  _costMetrics.updateGlobalView();
+  _costMetrics->updateGlobalView();
   _blacklist.update();
 
   _statistics.notifyOfStateChange( _state );

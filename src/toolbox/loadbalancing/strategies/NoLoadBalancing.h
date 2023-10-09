@@ -38,7 +38,7 @@ class toolbox::loadbalancing::NoLoadBalancing: public toolbox::loadbalancing::Ab
      */
     NoLoadBalancing(
       Configuration* configuration,
-      bool deleteInDestructor
+      CostMetrics*   costMetrics
     );
 
 

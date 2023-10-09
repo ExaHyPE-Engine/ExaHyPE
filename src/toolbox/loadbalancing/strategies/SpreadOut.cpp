@@ -9,8 +9,8 @@
 tarch::logging::Log  toolbox::loadbalancing::SpreadOut::_log( "toolbox::loadbalancing::SpreadOut" );
 
 
-toolbox::loadbalancing::SpreadOut::SpreadOut(Configuration* configuration, bool deleteInDestructor):
-  AbstractLoadBalancing( configuration, deleteInDestructor ),
+toolbox::loadbalancing::SpreadOut::SpreadOut(Configuration* configuration, CostMetrics*   costMetrics):
+  AbstractLoadBalancing( configuration, costMetrics ),
   _previousNumberOfCells(-1),
   _numberOfStableGridIterations(0) {
   assertion( configuration!=nullptr );
@@ -130,7 +130,7 @@ void toolbox::loadbalancing::SpreadOut::updateLoadBalancing() {
 
 void toolbox::loadbalancing::SpreadOut::finishStep() {
   _statistics.updateGlobalView();
-  _costMetrics.updateGlobalView();
+  _costMetrics->updateGlobalView();
   _blacklist.update();
 
   _statistics.notifyOfStateChange( _state );
