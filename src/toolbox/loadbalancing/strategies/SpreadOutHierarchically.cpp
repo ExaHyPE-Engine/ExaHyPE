@@ -1,4 +1,5 @@
-#include "SpreadOutHierarchically.h"
+#include "../strategies/SpreadOutHierarchically.h"
+
 #include "loadbalancing.h"
 
 
@@ -6,10 +7,10 @@
 #include "tarch/multicore/Core.h"
 
 
-tarch::logging::Log  toolbox::loadbalancing::SpreadOutHierarchically::_log( "toolbox::loadbalancing::SpreadOutHierarchically" );
+tarch::logging::Log  toolbox::loadbalancing::strategies::SpreadOutHierarchically::_log( "toolbox::loadbalancing::strategies::SpreadOutHierarchically" );
 
 
-std::string toolbox::loadbalancing::SpreadOutHierarchically::toString( Action action ) {
+std::string toolbox::loadbalancing::strategies::SpreadOutHierarchically::toString( Action action ) {
   switch ( action ) {
     case Action::Unspecified:
       return "unspecified";
@@ -24,7 +25,7 @@ std::string toolbox::loadbalancing::SpreadOutHierarchically::toString( Action ac
 }
 
 
-toolbox::loadbalancing::SpreadOutHierarchically::SpreadOutHierarchically(Configuration* configuration, CostMetrics*   costMetrics ):
+toolbox::loadbalancing::strategies::SpreadOutHierarchically::SpreadOutHierarchically(Configuration* configuration, CostMetrics*   costMetrics ):
   AbstractLoadBalancing( configuration, costMetrics),
   _stepsToWaitForNextLoadBalancingDecision(0) {
   assertion( configuration!=nullptr );
@@ -33,11 +34,11 @@ toolbox::loadbalancing::SpreadOutHierarchically::SpreadOutHierarchically(Configu
 }
 
 
-toolbox::loadbalancing::SpreadOutHierarchically::~SpreadOutHierarchically() {
+toolbox::loadbalancing::strategies::SpreadOutHierarchically::~SpreadOutHierarchically() {
 }
 
 
-void toolbox::loadbalancing::SpreadOutHierarchically::updateState() {
+void toolbox::loadbalancing::strategies::SpreadOutHierarchically::updateState() {
   switch (_state) {
     case State::InterRankDistribution:
       if (
@@ -69,7 +70,7 @@ void toolbox::loadbalancing::SpreadOutHierarchically::updateState() {
 }
 
 
-toolbox::loadbalancing::SpreadOutHierarchically::Action toolbox::loadbalancing::SpreadOutHierarchically::getAction() const {
+toolbox::loadbalancing::strategies::SpreadOutHierarchically::Action toolbox::loadbalancing::strategies::SpreadOutHierarchically::getAction() const {
   if (_stepsToWaitForNextLoadBalancingDecision>0) {
       // @todo Debug
     logInfo(
@@ -132,7 +133,7 @@ toolbox::loadbalancing::SpreadOutHierarchically::Action toolbox::loadbalancing::
 }
 
 
-int toolbox::loadbalancing::SpreadOutHierarchically::getNumberOfSplitsOnLocalRank() const {
+int toolbox::loadbalancing::strategies::SpreadOutHierarchically::getNumberOfSplitsOnLocalRank() const {
   assertionEquals( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size(), 1 );
 
   int maxSizeOfLocalRank = getWeightOfHeaviestLocalSpacetree();
@@ -184,7 +185,7 @@ int toolbox::loadbalancing::SpreadOutHierarchically::getNumberOfSplitsOnLocalRan
 }
 
 
-void toolbox::loadbalancing::SpreadOutHierarchically::updateLoadBalancing() {
+void toolbox::loadbalancing::strategies::SpreadOutHierarchically::updateLoadBalancing() {
   auto action = getAction();
 
   #if PeanoDebug>0
@@ -246,7 +247,7 @@ void toolbox::loadbalancing::SpreadOutHierarchically::updateLoadBalancing() {
 }
 
 
-void toolbox::loadbalancing::SpreadOutHierarchically::finishStep() {
+void toolbox::loadbalancing::strategies::SpreadOutHierarchically::finishStep() {
   _statistics.updateGlobalView();
   _costMetrics->updateGlobalView();
   _blacklist.update();
@@ -268,7 +269,7 @@ void toolbox::loadbalancing::SpreadOutHierarchically::finishStep() {
 }
 
 
-void toolbox::loadbalancing::SpreadOutHierarchically::triggerSplit( int numberOfCells, int targetRank ) {
+void toolbox::loadbalancing::strategies::SpreadOutHierarchically::triggerSplit( int numberOfCells, int targetRank ) {
   assertionEquals( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size(), 1 );
 
   const int sourceTree = *( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().begin() );

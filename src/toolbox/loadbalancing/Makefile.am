@@ -11,11 +11,12 @@ ToolboxLoadBalancing_SOURCES = \
   AbstractLoadBalancing.cpp \
   Blacklist.cpp \
   Configuration.cpp \
+  CostMetrics.cpp \
   loadbalancing.cpp \
   State.cpp \
   Statistics.cpp \
-  metrics/CellCount.h \
-  metrics/CustomCellWeight.h \
+  metrics/CellCount.cpp \
+  metrics/CustomCellWeight.cpp \
   strategies/Hardcoded.cpp \
   strategies/NoLoadBalancing.cpp \
   strategies/RecursiveBipartition.cpp \

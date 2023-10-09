@@ -1,4 +1,5 @@
-#include "SpreadOutOnceGridStagnates.h"
+#include "../strategies/SpreadOutOnceGridStagnates.h"
+
 #include "loadbalancing.h"
 
 
@@ -6,10 +7,10 @@
 #include "tarch/multicore/Core.h"
 
 
-tarch::logging::Log  toolbox::loadbalancing::SpreadOutOnceGridStagnates::_log( "toolbox::loadbalancing::SpreadOutOnceGridStagnates" );
+tarch::logging::Log  toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::_log( "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates" );
 
 
-toolbox::loadbalancing::SpreadOutOnceGridStagnates::SpreadOutOnceGridStagnates(Configuration* configuration, CostMetrics*   costMetrics ):
+toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::SpreadOutOnceGridStagnates(Configuration* configuration, CostMetrics*   costMetrics ):
   AbstractLoadBalancing( configuration, costMetrics ),
   _previousNumberOfCells(-1),
   _numberOfStableGridIterations(0) {
@@ -19,12 +20,12 @@ toolbox::loadbalancing::SpreadOutOnceGridStagnates::SpreadOutOnceGridStagnates(C
 }
 
 
-toolbox::loadbalancing::SpreadOutOnceGridStagnates::~SpreadOutOnceGridStagnates() {
+toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::~SpreadOutOnceGridStagnates() {
 }
 
 
 
-int toolbox::loadbalancing::SpreadOutOnceGridStagnates::getNumberOfTreesPerRank() const {
+int toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::getNumberOfTreesPerRank() const {
   int result = 0;
 
   if (
@@ -69,7 +70,7 @@ int toolbox::loadbalancing::SpreadOutOnceGridStagnates::getNumberOfTreesPerRank(
 }
 
 
-void toolbox::loadbalancing::SpreadOutOnceGridStagnates::updateLoadBalancing() {
+void toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::updateLoadBalancing() {
   if (
     _statistics.hasConsistentViewOfWorld()
     and
@@ -131,7 +132,7 @@ void toolbox::loadbalancing::SpreadOutOnceGridStagnates::updateLoadBalancing() {
 }
 
 
-void toolbox::loadbalancing::SpreadOutOnceGridStagnates::finishStep() {
+void toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::finishStep() {
   _statistics.updateGlobalView();
   _costMetrics->updateGlobalView();
   _blacklist.update();
@@ -143,7 +144,7 @@ void toolbox::loadbalancing::SpreadOutOnceGridStagnates::finishStep() {
 }
 
 
-void toolbox::loadbalancing::SpreadOutOnceGridStagnates::triggerSplit( int numberOfCells, int targetRank ) {
+void toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates::triggerSplit( int numberOfCells, int targetRank ) {
   logInfo( "triggerSplit(int,int,int)", "trigger split from tree 0 into new tree on rank " << targetRank << " with " << numberOfCells << " cell(s)" );
 
   assertionEquals( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size(), 1 );

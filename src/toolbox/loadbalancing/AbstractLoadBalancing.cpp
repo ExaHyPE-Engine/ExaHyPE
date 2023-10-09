@@ -31,6 +31,12 @@ toolbox::loadbalancing::AbstractLoadBalancing::~AbstractLoadBalancing() {
 }
 
 
+void toolbox::loadbalancing::AbstractLoadBalancing::setConfigurationAndMetricsNullWithoutDelete() {
+  _configuration = nullptr;
+  _costMetrics   = nullptr;
+}
+
+
 std::string toolbox::loadbalancing::AbstractLoadBalancing::toString() const {
   std::ostringstream msg;
 
@@ -104,23 +110,15 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::isInterRankBalancingBad() co
   } else if ( static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) >= _configuration->getMaxLocalTreesPerRank(_state) ) {
     return false;
   } else {
-    int localCells = 0;
-    std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
-    for (auto p: idsOfLocalSpacetrees) {
-      localCells += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
-    }
-
-    const double optimalCellCount = static_cast<double>(_statistics.getGlobalNumberOfInnerUnrefinedCells())
+    const double optimalCost = static_cast<double>(_costMetrics->getGlobalCost())
                            / tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
-    const double illbalancing   = (static_cast<double>(localCells)-optimalCellCount) / optimalCellCount;
+    const double illbalancing   = (_costMetrics->getCostOfLocalRank()-optimalCost) / optimalCost;
     const double balancingRatio = _configuration->getWorstCaseBalancingRatio(_state);
-    bool result = (localCells < _statistics.getGlobalNumberOfInnerUnrefinedCells()) and (illbalancing > 1.0 - balancingRatio);
+    bool result = illbalancing > 1.0 - balancingRatio;
 
     if (result) {
-      logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _statistics.getGlobalNumberOfInnerUnrefinedCells() << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
-    } else {
-      logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _statistics.getGlobalNumberOfInnerUnrefinedCells() << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
+      logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cost=" << _costMetrics->getGlobalCost() << ")" );
     }
 
     return result;
@@ -138,18 +136,21 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::isIntraRankBalancingBad() co
   } else if ( static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) >= _configuration->getMaxLocalTreesPerRank(_state) ) {
     return false;
   } else {
-    int maxCells = 0;
-    int minCells = std::numeric_limits<int>::max();
+    double maxCost = 0;
+    double minCost = std::numeric_limits<double>::max();
 
     for (auto p: peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees() ) {
-      maxCells = std::max( maxCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
-      minCells = std::min( minCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
+      maxCost = std::max( maxCost, _costMetrics->getCostOfLocalTree(p) );
+      minCost = std::min( minCost, _costMetrics->getCostOfLocalTree(p) );
     }
+
+    assertion(minCost>=0.0);
+    assertion(maxCost>=0.0);
 
     bool result = false;
 
-    if (maxCells>0 and minCells>0) {
-      double relativeWeightSmalltestTree = static_cast<double>(minCells) / static_cast<double>(maxCells);
+    if (maxCost>0.0 and minCost>0.0) {
+      double relativeWeightSmalltestTree = minCost / maxCost;
       double balanceThreshold            = _configuration->getWorstCaseBalancingRatio(_state);
 
       result = relativeWeightSmalltestTree < balanceThreshold;
@@ -159,8 +160,8 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::isIntraRankBalancingBad() co
         "local trees are ill-balanced=" << result <<
         ", rel-weight=" << relativeWeightSmalltestTree <<
         ", threshold=" << balanceThreshold <<
-        ", #min-cells=" << minCells <<
-        ", #max-cells=" << maxCells
+        ", #min-cost=" << minCost <<
+        ", #max-cost=" << maxCost
       );
     }
 
@@ -170,6 +171,66 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::isIntraRankBalancingBad() co
 
 
 bool toolbox::loadbalancing::AbstractLoadBalancing::areRanksUnemployed() const {
-  return _statistics.getMinimumOfMaximumOfTreesPerRank() == 0
+  return tarch::la::equals(_costMetrics->getMinimumOfMaximumRankWeights(),0.0)
      and _statistics.getGlobalNumberOfTrees() > 0;
+}
+
+
+double toolbox::loadbalancing::AbstractLoadBalancing::getWeightOfHeaviestLocalSpacetree() const {
+  const int heaviestSpacetree = getIdOfHeaviestLocalSpacetree();
+  logDebug( "getWeightOfHeaviestLocalSpacetree()", "id=" << heaviestSpacetree << ", #octants=" << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(heaviestSpacetree).getNumberOfLocalUnrefinedCells() );
+  return heaviestSpacetree==NoHeaviestTreeAvailable ? -1 : peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(heaviestSpacetree).getNumberOfLocalUnrefinedCells();
+}
+
+
+int toolbox::loadbalancing::AbstractLoadBalancing::getIdOfHeaviestLocalSpacetree() const {
+  std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
+  int result = NoHeaviestTreeAvailable;
+  double maxLocalCost = -1;
+
+  for (auto p: idsOfLocalSpacetrees) {
+    if (
+      _costMetrics->getCostOfLocalTree(p)>maxLocalCost
+      and
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>=ThreePowerD
+    ) {
+      maxLocalCost = _costMetrics->getCostOfLocalTree(p)>maxLocalCost;
+      result = p;
+    }
+  }
+  return result;
+}
+
+
+int toolbox::loadbalancing::AbstractLoadBalancing::getIdOfHeaviestLocalSpacetree(double tolerance) const {
+  std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
+  int result = NoHeaviestTreeAvailable;
+  int maxLocalCost = -1;
+
+  for (auto p: idsOfLocalSpacetrees) {
+    if (
+      _costMetrics->getCostOfLocalTree(p)>maxLocalCost
+      and
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>=ThreePowerD
+    ) {
+      maxLocalCost = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
+    }
+  }
+
+  if (maxLocalCost>0.0) {
+    logInfo( "getIdOfHeaviestLocalSpacetree(double)", "try to find one maximum tree which has weight close to " << maxLocalCost << ", i.e. has more than " << (tolerance * maxLocalCost) << " cost"  );
+    for (auto p: idsOfLocalSpacetrees) {
+      if (
+        tarch::la::greaterEquals( _costMetrics->getCostOfLocalTree(p), tolerance * maxLocalCost )
+        and
+        peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>=ThreePowerD
+        and
+        (rand() % 2 == 1 or result == NoHeaviestTreeAvailable)
+      ) {
+        logInfo( "getIdOfHeaviestLocalSpacetree(double)", "tree " << p << " meets criterion with weight of " << _costMetrics->getCostOfLocalTree(p) );
+        result = p;
+      }
+    }
+  }
+  return result;
 }

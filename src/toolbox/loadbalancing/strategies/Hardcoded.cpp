@@ -1,4 +1,5 @@
-#include "Hardcoded.h"
+#include "../strategies/Hardcoded.h"
+
 #include "loadbalancing.h"
 
 #include "tarch/Assertions.h"
@@ -8,10 +9,10 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 
-tarch::logging::Log  toolbox::loadbalancing::Hardcoded::_log( "toolbox::loadbalancing::Hardcoded" );
+tarch::logging::Log  toolbox::loadbalancing::strategies::Hardcoded::_log( "toolbox::loadbalancing::strategies::Hardcoded" );
 
 
-toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore):
+toolbox::loadbalancing::strategies::Hardcoded::Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore):
   AbstractLoadBalancing( nullptr, nullptr ),
   _currentTimeStamp(0),
   _handOutOnePartitionPerCore(handOutOnePartitionPerCore) {
@@ -40,7 +41,7 @@ toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStam
 
 
 
-toolbox::loadbalancing::Hardcoded::Split::Split( const Split& split ):
+toolbox::loadbalancing::strategies::Hardcoded::Split::Split( const Split& split ):
   timeStamp( split.timeStamp ),
   splittingTree( split.splittingTree ),
   numberOfCells( split.numberOfCells ),
@@ -48,7 +49,7 @@ toolbox::loadbalancing::Hardcoded::Split::Split( const Split& split ):
 }
 
 
-toolbox::loadbalancing::Hardcoded::Split::Split( int  timeStamp_, int  splittingTree_, int  numberOfCells_, int  destinationRank_ ):
+toolbox::loadbalancing::strategies::Hardcoded::Split::Split( int  timeStamp_, int  splittingTree_, int  numberOfCells_, int  destinationRank_ ):
   timeStamp( timeStamp_),
   splittingTree( splittingTree_),
   numberOfCells( numberOfCells_ ),
@@ -56,7 +57,7 @@ toolbox::loadbalancing::Hardcoded::Split::Split( int  timeStamp_, int  splitting
 }
 
 
-void toolbox::loadbalancing::Hardcoded::finishStep() {
+void toolbox::loadbalancing::strategies::Hardcoded::finishStep() {
   _currentTimeStamp++;
 
   while (not _splits.empty() and _currentTimeStamp>=_splits.front().timeStamp) {
@@ -102,4 +103,4 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
 }
 
 
-void toolbox::loadbalancing::Hardcoded::finishSimulation() {}
+void toolbox::loadbalancing::strategies::Hardcoded::finishSimulation() {}

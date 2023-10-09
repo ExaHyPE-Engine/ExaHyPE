@@ -255,9 +255,9 @@ if __name__ == "__main__":
 
     # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
     project.set_load_balancing(
-        "toolbox::loadbalancing::SpreadOutHierarchically",
-        "(new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + "))"
-    )
+        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+        "new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + "), new toolbox::loadbalancing::metrics::CellCount()",
+   )
 
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 

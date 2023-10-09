@@ -10,14 +10,16 @@
 
 #include <map>
 
-#include "AbstractLoadBalancing.h"
+#include "toolbox/loadbalancing/AbstractLoadBalancing.h"
 
 #include "toolbox/loadbalancing/metrics/CellCount.h"
 
 
 namespace toolbox {
   namespace loadbalancing {
-    class RecursiveBipartition;
+    namespace strategies {
+      class RecursiveBipartition;
+    }
   }
 }
 
@@ -40,7 +42,7 @@ namespace toolbox {
  * peano4::grid::Spacetree::splitOrJoinCell() and the general
  * @ref peano_domain_decomposition "domain decomposition overview".
  */
-class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancing::AbstractLoadBalancing {
+class toolbox::loadbalancing::strategies::RecursiveBipartition: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * Set up recursive subdivision

@@ -1,4 +1,5 @@
-#include "NoLoadBalancing.h"
+#include "../strategies/NoLoadBalancing.h"
+
 #include "loadbalancing.h"
 #include "toolbox/loadbalancing/metrics/CellCount.h"
 
@@ -8,12 +9,12 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 
-toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing():
+toolbox::loadbalancing::strategies::NoLoadBalancing::NoLoadBalancing():
   NoLoadBalancing( nullptr, nullptr ) {
 }
 
 
-toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing(
+toolbox::loadbalancing::strategies::NoLoadBalancing::NoLoadBalancing(
   Configuration* configuration,
   CostMetrics*   costMetrics
 ):
@@ -23,13 +24,13 @@ toolbox::loadbalancing::NoLoadBalancing::NoLoadBalancing(
 }
 
 
-void toolbox::loadbalancing::NoLoadBalancing::finishStep() {
+void toolbox::loadbalancing::strategies::NoLoadBalancing::finishStep() {
   _statistics.updateGlobalView();
   _costMetrics->updateGlobalView();
   _blacklist.update();
 }
 
 
-void toolbox::loadbalancing::NoLoadBalancing::enable( [[maybe_unused]] bool value ) {
+void toolbox::loadbalancing::strategies::NoLoadBalancing::enable( [[maybe_unused]] bool value ) {
   AbstractLoadBalancing::enable(false);
 }

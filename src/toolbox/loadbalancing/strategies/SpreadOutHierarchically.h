@@ -10,14 +10,16 @@
 
 #include <map>
 
-#include "AbstractLoadBalancing.h"
+#include "toolbox/loadbalancing/AbstractLoadBalancing.h"
 
 #include "toolbox/loadbalancing/metrics/CellCount.h"
 
 
 namespace toolbox {
   namespace loadbalancing {
-    class SpreadOutHierarchically;
+    namespace strategies {
+      class SpreadOutHierarchically;
+    }
   }
 }
 
@@ -37,7 +39,7 @@ namespace toolbox {
  * @ref peano_domain_decomposition "domain decomposition overview" for the
  * rationale.
  */
-class toolbox::loadbalancing::SpreadOutHierarchically: public toolbox::loadbalancing::AbstractLoadBalancing {
+class toolbox::loadbalancing::strategies::SpreadOutHierarchically: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * @see getAction()

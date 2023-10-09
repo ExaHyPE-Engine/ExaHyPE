@@ -278,9 +278,9 @@ if not os.path.exists(solution_dir):
 
 #my_project.set_load_balancing("toolbox::loadbalancing::SpreadOut", "new ::exahype2::LoadBalancingConfiguration(0.98)")
 if args.trees > 0:
-  my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + ")")
+  my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + ")")
 else:
-  my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
+  my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
 #my_project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration(0.98, 0, 16)")
 #my_project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_SplitOversizedTree", "new ::exahype2::LoadBalancingConfiguration(0.98, 1000, 16)")
 #my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")

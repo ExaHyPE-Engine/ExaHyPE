@@ -240,7 +240,7 @@ See the comment above on the recursive top-down splitting. In this context:
 - Use a load balancer, which immediately spreads out over the cores once the
   grid construction starts. toolbox::loadbalancing::SpreadOut is a good example.  
 - If toolbox::loadbalancing::SpreadOut is still too slow or does not kick in
-  (as you have too few cells), switch to toolbox::loadbalancing::SpreadOutHierarchically.
+  (as you have too few cells), switch to toolbox::loadbalancing::strategies::SpreadOutHierarchically.
 
 Using the schemes that spread out immediately often makes the resulting domain
 decomposition quality worse, as they realise a greedy approach which kicks in 

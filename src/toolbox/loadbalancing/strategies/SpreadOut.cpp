@@ -1,4 +1,5 @@
-#include "SpreadOut.h"
+#include "../strategies/SpreadOut.h"
+
 #include "loadbalancing.h"
 
 
@@ -6,10 +7,10 @@
 #include "tarch/multicore/Core.h"
 
 
-tarch::logging::Log  toolbox::loadbalancing::SpreadOut::_log( "toolbox::loadbalancing::SpreadOut" );
+tarch::logging::Log  toolbox::loadbalancing::strategies::SpreadOut::_log( "toolbox::loadbalancing::strategies::SpreadOut" );
 
 
-toolbox::loadbalancing::SpreadOut::SpreadOut(Configuration* configuration, CostMetrics*   costMetrics):
+toolbox::loadbalancing::strategies::SpreadOut::SpreadOut(Configuration* configuration, CostMetrics*   costMetrics):
   AbstractLoadBalancing( configuration, costMetrics ),
   _previousNumberOfCells(-1),
   _numberOfStableGridIterations(0) {
@@ -19,12 +20,12 @@ toolbox::loadbalancing::SpreadOut::SpreadOut(Configuration* configuration, CostM
 }
 
 
-toolbox::loadbalancing::SpreadOut::~SpreadOut() {
+toolbox::loadbalancing::strategies::SpreadOut::~SpreadOut() {
 }
 
 
 
-int toolbox::loadbalancing::SpreadOut::getNumberOfTreesPerRank() const {
+int toolbox::loadbalancing::strategies::SpreadOut::getNumberOfTreesPerRank() const {
   int result = 0;
 
   if (
@@ -66,7 +67,7 @@ int toolbox::loadbalancing::SpreadOut::getNumberOfTreesPerRank() const {
 }
 
 
-void toolbox::loadbalancing::SpreadOut::updateLoadBalancing() {
+void toolbox::loadbalancing::strategies::SpreadOut::updateLoadBalancing() {
   if (
     _statistics.hasConsistentViewOfWorld()
     and
@@ -128,7 +129,7 @@ void toolbox::loadbalancing::SpreadOut::updateLoadBalancing() {
 }
 
 
-void toolbox::loadbalancing::SpreadOut::finishStep() {
+void toolbox::loadbalancing::strategies::SpreadOut::finishStep() {
   _statistics.updateGlobalView();
   _costMetrics->updateGlobalView();
   _blacklist.update();
@@ -140,7 +141,7 @@ void toolbox::loadbalancing::SpreadOut::finishStep() {
 }
 
 
-void toolbox::loadbalancing::SpreadOut::triggerSplit( int numberOfCells, int targetRank ) {
+void toolbox::loadbalancing::strategies::SpreadOut::triggerSplit( int numberOfCells, int targetRank ) {
   logInfo( "triggerSplit(int,int,int)", "trigger split from tree 0 into new tree on rank " << targetRank << " with " << numberOfCells << " cell(s)" );
 
   assertionEquals( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size(), 1 );

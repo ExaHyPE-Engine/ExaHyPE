@@ -10,14 +10,16 @@
 
 #include <map>
 
-#include "AbstractLoadBalancing.h"
+#include "toolbox/loadbalancing/AbstractLoadBalancing.h"
 
 #include "toolbox/loadbalancing/metrics/CellCount.h"
 
 
 namespace toolbox {
   namespace loadbalancing {
-    class SplitOversizedTree;
+    namespace strategies {
+      class SplitOversizedTree;
+    }
   }
 }
 
@@ -49,7 +51,7 @@ namespace toolbox {
  * depth of the global spacetree. That is, this load balancing scheme is
  * advantageous if recursive splitting fail.
  */
-class toolbox::loadbalancing::SplitOversizedTree: public toolbox::loadbalancing::AbstractLoadBalancing {
+class toolbox::loadbalancing::strategies::SplitOversizedTree: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * Set up recursive subdivision
@@ -101,7 +103,7 @@ class toolbox::loadbalancing::SplitOversizedTree: public toolbox::loadbalancing:
      */
     bool doesLocalTreeViolateThreshold() const;
 
-    int getTargetTreeSize() const;
+    double getTargetTreeCost() const;
 
     /**
      * Wrapper around the spacetree set which also updates the blacklist.

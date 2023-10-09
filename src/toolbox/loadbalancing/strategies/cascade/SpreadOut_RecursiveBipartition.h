@@ -3,15 +3,17 @@
 #pragma once
 
 
-#include "toolbox/loadbalancing/Cascade.h"
-#include "toolbox/loadbalancing/SpreadOut.h"
-#include "toolbox/loadbalancing/RecursiveBipartition.h"
+#include "toolbox/loadbalancing/strategies/cascade/Cascade.h"
+#include "toolbox/loadbalancing/strategies/SpreadOut.h"
+#include "toolbox/loadbalancing/strategies/RecursiveBipartition.h"
 
 
 namespace toolbox {
   namespace loadbalancing {
-    namespace cascade {
-      typedef toolbox::loadbalancing::Cascade<toolbox::loadbalancing::SpreadOut, toolbox::loadbalancing::RecursiveBipartition>  SpreadOut_RecursiveBipartition;
+    namespace strategies {
+      namespace cascade {
+        typedef toolbox::loadbalancing::strategies::cascade::Cascade<toolbox::loadbalancing::strategies::SpreadOut, toolbox::loadbalancing::strategies::RecursiveBipartition>  SpreadOut_RecursiveBipartition;
+      }
     }
   }
 }

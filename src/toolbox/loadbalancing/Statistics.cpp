@@ -39,7 +39,6 @@ std::string  toolbox::loadbalancing::Statistics::toString() const {
   msg << "(local-number-of-inner-unrefined-cells=" << _localNumberOfInnerUnrefinedCells
       << ",global-number-of-inner-unrefined-cells=" << _globalNumberOfInnerUnrefinedCells
       << ",global-number-of-trees=" << _globalNumberOfTrees
-      << ",min-of-max-trees-per-rank=" << _minimumOfMaximumTreesPerRank
       << ",max-trees-per-rank=" << _maximumTreesPerRank
       << ",local-load-balancing-enabled=" << _localLoadBalancingEnabled
       << ",global-number-of-ranks-with-enabled-lb=" << _globalNumberOfRanksWithEnabledLoadBalancing
@@ -97,25 +96,19 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1) {
     _globalNumberOfInnerUnrefinedCells           = _localNumberOfInnerUnrefinedCells;
-    _lightestRank._rank                          = 0;
-    _lightestRank._unrefinedCells                = _localNumberOfInnerUnrefinedCells;
     _globalNumberOfSplits                        = _localNumberOfSplits;
     _globalNumberOfTrees                         = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
     _globalNumberOfRanksWithEnabledLoadBalancing = _localLoadBalancingEnabled ? 1 : 0;
-    _minimumOfMaximumTreesPerRank                = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
     _maximumTreesPerRank                         = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
   }
   else {
     #ifdef Parallel
-    waitForGlobalStatisticsExchange();
+    waitForGlobalDataExchange();
 
     _globalNumberOfInnerUnrefinedCells = _globalNumberOfInnerUnrefinedCellsBufferIn;
-    _lightestRank._rank                = _lightestRankIn._unrefinedCells < _localNumberOfInnerUnrefinedCells ? _lightestRankIn._rank : tarch::mpi::Rank::getInstance().getRank();
-    _lightestRank._unrefinedCells      = _lightestRankIn._unrefinedCells;
     _globalNumberOfSplits              = _numberOfSplitsIn;
     _globalNumberOfTrees               = _numberOfTreesIn;
     _globalNumberOfRanksWithEnabledLoadBalancing = _numberOfRanksWithEnabledLoadBalancingIn;
-    _minimumOfMaximumTreesPerRank                = _minimumOfMaximumTreesIn;
     _maximumTreesPerRank                         = _maximumTreesIn;
 
     if ( _globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCells ) {
@@ -126,20 +119,15 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
       );
       _viewConsistent = false;
       _globalNumberOfInnerUnrefinedCells       = _localNumberOfInnerUnrefinedCells;
-      _lightestRank._rank                      = tarch::mpi::Rank::getInstance().getRank();
     }
 
     _globalSumRequest            = new MPI_Request();
-    _globalLightestRankRequest   = new MPI_Request();
     _globalNumberOfSplitsRequest = new MPI_Request();
     _globalNumberOfTreesRequest  = new MPI_Request();
     _globalNumberOfRanksWithEnabledLoadBalancingRequest = new MPI_Request();
-    _globalMinimumOfMaximumTreesPerRankRequest          = new MPI_Request();
     _globalMaximumTreesPerRankRequest                   = new MPI_Request();
 
     _globalNumberOfInnerUnrefinedCellsBufferOut     = _localNumberOfInnerUnrefinedCells;
-    _lightestRankOut._unrefinedCells                = _localNumberOfInnerUnrefinedCells;
-    _lightestRankOut._rank                          = tarch::mpi::Rank::getInstance().getRank();
     _numberOfSplitsOut                              = _localNumberOfSplits;
     _numberOfTreesOut                               = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
     _numberOfRanksWithEnabledLoadBalancingOut       = _localLoadBalancingEnabled ? 1 : 0;
@@ -171,15 +159,6 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
       MPI_SUM,
       tarch::mpi::Rank::getInstance().getCommunicator(),
       _globalSumRequest
-    );
-    MPI_Iallreduce(
-      &_lightestRankOut,   // send
-      &_lightestRankIn,    // receive
-      1,                         // count
-      MPI_DOUBLE_INT,
-      MPI_MINLOC,
-      tarch::mpi::Rank::getInstance().getCommunicator(),
-      _globalLightestRankRequest
     );
     // has to be global number, as local is already erased
     MPI_Iallreduce(
@@ -249,11 +228,6 @@ int toolbox::loadbalancing::Statistics::getGlobalNumberOfTrees() const {
 }
 
 
-int toolbox::loadbalancing::Statistics::getMinimumOfMaximumOfTreesPerRank() const {
-  return _minimumOfMaximumTreesPerRank;
-}
-
-
 int toolbox::loadbalancing::Statistics::getMaximumTreesPerRank() const {
   return _maximumTreesPerRank;
 }
@@ -261,13 +235,6 @@ int toolbox::loadbalancing::Statistics::getMaximumTreesPerRank() const {
 
 int toolbox::loadbalancing::Statistics::getNumberOfStateUpdatesWithoutAnySplit() const {
   return _numberOfStateUpdatesWithoutAnySplit;
-}
-
-
-int toolbox::loadbalancing::Statistics::getLightestRank() const {
-  assertion1( _lightestRank._rank>=0, toString() );
-  assertion1( _lightestRank._rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(), toString() );
-  return _lightestRank._rank;
 }
 
 

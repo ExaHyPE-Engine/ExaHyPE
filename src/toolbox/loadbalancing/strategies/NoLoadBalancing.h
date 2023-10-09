@@ -6,12 +6,14 @@
 
 #include "tarch/logging/Log.h"
 
-#include "AbstractLoadBalancing.h"
+#include "toolbox/loadbalancing/AbstractLoadBalancing.h"
 
 
 namespace toolbox {
   namespace loadbalancing {
-    class NoLoadBalancing;
+    namespace strategies {
+      class NoLoadBalancing;
+    }
   }
 }
 
@@ -22,7 +24,7 @@ namespace toolbox {
  * A dummy that you can use if you wanna have a class around with a proper
  * load balancing signature.
  */
-class toolbox::loadbalancing::NoLoadBalancing: public toolbox::loadbalancing::AbstractLoadBalancing {
+class toolbox::loadbalancing::strategies::NoLoadBalancing: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * Delegate to other constructor with nullptr arguments, as configuration
