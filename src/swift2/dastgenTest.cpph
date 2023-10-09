@@ -1,4 +1,5 @@
 #pragma once
+#include <cstring>
 #include <iostream>
 #include <type_traits>
 
@@ -24,6 +25,8 @@ void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
     checkPeanoDoubleArrays(particle);
     checkPeanoIntegerArrays(particle);
   }
+
+  checkConstructors(localParticles);
 }
 
 
@@ -910,6 +913,168 @@ void dastgenTest::checkPeanoIntegerArrays(Particle& particle) {
   assert(integer_var4[i] == particle->getMyCompressedDebugIntegerArray(i));
 }
 #endif
+}
+
+
+template <typename ParticleContainer>
+void dastgenTest::checkConstructors(ParticleContainer& localParticles) {
+
+  using Part = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  // Prepare some dummy arguments
+  tarch::la::Vector<Dimensions, double> dummyDimDoubleVector = {0.1, 0.2, 0.3};
+  tarch::la::Vector<8, double>          dummyDoubleVector    = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8};
+  tarch::la::Vector<8, int>             dummyIntVector       = {1, 2, 3, 4, 5, 6, 7, 8};
+  std::bitset<8>                        dummyBitset          = 0b11111111;
+  double                                dummyDoubleArr[8]    = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8};
+  int                                   dummyIntArr[8]       = {1, 2, 3, 4, 5, 6, 7, 8};
+  char                                  dummyString[80]      = "Hello there";
+
+  // First the copy constructor
+  Part* p1 = new Part();
+  // set a handful of values for checks later
+  // Should be the same as for the Part p2 below
+  p1->setMyDouble(2.);
+  p1->setMyInteger(1);
+  p1->setMyString(dummyString);
+  p1->setMyBoolean(true);
+
+  // Now the full-arg constructor
+  // For the values where we provided initial values in the dastgen script,
+  // copy them over from p1. Otherwise, checks further below will fail.
+  // I'm manually setting the string initial values here because they were a
+  // hassle to copy correctly and pass the subsequent tests.
+  char initvalString[80]      = "initval\0";
+  int  initLen                = 8;
+  char initvalDebugString[80] = "initval\0";
+  int  initLenDebug           = 8;
+
+
+  Part* p2 = new Part(
+    /* tarch::la::Vector<Dimensions,double>  __debugX = */ dummyDimDoubleVector,
+    /* tarch::la::Vector<Dimensions,double>  __debugH = */ dummyDimDoubleVector * 2.,
+    /* tarch::la::Vector<Dimensions,double>  __x = */ dummyDimDoubleVector * 3.,
+    /* double  __searchRadius = */ 1.,
+    /* ParallelState  __ParallelState = */ Part::ParallelState::Local,
+    /* NewParallelState  __NewParallelState = */ Part::NewParallelState::Local,
+    /* MoveState  __MoveState = */ Part::MoveState::New,
+    /* bool  __CellHasUpdatedParticle = */ false,
+    /* bool  __myBoolean = */ true,
+    /* bool  __myInitvalBoolean = */ p1->getMyInitvalBoolean(),
+#if PeanoDebug > 0
+    /* bool  __myDebugBoolean = */ true,
+    /* bool  __myInitvalDebugBoolean = */ p1->getMyInitvalDebugBoolean(),
+#endif
+    /* double  __myDouble =  */ 2.,
+    /* double  __myInitvalDouble = */ p1->getMyInitvalDouble(),
+#if PeanoDebug > 0
+    /* double  __myDebugDouble = */ 4.,
+    /* double  __myInitvalDebugDouble = */ p1->getMyInitvalDebugDouble(),
+#endif
+    /* double  __myCompressedDouble = */ 6.,
+    /* double  __myInitvalCompressedDouble = */ p1->getMyInitvalCompressedDouble(),
+#if PeanoDebug > 0
+    /* double  __myDebugCompressedDouble = */ 8.,
+    /* double  __myInitvalDebugCompressedDouble = */ p1->getMyInitvalDebugCompressedDouble(),
+#endif
+    /* MyEnum  __myEnum = */ Part::MyEnum::Foo,
+#if PeanoDebug > 0
+    /* MyDebugEnum  __myDebugEnum = */ Part::MyDebugEnum::Bar,
+#endif
+    /* int  __myInteger = */ 1,
+    /* int  __myInitvalInteger = */ p1->getMyInitvalInteger(),
+#if PeanoDebug > 0
+    /* int  __myDebugInteger = */ 3,
+    /* int  __myInitvalDebugInteger = */ p1->getMyInitvalDebugInteger(),
+#endif
+    /* int  __myCompressedInteger = */ 5,
+    /* int  __myInitvalCompressedInteger = */ p1->getMyInitvalCompressedInteger(),
+#if PeanoDebug > 0
+    /* int  __myDebugCompressedInteger = */ 7,
+    /* int  __myInitvalDebugCompressedInteger = */ p1->getMyInitvalDebugCompressedInteger(),
+#endif
+    /* char  __myString[80] = */ dummyString,
+    /* int  __myStringLength = */ 11,
+    /* char  __myInitvalString[80] = */ initvalString,
+    /* int  __myInitvalStringLength = */ initLen,
+#if PeanoDebug > 0
+    /* char  __myDebugString[80] = */ dummyString,
+    /* int  __myDebugStringLength = */ 11,
+    /* char  __myInitvalDebugString[80] = */ initvalDebugString,
+    /* int  __myInitvalDebugStringLength = */ initLenDebug,
+#endif
+    /* std::bitset<8>  __myBooleanArray = */ dummyBitset,
+    /* std::bitset<8>  __myCompressedBooleanArray = */ dummyBitset,
+#if PeanoDebug > 0
+    /* std::bitset<8>  __myDebugBooleanArray = */ dummyBitset,
+    /* std::bitset<8>  __myDebugCompressedBooleanArray = */ dummyBitset,
+#endif
+    /* double  __myDoubleArray[8] = */ dummyDoubleArr,
+    /* double  __myCompressedDoubleArray[8] = */ dummyDoubleArr,
+#if PeanoDebug > 0
+    /* double  __myDebugDoubleArray[8] = */ dummyDoubleArr,
+    /* double  __myDebugCompressedDoubleArray[8] = */ dummyDoubleArr,
+#endif
+    /* int  __myIntegerArray[8] = */ dummyIntArr,
+    /* int  __myCompressedIntegerArray[8] = */ dummyIntArr,
+#if PeanoDebug > 0
+    /* int  __myDebugIntegerArray[8] = */ dummyIntArr,
+    /* int  __myDebugCompressedIntegerArray[8] = */ dummyIntArr,
+#endif
+    /* tarch::la::Vector<8,double>  __myPeanoDoubleArray = */ dummyDoubleVector,
+    /* tarch::la::Vector<8,double>  __myCompressedPeanoDoubleArray = */ dummyDoubleVector,
+#if PeanoDebug > 0
+    /* tarch::la::Vector<8,double>  __myDebugPeanoDoubleArray = */ dummyDoubleVector,
+    /* tarch::la::Vector<8,double>  __myDebugCompressedPeanoDoubleArray = */ dummyDoubleVector,
+#endif
+    /* tarch::la::Vector<8,int>  __myPeanoIntegerArray = */ dummyIntVector,
+    /* tarch::la::Vector<8,int>  __myCompressedPeanoIntegerArray = */ dummyIntVector,
+#if PeanoDebug > 0
+    /* tarch::la::Vector<8,int>  __myDebugPeanoIntegerArray = */ dummyIntVector,
+    /* tarch::la::Vector<8,int>  __myDebugCompressedPeanoIntegerArray); */ dummyIntVector
+#endif
+  );
+
+
+  // Sporadically check that everything has been set correctly
+
+  assert(p1->getMyDouble() == p2->getMyDouble());
+  assert(p1->getMyInteger() == p2->getMyInteger());
+  assert(p1->getMyBoolean() == p2->getMyBoolean());
+
+
+  // Run the same checks as for the other particles
+  checkBooleans(p1);
+  checkDoubles(p1);
+  checkEnums(p1);
+  checkIntegers(p1);
+  checkStrings(p1);
+
+  checkBooleanArrays(p1);
+  checkDoubleArrays(p1);
+  checkIntegerArrays(p1);
+
+  checkPeanoDoubleArrays(p1);
+  checkPeanoIntegerArrays(p1);
+
+
+  checkBooleans(p2);
+  checkDoubles(p2);
+  checkEnums(p2);
+  checkIntegers(p2);
+  checkStrings(p2);
+
+  checkBooleanArrays(p2);
+  checkDoubleArrays(p2);
+  checkIntegerArrays(p2);
+
+  checkPeanoDoubleArrays(p2);
+  checkPeanoIntegerArrays(p2);
+
+
+  // Clean up after yourself
+  delete[] p1;
+  delete[] p2;
 }
 
 

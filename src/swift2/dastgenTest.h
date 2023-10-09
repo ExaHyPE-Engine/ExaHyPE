@@ -89,6 +89,13 @@ namespace dastgenTest {
 
 
   /**
+   * Check the constructor methods.
+   */
+  template <typename ParticleContainer>
+  void checkConstructors(ParticleContainer& localParticles);
+
+
+  /**
    * A dummy function to move the simulation forward in time.
    * The time step size is hard-coded such that the sim runs
    * for 2 steps. */
