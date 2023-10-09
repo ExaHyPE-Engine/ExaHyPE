@@ -277,7 +277,7 @@ class CollocatedLowOrderDiscretisation(Solver):
       vertex_unknown = self._vertex_pde_data,
       getter         = "getValue().data()",
       description    = "u",
-      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.NoMetaFile, 
+      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
       number_of_unknows_per_vertex = self._unknowns,
       guard_predicate              = "true", 
       ))
@@ -286,7 +286,7 @@ class CollocatedLowOrderDiscretisation(Solver):
       vertex_unknown = self._vertex_pde_data,
       getter         = "getRhs().data()",
       description    = "u",
-      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.NoMetaFile, 
+      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
       number_of_unknows_per_vertex = self._unknowns,
       guard_predicate              = "true", 
       ))
