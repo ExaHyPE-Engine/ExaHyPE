@@ -36,15 +36,15 @@ class MatrixGenerator:
     self.poly_degree   = poly_degree
 
     '''
-    The next three attributes are set here, and 
+    The next four attributes are set here, and 
     are promoted to 2/3 dimensions by calling
-    getPolynomialsForDimension, for instance.
+    getPolynomial, for instance.
     Each comes with a default argument of 
     self.Dimensions, but this can be modified if
     a lower dimension of polynomial is required
     '''
     self.polynomials1d = self.getPolynomial1d()
-    self.derivatives1d = [ p.deriv() for p in self.getPolynomial1d() ]
+    self.derivatives1d = [ p.deriv() for p in self.polynomials1d ]
     self.points1d      = self.getPoints1d()
     self.weights1d     = self.getWeights1d()
 
@@ -143,7 +143,7 @@ class MatrixGenerator:
     '''
     return [ *product( *points ) ]
 
-  def getWeightsForDimension(self, dim):
+  def getWeightsForDimension(self, dim=-1):
     """!
     We promote the 1D quadrature weights
     in into the dimensions of our problem
@@ -151,6 +151,8 @@ class MatrixGenerator:
     for any dimension and does not need to
     be implemented in the child class.
     """
+    if dim==-1:
+      dim = self.Dimensions
     #dummy function to return product of entries in array
     def arrayProduct(array):
       output = 1
@@ -217,6 +219,15 @@ class MatrixGenerator:
 
     #define function object to return:
     def returnFunc(*args):
+      '''
+      The intention of this part is as follows:
+      We have (for example) 3 arguments for a 3d function: [arg_x, arg_y, arg_z]
+      We have correspondingly 3 polynomials, since we promote a 1d basis to a 3d
+      basis by taking products: [poly_x, poly_y, poly_z].
+      Then, we return poly_x(arg_x) * poly_y(arg_y) * poly_z(arg_z)
+
+      The polys don't go out of scope.      
+      '''
       assert(len(args)==dim), f"Supplied {len(args)} args to a {dim}d function!"
       out = 1
       for i, arg in enumerate(args):
