@@ -9,4 +9,4 @@ from .Utils import construct_ifdef_string
 
 from .Utils import LLVMSymbol
 
-print("DaStGen 2 (C) www.peano-framework.org")
+#print("DaStGen 2 (C) www.peano-framework.org")

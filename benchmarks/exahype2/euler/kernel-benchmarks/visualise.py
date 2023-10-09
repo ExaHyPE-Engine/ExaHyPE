@@ -8,11 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-machine_implementations = {
-  "host":"host",
-  "device":"device",
-}
-
 
 Markers = [ "o", "s", "<", ">", "^", "v", "D" ]
 Colours = [ "#ff0000",
@@ -31,10 +26,10 @@ Colours = [ "#ff0000",
             ]
 
 
-Devices         = ["host"]
+Devices         = ["host", "device 0", "device 1", "device 2", "device 3"]
 CallSemantics   = ["functors", "static"]
 DataFlow        = ["patch-wise", "batched", "task-graph" ]
-Parallelisation = ["no parallelism", "parallel for", "subtasks"] 
+Parallelisation = ["no parallelism", "parallel for", "subtasks", "map", "managed", "usm"] 
   
 
 def parse(device, call_semantics, data_flow, parallelisation):

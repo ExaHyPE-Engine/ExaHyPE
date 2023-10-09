@@ -159,7 +159,15 @@ endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
-  target_link_libraries(project_options INTERFACE OpenMP::OpenMP_CXX)
+
+  # Workaround for Intel oneAPI. TODO: Fix this:
+  # "PLEASE append the compiler options "-save-temps -v", rebuild the application to to get the full command which is failing"
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    target_compile_options(project_options INTERFACE -fopenmp)
+    target_link_libraries(project_options INTERFACE -fopenmp)
+  else()
+    target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+  endif()
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
   target_link_libraries(project_options INTERFACE TBB::tbb)
