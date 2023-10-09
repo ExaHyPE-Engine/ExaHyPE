@@ -6,7 +6,7 @@ from   scipy.interpolate import lagrange
 
 import peano4
 
-from   MatrixGenerator import MatrixGenerator
+from   .MatrixGenerator import MatrixGenerator
 
 
 
@@ -41,7 +41,7 @@ class DLinear(MatrixGenerator):
     
   def getCellIdentityMatrix(self):
     dim    = self._cell_dofs * self.unknowns_per_vertex_dof
-    #           identity matrix. quite a funny one from numpy devs
+    #           identity matrix.
     output = np.eye(dim,dim) * 2**(-self.Dimensions)
     return output
 
