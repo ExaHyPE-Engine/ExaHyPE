@@ -3,10 +3,28 @@ documentation:
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  dependencies: []
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LATEX_IMAGE_TAG} doxygen documentation/Doxyfile
   artifacts:
     paths:
       - ./doxygen-html/*
   retry: 0
+
+pages:
+  stage: deploy
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  script:
+    #make public directory. This will be visible to outside world
+    - mkdir public
+    #copy the doxygen stuff into it
+    - cp -r ./doxygen-html/* public/
+  needs:
+    - job: documentation
+  artifacts:
+    paths:
+      - public
+  rules:
+    #only do this on p4
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
