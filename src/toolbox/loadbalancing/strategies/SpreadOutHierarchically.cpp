@@ -248,6 +248,7 @@ void toolbox::loadbalancing::SpreadOutHierarchically::updateLoadBalancing() {
 
 void toolbox::loadbalancing::SpreadOutHierarchically::finishStep() {
   _statistics.updateGlobalView();
+  _costMetrics.updateGlobalView();
   _blacklist.update();
 
   if ( _statistics.hasConsistentViewOfWorld() ) {

@@ -78,6 +78,13 @@
  *   rebalance. Rebalancing is already problematic from a memory constraint
  *   point of view. Any further refinement makes this situation worse.
  *
+ *
+ * ## Alter cost metrics
+ *
+ * All the load balancing strategies work against some cost metrics. By
+ * default, we use CellCount. But you can create your own cost metric and
+ * use this one instead.
+ *
  */
 
 

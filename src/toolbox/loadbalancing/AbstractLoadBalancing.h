@@ -11,8 +11,9 @@
 
 #include <map>
 
-#include "Configuration.h"
 #include "Blacklist.h"
+#include "Configuration.h"
+#include "CostMetrics.h"
 #include "Statistics.h"
 
 
@@ -29,9 +30,9 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
      * Constructor
      *
      * Data ownership is handed over to the load balancing, i.e. the balancing
-     * has to delete the configuration object unless you pass in a false.
-     * Consequently, deleteInConstructor should not hold if you pass in the
-     * nullptr.
+     * has to delete the configuration object unless you pass in the nullptr.
+     * If you pass in the nullptr, you cannot use the object, so this should
+     * be done with care by any subclass.
      *
      * Many implementations of AbstractLoadBalancing change the _state field
      * immediately in their constructor. Please ensure that you invoke
@@ -42,10 +43,9 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
      * start.
      */
     AbstractLoadBalancing(
-      Configuration* configuration,
-      bool deleteInDestructor
+      Configuration*  configuration,
+      CostMetrics*    costMetrics
     );
-
 
     virtual ~AbstractLoadBalancing();
 
@@ -110,6 +110,8 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
 
     Configuration*  _configuration;
 
+    CostMetrics*    _costMetrics;
+
     /**
      * Ensure that you invoke
      *
@@ -119,9 +121,6 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
      * view of the whole world.
      */
     State  _state;
-
-    bool _deleteInDestructor;
-
 
     /**
      * Ensure enough memory is left-over.

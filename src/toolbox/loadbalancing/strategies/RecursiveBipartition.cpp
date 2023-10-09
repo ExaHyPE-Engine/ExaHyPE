@@ -181,6 +181,7 @@ void toolbox::loadbalancing::RecursiveBipartition::updateLoadBalancing() {
 
 void toolbox::loadbalancing::RecursiveBipartition::finishStep() {
   _statistics.updateGlobalView();
+  _costMetrics.updateGlobalView();
   _blacklist.update();
 
   updateLoadBalancing();

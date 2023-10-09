@@ -185,6 +185,7 @@ void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
 
 void toolbox::loadbalancing::SplitOversizedTree::finishStep() {
   _statistics.updateGlobalView();
+  _costMetrics.updateGlobalView();
   _blacklist.update();
 
   updateLoadBalancing();

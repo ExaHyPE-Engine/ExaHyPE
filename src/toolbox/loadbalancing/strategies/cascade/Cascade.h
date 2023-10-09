@@ -2,12 +2,13 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "LoadBalancing.h"
-#include "State.h"
+#include "toolbox/loadbalancing/LoadBalancing.h"
+#include "toolbox/loadbalancing/State.h"
 
 
 namespace toolbox {
   namespace loadbalancing {
+    namespace loadbalancing {
     template<typename HostedLoadBalancing0, typename HostedLoadBalancing1>
     class Cascade;
   }

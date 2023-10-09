@@ -59,7 +59,7 @@ std::string  toolbox::loadbalancing::Statistics::toString() const {
 }
 
 
-void toolbox::loadbalancing::Statistics::waitForGlobalStatisticsExchange() {
+void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
   #ifdef Parallel
   if (_globalSumRequest != nullptr ) {
     MPI_Wait( _globalSumRequest, MPI_STATUS_IGNORE );

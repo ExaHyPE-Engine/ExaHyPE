@@ -9,14 +9,22 @@ std::ostream& operator<<(std::ostream& out, const toolbox::loadbalancing::Abstra
   return out;
 }
 
-toolbox::loadbalancing::AbstractLoadBalancing::AbstractLoadBalancing(Configuration* configuration, bool deleteInDestructor):
+toolbox::loadbalancing::AbstractLoadBalancing::AbstractLoadBalancing(
+  Configuration*  configuration,
+  CostMetrics*    costMetrics
+):
+  _blacklist(),
+  _statistics(),
   _configuration(configuration),
-  _state( State::Undefined ),
-  _deleteInDestructor(deleteInDestructor) {}
+  _costMetrics(costMetrics),
+  _state( State::Undefined ) {}
 
 toolbox::loadbalancing::AbstractLoadBalancing::~AbstractLoadBalancing() {
-  if (_deleteInDestructor) {
+  if (_configuration!=nullptr) {
     delete _configuration;
+  }
+  if (_costMetrics!=nullptr) {
+    delete _costMetrics;
   }
 }
 
@@ -26,6 +34,7 @@ std::string toolbox::loadbalancing::AbstractLoadBalancing::toString() const {
 
   msg << "(state=" << ::toString( _state )
       << ",statistics=" << _statistics.toString()
+      << ",cost-metrics=" << _costMetrics.toString()
       << ",blacklist=" << _blacklist.toString()
       << ")";
 

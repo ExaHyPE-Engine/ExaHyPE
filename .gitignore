@@ -314,3 +314,4 @@ src/unittests/UnitTests*
 *.trs
 *.sh
 compile_commands.json
+/documentation/

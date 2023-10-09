@@ -41,7 +41,7 @@ class toolbox::loadbalancing::Statistics {
      * - finishSimulation() and
      * - finishStep()
      */
-    void waitForGlobalStatisticsExchange();
+    void waitForGlobalDataExchange();
 
     void updateGlobalView();
 
