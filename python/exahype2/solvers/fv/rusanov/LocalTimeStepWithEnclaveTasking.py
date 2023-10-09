@@ -16,8 +16,8 @@ from .kernels import create_compute_new_time_step_size_kernel_for_local_time_ste
 from .kernels import create_abstract_solver_user_declarations_for_local_time_stepping
 from .kernels import create_abstract_solver_user_definitions_for_local_time_stepping
 
-from exahype2.solvers.fv.kernels import SolverVariant    
-from exahype2.solvers.fv.kernels import KernelVariant    
+from .kernels import SolverVariant    
+from .kernels import KernelVariant    
 
 from exahype2.solvers.fv.kernels import create_halo_layer_construction_with_interpolation_for_reconstructed_patch
 from exahype2.solvers.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
