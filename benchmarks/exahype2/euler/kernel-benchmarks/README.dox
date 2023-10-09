@@ -71,6 +71,8 @@ environment in specific ways. You might have to set some environment
 variables specifying the GPUs to use or core counts accordingly.
 The exact usage obviously depends strongly @ref page_compiler_specific_settings "on your software stack".
 
+The JIT compiler crashes due to the FPGA emulation device on our cluster (NCC). If this happens on
+your machine, try putting SYCL_DEVICE_FILTER=gpu before the command to run the benchmark.
 
 # Outputs
 

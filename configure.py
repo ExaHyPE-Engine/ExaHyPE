@@ -161,7 +161,7 @@ if args.libxsmm:
 if args.cmake:
   # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
   env_vars = {
-      "C": "{}".format(args.cc),
+      "CC": "{}".format(args.cc),
       "CXX": "{}".format(args.cxx),
   }
 
@@ -184,7 +184,7 @@ if args.cmake:
 else:
   # Prepare the environment variables
   env_vars = {
-      "C": "{} {}".format(args.cc, cflags),
+      "CC": "{} {}".format(args.cc, cflags),
       "CXX": "{} {}".format(args.cxx, cxxflags),
   }
 

@@ -294,20 +294,19 @@ submodules/
 # Unit tests
 UnitTests2d*
 UnitTests3d*
+src/unittests/UnitTests*
 
 # Output files
 *patch-file*
 *.pvd
 *.err
 *.out
-/documentation/
 
 *.o.*
 *.trs*
 *.xml
 *.def
 
-builds/
 # Misc
 .DS_Store
 /Debug/
@@ -315,4 +314,3 @@ builds/
 *.trs
 *.sh
 compile_commands.json
-/documentation/

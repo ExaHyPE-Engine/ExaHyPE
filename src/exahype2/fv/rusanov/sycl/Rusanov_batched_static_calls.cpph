@@ -5,7 +5,6 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "exahype2/fv/rusanov/LoopBody.h"
-#define NSEC_IN_SEC 1000000000.0
 
 
 template <
@@ -15,7 +14,7 @@ template <
   std::size_t unknowns,
   std::size_t auxiliaryVariables,
   typename TempDataEnumerator>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
+void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
   int                   targetDevice,
   ::exahype2::CellData& hostPatchData,
   bool                  evaluateFlux,
@@ -23,13 +22,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
   bool                  evaluateSource,
   bool                  evaluateMaximumEigenvalueAfterTimeStep
 ) {
-#if defined(GPUOffloadingSYCL)
-  ::sycl::property_list prop_list{::sycl::property::queue::enable_profiling()};
-  ::sycl::queue         queue{::sycl::gpu_selector_v, prop_list}; // Queue is hard-coded to GPU
-  /* command_graph is currently in development (not working properly)
-  ::sycl::ext::oneapi::experimental::command_graph g(queue.get_context(), queue.get_device());
-  */
-  //::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+  #if defined(GPUOffloadingSYCL)
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   constexpr int solversHaloSize = 1;
 
@@ -889,16 +883,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
     updateWithNCP.wait();
   }
 
-  /* Prints out the time spent in kernel, without CPU-GPU data transfers
-  if (evaluateMaximumEigenvalueAfterTimeStep == true) {
-  evalEigen.wait();
-  auto start = copySolutionEvent.get_profiling_info<::sycl::info::event_profiling::command_start>();
-  auto stop = evalEigen.get_profiling_info<::sycl::info::event_profiling::command_end>();
-  auto duration = static_cast<double>(stop - start) / NSEC_IN_SEC;
-  ::std::cout << "Batched kernel execution time with reduction:" << duration << ::std::endl;
-  }
-  */
-
   patchData.destroy(hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
 
   if (tempFluxX != nullptr)
@@ -919,9 +903,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
     ::sycl::free(tempEigenvalueY, queue);
   if (tempEigenvalueZ != nullptr)
     ::sycl::free(tempEigenvalueZ, queue);
-#else
+  #else
   assertionMsg(
     false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
   );
-#endif
+  #endif
 }

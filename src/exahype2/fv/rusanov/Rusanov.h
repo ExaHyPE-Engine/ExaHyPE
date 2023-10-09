@@ -645,48 +645,6 @@ namespace exahype2 {
         );
       }
 
-
-      template <
-        typename Solver,
-        int      numberOfVolumesPerAxisInPatch,
-        int      haloSize,
-        int      unknowns,
-        int      auxiliaryVariables,
-        typename TempDataEnumerator
-      >
-      static void timeStepWithRusanov_batched_heap_multicore_static_calls(
-        ::exahype2::CellData&   patchData,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
-      )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      {
-        #if defined(SharedOMP)
-        omp::timeStepWithRusanov_batched_heap_multicore_static_calls<
-          Solver,
-          numberOfVolumesPerAxisInPatch,
-          haloSize,
-          unknowns,
-          auxiliaryVariables,
-          TempDataEnumerator
-        >(
-          patchData,
-          evaluateFlux,
-          evaluateNonconservativeProduct,
-          evaluateSource,
-          evaluateMaximumEigenvalueAfterTimeStep,
-          loopParallelism
-        );
-        #else
-        assertionMsg(false, "not supported");
-        #endif
-      }
-
       namespace internal {
         tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables);
         tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesUnknowns(int numberOfVolumesPerAxisInPatch, int unknowns);

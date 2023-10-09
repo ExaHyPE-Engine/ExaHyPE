@@ -4,20 +4,26 @@ function(set_project_linker_flags project_name)
     $<$<CONFIG:Release>:/LTCG>
   )
 
-  set(CLANG_LINKER_FLAGS
-    -flto
+  set(LLVM_LINKER_FLAGS
+    #-flto
   )
 
-  set(GCC_LINKER_FLAGS
-      ${CLANG_LINKER_FLAGS}
+  set(GNU_LINKER_FLAGS
+    ${LLVM_LINKER_FLAGS}
   )
+
+  set(NVHPC_LINKER_FLAGS)
 
   if(MSVC)
     set(LINKER_FLAGS ${MSVC_LINKER_FLAGS})
   elseif(CMAKE_CXX_COMPILER_ID MATCHES ".*Clang")
-    set(LINKER_FLAGS ${CLANG_LINKER_FLAGS})
+    set(LINKER_FLAGS ${LLVM_LINKER_FLAGS})
   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(LINKER_FLAGS ${GCC_LINKER_FLAGS})
+    set(LINKER_FLAGS ${GNU_LINKER_FLAGS})
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    set(LINKER_FLAGS ${LLVM_LINKER_FLAGS})
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+    set(LINKER_FLAGS ${NVHPC_LINKER_FLAGS})
   else()
     message(AUTHOR_WARNING "No linker flags set for '${CMAKE_CXX_COMPILER_ID}' compiler.")
   endif()
