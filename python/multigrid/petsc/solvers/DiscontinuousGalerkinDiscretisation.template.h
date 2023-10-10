@@ -63,16 +63,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     ) override;
 
 
-    {% if CELL_CELL_MASS_MATRIX==[] %}
-    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getMassMatrix(
+    {% if CELL_CELL_RHS_MATRIX==[] %}
+    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getLhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) override;
     {% endif %}
 
 
-    {% if CELL_CELL_SYSTEM_MATRIX==[] %}
-    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getSystemMatrix(
+    {% if CELL_CELL_RHS_MATRIX==[] %}
+    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getRhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) override;

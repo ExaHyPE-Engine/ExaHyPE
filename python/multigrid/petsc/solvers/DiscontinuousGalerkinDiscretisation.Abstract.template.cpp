@@ -33,34 +33,42 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishAssembly() {
 }
 
 
-{% if CELL_CELL_MASS_MATRIX!=[] %}
-tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMassMatrix(
+{% if CELL_CELL_LHS_MATRIX!=[] %}
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLhsMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
   static tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, double > result = {
-      {{CELL_CELL_MASS_MATRIX[0]| join(", ")}}
-      {% for ROW in CELL_CELL_MASS_MATRIX[1:] %}
+      {{CELL_CELL_LHS_MATRIX[0]| join(", ")}}
+      {% for ROW in CELL_CELL_LHS_MATRIX[1:] %}
         ,{{ROW | join(", ")}}
       {% endfor %}
   };
-  return tarch::la::volume(cellSize) * result;
+  double scaling = 1.0;
+  for (int i=0; i<{{CELL_CELL_LHS_MATRIX_SCALING}}; i++) {
+    scaling *= cellSize(0);
+  }
+  return scaling * result;
 }
 {% endif %}
 
 
-{% if CELL_CELL_SYSTEM_MATRIX!=[] %}
-tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getSystemMatrix(
+{% if CELL_CELL_RHS_MATRIX!=[] %}
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRhsMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
   static tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, double > result = {
-      {{CELL_CELL_SYSTEM_MATRIX[0]| join(", ")}}
-      {% for ROW in CELL_CELL_SYSTEM_MATRIX[1:] %}
+      {{CELL_CELL_RHS_MATRIX[0]| join(", ")}}
+      {% for ROW in CELL_CELL_RHS_MATRIX[1:] %}
         ,{{ROW | join(", ")}}
       {% endfor %}
   };
-  return tarch::la::volume(cellSize) / cellSize(0) / cellSize(0) * result;
+  double scaling = 1.0;
+  for (int i=0; i<{{CELL_CELL_RHS_MATRIX_SCALING}}; i++) {
+    scaling *= cellSize(0);
+  }
+  return scaling * result;
 }
 {% endif %}
 

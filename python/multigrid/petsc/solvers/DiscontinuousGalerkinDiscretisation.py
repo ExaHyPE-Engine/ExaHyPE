@@ -11,6 +11,7 @@ from .Solver                                              import Solver
 from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
 from multigrid.petsc.actionsets.InitCellDoFs              import InitCellDoFs
 from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
+from multigrid.petsc.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
 
 from abc import abstractmethod
 
@@ -25,6 +26,36 @@ class AssemblePetscMatrix(ActionSet):
 
   """
   TemplateTouchCellFirstTime = """
+  if (fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior) {
+    std::pair<int,int> localCellIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
+    int globalCellIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localCellIndex);
+
+    auto lhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
+    for (int row=0; row<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; row++) 
+    for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        globalCellIndex+row, 
+        globalCellIndex+col, 
+        lhsCellMatrix(row,col)
+      );
+    }
+    
+    auto rhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
+    for (int row=0; row<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; row++) {
+      double rhs = 0.0;
+      for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+        rhs += rhsCellMatrix(row,col) * fineGridCell{{SOLVER_NAME}}.getRhs(col);
+      }
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        row, rhs
+      );
+    }
+    
+    auto projectionMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfCellDataOntoFace(marker.x(),marker.h());
+    for (int d=0; d<Dimensions; d++) {
+    xxx
+    }
+  }
   """
 
   TemplateTouchFaceFirstTime="""
@@ -161,6 +192,17 @@ class DiscontinuousGalerkinDiscretisation(Solver):
   cell_rhs_matrix: [double] or []
     Pass in [] if you prefer to assemble the matrix per cell yourself.
 
+  cell_cell_lhs_matrix_scaling: Positive integer
+    The lhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
+    parameter. If you don't specify an lhs matrix, i.e. you prefer to inject
+    this matrix manually, you can leave this parameter None, as it is not 
+    used.
+    
+  cell_cell_rhs_matrix_scaling: Positive integer
+    The rhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
+    parameter. If you don't specify a rhs matrix, i.e. you prefer to inject
+    this matrix manually, you can leave this parameter None, as it is not 
+    used.
   
   """
   def __init__(self,
@@ -170,8 +212,10 @@ class DiscontinuousGalerkinDiscretisation(Solver):
                unknowns,
                min_h,
                max_h,
-               cell_cell_mass_matrix,
-               cell_cell_system_matrix,
+               cell_cell_lhs_matrix,
+               cell_cell_rhs_matrix,
+               cell_cell_lhs_matrix_scaling,
+               cell_cell_rhs_matrix_scaling,
                cell_to_face_matrix,
                face_face_Riemann_problem_matrix,
                face_to_cell_matrix,
@@ -192,12 +236,15 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     self.dimensions        = dimensions
     self.unknowns          = unknowns
 
-    self.cell_cell_mass_matrix    = cell_cell_mass_matrix
-    self.cell_cell_system_matrix  = cell_cell_system_matrix
-    self.cell_to_face_matrix      = cell_to_face_matrix
+    self.cell_cell_lhs_matrix               = cell_cell_lhs_matrix
+    self.cell_cell_rhs_matrix               = cell_cell_rhs_matrix
+    self.cell_to_face_matrix                = cell_to_face_matrix
     self.face_face_Riemann_problem_matrix   = face_face_Riemann_problem_matrix
     self.face_to_cell_matrix                = face_to_cell_matrix
 
+    self.cell_cell_lhs_matrix_scaling = cell_cell_lhs_matrix_scaling
+    self.cell_cell_rhs_matrix_scaling = cell_cell_rhs_matrix_scaling
+    
     self.quadrature_points_in_unit_interval = quadrature_points_in_unit_interval
     
     self._cell_pde_data   = peano4.datamodel.DaStGen2( name )
@@ -246,52 +293,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     solution and right-hand side. 
     
     """
-    solution_plotter = peano4.toolbox.PlotCellDataInPeanoBlockFormat(
-      filename       = "solution-" + self._name,
-      cell_unknown   = self._cell_pde_data,
-      getter         = "getValue().data()",
-      description    = "u",
-      time_stamp_evaluation        = peano4.toolbox.PlotCellDataInPeanoBlockFormat.NoMetaFile, 
-      number_of_unknows_per_cell   = self.number_of_matrix_entries_per_cell,
-      guard_predicate              = "not marker.hasBeenRefined()", 
-      )
-
-    rhs_plotter = peano4.toolbox.PlotCellDataInPeanoBlockFormat(
-      filename       = "rhs-" + self._name,
-      cell_unknown   = self._cell_pde_data,
-      getter         = "getRhs().data()",
-      description    = "b",
-      time_stamp_evaluation        = peano4.toolbox.PlotCellDataInPeanoBlockFormat.NoMetaFile, 
-      number_of_unknows_per_cell   = self.number_of_matrix_entries_per_cell,
-      guard_predicate              = "not marker.hasBeenRefined()", 
-      )
-    
-    arrangement_of_points_in_reference_element = []
-    if self.dimensions==2:
-      for y in range(0,self.polynomial_degree+1):
-        for x in range(0,self.polynomial_degree+1):
-          arrangement_of_points_in_reference_element.append( self.quadrature_points_in_unit_interval[x] )
-          arrangement_of_points_in_reference_element.append( self.quadrature_points_in_unit_interval[y] )
-    else:
-      for z in range(0,self.polynomial_degree+1):
-        for y in range(0,self.polynomial_degree+1):
-          for x in range(0,self.polynomial_degree+1):
-            arrangement_of_points_in_reference_element.append( self.quadrature_points_in_unit_interval[x] )
-            arrangement_of_points_in_reference_element.append( self.quadrature_points_in_unit_interval[y] )
-            arrangement_of_points_in_reference_element.append( self.quadrature_points_in_unit_interval[z] )
-    
-    solution_plotter.switch_unknown_arrangement(total_number_of_unknows_per_cell = self.number_of_matrix_entries_per_cell,
-                                                nodes_per_axis                   = self.polynomial_degree+1,
-                                                meta_data                        = "Solution created by PETSc",
-                                                arrangement_of_points_in_reference_element = arrangement_of_points_in_reference_element
-                                                )
-    rhs_plotter.switch_unknown_arrangement(total_number_of_unknows_per_cell = self.number_of_matrix_entries_per_cell,
-                                                nodes_per_axis                   = self.polynomial_degree+1,
-                                                meta_data                        = "",
-                                                arrangement_of_points_in_reference_element = arrangement_of_points_in_reference_element
-                                                )
-    observer.add_action_set( solution_plotter )
-    observer.add_action_set( rhs_plotter )
+    observer.add_action_set( PlotDGDataInPeanoBlockFormat(self) )
     pass
 
 
@@ -351,12 +353,14 @@ class DiscontinuousGalerkinDiscretisation(Solver):
         "MAX_H"             : self.max_h,
         "POLYNOMIAL_DEGREE":  self.polynomial_degree,
         "UNKNOWNS":           self.unknowns,
-        "CELL_CELL_MASS_MATRIX":     self.cell_cell_mass_matrix,
-        "CELL_CELL_SYSTEM_MATRIX":   self.cell_cell_system_matrix,
+        "CELL_CELL_LHS_MATRIX":      self.cell_cell_lhs_matrix,
+        "CELL_CELL_RHS_MATRIX":      self.cell_cell_rhs_matrix,
         "CELL_TO_FACE_MATRIX":       self.cell_to_face_matrix,
         "FACE_FACE_RIEMANN_PROBLEM_MATRIX":      self.face_face_Riemann_problem_matrix,
         "FACE_TO_CELL_MATRIX":                   self.face_to_cell_matrix,
         "QUADRATURE_POINTS_IN_UNIT_INTERVAL":    self.quadrature_points_in_unit_interval,
+        "CELL_CELL_LHS_MATRIX_SCALING": self.cell_cell_lhs_matrix_scaling,
+        "CELL_CELL_RHS_MATRIX_SCALING": self.cell_cell_rhs_matrix_scaling,
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

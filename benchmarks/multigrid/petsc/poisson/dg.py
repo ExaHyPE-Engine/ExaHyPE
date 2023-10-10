@@ -46,13 +46,16 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      dimensions           = args.dimensions,
                                                                      min_h                = args.meshsize,
                                                                      max_h                = args.meshsize,
-                                                                     cell_cell_mass_matrix   = matrices.getCellCellMassMatrix(),     
-                                                                     cell_cell_system_matrix = matrices.getCellCellSystemMatrixForLaplacian(),
+                                                                     cell_cell_rhs_matrix   = matrices.getCellCellMassMatrix(),     
+                                                                     cell_cell_lhs_matrix   = matrices.getCellCellSystemMatrixForLaplacian(),
+                                                                     cell_cell_lhs_matrix_scaling = args.dimensions-2,
+                                                                     cell_cell_rhs_matrix_scaling = args.dimensions,
                                                                      cell_to_face_matrix     = matrices.getCellToFaceMatrix(),       
                                                                      face_face_Riemann_problem_matrix        = matrices.getFaceFaceMatrix(),   # todo bad name    
                                                                      face_to_cell_matrix     = matrices.getCellIdentityMatrix(), # @todo Wrong
                                                                      quadrature_points_in_unit_interval = [ 0.0,1.0 ],
                                                                      )
+
 
 project.add_solver( solver )
                         

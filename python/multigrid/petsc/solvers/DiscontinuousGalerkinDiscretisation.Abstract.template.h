@@ -89,18 +89,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     void finishAssembly();
 
 
-    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getMassMatrix(
+    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getLhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     )
-    {% if CELL_CELL_MASS_MATRIX==[] %} = 0 {% endif %};
+    {% if CELL_CELL_LHS_MATRIX==[] %} = 0 {% endif %};
 
 
-    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getSystemMatrix(
+    virtual tarch::la::Matrix< DoFsPerCell, DoFsPerCell, double > getRhsMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     )
-    {% if CELL_CELL_SYSTEM_MATRIX==[] %} = 0 {% endif %};
+    {% if CELL_CELL_RHS_MATRIX==[] %} = 0 {% endif %};
 
 
     virtual tarch::la::Matrix< NodesPerFace*Unknowns*FacesPerCell, DoFsPerCell, double > getProjectionOfCellDataOntoFace(
