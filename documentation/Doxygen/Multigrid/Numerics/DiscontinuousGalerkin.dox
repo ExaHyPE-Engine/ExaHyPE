@@ -34,8 +34,7 @@ Consequently, we end up with one unknown per vertex in our mesh: We have to
 know the right scaling.
 
 
-In the present project, we make things more complicated: 
-We drop the continuity requirement. Our intention/rationale is that we could get a more accurate solution
+In the present project, we drop the continuity requirement. Our intention/rationale is that we could get a more accurate solution
 by using piecewise functions that don't "connect" with each other.
 This means that we need more weights.
 The example below still uses linear shape functions (now in 2d):
@@ -54,23 +53,39 @@ more freedom to approximate a solution, as they are not tightly glued together.
  
  
 ## Geometric arrangement
-
+ 
 We have quite some freedom to arrange these weights.
-We depict two arrangements here:
+The sketch below depits a Gauss-Legendre (left) and Gauss-Lobatto (right) arrangement.
 
 @image html gaussLobatto.png
 
-We show a scheme for both Gauss-Legendre (above) and Gauss-Lobatto (below).
-We focus exclusively on the cell dofs (blue) from here onwards.
-We note that for Lobatto, some cell dofs coincide spatially with the faces,
-but logically we hold everything in the cells. Each cell dof
-holds one value (weight) for each PDE in our setup.  
-We call these weights ***unknowns*** whereas the set of unknowns in one
-point per cell are called ***degree of freedom***.
-For a scalar equation such as Poisson, we only have one unknown
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+We refer to the points which hold the data as ***nodes***. Each node can hold 
+multiple ***unknowns*** which are weights of the shape functions. The number of
+nodes times the number of unknowns defines the total number of ***degrees of freedom***
+(DoFs) within the system.
+</div>
+
+
+
+We note that for Lobatto, some cell nodes coincide spatially with the faces.
+However, we hold all the data within the cells (from a data structure point
+of view). 
 As we store all the unknowns of all degrees of freedom per cell in one 
 huge array per cell, we end up with an array of doubles of size 
-@f$ K (p+1)^d @f$, K being the number of unknowns per cell dof.
+@f$ K (p+1)^d @f$, K being the number of unknowns per cell node and @f$ p @f$
+denoting the polynomial order.
+
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+A solver in Peano has a unique geometric layout of its nodes, and each and every
+node holds the same number of unknowns. 
+You can however combine various solvers with different layouts.
+The overall philosophy is to keep things simple as building blocks, which users
+can assemble into more complex code setups.
+An alternative approach would have been to write one generic, monolithic solver
+with a lot of features which cover all eventualities and then can be specialised.
+</div>
 
 
 ## The weak formulation
@@ -159,17 +174,10 @@ We end up with a linear equation system
 
 @f$ A x = b @f$
 
-where x has @f$ K |\mathbb{C}| \cdot (p+1)^d @f$ entries. @f$ \mathbb{C}  @f$ 
+where x has @f$ |\mathbb{C}| \cdot K  \cdot (p+1)^d @f$ entries. @f$ \mathbb{C}  @f$ 
 is set of cells in the mesh.
 
-<!--
-For the remainder, we use
-Gauss-Lobatto, which means that we place the weights exactly at the cell 
-corners.
-Each face dof holds a value for 
-@f$ u, \ \text{and } \phi_x @f$ for each vertical face, and 
-@f$ u, \ \text{and } \phi_y @f$ for each horizontal face.
--->
+
 
 
 ## An operator language and temporary variables
