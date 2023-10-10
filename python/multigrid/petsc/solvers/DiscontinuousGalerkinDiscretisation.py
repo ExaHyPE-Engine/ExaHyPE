@@ -60,11 +60,10 @@ class AssemblePetscMatrix(ActionSet):
       int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
       int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
       
-      // @todo + dofsPerFace stimmen net
       for (int row=0; row<dofsPerFace; row++ ) {
         for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalFirstDoFIndexOfLeftFace + row, 
+            globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
             globalCellIndex+col,
             projectionCellToFaceMatrix(d * dofsPerFace + row,col)
           );
@@ -75,12 +74,12 @@ class AssemblePetscMatrix(ActionSet):
           );
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalCellIndex+col,
-            globalFirstDoFIndexOfLeftFace + row, 
+            globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
             projectionFaceToCellMatrix(col, d * dofsPerFace + row)
           );
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalCellIndex+col,
-            globalFirstDoFIndexOfRightFace + row, 
+            globalFirstDoFIndexOfRightFace + row + 2 * dofsPerFace, 
             projectionFaceToCellMatrix(col, d * dofsPerFace + row + Dimensions*dofsPerFace)
           );
         }
@@ -90,6 +89,20 @@ class AssemblePetscMatrix(ActionSet):
   """
 
   TemplateTouchFaceFirstTime="""
+  auto RiemannSolverMatrix = repositories::{{SOLVER_INSTANCE}}.getRiemannSolver(marker.x(),marker.h());
+  int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.Unknowns;
+  if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() != facedata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+    std::pair<int,int> localFirstDoFIndex = std::make_pair(_spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
+    int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex);
+    for (int row=0; row<dofsPerFace; row++)
+    for (int col=0; col<2*dofsPerFace; col++) {
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        globalFirstDoFIndex + 2*dofsPerFace,
+        globalFirstDoFIndex + col, 
+        RiemannSolverMatrix(row, col)
+      );
+    }
+  }
   """
   
   def __init__(self,
