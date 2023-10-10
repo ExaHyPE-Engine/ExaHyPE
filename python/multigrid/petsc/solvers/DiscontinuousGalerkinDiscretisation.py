@@ -51,9 +51,40 @@ class AssemblePetscMatrix(ActionSet):
       );
     }
     
-    auto projectionMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfCellDataOntoFace(marker.x(),marker.h());
+    auto projectionCellToFaceMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfCellDataOntoFace(marker.x(),marker.h());
+    auto projectionFaceToCellMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfRiemannSolutionOntoCell(marker.x(),marker.h());
+    int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.Unknowns;
     for (int d=0; d<Dimensions; d++) {
-    xxx
+      std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
+      std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
+      int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
+      int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
+      
+      // @todo + dofsPerFace stimmen net
+      for (int row=0; row<dofsPerFace; row++ ) {
+        for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalFirstDoFIndexOfLeftFace + row, 
+            globalCellIndex+col,
+            projectionCellToFaceMatrix(d * dofsPerFace + row,col)
+          );
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalFirstDoFIndexOfRightFace + row, 
+            globalCellIndex+col,
+            projectionCellToFaceMatrix(d * dofsPerFace + row + Dimensions*dofsPerFace,col)
+          );
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalCellIndex+col,
+            globalFirstDoFIndexOfLeftFace + row, 
+            projectionFaceToCellMatrix(col, d * dofsPerFace + row)
+          );
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalCellIndex+col,
+            globalFirstDoFIndexOfRightFace + row, 
+            projectionFaceToCellMatrix(col, d * dofsPerFace + row + Dimensions*dofsPerFace)
+          );
+        }
+      }
     }
   }
   """
@@ -217,8 +248,10 @@ class DiscontinuousGalerkinDiscretisation(Solver):
                cell_cell_lhs_matrix_scaling,
                cell_cell_rhs_matrix_scaling,
                cell_to_face_matrix,
-               face_face_Riemann_problem_matrix,
                face_to_cell_matrix,
+               cell_to_face_matrix_scaling,
+               face_to_cell_matrix_scaling,
+               face_face_Riemann_problem_matrix,
                quadrature_points_in_unit_interval,
                ):
     """!
@@ -239,11 +272,13 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     self.cell_cell_lhs_matrix               = cell_cell_lhs_matrix
     self.cell_cell_rhs_matrix               = cell_cell_rhs_matrix
     self.cell_to_face_matrix                = cell_to_face_matrix
-    self.face_face_Riemann_problem_matrix   = face_face_Riemann_problem_matrix
     self.face_to_cell_matrix                = face_to_cell_matrix
+    self.face_face_Riemann_problem_matrix   = face_face_Riemann_problem_matrix
 
     self.cell_cell_lhs_matrix_scaling = cell_cell_lhs_matrix_scaling
     self.cell_cell_rhs_matrix_scaling = cell_cell_rhs_matrix_scaling
+    self.cell_to_face_matrix_scaling  = cell_to_face_matrix_scaling
+    self.face_to_cell_matrix_scaling  = face_to_cell_matrix_scaling
     
     self.quadrature_points_in_unit_interval = quadrature_points_in_unit_interval
     
@@ -355,12 +390,14 @@ class DiscontinuousGalerkinDiscretisation(Solver):
         "UNKNOWNS":           self.unknowns,
         "CELL_CELL_LHS_MATRIX":      self.cell_cell_lhs_matrix,
         "CELL_CELL_RHS_MATRIX":      self.cell_cell_rhs_matrix,
-        "CELL_TO_FACE_MATRIX":       self.cell_to_face_matrix,
         "FACE_FACE_RIEMANN_PROBLEM_MATRIX":      self.face_face_Riemann_problem_matrix,
+        "CELL_TO_FACE_MATRIX":       self.cell_to_face_matrix,
         "FACE_TO_CELL_MATRIX":                   self.face_to_cell_matrix,
         "QUADRATURE_POINTS_IN_UNIT_INTERVAL":    self.quadrature_points_in_unit_interval,
         "CELL_CELL_LHS_MATRIX_SCALING": self.cell_cell_lhs_matrix_scaling,
         "CELL_CELL_RHS_MATRIX_SCALING": self.cell_cell_rhs_matrix_scaling,
+        "CELL_TO_FACE_MATRIX_SCALING":           self.cell_to_face_matrix_scaling,
+        "FACE_TO_CELL_MATRIX_SCALING":           self.face_to_cell_matrix_scaling,
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

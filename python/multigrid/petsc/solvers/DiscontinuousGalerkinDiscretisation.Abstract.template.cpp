@@ -84,7 +84,11 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAM
         ,{{ROW | join(", ")}}
       {% endfor %}
   };
-  return result;
+  double scaling = 1.0;
+  for (int i=0; i<{{CELL_TO_FACE_MATRIX_SCALING}}; i++) {
+    scaling *= cellSize(0);
+  }
+  return scaling * result;
 }
 {% endif %}
 
@@ -100,7 +104,11 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAM
         ,{{ROW | join(", ")}}
       {% endfor %}
   };
-  return cellSize(0) * result;
+  double scaling = 1.0;
+  for (int i=0; i<{{FACE_TO_CELL_MATRIX_SCALING}}; i++) {
+    scaling *= cellSize(0);
+  }
+  return scaling * result;
 }
 {% endif %}
 
