@@ -90,6 +90,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         source_term=None,
         material_parameters=None,
         point_source=0,
+        eigenvalues=None,
         additional_action_set_includes="",
         additional_user_includes="",
     ):
@@ -101,7 +102,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             additional_user_includes="",
             flux=flux,
             ncp=ncp,
-            eigenvalues=PDETerms.User_Defined_Implementation,
+            eigenvalues=eigenvalues,
             source_term=source_term,
             material_parameters=material_parameters,
             point_source=point_source,
