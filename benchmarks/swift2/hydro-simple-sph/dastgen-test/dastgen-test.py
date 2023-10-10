@@ -94,8 +94,6 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 # Initialisation snippet for the particle
 ###############################################################################
 
-# Alternative method: InsertParticlesByCoordinates
-
 # Set up the coordinates for the particles
 # We construct a regular (lattice) configuration.
 Npart = 100
@@ -112,12 +110,6 @@ yp = yp.reshape((np.prod(yp.shape),))
 
 coords[:, 0] = xp
 coords[:, 1] = yp
-
-#  Sedov-Taylor Blast snippet  --------------------------------------------------
-#  The particle attributes are set via an initalisation snippet that sets
-#  the initial conditions specific for this problem, i.e. the velocity field
-#  that converges towards the center of the domain and that generates the
-#  collapse.
 
 initialisation_snippet = """
       /*
@@ -145,14 +137,6 @@ project.algorithm_step_initial_conditions.add_action_set(
 
 ###############################################################################
 # Generate plain Peano 4 project
-###############################################################################
-#
-# The value of some constants such as the adiabatic index cannot be arbitrary
-# but rather we have a set of pre-defined options. The same happens for some
-# functions, e.g. the SPH smoothing kernel. This allows us to define some
-# symbols and fix the values at compile time.
-#
-#
 ###############################################################################
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)

@@ -17,7 +17,7 @@ class DastgenTestDummyParticle(Particle):
     of dastgen2.
 
     All this particle does is define variables, and then test getters, setters,
-    and constructors in a single sweep.
+    and constructors.
 
     """
 

@@ -4,7 +4,7 @@
 set -e
 
 # Script to run experiment (dastgen-test)
-#
+
 # set threads number
 export OMP_NUM_THREADS=1
 
