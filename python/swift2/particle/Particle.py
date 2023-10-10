@@ -187,8 +187,6 @@ Particle properties:
         TODO: init steps
         """
 
-        return
-
         steps = self.algorithm_steps()
         nsteps = len(steps)
         nstages = AlgorithmStep.SweepStage.STAGE_COUNT.value
@@ -223,7 +221,7 @@ Particle properties:
                   globaldata::hydroPart::SweepStage::{1}
                   );\n"""
 
-        # First step is special: First reset all dependency values
+        # First step is special: First reset all dependency values before doing anything else
         first_step = self.algorithm_steps()[0]
         if first_step.touch_vertex_first_time_kernel is None:
             first_step.touch_vertex_first_time_kernel = ""
@@ -231,18 +229,20 @@ Particle properties:
 
         for step in self.algorithm_steps():
 
+            if step.touch_vertex_first_time_kernel is None:
+                step.touch_vertex_first_time_kernel = ""
+            stage = AlgorithmStep.get_sweep_stage_name(AlgorithmStep.SweepStage.TOUCH_VERTEX_FIRST_TIME)
+            step.touch_vertex_first_time_kernel += check_template.format(step.name, stage)
+
             if step.cell_kernel is None:
                 step.cell_kernel = ""
             stage = AlgorithmStep.get_sweep_stage_name(AlgorithmStep.SweepStage.CELL_KERNEL)
             step.cell_kernel += check_template.format(step.name, stage)
 
-            if step.touch_vertex_first_time_kernel is None:
-                step.touch_vertex_first_time_kernel = ""
-            #  step.touch_vertex_first_time_kernel += ";\ndependencyCheck(localParticles, 0,1);\n"
-
             if step.touch_vertex_last_time_kernel is None:
                 step.touch_vertex_last_time_kernel = ""
-            #  step.touch_vertex_last_time_kernel += ";\ndependencyCheck(localParticles, 0,1);\n"
+            stage = AlgorithmStep.get_sweep_stage_name(AlgorithmStep.SweepStage.TOUCH_VERTEX_LAST_TIME)
+            step.touch_vertex_last_time_kernel += check_template.format(step.name, stage)
 
             if step.includes is None:
                 step.includes = ""

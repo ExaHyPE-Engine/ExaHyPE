@@ -68,7 +68,7 @@ class AlgorithmStep(object):
         names of the stages in
         """
 
-        TOUCH_VERTEX_FIST_TIME = 0
+        TOUCH_VERTEX_FIRST_TIME = 0
         CELL_KERNEL = 1
         TOUCH_VERTEX_LAST_TIME = 2
         STAGE_COUNT = 3
@@ -79,7 +79,7 @@ class AlgorithmStep(object):
         """
         Get the name as a string of a sweep stage for a given SweepStage enum.
         """
-        if stage == AlgorithmStep.SweepStage.TOUCH_VERTEX_FIST_TIME:
+        if stage == AlgorithmStep.SweepStage.TOUCH_VERTEX_FIRST_TIME:
             return "touchVertexFirstTime"
         elif stage == AlgorithmStep.SweepStage.CELL_KERNEL:
             return "cellKernel"

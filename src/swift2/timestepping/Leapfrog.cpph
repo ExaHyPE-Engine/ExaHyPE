@@ -17,6 +17,8 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
       not particle->getIsBoundaryParticle()
     ) {
 
+      std::cout << "Drifting particle " << particle->getPartid() << std::endl;
+
       // Drift the particle (update position for a full time-step). It's important
       // to take the "V_full" here, not the fluid velocity V. V_full doesn't get
       // touched outside of kicks. V will be interpolated/integrated in time as the

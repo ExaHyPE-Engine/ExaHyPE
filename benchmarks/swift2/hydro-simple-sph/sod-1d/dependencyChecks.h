@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #pragma once
 
 /* namespace benchmarks{ */
@@ -6,17 +7,52 @@
 /* namespace globaldata{ */
 
 
-template <typename particle>
-static void dependencyCheckDumpDebugOutput(const particle* localParticle,
+template <typename Particle>
+static void dependencyCheckDumpDebugOutput(const Particle* localParticle,
     const benchmarks::swift2::sod::globaldata::hydroPart::AlgorithmStep AlgorithmStep,
     const benchmarks::swift2::sod::globaldata::hydroPart::SweepStage SweepStage,
     const int errors){
 
+  using StepEnum = std::remove_pointer<Particle>::type::AlgorithmStep;
+  using StageEnum = std::remove_pointer<Particle>::type::SweepStage;
+  using PartClass = std::remove_pointer<Particle>::type;
 
   std::cout << "Particle " << localParticle->getPartid() << " - found " << errors << " dependency errors" << std::endl;
-  std::cout << "Stage: " << AlgorithmStep << " " << SweepStage << std::endl;
+  std::cout << "Stage: " << PartClass::castAlgorithmStepToString(AlgorithmStep) << " / " << PartClass::castSweepStageToString(SweepStage) << std::endl;
   std::cout << "Particle data:" << localParticle->toString() << std::endl;
 
+  // Set up "header" of the table
+  std::cout << "Particle Dependency Checks This Step:\n";
+  std::cout << std::left << std::setw(40) << "Algorithm Step " ;
+  for (int s = 0; s < static_cast<int>(StageEnum::count); s++) {
+    // all stages that we account for
+    std::cout << PartClass::castSweepStageToString(static_cast<StageEnum>(s));
+    if (s < static_cast<int>(StageEnum::count) - 1) {
+      std::cout << std::setw(3) << " / ";
+    }
+  }
+  std::cout << "\n";
+
+
+  // write out what particle has actually done
+  int i = 0;
+  for (int a = 0; a < static_cast<int>(StepEnum::count); a++) {
+
+    std::cout << std::left << std::setw(40) << PartClass::castAlgorithmStepToString(static_cast<StepEnum>(a));
+
+    for (int s = 0; s < static_cast<int>(StageEnum::count); s++) {
+      std::cout << std::setw(5) << localParticle->getSweepStateProgression(i);
+      if (s < static_cast<int>(StageEnum::count) - 1) {
+        std::cout << std::setw(3) << " / ";
+      }
+      i++;
+    }
+    std::cout << "\n";
+  }
+
+
+  // flush before you quit
+  std::cout << std::endl;
 
 
   abort();
