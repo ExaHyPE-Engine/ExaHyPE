@@ -8,6 +8,7 @@ import dastgen2
 import peano4.dastgen2
 
 from abc import ABC
+import copy
 
 
 class SPHLeapfrogFixedSearchRadius(Particle):
@@ -761,7 +762,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         print(namespace)
 
     def initialisation_steps(self):
-        return [
+        # Define the algorithm steps to be taken during initialization here
+        initsteps =  [
             self.algorithm_steps_dict["FlagBoundaryParticles"],
             self.algorithm_steps_dict["Density"],
             self.algorithm_steps_dict["Force"],
@@ -769,6 +771,11 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             #  self.algorithm_steps_dict["Kick1"],
             self.algorithm_steps_dict["Kick2"],
         ]
+
+        # return deep copies of algorithms steps. Otherwise,
+        # modifications down the line (like the dependency checks)
+        # will cause trouble.
+        return [ copy.deepcopy(i) for i in initsteps]
 
     @property
     def readme_descriptor(self):

@@ -216,16 +216,16 @@ Particle properties:
 
 
         check_template ="""\n
-  dependencyCheck(localParticles,
-                  globaldata::hydroPart::AlgorithmStep::{0},
-                  globaldata::hydroPart::SweepStage::{1}
-                  );\n"""
+  dependencyChecks::dependencyCheck(localParticles,
+                  globaldata::{NAME}::AlgorithmStep::{0},
+                  globaldata::{NAME}::SweepStage::{1}
+                  );\n""".replace("{NAME}", self.name)
 
         # First step is special: First reset all dependency values before doing anything else
         first_step = self.algorithm_steps()[0]
         if first_step.touch_vertex_first_time_kernel is None:
             first_step.touch_vertex_first_time_kernel = ""
-        first_step.touch_vertex_first_time_kernel = "\n  clearDependencyChecks(localParticles);\n" + first_step.touch_vertex_last_time_kernel
+        first_step.touch_vertex_first_time_kernel = "\n  dependencyChecks::clearDependencyChecks(localParticles);\n" + first_step.touch_vertex_last_time_kernel
 
         for step in self.algorithm_steps():
 

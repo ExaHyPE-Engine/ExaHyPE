@@ -9,6 +9,9 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
                                 .getMinTimeStepSize();
 
   for (auto* particle : localParticles) {
+
+    std::cout << "Drifting particle " << particle->getPartid() << std::endl;
+
     if (
       particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
       and
@@ -16,8 +19,6 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
       and
       not particle->getIsBoundaryParticle()
     ) {
-
-      std::cout << "Drifting particle " << particle->getPartid() << std::endl;
 
       // Drift the particle (update position for a full time-step). It's important
       // to take the "V_full" here, not the fluid velocity V. V_full doesn't get
