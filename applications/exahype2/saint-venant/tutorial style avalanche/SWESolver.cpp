@@ -187,6 +187,10 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
     // Partial Derivatives of unknowns
     // Retrieving true value from average value and deltaQ
 
+    //h
+    const double hx  = (Q[NumberOfUnknowns + h_x] - 0.5*deltaQ[NumberOfUnknowns + h_x]) / (1 * volumeH(0));
+    const double hy  = (Q[NumberOfUnknowns + h_y] - 0.5*deltaQ[NumberOfUnknowns + h_y]) / (1 * volumeH(1));
+
     // u
     const double ux  = (Q[NumberOfUnknowns + u_x] - 0.5*deltaQ[NumberOfUnknowns + u_x]) / (1 * volumeH(0));
     const double uy  = (Q[NumberOfUnknowns + u_y] - 0.5*deltaQ[NumberOfUnknowns + u_y]) / (1 * volumeH(1));
@@ -204,13 +208,13 @@ void applications::exahype2::avalanche::SWESolver::nonconservativeProduct(
     switch (normal) {
     case 0: // x
       BTimesDeltaQ[0] = -(volumeH(0) * 0.0);
-      BTimesDeltaQ[1] = -(volumeH(0) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * ux + Q[0] * uxx));
-      BTimesDeltaQ[2] = -(volumeH(0) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uxy + vxx)));
+      BTimesDeltaQ[1] = -(volumeH(0) * Nu * sqrt(Q[0]) * (1.5 * hx * ux + Q[0] * uxx));
+      BTimesDeltaQ[2] = -(volumeH(0) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * hx * (uy + vx) + Q[0] * (uxy + vxx)));
       break;
     case 1: // y
       BTimesDeltaQ[0] = -(volumeH(1) * 0.0);
-      BTimesDeltaQ[1] = -(volumeH(1) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uyy + vxy)));
-      BTimesDeltaQ[2] = -(volumeH(1) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * vy + Q[0] * vyy));
+      BTimesDeltaQ[1] = -(volumeH(1) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * hy * (uy + vx) + Q[0] * (uyy + vxy)));
+      BTimesDeltaQ[2] = -(volumeH(1) * Nu * sqrt(Q[0]) * (1.5 * hy * vy + Q[0] * vyy));
       break;
     }
   }
@@ -262,20 +266,19 @@ void applications::exahype2::avalanche::SWESolver::sourceTerm(
     const double ubar = sqrt(Q[1] * Q[1] + Q[2] * Q[2]) * ih;
 
     const double Fr       = ubar / sqrt(Gravity * Q[0] * cos(Zeta));
-    const double Tau      = Beta * Q[0] / Hstop - Fr;
-    const double Betastar = Beta * (Mu2 + Mu3 - 2 * Mu1) / ((Mu2 - Mu3) * (Mu2 - Mu3)) - Tau;
-    const double Hstar    = (Betastar + Tau) * Hstop / Beta;
+    const double Betastar = Beta * (Mu2 + Mu3 - 2 * Mu1) / ((Mu2 - Mu3) * (Mu2 - Mu3)) - Gamma;
+    const double Hstar    = (Betastar + Gamma) * Hstop / Beta;
     double       Mu       = 1.0;
 
     if (Fr > Betastar) {
-      const double vstop  = (Q[0] * Beta) / (Fr + Tau);
+      const double vstop  = (Q[0] * Beta) / (Fr + Gamma);
       const double Mustop = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
       Mu                  = Mustop;
     }
 
     else if (Fr > 0 && Fr <= Betastar) {
       const double vstart  = Q[0];
-      const double vstop   = Q[0] * Beta / (Betastar + Tau);
+      const double vstop   = Q[0] * Beta / (Betastar + Gamma);
       const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
       const double Mustop  = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
       const double T       = Mustart + (Mustop - Mustart) * (Fr / Betastar);

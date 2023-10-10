@@ -77,7 +77,7 @@ namespace exahype2::saintvenant {
       }
       return result;
     }
-    // std::cout<<"max eigenvalue h=0 at t="<<t<<std::endl;
+    //std::cout<<"max eigenvalue h=0 at t="<<t<<std::endl;
     return 0.0;
   }
 

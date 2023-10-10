@@ -72,6 +72,7 @@ Zeta1 = 21*Pi/180
 Zeta2 = 30.7*Pi/180
 Zeta3 = 22.2*Pi/180
 Beta = 0.136
+Gamma=0
 FrictionLengthScale = 0.00065
 Mu1 = math.tan(Zeta1)
 Mu2 = math.tan(Zeta2)
@@ -89,6 +90,7 @@ my_solver.add_solver_constants("static constexpr double Zeta1 = {};".format(Zeta
 my_solver.add_solver_constants("static constexpr double Zeta2 = {};".format(Zeta2)) # Pouliquen and Forterre
 my_solver.add_solver_constants("static constexpr double Zeta3 = {};".format(Zeta3)) # Pouliquen and Forterre
 my_solver.add_solver_constants("static constexpr double Beta = {};".format(Beta)) # Pouliquen main paper
+my_solver.add_solver_constants("static constexpr double Gamma = {};".format(Gamma))
 my_solver.add_solver_constants("static constexpr double FrictionLengthScale = {};".format(FrictionLengthScale)) # Pouliquen and Forterre
 
 ## Dependent Constants

@@ -4,7 +4,7 @@ class Avalanche:
 
     
 
-    def __init__(self, unknowns, auxiliary_variables, solver="FVRusanovGlobalAdaptive", Zeta=23.0, Zeta1=21.0, Zeta2=30.7, Zeta3=22.2, Beta=0.136, FrictionLengthScale=0.00065, Gravity=9.81):
+    def __init__(self, unknowns, auxiliary_variables, solver="FVRusanovGlobalAdaptive", Zeta=23.0, Zeta1=21.0, Zeta2=30.7, Zeta3=22.2, Beta=0.136, Gamma=0, FrictionLengthScale=0.00065, Gravity=9.81):
         self.unknowns = unknowns
         self.auxiliary_variables = auxiliary_variables
         self.solver = solver
@@ -14,6 +14,7 @@ class Avalanche:
         self.Zeta2 = Zeta2*self.Pi/180
         self.Zeta3 = Zeta3*self.Pi/180
         self.Beta = Beta
+        self.Gamma = Gamma
         self.FrictionLengthScale = FrictionLengthScale
         self.Gravity = Gravity
         self.Mu1 = math.tan(self.Zeta1)
@@ -89,6 +90,10 @@ class Avalanche:
             // Partial Derivatives of unknowns
             // Retrieving true value from average value and deltaQ
 
+            //h
+            const double hx  = (Q[NumberOfUnknowns + h_x] - 0.5*deltaQ[NumberOfUnknowns + h_x]) / (1 * volumeH(0));
+            const double hy  = (Q[NumberOfUnknowns + h_y] - 0.5*deltaQ[NumberOfUnknowns + h_y]) / (1 * volumeH(1));
+
             // u
             const double ux  = (Q[NumberOfUnknowns + u_x] - 0.5*deltaQ[NumberOfUnknowns + u_x]) / (1 * volumeH(0));
             const double uy  = (Q[NumberOfUnknowns + u_y] - 0.5*deltaQ[NumberOfUnknowns + u_y]) / (1 * volumeH(1));
@@ -104,34 +109,35 @@ class Avalanche:
             const double vxy = (Q[NumberOfUnknowns + v_xy] - 0.5*deltaQ[NumberOfUnknowns + v_xy]) / (4 * volumeH(0) * volumeH(1));
 
             switch (normal) {{
-            case 0: // x
-            {BTimesDeltaQ}[0] = -(volumeH(0) * 0.0);
-            {BTimesDeltaQ}[1] = -(volumeH(0) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * ux + Q[0] * uxx));
-            {BTimesDeltaQ}[2] = -(volumeH(0) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uxy + vxx)));
-            break;
-            case 1: // y
-            {BTimesDeltaQ}[0] = -(volumeH(1) * 0.0);
-            {BTimesDeltaQ}[1] = -(volumeH(1) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * (uy + vx) + Q[0] * (uyy + vxy)));
-            {BTimesDeltaQ}[2] = -(volumeH(1) * Nu * sqrt(Q[0]) * (1.5 * deltaQ[0] * vy + Q[0] * vyy));
-            break;
+                case 0: // x
+                    {BTimesDeltaQ}[0] = -(volumeH(0) * 0.0);
+                    {BTimesDeltaQ}[1] = -(volumeH(0) * Nu * sqrt(Q[0]) * (1.5 * hx * ux + Q[0] * uxx));
+                    {BTimesDeltaQ}[2] = -(volumeH(0) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * hx * (uy + vx) + Q[0] * (uxy + vxx)));
+                break;
+                case 1: // y
+                    {BTimesDeltaQ}[0] = -(volumeH(1) * 0.0);
+                    {BTimesDeltaQ}[1] = -(volumeH(1) * 0.5 * Nu * sqrt(Q[0]) * (1.5 * hy * (uy + vx) + Q[0] * (uyy + vxy)));
+                    {BTimesDeltaQ}[2] = -(volumeH(1) * Nu * sqrt(Q[0]) * (1.5 * hy * vy + Q[0] * vyy));
+                break;
             }}
         }}
 
         else{{
             // std::cout<<"ncp h=0 at t="<<t<<std::endl;
             switch (normal) {{
-            case 0: // x
-            {BTimesDeltaQ}[0] = 0.0;
-            {BTimesDeltaQ}[1] = 0.0;
-            {BTimesDeltaQ}[2] = 0.0;
-            break;
-            case 1: // y
-            {BTimesDeltaQ}[0] = 0.0;
-            {BTimesDeltaQ}[1] = 0.0;
-            {BTimesDeltaQ}[2] = 0.0;
-            break;
+                case 0: // x
+                    {BTimesDeltaQ}[0] = 0.0;
+                    {BTimesDeltaQ}[1] = 0.0;
+                    {BTimesDeltaQ}[2] = 0.0;
+                break;
+                case 1: // y
+                    {BTimesDeltaQ}[0] = 0.0;
+                    {BTimesDeltaQ}[1] = 0.0;
+                    {BTimesDeltaQ}[2] = 0.0;
+                break;
             }}
         }}
+
         """
         if "FV" in self.solver:
             return implementation_of_ncp_string_template.format(BTimesDeltaQ="BTimesDeltaQ",Nu=self.Nu, NumberOfUnknowns=self.unknowns)
@@ -153,6 +159,7 @@ class Avalanche:
             const double Zeta2 = {Zeta2};
             const double Zeta3 = {Zeta3};
             const double Beta = {Beta};
+            const double Gamma = {Gamma};
             const double FrictionLengthScale = {FrictionLengthScale};
             const double Mu1 = {Mu1};
             const double Mu2 = {Mu2};
@@ -164,24 +171,27 @@ class Avalanche:
 
 
             const double Fr       = ubar / sqrt(Gravity * Q[0] * cos(Zeta));
-            const double Tau      = Beta * Q[0] / Hstop - Fr;
-            const double Betastar = Beta * (Mu2 + Mu3 - 2 * Mu1) / ((Mu2 - Mu3) * (Mu2 - Mu3)) - Tau;
-            const double Hstar    = (Betastar + Tau) * Hstop / Beta;
+            const double Betastar = Beta * (Mu2 + Mu3 - 2 * Mu1) / ((Mu2 - Mu3) * (Mu2 - Mu3)) - Gamma;
+            const double Hstar    = (Betastar + Gamma) * Hstop / Beta;
             double       Mu       = 1.0;
 
             if (Fr > Betastar) {{
-                const double vstop  = (Q[0] * Beta) / (Fr + Tau);
+                const double vstop  = (Q[0] * Beta) / (Fr + Gamma);
                 const double Mustop = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
                 Mu                  = Mustop;
             }}
 
             else if (Fr > 0 && Fr <= Betastar) {{
                 const double vstart  = Q[0];
-                const double vstop   = Q[0] * Beta / (Betastar + Tau);
+                const double vstop   = Q[0] * Beta / (Betastar + Gamma);
                 const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
                 const double Mustop  = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
                 const double T       = Mustart + (Mustop - Mustart) * (Fr / Betastar);
                 Mu                   = T;
+                //std::cout<<"h="<<Q[0]<<std::endl;
+                //std::cout<<"Beta="<<Beta<<std::endl;
+                //std::cout<<"Betastar="<<Betastar<<std::endl;
+                //std::cout<<"Gamma="<<Gamma<<std::endl;
             }}
 
             else if (Fr == 0) {{
@@ -189,20 +199,30 @@ class Avalanche:
                 const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
                 Mu                   = Mustart;
             }}
+            
 
             if(tarch::la::equals(ubar,0.0)){{
                 // std::cout<<"sourceTerm h>0 and ubar=0 at t="<<t<<std::endl;
                 const int NumberOfUnknowns = {NumberOfUnknowns};
-                const double hx = Q[NumberOfUnknowns + h_x]/volumeH(0);
-                const double hy = Q[NumberOfUnknowns + h_y]/volumeH(1);
+                //const double hx = Q[NumberOfUnknowns + h_x]/volumeH(0);
+                //const double hy = Q[NumberOfUnknowns + h_y]/volumeH(1);
+                const double hx = 0;
+                const double hy = 0;
                 const tarch::la::Vector<Dimensions, double> frictionVector = {{tan(Zeta)-hx,-hy}};
                 const double frictionVectorMagnitude = tarch::la::norm2(frictionVector);
                 if(tarch::la::greater(Mu,frictionVectorMagnitude)){{
                     Mu = frictionVectorMagnitude;
                 }}
-                S[0] = 0.0;
-                S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (frictionVector(0)/frictionVectorMagnitude) * Q[0] * Gravity * cos(Zeta);
-                S[2] = -Mu * (frictionVector(1)/frictionVectorMagnitude) * Q[0] * Gravity * cos(Zeta);
+                if(tarch::la::equals(Mu,0.0)){{
+                    S[0] = 0.0;
+                    S[1] = Q[0] * Gravity * sin(Zeta);
+                    S[2] = 0.0;
+                }}
+                else{{
+                    S[0] = 0.0;
+                    S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (frictionVector(0)/frictionVectorMagnitude) * Q[0] * Gravity * cos(Zeta);
+                    S[2] = -Mu * (frictionVector(1)/frictionVectorMagnitude) * Q[0] * Gravity * cos(Zeta);
+                }}
             }}
             else if(tarch::la::greater(ubar,0.0)){{
                 // std::cout<<"sourceTerm h>0 ubar>0 at t="<<t<<std::endl;
@@ -218,7 +238,7 @@ class Avalanche:
             S[1] = 0.0;
             S[2] = 0.0;
         }}
-        """.format(Gravity=self.Gravity, Zeta=self.Zeta, Zeta1=self.Zeta1, Zeta2=self.Zeta2, Zeta3=self.Zeta3, Beta=self.Beta, FrictionLengthScale=self.FrictionLengthScale, Mu1=self.Mu1, Mu2=self.Mu2, Mu3=self.Mu3, Nu=self.Nu, Hstart=self.Hstart, Hstop=self.Hstop, NumberOfUnknowns=self.unknowns)
+        """.format(Gravity=self.Gravity, Zeta=self.Zeta, Zeta1=self.Zeta1, Zeta2=self.Zeta2, Zeta3=self.Zeta3, Beta=self.Beta, Gamma=self.Gamma, FrictionLengthScale=self.FrictionLengthScale, Mu1=self.Mu1, Mu2=self.Mu2, Mu3=self.Mu3, Nu=self.Nu, Hstart=self.Hstart, Hstop=self.Hstop, NumberOfUnknowns=self.unknowns)
 
 
     def implementation_of_refinement_criterion(self):

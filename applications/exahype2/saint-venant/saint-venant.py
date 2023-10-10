@@ -8,12 +8,12 @@ import exahype2
 
 dimensions                = 2
 auxiliary_variables       = 13
-cell_size                 = 0.075
+cell_size                 = 0.0028
 amr_levels                = 3
 patch_size                = 3
 rk_order                  = 2
 dg_order                  = 1
-end_time                  = 2.0
+end_time                  = 1.0
 plot_interval             = end_time/100
 #plot_interval             = 0
 use_gpu                   = False
@@ -57,7 +57,7 @@ build_modes = {
   "Stats":peano4.output.CompileMode.Stats,
   "Debug":peano4.output.CompileMode.Debug,
 }
-build_mode = "Debug"
+build_mode = "Release"
 
 storage_types = {
   "CallStack":exahype2.solvers.fv.Storage.CallStack,
@@ -314,7 +314,7 @@ my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically",
 #my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
-my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+# my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
 
 
@@ -340,7 +340,7 @@ print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 acoustic-wave.py' again")
+print("Regenerate all code by running 'python3 saint-venant.py' again")
 print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")
 
 
