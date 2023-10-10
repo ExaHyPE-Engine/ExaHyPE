@@ -25,7 +25,7 @@ the solver in the first place. This happens in get_includes().
   
   """
   TemplateInitVertex = """
-  if ( fineGridCell{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+  if ( fineGridVertex{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
     {% if VERTEX_CARDINALITY>1 %}
     {% else %}
     double value, rhs;
@@ -36,8 +36,8 @@ the solver in the first place. This happens in get_includes().
       value,
       rhs
     );
-    fineGridCell{{SOLVER_NAME}}.setValue(value);
-    fineGridCell{{SOLVER_NAME}}.setRhs(rhs);
+    fineGridVertex{{SOLVER_NAME}}.setValue(value);
+    fineGridVertex{{SOLVER_NAME}}.setRhs(rhs);
   }
 """
   
