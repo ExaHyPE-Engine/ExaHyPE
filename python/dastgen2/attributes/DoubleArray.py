@@ -56,7 +56,11 @@ class DoubleArray(Double):
         return [
             ("get" + accessor_name + "() const", "const double*"),
             (
-                "set" + accessor_name + "(const double value[" + self._cardinality + "])",
+                "set"
+                + accessor_name
+                + "(const double value["
+                + self._cardinality
+                + "])",
                 "void",
             ),
             ("get" + accessor_name + "(int index) const", "double"),

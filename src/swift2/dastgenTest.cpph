@@ -907,7 +907,7 @@ void dastgenTest::checkPeanoIntegerArrays(Particle& particle) {
 
   // getter/setter with array
   particle->setMyCompressedDebugPeanoIntegerArray(init_integer);
-  const tarch::la::Vector<8,int> integer_var4 = particle->getMyCompressedDebugPeanoIntegerArray();
+  const tarch::la::Vector<8, int> integer_var4 = particle->getMyCompressedDebugPeanoIntegerArray();
   assert(integer_var4[i] == particle->getMyCompressedDebugPeanoIntegerArray(i));
 }
 #endif
