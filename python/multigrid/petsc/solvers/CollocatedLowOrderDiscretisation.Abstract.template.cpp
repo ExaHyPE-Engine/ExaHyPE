@@ -27,7 +27,11 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
         ,{{ROW | join(", ")}}
       {% endfor %}
   };
-  return tarch::la::volume(cellSize) / cellSize(0) / cellSize(0) * result;
+  double scaling = 1.0;
+  for (int i=0; i<{{CELL_LHS_MATRIX_SCALING}}; i++) {
+    scaling *= cellSize(0);
+  }
+  return scaling * result;
 }
 {% endif %}
 
@@ -43,7 +47,11 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
         ,{{ROW | join(", ")}}
       {% endfor %}
   };
-  return result;
+  double scaling = 1.0;
+  for (int i=0; i<{{CELL_RHS_MATRIX_SCALING}}; i++) {
+    scaling *= cellSize(0);
+  }
+  return scaling * result;
 }
 {% endif %}
 
