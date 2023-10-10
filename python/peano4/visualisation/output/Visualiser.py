@@ -207,7 +207,7 @@ class Visualiser(object):
     print("Total number of patches:", num_patches)
 
 
-    self._dof, self._dimension, self._unknowns, self._description, self._is_data_associated_to_cell, self._mapping = validate(parsers)
+    self._dof, self._dimensions, self._unknowns, self._description, self._is_data_associated_to_cell, self._mapping = validate(parsers)
     print( "Parsing complete. Convert set of " + str(len(self._cell_data)) + " patches with " + str(self._unknowns) + " unknowns per " + str(self._dof) + "^" + str(self._dimensions) + " patch/cell into VTK data structures" )
   
     if filter!=None:
@@ -217,4 +217,14 @@ class Visualiser(object):
        if p.run_on_concatenated_data:
          print( "apply filter " + str(p) )
          self._cell_data, self._dof, self._dimensions, self._unknowns, self.is_data_associated_to_cell, self._description, self._mapping = p.render(self._cell_data, self._dof, self._dimensions, self._unknowns, self._is_data_associated_to_cell, self._description, self._mapping)
+
      
+  def reload_single_file(self):
+    parser = PatchFileParser(self._file_name, self.identifier, 0)
+    parser.parse_file()
+    self._dof, self._dimensions, self._unknowns, self._description, self._is_data_associated_to_cell, self._mapping = validate([parser])
+    self._cell_data = parser.cell_data
+    
+    for p in self._filter:
+      print( "apply filter " + str(p) )
+      self._cell_data, self._dof, self._dimensions, self._unknowns, self.is_data_associated_to_cell, self._description, self._mapping = p.render(self._cell_data, self._dof, self._dimensions, self._unknowns, self._is_data_associated_to_cell, self._description, self._mapping)
