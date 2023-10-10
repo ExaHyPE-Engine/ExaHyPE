@@ -153,6 +153,7 @@ class PatchFileParser(object):
              
           #Get patch data  
           this_line = data_file.readline().strip()
+          values = None
           if this_line.startswith("begin cell-values") and ( self.set_identifier=="" or this_line.endswith('"'+self.set_identifier+'"')):
             this_line = data_file.readline()
             values = np.fromstring(this_line, dtype=float, sep=' ')
@@ -162,11 +163,12 @@ class PatchFileParser(object):
             values = np.fromstring(this_line, dtype=float, sep=' ')
             
           #Add patch to list
-          self.cell_data.append(Patch(offset, size, values, self.subdomain_number))   
+          if values!=None:
+            self.cell_data.append(Patch(offset, size, values, self.subdomain_number))   
       self._initialise_default_mapping_if_no_mapping_specified()
       self.parsed = True
     except Exception as e:
-      print( "Error: was not able to read " + self.file_path + ": " + str(e) )
+      print( "Error: was not able to read " + self.file_path + ": " + str(e) + " in line " + this_line )
       self.parsed = False
       
 

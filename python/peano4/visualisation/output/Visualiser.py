@@ -61,16 +61,25 @@ class Visualiser(object):
   """
   
   def __init__(self, file_name, verbose=False ):
-    """
+    """!
     
-     file_name: String
+    Abstract superclass of a visualiser
+    
+    file_name: String
        Name of a Peano patch file. This has to be a meta file, i.e. a file which 
        does not hold actual data but hosts data sets that in turn link to actual
        data. 
        
-      :: Attributes
-      
-      self._data: Patch
+    verbose: Boolean
+       Controls how much the class writes out.
+       
+    ## Attributes
+
+    self.identifier: String
+       Pick one subidentifier from the input file. If this one is empty, we take
+       every input data set. However, some output formats (such as Paraview) 
+       don't support multiple output data sets, so we might end up with either 
+       the first or last one from the file - depending on the implementations.        
         
     """
     self._file_name       = file_name
@@ -129,9 +138,8 @@ class Visualiser(object):
   def reload(self):
     """
      
-     Invokes render_dataset() and then sets the resulting self._data
-     as output of the client side object of the trivial producer. Does
-     not work if self._tp is set to None
+     At this point self.identifier has to be set so the PatchFileParser
+     picks the right unknown.
     
     """
     input_file = open( self._file_name, "r" )
