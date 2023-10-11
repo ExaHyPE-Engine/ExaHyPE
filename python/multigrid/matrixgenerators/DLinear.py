@@ -6,7 +6,7 @@ from   scipy.interpolate import lagrange
 
 import peano4
 
-from   .MatrixGenerator import MatrixGenerator
+from   MatrixGenerator import MatrixGenerator
 
 
 
@@ -36,6 +36,9 @@ class DLinear(MatrixGenerator):
     
   @property
   def _cell_dofs(self):
+    """!
+    @todo should this be 2**D or (p+1)**D? suppose it's not relevant, given this is a linear solver
+    """
     return 2**(self.Dimensions)
  
     
@@ -58,7 +61,6 @@ class DLinear(MatrixGenerator):
     massMatrix = self.getCellMassMatrix()
     output     = np.zeros_like(massMatrix)
     for i in range( output.shape[0] ):
-      #this line is 2d only
       output[i,i] = np.sum( massMatrix[i,] )
     return output
     
@@ -78,6 +80,11 @@ class DLinear(MatrixGenerator):
     for i in range(output.shape[0]):
       for j in range(output.shape[1]):
         output[i,j] = self.evalIntegral(functions=[self.getPolynomial(i), self.getPolynomial(j)])
+    
+    #pad the output
+    if self.unknowns_per_vertex_dof > 1:
+      output = self.padMatrixForMoreThanOneDofPerNode(output)
+
     return output
 
   def getCellSystemMatrixForLaplacian(self):
@@ -89,7 +96,6 @@ class DLinear(MatrixGenerator):
     needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
     so normalise by h
 
-    @todo sign is wrong...
     '''
     dim    = (self.poly_degree + 1) ** self.Dimensions
     output = np.zeros((dim,dim))
@@ -98,4 +104,35 @@ class DLinear(MatrixGenerator):
       for j in range(output.shape[1]):
         output[i,j] += self.evalIntegral(functions=[self.getDeriv(i, 0), self.getDeriv(j, 0)])
         output[i,j] += self.evalIntegral(functions=[self.getDeriv(i, 1), self.getDeriv(j, 1)])
+    
+    #pad the output
+    if self.unknowns_per_vertex_dof > 1:
+      output = self.padMatrixForMoreThanOneDofPerNode(output)
+
+    return output
+
+  def padMatrixForMoreThanOneDofPerNode(self, matrix):
+    """!
+    @todo - Currently this just pads the same matrix out to each of the multiple dofs per node. 
+    """
+    shape = matrix.shape
+    # scale up each entry
+    upv    = self.unknowns_per_vertex_dof #alias
+    shape  = [s * upv for s in shape]
+    output = np.zeros(shape)
+    # pad!
+    for i in range(matrix.shape[0]):
+        # now we want to loop over the rows within the node
+      for dof in range(upv):
+        # get the row we want from the matrix passed in
+        row = matrix[i]
+
+        #make a dummy row to fill out
+        newRow = np.zeros( matrix.shape[0] * upv )
+
+        # we want to populate every upv'th entry, starting with dof
+        for d in range(row.shape[0]):
+          newRow[ upv*d + dof ] = row[d]
+        #place this into the output
+        output[ upv*i + dof ] = newRow
     return output
