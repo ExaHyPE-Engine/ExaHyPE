@@ -6,7 +6,7 @@ from   scipy.interpolate import lagrange
 
 import peano4
 
-from   MatrixGenerator import MatrixGenerator
+from   .MatrixGenerator import MatrixGenerator
 
 
 
