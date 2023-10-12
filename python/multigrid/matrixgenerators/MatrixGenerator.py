@@ -273,7 +273,6 @@ class MatrixGenerator:
     #return this function object
     return returnFunc
 
-
   def evalPolynomial(self, index, point, dim=-1):
     """!
     Method to evaluate a d-dimensional polynomial at the supplied

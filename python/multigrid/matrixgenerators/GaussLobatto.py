@@ -6,11 +6,12 @@ from   scipy.interpolate import lagrange
 
 import peano4
 
-from   .DGMatrixGenerator import DGMatrixGenerator
+# from   .DGMatrixGenerator import DGMatrixGenerator
+from   .MatrixGenerator import MatrixGenerator
 
 
 
-class GaussLobatto(DGMatrixGenerator):
+class GaussLobatto(MatrixGenerator):
   '''
   
   Simple matrix generator assuming that we use a Gauss Lobatto unknown layout
@@ -25,36 +26,77 @@ class GaussLobatto(DGMatrixGenerator):
   '''
   def __init__(self,
                dimensions,
-               polynomial_degree,
-               unknowns_per_cell_node,
-               unknowns_per_face_node):
+               poly_degree,
+               unknowns_per_cell_node=1,
+               unknowns_per_face_node=1):
 
-    super( GaussLobatto, self ).__init__(dimensions, 
+    super( GaussLobatto, self ).__init__(dimensions,
+                                         poly_degree
                                          )
-    self.polynomial_degree = polynomial_degree
     self.unknowns_per_cell_node = unknowns_per_cell_node
     self.unknowns_per_face_node = unknowns_per_face_node
 
-    self.celldofs    = ( self.polynomial_degree + 1 ) ** (self.dimensions)
-    self.facedofs    = ( self.polynomial_degree + 1 ) ** (self.dimensions - 1)
+    self.celldofs    = ( self.poly_degree + 1 ) ** (self.Dimensions)
+    self.facedofs    = ( self.poly_degree + 1 ) ** (self.Dimensions - 1)
 
-    self.polynomials = self.set_polynomials()
-    self.points,\
-    self.weights     = leggauss( self.polynomial_degree + 1 )
-    self.weights2d   = [ w1*w2  for w1 in self.weights for w2 in self.weights]
-    self.points2d    = [(p1,p2) for p1 in self.points  for p2 in self.points ]
-    if dimensions==2:
-      self.faceNormals = [ [-1,0], [0,-1], [1,0], [0,1] ]
-    else:
-      assert False, "not yet implemented"
+    # self.polynomials = self.set_polynomials()
+    # self.points,\
+    # self.weights     = leggauss( self.polynomial_degree + 1 )
+    # self.weights2d   = [ w1*w2  for w1 in self.weights for w2 in self.weights]
+    # self.points2d    = [(p1,p2) for p1 in self.points  for p2 in self.points ]
     
-  def getCellIdentityMatrix(self):
-    dim    = self.celldofs * self.unknowns_per_cell_node
-    output = np.zeros((dim,dim))
-    for i in range(dim):
-      output[i,i] = 2**(-self.dimensions)
+  def getPoints1d(self):
+    """!
+    Overwriting the method in base class. Let's produce Gauss-Lobatto
+    points. Standard behaviour is Legendre points using built-in stuff
+    from scipy.
+    We borrow the method from the wikipedia page
+    """
+    # let p be the poly degree. Then p+1 is the number of points we aim for
+    # So we gather the n'th polynomial Pn, then return [-1,1], as well as the roots
+    # of the derivative of Pn
+    output = [-1] #we'll append 1 at the end
+    if self.poly_degree > 1: # no need to do anything for degree 1
+      n      = self.poly_degree
+      # next few lines are just what needs to be done for numpy
+      coeffs = [0 for _ in range(n+1)]
+      coeffs[n] = 1
+      poly   = np.polynomial.legendre.Legendre(coeffs)
+      #get the roots
+      roots  = poly.deriv().roots().tolist()
+      # append
+      output += roots
+    #clip the weird rounding errors
+    for i in range(len(output)):
+      if abs(output[i])<1E-10:
+        output[i]=0
+    output.append(1)
     return output
 
+  def getWeights1d(self):
+    """!
+    Overwrites the method in the base class. Method
+    is borrowed from wikipedia
+    """
+    # number of points
+    n = self.poly_degree + 1
+    firstWeight = 2 / (n*(n-1))
+
+    # need to get P_{n-1}
+    coeffs = [0 for _ in range(n)]
+    coeffs[n-1] = 1
+    poly   = np.polynomial.legendre.Legendre(coeffs)
+
+    output = []
+    for p in self.getPoints1d():
+      weight = firstWeight / poly(p)**2
+      output.append(weight)
+    return output
+
+  def getCellIdentityMatrix(self):
+    dim    = self.celldofs * self.unknowns_per_cell_node
+    output = np.eye(dim,dim) * 2**(-self.dimensions)
+    return output
       
   def getCellCellMassMatrix(self):
     '''!
