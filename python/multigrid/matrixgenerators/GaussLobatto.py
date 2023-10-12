@@ -11,7 +11,7 @@ from   .DGMatrixGenerator import DGMatrixGenerator
 
 
 class GaussLobatto(DGMatrixGenerator):
-  '''
+  '''!
   
   Simple matrix generator assuming that we use a Gauss Lobatto unknown layout
   
@@ -35,8 +35,8 @@ class GaussLobatto(DGMatrixGenerator):
     self.unknowns_per_cell_node = unknowns_per_cell_node
     self.unknowns_per_face_node = unknowns_per_face_node
 
-    self.celldofs    = ( self.polynomial_degree + 1 ) ** (self.dimensions)
-    self.facedofs    = ( self.polynomial_degree + 1 ) ** (self.dimensions - 1)
+    self.cell_nodes    = ( self.polynomial_degree + 1 ) ** (self.dimensions)
+    self.face_nodes    = ( self.polynomial_degree + 1 ) ** (self.dimensions - 1)
 
     self.polynomials = self.set_polynomials()
     self.points,\
@@ -49,7 +49,7 @@ class GaussLobatto(DGMatrixGenerator):
       assert False, "not yet implemented"
     
   def getCellIdentityMatrix(self):
-    dim    = self.celldofs * self.unknowns_per_cell_node
+    dim    = self.cell_nodes * self.unknowns_per_cell_node
     output = np.zeros((dim,dim))
     for i in range(dim):
       output[i,i] = 2**(-self.dimensions)
@@ -65,10 +65,10 @@ class GaussLobatto(DGMatrixGenerator):
     The resulting matrix has to be scaled by @f$ h^d @f$.
 
     '''
-    dim    = self.celldofs * self.unknowns_per_cell_node
+    dim    = self.cell_nodes * self.unknowns_per_cell_node
     output = np.zeros((dim,dim))
-    for i in range( self.celldofs ):
-      for j in range( self.celldofs ):
+    for i in range( self.cell_nodes ):
+      for j in range( self.cell_nodes ):
         for k in range( self.unknowns_per_cell_node ):
           output[self.unknowns_per_cell_node*i+k, self.unknowns_per_cell_node*j+k] += self.evaluateIntegral2d(functions2d=[ self.getPoly2d(i), self.getPoly2d(j) ]) # phi_x-phi_x coupling 
     return output
@@ -82,10 +82,10 @@ class GaussLobatto(DGMatrixGenerator):
     needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
     so normalise by h
     '''
-    dim    = self.celldofs * self.unknowns_per_cell_node
+    dim    = self.cell_nodes * self.unknowns_per_cell_node
     output = np.zeros((dim,dim))
-    for i in range( self.celldofs ):
-      for j in range( self.celldofs ):
+    for i in range( self.cell_nodes ):
+      for j in range( self.cell_nodes ):
         for k in range( self.unknowns_per_cell_node ):
           pass
           # They are all the same, but they don't have to be!
@@ -97,12 +97,26 @@ class GaussLobatto(DGMatrixGenerator):
     return output
 
   def getCellToFaceMatrix(self):
-    faceDim = self.facedofs * self.unknowns_per_face_node * 2 * self.dimensions * 2 # * 2 at the end since we are glueing together 2 faces
-    cellDim = self.celldofs * self.unknowns_per_cell_node
+    faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.dimensions * 2 # * 2 at the end since we are glueing together 2 faces
+    cellDim = self.cell_nodes * self.unknowns_per_cell_node
     return np.zeros((faceDim,cellDim))
   
-  def getFaceFaceMatrix(self):
-    dim = self.facedofs * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
+  def getAveragingRiemannSolver(self):
+    """!
+    
+    Simple averaging Riemann solver
+    
+    We know that this solver is extremely diffusive, but it makes sense to 
+    provide this one as a simple debugging mechanism. In line with our
+    @ref page_multigrid_numerics_Disontinuous_Galerkin "DG description", it
+    is clear that the dimension of the result matrix is @f$ dof \times 2dof @f$
+    where dof is the number of degrees of freedom projected onto a face.
+    
+    Please note that unknowns_per_face_node=@f$ 3 \cdot dof @f$ in the equation
+    above.
+    
+    """
+    dim = self.face_nodes * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
     return np.eye(dim,dim)
 
   def set_polynomials(self):
@@ -131,7 +145,7 @@ class GaussLobatto(DGMatrixGenerator):
     '''
     returns the 2d poly a the given index
     '''
-    assert 0 <= index <= self.celldofs
+    assert 0 <= index <= self.cell_nodes
 
     #convert to 2d
     indexX, indexY = self.convertIndexTo2d(index)

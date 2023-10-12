@@ -33,13 +33,6 @@ class DGMatrixGenerator:
     '''
     raise NotImplementedError
 
-  @abstractmethod
-  def getFaceFaceMatrix(self):
-    '''
-    glue together solution across faces
-    '''
-    raise NotImplementedError
-      
 
   @staticmethod
   def convert1dPointTo2d(faceNo, point1d):

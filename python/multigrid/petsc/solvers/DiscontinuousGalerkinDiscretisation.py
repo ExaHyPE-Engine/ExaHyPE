@@ -209,32 +209,19 @@ class DiscontinuousGalerkinDiscretisation(Solver):
   """!
    
   Discontinuous Galerkin class
-  
-  
-  ## Usage of the built-in matrix generators
-  
-  Obviously, you are free to use any way to generate the matrices that you 
-  want. If you however decide to use the built-in matrix generators, please
-  take into account that you have to follow one convention: Whenever you
-  work with plain DG, the unknowns per face node have to be the same as 
-  the unknowns per cell node. Otherwise, your matrix sizes will not match.
-  
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  matrices = multigrid.matrixgenerators.GaussLobatto(polynomial_degree     = args.degree,
-                                                   dimensions              = args.dimensions,
-                                                   unknowns_per_cell_node  = 1,
-                                                   unknowns_per_face_node  = 1,  # for DG, this has to equal unknowns_per_cell_dof
-                                                   )
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  
-  
+  The best description of this class can e found in the generic @ref page_multigrid_numerics_Disontinuous_Galerkin "generic DG pages".
+  This class docu really focuses on implementation details.  
 
-  cell_lhs_matrix: [double] or []
-    Pass in [] if you prefer to assemble the matrix per cell yourself.
+  cell_cell_lhs_matrix: [Float] or []
+    Pass in [] if you prefer to assemble the matrix per cell yourself. If this
+    is the @f$ \hat \mathcal{L} @f$ part in @ref page_multigrid_numerics_Disontinuous_Galerkin.
     
-  cell_rhs_matrix: [double] or []
-    Pass in [] if you prefer to assemble the matrix per cell yourself.
+  cell_cell_rhs_matrix: [Float] or []
+    Pass in [] if you prefer to assemble the matrix per cell yourself. This 
+    part is not extensively discussed in the @ref page_multigrid_numerics_Disontinuous_Galerkin "generic DG discussion", 
+    but it is the part that enters the right-hand side, so typically the one
+    arising from @f$ \int f \cdot v \ dx @f$. 
 
   cell_cell_lhs_matrix_scaling: Positive integer
     The lhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
@@ -247,6 +234,13 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     parameter. If you don't specify a rhs matrix, i.e. you prefer to inject
     this matrix manually, you can leave this parameter None, as it is not 
     used.
+    
+  face_face_Riemann_problem_matrix: [Float] or []
+    Pass in [] if you prefer to assemble the matrix per cell yourself. This 
+    matrix represents the actual Riemann solver. It accepts the left projection
+    @f$ u^- @f$ and @f$ u^+ @f$ and yields a "reconstructed" value at this 
+    point passed into the differential operator. Therefore, this is a band
+    matrix.
   
   """
   def __init__(self,

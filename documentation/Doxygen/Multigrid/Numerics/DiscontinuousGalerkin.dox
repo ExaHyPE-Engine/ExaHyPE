@@ -194,22 +194,24 @@ scheme into a sequence/set of computations:
 - The operator @f$ A_{cc} @f$ takes the dofs within a cell and computes the 
   term @f$ - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx @f$.
   It takes the @f$ K (p+1)^d @f$ values per cell and yields @f$ K (p+1)^d @f$
-  equations/updates from the cell.
+  equations/updates from the cell. In classes like petsc.solvers.DiscontinuousGalerkinDiscretisation
+  this matrix is called cell_cell_lhs_matrix.
 - Let's introduce temporary variables on the face. Those are the 
   @f$ u^+ @f$ and @f$ u^- @f$ values, i.e. we store @f$ 2K (p+1)^{d-1} @f$
   degrees of freedom on the face. Those are not really degrees of freedom.
   They will be mere projection, i.e. simply encode what the solution along
   the face is.
-- The operator @f$ P_{cf} @f$ takes the solution from a cell and projects it 
+- The operator @f$ A_{cf} @f$ takes the solution from a cell and projects it 
   onto a face. Let @f$ u^+ @f$ and @f$ u^- @f$ denote the solution left or 
   right of a face (from the face's point of view). For each of the @f$ 2d @f$ 
   faces of a cell, the operator @f$ P_{cf} @f$ yields either the 
   @f$ u^+ @f$ or @f$ u^- @f$.
 - The operator @f$ A_{ff} @f$ operates on a face. It takes 
-  @f$ u^+ @f$ and @f$ u^- @f$ and yields a @f$ \hat u @f$, i.e. something
-  that "reconstructs" the solution. This operator is the 
+  @f$ u^+ @f$ and @f$ u^- @f$ and yields something
+  that "reconstructs" the solution and applies the flux operator on it. 
+  This is the Riemann solver and hence linear algebraises the 
   @f$ \tilde{\mathcal{M}}(\hat u ) @f$ from above.
-- The operator @f$ P_{fc} @f$ takes the @f$ \hat u @f$ on the face and yields
+- The operator @f$ A_{fc} @f$ takes the @f$ \hat u @f$ on the face and yields
   the updates for the cell. It evaluates @f$ \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x) @f$.
 
 
@@ -255,16 +257,17 @@ Effectively, our approach blows up the equation system to solve into
 @f$ 
  Ax = 
  \begin{bmatrix}
-  A_{cc}  & A_{fc}  & 0 \\
-  0       & id      & -A_{ff} \\
- -id      & 0       & A_{cf}      \\
+  A_{cc}  & A_{fc}  & 0 & 0 \\
+  0       & id      & -A_{ff}|_+ & -A_{ff}|_- \\
+ -id      & 0       & A_{cf}|_+ & 0      \\
+ -id      & 0       & 0 & A_{cf}|_-      
  \end{bmatrix}
  \begin{bmatrix}
- x_{c} \\ x_f \\ x_\pm
+ x_{c} \\ x_f \\ x^+ \\ x^-
  \end{bmatrix}
  = 
  \begin{bmatrix}
- b_{c} \\ 0 \\ 0
+ b_{c} \\ 0 \\ 0 \\ 0 
  \end{bmatrix}
 @f$ 
 
