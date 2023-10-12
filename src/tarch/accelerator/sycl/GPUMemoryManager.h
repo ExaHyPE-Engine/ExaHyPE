@@ -1,8 +1,11 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-
 #include "tarch/multicore/multicore.h"
+
+
+#if !defined(_TARCH_ACCELERATOR_SYCL_GPU_MEMORY_MANAGER) and defined(GPUOffloadingSYCL)
+#define _TARCH_ACCELERATOR_SYCL_GPU_MEMORY_MANAGER
+
 
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/logging/Log.h"
@@ -41,6 +44,7 @@ class tarch::accelerator::sycl::GPUMemoryManager {
 
     /**
      * Map of pages (memory blocks) per size.
+     *
      */
     typedef std::map< int, std::vector<void*> >  FreePages;
 
@@ -57,8 +61,10 @@ class tarch::accelerator::sycl::GPUMemoryManager {
 
     /**
      * Map from device number onto memory
+     *
+     * I don't want to use the copy here as key, so I instead use a pointer.
      */
-    std::map<int, DeviceMemory>  _deviceMemory;
+    std::map<::sycl::queue*, DeviceMemory>  _deviceMemory;
 
     GPUMemoryManager() = default;
 
@@ -131,3 +137,5 @@ class tarch::accelerator::sycl::GPUMemoryManager {
     void clear();
 };
 
+
+#endif
