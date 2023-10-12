@@ -15,9 +15,9 @@ template <
   std::size_t unknowns,
   std::size_t auxiliaryVariables,
   typename TempDataEnumerator>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
+void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls(
   int                   targetDevice,
-  ::exahype2::CellData& hostPatchData,
+  auto&                 patchData,
   bool                  evaluateFlux,
   bool                  evaluateNonconservativeProduct,
   bool                  evaluateSource,
@@ -43,18 +43,16 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
     1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
   );
   TempDataEnumerator fluxEnumerator(
-    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, unknowns, 0
+    patchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, unknowns, 0
   );
   TempDataEnumerator ncpEnumerator(
-    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch + 1, solversHaloSize, unknowns, 0
+    patchData.numberOfCells, numberOfVolumesPerAxisInPatch + 1, solversHaloSize, unknowns, 0
   );
   TempDataEnumerator eigenvalueEnumerator(
-    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, 1, 0
+    patchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, 1, 0
   );
 
-  GPUCellData       patchData(hostPatchData, QInEnumerator, QOutEnumerator, queue);
-
-  const std::size_t numberOfPatches = hostPatchData.numberOfCells;
+  const std::size_t numberOfPatches = patchData.numberOfCells;
   ::sycl::event     copySolutionEvent;
   if (Dimensions == 2 and evaluateSource) {
     copySolutionEvent = queue.submit([&](::sycl::handler& handle) {
@@ -65,7 +63,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int x          = i[1];
           int y          = i[2];
 
-          internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+          ::exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
             patchData.QIn + patchIndex * QInEnumerator.size(),
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -90,7 +88,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-            internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+            ::exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchData.cellCentre[patchIndex],
@@ -116,7 +114,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-            internal::copySolution_LoopBody(
+            ::exahype2::fv::rusanov::internal::copySolution_LoopBody(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchIndex,
@@ -140,7 +138,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
           for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
             for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-              internal::copySolution_LoopBody(
+              ::exahype2::fv::rusanov::internal::copySolution_LoopBody(
                 patchData.QIn + patchIndex * QInEnumerator.size(),
                 QInEnumerator,
                 patchIndex,
@@ -166,7 +164,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[1];
           int x          = i[2] - solversHaloSize;
 
-          internal::computeMaxEigenvalue_LoopBody<Solver>(
+          ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn + patchIndex * QInEnumerator.size(),
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -192,7 +190,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[1] - solversHaloSize;
           int x          = i[2];
 
-          internal::computeMaxEigenvalue_LoopBody<Solver>(
+          ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn + patchIndex * QInEnumerator.size(),
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -222,7 +220,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int x          = i[2];
 
           for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-            internal::updateSolutionWithEigenvalueDamping_LoopBody(
+            ::exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBody(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               tempEigenvalueX,
@@ -252,7 +250,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); x++) {
-            internal::computeMaxEigenvalue_LoopBody<Solver>(
+            ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchData.cellCentre[patchIndex],
@@ -279,7 +277,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int z          = i[2];
 
           for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); y++) {
-            internal::computeMaxEigenvalue_LoopBody<Solver>(
+            ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchData.cellCentre[patchIndex],
@@ -306,7 +304,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int z = -solversHaloSize; z < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); z++) {
-            internal::computeMaxEigenvalue_LoopBody<Solver>(
+            ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchData.cellCentre[patchIndex],
@@ -339,7 +337,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
           for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
             for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-              internal::updateSolutionWithEigenvalueDamping_LoopBody(
+              ::exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBody(
                 patchData.QIn + patchIndex * QInEnumerator.size(),
                 QInEnumerator,
                 tempEigenvalueX,
@@ -372,7 +370,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[1];
           int x          = i[2] - solversHaloSize;
 
-          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+          ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn + patchIndex * QInEnumerator.size(),
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -398,7 +396,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int x          = i[1];
           int y          = i[2] - solversHaloSize;
 
-          internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+          ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn + patchIndex * QInEnumerator.size(),
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -428,7 +426,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-            internal::updateSolutionWithFlux_LoopBody(
+            ::exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
               tempFluxX,
               tempFluxY,
               tempFluxZ,
@@ -456,7 +454,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); x++) {
-            internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+            ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchData.cellCentre[patchIndex],
@@ -483,7 +481,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int z          = i[2];
 
           for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); y++) {
-            internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+            ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchData.cellCentre[patchIndex],
@@ -510,7 +508,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int z = -solversHaloSize; z < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); z++) {
-            internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+            ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchData.cellCentre[patchIndex],
@@ -543,7 +541,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
           for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
             for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-              internal::updateSolutionWithFlux_LoopBody(
+              ::exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
                 tempFluxX,
                 tempFluxY,
                 tempFluxZ,
@@ -571,7 +569,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
         int y          = i[1];
 
         for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize - 1); x++) {
-          internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+          ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn + patchIndex * QInEnumerator.size(),
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -594,7 +592,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
         int x          = i[1];
 
         for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize - 1); y++) {
-          internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+          ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
             patchData.QIn + patchIndex * QInEnumerator.size(),
             QInEnumerator,
             patchData.cellCentre[patchIndex],
@@ -625,7 +623,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
           int y          = i[2];
 
           for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-            internal::updateSolutionWithNonconservativeFlux_LoopBody(
+            ::exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_LoopBody(
               tempNonconservativeProductX,
               tempNonconservativeProductY,
               tempNonconservativeProductZ,
@@ -654,7 +652,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
           for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize - 1);
                x++) {
-            internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+            ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchData.cellCentre[patchIndex],
@@ -682,7 +680,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
           for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize - 1);
                y++) {
-            internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+            ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchData.cellCentre[patchIndex],
@@ -710,7 +708,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
           for (int z = -solversHaloSize; z < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize - 1);
                z++) {
-            internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+            ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
               patchData.QIn + patchIndex * QInEnumerator.size(),
               QInEnumerator,
               patchData.cellCentre[patchIndex],
@@ -744,7 +742,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
           for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
             for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-              internal::updateSolutionWithNonconservativeFlux_LoopBody(
+              ::exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_LoopBody(
                 tempNonconservativeProductX,
                 tempNonconservativeProductY,
                 tempNonconservativeProductZ,
@@ -784,7 +782,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
           newMaxEigenvalue = std::max(
             newMaxEigenvalue,
-            internal::reduceMaxEigenvalue_LoopBody<Solver>(
+            ::exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody<Solver>(
               patchData.QOut + patchIndex * QOutEnumerator.size(),
               QOutEnumerator,
               patchData.cellCentre[patchIndex],
@@ -801,7 +799,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
         patchData.maxEigenvalue[patchIndex] = ::sycl::reduce_over_group(
           i.get_group(),
-          internal::reduceMaxEigenvalue_LoopBody<Solver>(
+          ::exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody<Solver>(
             patchData.QOut + patchIndex * QOutEnumerator.size(),
             QOutEnumerator,
             patchData.cellCentre[patchIndex],
@@ -838,7 +836,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
         for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
           newMaxEigenvalue = std::max(
             newMaxEigenvalue,
-            internal::reduceMaxEigenvalue_LoopBody<Solver>(
+            ::exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody<Solver>(
               patchData.QOut + patchIndex * QOutEnumerator.size(),
               QOutEnumerator,
               patchData.cellCentre[patchIndex],
@@ -855,7 +853,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
 
         patchData.maxEigenvalue[patchIndex] = ::sycl::reduce_over_group(
           i.get_group(),
-          internal::reduceMaxEigenvalue_LoopBody<Solver>(
+          ::exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody<Solver>(
             patchData.QOut + patchIndex * QOutEnumerator.size(),
             QOutEnumerator,
             patchData.cellCentre[patchIndex],
@@ -874,8 +872,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
     updateWithFlux.wait();
     updateWithNCP.wait();
   }
-
-  patchData.destroy(hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
 }
 #endif
 
@@ -916,6 +912,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
     hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, 1, 0
   );
 
+  GPUUSMCellData       patchData(hostPatchData, QInEnumerator, QOutEnumerator, queue);
+
   double* tempFluxX = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
   double* tempFluxY = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
   double* tempFluxZ = evaluateFlux and Dimensions == 3
@@ -934,7 +932,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
   double* tempEigenvalueY             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
   double* tempEigenvalueZ             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
 
-  exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<
+  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls<
     Solver,
     numberOfVolumesPerAxisInPatch,
     haloSize,
@@ -958,6 +956,226 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
     tempEigenvalueY,
     tempEigenvalueZ
   );
+
+  patchData.destroy(hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
+
+  if (tempFluxX != nullptr)
+    ::sycl::free(tempFluxX, queue);
+  if (tempFluxY != nullptr)
+    ::sycl::free(tempFluxY, queue);
+  if (tempFluxZ != nullptr)
+    ::sycl::free(tempFluxZ, queue);
+  if (tempNonconservativeProductX != nullptr)
+    ::sycl::free(tempNonconservativeProductX, queue);
+  if (tempNonconservativeProductY != nullptr)
+    ::sycl::free(tempNonconservativeProductY, queue);
+  if (tempNonconservativeProductZ != nullptr)
+    ::sycl::free(tempNonconservativeProductZ, queue);
+  if (tempEigenvalueX != nullptr)
+    ::sycl::free(tempEigenvalueX, queue);
+  if (tempEigenvalueY != nullptr)
+    ::sycl::free(tempEigenvalueY, queue);
+  if (tempEigenvalueZ != nullptr)
+    ::sycl::free(tempEigenvalueZ, queue);
+  #else
+  assertionMsg(
+    false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
+  );
+  #endif
+}
+
+
+template <
+  typename Solver,
+  std::size_t numberOfVolumesPerAxisInPatch,
+  std::size_t haloSize,
+  std::size_t unknowns,
+  std::size_t auxiliaryVariables,
+  typename TempDataEnumerator>
+void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_copy_static_calls(
+  int                   targetDevice,
+  ::exahype2::CellData& hostPatchData,
+  bool                  evaluateFlux,
+  bool                  evaluateNonconservativeProduct,
+  bool                  evaluateSource,
+  bool                  evaluateMaximumEigenvalueAfterTimeStep
+) {
+  #if defined(GPUOffloadingSYCL)
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+
+  constexpr int solversHaloSize = 1;
+
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+    1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
+  );
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+    1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
+  );
+  TempDataEnumerator fluxEnumerator(
+    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, unknowns, 0
+  );
+  TempDataEnumerator ncpEnumerator(
+    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch + 1, solversHaloSize, unknowns, 0
+  );
+  TempDataEnumerator eigenvalueEnumerator(
+    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, 1, 0
+  );
+
+  GPUCopyCellData       patchData(hostPatchData, QInEnumerator, QOutEnumerator, queue);
+
+  double* tempFluxX = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempFluxY = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempFluxZ = evaluateFlux and Dimensions == 3
+                        ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue)
+                        : nullptr;
+  double* tempNonconservativeProductX = evaluateNonconservativeProduct
+                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
+                                          : nullptr;
+  double* tempNonconservativeProductY = evaluateNonconservativeProduct
+                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
+                                          : nullptr;
+  double* tempNonconservativeProductZ = evaluateNonconservativeProduct and Dimensions == 3
+                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
+                                          : nullptr;
+  double* tempEigenvalueX             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+  double* tempEigenvalueY             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+  double* tempEigenvalueZ             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+
+  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls<
+    Solver,
+    numberOfVolumesPerAxisInPatch,
+    haloSize,
+    unknowns,
+    auxiliaryVariables,
+    TempDataEnumerator
+  >(
+    targetDevice,
+    patchData,
+    evaluateFlux,
+    evaluateNonconservativeProduct,
+    evaluateSource,
+    evaluateMaximumEigenvalueAfterTimeStep,
+    tempFluxX,
+    tempFluxY,
+    tempFluxZ,
+    tempNonconservativeProductX,
+    tempNonconservativeProductY,
+    tempNonconservativeProductZ,
+    tempEigenvalueX,
+    tempEigenvalueY,
+    tempEigenvalueZ
+  );
+
+  patchData.destroy(hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
+
+  if (tempFluxX != nullptr)
+    ::sycl::free(tempFluxX, queue);
+  if (tempFluxY != nullptr)
+    ::sycl::free(tempFluxY, queue);
+  if (tempFluxZ != nullptr)
+    ::sycl::free(tempFluxZ, queue);
+  if (tempNonconservativeProductX != nullptr)
+    ::sycl::free(tempNonconservativeProductX, queue);
+  if (tempNonconservativeProductY != nullptr)
+    ::sycl::free(tempNonconservativeProductY, queue);
+  if (tempNonconservativeProductZ != nullptr)
+    ::sycl::free(tempNonconservativeProductZ, queue);
+  if (tempEigenvalueX != nullptr)
+    ::sycl::free(tempEigenvalueX, queue);
+  if (tempEigenvalueY != nullptr)
+    ::sycl::free(tempEigenvalueY, queue);
+  if (tempEigenvalueZ != nullptr)
+    ::sycl::free(tempEigenvalueZ, queue);
+  #else
+  assertionMsg(
+    false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
+  );
+  #endif
+}
+
+
+template <
+  typename Solver,
+  std::size_t numberOfVolumesPerAxisInPatch,
+  std::size_t haloSize,
+  std::size_t unknowns,
+  std::size_t auxiliaryVariables,
+  typename TempDataEnumerator>
+void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_managed_static_calls(
+  int                   targetDevice,
+  ::exahype2::CellData& hostPatchData,
+  bool                  evaluateFlux,
+  bool                  evaluateNonconservativeProduct,
+  bool                  evaluateSource,
+  bool                  evaluateMaximumEigenvalueAfterTimeStep
+) {
+  #if defined(GPUOffloadingSYCL)
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+
+  constexpr int solversHaloSize = 1;
+
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+    1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
+  );
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+    1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
+  );
+  TempDataEnumerator fluxEnumerator(
+    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, unknowns, 0
+  );
+  TempDataEnumerator ncpEnumerator(
+    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch + 1, solversHaloSize, unknowns, 0
+  );
+  TempDataEnumerator eigenvalueEnumerator(
+    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, 1, 0
+  );
+
+  GPUManagedCellData       patchData(hostPatchData, QInEnumerator, QOutEnumerator, queue);
+
+  double* tempFluxX = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempFluxY = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempFluxZ = evaluateFlux and Dimensions == 3
+                        ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue)
+                        : nullptr;
+  double* tempNonconservativeProductX = evaluateNonconservativeProduct
+                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
+                                          : nullptr;
+  double* tempNonconservativeProductY = evaluateNonconservativeProduct
+                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
+                                          : nullptr;
+  double* tempNonconservativeProductZ = evaluateNonconservativeProduct and Dimensions == 3
+                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
+                                          : nullptr;
+  double* tempEigenvalueX             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+  double* tempEigenvalueY             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+  double* tempEigenvalueZ             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+
+  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls<
+    Solver,
+    numberOfVolumesPerAxisInPatch,
+    haloSize,
+    unknowns,
+    auxiliaryVariables,
+    TempDataEnumerator
+  >(
+    targetDevice,
+    patchData,
+    evaluateFlux,
+    evaluateNonconservativeProduct,
+    evaluateSource,
+    evaluateMaximumEigenvalueAfterTimeStep,
+    tempFluxX,
+    tempFluxY,
+    tempFluxZ,
+    tempNonconservativeProductX,
+    tempNonconservativeProductY,
+    tempNonconservativeProductZ,
+    tempEigenvalueX,
+    tempEigenvalueY,
+    tempEigenvalueZ
+  );
+
+  patchData.destroy(hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
 
   if (tempFluxX != nullptr)
     ::sycl::free(tempFluxX, queue);

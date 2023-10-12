@@ -6,7 +6,7 @@
 #include "exahype2/CellData.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 
-exahype2::fv::rusanov::sycl::GPUCellData::GPUCellData(
+exahype2::fv::rusanov::sycl::GPUCopyCellData::GPUCopyCellData(
   const ::exahype2::CellData&                               hostObject,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
@@ -38,7 +38,7 @@ exahype2::fv::rusanov::sycl::GPUCellData::GPUCellData(
   delete[] tmpQIn;
 }
 
-void exahype2::fv::rusanov::sycl::GPUCellData::destroy(
+void exahype2::fv::rusanov::sycl::GPUCopyCellData::destroy(
   ::exahype2::CellData&                                     hostObject,
   const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
   bool                                                      copyEigenvaluesBack,

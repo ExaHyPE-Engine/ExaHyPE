@@ -8,7 +8,89 @@
 namespace exahype2 {
   namespace fv {
     namespace rusanov {
+      /**
+       * All the memory management is discussed in the documentation of
+       * GPUCellData.
+       */
       namespace sycl {
+        /*
+         * Task-graph realisation of the kernel where the input data and result
+         * are explicitly copied forth and back between GPU and CPU.
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_taskgraph_copy_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        /*
+         * Batched realisation of the kernel where the input data and result
+         * are explicitly copied forth and back between GPU and CPU.
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_copy_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        /*
+         * Patch-wise realisation of the kernel where the input data and result
+         * are explicitly copied forth and back between GPU and CPU.
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_patchwise_copy_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
         /*
          * This version allocates the temporary data on the GPU via a device
          * malloc, then calls timeStepWithRusanov_taskgraph_static_calls()
@@ -86,6 +168,81 @@ namespace exahype2 {
           typename TempDataEnumerator
         >
         static void timeStepWithRusanov_patchwise_usm_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        /*
+         *
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_taskgraph_managed_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        /**
+         *
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_managed_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        /**
+         *
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_patchwise_managed_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -274,7 +431,7 @@ namespace exahype2 {
             >
             static void timeStepWithRusanov_batched_static_calls(
               int                     targetDevice,
-              ::exahype2::CellData&   patchData,
+              auto&                   patchData,
               bool                    evaluateFlux,
               bool                    evaluateNonconservativeProduct,
               bool                    evaluateSource,
