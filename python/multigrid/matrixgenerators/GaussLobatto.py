@@ -6,7 +6,6 @@ from   scipy.interpolate import lagrange
 
 import peano4
 
-# from   .DGMatrixGenerator import DGMatrixGenerator
 from   .MatrixGenerator import MatrixGenerator
 
 
@@ -28,7 +27,8 @@ class GaussLobatto(MatrixGenerator):
                dimensions,
                poly_degree,
                unknowns_per_cell_node=1,
-               unknowns_per_face_node=1):
+               unknowns_per_face_node=1,
+               use_unit_interval=False):
 
     super( GaussLobatto, self ).__init__(dimensions,
                                          poly_degree
@@ -39,12 +39,11 @@ class GaussLobatto(MatrixGenerator):
     self.celldofs    = ( self.poly_degree + 1 ) ** (self.Dimensions)
     self.facedofs    = ( self.poly_degree + 1 ) ** (self.Dimensions - 1)
 
-    # self.polynomials = self.set_polynomials()
-    # self.points,\
-    # self.weights     = leggauss( self.polynomial_degree + 1 )
-    # self.weights2d   = [ w1*w2  for w1 in self.weights for w2 in self.weights]
-    # self.points2d    = [(p1,p2) for p1 in self.points  for p2 in self.points ]
-    
+    self.use_unit_interval = use_unit_interval
+
+    if use_unit_interval:
+      self.points1d    = self.getPointsInUnitInterval()
+
   def getPoints1d(self):
     """!
     Overwriting the method in base class. Let's produce Gauss-Lobatto
@@ -87,11 +86,26 @@ class GaussLobatto(MatrixGenerator):
     coeffs[n-1] = 1
     poly   = np.polynomial.legendre.Legendre(coeffs)
 
-    output = []
-    for p in self.getPoints1d():
+    output = [firstWeight]
+    for p in self.getPoints1d()[1:-1]:
       weight = firstWeight / poly(p)**2
       output.append(weight)
+
+    output.append(firstWeight)
     return output
+  
+  def getPointsInUnitInterval(self):
+    scale = lambda x: 0.5*(x+1)
+    return [scale(x) for x in self.points1d]
+
+  def evalIntegral(self, functions, dim=-1, factor=1):
+    # if we shrank the interval, then we need to pass factor = 0.5 along
+    if self.use_unit_interval:
+      factor = 0.5
+    else:
+      factor = 1
+    # no need to re-implement
+    return super( GaussLobatto, self ).evalIntegral(functions, dim, factor)
 
   def getCellIdentityMatrix(self):
     dim    = self.celldofs * self.unknowns_per_cell_node
