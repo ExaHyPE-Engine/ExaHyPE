@@ -146,26 +146,3 @@ class GaussLobatto(MatrixGenerator):
   def getFaceFaceMatrix(self):
     dim = self.facedofs * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
     return np.eye(dim,dim)
-
-  def set_polynomials(self):
-    polys = []
-    x = np.linspace(-1,1, self.polynomial_degree + 1)
-    for j in range(self.polynomial_degree + 1):
-      y = np.zeros_like(x)
-      y[j] = 1.0
-      polys.append( lagrange(x,y) )
-    return polys
-
-  def convertIndexTo2d(self, index):
-    x = index %  ( self.polynomial_degree + 1 )
-    y = index // ( self.polynomial_degree + 1 )
-    return [x,y]
-
-  def getPoly1d(self,index):
-    '''
-    returns the 1d poly at the given index.
-    you should treat the returned object like a function!
-    '''
-    assert 0 <= index <= self.polynomial_degree
-    return self.polynomials[index]
- 
