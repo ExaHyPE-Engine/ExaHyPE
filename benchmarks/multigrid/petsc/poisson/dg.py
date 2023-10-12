@@ -34,12 +34,12 @@ project = multigrid.petsc.Project(project_name = "DG",
                                   ) 
 
                         
-matrices = multigrid.matrixgenerators.GaussLobatto(polynomial_degree      = args.degree,
+matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args.degree,
                                                    dimensions             = args.dimensions,
                                                    unknowns_per_cell_node = 1,
                                                    unknowns_per_face_node = 1,  # for DG, this has to equal unknowns_per_cell_dof
                                                    )
-                        
+                                                   
 solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
                                                                      unknowns             = 1,                      # unknowns_per_cell_dof,
@@ -55,7 +55,7 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      cell_to_face_matrix_scaling  = 0,       
                                                                      face_to_cell_matrix_scaling  = args.dimensions, 
                                                                      face_face_Riemann_problem_matrix        = matrices.getFaceFaceMatrix(),   # todo bad name    
-                                                                     quadrature_points_in_unit_interval = [ 0.0,1.0 ],
+                                                                     quadrature_points_in_unit_interval = matrices.getPointsInUnitInterval(),
                                                                      )
 
 
