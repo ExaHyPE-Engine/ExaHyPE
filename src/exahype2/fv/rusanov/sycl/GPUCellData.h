@@ -64,36 +64,27 @@ namespace exahype2 {
          * frees the copies in the shared memory.
          *
          *
-         * @todo Here are some todos:
+         * ## Implementation
          *
-         * - We have to clarify more explicitly, that the GPUCellData is a wrapper
-         *   which actually transfers data. So it has some semantics. This is not
-         *   properly done within the kernels.
-         * - A GPUCellData can either create a copy of the input in the shared
-         *   memory region (current implementation), or it can copy stuff over
-         *   into the device explicitly. For this, it needs to know the queue,
-         *   allocate memory on the device, and then call handle.copy()
-         *   explicitly. We end up with a dedicated copy kernel. We can realise
-         *   this within the present code base, by adding an explicit transfer()
-         *   operation as counterpart of destroy. There can be a transfer_shared
-         *   and transfer_copy operation with the latter returning an event.
-         * - The kernels should be renamed. The explicit copy should have copy
-         *   in the name just as the OpenMP variant has a map in its name.
-         * - SYCL has this notion of buffers which wrap around arrays. The
-         *   buffers then are again wrapped via accessors which are annotated
-         *   with read_only or write_only. Again, the GPUCellData could own the
-         *   host data and provide the accessors which then are used by
-         *   alternative kernel variants.
+         * It is worth comparing this version with GPUCopyCellData. The big
+         * difference here is that we leave the actual patch data where it is,
+         * i.e. we exploit the fact that these data are alread in the shared
+         * memory space.
          *
+         * For all the other data, which we have to copy explicitly, we have
+         * to decide if we want to allocate these data explicitly on the
+         * device or make it shared, too. To be "clean", I put everything into
+         * the shared memory, so I can use simple memcopies on the host to
+         * get everything set up properly.
          */
         struct GPUUSMCellData {
-          double*                                QIn;
+          double**                               QIn;
           tarch::la::Vector<Dimensions, double>* cellCentre;
           tarch::la::Vector<Dimensions, double>* cellSize;
           double*                                t;
           double*                                dt;
           int                                    numberOfCells;
-          double*                                QOut;
+          double**                               QOut;
           double*                                maxEigenvalue;
 
           /**
@@ -135,6 +126,11 @@ namespace exahype2 {
            * The user has to call destroy() eventually to free all internal
            * data structures.
            *
+           * This routine is very similar to the constructor of
+           * GPUCopyCellData. The big difference to this one is that we know
+           * that the actual QIn do already reside in shared memory. That is,
+           * we don't have to copy those guys.
+           *
            * @see destroy()
            */
           GPUUSMCellData(
@@ -172,16 +168,28 @@ namespace exahype2 {
          * Call destroy() on the host once the kernels have finished. This actually
          * frees the copies in the shared memory.
          *
+         * ## Implementation
+         *
+         * The QIn and QOut in the original patch data is an array over pointers,
+         * where each pointer points to the QIn/QOut data of one patch. When we
+         * copy the data over to the GPU, it makes no sense to work with a
+         * fragmented memory. Instead, we allocate the data for all N patches
+         * in one big go. The corresponding entry is stored in QInCopy or
+         * QOutCopy, respectively. The QIn and QOut then are index arrays
+         * over this big copy.
          */
         struct GPUCopyCellData {
-          double*                                QIn;
+          double**                               QIn;
           tarch::la::Vector<Dimensions, double>* cellCentre;
           tarch::la::Vector<Dimensions, double>* cellSize;
           double*                                t;
           double*                                dt;
           int                                    numberOfCells;
-          double*                                QOut;
+          double**                               QOut;
           double*                                maxEigenvalue;
+
+          double*                                QInCopyInOneHugeBuffer;
+          double*                                QOutCopyInOneHugeBuffer;
 
           /**
            * We never create a GPU wrapper object directly
@@ -216,11 +224,21 @@ namespace exahype2 {
           ~GPUCopyCellData() = default;
 
           /**
-           * Create a wrapper around a cell data object which can then be
-           * copied to the CPU.
+           * Create a wrapper around a cell data object
            *
+           * The resulting object then is copied to the CPU.
            * The user has to call destroy() eventually to free all internal
            * data structures.
+           * Internally, the code first flattens the whole QIn object into
+           * one big buffer, and then copies this buffer over in one rush.
+           * We make this linearlisation be the last step, so the other copy
+           * operations can overlap with this linearlisation overhead on the
+           * host.
+           *
+           * The events needs to be stored in a std::vector. I could, in
+           * theory, work with an array, but SYCL does not support a wait
+           * over an array. After all, it has to know the size (number) of
+           * the events when it waits.
            *
            * @see destroy()
            */
@@ -262,14 +280,18 @@ namespace exahype2 {
          *
          */
         struct GPUManagedCellData {
-          double*                                QIn;
+          double**                               QIn;
           tarch::la::Vector<Dimensions, double>* cellCentre;
           tarch::la::Vector<Dimensions, double>* cellSize;
           double*                                t;
           double*                                dt;
           int                                    numberOfCells;
-          double*                                QOut;
+          double**                               QOut;
           double*                                maxEigenvalue;
+
+
+          double*                                QInCopyInOneHugeBuffer;
+          double*                                QOutCopyInOneHugeBuffer;
 
           /**
            * We never create a GPU wrapper object directly
@@ -305,10 +327,10 @@ namespace exahype2 {
 
           /**
            * Create a wrapper around a cell data object which can then be
-           * copied to the CPU.
-           *
-           * The user has to call destroy() eventually to free all internal
-           * data structures.
+           * copied to the CPU. The user has to call destroy() eventually to
+           * free all internal data structures. This version is very similar
+           * to GPUCopyCellData, but all the allocs are piped towards the
+           * memory manager.
            *
            * @see destroy()
            */

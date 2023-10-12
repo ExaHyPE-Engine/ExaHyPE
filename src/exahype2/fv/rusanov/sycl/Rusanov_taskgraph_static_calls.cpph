@@ -80,7 +80,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[0];
             int y = i[1];
             ::exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -88,7 +88,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
               volumeIndex2d(x, y),
               patchData.t[patchIndex],
               patchData.dt[patchIndex],
-              patchData.QOut + patchIndex * QOutEnumerator.size(),
+              patchData.QOut[patchIndex],
               QOutEnumerator
             );
           }
@@ -105,7 +105,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int y = i[1];
             int z = i[2];
             ::exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -113,7 +113,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
               volumeIndex3d(x, y, z),
               patchData.t[patchIndex],
               patchData.dt[patchIndex],
-              patchData.QOut + patchIndex * QOutEnumerator.size(),
+              patchData.QOut[patchIndex],
               QOutEnumerator
             );
           }
@@ -130,12 +130,12 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int y       = i[1];
             int unknown = i[2];
             ::exahype2::fv::rusanov::internal::copySolution_LoopBody(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchIndex,
               volumeIndex2d(x, y),
               unknown,
-              patchData.QOut + patchIndex * QOutEnumerator.size(),
+              patchData.QOut[patchIndex],
               QOutEnumerator
             );
           }
@@ -153,12 +153,12 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int z = i[2];
             for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
               ::exahype2::fv::rusanov::internal::copySolution_LoopBody(
-                patchData.QIn + patchIndex * QInEnumerator.size(),
+                patchData.QIn[patchIndex],
                 QInEnumerator,
                 patchIndex,
                 volumeIndex3d(x, y, z),
                 unknown,
-                patchData.QOut + patchIndex * QOutEnumerator.size(),
+                patchData.QOut[patchIndex],
                 QOutEnumerator
               );
             }
@@ -182,7 +182,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[1] - solversHaloSize;
 
             ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -206,7 +206,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[1];
 
             ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -235,7 +235,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
 
             for (int unknown = 0; unknown < unknowns; unknown++) {
               ::exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBody(
-                patchData.QIn + patchIndex * QInEnumerator.size(),
+                patchData.QIn[patchIndex],
                 QInEnumerator,
                 tempEigenvalueX,
                 tempEigenvalueY,
@@ -247,7 +247,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
                 volumeIndex2d(x, y),
                 unknown,
                 patchData.dt[patchIndex],
-                patchData.QOut + patchIndex * QOutEnumerator.size(),
+                patchData.QOut[patchIndex],
                 QOutEnumerator
               );
             }
@@ -267,7 +267,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[2] - solversHaloSize;
 
             ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -295,7 +295,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[2];
 
             ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -323,7 +323,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[2];
 
             ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -354,7 +354,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
 
             for (int unknown = 0; unknown < unknowns; unknown++) {
               ::exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBody(
-                patchData.QIn + patchIndex * QInEnumerator.size(),
+                patchData.QIn[patchIndex],
                 QInEnumerator,
                 tempEigenvalueX,
                 tempEigenvalueY,
@@ -366,7 +366,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
                 volumeIndex3d(x, y, z),
                 unknown,
                 patchData.dt[patchIndex],
-                patchData.QOut + patchIndex * QOutEnumerator.size(),
+                patchData.QOut[patchIndex],
                 QOutEnumerator
               );
             }
@@ -391,7 +391,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[1] - solversHaloSize;
 
             ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -415,7 +415,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[1];
 
             ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -453,7 +453,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
               volumeIndex2d(x, y),
               unknown,
               patchData.dt[patchIndex],
-              patchData.QOut + patchIndex * QOutEnumerator.size(),
+              patchData.QOut[patchIndex],
               QOutEnumerator
             );
           }
@@ -472,7 +472,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[2] - solversHaloSize;
 
             ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -500,7 +500,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[2];
 
             ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -528,7 +528,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[2];
 
             ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -569,7 +569,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
                 volumeIndex3d(x, y, z),
                 unknown,
                 patchData.dt[patchIndex],
-                patchData.QOut + patchIndex * QOutEnumerator.size(),
+                patchData.QOut[patchIndex],
                 QOutEnumerator
               );
             }
@@ -593,7 +593,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[1] - solversHaloSize;
 
             ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -617,7 +617,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[1];
 
             ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -657,7 +657,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
               volumeIndex2d(x, y),
               unknown,
               patchData.dt[patchIndex],
-              patchData.QOut + patchIndex * QOutEnumerator.size(),
+              patchData.QOut[patchIndex],
               QOutEnumerator
             );
           }
@@ -676,7 +676,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[2] - solversHaloSize;
 
             ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -704,7 +704,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[2];
 
             ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -732,7 +732,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
             int x = i[2];
 
             ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn + patchIndex * QInEnumerator.size(),
+              patchData.QIn[patchIndex],
               QInEnumerator,
               patchData.cellCentre[patchIndex],
               patchData.cellSize[patchIndex],
@@ -774,7 +774,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
                 volumeIndex3d(x, y, z),
                 unknown,
                 patchData.dt[patchIndex],
-                patchData.QOut + patchIndex * QOutEnumerator.size(),
+                patchData.QOut[patchIndex],
                 QOutEnumerator
               );
             }
@@ -799,7 +799,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
               newMaxEigenvalue = std::max(
                 newMaxEigenvalue,
                 ::exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody<Solver>(
-                  patchData.QOut + patchIndex * QOutEnumerator.size(),
+                  patchData.QOut[patchIndex],
                   QOutEnumerator,
                   patchData.cellCentre[patchIndex],
                   patchData.cellSize[patchIndex],
@@ -831,7 +831,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
                 newMaxEigenvalue = std::max(
                   newMaxEigenvalue,
                   ::exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody<Solver>(
-                    patchData.QOut + patchIndex * QOutEnumerator.size(),
+                    patchData.QOut[patchIndex],
                     QOutEnumerator,
                     patchData.cellCentre[patchIndex],
                     patchData.cellSize[patchIndex],

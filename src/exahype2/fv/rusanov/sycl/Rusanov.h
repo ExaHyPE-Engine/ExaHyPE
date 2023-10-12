@@ -436,6 +436,8 @@ namespace exahype2 {
               bool                    evaluateNonconservativeProduct,
               bool                    evaluateSource,
               bool                    evaluateMaximumEigenvalueAfterTimeStep,
+              const exahype2::enumerator::AoSLexicographicEnumerator&   QInEnumerator,
+              const exahype2::enumerator::AoSLexicographicEnumerator&   QOutEnumerator,
               double*                 tempFluxX,
               double*                 tempFluxY,
               double*                 tempFluxZ,
