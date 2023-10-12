@@ -7,6 +7,7 @@
 #include "exahype2/fv/rusanov/LoopBody.h"
 
 
+#if defined(GPUOffloadingSYCL)
 template <
   typename Solver,
   std::size_t numberOfVolumesPerAxisInPatch,
@@ -14,15 +15,23 @@ template <
   std::size_t unknowns,
   std::size_t auxiliaryVariables,
   typename TempDataEnumerator>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
+void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls(
   int                   targetDevice,
   ::exahype2::CellData& hostPatchData,
   bool                  evaluateFlux,
   bool                  evaluateNonconservativeProduct,
   bool                  evaluateSource,
-  bool                  evaluateMaximumEigenvalueAfterTimeStep
+  bool                  evaluateMaximumEigenvalueAfterTimeStep,
+  double*                 tempFluxX,
+  double*                 tempFluxY,
+  double*                 tempFluxZ,
+  double*                 tempNonconservativeProductX,
+  double*                 tempNonconservativeProductY,
+  double*                 tempNonconservativeProductZ,
+  double*                 tempEigenvalueX,
+  double*                 tempEigenvalueY,
+  double*                 tempEigenvalueZ
 ) {
-  #if defined(GPUOffloadingSYCL)
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   constexpr int solversHaloSize = 1;
@@ -43,26 +52,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
     hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, 1, 0
   );
 
-  double* tempFluxX = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
-  double* tempFluxY = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
-  double* tempFluxZ = evaluateFlux and Dimensions == 3
-                        ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue)
-                        : nullptr;
-  double* tempNonconservativeProductX = evaluateNonconservativeProduct
-                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
-                                          : nullptr;
-  double* tempNonconservativeProductY = evaluateNonconservativeProduct
-                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
-                                          : nullptr;
-  double* tempNonconservativeProductZ = evaluateNonconservativeProduct and Dimensions == 3
-                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
-                                          : nullptr;
-  double* tempEigenvalueX             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
-  double* tempEigenvalueY             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
-  double* tempEigenvalueZ             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+  GPUCellData       patchData(hostPatchData, QInEnumerator, QOutEnumerator, queue);
 
   const std::size_t numberOfPatches = hostPatchData.numberOfCells;
-  GPUCellData       patchData(hostPatchData, QInEnumerator, QOutEnumerator, queue);
   ::sycl::event     copySolutionEvent;
   if (Dimensions == 2 and evaluateSource) {
     copySolutionEvent = queue.submit([&](::sycl::handler& handle) {
@@ -884,6 +876,88 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
   }
 
   patchData.destroy(hostPatchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
+}
+#endif
+
+
+template <
+  typename Solver,
+  std::size_t numberOfVolumesPerAxisInPatch,
+  std::size_t haloSize,
+  std::size_t unknowns,
+  std::size_t auxiliaryVariables,
+  typename TempDataEnumerator>
+void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
+  int                   targetDevice,
+  ::exahype2::CellData& hostPatchData,
+  bool                  evaluateFlux,
+  bool                  evaluateNonconservativeProduct,
+  bool                  evaluateSource,
+  bool                  evaluateMaximumEigenvalueAfterTimeStep
+) {
+  #if defined(GPUOffloadingSYCL)
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+
+  constexpr int solversHaloSize = 1;
+
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+    1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
+  );
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+    1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
+  );
+  TempDataEnumerator fluxEnumerator(
+    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, unknowns, 0
+  );
+  TempDataEnumerator ncpEnumerator(
+    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch + 1, solversHaloSize, unknowns, 0
+  );
+  TempDataEnumerator eigenvalueEnumerator(
+    hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, 1, 0
+  );
+
+  double* tempFluxX = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempFluxY = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempFluxZ = evaluateFlux and Dimensions == 3
+                        ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue)
+                        : nullptr;
+  double* tempNonconservativeProductX = evaluateNonconservativeProduct
+                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
+                                          : nullptr;
+  double* tempNonconservativeProductY = evaluateNonconservativeProduct
+                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
+                                          : nullptr;
+  double* tempNonconservativeProductZ = evaluateNonconservativeProduct and Dimensions == 3
+                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
+                                          : nullptr;
+  double* tempEigenvalueX             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+  double* tempEigenvalueY             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+  double* tempEigenvalueZ             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
+
+  exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_static_calls<
+    Solver,
+    numberOfVolumesPerAxisInPatch,
+    haloSize,
+    unknowns,
+    auxiliaryVariables,
+    TempDataEnumerator
+  >(
+    targetDevice,
+    hostPatchData,
+    evaluateFlux,
+    evaluateNonconservativeProduct,
+    evaluateSource,
+    evaluateMaximumEigenvalueAfterTimeStep,
+    tempFluxX,
+    tempFluxY,
+    tempFluxZ,
+    tempNonconservativeProductX,
+    tempNonconservativeProductY,
+    tempNonconservativeProductZ,
+    tempEigenvalueX,
+    tempEigenvalueY,
+    tempEigenvalueZ
+  );
 
   if (tempFluxX != nullptr)
     ::sycl::free(tempFluxX, queue);
