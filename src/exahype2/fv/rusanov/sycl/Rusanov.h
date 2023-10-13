@@ -424,6 +424,9 @@ namespace exahype2 {
              * within our rusanov::sycl namespace. Therefore, we have to qualify
              * the namespace absolutely with ::sycl if we want to use something
              * from the standard.
+             *
+             * @param patchData A GPU patch data object which encapsulates all
+             *   data transfer to/from GPU.
              */
             template <
               typename     Solver,
@@ -431,12 +434,11 @@ namespace exahype2 {
               std::size_t  haloSize,
               std::size_t  unknowns,
               std::size_t  auxiliaryVariables,
-              typename     TempDataEnumerator,
-              typename     GPUPatchData
+              typename     TempDataEnumerator
             >
             static void timeStepWithRusanov_batched_static_calls(
               int                     targetDevice,
-              ::exahype2::CellData&   hostPatchData,
+              auto                    patchData,
               bool                    evaluateFlux,
               bool                    evaluateNonconservativeProduct,
               bool                    evaluateSource,
