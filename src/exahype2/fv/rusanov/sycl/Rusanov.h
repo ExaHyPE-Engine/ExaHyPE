@@ -602,7 +602,7 @@ namespace exahype2 {
             >
             static void timeStepWithRusanov_taskgraph_static_calls(
               int                     targetDevice,
-              ::exahype2::CellData&   patchData,
+              auto&                   patchData,
               bool                    evaluateFlux,
               bool                    evaluateNonconservativeProduct,
               bool                    evaluateSource,
@@ -685,7 +685,7 @@ namespace exahype2 {
             >
             static void timeStepWithRusanov_batched_static_calls(
               int                     targetDevice,
-              auto                    patchData,
+              auto&                   patchData,
               bool                    evaluateFlux,
               bool                    evaluateNonconservativeProduct,
               bool                    evaluateSource,
@@ -738,7 +738,7 @@ namespace exahype2 {
             >
             static void timeStepWithRusanov_patchwise_static_calls(
               int                     targetDevice,
-              ::exahype2::CellData&   patchData,
+              auto&                   patchData,
               bool                    evaluateFlux,
               bool                    evaluateNonconservativeProduct,
               bool                    evaluateSource,

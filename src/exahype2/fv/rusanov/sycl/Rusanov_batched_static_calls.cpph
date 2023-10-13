@@ -20,7 +20,7 @@ template <
 >
 void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls(
   int                     targetDevice,
-  auto                    patchData,
+  auto&                   patchData,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
