@@ -4,6 +4,11 @@
 
 
 
+#include "tarch/timing/Measurement.h"
+
+#include "exahype2/CellData.h"
+
+
 
 namespace exahype2 {
   namespace fv {
@@ -19,6 +24,11 @@ namespace exahype2 {
          * Task-graph realisation of the kernel where the input data and result
          * are explicitly copied forth and back between GPU and CPU. This
          * routine employs GPUCopyCellData as a wrapper around the host data.
+         *
+         * After that, the call is forwarded to the corresponding internal
+         * implementation.
+         *
+         * @see exahype2::fv::rusanov::sycl::internal
          */
         template <
           typename Solver,
@@ -43,8 +53,17 @@ namespace exahype2 {
 
 
         /*
+         * Batched realisation of the kernel
+         *
          * Batched realisation of the kernel where the input data and result
-         * are explicitly copied forth and back between GPU and CPU.
+         * are explicitly copied forth and back between GPU and CPU. This
+         * routine employs GPUCopyCellData as a wrapper around the host data.
+         *
+         * After that, the call is forwarded to the corresponding internal
+         * implementation.
+         *
+         * @see exahype2::fv::rusanov::sycl::internal
+         *
          */
         template <
           typename Solver,
@@ -69,8 +88,17 @@ namespace exahype2 {
 
 
         /*
+         * Patch-wise realisation of the kernel
+         *
          * Patch-wise realisation of the kernel where the input data and result
-         * are explicitly copied forth and back between GPU and CPU.
+         * are explicitly copied forth and back between GPU and CPU. This
+         * routine employs GPUCopyCellData as a wrapper around the host data.
+         *
+         * After that, the call is forwarded to the corresponding internal
+         * implementation.
+         *
+         * @see exahype2::fv::rusanov::sycl::internal
+         *
          */
         template <
           typename Solver,
@@ -297,6 +325,225 @@ namespace exahype2 {
             evaluateMaximumEigenvalueAfterTimeStep
           );
         }
+
+
+        /**
+         * Variant of kernel invocation which times core compute time
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_taskgraph_copy_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_copy_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_patchwise_copy_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_taskgraph_usm_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_usm_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_patchwise_usm_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        /*
+         *
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_taskgraph_managed_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        /**
+         *
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_batched_managed_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
+
+
+        /**
+         *
+         */
+        template <
+          typename Solver,
+          std::size_t  numberOfVolumesPerAxisInPatch,
+          std::size_t  haloSize,
+          std::size_t  unknowns,
+          std::size_t  auxiliaryVariables,
+          typename TempDataEnumerator
+        >
+        static void timeStepWithRusanov_patchwise_managed_static_calls(
+          int                     targetDevice,
+          ::exahype2::CellData&   patchData,
+          bool                    evaluateFlux,
+          bool                    evaluateNonconservativeProduct,
+          bool                    evaluateSource,
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
+        )
+        #if defined(UseManualInlining)
+        __attribute__((always_inline))
+        #endif
+        ;
 
 
         namespace internal {
