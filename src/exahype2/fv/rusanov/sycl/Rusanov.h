@@ -14,8 +14,11 @@ namespace exahype2 {
        */
       namespace sycl {
         /*
+         * Task-graph implementation with copying
+         *
          * Task-graph realisation of the kernel where the input data and result
-         * are explicitly copied forth and back between GPU and CPU.
+         * are explicitly copied forth and back between GPU and CPU. This
+         * routine employs GPUCopyCellData as a wrapper around the host data.
          */
         template <
           typename Solver,
@@ -436,8 +439,6 @@ namespace exahype2 {
               bool                    evaluateNonconservativeProduct,
               bool                    evaluateSource,
               bool                    evaluateMaximumEigenvalueAfterTimeStep,
-              const exahype2::enumerator::AoSLexicographicEnumerator&   QInEnumerator,
-              const exahype2::enumerator::AoSLexicographicEnumerator&   QOutEnumerator,
               double*                 tempFluxX,
               double*                 tempFluxY,
               double*                 tempFluxZ,

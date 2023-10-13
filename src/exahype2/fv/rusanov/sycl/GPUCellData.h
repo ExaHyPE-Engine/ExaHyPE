@@ -153,30 +153,47 @@ namespace exahype2 {
          *
          * Please consult GPUUSMCellData for a description.
          *
-         * ## Usage
-         *
-         * Create an instance of this class on the host using the constructor that
-         * accepts the CellData. This instance wraps around the real cell data, i.e.
-         * creates copies copy of all relevant data in the shared memory.
-         *
-         * Copy this wrapper object over to the accelerator. This is a byte-wise
-         * copy. We can do this, as we have made all pointer of this wrapper object
-         * point to shared memory.
-         *
-         * Destroy the object on the accelerator. No data is actually freed.
-         *
-         * Call destroy() on the host once the kernels have finished. This actually
-         * frees the copies in the shared memory.
-         *
          * ## Implementation
          *
          * The QIn and QOut in the original patch data is an array over pointers,
          * where each pointer points to the QIn/QOut data of one patch. When we
          * copy the data over to the GPU, it makes no sense to work with a
          * fragmented memory. Instead, we allocate the data for all N patches
-         * in one big go. The corresponding entry is stored in QInCopy or
-         * QOutCopy, respectively. The QIn and QOut then are index arrays
+         * in one big go. The corresponding entry is stored in QInCopyInOneHugeBuffer or
+         * QOutCopyInOneHugeBuffer, respectively. The QIn and QOut then are index arrays
          * over this big copy.
+         *
+         * ## Usage
+         *
+         * Please consult GPUUSMCellData for a description. There is one
+         * difference behind the scenes, which you might want to take into
+         * account or you might not want to: The whole patch data are copied
+         * over into one huge chunk. Therefore, you can either use
+         *
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+         *   1,
+         *   numberOfVolumesPerAxisInPatch,
+         *   haloSize,
+         *   unknowns,
+         *   auxiliaryVariables
+         * );
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         * over the individual QIn[i] pointers, or you can use
+         *
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+         *   numberOfPatches,
+         *   numberOfVolumesPerAxisInPatch,
+         *   haloSize,
+         *   unknowns,
+         *   auxiliaryVariables
+         * );
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         * over the whole big block.
+         *
          */
         struct GPUCopyCellData {
           double**                               QIn;
