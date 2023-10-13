@@ -353,7 +353,8 @@ template <void (*Function)(
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
-  bool                    evaluateMaximumEigenvalueAfterTimeStep
+  bool                    evaluateMaximumEigenvalueAfterTimeStep,
+  tarch::timing::Measurement&  measurement
 )>
 void wrapDeviceKernel(
   int                               device,
@@ -362,14 +363,19 @@ void wrapDeviceKernel(
 ) {
   assertion( device!=tarch::accelerator::Device::HostDevice );
 
+  static tarch::timing::Measurement timingComputeKernel;
   Function(
     device,
     patchData,
     true ,
     false ,
     false ,
-    evaluateMaximumEigenvalueAfterTimeStep
+    evaluateMaximumEigenvalueAfterTimeStep,
+    timingComputeKernel
   );
+  if (timingComputeKernel.getNumberOfMeasurements()==NumberOfSamples) {
+    logInfo( "wrapDeviceKernel(...)", "core compute kernel time: " << timingComputeKernel.getValue() << " " << timingComputeKernel.toString() );
+  }
 }
 
 
