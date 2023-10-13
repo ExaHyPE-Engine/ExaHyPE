@@ -390,12 +390,13 @@ namespace exahype2 {
              * Once the kernel has finished, we have to free all temporary data. We
              * use sycl::free() to delete our scratchpads.
              *
-             * With SYCL, we can copy the enumerators directly to the GPU, as they
-             * provide standard constructors.
-             *
-             * The copying of the actual patch data is more complicated, as we
-             * have pointers over pointers here. We use the GPUCellData wrapper
-             * in the sycl namespace to realise these deep copies.
+             * The QIn and QOut as wrapped by hostPatchData also have to go to the GPU.
+             * There are different options for this one the table, and each option
+             * is offered through one of the routines in the namespace above. The
+             * realisation of these options is encapsulated within classes from
+             * GPUCellData and we parameterise this routine with this type, i.e.
+             * we can alter the memory transfer model by exchanging the type in the
+             * template.
              *
              *
              * ## SYCL details
@@ -425,29 +426,21 @@ namespace exahype2 {
              * from the standard.
              */
             template <
-              typename Solver,
+              typename     Solver,
               std::size_t  numberOfVolumesPerAxisInPatch,
               std::size_t  haloSize,
               std::size_t  unknowns,
               std::size_t  auxiliaryVariables,
-              typename TempDataEnumerator
+              typename     TempDataEnumerator,
+              typename     GPUPatchData
             >
             static void timeStepWithRusanov_batched_static_calls(
               int                     targetDevice,
-              auto&                   patchData,
+              ::exahype2::CellData&   hostPatchData,
               bool                    evaluateFlux,
               bool                    evaluateNonconservativeProduct,
               bool                    evaluateSource,
-              bool                    evaluateMaximumEigenvalueAfterTimeStep,
-              double*                 tempFluxX,
-              double*                 tempFluxY,
-              double*                 tempFluxZ,
-              double*                 tempNonconservativeProductX,
-              double*                 tempNonconservativeProductY,
-              double*                 tempNonconservativeProductZ,
-              double*                 tempEigenvalueX,
-              double*                 tempEigenvalueY,
-              double*                 tempEigenvalueZ
+              bool                    evaluateMaximumEigenvalueAfterTimeStep
             )
             #if defined(UseManualInlining)
             __attribute__((always_inline))
@@ -492,7 +485,7 @@ namespace exahype2 {
               std::size_t  haloSize,
               std::size_t  unknowns,
               std::size_t  auxiliaryVariables,
-              typename TempDataEnumerator
+              typename     TempDataEnumerator
             >
             static void timeStepWithRusanov_patchwise_static_calls(
               int                     targetDevice,
