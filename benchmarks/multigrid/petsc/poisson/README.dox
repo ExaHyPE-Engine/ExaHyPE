@@ -110,5 +110,10 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
   - The operator @f$ P_{fc} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
     the updates for the cell. 
   
+ In the example above, we use d-linear shape functions arranged along the 
+ Gauss-Lobatto integration points. So the two nodes carrying the shape 
+ function weights are spread out over the unit interval.
+ 
+ 
  */
  
