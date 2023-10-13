@@ -24,6 +24,91 @@
  ~~~~~~~~~~~~~~~~~~~~~~~~~
  /opt/paraview/bin/pvpython ~/git/Peano/python/peano4/visualisation/render.py --filter-fine-grid solution-CollocatedPoisson.peano-patch-file
  ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ # Solver description
  
+ ## Discontinuous Galerkin
+ 
+ A DG solver is instantiated similar to
+ 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
+                                                                     polynomial_degree    = args.degree,
+                                                                     cell_unknowns        = 1,                      # unknowns_per_cell_dof,
+                                                                     face_unknowns        = 1,                      # unknowns_per_cell_dof,
+                                                                     dimensions           = args.dimensions,
+                                                                     min_h                = args.meshsize,
+                                                                     max_h                = args.meshsize,
+                                                                     cell_cell_rhs_matrix   = matrices.getCellCellMassMatrix(),     
+                                                                     cell_cell_lhs_matrix   = matrices.getCellCellSystemMatrixForLaplacian(),
+                                                                     cell_cell_lhs_matrix_scaling = args.dimensions-2,
+                                                                     cell_cell_rhs_matrix_scaling = args.dimensions,
+                                                                     cell_to_face_matrix     = matrices.getCellToFaceMatrix(),       
+                                                                     face_to_cell_matrix     = matrices.getCellIdentityMatrix(), 
+                                                                     cell_to_face_matrix_scaling  = 0,       
+                                                                     face_to_cell_matrix_scaling  = args.dimensions, 
+                                                                     face_face_Riemann_problem_matrix        = matrices.getAveragingRiemannSolver(),   # todo bad name    
+#                                                                     quadrature_points_in_unit_interval = matrices.getPointsInUnitInterval(),
+                                                                     quadrature_points_in_unit_interval = [0.0, 1.0],
+                                                                     )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+ We follow the notation as used for multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation
+ and obtain, for Poisson, @f$ \mathcal{L}(u) = -\Delta u = - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u @f$.
+ The extension to higher dimensions is straightforward.
+ Our weak formulation becomes
+
+
+\f{eqnarray*}{
+  \int _\Omega \mathcal{L}(u) \cdot v \ dx 
+  &=& 
+  \int _\Omega ( -\Delta u) \cdot v \ dx
+  \\ 
+  &=& 
+  \int _{\text{cell}_v} (- \Delta u) \cdot v \ dx
+  \\ 
+  &=& 
+  \int _{\text{cell}_v} ( \nabla u, \nabla v) \ dx
+  - 
+  \int _{\partial \text{cell}_v} (\hat{\nabla u},n) \cdot v \ dx
+  =
+  \int _{\text{cell}_v} f \cdot v dx 
+\f}
+
+
+  Within the framework above, we end up with the following situation:
+
+  - Each cell holds @f$ (p+1)^d @f$ degrees of freedom (dof). We specify this 
+    through the variable polynomial_degree. 
+  - Each node within the cell holds one unknown as we solve a scalar equation.
+    Therefore, 
+    
+            cell_unknowns=1
+            
+  - The operator @f$ A_{cc} @f$ takes the dofs within a cell and couples
+    them with each other. It respresents @f$ \int _{\text{cell}_v} ( \nabla u, \nabla v) \ dx @f$.
+  - On the faces, we have the gradient @f$ \nabla u @f$ from the left and from
+    right right. So we might be tempted to hold @f$ \nabla u^+ @f$ and
+    @f$ \nabla u^- @f$. So @f$ 2d @f$ quantities in total. However, this is 
+    not necessary: We are really only interested in the gradient along the 
+    normal. Therefore, we set 
+     
+            face_unknowns=1 
+    
+    These are not really unknowns in the linear algebra sense. They are 
+    helpers.        
+  - The operator @f$ P_{cf} @f$ takes the solution from a cell and projects it 
+    the faces. Hence, @f$ P_{cf} \in \mathbb{R}^{2d(p+1)^{d-1} \times (p+1)^{d}} @f$.
+    The 2d equals the number of faces of a cell, while the cell is a submanifold
+    and therefore hosts @f$ (p+1)^{d-1} @f$. 
+    The result is written into 
+    @f$ u^+ @f$ or @f$ u^- @f$ respectively on the faces.
+  - The operator @f$ A_{ff} @f$ takes the @f$ 2(p+1)^{d-1} @f$ on the face
+    and yields the 
+    @f$ (p+1)^{d-1} @f$ averages.
+  - The operator @f$ P_{fc} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
+    the updates for the cell. 
+  
  */
  

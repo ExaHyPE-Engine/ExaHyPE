@@ -104,7 +104,7 @@ if (fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}P
     _rhsWriter->plotVertex(   rhsPatchVertexIndex,   rhs+currentDoF   );
     valuePatchVertexIndex++;
     rhsPatchVertexIndex++;
-    currentDoF += repositories::{{SOLVER_INSTANCE}}.Unknowns;
+    currentDoF += repositories::{{SOLVER_INSTANCE}}.CellUnknowns;
   }
 
 }
@@ -130,14 +130,14 @@ if (fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}P
   _valueWriter = _writer->createVertexDataWriter( 
     "value", 
     repositories::{{SOLVER_INSTANCE}}.Order+1,  // nodes per axis                                          
-    repositories::{{SOLVER_INSTANCE}}.Unknowns,
+    repositories::{{SOLVER_INSTANCE}}.CellUnknowns,
     "Solution",
     "Solution as delivered through PETSc"
   );
   _rhsWriter = _writer->createVertexDataWriter( 
     "rhs", 
     repositories::{{SOLVER_INSTANCE}}.Order+1,  // nodes per axis                                          
-    repositories::{{SOLVER_INSTANCE}}.Unknowns,
+    repositories::{{SOLVER_INSTANCE}}.CellUnknowns,
     "Right-hand side",
     "Nodal right-hand side value"
   );

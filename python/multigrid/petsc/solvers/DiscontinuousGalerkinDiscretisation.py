@@ -53,7 +53,7 @@ class AssemblePetscMatrix(ActionSet):
     
     auto projectionCellToFaceMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfCellDataOntoFace(marker.x(),marker.h());
     auto projectionFaceToCellMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfRiemannSolutionOntoCell(marker.x(),marker.h());
-    int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.Unknowns;
+    int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
     for (int d=0; d<Dimensions; d++) {
       std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
       std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
@@ -90,7 +90,7 @@ class AssemblePetscMatrix(ActionSet):
 
   TemplateTouchFaceFirstTime="""
   auto RiemannSolverMatrix = repositories::{{SOLVER_INSTANCE}}.getRiemannSolver(marker.x(),marker.h());
-  int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.Unknowns;
+  int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
   if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() != facedata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
     std::pair<int,int> localFirstDoFIndex = std::make_pair(_spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex);
@@ -421,49 +421,15 @@ class DiscontinuousGalerkinDiscretisation(Solver):
   </div>
 
 
-  ## Example: the Poisson equation with simple averaging as Riemann solver
+  ## Examples
+  
+  Multiple examples are shipped with Peano which demonstrate how to use the 
+  plain Discontiuous Galerking solver:
+  
+  - benchmarks/multigrid/petsc/poisson/dg.py Hosts a simple solver for the 
+    Poisson equation. All the rationale are discussed in @ref benchmarks_multigrid_petsc_poisson.
+    
 
-  For Poisson, @f$ \mathcal{L}(u) = -\Delta u = - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u @f$.
-  The extension to higher dimensions is straightforward.
-  Our weak formulation becomes
-
-
-\f{eqnarray*}{
-  \int _\Omega \mathcal{L}(u) \cdot v \ dx 
-  &=& 
-  \int _\Omega ( -\Delta u) \cdot v \ dx
-  \\ 
-  &=& 
-  \int _{\text{cell}_v} (- \Delta u) \cdot v \ dx
-  \\ 
-  &=& 
-  \int _{\text{cell}_v} (\nabla u, \nabla v) \ dx
-  - 
-  \int _{\partial \text{cell}_v} (\hat u,n) \cdot v \ dx
-  =
-  \int _\Omega \mathcal{L}(u) \cdot v dx 
-\f}
-
-
-  Within the framework above, we end up with the following situation:
-
-  - Each cell holds @f$ (p+1)^d @f$ degrees of freedom (dof).
-  - Each dof holds one unknown.
-  - The operator @f$ A_{cc} @f$ takes the dofs within a cell and couples
-    them with each other.
-  - Each face holds @f$ 2(p+1)^{d-1} @f$ degrees of freedom (dof). They are not 
-    proper degrees of freedom however:
-  - The operator @f$ P_{cf} @f$ takes the solution from a cell and projects it 
-    the faces. The @f$ 2(p+1)^d @f$ values encode the left and right solution
-    @f$ u^+ @f$ and @f$ u^- @f$ along a face.
-  - We introduce another @f$ (p+1)^{d-1} @f$ degrees of freedom on the face.
-    Again, they are not real degrees of freedom:
-  - The operator @f$ A_{ff} @f$ takes the @f$ 2(p+1)^{d-1} @f$ and yields the 
-    @f$ (p+1)^{d-1} @f$ averages.
-  - The operator @f$ P_{fc} @f$ takes the @f$ 2(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
-    the updates for the cell. It evaluates @f$ \int _{\partial \text{cell}_v} (n,[[u]]) v dS(x) @f$
-    where the @f$ [[u]] @f$ is the average of the solution projections that we have 
-    stored before in helper variables.
 
 
   ## Attributes

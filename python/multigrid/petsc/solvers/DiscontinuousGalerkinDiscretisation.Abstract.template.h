@@ -47,7 +47,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     static constexpr int        Order    = {{POLYNOMIAL_DEGREE}};
     static constexpr int        CellUnknowns = {{CELL_UNKNOWNS}};
-    static constexpr int        CellUnknowns = {{FACE_UNKNOWNS}};
+    static constexpr int        FaceUnknowns = {{FACE_UNKNOWNS}};
 
     static constexpr int        FacesPerCell = 2 * Dimensions;
 
@@ -59,7 +59,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr int     NodesPerFace = (Order+1) * (Order+1);
     #endif
 
-    static constexpr int     DoFsPerCell = Unknowns * NodesPerCell;
+    static constexpr int     DoFsPerCell = CellUnknowns * NodesPerCell;
 
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
@@ -70,12 +70,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     virtual void initNode(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  cellH,
-      {% if UNKNOWNS==1 %}
+      {% if CELL_UNKNOWNS==1 %}
       double&                                       value,
       double&                                       rhs
       {% else %}
-      tarch::la::Vector< {{UNKNOWNS}}, double >&  value,
-      tarch::la::Vector< {{UNKNOWNS}}, double >&  rhs
+      tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  value,
+      tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  rhs
       {% endif %}
     ) = 0;
 
@@ -104,21 +104,21 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     {% if CELL_CELL_RHS_MATRIX==[] %} = 0 {% endif %};
 
 
-    virtual tarch::la::Matrix< NodesPerFace*Unknowns*FacesPerCell, DoFsPerCell, double > getProjectionOfCellDataOntoFace(
+    virtual tarch::la::Matrix< NodesPerFace*FaceUnknowns*FacesPerCell, DoFsPerCell, double > getProjectionOfCellDataOntoFace(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     )
     {% if CELL_TO_FACE_MATRIX==[] %} = 0 {% endif %};
 
 
-    virtual tarch::la::Matrix< DoFsPerCell, NodesPerFace*Unknowns*FacesPerCell, double > getProjectionOfRiemannSolutionOntoCell(
+    virtual tarch::la::Matrix< DoFsPerCell, NodesPerFace*FaceUnknowns*FacesPerCell, double > getProjectionOfRiemannSolutionOntoCell(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     )
     {% if FACE_TO_CELL_MATRIX==[] %} = 0 {% endif %};
 
 
-    virtual tarch::la::Matrix< NodesPerFace*Unknowns, 2*NodesPerFace*Unknowns, double > getRiemannSolver(
+    virtual tarch::la::Matrix< NodesPerFace*FaceUnknowns, 2*NodesPerFace*FaceUnknowns, double > getRiemannSolver(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     )

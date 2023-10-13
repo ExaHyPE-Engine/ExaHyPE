@@ -53,12 +53,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     virtual void initNode(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      {% if UNKNOWNS==1 %}
+      {% if CELL_UNKNOWNS==1 %}
       double&                                       value,
       double&                                       rhs
       {% else %}
-      tarch::la::Vector< {{UNKNOWNS}}, double >&  value,
-      tarch::la::Vector< {{UNKNOWNS}}, double >&  rhs
+      tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  value,
+      tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  rhs
       {% endif %}
     ) override;
 
@@ -80,7 +80,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
 
 
     {% if CELL_TO_FACE_MATRIX==[] %}
-    virtual tarch::la::Matrix< NodesPerFace*Unknowns*FacesPerCell, DoFsPerCell, double > getProjectionOfCellDataOntoFace(
+    virtual tarch::la::Matrix< NodesPerFace*FaceUnknowns*FacesPerCell, DoFsPerCell, double > getProjectionOfCellDataOntoFace(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) override;
@@ -88,7 +88,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
 
 
     {% if FACE_TO_CELL_MATRIX==[] %}
-    virtual tarch::la::Matrix< DoFsPerCell, NodesPerFace*Unknowns*FacesPerCell, double > getProjectionOfRiemannSolutionOntoCell(
+    virtual tarch::la::Matrix< DoFsPerCell, NodesPerFace*FaceUnknowns*FacesPerCell, double > getProjectionOfRiemannSolutionOntoCell(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) override;
