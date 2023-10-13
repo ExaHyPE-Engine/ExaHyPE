@@ -16,7 +16,7 @@ Initialise degrees of freedom associated with cells
   if ( fineGridCell{{SOLVER_NAME}}PETScData.getType() != celldata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
     int dof = 0;
     dfor( k, {{POLYNOMIAL_DEGREE+1}} ) {
-      {% if UNKNOWNS>1 %}
+      {% if CELL_UNKNOWNS>1 %}
       xxxx
       {% else %}
       double value, rhs;
@@ -55,7 +55,7 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
-    self.d["UNKNOWNS"]           = solver.unknowns
+    self.d["CELL_UNKNOWNS"]      = solver.cell_unknowns
     self.d["POLYNOMIAL_DEGREE"]  = solver.polynomial_degree
 
 

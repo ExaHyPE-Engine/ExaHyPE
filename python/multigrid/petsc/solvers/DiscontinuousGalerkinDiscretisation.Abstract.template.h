@@ -46,7 +46,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static const double         QuadraturePointsInUnitInterval[];
 
     static constexpr int        Order    = {{POLYNOMIAL_DEGREE}};
-    static constexpr int        Unknowns = {{UNKNOWNS}};
+    static constexpr int        CellUnknowns = {{CELL_UNKNOWNS}};
+    static constexpr int        CellUnknowns = {{FACE_UNKNOWNS}};
 
     static constexpr int        FacesPerCell = 2 * Dimensions;
 
