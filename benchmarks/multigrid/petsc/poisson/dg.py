@@ -34,7 +34,7 @@ project = multigrid.petsc.Project(project_name = "DG",
                                   ) 
 
                         
-matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args.degree,
+matrices = multigrid.matrixgenerators.GaussLobatto(polynomial_degree            = args.degree,
                                                    dimensions             = args.dimensions,
                                                    unknowns_per_cell_node = 1,
                                                    unknowns_per_face_node = 1,  # for DG, this has to equal unknowns_per_cell_dof
@@ -42,7 +42,8 @@ matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args
                                                    
 solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
-                                                                     unknowns             = 1,                      # unknowns_per_cell_dof,
+                                                                     cell_unknowns        = 1,                      # unknowns_per_cell_dof,
+                                                                     face_unknowns        = 1,                      # unknowns_per_cell_dof,
                                                                      dimensions           = args.dimensions,
                                                                      min_h                = args.meshsize,
                                                                      max_h                = args.meshsize,
@@ -54,8 +55,9 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      face_to_cell_matrix     = matrices.getCellIdentityMatrix(), 
                                                                      cell_to_face_matrix_scaling  = 0,       
                                                                      face_to_cell_matrix_scaling  = args.dimensions, 
-                                                                     face_face_Riemann_problem_matrix        = matrices.getFaceFaceMatrix(),   # todo bad name    
-                                                                     quadrature_points_in_unit_interval = matrices.getPointsInUnitInterval(),
+                                                                     face_face_Riemann_problem_matrix        = matrices.getAveragingRiemannSolver(),   # todo bad name    
+#                                                                     quadrature_points_in_unit_interval = matrices.getPointsInUnitInterval(),
+                                                                     quadrature_points_in_unit_interval = [0.0, 1.0],
                                                                      )
 
 

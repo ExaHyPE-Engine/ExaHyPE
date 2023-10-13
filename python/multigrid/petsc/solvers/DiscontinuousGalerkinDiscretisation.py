@@ -210,9 +210,265 @@ class DiscontinuousGalerkinDiscretisation(Solver):
    
   Discontinuous Galerkin class
 
-  The best description of this class can e found in the generic @ref page_multigrid_numerics_Disontinuous_Galerkin "generic DG pages".
-  This class docu really focuses on implementation details.  
+  ## The weak formulation
 
+  To translate a PDE into an equation system, we express the solution 
+
+  @f$ u = \sum _i u_i \phi _i @f$
+
+  as sum over shape functions @f$ \phi _i @f$. 
+  The shape functions in this class are locally continuous, but their linear 
+  combination is not. We test this setup against test functions @f$ v @f$.
+  Each test function is actually any of the shape functions @f$ \phi _i @f$.
+  Drawing both shapes and test functions from the same function space means that
+  we follow a ***Ritz-Galerkin*** approach.
+
+
+  Let @f$ \mathcal{L}(u) @f$ be the differential operator on the left-hand side
+  of the PDE, i.e. let's assume that we solve
+
+  @f$
+    \mathcal{L}(u) = f.
+  @f$
+
+  A weak formulation means that we multiple both sides with a test function and 
+  then integrate over the whole thing. As we take all these tests from the same 
+  function space as the shape functions, we know that they all have local 
+  support.Consequently, our test integral "shrinks" down to the support of the 
+  test function
+
+  @f$
+    \int _\Omega \mathcal{L}(u) \cdot v dx = \int_{\text{cell}_v} \mathcal{L}(u) \cdot v dx
+  @f$
+
+  as the product disappears everywhere outside of the cell that hosts the test 
+  function of interest.
+
+
+  Once again, we can integrate by parts to get rid of the highest derivative in
+  our partial differential operator @f$ \mathcal{L}(u) @f$, but this time, we will 
+  get an expression of the form 
+
+
+\f{eqnarray*}{
+  \int _\Omega \mathcal{L}(u) \cdot v dx 
+  &=& 
+  - \int _\Omega \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx 
+  + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(u)) v dS(x)
+  \\
+  &=& 
+  - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx 
+  + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x)
+  \\
+  & = & \int _{\text{cell}_v} f \cdot v dx.
+\f}
+
+  We reduced the order of the deriative within @f$ \mathcal{L}(u) @f$ and got a 
+  new operator @f$ \tilde{\mathcal{L}} @f$.
+  If  @f$ \mathcal{L}(u) @f$ is dominated by a second derivative, @f$ \tilde{\mathcal{L}} @f$ 
+  hosts only first-order derivatives.
+  But this is a Pyrrhic victory:
+  We now get an additional PDE term over the cell faces.
+
+
+  We conclude that
+
+  1. the jump terms along the faces do not disappear, i.e. they do not cancel out 
+     from left and right as they do in a Continuous Galerkin formulation. 
+  2. Even worse, they refer to a value @f$ u @f$ which technically does not 
+     exist, as there is no (unique) solution along the face. We only have a 
+     left @f$ u^- @f$ and a right @f$ u^+ @f$ solution. Therefore, I explicitly
+     write @f$ \hat u @f$ in the equation above. It denotes that we haven't yet
+     decided what the function looks like along the face.
+  3. We now have cell integrals to evaluate, and there are additional face 
+     integrals. The latter ones couple neighbouring cells.    
+
+  We end up with a linear equation system 
+
+  @f$ A x = b @f$
+
+  where x has @f$ |\mathbb{C}| \cdot K  \cdot (p+1)^d @f$ entries. @f$ \mathbb{C}  @f$ 
+  is set of cells in the mesh.
+
+
+  ## An operator language and temporary variables
+    
+  Before we dive into examples or discuss how to map this formalism onto code, we 
+  introduce an operator language. That is, we break down the overall computation
+  into small tasks. These tasks will be found 1:1 in the code later on. Furthermore,
+  we gain some freedom by breaking things down into tiny bits and pieces: We can
+  alter individual ones or puzzle them together in various ways.
+    
+  We introduce a few operators (functions) to break down the overall computational 
+  scheme into a sequence/set of computations:
+    
+  - The operator @f$ A_{cc} @f$ takes the dofs within a cell and computes the 
+    term @f$ - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx @f$.
+    It takes the @f$ K (p+1)^d @f$ values per cell and yields @f$ K (p+1)^d @f$
+    equations/updates from the cell. In classes like petsc.solvers.DiscontinuousGalerkinDiscretisation
+    this matrix is called cell_cell_lhs_matrix.
+  - Let's introduce temporary variables on the face. Those are the 
+    @f$ u^+ @f$ and @f$ u^- @f$ values, i.e. we store @f$ 2K (p+1)^{d-1} @f$
+    degrees of freedom on the face. Those are not really degrees of freedom.
+    They will be mere projection, i.e. simply encode what the solution along
+    the face is.
+  - The operator @f$ A_{cf} @f$ takes the solution from a cell and projects it 
+    onto a face. Let @f$ u^+ @f$ and @f$ u^- @f$ denote the solution left or 
+    right of a face (from the face's point of view). For each of the @f$ 2d @f$ 
+    faces of a cell, the operator @f$ P_{cf} @f$ yields either the 
+    @f$ u^+ @f$ or @f$ u^- @f$.
+  - The operator @f$ A_{ff} @f$ operates on a face. It takes 
+    @f$ u^+ @f$ and @f$ u^- @f$ and yields something
+    that "reconstructs" the solution and applies the flux operator on it. 
+    This is the Riemann solver and hence linear algebraises the 
+    @f$ \tilde{\mathcal{M}}(\hat u ) @f$ from above.
+  - The operator @f$ A_{fc} @f$ takes the @f$ \hat u @f$ on the face and yields
+    the updates for the cell. It evaluates @f$ \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x) @f$.
+  
+  
+  <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+    Within Peano, it is important to distinguish data on cell and faces carefully 
+    from each other. Furthermore
+    (i) we can read data associated with faces within cells;
+    (ii) we can never read data from neighbouring cells within a cell;
+    (iii) we can never access adjacent cell data from a face.
+  </div>
+    
+    
+    
+  The overall scheme in operator notation thus reads
+    
+  @f$
+    A_{cc} + A_{fc} \circ A_{ff} \circ A_{cf}
+  @f$
+  
+    
+  i.e. we evaluate the cell contributions and add the face contributions 
+  which in turn results from a concatenation of three operators: 
+  Project solution onto face, solve a Riemann problem there, and then 
+  take the result and project it back onto the cell. The projection onto
+  the face is a purely geoemtric thing: Once we know the polynomials 
+  chosen within the cell, we can evaluate what the solution looks like 
+  depending on the weights (unknowns within the degree of freedom). 
+  With that knowledge, we can determine what the solution on the face 
+  looks like. We use the same polynomial space there (restricted to the 
+  submanifold) and therefore can express the face representation through
+  polynomial weights (left and right of the face), too. For each pair of
+  the  polynomial weights, we can solve the Riemann problem and store the
+  outcome in further weights. That is, we represent the outcome of the
+  Riemann problem again in the polynomial space on the faces. Finally,
+  we take this representation, test it against the test functions, 
+  integrate over the face and write the contributions back into the cell.
+    
+    
+    
+    
+  Effectively, our approach blows up the equation system to solve into 
+    
+  @f$ 
+   Ax = 
+   \begin{bmatrix}
+   A_{cc}  & A_{fc}  & 0 & 0 \\
+    0       & id      & -A_{ff}|_+ & -A_{ff}|_- \\
+   -id      & 0       & A_{cf}|_+ & 0      \\
+   -id      & 0       & 0 & A_{cf}|_-      
+   \end{bmatrix}
+   \begin{bmatrix}
+   x_{c} \\ x_f \\ x^+ \\ x^-
+   \end{bmatrix}
+   = 
+   \begin{bmatrix}
+   b_{c} \\ 0 \\ 0 \\ 0 
+   \end{bmatrix}
+  @f$ 
+
+
+  @todo We need a nice illustration here of all the function spaces 
+
+  where we have to specify the involved matrices further. 
+  The @f$ x_c @f$ are the real degrees of freedom, i.e. the weights within
+  the cells which effectively span the solution.
+  The @f$ x_\pm @f$ encode the projection of these polynomials onto the faces.
+  These are not real degrees of freedom, as they always result directly from
+  the @f$ x_c @f$.
+  The @f$ x_f @f$ encode the reconstructed solution on the faces and hold the
+  average of the @f$ x_\pm @f$ values.
+  This setup means our total matrix is no longer square. 
+  @f$ A_{cc} @f$ is square, with @f$ |\mathbb{C}| \cdot (p+1)^d @f$ rows, 
+  where @f$ |\mathbb{C}| @f$ is the number of cells in the mesh. 
+  @f$ A_{fc} @f$ has the same number of rows, but @f$ |\mathbb{F}| \cdot (p+1)^{d-1} @f$
+  columns, since this part has to "hit" @f$ x_f @f$. 
+  @f$ A_{ff} @f$ has @f$ |\mathbb{F}| \cdot (p+1)^{d-1} @f$ rows, and twice as many
+  columns (note that @f$ | x_\pm| \ = \ 2 |x_f| @f$ ).
+  Finally, @f$ A_{cf} @f$ has @f$ |\mathbb{C}| \cdot (p+1)^d @f$ rows and 
+  @f$ 2|\mathbb{F}| \cdot (p+1)^{d-1} @f$ columns, since this part "hits" 
+  @f$ x_\pm @f$.
+
+  Our global matrix is no longer square. We have 
+  @f$ 2 |\mathbb{C}| \cdot (p+1)^d + |\mathbb{F}| \cdot (p+1)^{d-1} @f$ rows
+  and 
+  @f$ |\mathbb{C}| \cdot (p+1)^d + 3|\mathbb{F}| \cdot (p+1)^{d-1} @f$ columns.
+
+
+
+
+  <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+  The write-down as one big matrix as above works if and only if the 
+  chosen Riemann solver yield a linear combination of the @f$ u^-/u^+ @f$
+  or @f$ x^-/x^+ @f$ values respectively. In many sophisticated solvers,
+  it will not be linear. In this case, the system becomes a non-linear 
+  equation system.
+  </div>
+
+
+  ## Example: the Poisson equation with simple averaging as Riemann solver
+
+  For Poisson, @f$ \mathcal{L}(u) = -\Delta u = - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u @f$.
+  The extension to higher dimensions is straightforward.
+  Our weak formulation becomes
+
+
+\f{eqnarray*}{
+  \int _\Omega \mathcal{L}(u) \cdot v \ dx 
+  &=& 
+  \int _\Omega ( -\Delta u) \cdot v \ dx
+  \\ 
+  &=& 
+  \int _{\text{cell}_v} (- \Delta u) \cdot v \ dx
+  \\ 
+  &=& 
+  \int _{\text{cell}_v} (\nabla u, \nabla v) \ dx
+  - 
+  \int _{\partial \text{cell}_v} (\hat u,n) \cdot v \ dx
+  =
+  \int _\Omega \mathcal{L}(u) \cdot v dx 
+\f}
+
+
+  Within the framework above, we end up with the following situation:
+
+  - Each cell holds @f$ (p+1)^d @f$ degrees of freedom (dof).
+  - Each dof holds one unknown.
+  - The operator @f$ A_{cc} @f$ takes the dofs within a cell and couples
+    them with each other.
+  - Each face holds @f$ 2(p+1)^{d-1} @f$ degrees of freedom (dof). They are not 
+    proper degrees of freedom however:
+  - The operator @f$ P_{cf} @f$ takes the solution from a cell and projects it 
+    the faces. The @f$ 2(p+1)^d @f$ values encode the left and right solution
+    @f$ u^+ @f$ and @f$ u^- @f$ along a face.
+  - We introduce another @f$ (p+1)^{d-1} @f$ degrees of freedom on the face.
+    Again, they are not real degrees of freedom:
+  - The operator @f$ A_{ff} @f$ takes the @f$ 2(p+1)^{d-1} @f$ and yields the 
+    @f$ (p+1)^{d-1} @f$ averages.
+  - The operator @f$ P_{fc} @f$ takes the @f$ 2(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
+    the updates for the cell. It evaluates @f$ \int _{\partial \text{cell}_v} (n,[[u]]) v dS(x) @f$
+    where the @f$ [[u]] @f$ is the average of the solution projections that we have 
+    stored before in helper variables.
+
+
+  ## Attributes
+  
+  
   cell_cell_lhs_matrix: [Float] or []
     Pass in [] if you prefer to assemble the matrix per cell yourself. If this
     is the @f$ \hat \mathcal{L} @f$ part in @ref page_multigrid_numerics_Disontinuous_Galerkin.
@@ -247,7 +503,8 @@ class DiscontinuousGalerkinDiscretisation(Solver):
                name,
                polynomial_degree,
                dimensions,
-               unknowns,
+               cell_unknowns,
+               face_unknowns,
                min_h,
                max_h,
                cell_cell_lhs_matrix,
@@ -274,7 +531,8 @@ class DiscontinuousGalerkinDiscretisation(Solver):
 
     self.polynomial_degree = polynomial_degree
     self.dimensions        = dimensions
-    self.unknowns          = unknowns
+    self.cell_unknowns     = cell_unknowns
+    self.face_unknowns     = face_unknowns
 
     self.cell_cell_lhs_matrix               = cell_cell_lhs_matrix
     self.cell_cell_rhs_matrix               = cell_cell_rhs_matrix
@@ -394,7 +652,8 @@ class DiscontinuousGalerkinDiscretisation(Solver):
         "MIN_H"             : self.min_h,
         "MAX_H"             : self.max_h,
         "POLYNOMIAL_DEGREE":  self.polynomial_degree,
-        "UNKNOWNS":           self.unknowns,
+        "CELL_UNKNOWNS":      self.cell_unknowns,
+        "FACE_UNKNOWNS":      self.face_unknowns,
         "CELL_CELL_LHS_MATRIX":      self.cell_cell_lhs_matrix,
         "CELL_CELL_RHS_MATRIX":      self.cell_cell_rhs_matrix,
         "FACE_FACE_RIEMANN_PROBLEM_MATRIX":      self.face_face_Riemann_problem_matrix,
@@ -453,7 +712,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     problem, and need one more unknown to store the outcome of that one.
     
     """
-    return 3 * self.unknowns * self.nodes_per_face
+    return 3 * self.face_unknowns * self.nodes_per_face
   
   @property
   def number_of_matrix_entries_per_cell(self):
@@ -462,5 +721,5 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     This is the actual unknowns per cell
     
     """
-    return self.unknowns * self.nodes_per_cell
+    return self.cell_unknowns * self.nodes_per_cell
   
