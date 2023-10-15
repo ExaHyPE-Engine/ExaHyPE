@@ -6,7 +6,6 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/accelerator/accelerator.h"
 
-#include <omp.h>
 
 tarch::logging::Log  tarch::accelerator::sycl::GPUMemoryManager::_log( "tarch::accelerator::sycl::GPUMemoryManager" );
 

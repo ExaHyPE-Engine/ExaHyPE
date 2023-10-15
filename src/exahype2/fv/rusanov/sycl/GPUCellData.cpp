@@ -40,8 +40,12 @@ exahype2::fv::rusanov::sycl::GPUCopyCellData::GPUCopyCellData(
   double* tmpQIn = new double[numberOfCells * inEnumerator.size()];
   for (int i = 0; i < numberOfCells; i++) {
     ::std::memcpy(&tmpQIn[i * inEnumerator.size()], hostObject.QIn[i], inEnumerator.size() * sizeof(double));
-    QIn[i]  = &QInCopyInOneHugeBuffer[i * inEnumerator.size()];
-    QOut[i] = &QOutCopyInOneHugeBuffer[i * outEnumerator.size()];
+	queue.submit([&] (::sycl::handler& h) {
+		h.single_task([=, *this] () {
+			QIn[i]  = &QInCopyInOneHugeBuffer[i * inEnumerator.size()];
+			QOut[i] = &QOutCopyInOneHugeBuffer[i * outEnumerator.size()];
+		});
+	});
   }
   copyEvent[4] = queue.memcpy(QInCopyInOneHugeBuffer, tmpQIn, numberOfCells * inEnumerator.size() * sizeof(double));
   delete[] tmpQIn;
@@ -58,7 +62,7 @@ void exahype2::fv::rusanov::sycl::GPUCopyCellData::destroy(
   double*                      tmpQOut = new double[numberOfCells * outEnumerator.size()];
 
   std::vector<::sycl::event>  copyEvent(2);
-  copyEvent[0] = queue.memcpy(tmpQOut, QOut, numberOfCells * outEnumerator.size() * sizeof(double));
+  copyEvent[0] = queue.memcpy(tmpQOut, QOutCopyInOneHugeBuffer, numberOfCells * outEnumerator.size() * sizeof(double));
   if (copyEigenvaluesBack) {
     copyEvent[1] = queue.memcpy(hostObject.maxEigenvalue, maxEigenvalue, numberOfCells * sizeof(double));
   }
@@ -171,8 +175,12 @@ exahype2::fv::rusanov::sycl::GPUManagedCellData::GPUManagedCellData(
   double* tmpQIn = new double[numberOfCells * inEnumerator.size()];
   for (int i = 0; i < numberOfCells; i++) {
     ::std::memcpy(&tmpQIn[i * inEnumerator.size()], hostObject.QIn[i], inEnumerator.size() * sizeof(double));
-    QIn[i]  = &QInCopyInOneHugeBuffer[i * inEnumerator.size()];
-    QOut[i] = &QOutCopyInOneHugeBuffer[i * outEnumerator.size()];
+	queue.submit([&] (::sycl::handler& h) {
+		h.single_task([=, *this] () {
+			QIn[i]  = &QInCopyInOneHugeBuffer[i * inEnumerator.size()];
+			QOut[i] = &QOutCopyInOneHugeBuffer[i * outEnumerator.size()];
+		});
+	});
   }
   copyEvent[4] = queue.memcpy(QInCopyInOneHugeBuffer, tmpQIn, numberOfCells * inEnumerator.size() * sizeof(double));
   delete[] tmpQIn;
@@ -188,7 +196,7 @@ void exahype2::fv::rusanov::sycl::GPUManagedCellData::destroy(
 ) {
   double*                      tmpQOut = new double[numberOfCells * outEnumerator.size()];
   ::std::vector<::sycl::event> copyEvent(2);
-  copyEvent[0] = queue.memcpy(tmpQOut, QOut, numberOfCells * outEnumerator.size() * sizeof(double));
+  copyEvent[0] = queue.memcpy(tmpQOut, QOutCopyInOneHugeBuffer, numberOfCells * outEnumerator.size() * sizeof(double));
   if (copyEigenvaluesBack) {
     copyEvent[1] = queue.memcpy(hostObject.maxEigenvalue, maxEigenvalue, numberOfCells * sizeof(double));
   }
