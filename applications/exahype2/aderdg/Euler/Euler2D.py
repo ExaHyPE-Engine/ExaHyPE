@@ -99,7 +99,7 @@ theSolver = GlobalAdaptiveTimeStep(
 )
 
 theSolver.set_implementation(
-    refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation
 )
 theSolver.add_kernel_optimizations(
     polynomials=polynomials, use_kernel_generator=True, architecture="noarch"

@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .FV import FV
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import peano4
 import exahype2
@@ -668,9 +668,9 @@ class EnclaveTasking(FV):
         if use_split_loop:
             self._use_split_loop = use_split_loop
 
-        if refinement_criterion == exahype2.solvers.fv.PDETerms.None_Implementation:
+        if refinement_criterion == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "refinement criterion cannot be none"
-        if initial_conditions == exahype2.solvers.fv.PDETerms.None_Implementation:
+        if initial_conditions == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "initial conditions cannot be none"
 
         if (

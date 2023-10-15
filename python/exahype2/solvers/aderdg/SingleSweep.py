@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .ADERDG import ADERDG, PrecisionType
 
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import jinja2
 

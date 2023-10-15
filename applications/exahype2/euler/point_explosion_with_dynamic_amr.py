@@ -1,6 +1,6 @@
 import sys
 
-from exahype2.solvers.fv.PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 from point_explosion import PointExplosion
 
@@ -20,15 +20,14 @@ class PointExplosionWithDynamicAMR(PointExplosion):
         // If you remove this part, you get static AMR.
         if (tarch::la::greater(t, 0.0)) {
           #if Dimensions == 2
-          const double energy = Q[3];
+          const double density = Q[0];
           #else
           const double energy = Q[4];
           #endif
 
-          if (energy >= 0.05) {
+          if (density >= 1.00134 && density < 1.0017) {
             result = ::exahype2::RefinementCommand::Refine;
-          }
-          if (energy < 0.05) {
+          } else {
             result = ::exahype2::RefinementCommand::Erase;
           }
         }

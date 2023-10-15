@@ -14,7 +14,7 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 import exahype2.solvers.fv.actionsets
 
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 
 class Storage(Enum):

@@ -134,7 +134,7 @@ my_solver.add_user_solver_includes( """
 """)
 
 my_solver.set_implementation(
-  boundary_conditions  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+  boundary_conditions  = exahype2.solvers.PDETerms.Empty_Implementation,
   ncp                  = """
   double deltaQSerialised[NumberOfUnknowns*3];
   for (int i=0; i<NumberOfUnknowns; i++) {
@@ -145,12 +145,12 @@ my_solver.set_implementation(
   }
   ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
-  flux                 = exahype2.solvers.fv.PDETerms.None_Implementation,
+  flux                 = exahype2.solvers.PDETerms.None_Implementation,
   source_term          = """
   memset(S, 0.0, NumberOfUnknowns*sizeof(double));
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
 """,
-  refinement_criterion = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+  refinement_criterion = exahype2.solvers.PDETerms.Empty_Implementation,
   eigenvalues          = """
   return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """,

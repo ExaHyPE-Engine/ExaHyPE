@@ -1,6 +1,6 @@
 import sys
 
-from exahype2.solvers.fv.PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 
 class BreakingDam:

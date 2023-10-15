@@ -1,6 +1,6 @@
 import sys
 
-from exahype2.solvers.fv.PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 from breaking_dam import BreakingDam
 

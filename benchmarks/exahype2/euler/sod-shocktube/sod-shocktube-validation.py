@@ -20,8 +20,8 @@ thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   mesh_size,
   mesh_size,
   time_step_relaxation = 0.01,
-  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+  flux = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 
 project.add_solver(thesolver)

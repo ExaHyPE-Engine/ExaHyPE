@@ -14,7 +14,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
 
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import jinja2
 import math
@@ -1469,9 +1469,9 @@ We use RK("""
         if initial_conditions is not None:
             self._initial_conditions_implementation = initial_conditions
 
-        if refinement_criterion == exahype2.solvers.fv.PDETerms.None_Implementation:
+        if refinement_criterion == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "refinement criterion cannot be none"
-        if initial_conditions == exahype2.solvers.fv.PDETerms.None_Implementation:
+        if initial_conditions == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "initial conditions cannot be none"
 
         if flux is not None:

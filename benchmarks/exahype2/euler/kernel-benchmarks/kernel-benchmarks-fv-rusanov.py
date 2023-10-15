@@ -75,12 +75,12 @@ if args.symbolic:
     my_solver.plot_description = my_scenario.pde.unknown_identifier_for_plotter()
 else:
     my_solver.set_implementation(
-        initial_conditions    = " ",  # cannot use exahype2.solvers.fv.PDETerms.Empty_Implementation as the solver is not prepared for an empty initialisation
-        boundary_conditions   = exahype2.solvers.fv.PDETerms.Empty_Implementation,
+        initial_conditions    = " ",  # cannot use exahype2.solvers.PDETerms.Empty_Implementation as the solver is not prepared for an empty initialisation
+        boundary_conditions   = exahype2.solvers.PDETerms.Empty_Implementation,
         flux                  = "::exahype2::euler::flux(Q, faceCentre, volumeH, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables, F);",
         eigenvalues           = "return ::exahype2::euler::maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, NumberOfUnknowns, NumberOfAuxiliaryVariables);",
-        refinement_criterion  = exahype2.solvers.fv.PDETerms.Empty_Implementation,
-        source_term           = exahype2.solvers.fv.PDETerms.None_Implementation,
+        refinement_criterion  = exahype2.solvers.PDETerms.Empty_Implementation,
+        source_term           = exahype2.solvers.PDETerms.None_Implementation,
     )
     if args.dim == 2:
       my_solver.plot_description = "rho, u, v, e"

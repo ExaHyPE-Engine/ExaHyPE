@@ -45,9 +45,9 @@ Next we will define and add a solver to this project:
     )
 
     my_solver.set_implementation(
-        ncp                   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-        flux                  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-        refinement_criterion  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+        ncp                   = exahype2.solvers.PDETerms.User_Defined_Implementation,
+        flux                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+        refinement_criterion  = exahype2.solvers.PDETerms.User_Defined_Implementation
     )
 
 Most of this should be self-explanatory and some pieces will be explained in more detail later,
@@ -143,7 +143,7 @@ We still have a flux, as with the other equations in the tutorials but in additi
 which is a non-conservative part (this just means it depends on the spatial derivatives of the considered variables).
 This was added to our solver like the flux: by adding a user-defined non-conservative term:
 
-    ncp = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    ncp = exahype2.solvers.PDETerms.User_Defined_Implementation
 
 We also have an auxiliary variable since the bathymetry never changes.
 We can define this auxiliary variable by setting the parameter auxiliary_variables in the solver to 1 instead of 0.

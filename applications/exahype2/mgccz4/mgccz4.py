@@ -107,10 +107,10 @@ if __name__ == "__main__":
         #pde = exahype2.sympy.PDE(unknowns=self._unknowns,auxiliary_variables=self._auxiliary_variables,dimensions=3)
 
         self.set_implementation(
-          boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          flux=exahype2.solvers.fv.PDETerms.None_Implementation,
-          ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          flux=exahype2.solvers.PDETerms.None_Implementation,
+          ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          source_term=exahype2.solvers.PDETerms.User_Defined_Implementation
         )
 
       def get_user_action_set_includes(self):
@@ -266,8 +266,8 @@ if __name__ == "__main__":
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
           args.max_h, args.max_h, time_step_size,
           flux = None,
-          ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-          sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+          ncp  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+          sources = exahype2.solvers.PDETerms.User_Defined_Implementation
       )
     else:
       my_solver = MGCCZ4Solver(solver_name, args.patch_size, args.max_h, args.max_h)

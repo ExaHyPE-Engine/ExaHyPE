@@ -132,11 +132,11 @@ if __name__ == "__main__":
         #self._solver_template_file_class_name = SuperClass.__name__
 
         self.set_implementation(
-          boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          flux=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          ncp=exahype2.solvers.fv.PDETerms.None_Implementation,
-          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          flux=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          ncp=exahype2.solvers.PDETerms.None_Implementation,
+          source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation
         )
 
         self._patch_size = patch_size
@@ -304,9 +304,9 @@ if __name__ == "__main__":
           solver_name, order, unknowns, 0, #auxiliary_variables
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
           min_h, args.max_h, time_step_size,
-          flux = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-          ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-          sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+          flux = exahype2.solvers.PDETerms.User_Defined_Implementation,
+          ncp  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+          sources = exahype2.solvers.PDETerms.User_Defined_Implementation
       )
     else:
       my_solver = SSInfallSolver(solver_name, args.patch_size, min_h, args.max_h,args.cfl,args.domain_r)

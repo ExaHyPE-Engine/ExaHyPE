@@ -56,9 +56,9 @@ my_solver.plot_description = "h, hu, hv, b"
 # generate a solver on its own (which would be empty as we specify a user-defined implementation here).
 #
 my_solver.set_implementation(
-    ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    flux=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    flux=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 
 #

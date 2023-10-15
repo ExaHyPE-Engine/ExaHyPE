@@ -17,7 +17,7 @@ from enum import Enum
 import exahype2
 import exahype2.solvers.rkfd.actionsets
 
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
 

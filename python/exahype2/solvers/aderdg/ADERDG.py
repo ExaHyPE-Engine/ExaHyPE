@@ -8,7 +8,7 @@ import peano4.output
 import exahype2.grid
 import exahype2.solvers.aderdg.actionsets
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 from .kernels import (get_face_overlap_merge_implementation, create_abstract_solver_user_declarations_for_error_measurement,
   create_abstract_solver_user_definitions_for_error_measurement, create_finish_time_step_implementation_for_error_measurement,
   add_final_action_for_error_measurement)
