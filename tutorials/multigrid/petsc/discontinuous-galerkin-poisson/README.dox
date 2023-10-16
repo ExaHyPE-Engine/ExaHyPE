@@ -1,0 +1,36 @@
+/**
+
+ @page tutorials_multigrid_petsc_discontinuous_galerkin_poisson Discontinuous Galerkin for the Poisson equation with PETSc
+
+ This simple example discusses the steps from the file benchmarks/multigrid/petsc/poisson/dg.py.
+ We omit some technical details (such as the parsing of the command line) and 
+ focus on key ingredients. Therefore, it is reasonable to study this description 
+ in combination with the actual script. It is best to read this documentation in 
+ combination with the docu of the class multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation
+ which provides a lot of details on the actual implementation and mathematical ingredients.
+ This page is more on the how to use the class to construct a working solver.
+ 
+ 
+ # Code usage
+  
+ ## Create a project
+ 
+ First, we have to create a multigrid project.
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+project = multigrid.petsc.Project(project_name = "DG", 
+                                  namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
+                                  ) 
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+
+ This is kind of an empty hull until we befill it with some global information 
+ (such as the domain size) and also tell the API to scan the global Makefile.
+ 
+
+ @image html degree_of_freedom_semantics_Lobatto.png
+ @image html face_to_face_projection.png
+ @image html gaussLobatto.png
+ @image html piecewise_discontinuous_shape_functions.png
+ @image html projection.png
+ 
+*/
