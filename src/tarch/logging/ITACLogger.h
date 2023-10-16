@@ -2,10 +2,10 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #ifdef Parallel
 #include <mpi.h>
 #endif
+
 #include <iostream>
 #include <fstream>
 #include <set>
@@ -13,12 +13,9 @@
 #include <map>
 #include <string>
 
-
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/logging/Log.h"
-
-
 
 namespace tarch {
   namespace logging {
@@ -59,7 +56,7 @@ class tarch::logging::ITACLogger {
 
     tarch::multicore::BooleanSemaphore _semaphore;
 
-    std::map< std::string, int >       _itacHandles;
+    std::map< std::string, int > _itacHandles;
 
     bool _firstTraceWritten;
 
@@ -67,13 +64,13 @@ class tarch::logging::ITACLogger {
      * Declared private since assignment does not make sense for an output
      * class (output information mismatch).
      */
-    ITACLogger& operator=(const CommandLineLogger& rhs) = delete;
+    ITACLogger& operator=(const CommandLineLogger&) = delete;
 
     /**
      * Declared private since copying does not make sense for an output
      * class (output information mismatch).
      */
-    ITACLogger(const ITACLogger& param) = delete;
+    ITACLogger(const ITACLogger&) = delete;
 
     /**
      * Construct message string
@@ -105,6 +102,7 @@ class tarch::logging::ITACLogger {
     ITACLogger();
 
     std::string getTimeStampHumanReadable( long int timestampNanoseconds ) const;
+
   public:
     ~ITACLogger();
 
@@ -195,4 +193,3 @@ class tarch::logging::ITACLogger {
     void suspendTrace();
     void continueTrace();
 };
-

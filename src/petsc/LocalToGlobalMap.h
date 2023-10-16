@@ -5,6 +5,7 @@
 
 
 #include <utility>
+#include <map>
 
 
 namespace petsc {
@@ -15,6 +16,13 @@ namespace petsc {
 class petsc::LocalToGlobalMap {
   public:
     static constexpr int RankGlobalTreeNumber = -1;
+
+    /**
+     * Is used by enumeration such that boundary Dirichlet points, for example,
+     * have a properly initialised number, even though they do not carry an
+     * unknown.
+     */
+    static constexpr int NoDegreeOfFreedom = -1;
 
     /**
      * Creates an empty map for tree treeNumber
@@ -31,6 +39,8 @@ class petsc::LocalToGlobalMap {
     LocalToGlobalMap(int treeNumber = RankGlobalTreeNumber);
 
     void setTreeNumber( int treeNumber );
+    
+    int getTreeNumber() const;
 
     /**
      * Reserve some indices for unknowns and return the first one
@@ -64,5 +74,30 @@ class petsc::LocalToGlobalMap {
     void computeLocalToGlobalMap();
 
     int getTotalNumberOfIndices() const;
+
+    /**
+     * should only be called from main tree, ie with treenumber = -1
+     * @param Number of tree where this map is constructed.
+     * @returns the number of vertices within the tree labelled treeNumber
+    */
+    int getIndicesPerSubtree( int treeNumber ) const;
+  
+  private:
+    int _treeNumber;
+    
+    // let's make this total number of indices in this tree specifically.
+    // later, we use this to make sure the merge was successful
+    int _totalNumberOfIndices;
+
+    // std::vector<petsc::LocalToGlobalMap> _subTrees;
+    int _numberOfSubtrees;
+
+    /**
+     * keeps track of the number of indices per subtree.
+     * used for computing local to global map.
+    */
+    std::map<int,int> _indicesPerSubtree;
+
 };
 
+ 

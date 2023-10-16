@@ -11,6 +11,9 @@ import sys
 import exahype2.grid
 import exahype2.solvers
 
+from exahype2.solvers.aderdg.ADERDG import ADERDG
+from exahype2.solvers.aderdg.kernelgenerator import Configuration
+
 
 class Project(object):
     """!
@@ -32,7 +35,7 @@ class Project(object):
     @see generate_Peano4_project()
     """
 
-    def __init__(self, namespace, project_name, directory=".", executable=""):
+    def __init__(self, namespace, project_name, executable, directory="."):
         self._project = peano4.Project(namespace, project_name, directory)
         self._project.output.makefile.add_cmake_core_library("ExaHyPE2Core")
 
@@ -44,9 +47,18 @@ class Project(object):
         self._max_terminal_time = 0.0
         self._first_plot_time_stamp = 0.0
         self._time_in_between_plots = 0.1
-        self._load_balancer_name = ""
+        self._load_balancer_name      = ""
         self._load_balancer_arguments = ""
-        self._Peano_src_directory = "."
+        self._log_filter_file         = "exahype.log-filter"
+        self._number_of_threads       = "tarch::multicore::Core::UseDefaultNumberOfThreads"
+        self._multicore_orchestration = "tarch::multicore::orchestration::createDefaultStrategy()"
+        self._timeout                 = -1
+        self._gpus                    = []
+        self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h", 
+                                          "tarch/multicore/orchestration/StrategyFactory.h",
+                                          "tarch/accelerator/Device.h"
+                                        ]
+        self._Peano_src_directory     = "."
         self._build_mode = peano4.output.CompileMode.Asserts
         self._executable_name = executable
         self._periodic_BC = [False, False, False]
@@ -82,6 +94,58 @@ class Project(object):
         self._load_balancer_name = load_balancer_name
         self._load_balancer_arguments = load_balancer_arguments
 
+    def set_log_filter_file(self, file_name):
+        """! Set a log filter file name
+        
+        Pass in the empty string, if you want the code to use the hard-coded
+        defaults.
+         
+        """
+        self._log_filter_file = file_name
+        
+    def set_number_of_threads(self, value):
+        """! Set number of threads to use
+        
+        Pass in number of threads (positive integer) or a string such as 
+        "tarch::multicore::Core::UseDefaultNumberOfThreads".
+        
+        """
+        self._number_of_threads = value
+        
+    def set_multicore_orchestration(self,value):
+        """! Set orchestration
+        
+        value has to be a string which creates an orchestration object, 
+        i.e. an object of the type tarch::multicore::orchestration::Orchestration.
+        You can either create it directly (in this case you need to add a new),
+        or you can use a factory method such as 
+        "tarch::multicore::orchestration::StrategyFactory::createDefaultStrategy()".
+        
+        """
+        self._multicore_orchestration = value
+
+    def set_timeout(self,value):
+        """! Set timeout
+        
+        value has to be a number greater or equal to zero, this then sets the 
+        timeout in seconds after which a node waiting for an MPI message shall
+        quit an shutdown the whole application with an error report.
+        If zero is passed, this feature is switched off and nodes will wait
+        indefinitely.
+        """
+        if value < 0:
+            raise Exception("Timeout has to be greater or equal to 0")
+        self._timeout = value
+        
+    def set_gpus(self,value):
+        """! Set GPUs to be used
+        
+        value is a list of integers or the empty list if you want the code to 
+        use all GPUs that are visible to a rank. 
+        
+        """
+        self._gpus                    = value
+        
     """
    The standard extensions that I use for both Peano and ExaHyPE.
   """
@@ -197,27 +261,27 @@ class Project(object):
 
 ### ExaHyPE 2
 
-This code uses ExaHyPE in its second generation. The first generation of the 
-code was developed through an EU FET HPC project called ExaHyPE. This first  
-generation was built on top of Peano in its third generation. The present    
-code uses ExaHyPE 2 which is a complete rewrite built on top of Peano 4. We  
-do not yet have a release paper for this second generation of ExaHyPE, and   
+This code uses ExaHyPE in its second generation. The first generation of the
+code was developed through an EU FET HPC project called ExaHyPE. This first
+generation was built on top of Peano in its third generation. The present
+code uses ExaHyPE 2 which is a complete rewrite built on top of Peano 4. We
+do not yet have a release paper for this second generation of ExaHyPE, and
 thus appreciate any citation of the original release paper
 
-       @article{Reinarz:2020:ExaHyPE,   
-         title = {ExaHyPE: An engine for parallel dynamically adaptive simulations of wave problems},   
-         journal = {Computer Physics Communications},   
-         volume = {254},   
-         pages = {107251},   
-         year = {2020},   
-         issn = {0010-4655},   
-         doi = {https://doi.org/10.1016/j.cpc.2020.107251},   
-         url = {https://www.sciencedirect.com/science/article/pii/S001046552030076X},   
-         author = {Anne Reinarz and Dominic E. Charrier and Michael Bader and Luke Bovard and Michael Dumbser and Kenneth Duru and Francesco Fambri and Alice-Agnes Gabriel and Jean-Matthieu Gallard and Sven K\"oppel and Lukas Krenz and Leonhard Rannabauer and Luciano Rezzolla and Philipp Samfass and Maurizio Tavelli and Tobias Weinzierl},   
-         keywords = {Hyperbolic, PDE, ADER-DG, Finite volumes, AMR, MPI, TBB, MPI+X},   
-         abstract = {ExaHyPE (An Exascale Hyperbolic PDE Engine) is a software engine for solving systems of first-order hyperbolic partial differential equations (PDEs). Hyperbolic PDEs are typically derived from the conservation laws of physics and are useful in a wide range of application areas. Applications powered by ExaHyPE can be run on a student's laptop, but are also able to exploit thousands of processor cores on state-of-the-art supercomputers. The engine is able to dynamically increase the accuracy of the simulation using adaptive mesh refinement where required. Due to the robustness and shock capturing abilities of ExaHyPE's numerical methods, users of the engine can simulate linear and non-linear hyperbolic PDEs with very high accuracy. Users can tailor the engine to their particular PDE by specifying evolved quantities, fluxes, and source terms. A complete simulation code for a new hyperbolic PDE can often be realised within a few hours - a task that, traditionally, can take weeks, months, often years for researchers starting from scratch. In this paper, we showcase ExaHyPE's workflow and capabilities through real-world scenarios from our two main application areas: seismology and astrophysics.   
-           Program summary   
-           Program title: ExaHyPE-Engine Program Files doi: http://dx.doi.org/10.17632/6sz8h6hnpz.1 Licensing provisions: BSD 3-clause Programming languages: C++, Python, Fortran Nature of Problem: The ExaHyPE PDE engine offers robust algorithms to solve linear and non-linear hyperbolic systems of PDEs written in first order form. The systems may contain both conservative and non-conservative terms. Solution method: ExaHyPE employs the discontinuous Galerkin (DG) method combined with explicit one-step ADER (arbitrary high-order derivative) time-stepping. An a-posteriori limiting approach is applied to the ADER-DG solution, whereby spurious solutions are discarded and recomputed with a robust, patch-based finite volume scheme. ExaHyPE uses dynamical adaptive mesh refinement to enhance the accuracy of the solution around shock waves, complex geometries, and interesting features. 
+       @article{Reinarz:2020:ExaHyPE,
+         title = {ExaHyPE: An engine for parallel dynamically adaptive simulations of wave problems},
+         journal = {Computer Physics Communications},
+         volume = {254},
+         pages = {107251},
+         year = {2020},
+         issn = {0010-4655},
+         doi = {https://doi.org/10.1016/j.cpc.2020.107251},
+         url = {https://www.sciencedirect.com/science/article/pii/S001046552030076X},
+         author = {Anne Reinarz and Dominic E. Charrier and Michael Bader and Luke Bovard and Michael Dumbser and Kenneth Duru and Francesco Fambri and Alice-Agnes Gabriel and Jean-Matthieu Gallard and Sven K\"oppel and Lukas Krenz and Leonhard Rannabauer and Luciano Rezzolla and Philipp Samfass and Maurizio Tavelli and Tobias Weinzierl},
+         keywords = {Hyperbolic, PDE, ADER-DG, Finite volumes, AMR, MPI, TBB, MPI+X},
+         abstract = {ExaHyPE (An Exascale Hyperbolic PDE Engine) is a software engine for solving systems of first-order hyperbolic partial differential equations (PDEs). Hyperbolic PDEs are typically derived from the conservation laws of physics and are useful in a wide range of application areas. Applications powered by ExaHyPE can be run on a student's laptop, but are also able to exploit thousands of processor cores on state-of-the-art supercomputers. The engine is able to dynamically increase the accuracy of the simulation using adaptive mesh refinement where required. Due to the robustness and shock capturing abilities of ExaHyPE's numerical methods, users of the engine can simulate linear and non-linear hyperbolic PDEs with very high accuracy. Users can tailor the engine to their particular PDE by specifying evolved quantities, fluxes, and source terms. A complete simulation code for a new hyperbolic PDE can often be realised within a few hours - a task that, traditionally, can take weeks, months, often years for researchers starting from scratch. In this paper, we showcase ExaHyPE's workflow and capabilities through real-world scenarios from our two main application areas: seismology and astrophysics.
+           Program summary
+           Program title: ExaHyPE-Engine Program Files doi: http://dx.doi.org/10.17632/6sz8h6hnpz.1 Licensing provisions: BSD 3-clause Programming languages: C++, Python, Fortran Nature of Problem: The ExaHyPE PDE engine offers robust algorithms to solve linear and non-linear hyperbolic systems of PDEs written in first order form. The systems may contain both conservative and non-conservative terms. Solution method: ExaHyPE employs the discontinuous Galerkin (DG) method combined with explicit one-step ADER (arbitrary high-order derivative) time-stepping. An a-posteriori limiting approach is applied to the ADER-DG solution, whereby spurious solutions are discarded and recomputed with a robust, patch-based finite volume scheme. ExaHyPE uses dynamical adaptive mesh refinement to enhance the accuracy of the solution around shock waves, complex geometries, and interesting features.
          }
        }
 """
@@ -287,6 +351,9 @@ thus appreciate any citation of the original release paper
         self._output_path = path
         if not self._output_path.endswith("/"):
             self._output_path += "/"
+            
+    def add_mainfile_include(self,value):
+        self._additional_includes.append( value )
 
     def __generate_solver_repository(self):
         """
@@ -294,11 +361,17 @@ thus appreciate any citation of the original release paper
         are a subclass of DoF, they have a name property.
         """
         solverRepositoryDictionary = {
-            "SOLVERS": [],
-            "LOAD_BALANCER": self._load_balancer_name,
-            "LOAD_BALANCER_ARGUMENTS": self._load_balancer_arguments,
-            "PLOT_FILTER": self._plot_filters,
-            "TRACERS": [x.name for x in self._tracer_particles],
+            "SOLVERS":                  [],
+            "LOAD_BALANCER":            self._load_balancer_name,
+            "LOAD_BALANCER_ARGUMENTS":  self._load_balancer_arguments,
+            "PLOT_FILTER":              self._plot_filters,
+            "TRACERS":                  [x.name for x in self._tracer_particles],
+            "LOG_FILTER_FILE":          self._log_filter_file,
+            "NUMBER_OF_THREADS":        self._number_of_threads,
+            "MULTICORE_ORCHESTRATION":  self._multicore_orchestration,
+            "TIMEOUT":                  self._timeout,
+            "GPUS":                     self._gpus,
+            "ADDITIONAL_INCLUDES":      self._additional_includes,
         }
 
         for solver in self._solvers:
@@ -339,8 +412,8 @@ thus appreciate any citation of the original release paper
         Add a tracer to the project
 
         We rely on the particle toolbox. Therefore, our particles have
-        already a position x, a cut off radius (which we don't usually
-        use here), and a (parallel) state. The cut-off radius determines
+        already a position x, a search radius (which we don't usually
+        use here), and a (parallel) state. The search radius determines
         how Peano sorts particles within the tree, and we can set it to
         zero here. This ensures that the particle has no real volume and
         thus is always sieved through to the finest grid level.
@@ -500,7 +573,7 @@ thus appreciate any citation of the original release paper
         self.plot_solution.add_action_set(update_particle_association_action_set)
         self.plot_solution.add_action_set(update_particle_parallel_state_action_set)
 
-        self._tracer_particles.append(particles)
+        self._tracer_particles.append(particle)
 
         return particles
 
@@ -605,4 +678,46 @@ thus appreciate any citation of the original release paper
 
         self._project.output.makefile.set_mode(self._build_mode)
 
+        for solver in self._solvers:
+            if isinstance(solver, ADERDG):
+                pathToExaHyPERoot = Configuration.pathToExaHyPERoot
+                if solver._use_BLIS:
+                    archname = ""
+                    for root, dirs, files in os.walk(pathToExaHyPERoot+ "/submodules/blis/include"):
+                        archname = dirs[0]
+                        break
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/blis/include/" + archname)
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/blis/lib/" + archname + "/libblis.a")
+                    self._project.output.makefile.add_library("-lpthread")
+                elif solver._use_Eigen:
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/eigen")
+                elif solver._use_libxsmm_JIT:
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/libxsmmJIT/include")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/libxsmmJIT/lib/libxsmm.a")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/OpenBLAS/libopenblas.a")
+                    self._project.output.makefile.add_library("-lpthread")
+                break
         return self._project
+
+
+    def register_new_user_defined_algorithmic_step(self,
+                                                   step,
+                                                   ):
+        """! Add all the use operations to new algorithmic step
+        
+Use this routine whenever you have created your own 
+@ref page_architecture "algorithmic step". Please note that the routine should
+be called after you have created all of your solvers. Otherwise, we'll miss out
+a few of your solvers and the data access patterns will/might be corrupted.
+
+The routine has no side-effects, i.e. does not alter the underlying project.
+It only manipulates the step. Therefore, you can even call it after you have 
+distilled the Peano project from the ExaHyPE project, i.e. after you have 
+called exahype2.Project.generate_Peano4_project().
+
+step: peano4.solversteps.Step
+  
+        """
+        for solver in self._solvers:
+            solver.add_use_data_statements_to_Peano4_solver_step(step)
+

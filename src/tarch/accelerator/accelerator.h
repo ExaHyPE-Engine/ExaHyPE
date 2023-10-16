@@ -4,7 +4,7 @@
 
 #include "tarch/multicore/multicore.h"
 
-#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP)
+#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) and !defined(GPUOffloadingCUDA)
 #define GPUOffloadingOff
 #endif
 
@@ -21,7 +21,7 @@ namespace tarch {
    */
   #if defined(GPUOffloadingHIP)
     #define GPUCallableMethod __host__ __device__
-  #elif defined(GPUOffloadingSYCL)
+  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
     #define GPUCallableMethod SYCL_EXTERNAL
   #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
     #define GPUCallableMethod __host__ __device__
@@ -39,7 +39,7 @@ namespace tarch {
   #pragma omp declare target
   void gpuAbort();
   #pragma omp end declare target
-  #elif defined(GPUOffloadingSYCL)
+  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
   GPUCallableMethod void gpuAbort();
   #elif defined(GPUOffloadingCPP)
   GPUCallableMethod void gpuAbort();
@@ -65,7 +65,10 @@ namespace tarch {
     ManagedSharedAcceleratorDeviceMemory
   };
 
- namespace internal {
+  std::string toString( MemoryLocation value );
+
+
+  namespace internal {
     void* allocateRawData(int size, MemoryLocation location);
   }
 

@@ -1,5 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
 import gc
 import os
 import re
@@ -45,7 +46,7 @@ class Project (object):
 
     self.solversteps  = peano4.solversteps.Steps(self)
 
-    self.main         = peano4.runner.DefaultSequence(self) 
+    self.main         = peano4.runner.DefaultSequence(self)
 
     self.is_generated         = False
     self.is_built             = False
@@ -55,6 +56,9 @@ class Project (object):
 
   def __str__(self):
     return "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
+
+  def set_fenv_handler(self, args):
+    self.main.d[ "FENV_ARGS" ] = args
 
   def cleanup(self):
     """!
@@ -75,7 +79,7 @@ class Project (object):
                overwrite=peano4.output.Overwrite.Default,
                throw_away_data_after_generation=False):
     """!
-    Generate all code. If you add stuff to your project after a 
+    Generate all code. If you add stuff to your project after a
     build, you have to (re-)generate the code. If you compile only
     once, you don't have to invoke this routine explicitly. It is
     lazily called by the other project routines - the latest before
@@ -87,14 +91,14 @@ class Project (object):
     subsequent generate calls enrich the output twice.
 
     throw_away_data_after_generation: Bool
-      The Peano 4 memory footprint can become quite substantial 
+      The Peano 4 memory footprint can become quite substantial
       effectively reducing the translation capabilities (as compilers
-      tend to require a lot of memory, too). So pass in True if you 
-      want the script to throw away the data structures (and run a 
+      tend to require a lot of memory, too). So pass in True if you
+      want the script to throw away the data structures (and run a
       garbage collection) after all files have been generated. Please
-      note that it invalidates both this object (and maybe another 
-      object that you've used to generate the present one - such as 
-      ExaHyPE). It really strips everything down to the stuff you 
+      note that it invalidates both this object (and maybe another
+      object that you've used to generate the present one - such as
+      ExaHyPE). It really strips everything down to the stuff you
       absolutely need to translate and run the code.
     """
     print( "generate all code ..." )
@@ -119,6 +123,7 @@ class Project (object):
       print( "threw away all data and ran garbage collection" )
 
   def build(self,
+            make=True,
             make_clean_first=True,
             throw_away_data_after_build=False,
             number_of_parallel_builds=-1,
@@ -136,11 +141,14 @@ class Project (object):
       throw_away_data_after_build: Bool
         see generate()
     """
-    if number_of_parallel_builds<=0:
+    if number_of_parallel_builds <= 0:
         number_of_parallel_builds = multiprocessing.cpu_count()
 
     if not self.is_generated:
       self.generate()
+
+    if not make:
+      return
 
     if make_clean_first:
       print( "clean up project ..." )
@@ -155,10 +163,14 @@ class Project (object):
     if not self.is_built:
       print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + " ..." )
       try:
-        from peano4.output.Helper import find_cmake_build_dir
-        cmake_build_dir = find_cmake_build_dir()
+        from peano4.output.Helper import find_CMake_build_dir
+        cmake_build_dir = find_CMake_build_dir()
         if cmake_build_dir != "":
-          command = f"cd {cmake_build_dir} && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
+          # Configuring twice is necessary because of the following
+          # Generated application needs to be added as a target, this forces cmake .. unless the user calls from the bash
+          # Generated applications CMakeLists might change the CMAKE_BUILD_TYPE for the change the generate the new possible targets
+          # The second cmake .. is necessary
+          command = f"cd {cmake_build_dir} && cmake .. && cmake .. && make -j{number_of_parallel_builds} {self.output.makefile.executable_name()}"
           process = subprocess.run([command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         else:
           process = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -176,7 +188,7 @@ class Project (object):
         # Check the return code for linker errors
         # Raise exception with errors
         if process.returncode != 0:
-          linker_error_message = process.stdout.decode().strip() + "\n" + error_message
+          linker_error_message = process.stderr.decode().strip() + "\n" + error_message
           raise Exception(linker_error_message)
         print("compile completed successfully")
         self.is_built = True

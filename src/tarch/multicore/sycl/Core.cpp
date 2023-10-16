@@ -26,9 +26,10 @@
 tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 namespace {
-  //sycl::queue  hostSyclQueue( sycl::device(sycl::cpu_selector()) );
-  //sycl::queue  hostSyclQueue( sycl::cpu_selector_v() );
-  sycl::queue  hostSyclQueue;
+  /**
+   * See the documentation in tarch/accelerator/sycl/Device.h.
+   */
+  sycl::queue  hostSyclQueue( sycl::cpu_selector_v );
 }
 
 
@@ -38,19 +39,31 @@ sycl::queue& tarch::multicore::getHostSYCLQueue() {
 
 
 /**
- * The SYCL core object differs from other core objects in that is solely makes
- * the host available for task "offloading".
+ * See the documentation in tarch/accelerator/sycl/Device.h.
  */
 tarch::multicore::Core::Core():
-  _numberOfThreads( hostSyclQueue.get_device().get_info<sycl::info::device::max_compute_units>() ) {
-  internal::configureInternalTaskQueues(_numberOfThreads);
+ _numberOfThreads( -1 ) {
+
+  sycl::device cpuDevice;
+  try {
+    cpuDevice = sycl::device( sycl::cpu_selector_v );
+  } catch (...) {
+    std::cerr << "Warning, failed at selecting cpu device" << std::endl;
+    std::abort();
+  }
+
+  sycl::queue  cpuQueue( cpuDevice );
+  hostSyclQueue = cpuQueue;
+
+  _numberOfThreads = hostSyclQueue.get_device().get_info<sycl::info::device::max_compute_units>();
+  assertion(_numberOfThreads>0);
 
   #if PeanoDebug>0
-    std::cout << "host (CPU) device queue:" << hostSyclQueue.get_device().get_info<sycl::info::device::name>()
-              << " with " << _numberOfThreads << " threads" << std::endl;
+  std::cout << "host (CPU) device queue:" << hostSyclQueue.get_device().get_info<sycl::info::device::name>()
+            << " with " << _numberOfThreads << " threads" << std::endl;
   #endif
 
-  assertion(_numberOfThreads>0);
+  internal::configureInternalTaskQueues(_numberOfThreads);
 }
 
 

@@ -14,7 +14,6 @@
 #define MPISupportsSingleSidedCommunication
 #endif
 
-
 #if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
 #define UseManualInlining
 #endif
@@ -25,7 +24,6 @@
 #define AlignmentOnHeap 16
 #endif
 
-
 /**
  * Clang requires us to put a static keyword in front of header file implementations,
  * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't
@@ -34,6 +32,7 @@
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions
 
 #define OpenMPTaskGroup
-#define PRAGMA_PUSH
-#define SILENCE_UNKNOWN_ATTRIBUTE
-#define PRAGMA_POP
+
+#define PragmaPush _Pragma("GCC diagnostic push")
+#define SilenceUnknownAttribute _Pragma("GCC diagnostic ignored \"-Wattributes\"")
+#define PragmaPop _Pragma("GCC diagnostic pop")

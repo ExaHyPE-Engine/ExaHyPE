@@ -54,8 +54,8 @@ automake --add-missing
 Open the Eclipse GUI and run the following steps:
 
 - Select `New Project`.
-- Select a C++ project. Older Eclipse versions want you to pick the mode `Managed Build`.
-- Locate the project at a remote directory (where you git deposits the clones.
+- Select a C++ project. Older Eclipse versions want you to pick the mode `Managed Build`. Some wizard generations distinguish C from C/C++. I always pick the C/C++ version.
+- Locate the project at a remote directory (where you git deposits the clones).
 - Select `GNU Autotools`. The Empty Project is the right one to select.
 - You need only one target configuration. By default, Eclipse offers you to build Build and Debug. Disable the debug variant.
 
@@ -95,11 +95,11 @@ is set up to only format files that have been modified on your local branch to t
 branch, ``p4``. Ideally, the formatting script should be run on your local branch before
 you submit a merge request.
 
-The usage is straightforward. The script can be found in ``Peano/.continuous_integration/format.py``.
+The usage is straightforward. The script can be found in ``Peano/format.py``.
 To format all files that differ from files on the main ``p4`` branch, simply run
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 .continuous_integration/format.py
+python3 format.py
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you want to compare your local branch to a different branch than ``p4``, you can

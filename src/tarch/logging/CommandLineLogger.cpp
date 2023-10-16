@@ -56,8 +56,7 @@ tarch::logging::CommandLineLogger& tarch::logging::CommandLineLogger::getInstanc
 std::ostream& tarch::logging::CommandLineLogger::out() {
   if (_outputStream==nullptr) {
     return std::cout;
-  }
-  else {
+  } else {
     _hasWrittenToOuputStream = true;
     return *_outputStream;
   }
@@ -72,13 +71,12 @@ void tarch::logging::CommandLineLogger::configureOutputStreams() {
 }
 
 
-tarch::logging::CommandLineLogger& tarch::logging::CommandLineLogger::operator=(const CommandLineLogger& rhs) {
+tarch::logging::CommandLineLogger& tarch::logging::CommandLineLogger::operator=(const CommandLineLogger&) {
   return *this;
 }
 
 
-tarch::logging::CommandLineLogger::CommandLineLogger(const CommandLineLogger& param) {
-}
+tarch::logging::CommandLineLogger::CommandLineLogger(const CommandLineLogger&) {}
 
 
 tarch::logging::CommandLineLogger::~CommandLineLogger() {
@@ -285,7 +283,7 @@ void tarch::logging::CommandLineLogger::traceOut(long int timestampNanoseconds, 
 }
 
 
-void tarch::logging::CommandLineLogger::indent( bool indent, const std::string& trace, const std::string& message ) {
+void tarch::logging::CommandLineLogger::indent( [[maybe_unused]] bool indent, [[maybe_unused]] const std::string& trace, [[maybe_unused]] const std::string& message ) {
   #if PeanoDebug>=1
   tarch::multicore::Lock lockCout( _semaphore );
   if (indent) {
@@ -293,13 +291,12 @@ void tarch::logging::CommandLineLogger::indent( bool indent, const std::string& 
     if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
       _indentTraces.push(trace);
     }
-  }
-  else {
+  } else {
     if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
       assertion3(
         not _indentTraces.empty(),
         trace,
-	message,
+        message,
         indent
       );
       assertionEquals2(

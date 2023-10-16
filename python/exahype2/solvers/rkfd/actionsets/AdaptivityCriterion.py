@@ -67,7 +67,12 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
      
-    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
+    if (
+      refinementCriterion==::exahype2::RefinementCommand::Refine 
+      and 
+      tarch::la::smallerEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
+    ) {
+      logDebug( "touchCellFirstTime(...)", "drop refine instructions, as mesh would be too small" );
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
     else if (refinementCriterion==::exahype2::RefinementCommand::Erase ) {
@@ -91,7 +96,12 @@ class AdaptivityCriterion(AbstractRKFDActionSet):
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
      
-    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
+    if (
+      refinementCriterion==::exahype2::RefinementCommand::Refine 
+      and 
+      tarch::la::smallerEquals( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH )
+    ) {
+      logDebug( "touchCellFirstTime(...)", "drop refine instructions, as mesh would be too small" );
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
     else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {

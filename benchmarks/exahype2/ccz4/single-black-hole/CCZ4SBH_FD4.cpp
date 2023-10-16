@@ -48,13 +48,9 @@ void benchmarks::exahype2::ccz4::prepareTwoPunctures() {
   const tarch::la::Vector<Dimensions, double>& meshCellH,
   double                                       t
 ) {
-  logTraceInWith3Arguments("refinementCriterion(...)", volumeX, meshCellH, t);
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  // see comments in header file
-
-  logTraceOutWith1Argument("refinementCriterion(...)", ::toString(result));
-  return result;
+  return tarch::la::norm2(volumeX) - std::sqrt(Dimensions)*meshCellH(0) < BlackHoleFVRegion
+       ? ::exahype2::RefinementCommand::Refine
+       : ::exahype2::RefinementCommand::Keep;
 }
 
 benchmarks::exahype2::ccz4::CCZ4SBH_FD4::CCZ4SBH_FD4() { prepareTwoPunctures(); }

@@ -6,10 +6,8 @@ from numpy import *
 # Parameters
 gamma = 5.0 / 3.0  # Gas adiabatic index
 numPart_L = 800  # Number of particles in the left state
-#x_min = -1.0
-#x_max = 1.0
-x_min = -0.5
-x_max = 0.5
+x_min = -1.0  # left box boundary
+x_max = 1.0  # right box boundary
 rho_L = 1.0  # Density left state
 rho_R = 0.125  # Density right state
 v_L = 0.0  # Velocity left state

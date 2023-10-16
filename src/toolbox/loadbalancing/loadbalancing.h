@@ -3,6 +3,10 @@
 #pragma once
 
 
+#include "toolbox/loadbalancing/metrics/CellCount.h"
+#include "toolbox/loadbalancing/metrics/CustomCellWeight.h"
+
+
 /**
  * @page toolbox_loadbalancing Loadbalancing toolbox
  *
@@ -34,7 +38,7 @@
  *   the splitting.
  * - toolbox::loadbalancing::SpreadOut Ensure that, if the problem is large
  *   enough, each thread on each rank gets one partition.
- * - toolbox::loadbalancing::SpreadOutHierarchically This strategy is very
+ * - toolbox::loadbalancing::strategies::SpreadOutHierarchically This strategy is very
  *   similar to toolbox::loadbalancing::SpreadOut, but is spreads out in two
  *   phases. First, the strategy tries to give each rank a partition. From
  *   thereon, each rank tries to give each of its threads one partition.
@@ -78,6 +82,13 @@
  *   rebalance. Rebalancing is already problematic from a memory constraint
  *   point of view. Any further refinement makes this situation worse.
  *
+ *
+ * ## Alter cost metrics
+ *
+ * All the load balancing strategies work against some cost metrics. By
+ * default, we use CellCount. But you can create your own cost metric and
+ * use this one instead.
+ *
  */
 
 
@@ -98,64 +109,12 @@ namespace toolbox {
      * held on this particular rank.
      */
     void dumpStatistics();
-    
 
     /**
-     * Is used by tree identification and either indicates that there are no trees
-     * at all or means that the heaviest tree is on the blacklist. See implementation
-     * remarks in class description.
-     */
-    constexpr int NoHeaviestTreeAvailable = -1;
-
-    /**
-     * Determines the maximum spacetree size a tree should have in the
-     * optimal case.
-     *
-     * As this routine does not really adopt the blacklist, it can introduce
-     * cyclles: If we repeatedly try to split the same
-     * rank this means that we have tried to split it, have not been
-     * successful, and tried again. This can happen, as not all trees
-     * can be split. See  peano4::grid::Spacetree::isCellTopDownSplitCandidate()
-     * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate()
-     * for a discussion which cells can be split and which can't. As
-     * not all cells can't be given away, not all trees can be split up.
-     *
-     * ## Randomisation
-     *
-     * If two or more trees have the same weight, the routine should
-     * randomly return one of them.
-     *
-     * @param tolerance By default, you get the last heaviest tree. But you
-     *   can ask for a random tree
-     *
-     * @return NoHeaviestTreeAvailable If there are no local trees or
-     *   if the heaviest tree is on the blacklist, i.e. we have to
-     *   assume that it still is splitting.
-     */
-    int getIdOfHeaviestLocalSpacetree();
-
-
-    /**
-     * Similar to getIdOfHeaviestLocalSpacetree() but you might get one of
-     * the trees back that is close to the heaviest one up to tolerance.
-     * Tolerance here is the relative difference: So you are guaranteed
-     * that
-     *
-     * @f$ m_i \geq tolerance \cdot m_{max} @f$
-     *
-     * or
-     *
-     * @f$ \frac{m_i}{m_{max}} \geq tolerance @f$
-     *
-     *
-     *
-     */
-    int getIdOfHeaviestLocalSpacetree(
-      double tolerance
-    );
-
-
-    /**
+     * This is a helper routine which is used by ExaHyPE's default main for 
+     * for example. It is never used by the actual load balancing at the
+     * moment.
+     * 
      * @return -1 if there is no local tree yet
      */
     int getWeightOfHeaviestLocalSpacetree();

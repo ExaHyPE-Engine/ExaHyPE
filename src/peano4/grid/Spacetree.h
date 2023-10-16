@@ -2,34 +2,27 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-
 #include "AutomatonState.h"
 #include "GridVertex.h"
 #include "GridStatistics.h"
 #include "GridControlEvent.h"
 #include "GridTraversalEventGenerator.h"
 
-
 #include "tarch/logging/Log.h"
 
-
 #include "peano4/stacks/STDVectorStack.h"
-
 
 #include "peano4/maps/STDStackMap.h"
 #include "peano4/maps/HierarchicalStackMap.h"
 
-
 #include <set>
 #include <bitset>
-
 
 namespace peano4 {
   namespace grid {
     class Spacetree;
     class TraversalObserver;
-    class GridTraversalEvent;
+    struct GridTraversalEvent;
 
     namespace tests {
       class SpacetreeTest;
@@ -41,14 +34,11 @@ namespace peano4 {
   }
 }
 
-
-
 /**
  * Represents one tree
  */
 class peano4::grid::Spacetree {
   public:
-
     /**
      * Periodic boundary conditions are technically realised as domain
      * decomposition, i.e. the vertices along the periodic boundaries carry
@@ -418,11 +408,13 @@ class peano4::grid::Spacetree {
     /**
      * Send user data
      *
-     * Send out data along the MPI boundary (horizontal) and stream data to the splitting,
-     * new workers (vertical). This routine is called within descend() as epilogue, i.e.
-     * after all data have been stored savely away on the output streams.
+     * Send out data along the MPI boundary (horizontal) and stream data to the
+     * splitting, new workers (vertical). This routine is called within
+     * descend() as epilogue, i.e. after all data have been stored savely away
+     * on the output streams.
      *
-     * <h2> Data order on output stacks </h2>
+     *
+     * ## Data order on output stacks
      *
      * When we send out data, we send that data from the output stack, i.e. we assume that
      * the user code has already piped its stuff there. As the output data structure is a
@@ -433,7 +425,27 @@ class peano4::grid::Spacetree {
      * a top(0), so picking the Nth element requires us to call top(N-1).
      *
      *
+     * ## Masking and selecting transfer data
+     *
+     * The routine here does not realise the actual data transfer. It delegates
+     * the actual streaming to the observer's sendFace(), sendVertex() and
+     * sendCell(). As observers are provided by the user - most frequently
+     * generated through the Python API - we know which user data we have
+     * tied to the mesh and hence can champion the data transfer.
+     *
+     * This separation of concerns implies that the sendXXX routines also can
+     * decide to mask out sent data. However, we have to be careful with this
+     * masking: We indeed want to be able to mask out horizontal data transfer
+     * and vertical data transfer which corresponds to the domain decomposition
+     * data exchange. We do not want to mask anything out that has to do with
+     * splits or joins.
+     *
+     *
+     *
      * @todo Was passiert bei dynamic AMR?
+     *
+     * @see peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree()
+     *   for a discussion of the splitting process and the required data flows.
      */
     void sendUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
 
@@ -1027,5 +1039,3 @@ class peano4::grid::Spacetree {
 
     bool isInvolvedInJoinOrFork() const;
 };
-
-

@@ -13,8 +13,8 @@ from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
 from .kernels import create_compute_time_step_size_for_fixed_time_stepping_with_subcycling
 
-from exahype2.solvers.fv.kernels import SolverVariant    
-from exahype2.solvers.fv.kernels import KernelVariant    
+from .kernels import SolverVariant    
+from .kernels import KernelVariant    
 
 from exahype2.solvers.fv.kernels import create_halo_layer_construction_with_interpolation_for_reconstructed_patch
 from exahype2.solvers.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping

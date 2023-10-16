@@ -66,6 +66,33 @@ touchCellLastTime | Invoked when the traversal automaton moves from fine to coar
 ------------- | ------------- | -------------
 
 
+## Markers
+
+Whenever you encounter a face, vertex or cell, Peano's action sets will be 
+given a single or set of the grid entities. So now you can manipulate them.
+The action sets also has access to the direct parent data one level coarser.
+
+Cells, faces and vertices do not carry information such as position. They 
+also do not know if they are local, they are hanging, ... Such information is
+held separatedly. We actually do not hold it at all, but compute it on-the-fly
+within the Peano core. To the action set, the information is exposed through 
+a marker object. That is, every action set is also passed a marker object 
+which you can query to get this information.
+
+Please note that all grid entities seem to hold positions and mesh sizes.
+However, these properties are only available in debug mode and should not be
+used by user code. I use them to print out meaningful debug data (so you know
+where the code is within the mesh) and I use them within assertions to check
+if the grid is consistent, i.e. Peano's core stores the right mesh data at 
+the right place.
+
+The markers of relevance are 
+
+- peano4::datamanagement::VertexMarker
+- peano4::datamanagement::FaceMarker
+- peano4::datamanagement::CellMarker
+
+
 
 ## Sequence and parallelisation of actions
 

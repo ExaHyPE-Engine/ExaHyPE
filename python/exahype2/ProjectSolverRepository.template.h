@@ -6,7 +6,7 @@
 // **********************************************************************************************
 #pragma once
 
-#include "toolbox/loadbalancing/NoLoadBalancing.h"
+#include "toolbox/loadbalancing/strategies/NoLoadBalancing.h"
 
 {% if LOAD_BALANCER!="" -%}
 #include "{{LOAD_BALANCER | replace('::', '/') }}.h"
@@ -20,6 +20,7 @@
 #include "{{ item[0] }}.h"
 {# Comment to ensure that jinja2 adds a new line#}
 {% endfor %}
+
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -37,7 +38,7 @@
   {% if LOAD_BALANCER!="" -%}
   extern {{LOAD_BALANCER}}              loadBalancer;
   {% else -%}
-  extern toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
+  extern toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
   {% endif -%}
 
   extern peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
@@ -68,7 +69,14 @@
   double getMinMeshSize();
   double getMaxMeshSize();
 
+  /**
+   * This routine returns the minimum of the max admissible mesh sizes.
+   */
   double getMaxAdmissibleMeshSize();
+
+  /**
+   * Return max of min admissible mesh sizes.
+   */
   double getMinAdmissibleMeshSize();
 
   void startGridConstructionStep();
@@ -99,6 +107,12 @@
   bool mayPlot();
   bool isFirstGridSweepOfTimeStep();
   bool isLastGridSweepOfTimeStep();
+
+  void suspendSolversForOneGridSweep();
+
+  void initLogFilters();
+
+  void initSharedMemoryAndGPUEnvironment();
 
 {% for item in NAMESPACE -%}
   }

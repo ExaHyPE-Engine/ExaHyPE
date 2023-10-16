@@ -11,6 +11,154 @@
  ./configure --enable-finiteelements --with-petsc
  ~~~~~~~~~~~~~~~~~~~~~
 
+ and you will need to make additions to CXXFLAGS and LDFLAGS to ensure that we 
+ can compile with PETSc and link appropriately:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure CXXFLAGS="... -I$PETSC_DIR/include" LDFLAGS="... -Wl,-rpath,$PETSC_DIR/lib -L$PETSC_DIR/lib" $LIBS="... -lpetsc"
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ Where PETSC_DIR points to your PETSc installation as passed into prefix 
+ (see remarks below). 
+ Alteratively, replace PETSC_DIR with the path from above directly.
+ Please do not omit the -Wl,... parts. If you do so, your code will link,
+ but you'll get seg fault the very moment you try to allocate any PETSc
+ object.
+ Once the flags are in, any
+ Peano Python script will pick up the right paths automatically. 
+ 
+ Please note that most off-the-shelf PETSc packages in mainstream Linux
+ distributions such as Ubuntu are compiled with MPI. That is, you will have
+ to use MPI for Peano as well, as PETSc otherwise will complain.
+ 
+ In principle, that's all you have to do. In practice, getting PETSc to work 
+ can be cumbersome. The flag above assumes that you have PETSc ready-to-use on 
+ your system (through a module file, e.g.). If this is not the case or if you 
+ want to use another software stack than the one used by PETSc (different 
+ compiler, e.g., or no MPI), you will need to follow some of the steps below.
+
+ # Preparing PETSc on your system
+
+ ## Downloading PETSc for your distribution
+
+ Most Linux distribution offer PETSc off-the-shelf through their package 
+ managers. These versions should be absolutely sufficient for our work
+ within Peano.
+
+ - Ubuntu: Install
+
+           apt install petsc-dev
+           
+   and then set 
+  
+           export PETSC_DIR=/usr/lib/petscdir/petsc3.15/x86_64-linux-gnu-real
+           
+   or similar.         
+   
+ The problem with these pre-manufactured PETSc installations is that they are
+ built against one specific MPI implementation picked by the distribution. If 
+ you want to use a different MPI (or no MPI at all), you will likely run into
+ problems and have to build your own PETSc version at one point.
+
+ ## Build PETSc locally
+
+ Alternatively, you can grab PETSc directly from the sources. The steps are 
+ summarised on their website (https://petsc.org/release/install/download/), but 
+ we will summarise the important ones here.
+
+ 1. Clone their repo. It's best to do this somewhere away from the Peano directory.
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+  git clone -b release https://gitlab.com/petsc/petsc.git petsc
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ 2. Change into this directory.
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+  cd petsc
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ 3. Run the configure script inside the PETSc directory:
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+  ./configure --with-cc=(C-COMPILER) --with-cxx=(C++-COMPILER) --with-fc=0  --with-mpi=0 --prefix=/opt/petsc
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  The command above disables the Fortran support and also MPI. The prefix 
+  
+ 4. Compile the actual code:
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+  make
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+ 5. Install PETSc:
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+  make install
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+PETSc's documentation makes a lot of fuss around various architectures and 
+systems, but I usually keep things simple. You might however prefer more 
+sophisticated calls such as 
+ 
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+   make PETSC_DIR=/path/to/petsc PETSC_ARCH=system_architecture all
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+\but most of the time, I don't need these. 
+
+
+From hereon, we will use a variable PETSC_DIR which is the prefix directory.
+In the example above we would have 
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+export PETSC_DIR=/opt/petsc
+  ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Whenever we use PETSC_DIR, you can replace it with the real path if you 
+don't want to work with additional variables. However, the PETSc guidelines
+recommend that you stick to the variable. As we need it all the time, it 
+might even be worth adding PETSC_DIR and PETSC_ARCH to .bashrc / .bash_profile.
+ 
+ 
+ 
+ ## Amend libraries and search paths
+
+ On most systems, the simple manipulation of the three flags CXXFLAGS, LDFLAGS
+ and LIBS should be sufficient. However, you might need some more complex
+ manipulations. Key insight here is that, depending on how PETSc itself is 
+ built, it will itself need further libraries. You can find a lot of these
+ in the file $PETSC_DIR/lib/petsc/conf/variables. The build command also 
+ reports on those just after the compile has finished.
+ 
+ If you need further flags, you typically add
+
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+  CXXFLAGS="(...) -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include"
+  LDFLAGS="(...) -lpetsc -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib -L$PETSC_DIR/$PETSC_ARCH/lib -L/path/to/gcc/libraries  "
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The first flag here comes from PETSc itself, and requires PETSC_DIR and PETSC_ARCH to be established already.
+The last flag is the path to the gcc runtime libraries. As an example, on a local machine, this libary looks like:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+-L/usr/lib/gcc/x86_64-linux-gnu
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We can then put these together:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure ... --enable-finiteelements --with-petsc CXXFLAGS=$(CXXFLAGS) LDFLAGS=$(LDFLAGS)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ 
+
+
+ # Typical PETSc code structure
+ 
  ## Algorithmic steps
  
  Each PETSc project consists of the following steps:
@@ -70,6 +218,40 @@ and so forth. The original hierarchical information on the number of solvers
 and so forth are lost. This is a realisation representation, not a logical 
 representation of our project.
  
+
+## A brief run through of the work in progress
+
+1. Mesh creation - this is done automatically
+
+2. EnumerateAndInitSolution step - Here we have two action sets, petsc.actionsets.InitVertexDoFs and petsc.actionsets.EnumerateVertices.
+   InitVertexDoFs and EnumerateVertices both operate only on TouchVertexFirstTime.
+   In petsc.actionsets.InitVertexDoFs, every fineGridVertex is marked as "Dirichlet"
+   if it lies on the boundary, and as "DoF" otherwise. For now, we just use marker.x() to 
+   determine whether a vertex is on the boundary.
+   We also insert 
+   a value and rhs into the vertex (on the Peano mesh) at this stage, which we pass to PETSc during assembly, but this comes later.
+   During the Enumeration Action set, every fineGridVertex is given a globalIndex, which will be used later
+   to construct the PETSc matrix. We operate exclusively on the fine grid data.
+
+3. InitPETSc step. Here we count total number of DoFs and send to our instanceOfPetsc. This is the same as the 
+   number of vertices that were marked as DoF - we simply query LocalToGlobalMap for the total number of global vertices.
+
+4. Assembly - This is the stage we construct the PETSc matrix and Rhs vector. For this, we add a new action set,
+   petsc.actionsets.InitVertexDoFsAssemblePetscMatrix.
+   During TouchCellFirstTime:
+      - Run through the vertices within this cell
+      - Retrieve a global Index for each from the LocalToGlobalMap per vertex
+      - Increment values in PETSc matrix based on the Poisson stencil @f$ 2^(2d) @f$ calls
+   During TouchVertexFirstTime:
+      - Get global index of the vertex (only for the fine grid vertex)
+      - Set entry in RHS vector to corresponding value from the Peano mesh.
+      - Set entry in solution vector to corresponding value from the Peano mesh.
+
+
+5. Solve - Hand over to PETSc to find solution 
+6. MapSolutionOntoMesh - query instanceOfPetsc for the data from the solution vector. 
+
+
 
  */
  

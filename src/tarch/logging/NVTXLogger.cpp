@@ -19,30 +19,21 @@
 #include <nvtx3/nvToolsExt.h>
 #endif
 
-
 tarch::logging::Log tarch::logging::NVTXLogger::_log( "tarch::logging::NVTXLogger" );
-
 
 tarch::logging::NVTXLogger  tarch::logging::NVTXLogger::_singleton;
 
-
-tarch::logging::NVTXLogger::NVTXLogger() {
-}
-
+tarch::logging::NVTXLogger::NVTXLogger() {}
 
 tarch::logging::NVTXLogger& tarch::logging::NVTXLogger::getInstance() {
   return _singleton;
 }
 
-
 tarch::logging::NVTXLogger::~NVTXLogger() {
   close();
 }
 
-
-void tarch::logging::NVTXLogger::indent( bool indent, const std::string& trace, const std::string& message ) {
-}
-
+void tarch::logging::NVTXLogger::indent( bool, const std::string&, const std::string& ) {}
 
 std::string tarch::logging::NVTXLogger::getTimeStampHumanReadable( long int timestampNanoseconds ) const {
   long int timestampSeconds = timestampNanoseconds / 1000 / 1000 / 1000;
@@ -73,10 +64,13 @@ std::string tarch::logging::NVTXLogger::getTimeStampHumanReadable( long int time
   return result.str();
 }
 
-
 std::string tarch::logging::NVTXLogger::constructMessageString(
-  std::string          messageType,
-  long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message
+  [[maybe_unused]] std::string messageType,
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
 ) {
   std::ostringstream result;
   result << getTimeStampHumanReadable(timestampNanoseconds)
@@ -141,14 +135,26 @@ void tarch::logging::NVTXLogger::error(long int timestampNanoseconds, int rank, 
 }
 
 
-void tarch::logging::NVTXLogger::traceIn(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::NVTXLogger::traceIn(
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
+) {
   #ifdef UseNVIDIA
   nvtxRangePush(trace.c_str());
   #endif
 }
 
 
-void tarch::logging::NVTXLogger::traceOut(long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message) {
+void tarch::logging::NVTXLogger::traceOut(
+  [[maybe_unused]] long int timestampNanoseconds,
+  [[maybe_unused]] int rank,
+  [[maybe_unused]] int threadId,
+  [[maybe_unused]] const std::string& trace,
+  [[maybe_unused]] const std::string& message
+) {
   #ifdef UseNVIDIA
   nvtxRangePop();
   #endif

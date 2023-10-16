@@ -6,21 +6,17 @@
 
 #include "peano4/utils/Loop.h"
 
-
 tarch::logging::Log  peano4::grid::GridTraversalEventGenerator::_log( "peano4::grid::GridTraversalEventGenerator" );
 
-
 peano4::grid::GridTraversalEventGenerator::GridTraversalEventGenerator(int id):
-  _id(id) {
-}
-
+  _id(id) {}
 
 std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesLocal(
-  GridVertex  vertices[TwoPowerD],
-  const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set< int >&                    joinTriggered,
-  const std::set< int >&                    joining
+  [[maybe_unused]] GridVertex  vertices[TwoPowerD],
+  [[maybe_unused]] const SplitSpecification&                 splitTriggered,
+  [[maybe_unused]] const std::set<int>&                      splitting,
+  [[maybe_unused]] const std::set< int >&                    joinTriggered,
+  [[maybe_unused]] const std::set< int >&                    joining
 ) const {
   std::bitset<TwoPowerD> bitset;
   for (int i=0; i<TwoPowerD; i++) {
@@ -30,13 +26,12 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesLoc
   return bitset;
 }
 
-
 std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
-  GridVertex                  vertices[TwoPowerD],
-  const SplitSpecification&   splitTriggered,
-  const std::set<int>&        splitting,
-  const std::set< int >&      joinTriggered,
-  const std::set< int >&      joining
+  [[maybe_unused]] GridVertex                  vertices[TwoPowerD],
+  [[maybe_unused]] const SplitSpecification&   splitTriggered,
+  [[maybe_unused]] const std::set<int>&        splitting,
+  [[maybe_unused]] const std::set< int >&      joinTriggered,
+  [[maybe_unused]] const std::set< int >&      joining
 ) const {
   std::bitset<TwoTimesD> result;
   for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {
@@ -78,15 +73,14 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
   return result;
 }
 
-
 bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree(
-  GridVertex                 vertex,
-  const SplitSpecification&  splitTriggered,
-  const std::set<int>&       splitting,
-  const std::set< int >&     joinTriggered,
-  const std::set< int >&     joining,
-  bool        splittingIsConsideredLocal,
-  bool        joiningIsConsideredLocal
+  [[maybe_unused]] GridVertex                 vertex,
+  [[maybe_unused]] const SplitSpecification&  splitTriggered,
+  [[maybe_unused]] const std::set<int>&       splitting,
+  [[maybe_unused]] const std::set< int >&     joinTriggered,
+  [[maybe_unused]] const std::set< int >&     joining,
+  [[maybe_unused]] bool        splittingIsConsideredLocal,
+  [[maybe_unused]] bool        joiningIsConsideredLocal
 ) const {
 /*
   if (vertex.getState()==GridVertex::State::HangingVertex) {
@@ -112,15 +106,14 @@ bool peano4::grid::GridTraversalEventGenerator::isVertexAdjacentToLocalSpacetree
 //  }
 }
 
-
 bool peano4::grid::GridTraversalEventGenerator::isSpacetreeNodeLocal(
-  GridVertex    vertices[TwoPowerD],
-  const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set< int >&                    joinTriggered,
-  const std::set< int >&                    joining,
-  bool          splittingIsConsideredLocal,
-  bool          joiningIsConsideredLocal
+  [[maybe_unused]] GridVertex    vertices[TwoPowerD],
+  [[maybe_unused]] const SplitSpecification&                 splitTriggered,
+  [[maybe_unused]] const std::set<int>&                      splitting,
+  [[maybe_unused]] const std::set< int >&                    joinTriggered,
+  [[maybe_unused]] const std::set< int >&                    joining,
+  [[maybe_unused]] bool          splittingIsConsideredLocal,
+  [[maybe_unused]] bool          joiningIsConsideredLocal
 ) const {
   bool isLocal = true;
   dfor2(k)
@@ -146,14 +139,13 @@ bool peano4::grid::GridTraversalEventGenerator::isSpacetreeNodeLocal(
   return isLocal;
 }
 
-
 std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdjacentToParallelDomainBoundary(
-  GridVertex                                vertices[TwoPowerD],
-  const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set< int >&                    joinTriggered,
-  const std::set< int >&                    joining,
-  bool calledByLeaveCell
+  [[maybe_unused]] GridVertex                                vertices[TwoPowerD],
+  [[maybe_unused]] const SplitSpecification&                 splitTriggered,
+  [[maybe_unused]] const std::set<int>&                      splitting,
+  [[maybe_unused]] const std::set< int >&                    joinTriggered,
+  [[maybe_unused]] const std::set< int >&                    joining,
+  [[maybe_unused]] bool calledByLeaveCell
 ) const {
   std::bitset<TwoPowerD> result;
   for (int j=0; j<TwoPowerD; j++) {
@@ -171,14 +163,13 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdj
   return result;
 }
 
-
 std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjacentToParallelDomainBoundary(
-  GridVertex                                vertices[TwoPowerD],
-  const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set< int >&                    joinTriggered,
-  const std::set< int >&                    joining,
-  bool calledByLeaveCell
+  [[maybe_unused]] GridVertex                                vertices[TwoPowerD],
+  [[maybe_unused]] const SplitSpecification&                 splitTriggered,
+  [[maybe_unused]] const std::set<int>&                      splitting,
+  [[maybe_unused]] const std::set< int >&                    joinTriggered,
+  [[maybe_unused]] const std::set< int >&                    joining,
+  [[maybe_unused]] bool calledByLeaveCell
 ) const {
   std::bitset<TwoTimesD> result;
   for (int j=0; j<TwoTimesD; j++) {
@@ -217,15 +208,15 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjace
 }
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createGenericCellTraversalEvent(
-  GridVertex                                coarseGridVertices[TwoPowerD],
-  GridVertex                                fineGridVertices[TwoPowerD],
-  const AutomatonState&                     state,
-  const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set< int >&                    joinTriggered,
-  const std::set< int >&                    joining,
-  const tarch::la::Vector<Dimensions,int>&  relativePositionToFather,
-  bool                                      spacetreeStateIsRunning
+  [[maybe_unused]] GridVertex                                coarseGridVertices[TwoPowerD],
+  [[maybe_unused]] GridVertex                                fineGridVertices[TwoPowerD],
+  [[maybe_unused]] const AutomatonState&                     state,
+  [[maybe_unused]] const SplitSpecification&                 splitTriggered,
+  [[maybe_unused]] const std::set<int>&                      splitting,
+  [[maybe_unused]] const std::set< int >&                    joinTriggered,
+  [[maybe_unused]] const std::set< int >&                    joining,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,int>&  relativePositionToFather,
+  [[maybe_unused]] bool                                      spacetreeStateIsRunning
 ) const {
   #if Dimensions==2
   logTraceInWith7Arguments( "createGenericCellTraversalEvent(...)", state.toString(), relativePositionToFather, fineGridVertices[0].toString(), fineGridVertices[1].toString(), fineGridVertices[2].toString(), fineGridVertices[3].toString(), _id );
@@ -245,6 +236,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   event.setIsFaceLocal( areFacesLocal( fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
   event.setIsVertexLocal( areVerticesLocal( fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
 
+  event.setIsParentVertexLocal( areVerticesLocal( coarseGridVertices, splitTriggered, splitting, joinTriggered, joining) );
+
   event.setInvokingSpacetree( _id );
   event.setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(
         spacetreeStateIsRunning and
@@ -258,18 +251,17 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   return event;
 }
 
-
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createLeaveCellTraversalEvent(
-  GridVertex                                coarseGridVertices[TwoPowerD],
-  GridVertex                                fineGridVertices[TwoPowerD],
-  const AutomatonState&                     state,
-  const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set< int >&                    joinTriggered,
-  const std::set< int >&                    joining,
-  const std::set< int >&                    hasSplit,
-  const tarch::la::Vector<Dimensions,int>&  relativePositionToFather,
-  bool                                      spacetreeStateIsRunning
+  [[maybe_unused]] GridVertex                                coarseGridVertices[TwoPowerD],
+  [[maybe_unused]] GridVertex                                fineGridVertices[TwoPowerD],
+  [[maybe_unused]] const AutomatonState&                     state,
+  [[maybe_unused]] const SplitSpecification&                 splitTriggered,
+  [[maybe_unused]] const std::set<int>&                      splitting,
+  [[maybe_unused]] const std::set< int >&                    joinTriggered,
+  [[maybe_unused]] const std::set< int >&                    joining,
+  [[maybe_unused]] const std::set< int >&                    hasSplit,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,int>&  relativePositionToFather,
+  [[maybe_unused]] bool                                      spacetreeStateIsRunning
 ) const {
   logTraceInWith3Arguments( "createLeaveCellTraversalEvent(...)", state.toString(), _id, relativePositionToFather );
   GridTraversalEvent  event = createGenericCellTraversalEvent(coarseGridVertices, fineGridVertices, state, splitTriggered, splitting, joinTriggered, joining, relativePositionToFather, spacetreeStateIsRunning);
@@ -393,7 +385,6 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   return event;
 }
 
-
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createPrunedEnterCellTraversalEvent( SpacetreeState spacetreeState, const GridTraversalEvent& event ) const {
   GridTraversalEvent result = event;
 
@@ -407,8 +398,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     result.setIsFaceLocal(0);
     result.setIsVertexLocal(0);
   }
-/*
 
+/*
   if(
     spacetreeState==SpacetreeState::EmptyRun or
     spacetreeState==SpacetreeState::NewFromSplit
@@ -452,18 +443,17 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   return result;
 }
 
-
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createEnterCellTraversalEvent(
-  GridVertex                                coarseGridVertices[TwoPowerD],
-  GridVertex                                fineGridVertices[TwoPowerD],
-  const AutomatonState&                     state,
-  const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set< int >&                    joinTriggered,
-  const std::set< int >&                    joining,
-  const std::set< int >&                    hasSplit,
-  const tarch::la::Vector<Dimensions,int>&  relativePositionToFather,
-  bool                                      spacetreeStateIsRunning
+  [[maybe_unused]] GridVertex                                coarseGridVertices[TwoPowerD],
+  [[maybe_unused]] GridVertex                                fineGridVertices[TwoPowerD],
+  [[maybe_unused]] const AutomatonState&                     state,
+  [[maybe_unused]] const SplitSpecification&                 splitTriggered,
+  [[maybe_unused]] const std::set<int>&                      splitting,
+  [[maybe_unused]] const std::set< int >&                    joinTriggered,
+  [[maybe_unused]] const std::set< int >&                    joining,
+  [[maybe_unused]] const std::set< int >&                    hasSplit,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,int>&  relativePositionToFather,
+  [[maybe_unused]] bool                                      spacetreeStateIsRunning
 ) const {
   logTraceInWith7Arguments( "createEnterCellTraversalEvent(...)", state.toString(), _id, relativePositionToFather, coarseGridVertices[0].toString(), coarseGridVertices[1].toString(), coarseGridVertices[2].toString(), coarseGridVertices[3].toString() );
   GridTraversalEvent  event = createGenericCellTraversalEvent(coarseGridVertices, fineGridVertices, state, splitTriggered, splitting, joinTriggered, joining, relativePositionToFather, spacetreeStateIsRunning);
@@ -538,7 +528,6 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       << ", vertex[7]=" << fineGridVertices[7].toString()
     );
   }
-
 
   for (int i=0; i<2*Dimensions; i++) {
     int        faceIndex   = PeanoCurve::getFaceNumberAlongCurve(state,i);
@@ -621,11 +610,10 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   return event;
 }
 
-
 peano4::grid::FaceType peano4::grid::GridTraversalEventGenerator::getFaceType(
-  GridVertex                         coarseGridVertices[TwoPowerD],
-  tarch::la::Vector<Dimensions,int>  positionOfCell,
-  int                                faceNumber
+  [[maybe_unused]] GridVertex                         coarseGridVertices[TwoPowerD],
+  [[maybe_unused]] tarch::la::Vector<Dimensions,int>  positionOfCell,
+  [[maybe_unused]] int                                faceNumber
 ) {
   logTraceInWith1Argument( "getFaceType(...)", faceNumber );
 
@@ -671,10 +659,9 @@ peano4::grid::FaceType peano4::grid::GridTraversalEventGenerator::getFaceType(
   return result;
 }
 
-
 peano4::grid::CellType peano4::grid::GridTraversalEventGenerator::getCellType(
-  GridVertex                         coarseGridVertices[TwoPowerD],
-  tarch::la::Vector<Dimensions,int>  positionOfCell
+  [[maybe_unused]] GridVertex                         coarseGridVertices[TwoPowerD],
+  [[maybe_unused]] tarch::la::Vector<Dimensions,int>  positionOfCell
 ) {
   bool allVerticesAreDelete = true;
   bool allVerticesAreNew    = true;
@@ -713,11 +700,10 @@ peano4::grid::CellType peano4::grid::GridTraversalEventGenerator::getCellType(
   }
 }
 
-
 peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::getVertexType(
-  GridVertex                         coarseGridVertices[TwoPowerD],
-  tarch::la::Vector<Dimensions,int>  position,
-  int                                dimension
+  [[maybe_unused]] GridVertex                         coarseGridVertices[TwoPowerD],
+  [[maybe_unused]] tarch::la::Vector<Dimensions,int>  position,
+  [[maybe_unused]] int                                dimension
 ) {
   if (dimension<0) {
     switch (coarseGridVertices[ peano4::utils::dLinearised(position,2) ].getState()) {
@@ -792,13 +778,12 @@ peano4::grid::VertexType peano4::grid::GridTraversalEventGenerator::getVertexTyp
   return result;
 }
 
-
 int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
-  GridVertex            vertices[TwoPowerD],
-  const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set< int >&                    joinTriggered,
-  const std::set< int >&                    joining
+  [[maybe_unused]] GridVertex            vertices[TwoPowerD],
+  [[maybe_unused]] const SplitSpecification&                 splitTriggered,
+  [[maybe_unused]] const std::set<int>&                      splitting,
+  [[maybe_unused]] const std::set< int >&                    joinTriggered,
+  [[maybe_unused]] const std::set< int >&                    joining
 ) const {
   const int NotSetYet = -1;
   int id     = NotSetYet;
@@ -836,8 +821,6 @@ int peano4::grid::GridTraversalEventGenerator::getTreeOwningSpacetreeNode(
 
   return id;
 }
-
-
 
 tarch::la::Vector< TwoPowerD, int >  peano4::grid::GridTraversalEventGenerator::getAdjacentRanksOfFace( GridVertex fineGridVertices[TwoPowerD], int faceNumber, bool calledByReceivingProcess ) const {
   tarch::la::Vector< TwoPowerD, int >  adjacentRanksOfFace(InvalidRank);
@@ -888,5 +871,4 @@ tarch::la::Vector< TwoPowerD, int >  peano4::grid::GridTraversalEventGenerator::
   }
 
   return adjacentRanksOfFace;
-
 }

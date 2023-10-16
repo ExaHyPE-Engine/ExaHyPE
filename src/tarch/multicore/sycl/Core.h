@@ -4,6 +4,10 @@
 
 #include "config.h"
 
+
+/**
+ * @see tarch_accelerator_SYCL in Device.h
+ */
 #if defined(SharedSYCL) and !defined(_TARCH_MULTICORE_SYCL_CORE_H_)
 #define _TARCH_MULTICORE_SYCL_CORE_H_
 
@@ -17,6 +21,9 @@
 
 namespace tarch {
   namespace multicore {
+    /**
+     * @return SYCL queue for the host
+     */
     sycl::queue& getHostSYCLQueue();
   }
 }

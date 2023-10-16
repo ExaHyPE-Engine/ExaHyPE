@@ -1,8 +1,7 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.rkdg.SeparateSweepsWithEnclaveTasking import SeparateSweepsWithEnclaveTasking
 from exahype2.solvers.rkdg.PDETerms                         import PDETerms
-
 
 from exahype2.solvers.rkdg.kernels import create_abstract_solver_declarations
 from exahype2.solvers.rkdg.kernels import create_abstract_solver_definitions
@@ -18,17 +17,20 @@ from exahype2.solvers.rkdg.rusanov.kernels import create_Riemann_solver_call
 
 from exahype2.solvers.rkdg.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
-
 class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking ):
-  def __init__(self, 
-    name, 
+  def __init__(self,
+    name,
     rk_order,
     polynomials,
     face_projections,
-    unknowns, auxiliary_variables, min_cell_h, max_cell_h, time_step_relaxation,
-    flux=PDETerms.User_Defined_Implementation, 
-    eigenvalues=PDETerms.User_Defined_Implementation, 
-    ncp=PDETerms.None_Implementation, 
+    unknowns,
+    auxiliary_variables,
+    min_cell_h,
+    max_cell_h,
+    time_step_relaxation,
+    flux=PDETerms.User_Defined_Implementation,
+    eigenvalues=PDETerms.User_Defined_Implementation,
+    ncp=PDETerms.None_Implementation,
     point_source=PDETerms.None_Implementation,
     boundary_conditions=PDETerms.User_Defined_Implementation,
     refinement_criterion=PDETerms.Empty_Implementation,
@@ -37,32 +39,31 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     pde_terms_without_state=False,
     plot_grid_properties=False
   ):
-    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, 
-                                                rk_order, 
-                                                polynomials, 
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name,
+                                                rk_order,
+                                                polynomials,
                                                 face_projections,
-                                                unknowns, 
-                                                auxiliary_variables, 
-                                                min_cell_h, 
-                                                max_cell_h, 
+                                                unknowns,
+                                                auxiliary_variables,
+                                                min_cell_h,
+                                                max_cell_h,
                                                 plot_grid_properties,
-                                                pde_terms_without_state) 
-   
+                                                pde_terms_without_state)
     self._time_step_relaxation = time_step_relaxation
     self._compute_eigenvalue   = True
 
     self._kernel_namespace              = "rusanov"
-    self._volumetric_solver_call        = create_volumetric_solver_call( self._basis, SolverVariant.WithVirtualFunctions ) 
-    self._fused_volumetric_kernel_call_cpu = create_volumetric_solver_call( self._basis, SolverVariant.Stateless ) 
-    self._fused_volumetric_kernel_call_gpu = create_volumetric_solver_call( self._basis, SolverVariant.Accelerator ) 
+    self._volumetric_solver_call        = create_volumetric_solver_call( self._basis, SolverVariant.WithVirtualFunctions )
+    self._fused_volumetric_kernel_call_cpu = create_volumetric_solver_call( self._basis, SolverVariant.Stateless )
+    self._fused_volumetric_kernel_call_gpu = create_volumetric_solver_call( self._basis, SolverVariant.Accelerator )
     self._Riemann_solver_call           = create_Riemann_solver_call( self._basis, face_projections )
     self._add_solver_contributions_call = create_add_solver_contributions_call( self._basis )
     self._multiply_with_inverted_mass_matrix_call = create_multiply_with_inverted_mass_matrix_call( self._basis )
 
-    self.set_implementation(boundary_conditions=boundary_conditions, 
+    self.set_implementation(boundary_conditions=boundary_conditions,
                             refinement_criterion=refinement_criterion,
-                            initial_conditions=initial_conditions, 
-                            additional_action_set_includes="", 
+                            initial_conditions=initial_conditions,
+                            additional_action_set_includes="",
                             additional_user_includes="",
                             flux=flux,
                             eigenvalues=eigenvalues,
@@ -70,7 +71,6 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
                             source_term=source_term,
                             point_source=point_source
                             )
-
 
   def set_implementation(self,
     flux=None,
@@ -96,10 +96,10 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
 
       This routine should be the very last invoked by the constructor.
     """
-    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions=boundary_conditions, 
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions=boundary_conditions,
                                                           refinement_criterion=refinement_criterion,
-                                                          initial_conditions=initial_conditions, 
-                                                          additional_action_set_includes=additional_action_set_includes, 
+                                                          initial_conditions=initial_conditions,
+                                                          additional_action_set_includes=additional_action_set_includes,
                                                           additional_user_includes=additional_user_includes,
                                                           flux=flux,
                                                           ncp=ncp,
@@ -109,22 +109,21 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
                                                           )
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)
-    
+
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, pde_terms_without_state=self._pde_terms_without_state)
     self._abstract_solver_user_declarations += solver_code_snippets.create_abstract_solver_user_declarations()
     self._abstract_solver_user_definitions   = create_abstract_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, pde_terms_without_state=self._pde_terms_without_state)
     self._abstract_solver_user_definitions  += solver_code_snippets.create_abstract_solver_user_definitions()
-    
+
     self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, pde_terms_without_state=self._pde_terms_without_state)
     self._solver_user_definitions            = create_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_sources_implementation, pde_terms_without_state=self._pde_terms_without_state)
-    
+
     self._compute_time_step_size              = solver_code_snippets.create_compute_time_step_size()
     self._compute_new_time_step_size          = solver_code_snippets.create_compute_new_time_step_size()
 
     self._start_time_step_implementation     = solver_code_snippets.create_start_time_step_implementation()
     self._finish_time_step_implementation    = solver_code_snippets.create_finish_time_step_implementation()
     self._constructor_implementation         = solver_code_snippets.create_abstract_solver_constructor_statements()
-
 
   @property
   def user_action_set_includes(self):

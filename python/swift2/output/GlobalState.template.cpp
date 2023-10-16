@@ -56,19 +56,19 @@ double getMaxTimeStamp() {
 }
 
 
-double getMinCutOffRadius() {
+double getMinSearchRadius() {
   double result = std::numeric_limits<double>::max();
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  result = std::min( result, globaldata::{{PARTICLE}}::getSpecies().getMinCutOffRadius() );
+  result = std::min( result, globaldata::{{PARTICLE}}::getSpecies().getMinSearchRadius() );
   {%- endfor %}
   return result;
 }
 
 
-double getMaxCutOffRadius() {
+double getMaxSearchRadius() {
   double result = 0.0;
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  result = std::max( result, globaldata::{{PARTICLE}}::getSpecies().getMaxCutOffRadius() );
+  result = std::max( result, globaldata::{{PARTICLE}}::getSpecies().getMaxSearchRadius() );
   {%- endfor %}
   return result;
 }
@@ -103,11 +103,6 @@ void startIntermediateStep() {
 
 
 void startInitialConditionStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
-  {%- endfor %}
-
   if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
     loadBalancer.enable(false);
   }
@@ -116,11 +111,6 @@ void startInitialConditionStep() {
 
 
 void startInitialisationStep() {
-  {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
-  {%- endfor %}
-
   if (not ::swift2::commandlinesettings::enableDynamicLoadBalancing() ) {
     loadBalancer.enable(false);
   }
@@ -130,8 +120,6 @@ void startInitialisationStep() {
 
 void startTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
-  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
   {%- endfor %}
   logTraceIn( "TimeStep()" );
@@ -148,6 +136,7 @@ void finishTimeStep() {
   globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -185,6 +174,7 @@ void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -196,6 +186,7 @@ void finishInitialConditionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
   vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();

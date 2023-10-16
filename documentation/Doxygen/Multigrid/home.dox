@@ -4,22 +4,13 @@
 \li \subpage multigrid_architecture
 \li \subpage multigrid_petsc
 \li \subpage multigrid_tutorials
-\li \subpage benchmark_multigrid_petsc_poisson
+\li \subpage multigrid_benchmarks
+\li \subpage multigrid_enumeration
+\li \subpage page_multigrid_numerics
 
 Peano's multigrid extension provides stand-alone multigrid solers. However, the
 solver ingredients are designed in a way that they can be used by other codes, 
 too.
 
-## Configure PETSc
-
-Our Peano 4 PETSc extensions are lain Peano 4 extensions which require a 
-configuation that links against PETSc and includes the finite element toolbox:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-./configure ... --enable-finiteelements
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The latter contains all the routines for our assemblies as well as the 
-matrix-free solvers.
 
 */

@@ -1,6 +1,7 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os.path
+import re
 
 from .Overwrite import Overwrite
 
@@ -24,27 +25,123 @@ def write_file(overwrite,overwrite_is_default,full_qualified_filename):
     print( "Error: undefined overwrite strategy" )
     return True
 
-def find_cmake_build_dir():
-  file_dir = os.path.dirname(os.path.realpath(__file__))
-  # The root dir of the project is: ../../../ -> one more depth because of the out of source build
-  project_root_dir = os.path.join(file_dir, '../../../..', )
+def find_CMake_build_dir():
+  """
+  This function searches for the CMake build directory by iteratively checking parent directories.
+  Starting from the callers directory (using getcwd), iterating until root directory of peano and
+  this is computed using the location of this file therefore adapt the code if the file is moved
+  somewhere else. Using CMake means that it was configured before, and therefore a CMakeCache.txt
+  exists.
 
-  # Go through all directories in root dir to find a CMakeCache
-  for path in [path.path for path in os.scandir(project_root_dir) if path.is_dir()]:
-    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-    if 'CMakeCache.txt' in files:
-      #print( "found CMakeCache.txt in {} and hence assume that user uses CMake".format(path) )
-      return path
-  return ""
+  :return: The path to the CMake build directory if found, or an empty string otherwise.
+  :rtype: str
+  """
+  if find_CMake_build_dir.CMake_build_dir_check_done:
+    return find_CMake_build_dir.saved_CMake_build_dir
+
+  find_CMake_build_dir.CMake_build_dir_check_done = True
+  call_directory = os.getcwd()
+  file_dir = os.path.dirname(os.path.realpath(__file__))
+  project_root_dir = os.path.abspath(os.path.join(file_dir, '..', '..', '..'))
+
+  if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
+    return ""
+
+  # We will iterate upwards aka implement "cd .." until we reach the peano4 root, or until we find CMakeCache.txt 
+  current_iter_dir = call_directory
+  while current_iter_dir != project_root_dir:
+    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt"))
+    if found_cache_file:
+      find_CMake_build_dir.saved_CMake_build_dir = current_iter_dir
+      return current_iter_dir
+    current_iter_dir = os.path.abspath(os.path.join(current_iter_dir, ".."))
+
+  return find_CMake_build_dir.saved_CMake_build_dir
+
+find_CMake_build_dir.CMake_build_dir_check_done = False
+find_CMake_build_dir.saved_CMake_build_dir = ""
+
+def find_configure_log():
+  if find_configure_log.find_configure_log_check_done:
+    return find_configure_log.configure_log_path
+
+  find_configure_log.find_configure_log_check_done = True
+  find_configure_log.configure_log_path = ""
+
+  file_dir = os.path.dirname(os.path.realpath(__file__))
+  project_root_dir = os.path.abspath(os.path.join(file_dir, '..', '..', '..'))
+  if os.path.exists(os.path.join(project_root_dir, "config.log")):
+    find_configure_log.configure_log_path = os.path.join(project_root_dir, "config.log")
+
+  return find_configure_log.configure_log_path
+
+find_configure_log.find_configure_log_check_done = False
+find_configure_log.configure_log_path = ""
 
 def using_cuda_backend():
-  build_dir_path = find_cmake_build_dir()
-  if build_dir_path != "":
+  """
+  This function checks if the CUDA backend. Caches the result, after the first call calling this
+  function will have no cost as it returns a cached value. It checks the value for the GPU backend
+  saved in the CMakeCache.txt whether it is set to CUDA
+
+  :return: True if the CUDA backend is being used, False otherwise.
+  :rtype: bool
+  """
+  if using_cuda_backend.using_cuda_backend_check_done:
+    return using_cuda_backend.using_cuda_backend_cached_value
+
+  using_cuda_backend.using_cuda_backend_check_done = True
+  cmake_build_dir_path = find_CMake_build_dir()
+  if cmake_build_dir_path != "": # Check for CUDA while we are using CMake backend
     try:
-      with open(os.path.join(build_dir_path,"CMakeCache.txt")) as cache:
+      with open(os.path.join(cmake_build_dir_path,"CMakeCache.txt")) as cache:
         for line in cache:
           if "WITH_GPU:STRING=cuda" in line:
-            return True
+            using_cuda_backend.using_cuda_backend_cached_value = True
+            return using_cuda_backend.using_cuda_backend_cached_value
     except Exception:
-      return False
-  return False
+      using_cuda_backend.using_cuda_backend_cached_value = False
+      return using_cuda_backend.using_cuda_backend_cached_value
+  else: # Check for CUDA while we are using Automake backend
+    config_log_path = find_configure_log()
+
+    if config_log_path == "":
+      using_cuda_backend.using_cuda_backend_cached_value = False
+      return using_cuda_backend.using_cuda_backend_cached_value
+
+    for line in open(config_log_path):
+      if line.startswith("GPUOffloadingCUDA_TRUE=''"):
+        using_cuda_backend.using_cuda_backend_cached_value = True
+        return using_cuda_backend.using_cuda_backend_cached_value
+
+    using_cuda_backend.using_cuda_backend_cached_value = False
+    return using_cuda_backend.using_cuda_backend_cached_value
+
+  return using_cuda_backend.using_cuda_backend_cached_value
+
+using_cuda_backend.using_cuda_backend_check_done = False
+using_cuda_backend.using_cuda_backend_cached_value = False
+
+def caller_distance_to_build_root():
+  # File dir is under src/
+  file_dir = os.path.dirname(os.path.realpath(__file__))
+  # The root dir of the project is: ../../../ -> one more depth because of the out of source build
+  # The caller has to be inside the build directory
+  call_directory = os.getcwd()
+  project_root_dir = os.path.abspath(os.path.join(file_dir, '../../..', ))
+
+  # Ensure we call the script under Peano4 folder
+  if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
+    return -1
+
+  # We will iterate upwards aka implement "cd .." until we reach the peano4 root, or until we find CMakeCache.txt 
+  current_iter_dir = call_directory
+  dist = 0
+  while current_iter_dir != project_root_dir:
+    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt"))
+    if found_cache_file:
+      return dist
+    current_iter_dir =os.path.abspath(os.path.join(current_iter_dir, ".."))
+    dist += 1
+
+  return -1

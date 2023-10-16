@@ -19,6 +19,15 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
     """
 
     TemplateProject = """
+
+  bool isHangingCell = false;
+  for(int d=0; d<2*Dimensions; d++){
+    if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
+      isHangingCell = true;
+      break;
+    }
+  }
+
   if ({{PREDICATE}}) {
   
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -309,7 +318,7 @@ class Prediction_kernelgenerator(AbstractAderDGActionSet):
             d["USE_GRADQ"] = self._use_gradQ
             d["USE_PSI"] = self._use_psi
             d["PRECISIONS_CAPITALIZED"] = [
-                x.replace(" ", "_").capitalize()
+                x.replace(" ", "_").replace("std::", "").capitalize()
                 for x in d["PREDICTOR_COMPUTATION_PRECISIONS"]
             ]
 

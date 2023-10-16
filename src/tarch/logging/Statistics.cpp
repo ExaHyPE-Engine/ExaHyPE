@@ -3,6 +3,8 @@
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
 
+#include "tarch/la/ScalarOperations.h"
+
 #include <fstream>
 
 
@@ -153,7 +155,7 @@ void tarch::logging::Statistics::inc( const std::string& identifier, double valu
 #endif
 
 
-void tarch::logging::Statistics::writeToCSV( std::string filename ) {
+void tarch::logging::Statistics::writeToCSV( [[maybe_unused]] std::string filename ) {
 #ifdef TrackStatistics
   logDebug( "writeToCSV(string)", "start to dump statistics into file " << filename );
 
@@ -162,6 +164,16 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
   }
 
   filename += ".csv";
+
+  // only for stats
+  int totalNumberOfEntries = 0;
+  for (auto& p: _dataSetMap) {
+    totalNumberOfEntries += p.second._data.size();
+  }
+  for (auto& p: _logMessageMap) {
+    totalNumberOfEntries += p.second._data.size();
+  }
+  logInfo( "writeToCSV(string)", "write statistics to file " << filename << " (total no of entries=" << totalNumberOfEntries << ")" );
 
   std::ofstream file( filename );
   file << "t";
@@ -175,17 +187,21 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
 
   double t = 0.0;
   while (t<std::numeric_limits<double>::max()) {
-
     // find minimum time stamp over both types of logs
-    t = std::numeric_limits<double>::max();
+    t   = std::numeric_limits<double>::max();
+
+    auto computeT = [&](double currentT) {
+      t  =  std::min( t,  currentT );
+    };
+
     for (auto& p: _dataSetMap) {
       if (not p.second._data.empty()) {
-        t = std::min( t, std::get<0>(p.second._data.front()) );
+        computeT( std::get<0>(p.second._data.front()) );
       }
     } 
     for (auto& p: _logMessageMap) {
       if (not p.second._data.empty()) {
-        t = std::min( t, std::get<0>(p.second._data.front()) );
+        computeT( std::get<0>(p.second._data.front()) );
       }
     }
 
@@ -196,7 +212,7 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
         if (
           not p.second._data.empty()
           and
-          std::get<0>(p.second._data.front()) < t + _maxTimeInBetweenTwoMeasurements
+          tarch::la::smallerEquals( std::get<0>(p.second._data.front()), t )
         ) {
           file << ", (" << std::get<1>(p.second._data.front())
               << "/" << std::get<2>(p.second._data.front())
@@ -213,7 +229,7 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
         if (
           not pp.second._data.empty()
           and
-          std::get<0>(pp.second._data.front()) < t + _maxTimeInBetweenTwoMeasurements
+          tarch::la::smallerEquals( std::get<0>(pp.second._data.front()), t )
         ) {
           file << ", \"" << std::get<1>(pp.second._data.front()) << "\" ";
           pp.second._data.erase(pp.second._data.begin());
@@ -233,10 +249,7 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
 
   // close output file
   file.close();
-  logInfo( "writeToCSV(string)", "wrote statistics to file " << filename );
   #else
   logWarning( "writeToCSV(string)", "no statistics available. Recompile with -DTrackStatistics for runtime sampling" );
   #endif
 }
-
-

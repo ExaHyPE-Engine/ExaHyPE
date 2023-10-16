@@ -2,13 +2,9 @@
 
 @page multigrid_tutorials Tutorials
 
-\li \subpage benchmark_multigrid_petsc_poisson
-
-Here are some very simple multigrid tutorials:
-
-1. The \ref multigrid_tutorials_petsc_poisson "Poisson equation with PETSc" example
-   demonstrates how to solve the all-time classic of elliptic differential equations
-   with PETSc: We solve @f$ -\Delta u = f @f$ on the unit square. 
+\li \subpage tutorials_multigrid_petsc_continuous_galerkin_poisson
+\li \subpage tutorials_multigrid_petsc_mixed_dg_poisson
+\li \subpage benchmark_multigrid_petsc_hdg_discretisation
 
 
 */

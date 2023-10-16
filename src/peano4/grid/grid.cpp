@@ -1,5 +1,6 @@
 #include "grid.h"
 
+#include "GridVertex.h"
 #include "AutomatonState.h"
 #include "GridControlEvent.h"
 #include "GridStatistics.h"
@@ -10,56 +11,7 @@ namespace {
   [[maybe_unused]] tarch::logging::Log _log("peano4::grid");
 } // namespace
 
-peano4::DataStorageScheme peano4::dataStorageScheme(bool predicateForLoad, bool predicateForStore) {
-  return dataStorageScheme(true, predicateForLoad, predicateForStore);
-}
 
-/**
- * Constructs a data storage scheme
- *
- * Same as the other constructor, assuming that its predicateToUseData
- * holds all the time.
- *
- * predicateToUseData | predicateForLoad | predicateForStore |  Result        | Description
- * -------------------|------------------|-------------------|----------------|-------------
- * False              | False            | False             | NoData         | Just ignore the data, as it is not used
- * False              | True             | False             | LoadFromInputStream_ProvideToCalculations_Discard | Load
- * it (and keep it as you've loaded it anyway) but then throw it away, as it is not used False              | False |
- * True              | CreateDummy_ProvideToCalculations_StoreToOutputStream | It will not be used, but create a dummy,
- * as it has to be stored eventually False              | True             | True              | assertion      | Makes
- * no sense True               | False            | False             | CreateDummy_ProvideToCalculations_Discard | Data
- * is required temporarily throughout calculations but not persistent in-between two grid sweeps True               |
- * True             | False             | LoadFromInputStream_ProvideToCalculations_Discard | Data flow-wisely the same
- * as False, True, False True               | False            | True              |
- * CreateDummy_ProvideToCalculations_StoreToOutputStream | Introduce a new piece of data into the data flow. Same as
- * false, false, true True               | True             | True              |
- * LoadFromInputStream_ProvideToCalculations_StoreToOutputStream | Proper piece of data that's held persistently
- * in-between two mesh sweeps
- *
- */
-peano4::DataStorageScheme peano4::dataStorageScheme(
-  bool predicateToUseData, bool predicateForLoad, bool predicateForStore
-) {
-  if (not predicateToUseData and not predicateForLoad and not predicateForStore)
-    return DataStorageScheme::NoData;
-  if (not predicateToUseData and predicateForLoad and not predicateForStore)
-    return DataStorageScheme::LoadFromInputStream_ProvideToCalculations_Discard;
-  if (not predicateToUseData and not predicateForLoad and predicateForStore)
-    return DataStorageScheme::CreateDummy_ProvideToCalculations_StoreToOutputStream;
-  if (not predicateToUseData and predicateForLoad and predicateForStore)
-    assertion(false);
-  if (predicateToUseData and not predicateForLoad and not predicateForStore)
-    return DataStorageScheme::CreateDummy_ProvideToCalculations_Discard;
-  if (predicateToUseData and predicateForLoad and not predicateForStore)
-    return DataStorageScheme::LoadFromInputStream_ProvideToCalculations_Discard;
-  if (predicateToUseData and not predicateForLoad and predicateForStore)
-    return DataStorageScheme::CreateDummy_ProvideToCalculations_StoreToOutputStream;
-  if (predicateToUseData and predicateForLoad and predicateForStore)
-    return DataStorageScheme::LoadFromInputStream_ProvideToCalculations_StoreToOutputStream;
-
-  assertion(false);
-  return DataStorageScheme::NoData;
-}
 
 std::string peano4::SplitInstruction::toString(peano4::SplitInstruction::Mode mode) {
   switch (mode) {
@@ -111,11 +63,11 @@ bool peano4::grid::overlaps(const tarch::la::Vector<Dimensions, double>& x, cons
 }
 
 peano4::grid::GridVertex peano4::grid::createVertex(
-  GridVertex::State                            state,
-  const tarch::la::Vector<Dimensions, double>& x,
-  int                                          level,
-  const tarch::la::Vector<TwoPowerD, int>&     adjacentRanks,
-  bool                                         isNewFineGridVertex
+  [[maybe_unused]] GridVertex::State                            state,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions,double>&  x,
+  [[maybe_unused]] int                                          level,
+  [[maybe_unused]] const tarch::la::Vector<TwoPowerD,int>&      adjacentRanks,
+  [[maybe_unused]] bool                                         isNewFineGridVertex
 ) {
   GridVertex result;
 
@@ -159,7 +111,7 @@ std::string peano4::grid::toString(const std::list<GridControlEvent>& events) {
 }
 
 std::vector<peano4::grid::GridControlEvent> peano4::grid::merge(
-  std::vector<GridControlEvent> events, const double Tolerance
+  std::vector<GridControlEvent> events, [[maybe_unused]] const double Tolerance
 ) {
   logTraceInWith1Argument("merge(...)", events.size());
 
@@ -199,6 +151,7 @@ std::vector<peano4::grid::GridControlEvent> peano4::grid::merge(
 void peano4::grid::internal::sort(std::list<peano4::grid::GridControlEvent>& events) {
 
   auto compare = [](const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs) -> bool {
+    if ( tarch::la::smaller( tarch::la::volume(lhs.getH()), tarch::la::volume(rhs.getH()) ) ) return true; 
     for (int d = 0; d < Dimensions; d++) {
       if (tarch::la::smaller(lhs.getOffset(d), rhs.getOffset(d)))
         return true;
@@ -269,8 +222,8 @@ peano4::grid::GridStatistics operator+(peano4::grid::GridStatistics lhs, peano4:
     lhs.getNumberOfLocalRefinedCells() + rhs.getNumberOfLocalRefinedCells(),
     lhs.getNumberOfRemoteRefinedCells() + rhs.getNumberOfRemoteRefinedCells(),
     std::min(lhs.getStationarySweeps(), rhs.getStationarySweeps()),
-    lhs.getCoarseningHasBeenVetoed() | rhs.getCoarseningHasBeenVetoed(),
-    lhs.getRemovedEmptySubtree() | rhs.getRemovedEmptySubtree(),
+    lhs.getCoarseningHasBeenVetoed() or rhs.getCoarseningHasBeenVetoed(),
+    lhs.getRemovedEmptySubtree() or rhs.getRemovedEmptySubtree(),
     tarch::la::min(lhs.getMinH(), rhs.getMinH())
   );
 }
@@ -439,7 +392,7 @@ peano4::grid::GridControlEvent peano4::grid::internal::createBoundingBoxEvent(
   return GridControlEvent(rhs.getRefinementControl(), boundingEventOffset, boundingEventSize, rhs.getH());
 };
 
-void peano4::grid::reduceGridControlEvents(std::vector<GridControlEvent>& events) {
+void peano4::grid::reduceGridControlEvents([[maybe_unused]] std::vector<GridControlEvent>& events) {
 #ifdef Parallel
   std::vector<GridControlEvent> localEvents = events;
   int                           localSize   = events.size();
@@ -454,7 +407,7 @@ void peano4::grid::reduceGridControlEvents(std::vector<GridControlEvent>& events
     totalSize += sizes[i];
   }
   events.resize(totalSize);
-  logInfo(
+  logDebug(
     "reduceGridControlEvents(...)",
     "we have "
       << totalSize << " grid control event(s) over all ranks, while the local rank hosts " << events.size()

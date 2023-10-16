@@ -67,7 +67,7 @@ class Project(object):
         self.algorithm_step_plot = peano4.solversteps.Step("Plot", False)
 
         self.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals
+            swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec
         )
         self.initialisation_steps_task_graph_compiler = (
             swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals
@@ -78,7 +78,7 @@ class Project(object):
 
         load_balancer_name: string
           Should be full-qualified name of the load balancer.
-          By default, I recommend to pass "toolbox::loadbalancing::SpreadOutHierarchically",
+          By default, I recommend to pass "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
           but you might be well-advices to study different classes within the
           namespace toolbox::loadbalancing
 
@@ -196,7 +196,7 @@ citation of the original SWIFT paper
             readme_text += (
                 """
 
-    We assume that you use a domain of ("""
+We assume that you use a domain of ("""
                 + str(self._domain_offset[0])
                 + ""","""
                 + str(self._domain_size[0] - self._domain_offset[0])
@@ -247,19 +247,56 @@ The coarsest regular mesh hence will host """
 
 Once this resultion is reached, the mesh will stop the initial load balancing, insert the 
 particles and then kick off the simulation. The mesh might be refined and erased subsequently,
-but it will never become closer than these constraints.
+but it will never become coarser than these constraints.
+
+Each particle provides its own additional meshing constraints:
+
+Species | max_h | coarsest level | min_h | finest level
+--------|-------|----------------|-------|-------------"""
+        )
+
+        for i in self._particle_species:
+            readme_text += """
+{} | {} | {} | {} | {}
+""".format(
+                i.name,
+                self.real_mesh_size(i.max_h)[0],
+                self.real_mesh_size(i.max_h)[1],
+                self.real_mesh_size(i.min_h)[0],
+                self.real_mesh_size(i.min_h)[1],
+            )
+
+        readme_text += """
+
+The meshing quantities abive are species-specific. Once you have multiple 
+particle species, the actual grid results from a combination of their 
+properties, and some species particles might reside on different resolution 
+levels.
 
 """
-        )
         self._project.output.readme.add_package_description(readme_text)
 
-    def __real_max_mesh_size(self):
+    def real_mesh_size(self, target_h):
+        """!
+
+        Translate a mesh size into its real Peano mesh size
+
+        Peano uses three-partitioning. That is, it will neve be able to match
+        given refinement instructions exactly. All it can do is to approximate
+        them. See @ref
+
+        Return a tuple of mesh size and mesh levels
+
+        """
         h = self._domain_size[0]
         level = 0
-        while h > self._global_max_h:
+        while h > target_h:
             h = h / 3.0
             level += 1
         return (h, level)
+
+    def __real_max_mesh_size(self):
+        return self.real_mesh_size(self._global_max_h)
 
     def __configure_makefile(self):
         self._project.output.makefile.set_dimension(self._dimensions)
@@ -412,8 +449,13 @@ but it will never become closer than these constraints.
         self.__compute_global_max_h()
 
         #
-        # Make pre-defined mesh traversals resort the particles. For this, they need
-        # the species set
+        # Make plotting resort and filter the particles. For this, they need
+        # the species set. The initialisation steps and the actual time steps
+        # are added the resorting action sets by the graph compiler, i.e. we
+        # should and we may not add them here manually. It is only the plotting
+        # (and the grid construction) which are not automatically added the
+        # sorting steps. However, the grid construction does not hold any
+        # particles yet, so we don't have to deal with this algorithm phase.
         #
         for current_species_set in self._particle_species_set:
             self.algorithm_step_plot.add_action_set(
@@ -421,16 +463,8 @@ but it will never become closer than these constraints.
                     current_species_set
                 )
             )
-            self.algorithm_step_initial_conditions.add_action_set(
-                peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(
-                    current_species_set
-                )
-            )
 
             self.algorithm_step_plot.add_action_set(
-                peano4.toolbox.particles.UpdateParallelState(current_species_set)
-            )
-            self.algorithm_step_initial_conditions.add_action_set(
                 peano4.toolbox.particles.UpdateParallelState(current_species_set)
             )
 
@@ -438,10 +472,10 @@ but it will never become closer than these constraints.
         # Create mesh traversals aka solver steps
         #
         initialisation_steps = self.initialisation_steps_task_graph_compiler(
-            self._particle_species_set
+            species_sets=self._particle_species_set, verbose=verbose
         )
         solver_steps = self.algorithm_steps_task_graph_compiler(
-            self._particle_species_set
+            species_sets=self._particle_species_set, verbose=verbose
         )
 
         #

@@ -10,11 +10,23 @@
 
 #include "exahype2/LoadBalancingConfiguration.h"
 #include "exahype2/RefinementControlService.h"
+#include "exahype2/UserInterface.h"
+
+#include "tarch/multicore/Core.h"
+#include "tarch/accelerator/Device.h"
+
 
 {% for item in TRACERS -%}
-#include "vertexdata/{{ item }}.h"
+#include "vertexdata/{{ item }}Set.h"
+#include "globaldata/{{ item }}.h"
 {# Comment to ensure that jinja2 adds a new line#}
 {%- endfor %}
+
+
+{% for INCLUDE in ADDITIONAL_INCLUDES %}
+#include "{{INCLUDE}}"
+{% endfor %}
+
 
 #include <algorithm>
 
@@ -105,7 +117,7 @@ double getMinMeshSize() {
 
 
 double getMaxMeshSize() {
-  double result = 0.0;
+  double result = 0;
   {% for item in SOLVERS -%}
   result = std::max( result, {{ item[1] }}.getMaxMeshSize() );
   {# Comment to ensure that jinja2 adds a new line#}
@@ -115,9 +127,9 @@ double getMaxMeshSize() {
 
 
 double getMaxAdmissibleMeshSize() {
-  double result = 0.0;
+  double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-  result = std::max( result, {{ item[1] }}.MaxAdmissibleCellH );
+  result = std::min( result, {{ item[1] }}.MaxAdmissibleCellH );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
@@ -151,6 +163,14 @@ double getMaxTimeStepSize() {
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result;
+}
+
+
+void suspendSolversForOneGridSweep() {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.suspendSolversForOneGridSweep();
+  {# Comment to ensure that jinja2 adds a new line#}
+  {%- endfor %}
 }
 
 
@@ -207,7 +227,7 @@ void finishTimeStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -228,7 +248,7 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -291,7 +311,7 @@ void finishGridInitialisationStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -307,7 +327,7 @@ void finishPlottingStep() {
   {%- endfor %}
 
   {% for item in TRACERS -%}
-  vertexdata::{{ item }}::finishedTraversal();
+  vertexdata::{{ item }}Set::finishedTraversal();
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
 
@@ -337,6 +357,32 @@ void finishSimulation() {
   {%- endfor %}
   loadBalancer.finishStep();
   ::exahype2::RefinementControlService::getInstance().finishStep();
+}
+
+
+void initLogFilters() {
+  {% if LOG_FILTER_FILE!="" %}
+  if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( "{{LOG_FILTER_FILE}}" ) ) {
+    // manual selection, as log filters are not there yet
+    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      logWarning( "main()", "filter file {{LOG_FILTER_FILE}} not found or file has been corrupted. Use default logging configuration" );
+    }
+    ::exahype2::setDefaultLogStatements();
+  }
+  {% else %}
+  ::exahype2::setDefaultLogStatements();
+  {% endif %}
+}
+
+void initSharedMemoryAndGPUEnvironment() {
+
+  {% if TIMEOUT>=0 %}
+  tarch::mpi::Rank::getInstance().setDeadlockTimeOut( {{TIMEOUT}} );
+  {% endif %}
+  tarch::multicore::Core::getInstance().configure( {{NUMBER_OF_THREADS}} );
+  tarch::accelerator::Device::getInstance().configure( { {{GPUS|join(",")}} } );
+  tarch::multicore::setOrchestration( {{MULTICORE_ORCHESTRATION}} );
+
 }
 
 

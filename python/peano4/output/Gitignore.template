@@ -24,6 +24,5 @@ solution-*
 
 Constants.h
 README-*
-GeneratedSubdirectories.cmake
 CMakeLists.txt
 .gitignore

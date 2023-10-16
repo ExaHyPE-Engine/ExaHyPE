@@ -634,7 +634,6 @@ class tarch::logging::Log {
      */
     void warning(const std::string& methodName, Message logMacroMessage);
 
-
     /**
      * Log an Error
      *
@@ -672,5 +671,3 @@ class tarch::logging::Log {
 
     static void flushBeforeAssertion();
 };
-
-

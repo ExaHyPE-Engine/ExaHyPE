@@ -8,7 +8,6 @@
 //
 #pragma once
 
-
 {{SOLVER_INCLUDES}}
 
 #include "exahype2/RefinementControl.h"
@@ -21,7 +20,6 @@
 
 #include "Constants.h"
 
-
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
@@ -32,14 +30,12 @@
   }
 {%- endfor %}
 
-
-
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
-
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
+      Suspended,
       Plotting {% for item in range(RK_STEPS) -%}
       ,
       ProjectOnFacesAndComputeVolumeIntegralOfStep{{item}},
@@ -87,7 +83,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
-
     /**
      * Evaluate refinement criterion over cell
      *
@@ -98,11 +93,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
 
     /**
      *
@@ -122,12 +116,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void initialCondition(
       double * __restrict__                        Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       const tarch::la::Vector<Dimensions,int>&     index,
       bool                                         gridIsConstructred
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<none>" %}
     {% else %}
@@ -140,13 +133,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual void boundaryConditions(
       const double * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
       double                                       t,
       int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
     {% endif %}
 
 
+    virtual void suspendSolversForOneGridSweep() override;
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -160,8 +154,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishGridConstructionStep() override;
 
-
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -173,9 +165,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * operation is still invoked.
      */
     virtual void finishGridInitialisationStep() override;
-
-
-
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -194,7 +183,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishTimeStep() override;
 
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -211,7 +199,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * operation is still invoked.
      */
     virtual void finishPlottingStep() override;
-
 
     /**
      * @param currentTimeStep If you set this to false, you'll get the
@@ -264,7 +251,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * implementation is still invoked, too.
      */
     virtual void finishSimulation() override;
-
 
     {% if STATELESS_PDE_TERMS %}
     /**
@@ -320,5 +306,3 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
   {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 };
-
-

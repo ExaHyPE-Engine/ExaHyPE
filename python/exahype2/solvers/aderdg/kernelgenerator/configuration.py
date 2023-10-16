@@ -72,13 +72,21 @@ class Configuration:
     validPrecisions = [
         "float",
         "double",
-        "long double"
+        "long double",
+        "std::float16_t",
+        "std::bfloat16_t"
     ]
 
 
     # set to false to use standard loops instead of libxsmm
 #    useLibxsmm = True;
     useLibxsmm = False;
+
+    useBLIS = False;
+
+    useEigen = False;
+
+    useLibxsmmJIT = False;
 
     # set to true to print models runtime
     runtimeDebug = False;

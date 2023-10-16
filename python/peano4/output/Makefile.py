@@ -8,8 +8,9 @@ import subprocess
 import jinja2
 
 from .Helper import write_file
-from .Helper import find_cmake_build_dir
+from .Helper import find_CMake_build_dir
 from .Helper import using_cuda_backend
+from .Helper import caller_distance_to_build_root
 
 from .Overwrite import Overwrite
 
@@ -68,26 +69,25 @@ MODE            = {{MODE}}
 
 ### MPI parallelisation
 
-Peano's distributed memory parallelisation is based upon plain space-filling 
-curves which are used first to split the cells among the ranks, and, after   
-that, to split the cells into chunks and deploy them onto cores (if shared   
-memory is used). There is no particularly novel contribution/paper on this   
-aspect of the code. The paper that is (algorithmically) most interesting is  
-an old EuroPar publication:                                                 
-
+Peano's distributed memory parallelisation is based upon plain space-filling
+curves which are used first to split the cells among the ranks, and, after
+that, to split the cells into chunks and deploy them onto cores (if shared
+memory is used). There is no particularly novel contribution/paper on this
+aspect of the code. The paper that is (algorithmically) most interesting is
+an old EuroPar publication:
 
        @InProceedings{Bungartz:2006:Parallelisation,
-         author={Bungartz, Hans-Joachim and Mehl, Miriam and Weinzierl, Tobias}, 
-         editor={Nagel, Wolfgang E. and Walter, Wolfgang V. and Lehner, Wolfgang}, 
-         title={A Parallel Adaptive Cartesian PDE Solver Using Space--Filling Curves},  
-         booktitle={Euro-Par 2006 Parallel Processing}, 
-         year={2006}, 
-         publisher={Springer Berlin Heidelberg}, 
-         address={Berlin, Heidelberg}, 
-         pages={1064--1074}, 
+         author={Bungartz, Hans-Joachim and Mehl, Miriam and Weinzierl, Tobias},
+         editor={Nagel, Wolfgang E. and Walter, Wolfgang V. and Lehner, Wolfgang},
+         title={A Parallel Adaptive Cartesian PDE Solver Using Space--Filling Curves},
+         booktitle={Euro-Par 2006 Parallel Processing},
+         year={2006},
+         publisher={Springer Berlin Heidelberg},
+         address={Berlin, Heidelberg},
+         pages={1064--1074},
          abstract={In this paper, we present a parallel multigrid PDE solver working on adaptive hierarchical cartesian grids. The presentation is restricted to the linear elliptic operator of second order, but extensions are possible and have already been realised as prototypes. Within the solver the handling of the vertices and the degrees of freedom associated to them is implemented solely using stacks and iterates of a Peano space--filling curve. Thus, due to the structuredness of the grid, two administrative bits per vertex are sufficient to store both geometry and grid refinement information. The implementation and parallel extension, using a space--filling curve to obtain a load balanced domain decomposition, will be formalised. In view of the fact that we are using a multigrid solver of linear complexity {\\$}{\\backslash}mathcal{\\{}O{\\}}(n){\\$}, it has to be ensured that communication cost and, hence, the parallel algorithm's overall complexity do not exceed this linear behaviour.}, 
-         isbn={978-3-540-37784-9} 
-       } 
+         isbn={978-3-540-37784-9}
+       }
 
 {% endif %}
 {% if SharedOMP %}
@@ -98,20 +98,20 @@ Peano 4 run uses a wrapper around OpenMP to obtain a high task efficiency.
 The wrapper can be read as user-level threading implemented on top of OpenMP's
 tasking mechanism. It is described in
 
-       @article{Schulz:2021:Tasking,   
+       @article{Schulz:2021:Tasking,
          title = {Task inefficiency patterns for a wave equation solver},
-         journal = {IWOMP},   "
-         year = {2021},   
+         journal = {IWOMP},"
+         year = {2021},
          author = {Holger Schulz and Gonzalo Brito Gadeschi and Oleksandr Rudyy and Tobias Weinzierl},
-      } 
+      }
 
 {% endif %}
 
 {% if SharedOMP %}
 
-Peano relies on a mixture of classic domain decomposition and task-based  
-parallelism. The domain decomposition provides the baseline performance,  
-and the tasking adds the big flexibility and scalability gain on top. The 
+Peano relies on a mixture of classic domain decomposition and task-based
+parallelism. The domain decomposition provides the baseline performance,
+and the tasking adds the big flexibility and scalability gain on top. The
 key publication discussing the overall idea and algorithmic ingredients is
 the SISC paper
 
@@ -153,6 +153,9 @@ the SISC paper
         self.d["GENERATED_INCLUDE_DIRS"] = set()
         self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
         self.d["CMAKE_LIBS"] = []
+        self.d["USING_CMAKE"] = False
+        self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = ""
+        self.d["CMAKE_MAKE_COMMAND"] = ""
         self.set_mode(CompileMode.Debug)
         self.clear_files()
 
@@ -290,7 +293,7 @@ the SISC paper
         src and parse the Makefile there.
         """
         self.d["CONFIGUREPATH"] = directory
-        cmake_path = find_cmake_build_dir()
+        cmake_path = find_CMake_build_dir()
         if cmake_path != "":
             return
 
@@ -366,6 +369,15 @@ did search for a file """
                 "CXXFLAGS",
                 "LDFLAGS",
                 "LIBS",
+                "CUDA_LIBS",
+                "NVCC",
+                "CUDA_PATH",
+                "CUDA_INCLUDE_FLAGS",
+                "NVCC_FLAGS_RELEASE",
+                "NVCC_FLAGS_STATS",
+                "NVCC_FLAGS_ASSERTS",
+                "NVCC_FLAGS_TRACE",
+                "NVCC_FLAGS_DEBUG"
             ]
 
             for line in input:
@@ -434,6 +446,16 @@ did search for a file """
             self.hfiles.remove(filename)
 
     def add_cu_file(self, filename, generated=False):
+        """
+        Adds a CUDA (.cu) file to the list of files. If the file is not generated, it is assumed that the
+        file was existing at time of the call (a generated file will be generated later) therefore we need
+        two separate lists for both files
+
+        :param filename: The name of the CUDA file to add.
+        :type filename: str
+        :param generated: Indicates whether the file is generated (True) or not (False). Default is False.
+        :type generated: bool
+        """
         if generated:
             if (
                 self.generated_cufiles.count(filename) == 0
@@ -462,6 +484,11 @@ did search for a file """
         All the standard Peano 4 routines rely on this function to add their
         generated files to the build environment. Nothing stops you however to
         add more files yourself.
+
+        Since the GPU code is templated, using CUDA backend means that the main file and the
+        subsequent compilation units need to be CUDA (.cu) files. To preserve backward
+        compatability and seamless user experience; this call generates CUDA (.cu) files
+        instead of C++ (.cpp) files when using CUDA backend.
 
         filename: String
            Filename of a C++ file. They usually should have the .cpp/.cxx extension.
@@ -562,12 +589,12 @@ did search for a file """
             )
         if module_file in self.d["FORTRAN_MODULES"] and not force:
             print(
-                """Fortran module file 
+                """Fortran module file
 """
                 + module_file
                 + """
-is already in module file list. Did not add it once more. You can overwrite 
-this default behaviour via the force attribute in add_Fortran_module(). If 
+is already in module file list. Did not add it once more. You can overwrite
+this default behaviour via the force attribute in add_Fortran_module(). If
 you create multiple Peano 4 makefiles in a row (as you change parameters, e.g.)
 then this message can typically be ignored.
 """
@@ -587,7 +614,23 @@ then this message can typically be ignored.
             self.add_Fortran_module(i)
 
     def generate(self, overwrite, directory):
-        cmake_build_dir = find_cmake_build_dir()
+        """
+        Generates build files and other project-related files based on templates.
+
+        If using the Automake then a Makefile is generated, if using CMake then
+        a CMakeLists.txt for the generated application is generated. A
+        GeneratedSubdirectories.cmake is generated to add the target to the project.
+        In the CMake backend a modified Makefile is produced where calling make will
+        change directories and call the cmake's defined make command.
+
+        A .gitignore is also generated depending on the project files.
+
+        :param overwrite: Specifies whether existing files should be overwritten.
+        :type overwrite: bool
+        :param directory: The directory where the generated files will be placed.
+        :type directory: str
+        """
+        cmake_build_dir = find_CMake_build_dir()
         self.d["CMAKE_BUILD_DIR"] = cmake_build_dir
         self.d["H_HEADERS"] = self.hfiles
         self.d["CXX_SOURCES"] = self.cppfiles
@@ -598,8 +641,25 @@ then this message can typically be ignored.
         self.d["GENERATED_CU_SOURCES"] = self.generated_cufiles
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
         self.d["GENERATOR"] = sys.argv[0]
+        self.d["USING_CMAKE"] = cmake_build_dir != ""
+        self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
-        # Anonymous function that generates the output_file_path from input_file_path template
+        # In the CMake backend we add a command that allows to build the generated application in the applicaiton directory
+        # To be able to do it, we need to change directory to project build directory and call make from there with the target name
+        # So that we do not build everything (all), and of course we need to propagate every make flag give with $(MAKEFLAGS)
+        # See the Makefile.template for the resulting command
+        if cmake_build_dir != "":
+            dist = caller_distance_to_build_root()
+            command = 'cd '
+            if dist != 0:
+                command += '../' * dist
+            else:
+                command += '.'
+            self.d["CMAKE_MAKE_COMMAND"] = command
+
+        # Anonymous function that generates the output_file_path from input_file_path template,
+        # As we might generate both for CMake (2 files) and Make (1 File) or only for Make
+        # We also use the anoynmous function to generate the .gitignore
         def generate_build_file(input_file_path, output_file_path):
             if write_file(overwrite, self.default_overwrite, output_file_path):
                 print("write " + output_file_path)
@@ -627,6 +687,7 @@ then this message can typically be ignored.
 
         file_dir = os.path.dirname(os.path.realpath(__file__))
 
+        # Pairs in the form of (input file, output file)
         template_output_pairs = list()
 
         template_output_pairs.append(
@@ -635,12 +696,7 @@ then this message can typically be ignored.
                 os.path.join(directory, "Makefile"),
             )
         )
-        template_output_pairs.append(
-            (
-                os.path.join(file_dir, "CMakeLists.txt.template"),
-                os.path.join(directory, "CMakeLists.txt"),
-            )
-        )
+
         template_output_pairs.append(
             (
                 os.path.join(file_dir, "Gitignore.template"),
@@ -648,25 +704,24 @@ then this message can typically be ignored.
             )
         )
 
-        # We do not want the same line multiple times as it creates build problems, so we read it into a set
-        # and do not write if the new executable entry is already inside.
-        generated_paths_filepath = os.path.join(
-            self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectories.cmake"
-        )
-        print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
-        generated_paths_before = os.path.exists(generated_paths_filepath)
-        generated_path_entries = set()
+        cmake_list_output_pair = (
+                os.path.join(file_dir, "CMakeLists.txt.template"),
+                os.path.join(directory, "CMakeLists.txt"),)
 
-        if generated_paths_before:
-            with open(generated_paths_filepath, "r") as generated_paths_file:
-                for line in generated_paths_file.readlines():
-                    generated_path_entries.add(line)
+        # Currently we support 1 generated application at a time.
+        # To add the generated application sub directory to the CMake build tree,
+        # we write it to a file called GeneratedSubdirectory.cmake in the build directory root.
+        if cmake_build_dir != "":
+          generated_paths_filepath = self.d["GENERATED_SUBDIRECTORY_FULLPATH"]
 
-        # Only append to the file only if doesnt exist before
-        generated_entry = f"add_subdirectory({os.path.abspath(directory)})\n"
-        if not generated_entry in generated_path_entries:
-            with open(generated_paths_filepath, "a") as subdir_cmake:
-                subdir_cmake.write(f"add_subdirectory({os.path.abspath(directory)})\n")
+          print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
+
+          with open(generated_paths_filepath, "w") as subdir_cmake:
+              subdir_cmake.write(f"add_subdirectory({os.path.abspath(directory)})\n")
 
         for template, output_file in template_output_pairs:
             generate_build_file(template, output_file)
+
+        # Generate CMakeLists only if we are using the CMake backend (CMake build directory found)
+        if cmake_build_dir != "":
+          generate_build_file(cmake_list_output_pair[0], cmake_list_output_pair[1])

@@ -2,9 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/tests/TestCase.h"
-
 
 namespace exahype2 {
   namespace dg {
@@ -14,19 +12,18 @@ namespace exahype2 {
   }
 }
 
-
 class exahype2::dg::tests::CellIntegralTest : public tarch::tests::TestCase {
   private:
-    const double Order4_QuadraturePoints1d[4+1];
-    const double Order4_MassMatrixDiagonal1d[4+1];
-    const double Order4_StiffnessOperator1d[(4+1)*(4+1)];
-    const double Order4_DerivativeOperator1d[(4+1)*(4+1)];
-    const double Order4_BasisFunctionValuesLeft1d[4+1];
+    const double _Order4_QuadraturePoints1d[4+1];
+    const double _Order4_MassMatrixDiagonal1d[4+1];
+    const double _Order4_StiffnessOperator1d[(4+1)*(4+1)];
+    const double _Order4_DerivativeOperator1d[(4+1)*(4+1)];
+    const double _Order4_BasisFunctionValuesLeft1d[4+1];
 
-    const double Order2_QuadraturePoints1d[2+1];
-    const double Order2_MassMatrixDiagonal1d[2+1];
-    const double Order2_StiffnessOperator1d[(2+1)*(2+1)];
-    const double Order2_DerivativeOperator1d[(2+1)*(2+1)];
+    const double _Order2_QuadraturePoints1d[2+1];
+    const double _Order2_MassMatrixDiagonal1d[2+1];
+    const double _Order2_StiffnessOperator1d[(2+1)*(2+1)];
+    const double _Order2_DerivativeOperator1d[(2+1)*(2+1)];
 
     /**
      * I initialise all velocity data with zero, and set density to 1.
@@ -53,5 +50,3 @@ class exahype2::dg::tests::CellIntegralTest : public tarch::tests::TestCase {
 
     virtual void run() override;
 };
-
-

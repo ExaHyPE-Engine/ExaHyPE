@@ -2,15 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/logging/Log.h"
-
+#include "tarch/multicore/BooleanSemaphore.h"
 
 namespace swift2 {
   class ParticleSpecies;
-}
-
+} // namespace swift2
 
 /**
  * Represent one type (species) of particles
@@ -27,96 +24,97 @@ namespace swift2 {
  *
  */
 class swift2::ParticleSpecies {
-  private:
-    static tarch::logging::Log                 _log;
-    static tarch::multicore::BooleanSemaphore  _semaphore;
+private:
+  static tarch::logging::Log                _log;
+  static tarch::multicore::BooleanSemaphore _semaphore;
 
-    double _minTimeStepSize;
-    double _maxTimeStepSize;
+  double _minTimeStepSize;
+  double _maxTimeStepSize;
 
-    double _minTimeStamp;
-    double _maxTimeStamp;
+  double _minTimeStamp;
+  double _maxTimeStamp;
 
-    double _minCutOffRadius;
-    double _maxCutOffRadius;
+  double _minSearchRadius;
+  double _maxSearchRadius;
 
-    double _minVelocity;
-    double _maxVelocity;
+  double _minVelocity;
+  double _maxVelocity;
 
-    bool _rerunPreviousGridSweep;
-  public:
-    /**
-     * Initialise all data with the data corresponding to a clear, i.e.
-     * from where they can be properly reduced. The only exception is
-     * the time stamp. Both the maximum and minimum time step are set
-     * to zero. If we set the max time stamp to inf, the code would
-     * immediately terminate, as it thinks at least one particle has
-     * reached the final time stamp.
-     */
-    ParticleSpecies();
-    ParticleSpecies( const ParticleSpecies& copy ) = delete;
+  bool _rerunPreviousGridSweep;
 
-    double getMinTimeStepSize() const;
-    double getMaxTimeStepSize() const;
+public:
+  /**
+   * Initialise all data with the data corresponding to a clear, i.e.
+   * from where they can be properly reduced. The only exception is
+   * the time stamp. Both the maximum and minimum time step are set
+   * to zero. If we set the max time stamp to inf, the code would
+   * immediately terminate, as it thinks at least one particle has
+   * reached the final time stamp.
+   */
+  ParticleSpecies();
+  ParticleSpecies(const ParticleSpecies& copy) = delete;
 
-    double getMinTimeStamp() const;
-    double getMaxTimeStamp() const;
+  double getMinTimeStepSize() const;
+  double getMaxTimeStepSize() const;
 
-    double getMinCutOffRadius() const;
-    double getMaxCutOffRadius() const;
+  double getMinTimeStamp() const;
+  double getMaxTimeStamp() const;
 
-    double getMinVelocity() const;
-    double getMaxVelocity() const;
+  double getMinSearchRadius() const;
+  double getMaxSearchRadius() const;
 
-    /**
-     * Query species whether the last grid sweep/update sweep has to be
-     * repeated. This happens if the cut-off radius changes for example.
-     */
-    bool rerunPreviousGridSweep() const;
+  double getMinVelocity() const;
+  double getMaxVelocity() const;
 
-    /**
-     * Set the rerun flag back to false.
-     */
-    void clearRerunPreviousGridSweepFlag();
+  /**
+   * Query species whether the last grid sweep/update sweep has to be
+   * repeated. This happens if the search radius changes for example.
+   */
+  bool rerunPreviousGridSweep() const;
 
-    /**
-     * The rerun flag can only be activated. You cannot deactivate it.
-     */
-    void setRerunPreviousGridSweep();
+  /**
+   * Set the rerun flag back to false.
+   */
+  void clearRerunPreviousGridSweepFlag();
 
-    /**
-     * Set both min and max time stamp.
-     */
-    void setTimeStamp( double t, bool reduceInsteadOfOverwrite=true );
-    void setTimeStamp( double tMin, double tMax, bool reduceInsteadOfOverwrite=true );
-    void setTimeStepSize( double dt, bool reduceInsteadOfOverwrite=true );
-    void setTimeStepSize( double dtMin, double dtMax, bool reduceInsteadOfOverwrite=true );
+  /**
+   * The rerun flag can only be activated. You cannot deactivate it.
+   */
+  void setRerunPreviousGridSweep();
 
-    /**
-     * Set the maximum velocity that has been observed in a cell. This routine
-     * takes the maximum velocity as observed so far and updates it if value is
-     * bigger.
-     *
-     * The routine is thread-safe.
-     */
-    void setVelocity(double vMin, double vMax, double rMin, double rMax);
+  /**
+   * Set both min and max time stamp.
+   */
+  void setTimeStamp(double t, bool reduceInsteadOfOverwrite = true);
+  void setTimeStamp(double tMin, double tMax, bool reduceInsteadOfOverwrite = true);
+  void setTimeStepSize(double dt, bool reduceInsteadOfOverwrite = true);
+  void setTimeStepSize(double dtMin, double dtMax, bool reduceInsteadOfOverwrite = true);
 
-    /**
-     * This routine is automatically called for each and every species by the
-     * GlobalState object.
-     */
-    void startTimeStep();
+  /**
+   * Set the maximum velocity that has been observed in a cell. This routine
+   * takes the maximum velocity as observed so far and updates it if value is
+   * bigger.
+   *
+   * The routine is thread-safe.
+   */
+  void setVelocity(double vMin, double vMax, double rMin, double rMax);
 
-    /**
-     *
-     * This routine is automatically called for each and every species by the
-     * GlobalState object.
-     */
-    void finishTimeStep();
+  /**
+   * This routine is automatically called for each and every species by the
+   * GlobalState object.
+   */
+  void startTimeStep();
 
-    void clearCutOffRadius();
-    void clearVelocity();
-    void clearTimeStampAndTimeStepSize();
+  /**
+   *
+   * This routine is automatically called for each and every species by the
+   * GlobalState object.
+   */
+  void finishTimeStep();
 
-    void allReduce();
+  void clearSearchRadius();
+  void clearVelocity();
+  void clearTimeStampAndTimeStepSize();
+
+  void allReduce();
 };
