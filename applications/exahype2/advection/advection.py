@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import subprocess
 
 sys.path.insert(0, os.path.abspath('../../../python'))
 import peano4
@@ -8,21 +9,17 @@ import exahype2
 
 dimensions                = 2
 cell_size                 = 0.1
-amr_levels                = 3
+amr_levels                = 0
 patch_size                = 4
 rk_order                  = 2
-dg_order                  = 1
+dg_order                  = 3
 end_time                  = 3.0
 plot_interval             = end_time/100
 #plot_interval             = 0
-use_gpu                   = False
-use_make                  = True
-use_symbolic_description  = False
-output_path               = "solution"
+advection_speed           = 1.0
 
 scenarios = [
   "SimpleTransport",
-  "SimpleTransportWithDynamicAMR",
 ]
 scenario = "SimpleTransport"
 
@@ -39,10 +36,16 @@ rkdg_rusanov_solvers = {
   "RKDGRusanovGlobalAdaptiveEnclave": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 }
 
+aderdg_rusanov_solvers = {
+  "ADERDGRusanovGlobalFixed": exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep,
+  "ADERDGRusanovGlobalAdaptive": exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep
+}
+
 solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
-solver = "RKDGRusanovGlobalFixed"
+solvers.update(aderdg_rusanov_solvers)
+solver = "ADERDGRusanovGlobalAdaptive"
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -63,7 +66,6 @@ storage_type = "CallStack"
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Advection Application Script')
 
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default=solver,             help="|".join(solvers.keys()))
-parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default=output_path,        help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default=build_mode,         help="|".join(build_modes.keys()))
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
 
@@ -73,8 +75,9 @@ parser.add_argument("-et",      "--end-time",          dest="end_time",       ty
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. size of a finite volume cell.")
-parser.add_argument("-sym",     "--symbolic",          dest="symbolic",       action="store_true",        default=use_symbolic_description, help="Use the symbolic PDE description of the advection equation.")
-parser.add_argument("-gpu",     "--gpu",               dest="use_gpu",        action="store_true",        default=use_gpu,            help="Use GPU offloading (requires a GPU enabled Peano build).")
+parser.add_argument("-dynamic", "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR.")
+parser.add_argument("-gpu",     "--gpu",               dest="use_gpu",        action="store_true",        default=False,              help="Use GPU offloading (requires a GPU enabled Peano build).")
+parser.add_argument("-vis",     "--visualise",         dest="visualise",      action="store_true",        default=False,              help="Visualise the output data using the postprocessor.")
 
 parser.add_argument("-pbc",     "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true",        help="Use periodic boundary conditions" )
 
@@ -88,7 +91,7 @@ parser.add_argument("--trees",                         dest="trees",          ty
 
 parser.add_argument(            "--make",                                     action="store_true",                                    help="Compile the code after generation")
 parser.add_argument(            "--no-make",           dest="use_make",       action="store_false",                                   help="Do not compile the code after generation")
-parser.set_defaults(use_make=use_make)
+parser.set_defaults(use_make=True)
 parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
 args = parser.parse_args()
 
@@ -112,10 +115,17 @@ if args.scenario not in scenarios:
     print("Error, scenario must be {} or {}, you supplied {}".format(", ".join(scenarios[:-1]), scenarios[-1], args.scenario))
     sys.exit(1)
 
+solver_type = args.solver
+if args.use_gpu:
+  if not "Enclave" in solver_type:
+    solver_type += "Enclave"
+    if solver_type not in solvers:
+      raise ValueError("The requested solver {} is not available for enclave tasking!".format(solver_type))
+
 if args.executable:
   executable_name = args.executable
 else:
-  executable_name = "advection-" + str(args.dim) + "d-" + str(args.scenario)
+  executable_name = "advection-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
 my_project = exahype2.Project(
   namespace=["applications", "exahype2", "advection"],
   project_name="Advection" + args.scenario,
@@ -123,20 +133,10 @@ my_project = exahype2.Project(
   executable=executable_name
 )
 
-solver_type = args.solver
-if args.use_gpu:
-  if not "Enclave" in solver_type:
-    solver_type += "Enclave"
-    if solver_type not in solvers:
-      raise ValueError("The requested solver {} is not available for enclave tasking!".format(solver_type))
-solver_name = "AdvectionSolver" + str(args.scenario) + str(solver_type)
-if args.use_gpu:
-  solver_name += "GPU"
-
 my_solver = None
 if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
   my_solver = solvers[solver_type](
-    name=solver_name,
+    name="AdvectionSolver",
     patch_size=args.patch_size,
     unknowns=args.dim,
     auxiliary_variables=0,
@@ -163,7 +163,7 @@ elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
   min_h = args.max_cell_size * 3.0**(-args.amr_levels)
   admissible_time_step_size = min_h/patch_size*0.5
   my_solver = solvers[solver_type](
-    name=solver_name,
+    name="AdvectionSolver",
     patch_size=args.patch_size,
     unknowns=args.dim,
     auxiliary_variables=0,
@@ -174,10 +174,10 @@ elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
 elif solver_type in rkdg_rusanov_solvers and "Adaptive" in solver_type:
   from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
   my_solver = solvers[solver_type](
-    name                      = solver_name,
+    name                      = "AdvectionSolver",
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
-    face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
+    face_projections          = FaceProjections.Solution,
     unknowns                  = args.dim,
     auxiliary_variables       = 0,
     max_cell_h                = args.max_cell_size,
@@ -189,46 +189,70 @@ elif solver_type in rkdg_rusanov_solvers and "Fixed" in solver_type:
   min_h = args.max_cell_size * 3.0**(-args.amr_levels)
   admissible_time_step_size = min_h/patch_size*0.5
   my_solver = solvers[solver_type](
-    name                      = solver_name,
+    name                      = "AdvectionSolver",
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
-    face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
+    face_projections          = FaceProjections.Solution,
     unknowns                  = args.dim,
     auxiliary_variables       = 0,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = min_h,
     time_step_size            = admissible_time_step_size,
   )
+elif solver_type in aderdg_rusanov_solvers and "Fixed" in solver_type:
+  # stability condition: CFL for Ader-DG
+  # dt <= c*dx / (lambda_max*(2N+1)
+  # cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
+  # here lambda_max = 1
+  # dt <= 0.1 * 0.03 / 7 \approx  0.0004
+  # dt <= 0.1 * 0.03 / 11 \approx  0.00025
+  min_h = args.max_cell_size * 3.0**(-args.amr_levels)
+  admissible_time_step_size = 0.001
+  my_solver = solvers[solver_type](
+    name="AdvectionSolver",
+    order=args.dg_order,
+    unknowns=args.dim,
+    auxiliary_variables=0,
+    max_cell_h=args.max_cell_size,
+    min_cell_h=min_h,
+    time_step_size=admissible_time_step_size,
+  )
+  my_solver.add_kernel_optimizations(
+    is_linear=True,
+    use_kernel_generator=True,
+    architecture="noarch"
+  )
+elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
+  my_solver = solvers[solver_type](
+    name                      = "AdvectionSolver",
+    order                     = args.dg_order,
+    unknowns                  = args.dim,
+    auxiliary_variables       = 0,
+    max_cell_h                = args.max_cell_size,
+    min_cell_h                = args.max_cell_size * 3.0**(-args.amr_levels),
+    time_step_relaxation      = 0.5
+  )
+  my_solver.add_kernel_optimizations(
+    is_linear=True,
+    use_kernel_generator=True,
+    architecture="noarch"
+  )
 
 if args.use_gpu:
   my_solver.set_pde_terms_without_state(True)
 
-if args.scenario == "SimpleTransport":
-  from simple_transport import SimpleTransport
-  my_scenario = SimpleTransport(unknowns=args.dim, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
-elif args.scenario == "SimpleTransportWithDynamicAMR":
-  from simple_transport_with_dynamic_amr import SimpleTransportWithDynamicAMR
-  my_scenario = SimpleTransportWithDynamicAMR(unknowns=args.dim, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
-
 my_solver.set_implementation(
-    initial_conditions    = my_scenario.implementation_of_initial_conditions(),
-    boundary_conditions   = my_scenario.implementation_of_boundary_conditions(),
-    flux                  = my_scenario.implementation_of_flux(),
-    eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
-    refinement_criterion  = my_scenario.implementation_of_refinement_criterion(),
-    source_term           = my_scenario.implementation_of_sources(),
+    initial_conditions    = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    boundary_conditions   = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    flux                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    eigenvalues           = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    refinement_criterion  = exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 
-if args.symbolic:
-  my_solver.plot_description = my_scenario.pde.unknown_identifier_for_plotter()
+if args.dim == 2:
+  my_solver.plot_description = "p, u, v"
 else:
-  if args.dim == 2:
-    my_solver.plot_description = "p, u, v"
-  else:
-    my_solver.plot_description = "p, u, v, w"
-  my_solver.add_user_solver_includes("""
-#include "AdvectionKernels.h"
-""")
+   my_solver.plot_description = "p, u, v, w"
 
 my_project.add_solver(my_solver)
 
@@ -255,45 +279,43 @@ my_project.set_global_simulation_parameters(
     periodic_BC=periodic_BC,
 )
 
-solution_dir = str(args.output_path) + "-" + str(solver_name) + "-" + str(args.dim) + "d"
+solution_dir = "solution-advection" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
 my_project.set_output_path(solution_dir)
 if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
 
-#my_project.set_load_balancing("toolbox::loadbalancing::SpreadOut", "new ::exahype2::LoadBalancingConfiguration(0.98)")
+if args.visualise:
+  output_patch_file = solution_dir + "/solution-AdvectionSolver.peano-patch-file"
+  if os.path.isfile(output_patch_file):
+      subprocess.call([
+          "python3", "../../../python/peano4/visualisation/render.py",
+          str(output_patch_file),
+      ])
+  sys.exit(0)
+
 if args.trees > 0:
   my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + ")")
 else:
   my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
-#my_project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration(0.98, 0, 16)")
-#my_project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_SplitOversizedTree", "new ::exahype2::LoadBalancingConfiguration(0.98, 1000, 16)")
-#my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
+
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+
+my_project.constants.export_constexpr_with_type("c", str(advection_speed), "double")
+my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
+
+my_project.output.makefile.add_h_file("AdvectionSolver.h")
+my_project.output.makefile.add_cpp_file("AdvectionSolver.cpp")
+
+if args.scenario == "SimpleTransport":
+  my_project.output.makefile.add_cpp_file("SimpleTransport.cpp")
+
 my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
-
-with open("postprocess.py", "w") as file:
-    file.write('''
-import os
-import sys
-import subprocess
-
-output_patch_file = "''' + str(solution_dir) + '''/solution-''' + str(solver_name) + '''.peano-patch-file"
-if os.path.isfile(output_patch_file):
-    subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file),
-    ])
-''')
-
-if args.symbolic:
-  print("\nPDE is: ")
-  print(my_scenario.pde.__str__())
 
 print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
 print("Regenerate all code by running 'python3 advection.py' again")
-print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")
+print("Generate (and convert) any postprocessing data by calling 'python3 advection.py --visualise'")
