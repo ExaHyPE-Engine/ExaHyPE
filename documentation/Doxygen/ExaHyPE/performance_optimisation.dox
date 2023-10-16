@@ -287,7 +287,17 @@ Nothing stops you from picking an alternative implementation for _compute_kernel
 as well. Just validate that you do not introduce any data races.
 
 
+### Any generic load balancing is disfunctional
 
+If you have extremely heterogeneous load per cell, any generic load balancing 
+of Peano has to fail, as all the generic balancing schemes use a plain cell
+count to determine a good domain decomposition. They use a homogeneous cost
+model.
+
+In principle, nothing stops you from writing your own totally independent load
+balancing. For some experiments, this might be reasonable. If you want to use a
+generic load balancing, you might however also consider to change the load 
+metrics. For this, you have to use a specialisation of toolbox::loadbalancing::metrics::CellCount.
 
 
 ## MPI optimisation
