@@ -26,7 +26,6 @@ parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       defau
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
-assert args.degree == 1, "not ready for degree 2 yet"
 assert args.dimensions == 2, "not ready for 3d yet"
 
 project = multigrid.petsc.Project(project_name = "DG", 
@@ -34,16 +33,16 @@ project = multigrid.petsc.Project(project_name = "DG",
                                   ) 
 
                         
-matrices = multigrid.matrixgenerators.GaussLobatto(polynomial_degree            = args.degree,
-                                                   dimensions             = args.dimensions,
+matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args.degree,
+                                                   Dimensions             = args.dimensions,
                                                    unknowns_per_cell_node = 1,
                                                    unknowns_per_face_node = 1,  # for DG, this has to equal unknowns_per_cell_dof
                                                    )
-                                                   
+                        
 solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
                                                                      cell_unknowns        = 1,                      # unknowns_per_cell_dof,
-                                                                     face_unknowns        = 1,                      # unknowns_per_cell_dof,
+                                                                     face_unknowns        = 1,                      # unknowns_per_face_dof,
                                                                      dimensions           = args.dimensions,
                                                                      min_h                = args.meshsize,
                                                                      max_h                = args.meshsize,
@@ -55,11 +54,9 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      face_to_cell_matrix     = matrices.getCellIdentityMatrix(), 
                                                                      cell_to_face_matrix_scaling  = 0,       
                                                                      face_to_cell_matrix_scaling  = args.dimensions, 
-                                                                     face_face_Riemann_problem_matrix   = [0.5, 0.0, 0.5, 0.0,
-                                                                                                           0.0, 0.5, 0.0, 0.5], # @todo should be delivered by matrices.getAveragingRiemannSolver(),   # todo bad name    
-                                                                     quadrature_points_in_unit_interval = [0.0, 1.0], # @todo should be delivered by matrices.points_in_unit_interval()
+                                                                     face_face_Riemann_problem_matrix=matrices.get_face_face_Riemann_problem_matrix(),
+                                                                     quadrature_points_in_unit_interval = matrices.getPointsInUnitInterval()
                                                                      )
-
 
 project.add_solver( solver )
                         

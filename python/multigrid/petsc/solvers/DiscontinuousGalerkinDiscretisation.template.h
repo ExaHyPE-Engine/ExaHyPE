@@ -96,7 +96,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
 
 
     {% if FACE_FACE_RIEMANN_PROBLEM_MATRIX==[] %}
-    virtual tarch::la::Matrix< NodesPerFace*Unknowns, 2*NodesPerFace*Unknowns, double > getRiemannSolver(
+    virtual tarch::la::Matrix< NodesPerFace*FaceUnknowns, 2*NodesPerFace*FaceUnknowns, double > getRiemannSolver(
       const tarch::la::Vector<Dimensions, double>&  faceCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) override;
