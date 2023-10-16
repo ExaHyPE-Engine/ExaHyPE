@@ -32,5 +32,70 @@ project = multigrid.petsc.Project(project_name = "DG",
  @image html gaussLobatto.png
  @image html piecewise_discontinuous_shape_functions.png
  @image html projection.png
+
+
+
+## The simplest Riemann solver: averaging
+
+This discussion follows the Discontinuous Galerking discussion. The only
+difference is that we have to extend our averaging such that both solution
+components, i.e. @f$ u @f$ and the normal projection of the @f$ \phi @f$
+are taken into account:
+
+\f{eqnarray*}{
+  \int_{\partial \text{cell}_{\psi _\phi }} (n \cdot \phi) \psi _\phi dS(x)  
+  & \approx & 
+  \int_{\partial \text{cell}_{\psi _\phi }} [[ (\phi,n) ]] \psi _\phi dS(x)  
+  =
+  \pm
+  \frac{1}{2} \int_{\partial \text{cell}_{\psi _\phi }} \left( \phi ^+ + \phi ^- \right) \psi _\phi dS(x)  
+  \\
+  \int _{\partial \text{cell}_{\psi _u}}  u \cdot (n, \psi _u) dS(x)
+  & \approx & 
+  \int _{\partial \text{cell}_{\psi _u}}  [[u]] \cdot (n, \psi _u) dS(x)
+  = 
+  \frac{1}{2}
+  \int _{\partial \text{cell}_{\psi _u}}  (u^- + u^+) \cdot ( n, \psi _u ) dS(x)
+\f}
+
+The image below illustrates this:
+
+  @image html average_gradient.png
+
+Neither the solution nor the gradient exist at the cell boundaries.
+We have to average both of them.
+
+
+There are two ways to implement this scheme:
+
+1. We don't use any constraint equation (see continuous case), but let the 
+   face-to-cell projection use the average of left and right value.
+2. We introduce a helper dof.
+
+The first variant is close-to-trivial and certainly a good sanity check. The 
+face-to-face matrix here is empty/zero, but the user has to take the averaging
+into account within the projection matrix. 
+
+
+The second variant is more sophsticiated, yet allows users later to implement
+more sophisticated schemes aka Riemann solvers. We have already gone down this
+route by introducing dedicated "helper" dofs on the face.
+
+
+\f{eqnarray*}{
+  \begin{pmatrix}
+  \frac{1}{2} & 0 & 0 & 0     & \frac{1}{2} & 0 & 0 & 0     & 0 & 0 & 0 & 0   & 0 & 0 & 0 & 0 \\
+  0 & \frac{1}{2} & 0 & 0     & 0 & \frac{1}{2} & 0 & 0     & 0 & 0 & 0 & 0   & 0 & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0               & 0 & 0 & 0 & 0               & \frac{1}{2} & 0 & 0 & 0     & \frac{1}{2} & 0 & 0 & 0 \\
+  0 & 0 & 0 & 0               & 0 & 0 & 0 & 0               & 0 & \frac{1}{2} & 0 & 0     & 0 & \frac{1}{2} & 0 & 0 
+  \end{pmatrix}
+\f}
+
+The first two rows refer to projected values from the left. They are sole 
+input values (should be brought to the right by the solver in this context) 
+and hence not subject to any additional equations.
+The third line averages the @f$ u @f$ values from left and right, the
+fourth line addresses the normal projections of @f$ \phi @f$. 
+
  
 */
