@@ -4,8 +4,8 @@
 
 \li \subpage tutorials_multigrid_petsc_continuous_galerkin_poisson
 \li \subpage tutorials_multigrid_petsc_discontinuous_galerkin_poisson
-\li \subpage tutorials_multigrid_petsc_mixed_dg_poisson
-\li \subpage benchmark_multigrid_petsc_hdg_discretisation
+\li \subpage tutorials_multigrid_petsc_mixed_galerkin_poisson
+\li \subpage tutorials_multigrid_petsc_hybrid_galerkin_poisson
 
 
 */

@@ -1,6 +1,6 @@
 /**
  
-@page page_multigrid_numerics_Mixed_Galerkin Mixed Galerkin formulations
+ @page tutorials_multigrid_petsc_mixed_galerkin_poisson Mixed Galerkin for the Poisson equation with PETSc
  
 A brief, informal discussion of mixed Galerkin methods.
 
