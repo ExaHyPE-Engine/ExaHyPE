@@ -78,7 +78,7 @@ class Project(object):
 
         load_balancer_name: string
           Should be full-qualified name of the load balancer.
-          By default, I recommend to pass "toolbox::loadbalancing::SpreadOutHierarchically",
+          By default, I recommend to pass "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
           but you might be well-advices to study different classes within the
           namespace toolbox::loadbalancing
 

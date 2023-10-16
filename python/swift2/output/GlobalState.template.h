@@ -10,7 +10,7 @@
 
 
 
-#include "toolbox/loadbalancing/NoLoadBalancing.h"
+#include "toolbox/loadbalancing/strategies/NoLoadBalancing.h"
 
 {% if LOAD_BALANCER!="" -%}
 #include "{{LOAD_BALANCER | replace('::', '/') }}.h"
@@ -25,7 +25,7 @@
   {% if LOAD_BALANCER!="" -%}
   extern {{LOAD_BALANCER}}              loadBalancer;
   {% else -%}
-  extern toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
+  extern toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
   {% endif -%}
 
 

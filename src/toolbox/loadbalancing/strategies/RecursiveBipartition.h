@@ -10,12 +10,16 @@
 
 #include <map>
 
-#include "AbstractLoadBalancing.h"
+#include "toolbox/loadbalancing/AbstractLoadBalancing.h"
+
+#include "toolbox/loadbalancing/metrics/CellCount.h"
 
 
 namespace toolbox {
   namespace loadbalancing {
-    class RecursiveBipartition;
+    namespace strategies {
+      class RecursiveBipartition;
+    }
   }
 }
 
@@ -38,7 +42,7 @@ namespace toolbox {
  * peano4::grid::Spacetree::splitOrJoinCell() and the general
  * @ref peano_domain_decomposition "domain decomposition overview".
  */
-class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancing::AbstractLoadBalancing {
+class toolbox::loadbalancing::strategies::RecursiveBipartition: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * Set up recursive subdivision
@@ -46,7 +50,7 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * The ownership of the pointer goes over to the recursive subdivision
      * instance, i.e. you don't have to delete the passed object.
      */
-    RecursiveBipartition(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
+    RecursiveBipartition(Configuration* configuration = new DefaultConfiguration(), CostMetrics*   costMetrics = new toolbox::loadbalancing::metrics::CellCount() );
     virtual ~RecursiveBipartition();
 
     /**

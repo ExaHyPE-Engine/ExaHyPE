@@ -243,7 +243,7 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 
 # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 project.set_load_balancing(
-    "toolbox::loadbalancing::SpreadOutHierarchically",
+    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
     "(new ::exahype2::LoadBalancingConfiguration(0.98))",
 )
 

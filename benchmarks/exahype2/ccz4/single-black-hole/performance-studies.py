@@ -116,6 +116,17 @@ if __name__ == "__main__":
         help="Task scheduler flavours",
     )
     parser.add_argument(
+        "-lbm",
+        "--load-balancing-metric",
+        dest="load_balancing_metric",
+        choices=[
+            "generic",
+            "tailored"
+        ],
+        required=True,
+        help="Load balancing metric",
+    )
+    parser.add_argument(
         "-s",
         "--solver",
         dest="solver",
@@ -252,12 +263,17 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation(args.peanodir, build_mode)
 
-
-    # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
-    project.set_load_balancing(
-        "toolbox::loadbalancing::SpreadOutHierarchically",
-        "(new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + "))"
-    )
+    
+    if args.load_balancing_metric=="generic":
+      project.set_load_balancing(
+        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+        "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + "), new toolbox::loadbalancing::metrics::CellCount()",
+        )
+    else:
+      project.set_load_balancing(
+        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+        "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + "), new toolbox::loadbalancing::metrics::CustomCellWeight()",
+        )
 
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 

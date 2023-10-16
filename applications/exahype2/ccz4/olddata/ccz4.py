@@ -502,7 +502,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
 
     std::fstream fin;
-    std::string att="_"""+args.tra_name+""".txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+    std::string att="_"""+args.exe_name+""".txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
     const int n_a_v=""" + str( self._auxiliary_variables ) + """;
     const double overlap=3;
 
@@ -920,7 +920,7 @@ if __name__ == "__main__":
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
     #project.set_load_balancing("toolbox::loadbalancing::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
     #project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
 
 
@@ -931,9 +931,9 @@ if __name__ == "__main__":
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
         init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
             particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0],[-8.0,-8.0,0]])
-            #particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
+        #    particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
         #init_action_set = exahype2.tracer.InsertParticlesFromFile( 
-        #                            particle_set=tracer_particles, filename="test-design.dat", scale_factor=abs(offset[0])*0.8)
+        #                            particle_set=tracer_particles, filename="t-design.dat", scale_factor=abs(offset[0])*0.8)
         #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
         init_action_set.priority = 0
         project.add_action_set_to_initialisation( init_action_set )
