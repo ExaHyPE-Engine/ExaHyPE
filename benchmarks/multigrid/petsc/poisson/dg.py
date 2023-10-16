@@ -46,16 +46,16 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      dimensions           = args.dimensions,
                                                                      min_h                = args.meshsize,
                                                                      max_h                = args.meshsize,
-                                                                     cell_cell_rhs_matrix   = matrices.getCellCellMassMatrix(),     
-                                                                     cell_cell_lhs_matrix   = matrices.getCellCellSystemMatrixForLaplacian(),
+                                                                     cell_cell_rhs_matrix   = matrices.get_cell_mass_matrix(),     
+                                                                     cell_cell_lhs_matrix   = matrices.get_cell_system_matrix_for_laplacian(),
                                                                      cell_cell_lhs_matrix_scaling = args.dimensions-2,
                                                                      cell_cell_rhs_matrix_scaling = args.dimensions,
-                                                                     cell_to_face_matrix     = matrices.getCellToFaceMatrix(),       
-                                                                     face_to_cell_matrix     = matrices.getCellIdentityMatrix(), 
+                                                                     cell_to_face_matrix     = matrices.get_cell_to_face_matrix(),       
+                                                                     face_to_cell_matrix     = matrices.get_cell_identity_matrix(), 
                                                                      cell_to_face_matrix_scaling  = 0,       
                                                                      face_to_cell_matrix_scaling  = args.dimensions, 
-                                                                     face_face_Riemann_problem_matrix=matrices.get_face_face_Riemann_problem_matrix(),
-                                                                     quadrature_points_in_unit_interval = matrices.getPointsInUnitInterval()
+                                                                     face_face_Riemann_problem_matrix=matrices.get_face_face_riemann_problem_matrix(),
+                                                                     quadrature_points_in_unit_interval = matrices.get_points_unit_interval()
                                                                      )
 
 project.add_solver( solver )

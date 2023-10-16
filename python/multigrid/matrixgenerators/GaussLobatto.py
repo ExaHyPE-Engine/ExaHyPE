@@ -36,15 +36,15 @@ class GaussLobatto(MatrixGenerator):
     self.unknowns_per_cell_node = unknowns_per_cell_node
     self.unknowns_per_face_node = unknowns_per_face_node
 
-    self.celldofs    = ( self.poly_degree + 1 ) ** (self.Dimensions)
-    self.facedofs    = ( self.poly_degree + 1 ) ** (self.Dimensions - 1)
+    self.cell_nodes    = ( self.poly_degree + 1 ) ** (self.Dimensions)
+    self.face_nodes    = ( self.poly_degree + 1 ) ** (self.Dimensions - 1)
 
     self.use_unit_interval = use_unit_interval
 
     if use_unit_interval:
-      self.points1d    = self.getPointsInUnitInterval()
+      self.points1d    = self.get_points_()
 
-  def getPoints1d(self):
+  def get_points1d(self):
     """!
     Overwriting the method in base class. Let's produce Gauss-Lobatto
     points. Standard behaviour is Legendre points using built-in stuff
@@ -72,7 +72,7 @@ class GaussLobatto(MatrixGenerator):
     output.append(1)
     return output
 
-  def getWeights1d(self):
+  def get_weights1d(self):
     """!
     Overwrites the method in the base class. Method
     is borrowed from wikipedia
@@ -87,32 +87,32 @@ class GaussLobatto(MatrixGenerator):
     poly   = np.polynomial.legendre.Legendre(coeffs)
 
     output = [firstWeight]
-    for p in self.getPoints1d()[1:-1]:
+    for p in self.get_points1d()[1:-1]:
       weight = firstWeight / poly(p)**2
       output.append(weight)
 
     output.append(firstWeight)
     return output
   
-  def getPointsInUnitInterval(self):
+  def get_points_unit_interval(self):
     scale = lambda x: 0.5*(x+1)
     return [scale(x) for x in self.points1d]
 
-  def evalIntegral(self, functions, dim=-1, factor=1):
+  def eval_integral(self, functions, dim=-1, factor=1):
     # if we shrank the interval, then we need to pass factor = 0.5 along
     if self.use_unit_interval:
       factor = 0.5
     else:
       factor = 1
     # no need to re-implement
-    return super( GaussLobatto, self ).evalIntegral(functions, dim, factor)
+    return super( GaussLobatto, self ).eval_integral(functions, dim, factor)
 
-  def getCellIdentityMatrix(self):
-    dim    = self.celldofs * self.unknowns_per_cell_node
+  def get_cell_identity_matrix(self):
+    dim    = self.cell_nodes * self.unknowns_per_cell_node
     output = np.eye(dim,dim) * 2**(-self.Dimensions)
     return output
       
-  def getCellCellMassMatrix(self):
+  def get_cell_mass_matrix(self):
     '''!
     
     Create a cell-cell mass matrix
@@ -121,15 +121,15 @@ class GaussLobatto(MatrixGenerator):
     The resulting matrix has to be scaled by @f$ h^d @f$.
 
     '''
-    dim    = self.celldofs * self.unknowns_per_cell_node
+    dim    = self.cell_nodes * self.unknowns_per_cell_node
     output = np.zeros((dim,dim))
-    for i in range( self.celldofs ):
-      for j in range( self.celldofs ):
+    for i in range( self.cell_nodes ):
+      for j in range( self.cell_nodes ):
         for k in range( self.unknowns_per_cell_node ):
-          output[self.unknowns_per_cell_node*i+k, self.unknowns_per_cell_node*j+k] += self.evalIntegral(functions=[ self.getPolynomial(i), self.getPolynomial(j) ]) 
+          output[self.unknowns_per_cell_node*i+k, self.unknowns_per_cell_node*j+k] += self.eval_integral(functions=[ self.get_polynomial(i), self.get_polynomial(j) ]) 
     return output
 
-  def getCellCellSystemMatrixForLaplacian(self):
+  def get_cell_system_matrix_for_laplacian(self):
     '''!
 
     Create a cell-cell mass matrix
@@ -138,10 +138,10 @@ class GaussLobatto(MatrixGenerator):
     needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
     so normalise by h
     '''
-    dim    = self.celldofs * self.unknowns_per_cell_node
+    dim    = self.cell_nodes * self.unknowns_per_cell_node
     output = np.zeros((dim,dim))
-    for i in range( self.celldofs ):
-      for j in range( self.celldofs ):
+    for i in range( self.cell_nodes ):
+      for j in range( self.cell_nodes ):
         for k in range( self.unknowns_per_cell_node ):
           pass
           # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
@@ -151,16 +151,16 @@ class GaussLobatto(MatrixGenerator):
           #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
     return output
 
-  def getCellToFaceMatrix(self):
-    faceDim = self.facedofs * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces
-    cellDim = self.celldofs * self.unknowns_per_cell_node
+  def get_cell_to_face_matrix(self):
+    faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces
+    cellDim = self.cell_nodes * self.unknowns_per_cell_node
     return np.zeros((faceDim,cellDim))
   
-  def getFaceFaceMatrix(self):
-    dim = self.facedofs * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
+  def get_face_to_face_matrix(self):
+    dim = self.face_nodes * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
     return np.eye(dim,dim)
 
-  def getAveragingRiemannSolver(self):
+  def get_averaging_riemann_solver(self):
     """!
     
     Simple averaging Riemann solver
@@ -178,5 +178,5 @@ class GaussLobatto(MatrixGenerator):
     dim = self.face_nodes * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
     return np.eye(dim,dim)
 
-  def get_face_face_Riemann_problem_matrix(self):
+  def get_face_face_riemann_problem_matrix(self):
     return np.array([0.5, 0.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.5]).reshape((4,2))
