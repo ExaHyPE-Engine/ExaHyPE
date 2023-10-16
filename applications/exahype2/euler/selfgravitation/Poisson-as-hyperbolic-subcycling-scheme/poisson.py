@@ -20,7 +20,8 @@ parser.add_argument("-j",  "--parallel-builds",        dest="j",              ty
 parser.add_argument("-d",  "--dimensions",                    dest="dimensions",            type=int, default=2, help="Dimensions")
 parser.add_argument("-m",  "--mode",                   dest="mode",                     default="release", help="|".join(modes.keys()))
 parser.add_argument("-et", "--end-time",               dest="end_time",                 type=float, default=1.0, help="Number of timesteps")
-parser.add_argument("-pd", "--peano-dir",              dest="peanodir",                 default="../../../../", help="Peano4 directory")
+parser.add_argument("-pd", "--peano-dir",              dest="peanodir",                 default="../../../../../", help="Peano4 directory")
+parser.add_argument("-cd", "--configure-dir",          dest="configuredir",             default="../../../../../", help="Location of configure" )
 parser.add_argument("-amr", "--adaptive-levels",       dest="adaptivity_levels",        type=int, default=0, help="Number of AMR grid levels on top of hmax (0 by default)")
 parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive"], required=True)
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
@@ -211,7 +212,7 @@ peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.output.makefile.add_cpp_file("Euler.cpp")
 peano4_project.output.makefile.add_h_file("Poisson.h")
 peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
-#peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
 if args.j==0:
   peano4_project.generate()
 else:

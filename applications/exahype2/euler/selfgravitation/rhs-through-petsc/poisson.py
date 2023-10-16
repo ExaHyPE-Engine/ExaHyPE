@@ -19,10 +19,11 @@ modes = {
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("-j",   "--parallel-builds",          dest="j",                       type=int,   default=-1, help="Parallel builds. Set to 0 to disable compile or to -1 to use all cores")
-parser.add_argument("-pd",  "--peano-dir",                dest="peanodir",                            default="../../../../", help="Peano4 directory")
+parser.add_argument("-pd",  "--peano-dir",                dest="peanodir",                            default="../../../../../", help="Peano4 directory")
+parser.add_argument("-cd",  "--configure-dir",            dest="configuredir",                        default="../../../../../", help="Location of configure" )
 parser.add_argument("-v",   "--verbose",                  dest="verbose",                 action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",               dest="dimensions",              type=int,   default=2, help="Dimensions")
-parser.add_argument("-upcd","--unknowns_per_vertex_dof",  dest="unknowns_per_vertex_dof", type=int,   default=3, help="unknowns per vertex dof")
+#parser.add_argument("-upcd","--unknowns_per_vertex_dof",  dest="unknowns_per_vertex_dof", type=int,   default=3, help="unknowns per vertex dof")
 parser.add_argument("-et",  "--end-time",                 dest="end_time",                type=float, default=1.0, help="Number of timesteps")
 parser.add_argument("-amr", "--adaptive-levels",          dest="adaptivity_levels",       type=int,   default=0, help="Number of AMR grid levels on top of hmax (0 by default)")
 parser.add_argument("-t",   "--type",                     dest="type",                    choices=["global-fixed", "global-adaptive"], required=True)
@@ -44,6 +45,10 @@ if args.mode not in modes:
 
 print("\nConfiguring {}D Euler problem. Buildmode is {}, nbuilds={}.\n".format(args.dimensions, args.mode, args.j))
 
+#generate matrices
+matrices = DLinear(args.dimensions,
+                   1) # unknowns_per_vertex_dof?
+
 #
 # Create a project and configure it to end up in a subnamespace (and thus
 # subdirectory).
@@ -52,7 +57,7 @@ project = exahype2.Project(
   namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
   project_name  = "Poisson",
   directory     = ".",
-  executable    = "subcycling-scheme"
+  executable    = "selfgravitation-with-petsc"
 )
 
 #
@@ -218,7 +223,7 @@ peano4_project.output.makefile.add_cpp_file("Euler.cpp")
 # peano4_project.output.makefile.add_h_file("Poisson.h")
 # peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
 
-#peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
 if args.j==0:
   peano4_project.generate()
 else:
