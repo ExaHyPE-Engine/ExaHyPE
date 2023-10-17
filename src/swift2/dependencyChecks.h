@@ -8,7 +8,7 @@ namespace dependencyChecks {
 #if PeanoDebug > 0
 
   template <typename Particle>
-  static void dependencyCheckDumpDebugOutput(
+  static void dependencyCheckDumpAlgorithmStepDebugOutput(
     const Particle*                                             localParticle,
     typename std::remove_pointer<Particle>::type::AlgorithmStep algorithmStepMarkerEnum,
     typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
@@ -51,7 +51,7 @@ namespace dependencyChecks {
 
       // write out counters for sweep stages of that algorithm step
       for (int s = 0; s < nstages; s++) {
-        std::cout << std::setw(5) << localParticle->getSweepStateProgression(i);
+        std::cout << std::setw(5) << localParticle->getAlgorithmStepSweepStateProgression(i);
         if (s < nstages - 1) {
           std::cout << std::setw(3) << " / ";
         }
@@ -68,9 +68,68 @@ namespace dependencyChecks {
   }
 
 
-  /* template <typename ParticleContainer, enum AlgorithmStep, enum SweepStage> */
+  template <typename Particle>
+  static void dependencyCheckDumpInitStepDebugOutput(
+    const Particle*                                          localParticle,
+    typename std::remove_pointer<Particle>::type::InitStep   initStepMarkerEnum,
+    typename std::remove_pointer<Particle>::type::SweepStage sweepStageMarkerEnum,
+    const int                                                errors
+  ) {
+
+    using PartType = std::remove_pointer<Particle>::type;
+
+    const int nsteps  = static_cast<int>(PartType::InitStep::count);
+    const int nstages = static_cast<int>(PartType::SweepStage::count);
+
+
+    std::cout << "-----------------------------------------\n";
+    std::cout << "Particle " << localParticle->getPartid() << " - found " << errors << " dependency errors\n";
+    std::cout
+      << "Failed at Init Step/Sweep Stage: " << PartType::castInitStepToString(initStepMarkerEnum) << " / "
+      << PartType::castSweepStageToString(sweepStageMarkerEnum) << "\n";
+    std::cout << "Particle data:" << localParticle->toString() << "\n";
+
+    // Set up "header" of the table
+    std::cout << "Particle Dependency Checks This Step:\n";
+    std::cout << std::left << std::setw(40) << "Init Step ";
+    for (int s = 0; s < nstages; s++) {
+      // all stage names that we account for
+      std::cout << PartType::castSweepStageToString(static_cast<PartType::SweepStage>(s));
+      if (s < nstages - 1) {
+        std::cout << std::setw(3) << " / ";
+      }
+    }
+    std::cout << "\n";
+
+
+    // write out what particle has actually done
+    int i = 0;
+    for (int a = 0; a < nsteps; a++) {
+
+      // write out init step name
+      std::cout << std::left << std::setw(40) << PartType::castInitStepToString(static_cast<PartType::InitStep>(a));
+
+      // write out counters for sweep stages of that init step
+      for (int s = 0; s < nstages; s++) {
+        std::cout << std::setw(5) << localParticle->getInitStepSweepStateProgression(i);
+        if (s < nstages - 1) {
+          std::cout << std::setw(3) << " / ";
+        }
+        i++;
+      }
+      std::cout << "\n";
+    }
+
+    // flush before you quit
+    std::cout << std::endl;
+
+    // TODO: is this the proper way of emergency exiting?
+    abort();
+  }
+
+
   template <typename ParticleContainer>
-  static void dependencyCheck(
+  static void dependencyCheckAlgorithmStep(
     const ParticleContainer&                                                                  localParticles,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    sweepStageMarkerEnum
@@ -90,7 +149,9 @@ namespace dependencyChecks {
     for (auto* particle : localParticles) {
 
       // First mark what we have just completed
-      particle->setSweepStateProgression(index_this_stage, particle->getSweepStateProgression()[index_this_stage] + 1);
+      particle->setAlgorithmStepSweepStateProgression(
+        index_this_stage, particle->getAlgorithmStepSweepStateProgression()[index_this_stage] + 1
+      );
 
 
       // Now check everything else before this stage, and check that everything
@@ -101,7 +162,7 @@ namespace dependencyChecks {
         for (int stage = 0; stage < nstages; stage++) {
 
           const int index     = step * nstages + stage;
-          int       partStage = particle->getSweepStateProgression()[index];
+          int       partStage = particle->getAlgorithmStepSweepStateProgression()[index];
 
           if (partStage == 0)
             errors++;
@@ -112,7 +173,7 @@ namespace dependencyChecks {
       for (int stage = 0; stage < sweepStageMarker; stage++) {
 
         const int index     = algorithmStepMarker * nstages + stage;
-        int       partStage = particle->getSweepStateProgression()[index];
+        int       partStage = particle->getAlgorithmStepSweepStateProgression()[index];
 
         if (partStage == 0)
           errors++;
@@ -120,13 +181,71 @@ namespace dependencyChecks {
 
       // If there are any errors, print out a detailed report and exit.
       if (errors > 0)
-        dependencyCheckDumpDebugOutput(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors);
+        dependencyCheckDumpAlgorithmStepDebugOutput(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors);
     }
   }
 
 
   template <typename ParticleContainer>
-  static void clearDependencyChecks(const ParticleContainer& localParticles) {
+  static void dependencyCheckInitStep(
+    const ParticleContainer&                                                               localParticles,
+    typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
+    typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage sweepStageMarkerEnum
+  ) {
+
+    using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+    const int initStepMarker   = static_cast<int>(initStepMarkerEnum);
+    const int sweepStageMarker = static_cast<int>(sweepStageMarkerEnum);
+
+    const int nstages = static_cast<int>(PartType::SweepStage::count);
+    const int nsteps  = static_cast<int>(PartType::InitStep::count);
+
+
+    const int index_this_stage = initStepMarker * nstages + sweepStageMarker;
+
+    for (auto* particle : localParticles) {
+
+      // First mark what we have just completed
+      particle->setInitStepSweepStateProgression(
+        index_this_stage, particle->getInitStepSweepStateProgression()[index_this_stage] + 1
+      );
+
+
+      // Now check everything else before this stage, and check that everything
+      // that should've run until now actually has run.
+      int errors = 0;
+      for (int step = 0; step < initStepMarker; step++) {
+
+        for (int stage = 0; stage < nstages; stage++) {
+
+          const int index     = step * nstages + stage;
+          int       partStage = particle->getInitStepSweepStateProgression()[index];
+
+          if (partStage == 0)
+            errors++;
+        }
+      }
+
+      // for the current sweep, only check up to the current stage.
+      for (int stage = 0; stage < sweepStageMarker; stage++) {
+
+        const int index     = initStepMarker * nstages + stage;
+        int       partStage = particle->getInitStepSweepStateProgression()[index];
+
+        if (partStage == 0)
+          errors++;
+      }
+
+      // If there are any errors, print out a detailed report and exit.
+      if (errors > 0)
+        dependencyCheckDumpInitStepDebugOutput(particle, initStepMarkerEnum, sweepStageMarkerEnum, errors);
+    }
+  }
+
+
+  template <typename ParticleContainer>
+  static void clearDependencyChecksAlgorithmStep(const ParticleContainer& localParticles) {
 
     using PartType    = std::remove_pointer<typename ParticleContainer::value_type>::type;
     const int nstages = static_cast<int>(PartType::SweepStage::count);
@@ -134,11 +253,25 @@ namespace dependencyChecks {
 
     for (auto* particle : localParticles) {
       for (int i = 0; i < nsteps * nstages; i++) {
-        particle->setSweepStateProgression(i, 0);
+        particle->setAlgorithmStepSweepStateProgression(i, 0);
       }
     }
   }
 
+
+  template <typename ParticleContainer>
+  static void clearDependencyChecksInitStep(const ParticleContainer& localParticles) {
+
+    using PartType    = std::remove_pointer<typename ParticleContainer::value_type>::type;
+    const int nstages = static_cast<int>(PartType::SweepStage::count);
+    const int nsteps  = static_cast<int>(PartType::InitStep::count);
+
+    for (auto* particle : localParticles) {
+      for (int i = 0; i < nsteps * nstages; i++) {
+        particle->setInitStepSweepStateProgression(i, 0);
+      }
+    }
+  }
 
 #else
 #error "You're trying to use dependency debug checks without debugging turned on."

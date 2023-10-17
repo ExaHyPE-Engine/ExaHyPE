@@ -177,61 +177,63 @@ Particle properties:
             + """
 
     """
-        )
+    )
 
-    def add_dependency_checks(self):
+    def _dependency_checks_modify_steps(self, steplist, step_type_name):
         """
-        TODO: Documentation
-        TODO: Move to peano4.toolbox.particles.Particle ?
-        TODO: ifdefs for debugging
-        TODO: init steps
+        This function actually modifies the AlgorithmSteps to contain the
+        debug dependency checks. Is called by self.add_dependency_checks()
+
+        Parameters
+        ----------
+
+        Steplist:       list
+            list of AlgorithmStep objects to work on
+
+        step_type_name: str
+            name of type of steps we're dealing with. Either AlgorithmStep
+            or InitStep.
         """
 
-        steps = self.algorithm_steps()
+        steps = steplist
         nsteps = len(steps)
         nstages = AlgorithmStep.SweepStage.STAGE_COUNT.value
-
-        # add enum to particle for each sweep stage
-        stage_name_list = [
-            AlgorithmStep.get_sweep_stage_name(s) for s in AlgorithmStep.SweepStage
-        ]
-        stage_name_enum = dastgen2.attributes.Enumeration(
-            "SweepStage", stage_name_list, ifdefs=["PeanoDebug > 0"]
-        )
-        self.data.add_attribute(stage_name_enum)
 
         # add enum to particle for each AlgorithmStep
         step_name_list = [step.name for step in steps]
         step_name_list.append("count")  # add a count so we can loop over enums
         step_name_enum = dastgen2.attributes.Enumeration(
-            "AlgorithmStep", step_name_list, ifdefs=["PeanoDebug > 0"]
+            step_type_name, step_name_list, ifdefs=["PeanoDebug > 0"]
         )
         self.data.add_attribute(step_name_enum)
 
         # add (flattened) array for flags
         step_progression = dastgen2.attributes.IntegerArray(
-            "SweepStateProgression", nsteps * nstages, ifdefs=["PeanoDebug > 0"]
+            step_type_name + "SweepStateProgression",
+            nsteps * nstages,
+            ifdefs=["PeanoDebug > 0"],
         )
         self.data.add_attribute(step_progression)
 
-        check_template = """\n
-  dependencyChecks::dependencyCheck(localParticles,
-                  globaldata::{NAME}::AlgorithmStep::{0},
+        check_template = """\n dependencyChecks::dependencyCheck{StepType}(localParticles,
+                  globaldata::{NAME}::{StepType}::{0},
                   globaldata::{NAME}::SweepStage::{1}
-                  );\n""".replace(
-            "{NAME}", self.name
-        )
+                  );\n"""
+        check_template = check_template.replace("{NAME}", self.name)
+        check_template = check_template.replace("{StepType}", step_type_name)
 
         # First step is special: First reset all dependency values before doing anything else
-        first_step = self.algorithm_steps()[0]
+        first_step = steplist[0]
         if first_step.touch_vertex_first_time_kernel is None:
             first_step.touch_vertex_first_time_kernel = ""
         first_step.touch_vertex_first_time_kernel = (
-            "\n  dependencyChecks::clearDependencyChecks(localParticles);\n"
+            "\n  dependencyChecks::clearDependencyChecks"
+            + step_type_name
+            + "(localParticles);\n"
             + first_step.touch_vertex_last_time_kernel
         )
 
-        for step in self.algorithm_steps():
+        for step in steplist:
             if step.touch_vertex_first_time_kernel is None:
                 step.touch_vertex_first_time_kernel = ""
             stage = AlgorithmStep.get_sweep_stage_name(
@@ -260,3 +262,32 @@ Particle properties:
             if step.includes is None:
                 step.includes = ""
             step.includes += """\n#include "swift2/dependencyChecks.h"\n"""
+
+            return
+
+    def add_dependency_checks(self):
+        """
+        TODO: Documentation
+        TODO: Move to peano4.toolbox.particles.Particle ?
+        TODO: init steps
+        """
+
+        # First add enum to particle class for each sweep stage. These are identical
+        # for both algorithm steps and initialisation steps.
+        stage_name_list = [
+            AlgorithmStep.get_sweep_stage_name(s) for s in AlgorithmStep.SweepStage
+        ]
+        stage_name_enum = dastgen2.attributes.Enumeration(
+            "SweepStage", stage_name_list, ifdefs=["PeanoDebug > 0"]
+        )
+        self.data.add_attribute(stage_name_enum)
+
+        # Add debug dependency checks to the actual algorithm steps:
+        steplist = self.algorithm_steps()
+        step_type_name = "AlgorithmStep"
+        self._dependency_checks_modify_steps(steplist, step_type_name)
+
+        # Same but for initialisation steps
+        steplist = self.initialisation_steps()
+        step_type_name = "InitStep"
+        self._dependency_checks_modify_steps(steplist, step_type_name)
