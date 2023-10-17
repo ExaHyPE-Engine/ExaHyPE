@@ -1,5 +1,7 @@
 import os
 import sys
+import sympy
+import subprocess
 
 #
 # We use our code Python generator to generate additional glue code.
@@ -54,6 +56,11 @@ else:
 use_make = True
 
 #
+# Set to true, to visualise/convert the output data using a postprocessor.
+#
+visualise = False
+
+#
 # Choose how often a snapshot is written.
 #
 time_in_between_two_snapshots = end_time/100
@@ -95,18 +102,47 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 #
 # We want to define our PDE symbolically.
 # For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
-# For reusability in other applications we implement the PDE model in the Python script pde.py.
 #
-from pde import PDE
-my_pde = PDE(unknowns=dimensions + 3, auxiliary_variables=0, dimensions=dimensions)
+my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(unknowns=dimensions+3, auxiliary_variables=0, dimensions=dimensions)
+v = my_pde.name_Q_entries(0, dimensions, "v")
+sigma = my_pde.name_Q_entries(dimensions, 3, "sigma")
+
+rho = sympy.symbols("rho")
+cp = sympy.symbols("cp")
+cs = sympy.symbols("cs")
+
+# Lamé parameters
+mu = rho * cs * cs
+lamb = rho * cp * cp - 2.0 * mu
 
 #
-# Since 'my_pde' only holds the PDE for the elastic wave equation without initial- or boundary conditions,
+# Define the equation system
+#
+# Flux [unknowns, dimensions]
+my_pde.F[0, 0] = -1.0 / rho * sigma[0]
+my_pde.F[1, 0] = -1.0 / rho * sigma[2]
+my_pde.F[2, 0] = -(2.0 * mu + lamb) * v[0]
+my_pde.F[3, 0] = -lamb * v[0]
+my_pde.F[4, 0] = -mu * v[1]
+
+my_pde.F[0, 1] = -1.0 / rho * sigma[2]
+my_pde.F[1, 1] = -1.0 / rho * sigma[1]
+my_pde.F[2, 1] = -lamb * v[1]
+my_pde.F[3, 1] = -(2.0 * mu + lamb) * v[1]
+my_pde.F[4, 1] = -mu * v[0]
+
+# Eigenvalues [unknowns, dimensions]
+my_pde.eigenvalues[0] = cp
+my_pde.eigenvalues[1] = cs
+my_pde.eigenvalues[2] = 0
+my_pde.eigenvalues[3] = -cs
+my_pde.eigenvalues[4] = -cp
+
+#
+# Since 'my_pde' only holds the PDE for the advection equation without initial- or boundary conditions,
 # we still need to properly define initial- and boundary conditions.
 # This gives us then a complete description of a 'scenario'.
 #
-import sympy
-
 #
 # Initial conditions
 #
@@ -142,9 +178,9 @@ my_pde.sources[2] = 0
 my_pde.sources[3] = 0
 my_pde.sources[4] = sympy.Piecewise((force, point_source <= max_h), (0, True))
 
-my_pde.substitute_expression(my_pde.rho, 2.7)
-my_pde.substitute_expression(my_pde.cp, 6.0)
-my_pde.substitute_expression(my_pde.cs, 3.464)
+my_pde.substitute_expression(rho, 2.7)
+my_pde.substitute_expression(cp, 6.0)
+my_pde.substitute_expression(cs, 3.464)
 my_pde.substitute_expression(t0, 0.1)
 my_pde.substitute_expression(M0, 1000.0)
 
@@ -194,6 +230,15 @@ my_project.set_output_path("solution")
 if not os.path.exists("solution"):
     os.makedirs("solution")
 
+if visualise:
+  output_patch_file = "solution/solution-ElasticWaveSolver.peano-patch-file"
+  if os.path.isfile(output_patch_file):
+    subprocess.call([
+        "python3", "../../../python/peano4/visualisation/render.py",
+        str(output_patch_file),
+    ])
+  sys.exit(0)
+
 #
 # If you only target a sequential execution, you can omit the load balancing.
 # However, for a parallel build and execution you need to set load balancing.
@@ -233,24 +278,6 @@ my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 #
 my_project.build(make=use_make, make_clean_first=True, throw_away_data_after_build=True)
 
-#
-# Create a postprocessing script which converts the output patch files of the simulation
-# to VTU files which can be read by ParaView e.g.
-#
-with open("postprocess.py", "w") as file:
-    file.write('''
-import os
-import sys
-import subprocess
-
-output_patch_file = "solution/solution-ElasticWaveSolver.peano-patch-file"
-if os.path.isfile(output_patch_file):
-    subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file),
-    ])
-''')
-
 print("\nPDE is: ")
 print(my_pde.__str__())
 print("Executable is elastic-wave-" + str(dimensions) + "d")
@@ -258,4 +285,3 @@ print("Clean object files via 'make clean'")
 print("(Re)compile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
 print("Regenerate all code by running 'python3 elastic-wave.py' again")
-print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")

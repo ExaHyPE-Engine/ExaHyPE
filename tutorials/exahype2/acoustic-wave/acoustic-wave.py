@@ -58,7 +58,7 @@ use_make = True
 #
 # Set to true, to visualise/convert the output data using a postprocessor.
 #
-visualise = True
+visualise = False
 
 #
 # Choose how often a snapshot is written.
