@@ -196,7 +196,7 @@ Particle properties:
             AlgorithmStep.get_sweep_stage_name(s) for s in AlgorithmStep.SweepStage
         ]
         stage_name_enum = dastgen2.attributes.Enumeration(
-           "SweepStage", stage_name_list, ifdefs=["PeanoDebug > 0"]
+            "SweepStage", stage_name_list, ifdefs=["PeanoDebug > 0"]
         )
         self.data.add_attribute(stage_name_enum)
 
@@ -214,37 +214,49 @@ Particle properties:
         )
         self.data.add_attribute(step_progression)
 
-
-        check_template ="""\n
+        check_template = """\n
   dependencyChecks::dependencyCheck(localParticles,
                   globaldata::{NAME}::AlgorithmStep::{0},
                   globaldata::{NAME}::SweepStage::{1}
-                  );\n""".replace("{NAME}", self.name)
+                  );\n""".replace(
+            "{NAME}", self.name
+        )
 
         # First step is special: First reset all dependency values before doing anything else
         first_step = self.algorithm_steps()[0]
         if first_step.touch_vertex_first_time_kernel is None:
             first_step.touch_vertex_first_time_kernel = ""
-        first_step.touch_vertex_first_time_kernel = "\n  dependencyChecks::clearDependencyChecks(localParticles);\n" + first_step.touch_vertex_last_time_kernel
+        first_step.touch_vertex_first_time_kernel = (
+            "\n  dependencyChecks::clearDependencyChecks(localParticles);\n"
+            + first_step.touch_vertex_last_time_kernel
+        )
 
         for step in self.algorithm_steps():
-
             if step.touch_vertex_first_time_kernel is None:
                 step.touch_vertex_first_time_kernel = ""
-            stage = AlgorithmStep.get_sweep_stage_name(AlgorithmStep.SweepStage.TOUCH_VERTEX_FIRST_TIME)
-            step.touch_vertex_first_time_kernel += check_template.format(step.name, stage)
+            stage = AlgorithmStep.get_sweep_stage_name(
+                AlgorithmStep.SweepStage.TOUCH_VERTEX_FIRST_TIME
+            )
+            step.touch_vertex_first_time_kernel += check_template.format(
+                step.name, stage
+            )
 
             if step.cell_kernel is None:
                 step.cell_kernel = ""
-            stage = AlgorithmStep.get_sweep_stage_name(AlgorithmStep.SweepStage.CELL_KERNEL)
+            stage = AlgorithmStep.get_sweep_stage_name(
+                AlgorithmStep.SweepStage.CELL_KERNEL
+            )
             step.cell_kernel += check_template.format(step.name, stage)
 
             if step.touch_vertex_last_time_kernel is None:
                 step.touch_vertex_last_time_kernel = ""
-            stage = AlgorithmStep.get_sweep_stage_name(AlgorithmStep.SweepStage.TOUCH_VERTEX_LAST_TIME)
-            step.touch_vertex_last_time_kernel += check_template.format(step.name, stage)
+            stage = AlgorithmStep.get_sweep_stage_name(
+                AlgorithmStep.SweepStage.TOUCH_VERTEX_LAST_TIME
+            )
+            step.touch_vertex_last_time_kernel += check_template.format(
+                step.name, stage
+            )
 
             if step.includes is None:
                 step.includes = ""
             step.includes += """\n#include "swift2/dependencyChecks.h"\n"""
-

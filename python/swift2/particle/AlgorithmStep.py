@@ -73,7 +73,6 @@ class AlgorithmStep(object):
         TOUCH_VERTEX_LAST_TIME = 2
         STAGE_COUNT = 3
 
-
     @staticmethod
     def get_sweep_stage_name(stage: SweepStage):
         """
@@ -89,7 +88,6 @@ class AlgorithmStep(object):
             return "count"
         else:
             raise ValueError("Unknown algorithm stage", stage)
-
 
     def __init__(
         self,

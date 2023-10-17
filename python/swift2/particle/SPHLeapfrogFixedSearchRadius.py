@@ -284,10 +284,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # same for initialization steps
         self._setup_initialisation_steps()
 
-
-
         # Debugging --------------------------------------------------------------------
-        # TODO: change this to a different flag somehow
+        # Add dependency checks
         if asserts:
             self.add_dependency_checks()
 
@@ -640,9 +638,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             self.algorithm_steps_dict["Kick2"],
             self.algorithm_steps_dict["ReduceGlobalQuantities"],
             self.algorithm_steps_dict["Kick1"],
-                ]
+        ]
 
-        self._algorithm_steps = [ copy.deepcopy(i) for i in steps]
+        self._algorithm_steps = [copy.deepcopy(i) for i in steps]
         return
 
     def algorithm_steps(self):
@@ -805,7 +803,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
         Make sure self._setup_algorithm_steps_dict() has been called before.
         """
-        initsteps =  [
+        initsteps = [
             self.algorithm_steps_dict["FlagBoundaryParticles"],
             self.algorithm_steps_dict["Density"],
             self.algorithm_steps_dict["Force"],
@@ -817,7 +815,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # return deep copies of algorithms steps. Otherwise,
         # modifications down the line (like the dependency checks)
         # will cause trouble.
-        self._initialisation_steps = [ copy.deepcopy(i) for i in initsteps]
+        self._initialisation_steps = [copy.deepcopy(i) for i in initsteps]
 
     def initialisation_steps(self):
         """
