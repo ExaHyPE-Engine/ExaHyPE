@@ -270,6 +270,10 @@ if __name__ == "__main__":
         "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + "), new toolbox::loadbalancing::metrics::CellCount()",
         )
     else:
+      load_balancing_cell_label = exahype2.grid.FineGridCellLoadBalancingCostMetric.create_cell_label(project)
+      load_balancing_action_set = exahype2.grid.FineGridCellLoadBalancingCostMetric(load_balancing_cell_label,
+                                                                                    "1.0 / (1.0+tarch::la::norm2(marker.x()))")
+      project.add_action_set_to_create_grid( load_balancing_action_set )
       project.set_load_balancing(
         "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
         "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + "), new toolbox::loadbalancing::metrics::CustomCellWeight()",
