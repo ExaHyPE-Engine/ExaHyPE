@@ -11,6 +11,8 @@ static void dependencyCheckDumpDebugOutput(const Particle* localParticle,
     typename std::remove_pointer<Particle>::type::SweepStage sweepStageMarkerEnum,
     const int errors){
 
+#if PeanoDebug > 0
+
   using PartType = std::remove_pointer<Particle>::type;
 
   const int nsteps = static_cast<int>(PartType::AlgorithmStep::count);
@@ -59,6 +61,7 @@ static void dependencyCheckDumpDebugOutput(const Particle* localParticle,
   // TODO: is this the proper way of emergency exiting?
   abort();
 
+#endif
 }
 
 
@@ -68,6 +71,8 @@ static void dependencyCheck(const ParticleContainer& localParticles,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage sweepStageMarkerEnum
     ){
+
+#if PeanoDebug > 0
 
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
 
@@ -114,12 +119,16 @@ static void dependencyCheck(const ParticleContainer& localParticles,
     if (errors > 0) dependencyCheckDumpDebugOutput(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors);
 
   }
+#else
+#error "You're trying to use dependency debug checks without debugging turned on."
+#endif
 }
 
 
 template <typename ParticleContainer>
 static void clearDependencyChecks(const ParticleContainer& localParticles){
 
+#if PeanoDebug > 0
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
   const int nstages = static_cast<int>(PartType::SweepStage::count);
   const int nsteps = static_cast<int>(PartType::AlgorithmStep::count);
@@ -130,6 +139,7 @@ static void clearDependencyChecks(const ParticleContainer& localParticles){
     }
   }
 
+#endif
 }
 
 

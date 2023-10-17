@@ -196,22 +196,22 @@ Particle properties:
             AlgorithmStep.get_sweep_stage_name(s) for s in AlgorithmStep.SweepStage
         ]
         stage_name_enum = dastgen2.attributes.Enumeration(
-            "SweepStage", stage_name_list, ifdefs=[]
-        )  # TODO needs ifdefs
+           "SweepStage", stage_name_list, ifdefs=["PeanoDebug > 0"]
+        )
         self.data.add_attribute(stage_name_enum)
 
         # add enum to particle for each AlgorithmStep
         step_name_list = [step.name for step in steps]
-        step_name_list.append("count")  # add a count
+        step_name_list.append("count")  # add a count so we can loop over enums
         step_name_enum = dastgen2.attributes.Enumeration(
-            "AlgorithmStep", step_name_list, ifdefs=[]
-        )  # TODO needs ifdefs
+            "AlgorithmStep", step_name_list, ifdefs=["PeanoDebug > 0"]
+        )
         self.data.add_attribute(step_name_enum)
 
         # add (flattened) array for flags
         step_progression = dastgen2.attributes.IntegerArray(
-            "SweepStateProgression", nsteps * nstages
-        )  # TODO needs ifdefs
+            "SweepStateProgression", nsteps * nstages, ifdefs=["PeanoDebug > 0"]
+        )
         self.data.add_attribute(step_progression)
 
 
