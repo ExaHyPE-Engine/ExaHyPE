@@ -42,14 +42,14 @@ class DLinear(MatrixGenerator):
     return 2**(self.Dimensions)
  
     
-  def getCellIdentityMatrix(self):
+  def get_cell_identity_matrix(self):
     dim    = self._cell_dofs * self.unknowns_per_vertex_dof
     #           identity matrix.
     output = np.eye(dim,dim) * 2**(-self.Dimensions)
     return output
 
       
-  def getLumpedMassMatrix(self):
+  def get_lumped_mass_matrix(self):
     """!
     Get this working for 2d. 
     What about 3d? If we select an index for the first dimension
@@ -58,14 +58,14 @@ class DLinear(MatrixGenerator):
     if we flattened it. Is this what we want?
     """
     #get mass matrix
-    massMatrix = self.getCellMassMatrix()
+    massMatrix = self.get_cell_mass_matrix()
     output     = np.zeros_like(massMatrix)
     for i in range( output.shape[0] ):
       output[i,i] = np.sum( massMatrix[i,] )
     return output
     
       
-  def getCellMassMatrix(self):
+  def get_cell_mass_matrix(self):
     '''!
     
     Create a cell-cell mass matrix
@@ -79,15 +79,15 @@ class DLinear(MatrixGenerator):
 
     for i in range(output.shape[0]):
       for j in range(output.shape[1]):
-        output[i,j] = self.evalIntegral(functions=[self.getPolynomial(i), self.getPolynomial(j)])
+        output[i,j] = self.eval_integral(functions=[self.get_polynomial(i), self.get_polynomial(j)])
     
     #pad the output
     if self.unknowns_per_vertex_dof > 1:
-      output = self.padMatrixForMoreThanOneDofPerNode(output)
+      output = self.pad_matrix(output)
 
     return output
 
-  def getCellSystemMatrixForLaplacian(self):
+  def get_cell_system_matrix_for_laplacian(self):
     '''!
 
     Create a cell-cell mass matrix
@@ -102,18 +102,22 @@ class DLinear(MatrixGenerator):
 
     for i in range(output.shape[0]):
       for j in range(output.shape[1]):
-        output[i,j] += self.evalIntegral(functions=[self.getDeriv(i, 0), self.getDeriv(j, 0)])
-        output[i,j] += self.evalIntegral(functions=[self.getDeriv(i, 1), self.getDeriv(j, 1)])
+        output[i,j] += self.eval_integral(functions=[self.get_deriv(i, 0), self.get_deriv(j, 0)])
+        output[i,j] += self.eval_integral(functions=[self.get_deriv(i, 1), self.get_deriv(j, 1)])
     
     #pad the output
     if self.unknowns_per_vertex_dof > 1:
-      output = self.padMatrixForMoreThanOneDofPerNode(output)
+      output = self.pad_matrix(output)
 
     return output
 
-  def padMatrixForMoreThanOneDofPerNode(self, matrix):
+  def pad_matrix(self, matrix):
     """!
-    @todo - Currently this just pads the same matrix out to each of the multiple dofs per node. 
+    This method will pad a matrix out with interleaving strategy
+    If we have more than one dof per node, this will ensure identical
+    matrix entries are present in correct poisions in all of them
+
+    @todo - Currently this just pads the same matrix out to each of the multiple dofs per node. Maybe provide option to not do this, eg just leave some of them empty
     """
     shape = matrix.shape
     # scale up each entry
