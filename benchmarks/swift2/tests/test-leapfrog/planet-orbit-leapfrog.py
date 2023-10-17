@@ -191,8 +191,8 @@ EARTH_V_INI_Y = str(V_MAX / LENGTH_UNIT * T)
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::RecursiveBipartition",
-    "new toolbox::loadbalancing::DefaultConfiguration()",
+    "toolbox::loadbalancing::strategies::RecursiveBipartition",
+    "new toolbox::loadbalancing::strategies::DefaultConfiguration()",
 )
 
 

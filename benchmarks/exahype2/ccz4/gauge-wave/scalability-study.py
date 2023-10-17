@@ -372,7 +372,7 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 
-#project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
+#project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.95,0))" )
 project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
 
 

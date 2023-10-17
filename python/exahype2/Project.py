@@ -82,7 +82,7 @@ class Project(object):
         """
         load_balancer_name: string
           Should be full-qualified name of the load balancer.
-          By default, I recommend to pass "toolbox::loadbalancing::RecursiveSubdivision"
+          By default, I recommend to pass "toolbox::loadbalancing::strategies::RecursiveSubdivision".
 
         load_balancer_arguments: string
           If your load balancing requires parameters, add them
@@ -96,22 +96,18 @@ class Project(object):
 
     def set_log_filter_file(self, file_name):
         """! Set a log filter file name
-        
         Pass in the empty string, if you want the code to use the hard-coded
         defaults.
-         
         """
         self._log_filter_file = file_name
-        
+
     def set_number_of_threads(self, value):
         """! Set number of threads to use
-        
-        Pass in number of threads (positive integer) or a string such as 
+        Pass in number of threads (positive integer) or a string such as
         "tarch::multicore::Core::UseDefaultNumberOfThreads".
-        
         """
         self._number_of_threads = value
-        
+
     def set_multicore_orchestration(self,value):
         """! Set orchestration
         
