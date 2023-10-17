@@ -297,14 +297,12 @@ src/unittests/UnitTests*
 *.pvd
 *.err
 *.out
-/documentation/
 
 *.o.*
 *.trs*
 *.xml
 *.def
 
-builds/
 # Misc
 .DS_Store
 /Debug/
@@ -312,4 +310,3 @@ builds/
 *.trs
 *.sh
 compile_commands.json
-/documentation/
