@@ -649,7 +649,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         Return algorithm steps: A list of AlgorithmStep objects to be executed in
         that order for this particle.
 
-        Make sure that self._setup_algorithm_steps_dict() and self._setup_algorithm_steps() have been called before using this function.
+        Make sure that self._setup_algorithm_steps_dict() and
+        self._setup_algorithm_steps() have been called before using this function.
 
         """
 

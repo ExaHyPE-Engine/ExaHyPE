@@ -4,6 +4,7 @@ import peano4.toolbox.particles
 import dastgen2
 from swift2.particle.AlgorithmStep import AlgorithmStep
 from abc import abstractmethod
+import copy
 
 
 class Particle(peano4.toolbox.particles.Particle):
@@ -193,9 +194,16 @@ Particle properties:
         step_type_name: str
             name of type of steps we're dealing with. Either AlgorithmStep
             or InitStep.
+
+
+        Returns
+        -------
+
+        steps: list
+            the modified list of AlgorithmSteps, now including dependency checks
         """
 
-        steps = steplist
+        steps = copy.deepcopy(steplist)
         nsteps = len(steps)
         nstages = AlgorithmStep.SweepStage.STAGE_COUNT.value
 
@@ -223,7 +231,7 @@ Particle properties:
         check_template = check_template.replace("{StepType}", step_type_name)
 
         # First step is special: First reset all dependency values before doing anything else
-        first_step = steplist[0]
+        first_step = steps[0]
         if first_step.touch_vertex_first_time_kernel is None:
             first_step.touch_vertex_first_time_kernel = ""
         first_step.touch_vertex_first_time_kernel = (
@@ -233,7 +241,7 @@ Particle properties:
             + first_step.touch_vertex_last_time_kernel
         )
 
-        for step in steplist:
+        for step in steps:
             if step.touch_vertex_first_time_kernel is None:
                 step.touch_vertex_first_time_kernel = ""
             stage = AlgorithmStep.get_sweep_stage_name(
@@ -263,7 +271,7 @@ Particle properties:
                 step.includes = ""
             step.includes += """\n#include "swift2/dependencyChecks.h"\n"""
 
-            return
+        return steps
 
     def add_dependency_checks(self):
         """
@@ -301,9 +309,11 @@ Particle properties:
         # Add debug dependency checks to the actual algorithm steps:
         steplist = self.algorithm_steps()
         step_type_name = "AlgorithmStep"
-        self._dependency_checks_modify_steps(steplist, step_type_name)
+        modified_steps = self._dependency_checks_modify_steps(steplist, step_type_name)
+        self._algorithm_steps = modified_steps
 
         # Same but for initialisation steps
         steplist = self.initialisation_steps()
         step_type_name = "InitStep"
-        self._dependency_checks_modify_steps(steplist, step_type_name)
+        modified_steps = self._dependency_checks_modify_steps(steplist, step_type_name)
+        self._initialisation_steps = modified_steps
