@@ -265,11 +265,28 @@ Particle properties:
 
             return
 
+
     def add_dependency_checks(self):
         """
-        TODO: Documentation
-        TODO: Move to peano4.toolbox.particles.Particle ?
-        TODO: init steps
+
+        Add dependency checks: We first create Enumerations representing each
+        algorithm step defined for the Particle, as well as each sweep stage of
+        any grid traversal.
+
+        Then for each defined algorithm step, we add a call to the dependency
+        check functions for each sweep stage (touch vertex first time, cell
+        kernel, touch vertex last time...)
+
+        The check consists of
+        1) marking down which step in the full algorithm a particle has
+        completed in the current simulation step
+        2) verifying that each step and sweep stage before the one the particle
+        currently finds itself in has been completed.
+
+        This is done both for the main algorithm steps as well as for the
+        initialisation steps individually.
+
+        TODO: Move a level up to peano4.toolbox.particles.Particle ?
         """
 
         # First add enum to particle class for each sweep stage. These are identical

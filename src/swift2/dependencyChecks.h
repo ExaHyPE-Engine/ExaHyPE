@@ -7,6 +7,16 @@ namespace dependencyChecks {
 
 #if PeanoDebug > 0
 
+  /**
+   * @brief This function is meant to be called on a particle on which dependency issues
+   * in the main algorithm steps have been detected. It writes the full current state of
+   * a problematic particle to screen and aborts the mission.
+   *
+   * @param localParticle: the problematic particle
+   * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
+   * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
+   * @param errors: Number of errors that have been detected
+   */
   template <typename Particle>
   static void dependencyCheckDumpAlgorithmStepDebugOutput(
     const Particle*                                             localParticle,
@@ -68,6 +78,16 @@ namespace dependencyChecks {
   }
 
 
+  /**
+   * @brief This function is meant to be called on a particle on which dependency issues
+   * in the initialisation algorithm steps have been detected. It writes the full current state of
+   * a problematic particle to screen and aborts the mission.
+   *
+   * @param localParticle: the problematic particle
+   * @param initStepMarkerEnum: Enum representing initialisation algorithm step particle is currently in
+   * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
+   * @param errors: Number of errors that have been detected
+   */
   template <typename Particle>
   static void dependencyCheckDumpInitStepDebugOutput(
     const Particle*                                          localParticle,
@@ -128,6 +148,15 @@ namespace dependencyChecks {
   }
 
 
+  /**
+   * @brief Dependency Check: Verify that particles have completed all the algorithm steps and stages of the
+   * main algorithm steps before the current one. If an error is found, debug information is printed to stdout
+   * and the program is aborted.
+   *
+   * @param localParticles: set of local Particles to perform checks on
+   * @param algorithmStepMarkerEnum: Enum representing current main algorithm step
+   * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
+   */
   template <typename ParticleContainer>
   static void dependencyCheckAlgorithmStep(
     const ParticleContainer&                                                                  localParticles,
@@ -186,6 +215,15 @@ namespace dependencyChecks {
   }
 
 
+  /**
+   * @brief Dependency Check: Verify that particles have completed all the algorithm steps and stages of the
+   * initialisation steps before the current one. If an error is found, debug information is printed to stdout
+   * and the program is aborted.
+   *
+   * @param localParticles: set of local Particles to perform checks on
+   * @param initStepMarkerEnum: Enum representing current initialisation algorithm step
+   * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
+   */
   template <typename ParticleContainer>
   static void dependencyCheckInitStep(
     const ParticleContainer&                                                               localParticles,
@@ -243,7 +281,11 @@ namespace dependencyChecks {
     }
   }
 
-
+  /**
+   * @brief Clear the dependency check counters of the main algorithm step dependency checks. Intended to be called first thing every new simulation step.
+   *
+   * @param localParticles: Set of particles to work on.
+   */
   template <typename ParticleContainer>
   static void clearDependencyChecksAlgorithmStep(const ParticleContainer& localParticles) {
 
@@ -259,6 +301,11 @@ namespace dependencyChecks {
   }
 
 
+  /**
+   * @brief Clear the dependency check counters of the initialisation step dependency checks. Intended to be called first thing every new simulation step.
+   *
+   * @param localParticles: Set of particles to work on.
+   */
   template <typename ParticleContainer>
   static void clearDependencyChecksInitStep(const ParticleContainer& localParticles) {
 
