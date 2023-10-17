@@ -177,7 +177,7 @@ Particle properties:
             + """
 
     """
-    )
+        )
 
     def _dependency_checks_modify_steps(self, steplist, step_type_name):
         """
@@ -264,7 +264,6 @@ Particle properties:
             step.includes += """\n#include "swift2/dependencyChecks.h"\n"""
 
             return
-
 
     def add_dependency_checks(self):
         """

@@ -73,8 +73,7 @@ namespace dependencyChecks {
     // flush before you quit
     std::cout << std::endl;
 
-    // TODO: is this the proper way of emergency exiting?
-    abort();
+    std::abort();
   }
 
 
@@ -143,8 +142,7 @@ namespace dependencyChecks {
     // flush before you quit
     std::cout << std::endl;
 
-    // TODO: is this the proper way of emergency exiting?
-    abort();
+    std::abort();
   }
 
 
@@ -282,7 +280,8 @@ namespace dependencyChecks {
   }
 
   /**
-   * @brief Clear the dependency check counters of the main algorithm step dependency checks. Intended to be called first thing every new simulation step.
+   * @brief Clear the dependency check counters of the main algorithm step dependency checks. Intended to be called
+   * first thing every new simulation step.
    *
    * @param localParticles: Set of particles to work on.
    */
@@ -302,7 +301,8 @@ namespace dependencyChecks {
 
 
   /**
-   * @brief Clear the dependency check counters of the initialisation step dependency checks. Intended to be called first thing every new simulation step.
+   * @brief Clear the dependency check counters of the initialisation step dependency checks. Intended to be called
+   * first thing every new simulation step.
    *
    * @param localParticles: Set of particles to work on.
    */
