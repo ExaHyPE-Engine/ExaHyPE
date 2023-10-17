@@ -121,7 +121,7 @@ class toolbox::loadbalancing::strategies::SplitOversizedTree: public toolbox::lo
      *
      *
      */
-    void triggerSplit( int sourceTree, int targetRank );
+    void triggerSplit( int sourceTree, int targetRank, int numberOfSplits );
 
     /**
      * <h2> Init has-spread-over-all-ranks flag </h2>
@@ -171,6 +171,8 @@ class toolbox::loadbalancing::strategies::SplitOversizedTree: public toolbox::lo
      * Please call this routine before you invoke updateState().
      */
     void updateLoadBalancing();
+
+    int computeNumberOfSplits(int sourceTree) const;
 };
 
 

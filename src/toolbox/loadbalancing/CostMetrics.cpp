@@ -64,10 +64,10 @@ void toolbox::loadbalancing::CostMetrics::waitForGlobalDataExchange() {
 
 void toolbox::loadbalancing::CostMetrics::updateGlobalView() {
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1) {
-    _globalWeight           = _localRankWeight;
-    _lightestRank._rank    = 0;
-    _lightestRank._weight  = getCostOfLocalRank();
-    _minimumOfMaximumOfRankWeights                = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
+    _globalWeight                   = _localRankWeight;
+    _lightestRank._rank             = 0;
+    _lightestRank._weight           = getCostOfLocalRank();
+    _minimumOfMaximumOfRankWeights  = getCostOfLocalRank();
   }
   else {
     #ifdef Parallel
