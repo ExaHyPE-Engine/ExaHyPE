@@ -59,9 +59,9 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   #endif
 
   #if Dimensions==2
-  {{FLOAT_TYPE}}                                 value[{{CARDINALITY_2D}}];
+  {{FLOAT_TYPE}}                                 value[{{CARDINALITY_2D}}] __attribute__((aligned(16)));
   #else
-  {{FLOAT_TYPE}}                                 value[{{CARDINALITY_3D}}];
+  {{FLOAT_TYPE}}                                 value[{{CARDINALITY_3D}}] __attribute__((aligned(16)));
   #endif
   
   enum ObjectConstruction {
