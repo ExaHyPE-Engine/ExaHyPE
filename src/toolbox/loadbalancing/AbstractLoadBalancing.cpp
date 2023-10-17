@@ -215,7 +215,7 @@ int toolbox::loadbalancing::AbstractLoadBalancing::getIdOfHeaviestLocalSpacetree
       and
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>=ThreePowerD
     ) {
-      maxLocalCost = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
+      maxLocalCost = _costMetrics->getCostOfLocalTree(p);
     }
   }
 
