@@ -601,10 +601,31 @@ thus appreciate any citation of the original release paper
     def add_action_set_to_initialisation(self, action_set):
         self.init_grid.add_action_set(action_set)
 
-    def generate_Peano4_project(self, verbose=False):
+    def add_action_set_to_create_grid(self, action_set):
+        """!
+        
+        Add an action set to create grid
+        
+        This routine actually adds an action set to each and every grid
+        creation routine. After all, we distinguish three flavours of it
+        
+        - with refinement;
+        - without refinement as we've just refined or split up domain;
+        - without refinement to let load balancing converge.
+        
         """
+        self.create_grid.add_action_set(action_set)
+        self.create_grid_but_postpone_refinement.add_action_set(action_set)
+        self.create_grid_and_converge_lb.add_action_set(action_set)
+
+    def generate_Peano4_project(self, verbose=False):
+        """!
+        
+        Construct a Peano 4 project and return it
+        
         Build the Peano4 project, i.e., all the action sets et al that you require
-        to run this ExaHyPE2 application.
+        to run this ExaHyPE2 application. The project is built within self._project
+        and eventually returned.
 
         This routine generates a Peano project, i.e. the domain-specific ExaHyPE
         view is translated into a Peano model. Once you have called this routine,
