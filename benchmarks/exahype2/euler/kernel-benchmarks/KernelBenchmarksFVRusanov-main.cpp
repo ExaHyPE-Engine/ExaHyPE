@@ -122,7 +122,12 @@ void storeOutcome(const double* Q, const double maxEigenvalue) {
  *
  * @return Tuple of maximum difference and total number of errors.
  */
-std::tuple<double, int> validateOutcome(double* Q, int patchIndex, const double maxEigenvalue) {
+std::tuple<double, int> validateOutcome(
+  double*       Q,
+  int           patchIndex,
+  const double  maxEigenvalue,
+  bool          reducesEigenvalue
+) {
   tarch::multicore::Lock lock(validateOutcomeSemaphore);
   int    index         = 0;
   int    errors        = 0;
@@ -140,7 +145,11 @@ std::tuple<double, int> validateOutcome(double* Q, int patchIndex, const double 
     maxDifference = std::max(maxDifference, std::abs(Q[i] - validOutcome[i]));
     index++;
   }
-  if (not tarch::la::equals(maxEigenvalue, validMaxEigenvalue, Accuracy)) {
+  if (
+    reducesEigenvalue
+    and
+    not tarch::la::equals(maxEigenvalue, validMaxEigenvalue, Accuracy)
+  ) {
     std::cout
       << std::fixed << " maxEigenvalue[" << patchIndex << "]!=validMaxEigenvalue[" << patchIndex
       << "]: " << maxEigenvalue << "!=" << validMaxEigenvalue << std::endl;
@@ -403,7 +412,9 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
   /**
    * Run a benchmark on the host
    *
-   * @see runBaseline
+   * It is important that we assess the version with the eigenvalue reduction
+   * first, as the very first run will determine our reference solution.  So
+   * we need a valid eigenvalue there.
    */
   auto assessKernel =
     [&](
@@ -440,7 +451,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
             kernel(
               device,
               patchData,
-              reduceMaxTimeStep>0
+              reduceMaxTimeStep==0
             );
             watchOneKernel.stop();
             if (launchingThread==0) {
@@ -453,7 +464,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
               double maxDifference = 0.0;
               for (int i = 0; i < patches; i++) {
                 auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome(
-                  patchData.QOut[i], i, patchData.maxEigenvalue[i]
+                  patchData.QOut[i], i, patchData.maxEigenvalue[i], reduceMaxTimeStep==0
                 );
                 errors += errorsPerPatch;
                 maxDifference = std::max(maxDifference, maxDifferencePerPatch);
@@ -481,10 +492,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 
         std::string reportedMarkerName = markerName;
         if (reduceMaxTimeStep==0) {
-          reportedMarkerName += ", no reduction";
+          reportedMarkerName += ", with reduction";
         }
         else {
-          reportedMarkerName += ", with reduction";
+          reportedMarkerName += ", no reduction";
         }
         reportRuntime( reportedMarkerName, timingOneKernel, timingWholeBenchmark, patches, launchingThreads );
       }
