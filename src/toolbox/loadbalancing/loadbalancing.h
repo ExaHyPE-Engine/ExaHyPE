@@ -12,10 +12,10 @@
  *
  * Suite of generic load balancing algorithms for Peano 4. The toolbox's
  * strategies typically have a State, a Configuration and a Blacklist. The
- * toolbox::loadbalancing namespace hosts primitive strategies, but you
+ * toolbox::loadbalancing::strategies namespace hosts primitive strategies, but you
  * can combine them into more sophisticated cascade of load balancing
  * schemes. You find examples for such cascades in the namespace
- * toolbox::loadbalancing::cascade. Most of them are only plain typedefs.
+ * toolbox::loadbalancing::strategies::cascade. Most of them are only plain typedefs.
  *
  *
  * ## Usage through Python API
@@ -32,17 +32,17 @@
  *
  * ## Overview over some pre-manufactured load balancing strategies
  *
- * - toolbox::loadbalancing::Hardcoded Don't do any analysis but hand out the
+ * - toolbox::loadbalancing::strategies::Hardcoded Don't do any analysis but hand out the
  *   partitioning instructions following a rulebook. This version allows you
  *   to create a reproducible load balancing scheme or to manually determine
  *   the splitting.
- * - toolbox::loadbalancing::SpreadOut Ensure that, if the problem is large
+ * - toolbox::loadbalancing::strategies::SpreadOut Ensure that, if the problem is large
  *   enough, each thread on each rank gets one partition.
  * - toolbox::loadbalancing::strategies::SpreadOutHierarchically This strategy is very
- *   similar to toolbox::loadbalancing::SpreadOut, but is spreads out in two
+ *   similar to toolbox::loadbalancing::strategies::SpreadOut, but is spreads out in two
  *   phases. First, the strategy tries to give each rank a partition. From
  *   thereon, each rank tries to give each of its threads one partition.
- * - toolbox::loadbalancing::RecursiveBipartition As the name suggests, the
+ * - toolbox::loadbalancing::strategies::RecursiveBipartition As the name suggests, the
  *   load balancing tries to identify oversized partitions and then splits
  *   these guys into two.
  *
