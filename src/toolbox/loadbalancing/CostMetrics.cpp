@@ -3,6 +3,9 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 
+tarch::logging::Log toolbox::loadbalancing::CostMetrics::_log( "toolbox::loadbalancing::CostMetrics" );
+
+
 toolbox::loadbalancing::CostMetrics::CostMetrics():
   _localRankWeight(0.0),
   _globalWeight(0.0),
@@ -45,7 +48,7 @@ double toolbox::loadbalancing::CostMetrics::getCostOfLocalRank() const {
 
 void toolbox::loadbalancing::CostMetrics::waitForGlobalDataExchange() {
   #ifdef Parallel
-  if (_globalSumRequest != nullptr ) {
+  if (_globalWeightRequest != nullptr ) {
     MPI_Wait( _globalWeightRequest, MPI_STATUS_IGNORE );
     MPI_Wait( _lightestRankRequest, MPI_STATUS_IGNORE );
     MPI_Wait( _minimumOfMaximumOfRankWeightsRequest, MPI_STATUS_IGNORE );
@@ -88,9 +91,9 @@ void toolbox::loadbalancing::CostMetrics::updateGlobalView() {
       _lightestRank._rank = tarch::mpi::Rank::getInstance().getRank();
     }
 
-    _globalSumRequest                          = new MPI_Request();
-    _globalLightestRankRequest                 = new MPI_Request();
-    _globalMinimumOfMaximumTreesPerRankRequest = new MPI_Request();
+    _globalWeightRequest                  = new MPI_Request();
+    _lightestRankRequest                  = new MPI_Request();
+    _minimumOfMaximumOfRankWeightsRequest = new MPI_Request();
 
     _globalWeightOut               = _localRankWeight;
     _lightestRankOut._weight       = _localRankWeight;
@@ -103,7 +106,7 @@ void toolbox::loadbalancing::CostMetrics::updateGlobalView() {
       MPI_DOUBLE,
       MPI_SUM,
       tarch::mpi::Rank::getInstance().getCommunicator(),
-      _globalSumRequest
+      _globalWeightRequest
     );
     MPI_Iallreduce(
       &_lightestRankOut,   // send
@@ -112,7 +115,16 @@ void toolbox::loadbalancing::CostMetrics::updateGlobalView() {
       MPI_DOUBLE_INT,
       MPI_MINLOC,
       tarch::mpi::Rank::getInstance().getCommunicator(),
-      _globalLightestRankRequest
+      _lightestRankRequest
+    );
+    MPI_Iallreduce(
+      &_minimumOfMaximumOfRankWeightsOut,     // send
+      &_minimumOfMaximumOfRankWeightsIn,      // receive
+      1,             // count
+      MPI_DOUBLE,
+      MPI_MIN,
+      tarch::mpi::Rank::getInstance().getCommunicator(),
+      _minimumOfMaximumOfRankWeightsRequest
     );
     #endif
   }

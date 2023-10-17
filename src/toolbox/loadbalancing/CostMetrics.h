@@ -8,6 +8,9 @@ namespace toolbox {
   }
 }
 
+
+#include "tarch/mpi/mpi.h"
+#include "tarch/logging/Log.h"
 #include <string>
 
 
@@ -120,4 +123,6 @@ class toolbox::loadbalancing::CostMetrics {
 
     double          _minimumOfMaximumOfRankWeightsIn;
     double          _minimumOfMaximumOfRankWeightsOut;
+  private:
+    static tarch::logging::Log _log;
 };

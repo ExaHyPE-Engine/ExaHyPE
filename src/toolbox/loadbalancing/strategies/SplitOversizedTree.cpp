@@ -125,9 +125,9 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::updateLoadBalancing
         ) {
           logInfo(
             "updateLoadBalancing()",
-            "Not all ranks are used. Lightest global rank is rank " << _costMetrics->getLightestRank()
+            "Not all ranks are used. Split once and deploy to lightest global rank " << _costMetrics->getLightestRank()
           );
-          triggerSplit(heaviestSpacetree, _costMetrics->getLightestRank(), computeNumberOfSplits(heaviestSpacetree));
+          triggerSplit(heaviestSpacetree, _costMetrics->getLightestRank(), 1);
         }
         else if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
           logInfo(
@@ -157,7 +157,8 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::updateLoadBalancing
           logInfo(
             "updateLoadBalancing()",
             "biggest local tree " << heaviestSpacetree << " is too heavy as it hosts " <<
-            weightOfHeaviestSpacetree << " cells. Try to offload subsection(s) of tree to " <<
+            weightOfHeaviestSpacetree << " cells. Try to split tree " << computeNumberOfSplits(heaviestSpacetree) <<
+            " times and to offload subsection(s) of tree to " <<
             _costMetrics->getLightestRank() <<
             " " << toString()
           );
@@ -187,7 +188,7 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::updateLoadBalancing
             logInfo(
               "updateLoadBalancing()",
               "local tree " << p << " is too heavy as it has a weight of " <<
-              _costMetrics->getCostOfLocalTree(p) << ". Try to split tree on local rank " <<
+              _costMetrics->getCostOfLocalTree(p) << ". Try to split tree " << computeNumberOfSplits(p) << " times on local rank " <<
               toString()
             );
             triggerSplit(p, tarch::mpi::Rank::getInstance().getRank(), computeNumberOfSplits(p));
