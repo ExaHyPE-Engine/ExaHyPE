@@ -11,6 +11,20 @@ namespace toolbox {
 #include <string>
 
 
+/**
+ * Abstract cost metric
+ *
+ * Base class for any cost metric that you want to use in combination with the
+ * generic load balancing strategies. To realise your own cost metric, you have
+ * to complete two steps:
+ *
+ * 1. The most important quantity of this class is _localRankWeight which is
+ *    not set by this abstract base class. I recommend to redefine the
+ *    routine updateGlobalView(), to set this attribute there, and then to call
+ *    CostMetric's updateGlobalView() to finish all global data exchange.
+ * 2. Next, you have to implement getCostOfLocalTree().
+ *
+ */
 class toolbox::loadbalancing::CostMetrics {
   public:
     CostMetrics();
@@ -40,6 +54,17 @@ class toolbox::loadbalancing::CostMetrics {
      */
     virtual void updateGlobalView();
 
+    /**
+     * Query cost of one tree
+     *
+     * This routine is only called by the rank which owns the tree
+     * spacetreeNumber. That is, you don't need global knowledge of the
+     * tree weight distribution.
+     *
+     * The routine is used in multiple places, but the most important one is
+     * toolbox::loadbalancing::AbstractLoadBalancing::getIdOfHeaviestLocalSpacetree(),
+     * which analyses the whole tree cost distribution on a rank.
+     */
     virtual double getCostOfLocalTree(int spacetreeNumber) const = 0;
 
     /**
@@ -68,7 +93,7 @@ class toolbox::loadbalancing::CostMetrics {
      * Weight of local rank
      *
      * Weight of the whole rank. This quantity is the key quantity
-     * whenever we actually ask teh metrics for information, as it
+     * whenever we actually ask the metrics for information, as it
      * feeds into the total weight, but also helps us to identify
      * underbooked ranks.
      */
