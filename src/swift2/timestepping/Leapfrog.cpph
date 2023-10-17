@@ -10,8 +10,6 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
 
   for (auto* particle : localParticles) {
 
-    std::cout << "Drifting particle " << particle->getPartid() << std::endl;
-
     if (
       particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
       and

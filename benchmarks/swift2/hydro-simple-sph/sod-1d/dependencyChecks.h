@@ -1,27 +1,18 @@
+#pragma once
 #include <iostream>
 #include <iomanip>
 #include <type_traits>
-#pragma once
 
 namespace dependencyChecks{
 
 template <typename Particle>
 static void dependencyCheckDumpDebugOutput(const Particle* localParticle,
-    // const benchmarks::swift2::sod::globaldata::hydroPart::AlgorithmStep AlgorithmStep,
-    // StepEnum AlgorithmStep,
-    // const benchmarks::swift2::sod::globaldata::hydroPart::SweepStage SweepStage,
-    // const int algorithmStepMarker,
-    // const int sweepStageMarker,
     typename std::remove_pointer<Particle>::type::AlgorithmStep algorithmStepMarkerEnum,
     typename std::remove_pointer<Particle>::type::SweepStage sweepStageMarkerEnum,
     const int errors){
 
-  // using StepEnum = std::remove_pointer<Particle>::type::AlgorithmStep;
-  // using StageEnum = std::remove_pointer<Particle>::type::SweepStage;
   using PartType = std::remove_pointer<Particle>::type;
 
-  // typename PartType::AlgorithmStep algorithmStepMarkerEnum = static_cast<PartType::AlgorithmStep>(algorithmStepMarker);
-  // typename PartType::SweepStage sweepStageMarkerEnum = static_cast<PartType::SweepStage>(sweepStageMarker);
   const int nsteps = static_cast<int>(PartType::AlgorithmStep::count);
   const int nstages = static_cast<int>(PartType::SweepStage::count);
 
@@ -74,20 +65,11 @@ static void dependencyCheckDumpDebugOutput(const Particle* localParticle,
 /* template <typename ParticleContainer, enum AlgorithmStep, enum SweepStage> */
 template <typename ParticleContainer>
 static void dependencyCheck(const ParticleContainer& localParticles,
-    /* HydroPart::AlgorithmStep, */
-    /* HydroPart::SweepStage){ */
-    /* AlgorithmStep A, */
-    /* SweepStage S){ */
-    // const benchmarks::swift2::sod::globaldata::hydroPart::AlgorithmStep AlgorithmStep,
-    // const benchmarks::swift2::sod::globaldata::hydroPart::SweepStage SweepStage
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage sweepStageMarkerEnum
     ){
 
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
-
-  // typename PartType::AlgorithmStep algorithmStepMarkerEnum = static_cast<PartType::AlgorithmStep>(algorithmStepMarker);
-  // typename PartType::SweepStage sweepStageMarkerEnum = static_cast<PartType::SweepStage>(sweepStageMarker);
 
   const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
   const int sweepStageMarker = static_cast<int>(sweepStageMarkerEnum);
@@ -147,6 +129,7 @@ static void clearDependencyChecks(const ParticleContainer& localParticles){
       particle->setSweepStateProgression(i, 0);
     }
   }
+
 }
 
 
