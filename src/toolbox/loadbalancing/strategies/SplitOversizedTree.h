@@ -49,7 +49,18 @@ namespace toolbox {
  * @ref page_peano_domain_decomposition "some domain split-up constraints",
  * as the logical tree topology's depth obviously is constraint by the
  * depth of the global spacetree. That is, this load balancing scheme is
- * advantageous if recursive splitting fail.
+ * advantageous if recursive splitting fails.
+ *
+ * I recommend to use this strategy if the following things hold:
+ *
+ * 1. Another strategy has already spread out over all ranks, so all ranks are
+ *    busy with at least one tree. In this case, we use this strategy as a
+ *    post-balancing step within a cascade of decompositions.
+ * 2. We have a good grasp of the load distribution at the time when this load
+ *    balancing step kicks in already.
+ *
+ * The second item implies that I've seen this strategy struggle for strongly
+ * adaptive, fine meshes and meshes with a very inhomogeneous load pattern.
  */
 class toolbox::loadbalancing::strategies::SplitOversizedTree: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:

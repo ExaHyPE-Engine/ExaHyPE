@@ -101,6 +101,14 @@ if __name__ == "__main__":
         help="Enable AMR",
     )
     parser.add_argument(
+        "-p",
+        "--plot",
+        dest="plot",
+        action="store_true",
+        default=False,
+        help="Plot initial and final solution",
+    )
+    parser.add_argument(
         "-sched",
         "--scheduler",
         dest="scheduler",
@@ -243,7 +251,10 @@ if __name__ == "__main__":
     else:
         build_mode = peano4.output.CompileMode.Release
 
-    plot_interval = 0.0
+    if args.plot:
+      plot_interval = args.end_time
+    else:
+      plot_interval = 0.0
 
     project.set_global_simulation_parameters(
         dimensions,  # dimensions

@@ -242,7 +242,7 @@ int toolbox::loadbalancing::strategies::SplitOversizedTree::computeNumberOfSplit
 void toolbox::loadbalancing::strategies::SplitOversizedTree::triggerSplit( int sourceTree, int targetRank, int numberOfSplits ) {
   const int numberOfSplitCells = std::max(
     1,
-    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(sourceTree).getNumberOfLocalUnrefinedCells() / numberOfSplits
+    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(sourceTree).getNumberOfLocalUnrefinedCells() / (1+numberOfSplits)
   );
   for (int i=0; i<numberOfSplits; i++) {
     bool success = peano4::parallel::SpacetreeSet::getInstance().split(
