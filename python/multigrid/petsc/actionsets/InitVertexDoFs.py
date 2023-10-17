@@ -26,8 +26,10 @@ the solver in the first place. This happens in get_includes().
   """
   TemplateInitVertex = """
   if ( fineGridVertex{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
-    tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> value;
-    tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> rhs;
+    {% if VERTEX_CARDINALITY>1 %}
+    {% else %}
+    double value, rhs;
+    {% endif %}
     repositories::{{SOLVER_INSTANCE}}.vertexInit(
       marker.x(),
       marker.h(),

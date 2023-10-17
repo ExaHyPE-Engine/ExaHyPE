@@ -26,7 +26,6 @@ parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       defau
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
-assert args.degree == 1, "not ready for degree 2 yet"
 assert args.dimensions == 2, "not ready for 3d yet"
 
 project = multigrid.petsc.Project(project_name = "DG", 
@@ -34,24 +33,29 @@ project = multigrid.petsc.Project(project_name = "DG",
                                   ) 
 
                         
-matrices = multigrid.matrixgenerators.GaussLobatto(polynomial_degree      = args.degree,
-                                                   dimensions             = args.dimensions,
+matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args.degree,
+                                                   Dimensions             = args.dimensions,
                                                    unknowns_per_cell_node = 1,
                                                    unknowns_per_face_node = 1,  # for DG, this has to equal unknowns_per_cell_dof
                                                    )
                         
 solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
-                                                                     unknowns             = 1,                      # unknowns_per_cell_dof,
+                                                                     cell_unknowns        = 1,                      # unknowns_per_cell_dof,
+                                                                     face_unknowns        = 1,                      # unknowns_per_face_dof,
                                                                      dimensions           = args.dimensions,
                                                                      min_h                = args.meshsize,
                                                                      max_h                = args.meshsize,
-                                                                     cell_cell_mass_matrix   = matrices.getCellCellMassMatrix(),     
-                                                                     cell_cell_system_matrix = matrices.getCellCellSystemMatrixForLaplacian(),
-                                                                     cell_to_face_matrix     = matrices.getCellToFaceMatrix(),       
-                                                                     face_face_Riemann_problem_matrix        = matrices.getFaceFaceMatrix(),   # todo bad name    
-                                                                     face_to_cell_matrix     = matrices.getCellIdentityMatrix(), # @todo Wrong
-                                                                     quadrature_points_in_unit_interval = [ 0.0,1.0 ],
+                                                                     cell_cell_rhs_matrix   = matrices.get_cell_mass_matrix(),     
+                                                                     cell_cell_lhs_matrix   = matrices.get_cell_system_matrix_for_laplacian(),
+                                                                     cell_cell_lhs_matrix_scaling = args.dimensions-2,
+                                                                     cell_cell_rhs_matrix_scaling = args.dimensions,
+                                                                     cell_to_face_matrix     = matrices.get_cell_to_face_matrix(),       
+                                                                     face_to_cell_matrix     = matrices.get_cell_identity_matrix(), 
+                                                                     cell_to_face_matrix_scaling  = 0,       
+                                                                     face_to_cell_matrix_scaling  = args.dimensions, 
+                                                                     face_face_Riemann_problem_matrix=matrices.get_face_face_riemann_problem_matrix(),
+                                                                     quadrature_points_in_unit_interval = matrices.get_points_unit_interval()
                                                                      )
 
 project.add_solver( solver )

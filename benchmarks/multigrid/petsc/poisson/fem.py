@@ -43,6 +43,8 @@ solver = multigrid.petsc.solvers.CollocatedLowOrderDiscretisation(name          
                                                                   max_h                = args.meshsize,
                                                                   cell_lhs_matrix      = matrices.getCellSystemMatrixForLaplacian(),
                                                                   cell_rhs_matrix      = matrices.getCellIdentityMatrix(),
+                                                                  cell_lhs_matrix_scaling = args.dimensions-2,
+                                                                  cell_rhs_matrix_scaling = args.dimensions,
                                                                   )
 
 project.add_solver( solver )

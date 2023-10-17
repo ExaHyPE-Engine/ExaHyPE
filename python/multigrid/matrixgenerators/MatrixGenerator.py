@@ -38,18 +38,18 @@ class MatrixGenerator:
     '''
     The next four attributes are set here, and 
     are promoted to 2/3 dimensions by calling
-    getPolynomial, for instance.
+    get_polynomial, for instance.
     Each comes with a default argument of 
     self.Dimensions, but this can be modified if
     a lower dimension of polynomial is required
     '''
-    self.polynomials1d = self.getPolynomial1d()
+    self.polynomials1d = self.get_polynomial1d()
     self.derivatives1d = [ p.deriv() for p in self.polynomials1d ]
-    self.points1d      = self.getPoints1d()
-    self.weights1d     = self.getWeights1d()
+    self.points1d      = self.get_points1d()
+    self.weights1d     = self.get_weights1d()
 
   @abstractmethod
-  def getPolynomial1d(self):
+  def get_polynomial1d(self):
     """!
     Method to create a list of 1D polynomials.
     We promote these to higher dimensions by
@@ -75,7 +75,7 @@ class MatrixGenerator:
     return polys
 
   @abstractmethod
-  def getPoints1d(self):
+  def get_points1d(self):
     """!
     Method to set the quadrature points, used for 
     integration.
@@ -93,7 +93,7 @@ class MatrixGenerator:
     return points
 
   @abstractmethod
-  def getWeights1d(self):
+  def get_weights1d(self):
     """!
     Method to set the quadrature weights, used for 
     integration.
@@ -110,7 +110,7 @@ class MatrixGenerator:
     points, weights = leggauss( self.poly_degree + 1 )
     return weights
 
-  def getPointsForDimension(self, dim=-1):
+  def get_points_for_dimension(self, dim=-1):
     """!
     We promote the 1D quadrature points
     in into the dimensions of our problem
@@ -143,7 +143,7 @@ class MatrixGenerator:
     '''
     return [ *product( *points ) ]
 
-  def getWeightsForDimension(self, dim=-1):
+  def get_weights_for_dimension(self, dim=-1):
     """!
     We promote the 1D quadrature weights
     in into the dimensions of our problem
@@ -175,7 +175,7 @@ class MatrixGenerator:
     '''
     return [ arrayProduct(array) for array in product( *weights ) ]
   
-  def convertIndexToDim(self, index, dim=-1):
+  def convert_index_to_dim(self, index, dim=-1):
     """!
     This method helps with indexing. Typically,
     for polynomial degree p, we have (p+1) nodal
@@ -195,7 +195,7 @@ class MatrixGenerator:
       index     = index % pToD
     return output
     
-  def getPolynomial(self, index, dim=-1):
+  def get_polynomial(self, index, dim=-1):
     """!
     Promote 1d polynomials to many dimensions
     by taking products.
@@ -214,7 +214,7 @@ class MatrixGenerator:
 
     # the indices of the polynomials we wanna fetch
     # warning: will misfire if "index" not in correct range for dim
-    indices =   self.convertIndexToDim(index, dim)
+    indices =   self.convert_index_to_dim(index, dim)
     polys   = [ self.polynomials1d[i] for i in indices ]
 
     #define function object to return:
@@ -238,11 +238,11 @@ class MatrixGenerator:
     #return this function object
     return returnFunc
 
-  def getDeriv(self, index, dimForDeriv, dim=-1):
+  def get_deriv(self, index, dimForDeriv, dim=-1):
     """!
     dimForDeriv is the singular dimension that we wanna take a polyderiv in
 
-    Behaves the same as getPolynomial, except in that in the specified 
+    Behaves the same as get_polynomial, except in that in the specified 
     dimension, we take a derivative rather than the poly itself
     """
     if dim == -1: 
@@ -252,7 +252,7 @@ class MatrixGenerator:
 
     # the indices of the polynomials we wanna fetch
     # warning: will misfire if "index" not in correct range for dim
-    indices = self.convertIndexToDim(index, dim)
+    indices = self.convert_index_to_dim(index, dim)
     polys   = []
     for i, index in enumerate(indices):
       if i == dimForDeriv:
@@ -273,7 +273,7 @@ class MatrixGenerator:
     #return this function object
     return returnFunc
 
-  def evalPolynomial(self, index, point, dim=-1):
+  def eval_polynomial(self, index, point, dim=-1):
     """!
     Method to evaluate a d-dimensional polynomial at the supplied
     point. We convert an index into a d-dimensional tuple, and
@@ -285,7 +285,7 @@ class MatrixGenerator:
     if dim == -1:
       dim = self.Dimensions
     assert len(point) == dim, "We must have same number of coordinates as number of dimensions!"
-    index = self.convertIndexToDim(index, dim)
+    index = self.convert_index_to_dim(index, dim)
     output = 1
     for i,p in zip(index, point):
       #evaluate polynomial at given point
@@ -293,11 +293,11 @@ class MatrixGenerator:
       output *= val
     return output
 
-  def evalIntegral(self, functions, dim=-1, factor=1):
+  def eval_integral(self, functions, dim=-1, factor=1):
     if dim == -1:
       dim = self.Dimensions
-    points  = self.getPointsForDimension(dim)
-    weights = self.getWeightsForDimension(dim)
+    points  = self.get_points_for_dimension(dim)
+    weights = self.get_weights_for_dimension(dim)
     output  = 0
 
     for p, w in zip(points, weights):
@@ -312,7 +312,7 @@ class MatrixGenerator:
     return output * factor
 
   @abstractmethod
-  def getCellSystemMatrixForLaplacian(self):
+  def get_cell_system_matrix_for_laplacian(self):
     """!
     
     The resulting matrix has to be scaled by @f$ h^{d-1} @f$.
@@ -323,7 +323,7 @@ class MatrixGenerator:
     raise NotImplementedError
   
   @abstractmethod
-  def getCellMassMatrix(self):
+  def get_cell_mass_matrix(self):
     """!
     
     A factor method to pre-assemble the mass matrix for a cell. This is
