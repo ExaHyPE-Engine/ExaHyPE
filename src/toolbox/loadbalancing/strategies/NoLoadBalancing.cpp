@@ -1,6 +1,6 @@
 #include "../strategies/NoLoadBalancing.h"
 
-#include "loadbalancing.h"
+#include "toolbox/loadbalancing/loadbalancing.h"
 #include "toolbox/loadbalancing/metrics/CellCount.h"
 
 #include "tarch/Assertions.h"

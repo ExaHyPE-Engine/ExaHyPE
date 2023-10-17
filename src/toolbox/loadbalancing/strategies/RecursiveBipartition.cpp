@@ -1,6 +1,6 @@
 #include "../strategies/RecursiveBipartition.h"
 
-#include "loadbalancing.h"
+#include "toolbox/loadbalancing/loadbalancing.h"
 
 #include "peano4/utils/Globals.h"
 #include "peano4/parallel/SpacetreeSet.h"

@@ -1,6 +1,6 @@
 #include "../strategies/Hardcoded.h"
 
-#include "loadbalancing.h"
+#include "toolbox/loadbalancing/loadbalancing.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"

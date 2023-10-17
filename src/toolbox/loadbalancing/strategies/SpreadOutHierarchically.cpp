@@ -1,6 +1,6 @@
 #include "../strategies/SpreadOutHierarchically.h"
 
-#include "loadbalancing.h"
+#include "toolbox/loadbalancing/loadbalancing.h"
 
 
 #include "peano4/parallel/SpacetreeSet.h"
