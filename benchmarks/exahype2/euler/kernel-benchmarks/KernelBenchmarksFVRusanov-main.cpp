@@ -429,7 +429,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       int                device,
       int                patches
     ) -> void {
-      for (int reduceMaxTimeStep=1; reduceMaxTimeStep>=0; reduceMaxTimeStep--) {
+      for (int reduceMaxTimeStep=0; reduceMaxTimeStep<2; reduceMaxTimeStep++) {
         tarch::timing::Measurement timingWholeBenchmark;
         tarch::timing::Measurement timingOneKernel;
 
@@ -458,12 +458,13 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
             if (launchingThread==0) {
               timingOneKernel.setValue( watchOneKernel.getCalendarTime() );
             }
-            if (Accuracy > 0.0 && reduceMaxTimeStep != 0) {
+            if constexpr (Accuracy > 0.0) {
               int    errors        = 0;
               double maxDifference = 0.0;
               for (int i = 0; i < patches; i++) {
-				if (counter == 0) {
+				if (counter == 0 and reduceMaxTimeStep == 0) {
                   storeOutcome(patchData.QOut[i], patchData.maxEigenvalue[0]);
+			      counter++;
 				}
                 auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome(
                   patchData.QOut[i], i, patchData.maxEigenvalue[i], reduceMaxTimeStep==0
@@ -471,7 +472,6 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
                 errors += errorsPerPatch;
                 maxDifference = std::max(maxDifference, maxDifferencePerPatch);
               }
-			  counter++;
 
               if (errors > 0) {
                 logError(
@@ -538,7 +538,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 
   for (int device=0; device<tarch::accelerator::Device::getInstance().getNumberOfDevices(); device++) {
     #if defined(GPUOffloadingSYCL)
-      /*assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator> >,     "device " + std::to_string(device) + ", batched, AoS, usm",   launchingThreads, device, numberOfPatches );
+      assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator> >,     "device " + std::to_string(device) + ", batched, AoS, usm",   launchingThreads, device, numberOfPatches );
       assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::SoALexicographicEnumerator> >,     "device " + std::to_string(device) + ", batched, SoA, usm",   launchingThreads, device, numberOfPatches );
       assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator> >,   "device " + std::to_string(device) + ", batched, AoSoA, usm", launchingThreads, device, numberOfPatches );
 
@@ -548,7 +548,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 
       assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator> >,     "device " + std::to_string(device) + ", task-graph, AoS, usm",   launchingThreads, device, numberOfPatches );
       assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::SoALexicographicEnumerator> >,     "device " + std::to_string(device) + ", task-graph, SoA, usm",   launchingThreads, device, numberOfPatches );
-      assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator> >,   "device " + std::to_string(device) + ", task-graph, AoSoA, usm", launchingThreads, device, numberOfPatches );*/
+      assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator> >,   "device " + std::to_string(device) + ", task-graph, AoSoA, usm", launchingThreads, device, numberOfPatches );
 
       assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_copy_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator> >,     "device " + std::to_string(device) + ", batched, AoS, copy",   launchingThreads, device, numberOfPatches );
       assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_copy_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::SoALexicographicEnumerator> >,     "device " + std::to_string(device) + ", batched, SoA, copy",   launchingThreads, device, numberOfPatches );
@@ -591,7 +591,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 
       assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator> >,     "device " + std::to_string(device) + ", patch-wise, AoS, managed",   launchingThreads, device, numberOfPatches );
       assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::SoALexicographicEnumerator> >,     "device " + std::to_string(device) + ", patch-wise, SoA, managed",   launchingThreads, device, numberOfPatches );
-      assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator> >,   "device " + std::to_string(device) + ", patch-wise, AoSoA, managed", launchingThreads, device, numberOfPatches );*/
+      assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_managed_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator> >,   "device " + std::to_string(device) + ", patch-wise, AoSoA, managed", launchingThreads, device, numberOfPatches );
     #endif
   }
 }

@@ -46,6 +46,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
     patchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, 1, 0
   );
 
+
   double* tempFluxX = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
   double* tempFluxY = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
   double* tempFluxZ = evaluateFlux and Dimensions == 3
@@ -168,6 +169,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
   ::sycl::event updateWithEigenvalue;
   if (Dimensions == 2) {
     ::sycl::event computeMaxEigenvalueX = queue.submit([&](::sycl::handler& handle) {
+	  handle.depends_on(copySolutionEvent);
       handle.parallel_for(
         ::sycl::range<3>{
           numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch + 2 * solversHaloSize},
@@ -194,6 +196,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
     });
 
     ::sycl::event computeMaxEigenvalueY = queue.submit([&](::sycl::handler& handle) {
+	  handle.depends_on(computeMaxEigenvalueX);
       handle.parallel_for(
         ::sycl::range<3>{
           numberOfPatches, numberOfVolumesPerAxisInPatch + 2 * solversHaloSize, numberOfVolumesPerAxisInPatch},
@@ -374,6 +377,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
   ::sycl::event updateWithFlux;
   if (evaluateFlux and Dimensions == 2) {
     ::sycl::event computeFluxX = queue.submit([&](::sycl::handler& handle) {
+	  handle.depends_on(updateWithEigenvalue);
       handle.parallel_for(
         ::sycl::range<3>{
           numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch + 2 * solversHaloSize},
@@ -400,6 +404,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
     });
 
     ::sycl::event computeFluxY = queue.submit([&](::sycl::handler& handle) {
+	  handle.depends_on(computeFluxX);
       handle.parallel_for(
         ::sycl::range<3>{
           numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch + 2 * solversHaloSize},
@@ -426,8 +431,6 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
     });
 
     updateWithFlux = queue.submit([&](::sycl::handler& handle) {
-      handle.depends_on(updateWithEigenvalue);
-      handle.depends_on(computeFluxX);
       handle.depends_on(computeFluxY);
 
       handle.parallel_for(
@@ -861,7 +864,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
           );
         }
         patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
-  */
+        */
 
         patchData.maxEigenvalue[patchIndex] = ::sycl::reduce_over_group(
           i.get_group(),
@@ -886,23 +889,23 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
   }
 
   if (tempFluxX != nullptr)
-    tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(tempFluxX, queue);
+    ::sycl::free(tempFluxX, queue);
   if (tempFluxY != nullptr)
-    tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(tempFluxY, queue);
+    ::sycl::free(tempFluxY, queue);
   if (tempFluxZ != nullptr)
-    tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(tempFluxZ, queue);
+    ::sycl::free(tempFluxZ, queue);
   if (tempNonconservativeProductX != nullptr)
-    tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(tempNonconservativeProductX, queue);
+    ::sycl::free(tempNonconservativeProductX, queue);
   if (tempNonconservativeProductY != nullptr)
-    tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(tempNonconservativeProductY, queue);
+    ::sycl::free(tempNonconservativeProductY, queue);
   if (tempNonconservativeProductZ != nullptr)
-    tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(tempNonconservativeProductZ, queue);
+    ::sycl::free(tempNonconservativeProductZ, queue);
   if (tempEigenvalueX != nullptr)
-    tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(tempEigenvalueX, queue);
+    ::sycl::free(tempEigenvalueX, queue);
   if (tempEigenvalueY != nullptr)
-    tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(tempEigenvalueY, queue);
+    ::sycl::free(tempEigenvalueY, queue);
   if (tempEigenvalueZ != nullptr)
-    tarch::accelerator::sycl::GPUMemoryManager::getInstance().free(tempEigenvalueZ, queue);
+    ::sycl::free(tempEigenvalueZ, queue);
 }
 #endif
 
