@@ -1,6 +1,7 @@
 #pragma once
 #include <iomanip>
 #include <iostream>
+#include <string>
 #include <type_traits>
 
 namespace dependencyChecks {
@@ -16,13 +17,16 @@ namespace dependencyChecks {
    * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
    * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
    * @param errors: Number of errors that have been detected
+   * @param call_identifier: Additional information on which dependency check failed to be printed
+   *                         to screen before exiting.
    */
   template <typename Particle>
   static void dependencyCheckDumpAlgorithmStepDebugOutput(
-    const Particle*                                             localParticle,
+    const Particle*                                             particle,
     typename std::remove_pointer<Particle>::type::AlgorithmStep algorithmStepMarkerEnum,
     typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
-    const int                                                   errors
+    const int                                                   errors,
+    const std::string                                           call_identifier
   ) {
 
     using PartType = std::remove_pointer<Particle>::type;
@@ -32,11 +36,12 @@ namespace dependencyChecks {
 
 
     std::cout << "-----------------------------------------\n";
-    std::cout << "Particle " << localParticle->getPartid() << " - found " << errors << " dependency errors\n";
+    std::cout << "Dependency check [" << call_identifier << "]\n";
+    std::cout << "Particle " << particle->getPartid() << " - found " << errors << " dependency errors\n";
     std::cout
       << "Failed at Algorithm Step/Sweep Stage: " << PartType::castAlgorithmStepToString(algorithmStepMarkerEnum)
       << " / " << PartType::castSweepStageToString(sweepStageMarkerEnum) << "\n";
-    std::cout << "Particle data:" << localParticle->toString() << "\n";
+    std::cout << "Particle data:" << particle->toString() << "\n";
 
     // Set up "header" of the table
     std::cout << "Particle Dependency Checks This Step:\n";
@@ -61,7 +66,7 @@ namespace dependencyChecks {
 
       // write out counters for sweep stages of that algorithm step
       for (int s = 0; s < nstages; s++) {
-        std::cout << std::setw(5) << localParticle->getAlgorithmStepSweepStateProgression(i);
+        std::cout << std::setw(5) << particle->getAlgorithmStepSweepStateProgression(i);
         if (s < nstages - 1) {
           std::cout << std::setw(3) << " / ";
         }
@@ -86,13 +91,16 @@ namespace dependencyChecks {
    * @param initStepMarkerEnum: Enum representing initialisation algorithm step particle is currently in
    * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
    * @param errors: Number of errors that have been detected
+   * @param call_identifier: Additional information on which dependency check failed to be printed
+   *                         to screen before exiting.
    */
   template <typename Particle>
   static void dependencyCheckDumpInitStepDebugOutput(
     const Particle*                                          localParticle,
     typename std::remove_pointer<Particle>::type::InitStep   initStepMarkerEnum,
     typename std::remove_pointer<Particle>::type::SweepStage sweepStageMarkerEnum,
-    const int                                                errors
+    const int                                                errors,
+    const std::string                                        call_identifier
   ) {
 
     using PartType = std::remove_pointer<Particle>::type;
@@ -208,7 +216,141 @@ namespace dependencyChecks {
 
       // If there are any errors, print out a detailed report and exit.
       if (errors > 0)
-        dependencyCheckDumpAlgorithmStepDebugOutput(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors);
+        dependencyCheckDumpAlgorithmStepDebugOutput(
+          particle,
+          algorithmStepMarkerEnum,
+          sweepStageMarkerEnum,
+          errors,
+          "localParticle check each step and sweep stage"
+        );
+    }
+  }
+
+
+  /**
+   * @TODO documentation
+   * @param activeParticles: set of local Particles to perform checks on
+   * @param algorithmStepMarkerEnum: Enum representing current main algorithm step
+   */
+  template <typename ParticleContainer>
+  static void dependencyCheckActiveParticlesAlgorithmStep(
+    const ParticleContainer&                                                                  activeParticles,
+    typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum
+  ) {
+
+    using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+    const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
+    const int touchVertexLastTime = static_cast<int>(PartType::SweepStage::touchVertexLastTime);
+
+    const int nstages = static_cast<int>(PartType::SweepStage::count);
+    const int nsteps  = static_cast<int>(PartType::AlgorithmStep::count);
+
+    const int index_this_stage = algorithmStepMarker * nstages + touchVertexLastTime;
+
+    for (auto* particle : activeParticles) {
+
+      // For local particles, we first mark down what step the particle completed.
+      // Don't do that for active particles.
+
+      // Now check everything else before this stage, and check that everything
+      // that should've run until now actually has run.
+      int errors = 0;
+      for (int step = 0; step < algorithmStepMarker; step++) {
+
+        for (int stage = 0; stage < nstages; stage++) {
+
+          const int index     = step * nstages + stage;
+          int       partStage = particle->getAlgorithmStepSweepStateProgression()[index];
+
+          if (partStage == 0)
+            errors++;
+        }
+      }
+
+      // for the current sweep, only check up to the current stage.
+      for (int stage = 0; stage < touchVertexLastTime; stage++) {
+
+        const int index     = algorithmStepMarker * nstages + stage;
+        int       partStage = particle->getAlgorithmStepSweepStateProgression()[index];
+
+        if (partStage == 0)
+          errors++;
+      }
+
+      // If there are any errors, print out a detailed report and exit.
+      if (errors > 0)
+        dependencyCheckDumpAlgorithmStepDebugOutput(
+          particle,
+          algorithmStepMarkerEnum,
+          PartType::SweepStage::touchVertexLastTime,
+          errors,
+          "activeParticles dependency check in TouchVertexLastTime"
+        );
+    }
+  }
+
+
+  /**
+   * @TODO documentation
+   * @param activeParticles: set of local Particles to perform checks on
+   * @param initStepMarkerEnum: Enum representing current main algorithm step
+   */
+  template <typename ParticleContainer>
+  static void dependencyCheckActiveParticlesInitStep(
+    const ParticleContainer&                                                             activeParticles,
+    typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep initStepMarkerEnum
+  ) {
+
+    using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+    const int initStepMarker      = static_cast<int>(initStepMarkerEnum);
+    const int touchVertexLastTime = static_cast<int>(PartType::SweepStage::touchVertexLastTime);
+
+    const int nstages = static_cast<int>(PartType::SweepStage::count);
+    const int nsteps  = static_cast<int>(PartType::InitStep::count);
+
+    const int index_this_stage = initStepMarker * nstages + touchVertexLastTime;
+
+    for (auto* particle : activeParticles) {
+
+      // For local particles, we first mark down what step the particle completed.
+      // Don't do that for active particles.
+
+      // Now check everything else before this stage, and check that everything
+      // that should've run until now actually has run.
+      int errors = 0;
+      for (int step = 0; step < initStepMarker; step++) {
+
+        for (int stage = 0; stage < nstages; stage++) {
+
+          const int index     = step * nstages + stage;
+          int       partStage = particle->getInitStepSweepStateProgression()[index];
+
+          if (partStage == 0)
+            errors++;
+        }
+      }
+
+      // for the current sweep, only check up to the current stage.
+      for (int stage = 0; stage < touchVertexLastTime; stage++) {
+
+        const int index     = initStepMarker * nstages + stage;
+        int       partStage = particle->getInitStepSweepStateProgression()[index];
+
+        if (partStage == 0)
+          errors++;
+      }
+
+      // If there are any errors, print out a detailed report and exit.
+      if (errors > 0)
+        dependencyCheckDumpInitStepDebugOutput(
+          particle,
+          initStepMarkerEnum,
+          PartType::SweepStage::touchVertexLastTime,
+          errors,
+          "activeParticles dependency check in TouchVertexLastTime"
+        );
     }
   }
 
@@ -275,7 +417,9 @@ namespace dependencyChecks {
 
       // If there are any errors, print out a detailed report and exit.
       if (errors > 0)
-        dependencyCheckDumpInitStepDebugOutput(particle, initStepMarkerEnum, sweepStageMarkerEnum, errors);
+        dependencyCheckDumpInitStepDebugOutput(
+          particle, initStepMarkerEnum, sweepStageMarkerEnum, errors, "localParticle check each step and sweep stage"
+        );
     }
   }
 

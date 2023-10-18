@@ -223,12 +223,23 @@ Particle properties:
         )
         self.data.add_attribute(step_progression)
 
-        check_template = """\n dependencyChecks::dependencyCheck{StepType}(localParticles,
+        check_template = """\n  dependencyChecks::dependencyCheck{StepType}(localParticles,
                   globaldata::{NAME}::{StepType}::{0},
                   globaldata::{NAME}::SweepStage::{1}
                   );\n"""
         check_template = check_template.replace("{NAME}", self.name)
         check_template = check_template.replace("{StepType}", step_type_name)
+
+        check_template_active_particles = """
+          dependencyChecks::dependencyCheckActiveParticles{StepType}(activeParticles,
+                                                                     globaldata::{NAME}::{StepType}::{0}
+                                                                    );\n"""
+        check_template_active_particles = check_template_active_particles.replace(
+            "{NAME}", self.name
+        )
+        check_template_active_particles = check_template_active_particles.replace(
+            "{StepType}", step_type_name
+        )
 
         # First step is special: First reset all dependency values before doing anything else
         first_step = steps[0]
@@ -265,6 +276,11 @@ Particle properties:
             )
             step.touch_vertex_last_time_kernel += check_template.format(
                 step.name, stage
+            )
+            # touch vertex last time is special: Make sure all activeParticles
+            # have been local at some point
+            step.touch_vertex_last_time_kernel += (
+                check_template_active_particles.format(step.name)
             )
 
             if step.includes is None:

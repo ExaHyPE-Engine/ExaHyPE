@@ -102,7 +102,7 @@ class AlgorithmStep(object):
         input_particles=None,
         includes="",
     ):
-        """
+        """!
 
         The algorithmic step description is a meta data object, i.e. it only
         holds properties.
