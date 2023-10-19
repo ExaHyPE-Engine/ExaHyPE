@@ -110,24 +110,48 @@
   \int _{\text{cell}_v} f \cdot v dx 
 \f}
 
- The volumetric parts are the same for each and every DG formalism. The
- treatment of the face terms differs from Riemann solver to Riemann solver.
+ There are some ingredients that are the same for each and every DG flavour:
  
- ## Riemann solver with simple averaging
-
- This is not a sophisticated choice, but one that highlights all key ingredients
- and is simple to digest:
-
   - Each cell holds @f$ (p+1)^d @f$ degrees of freedom (dof). We specify this 
     through the variable polynomial_degree. The solver class internally then
     will take care of the +1.
-  - Each node within the cell holds one unknown as we solve a scalar equation.
+  - Each node within the cell holds one unknown, as we solve a scalar equation.
     Therefore, 
     
             cell_unknowns=1
-            
+
+    If you have vector-valued PDEs, it is worth studying the documentation of
+    <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver itself</a>
+    and notably the section "Data storage" therein.
   - The operator @f$ A_{cc} @f$ takes the dofs within a cell and couples
     them with each other. It respresents @f$ \int _{\text{cell}_v} ( \nabla u, \nabla v) \ dx @f$.
+    In the interface above, it is specified by the two parameters cell_cell_lhs_matrix
+    and cell_cell_lhs_matrix_scaling.
+  - The operator @f$ P_{cf} @f$ takes the solution from a cell and projects it 
+    the faces. Hence, @f$ P_{cf} \in \mathbb{R}^{2d(p+1)^{d-1} \times (p+1)^{d}} @f$.
+    The 2d equals the number of faces of a cell, while the cell is a submanifold
+    and therefore hosts @f$ (p+1)^{d-1} @f$. 
+    The result is written into 
+    @f$ u^+ @f$ or @f$ u^- @f$ respectively on the faces.
+  - The operator @f$ P_{fc} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
+    the updates for the cell. 
+  - The right-hand side operator is the @f$ (p+1) \times (p+1) @f$ matrix which is
+    applied to the nodal values of f, i.e. the @f$ f(x) @f$ within the Gauss-Lobatto
+    or Gauss-Legendre points of a cell. This default right-hand side is a ***mass matrix***
+    and scaled with @f$ h^d @f$ due to the integral. Consequently, 
+    
+                   cell_cell_rhs_matrix_scaling = args.dimensions
+
+  - The quadrature points are dumped into the solver and are mainly used for 
+    the visualisation, but also to evaluate @f$ f(x) @f$ for the right-hand
+    side at the correct points.
+ 
+## The simplest Riemann solver: averaging
+
+@todo Tobias. Continue writing.
+
+
+
   - On the faces, we have the gradient @f$ \nabla u @f$ from the left and from
     right right. So we might be tempted to hold @f$ \nabla u^+ @f$ and
     @f$ \nabla u^- @f$. So @f$ 2d @f$ quantities in total. However, this is 
@@ -138,32 +162,14 @@
     
     These are not really unknowns in the linear algebra sense. They are 
     helpers.        
-  - The operator @f$ P_{cf} @f$ takes the solution from a cell and projects it 
-    the faces. Hence, @f$ P_{cf} \in \mathbb{R}^{2d(p+1)^{d-1} \times (p+1)^{d}} @f$.
-    The 2d equals the number of faces of a cell, while the cell is a submanifold
-    and therefore hosts @f$ (p+1)^{d-1} @f$. 
-    The result is written into 
-    @f$ u^+ @f$ or @f$ u^- @f$ respectively on the faces.
   - The operator @f$ A_{ff} @f$ takes the @f$ 2(p+1)^{d-1} @f$ on the face
     and yields the 
     @f$ (p+1)^{d-1} @f$ averages.
-  - The operator @f$ P_{fc} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
-    the updates for the cell. 
-  
- In the example above, we use d-linear shape functions arranged along the 
- Gauss-Lobatto integration points. So the two nodes carrying the shape 
- function weights are spread out over the unit interval.
  
+ 
+ . The
+ treatment of the face terms differs from Riemann solver to Riemann solver.
 
- @image html degree_of_freedom_semantics_Lobatto.png
- @image html face_to_face_projection.png
- @image html gaussLobatto.png
- @image html piecewise_discontinuous_shape_functions.png
- @image html projection.png
-
-
-
-## The simplest Riemann solver: averaging
 
 This discussion follows the Discontinuous Galerking discussion. The only
 difference is that we have to extend our averaging such that both solution
@@ -225,9 +231,18 @@ and hence not subject to any additional equations.
 The third line averages the @f$ u @f$ values from left and right, the
 fourth line addresses the normal projections of @f$ \phi @f$. 
 
-
- # What happens under the hood (C++ view)
+  
+ In the example above, we use d-linear shape functions arranged along the 
+ Gauss-Lobatto integration points. So the two nodes carrying the shape 
+ function weights are spread out over the unit interval.
  
+
+ @image html face_to_face_projection.png
+ @image html piecewise_discontinuous_shape_functions.png
+ @image html projection.png
+
+
+
  
  
 */

@@ -420,7 +420,26 @@ class DiscontinuousGalerkinDiscretisation(Solver):
   equation system.
   </div>
 
+  ## Data storage
+  
+  The data storage within a cell is not prescribed by Peano, i.e. you can, 
+  in principle decide if you want to reorder the @ref page_multigrid_terminology "nodes within the cell"
+  or you can decide to order the degrees of freedom overall as SoA as opposed
+  to AoS. At the end of the day, Peano maintains an array of doubles per
+  cell and does not really care about the semantics of those. However, we
+  strongly recommend that you stick to the default configuration where 
+  possible:
 
+  @image html degree_of_freedom_semantics.png
+
+  - Nodes are enumerated following our @ref multigrid_enumeration "dimension-generic conventions".
+  - Data are stored as an Array of Structs (AoS), i.e. first all the unknowns
+    of the first node, then all of the second, and so forth.
+    
+  If you change any ordering, you have to take this into account for all 
+  associated operators (such as projections onto the faces), but you also 
+  will have to amend the plotters which are tied to these conventions.
+  
   ## Examples
   
   Multiple examples are shipped with Peano which demonstrate how to use the 
