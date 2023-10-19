@@ -80,7 +80,12 @@ enable the autotools pipeline. Every new commit now will add this ignore entry
 to the global repo, which is something we don't want to have.
 
 
+# Python Conventions / Style Guide
 
+Most users will interact with Peano through the Python API, which acts as glue to stick
+together various C++ snippets in a way that can be modified for each experiment. 
+
+We aim for our Python to look something like the [PEP-8 style guide for Python](https://peps.python.org/pep-0008/).
 
 
 Code Formatting

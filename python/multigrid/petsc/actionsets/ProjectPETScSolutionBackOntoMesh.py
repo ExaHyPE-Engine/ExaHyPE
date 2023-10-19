@@ -20,24 +20,25 @@ corresponding entry in the solution vector reads like.
   """
   
   
-  TemplateInitVertex = """
-  if ( not marker.willBeRefined()
-      and
-      // we only gave it an index if it was not on the boundary
-      fineGridVertexPoisson.getType() != vertexdata::Poisson::Type::Dirichlet 
-   ) { 
+  TemplateInitCell = """
+  if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
-
-    for (int i=0; i<{{VERTEX_CARDINALITY}}; i++) {
-      std::pair<int,int> localIndex( _spacetreeId, fineGridVertex{{SOLVER_NAME}}.getNumber()+i );
-      int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
-
-      // ask our instance of Petsc the value stored in the solution vector here.
-      double val = repositories::instanceOfPetsc.getX(globalIndex);
-      fineGridVertex{{SOLVER_NAME}}.setValue(0, val);
-
-    }
     
+    // Commenting out so that we don't get compilation errors, as we are halfway through making changes
+    /*
+    std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber() );
+    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
+
+    tarch::la::Vector<{{CELL_CARDINALITY}}, double> cellDofs;
+    for (int i=0; i<{{CELL_CARDINALITY}}; i++){
+      cellDofs[i] = repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().get(globalIndex + i);
+    }
+
+    //place this vector into the mesh
+    fineGridCell{{SOLVER_NAME}}.setValue(cellDofs);
+    
+    */
+
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
 """
@@ -75,8 +76,8 @@ in init().
     
     """
     result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.TemplateInitVertex).render(**self.d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
       pass 
     return result
 
@@ -141,7 +142,8 @@ basically initialise the _localMap with the correct tree number.
   _spacetreeId = treeNumber;
 """
 
-class ProjectPETScCellSolutionOnVerticesBackOntoMesh(ActionSet):
+
+class ProjectPETScSolutionOnVerticesBackOntoMesh(ActionSet):
   """!
 
 Project solution vector from PETSc back onto vertices
@@ -154,25 +156,20 @@ corresponding entry in the solution vector reads like.
   
   """
   
-  
-  TemplateInitCell = """
-  if ( not marker.willBeRefined() ) { 
-    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
+  TemplateTouchVertexFirstTime = """
+  if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
+    std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
+    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
 
-    std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}.getNumber() );
-    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
-
-    tarch::la::Vector<{{CELL_CARDINALITY}}, double> cellDofs;
-    for (int i=0; i<{{CELL_CARDINALITY}}; i++){
-      cellDofs[i] = repositories::instanceOfPetsc.getX(globalIndex + i);
+    for (int i=0; i<{{VERTEX_CARDINALITY}}; i++){
+      fineGridVertex{{SOLVER_NAME}}.setValue(
+        i,
+        repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().get(globalIndex+i)
+      );
     }
-
-    //place this vector into the mesh
-    fineGridCell{{SOLVER_NAME}}.setValue(cellDofs);
-    
-    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
 """
+
   
   def __init__(self,
                solver):
@@ -187,11 +184,11 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
   degrees of freedom are assigned exclusively to the vertices.
     
     """
-    super( ProjectPETScCellSolutionOnVerticesBackOntoMesh, self ).__init__()
+    super( ProjectPETScSolutionOnVerticesBackOntoMesh, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
-    self.d["CELL_CARDINALITY"]       = solver.number_of_cell_unknowns
+    self.d["VERTEX_CARDINALITY"]     = solver.number_of_matrix_entries_per_vertex
 
 
 
@@ -201,14 +198,14 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
 Provide C++ code snippet for peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME  
   
 Only touchVertexFirstTime is an event where this action set actually
-does something: It inserts the template TemplateInitVertex and 
+does something: It inserts the template TemplateTouchVertexFirstTime and 
 replaces it with entries from the dictionary. The latter is befilled
 in init().
     
     """
     result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+      result = jinja2.Template(self.TemplateTouchVertexFirstTime).render(**self.d)
       pass 
     return result
 

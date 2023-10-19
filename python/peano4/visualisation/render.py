@@ -19,6 +19,7 @@ if __name__ == "__main__":
   parser.add_argument("--type",                      dest="type",                         choices=["display", "vtu", "patch-file" ],  default="vtu", help="Output format" )
   parser.add_argument("--dir",                       dest="dir",                          default=".", help="Output directory" )
   parser.add_argument("-v", "--verbose",             dest="verbose",                      action="store_true",  default = False, help="Run in a chatty mode" )
+  parser.add_argument("-s", "--single-file",         dest="single_file",                  action="store_true",  default = False, help="Input file is single snapshot (and not meta file)" )
   parser.add_argument(                               dest="filename", help="Input file name" )
   args = parser.parse_args()
 
@@ -51,4 +52,7 @@ if __name__ == "__main__":
     print( "add shrink patches filter" )
     visualiser.append_filter( peano4.visualisation.filters.ShrinkPatches(args.shrink_cells,verbose=args.verbose), False )
 
-  visualiser.display()
+  if args.single_file:
+    visualiser.display_single_file()
+  else:
+    visualiser.display()

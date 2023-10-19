@@ -1,0 +1,52 @@
+/**
+ 
+ @page page_multigrid_terminology Terminology and degree of freedom layout
+
+In all of our methods, we work with Lagrangian polynomials. The solution 
+results from a linear combination of weighted polynomials spanning function
+spaces. The weights determine the continuous solution. We have quite some 
+freedom how to arrange the weights geometrically and to pick polynomials.
+The sketch below depits a Gauss-Legendre (left) and Gauss-Lobatto (right) 
+arrangement.
+
+@image html gaussLobatto.png
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+We refer to the points which host weights of Lagrangian polynomials as ***nodes***. Each node can hold 
+multiple ***unknowns*** which are weights of the shape functions. 
+</div>
+
+
+If we look at one cell, the number of
+nodes times the number of unknowns defines the total number of ***degrees of freedom***
+(DoFs) within the system. We frequently also introduce function 
+spaces on facets and vertices. Those guys have their own nodes and unknowns.
+It really depends on the numerical scheme if the resulting weights are 
+real degrees of freedom or sole helpers.
+
+
+We note that for Lobatto, some cell nodes coincide spatially with the faces.
+However, we hold all the data within the cells (from a data structure point
+of view). 
+As we store all the unknowns of all degrees of freedom per cell in one 
+huge array per cell, we end up with an array of doubles of size 
+@f$ K (p+1)^d @f$, K being the number of unknowns per cell node and @f$ p @f$
+denoting the polynomial order.
+
+
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+A solver in Peano has a unique geometric layout of its nodes, and each and every
+node holds the same number of unknowns (though some solvers allow you to change
+the number of unknowns held by cells, facets and vertices). If you need 
+different node layouts (polynomial orders), you 
+can combine various solvers with different layouts.
+The overall philosophy is to keep things simple as building blocks, which users
+can assemble into more complex code setups.
+An alternative approach would have been to write one generic, monolithic solver
+with a lot of features which cover all eventualities and then can be specialised.
+</div>
+
+
+ */
+ 
+ 

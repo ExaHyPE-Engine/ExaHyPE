@@ -1,54 +1,488 @@
 # This file is part of the Peano multigrid project. For conditions of 
 # distribution and use, please see the copyright notice at www.peano-framework.org
 import peano4
+import jinja2
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
 
 import os
 
-
-from .Solver                                    import Solver
-
-from multigrid.petsc.actionsets.EnumerateDofs             import EnumerateDofs
-from multigrid.petsc.actionsets.InitVertexDofs                  import InitCellDoFs
-from multigrid.petsc.actionsets.ProjectPETScSolutionOnCellsBackOntoMesh import ProjectPETScSolutionOnCellsBackOntoMesh
-from multigrid.petsc.actionsets.AssemblePETSCMatrix       import AssemblePETSCMatrixForMixed
-
+from .Solver                                              import Solver
+from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
+from multigrid.petsc.actionsets.InitCellDoFs              import InitCellDoFs
+from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
+from multigrid.petsc.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
 
 from abc import abstractmethod
+
+from peano4.solversteps.ActionSet import ActionSet
+
+
+
+class AssemblePetscMatrix(ActionSet):
+  """!
+
+  Trigger assembly of PETSc matrix and also assemble rhs vector
+
+  """
+  TemplateTouchCellFirstTime = """
+  if (fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior) {
+    std::pair<int,int> localCellIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
+    int globalCellIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localCellIndex);
+
+    auto lhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
+    for (int row=0; row<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; row++) 
+    for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        globalCellIndex+row, 
+        globalCellIndex+col, 
+        lhsCellMatrix(row,col)
+      );
+    }
+    
+    auto rhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
+    for (int row=0; row<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; row++) {
+      double rhs = 0.0;
+      for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+        rhs += rhsCellMatrix(row,col) * fineGridCell{{SOLVER_NAME}}.getRhs(col);
+      }
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        row, rhs
+      );
+    }
+    
+    auto projectionCellToFaceMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfCellDataOntoFace(marker.x(),marker.h());
+    auto projectionFaceToCellMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfRiemannSolutionOntoCell(marker.x(),marker.h());
+    int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
+    for (int d=0; d<Dimensions; d++) {
+      std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
+      std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
+      int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
+      int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
+      
+      for (int row=0; row<dofsPerFace; row++ ) {
+        for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
+            globalCellIndex+col,
+            projectionCellToFaceMatrix(d * dofsPerFace + row,col)
+          );
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalFirstDoFIndexOfRightFace + row, 
+            globalCellIndex+col,
+            projectionCellToFaceMatrix(d * dofsPerFace + row + Dimensions*dofsPerFace,col)
+          );
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalCellIndex+col,
+            globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
+            projectionFaceToCellMatrix(col, d * dofsPerFace + row)
+          );
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalCellIndex+col,
+            globalFirstDoFIndexOfRightFace + row + 2 * dofsPerFace, 
+            projectionFaceToCellMatrix(col, d * dofsPerFace + row + Dimensions*dofsPerFace)
+          );
+        }
+      }
+    }
+  }
+  """
+
+  TemplateTouchFaceFirstTime="""
+  auto RiemannSolverMatrix = repositories::{{SOLVER_INSTANCE}}.getRiemannSolver(marker.x(),marker.h());
+  int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
+  if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() != facedata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+    std::pair<int,int> localFirstDoFIndex = std::make_pair(_spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
+    int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex);
+    for (int row=0; row<dofsPerFace; row++)
+    for (int col=0; col<2*dofsPerFace; col++) {
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        globalFirstDoFIndex + 2*dofsPerFace,
+        globalFirstDoFIndex + col, 
+        RiemannSolverMatrix(row, col)
+      );
+    }
+  }
+  """
+  
+  def __init__(self,
+               solver,
+               ):
+    """!
+    
+    Yet to be written
+        
+    """
+    
+    super( AssemblePetscMatrix, self ).__init__()
+    self.d = {}
+    self.d["SOLVER_INSTANCE"]        = solver.instance_name()
+    self.d["SOLVER_NAME"]            = solver.typename()
+
+
+  def get_body_of_operation(self,operation_name):
+    """!
+
+Provide C++ code snippet for peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME  
+Provide C++ code snippet for peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME  
+  
+Only touchVertexFirstTime is an event where this action set actually
+does something: It inserts the template TemplateTouchVertexFirstTime and 
+replaces it with entries from the dictionary. The latter is befilled
+in init().
+
+We actually do something during touchVertexFirstTime and touchCellFirstTime. We insert the 
+appropriate template into each.
+    
+    """
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.TemplateTouchCellFirstTime).render(**self.d)
+      pass 
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      result = jinja2.Template(self.TemplateTouchFaceFirstTime).render(**self.d)
+      pass 
+    return result
+
+
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_")
+
+
+  def user_should_modify_template(self):
+    """!
+    
+    The action set that Peano will generate that corresponds to this class
+    should not be modified by users and can safely be overwritten every time
+    we run the Python toolkit.
+    
+    """
+    return False
+
+
+  def get_includes(self):
+    """!
+   
+Consult petsc.Project for details
+    
+"""    
+    return """
+#include "repositories/SolverRepository.h"
+#include "tarch/la/Matrix.h"
+"""
+
+  def get_attributes(self):
+    """!
+    
+    
+    """
+    return f"""
+  int _spacetreeId;    
+"""
+      
+  def get_constructor_body(self):
+    """!
+    
+Define body of constructor
+
+@see get_attributes()
+    
+    """
+    return f"""
+    _spacetreeId = treeNumber;
+"""
+
 
 
 class DiscontinuousGalerkinDiscretisation(Solver):
   """!
    
-  we have a few different pieces of degree-of-freedom
-  terminology here. 
+  Discontinuous Galerkin class
 
-  CELL_DOFS - this will be our jinja template expression
-    the number of physical degrees of freedom within a 
-    cell. this should be (poly_degree + 1) ** dimensions
+  ## The weak formulation
 
-  CELL_DOF_UNKNOWNS - this will be our jinja expression
-    for the number of different unknonws that we associate
-    with a physica degree of freedom. here we take this to
-    be 3 (u, @f$ \phi_x, \ \phi_y @f$)
+  To translate a PDE into an equation system, we express the solution 
+
+  @f$ u = \sum _i u_i \phi _i @f$
+
+  as sum over shape functions @f$ \phi _i @f$. 
+  The shape functions in this class are locally continuous, but their linear 
+  combination is not. We test this setup against test functions @f$ v @f$.
+  Each test function is actually any of the shape functions @f$ \phi _i @f$.
+  Drawing both shapes and test functions from the same function space means that
+  we follow a ***Ritz-Galerkin*** approach.
+
+
+  Let @f$ \mathcal{L}(u) @f$ be the differential operator on the left-hand side
+  of the PDE, i.e. let's assume that we solve
+
+  @f$
+    \mathcal{L}(u) = f.
+  @f$
+
+  A weak formulation means that we multiple both sides with a test function and 
+  then integrate over the whole thing. As we take all these tests from the same 
+  function space as the shape functions, we know that they all have local 
+  support.Consequently, our test integral "shrinks" down to the support of the 
+  test function
+
+  @f$
+    \int _\Omega \mathcal{L}(u) \cdot v dx = \int_{\text{cell}_v} \mathcal{L}(u) \cdot v dx
+  @f$
+
+  as the product disappears everywhere outside of the cell that hosts the test 
+  function of interest.
+
+
+  Once again, we can integrate by parts to get rid of the highest derivative in
+  our partial differential operator @f$ \mathcal{L}(u) @f$, but this time, we will 
+  get an expression of the form 
+
+
+\f{eqnarray*}{
+  \int _\Omega \mathcal{L}(u) \cdot v dx 
+  &=& 
+  - \int _\Omega \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx 
+  + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(u)) v dS(x)
+  \\
+  &=& 
+  - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx 
+  + \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x)
+  \\
+  & = & \int _{\text{cell}_v} f \cdot v dx.
+\f}
+
+  We reduced the order of the deriative within @f$ \mathcal{L}(u) @f$ and got a 
+  new operator @f$ \tilde{\mathcal{L}} @f$.
+  If  @f$ \mathcal{L}(u) @f$ is dominated by a second derivative, @f$ \tilde{\mathcal{L}} @f$ 
+  hosts only first-order derivatives.
+  But this is a Pyrrhic victory:
+  We now get an additional PDE term over the cell faces.
+
+
+  We conclude that
+
+  1. the jump terms along the faces do not disappear, i.e. they do not cancel out 
+     from left and right as they do in a Continuous Galerkin formulation. 
+  2. Even worse, they refer to a value @f$ u @f$ which technically does not 
+     exist, as there is no (unique) solution along the face. We only have a 
+     left @f$ u^- @f$ and a right @f$ u^+ @f$ solution. Therefore, I explicitly
+     write @f$ \hat u @f$ in the equation above. It denotes that we haven't yet
+     decided what the function looks like along the face.
+  3. We now have cell integrals to evaluate, and there are additional face 
+     integrals. The latter ones couple neighbouring cells.    
+
+  We end up with a linear equation system 
+
+  @f$ A x = b @f$
+
+  where x has @f$ |\mathbb{C}| \cdot K  \cdot (p+1)^d @f$ entries. @f$ \mathbb{C}  @f$ 
+  is set of cells in the mesh.
+
+
+  ## An operator language and temporary variables
+    
+  Before we dive into examples or discuss how to map this formalism onto code, we 
+  introduce an operator language. That is, we break down the overall computation
+  into small tasks. These tasks will be found 1:1 in the code later on. Furthermore,
+  we gain some freedom by breaking things down into tiny bits and pieces: We can
+  alter individual ones or puzzle them together in various ways.
+    
+  We introduce a few operators (functions) to break down the overall computational 
+  scheme into a sequence/set of computations:
+    
+  - The operator @f$ A_{cc} @f$ takes the dofs within a cell and computes the 
+    term @f$ - \int _{\text{cell}_v} \left( \tilde{\mathcal{L}}(u), \nabla v \right) dx @f$.
+    It takes the @f$ K (p+1)^d @f$ values per cell and yields @f$ K (p+1)^d @f$
+    equations/updates from the cell. In classes like petsc.solvers.DiscontinuousGalerkinDiscretisation
+    this matrix is called cell_cell_lhs_matrix.
+  - Let's introduce temporary variables on the face. Those are the 
+    @f$ u^+ @f$ and @f$ u^- @f$ values, i.e. we store @f$ 2K (p+1)^{d-1} @f$
+    degrees of freedom on the face. Those are not really degrees of freedom.
+    They will be mere projection, i.e. simply encode what the solution along
+    the face is.
+  - The operator @f$ A_{cf} @f$ takes the solution from a cell and projects it 
+    onto a face. Let @f$ u^+ @f$ and @f$ u^- @f$ denote the solution left or 
+    right of a face (from the face's point of view). For each of the @f$ 2d @f$ 
+    faces of a cell, the operator @f$ P_{cf} @f$ yields either the 
+    @f$ u^+ @f$ or @f$ u^- @f$.
+  - The operator @f$ A_{ff} @f$ operates on a face. It takes 
+    @f$ u^+ @f$ and @f$ u^- @f$ and yields something
+    that "reconstructs" the solution and applies the flux operator on it. 
+    This is the Riemann solver and hence linear algebraises the 
+    @f$ \tilde{\mathcal{M}}(\hat u ) @f$ from above.
+  - The operator @f$ A_{fc} @f$ takes the @f$ \hat u @f$ on the face and yields
+    the updates for the cell. It evaluates @f$ \int _{\partial \text{cell}_v} (n,\tilde{\mathcal{M}}(\hat u )) v dS(x) @f$.
   
-  CELL_CARDINALITY - the product of the above two.
+  
+  <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+    Within Peano, it is important to distinguish data on cell and faces carefully 
+    from each other. Furthermore
+    (i) we can read data associated with faces within cells;
+    (ii) we can never read data from neighbouring cells within a cell;
+    (iii) we can never access adjacent cell data from a face.
+  </div>
+    
+    
+    
+  The overall scheme in operator notation thus reads
+    
+  @f$
+    A_{cc} + A_{fc} \circ A_{ff} \circ A_{cf}
+  @f$
+  
+    
+  i.e. we evaluate the cell contributions and add the face contributions 
+  which in turn results from a concatenation of three operators: 
+  Project solution onto face, solve a Riemann problem there, and then 
+  take the result and project it back onto the cell. The projection onto
+  the face is a purely geoemtric thing: Once we know the polynomials 
+  chosen within the cell, we can evaluate what the solution looks like 
+  depending on the weights (unknowns within the degree of freedom). 
+  With that knowledge, we can determine what the solution on the face 
+  looks like. We use the same polynomial space there (restricted to the 
+  submanifold) and therefore can express the face representation through
+  polynomial weights (left and right of the face), too. For each pair of
+  the  polynomial weights, we can solve the Riemann problem and store the
+  outcome in further weights. That is, we represent the outcome of the
+  Riemann problem again in the polynomial space on the faces. Finally,
+  we take this representation, test it against the test functions, 
+  integrate over the face and write the contributions back into the cell.
+    
+    
+    
+    
+  Effectively, our approach blows up the equation system to solve into 
+    
+  @f$ 
+   Ax = 
+   \begin{bmatrix}
+   A_{cc}  & A_{fc}  & 0 & 0 \\
+    0       & id      & -A_{ff}|_+ & -A_{ff}|_- \\
+   -id      & 0       & A_{cf}|_+ & 0      \\
+   -id      & 0       & 0 & A_{cf}|_-      
+   \end{bmatrix}
+   \begin{bmatrix}
+   x_{c} \\ x_f \\ x^+ \\ x^-
+   \end{bmatrix}
+   = 
+   \begin{bmatrix}
+   b_{c} \\ 0 \\ 0 \\ 0 
+   \end{bmatrix}
+  @f$ 
 
 
+  @todo We need a nice illustration here of all the function spaces 
+
+  where we have to specify the involved matrices further. 
+  The @f$ x_c @f$ are the real degrees of freedom, i.e. the weights within
+  the cells which effectively span the solution.
+  The @f$ x_\pm @f$ encode the projection of these polynomials onto the faces.
+  These are not real degrees of freedom, as they always result directly from
+  the @f$ x_c @f$.
+  The @f$ x_f @f$ encode the reconstructed solution on the faces and hold the
+  average of the @f$ x_\pm @f$ values.
+  This setup means our total matrix is no longer square. 
+  @f$ A_{cc} @f$ is square, with @f$ |\mathbb{C}| \cdot (p+1)^d @f$ rows, 
+  where @f$ |\mathbb{C}| @f$ is the number of cells in the mesh. 
+  @f$ A_{fc} @f$ has the same number of rows, but @f$ |\mathbb{F}| \cdot (p+1)^{d-1} @f$
+  columns, since this part has to "hit" @f$ x_f @f$. 
+  @f$ A_{ff} @f$ has @f$ |\mathbb{F}| \cdot (p+1)^{d-1} @f$ rows, and twice as many
+  columns (note that @f$ | x_\pm| \ = \ 2 |x_f| @f$ ).
+  Finally, @f$ A_{cf} @f$ has @f$ |\mathbb{C}| \cdot (p+1)^d @f$ rows and 
+  @f$ 2|\mathbb{F}| \cdot (p+1)^{d-1} @f$ columns, since this part "hits" 
+  @f$ x_\pm @f$.
+
+  Our global matrix is no longer square. We have 
+  @f$ 2 |\mathbb{C}| \cdot (p+1)^d + |\mathbb{F}| \cdot (p+1)^{d-1} @f$ rows
+  and 
+  @f$ |\mathbb{C}| \cdot (p+1)^d + 3|\mathbb{F}| \cdot (p+1)^{d-1} @f$ columns.
+
+
+
+
+  <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+  The write-down as one big matrix as above works if and only if the 
+  chosen Riemann solver yield a linear combination of the @f$ u^-/u^+ @f$
+  or @f$ x^-/x^+ @f$ values respectively. In many sophisticated solvers,
+  it will not be linear. In this case, the system becomes a non-linear 
+  equation system.
+  </div>
+
+
+  ## Examples
+  
+  Multiple examples are shipped with Peano which demonstrate how to use the 
+  plain Discontiuous Galerking solver:
+  
+  - benchmarks/multigrid/petsc/poisson/dg.py Hosts a simple solver for the 
+    Poisson equation. All the rationale are discussed in @ref benchmarks_multigrid_petsc_poisson.
+    
+
+
+
+  ## Attributes
+  
+  
+  cell_cell_lhs_matrix: [Float] or []
+    Pass in [] if you prefer to assemble the matrix per cell yourself. If this
+    is the @f$ \hat \mathcal{L} @f$ part in @ref page_multigrid_numerics_Disontinuous_Galerkin.
+    
+  cell_cell_rhs_matrix: [Float] or []
+    Pass in [] if you prefer to assemble the matrix per cell yourself. This 
+    part is not extensively discussed in the @ref page_multigrid_numerics_Disontinuous_Galerkin "generic DG discussion", 
+    but it is the part that enters the right-hand side, so typically the one
+    arising from @f$ \int f \cdot v \ dx @f$. 
+
+  cell_cell_lhs_matrix_scaling: Positive integer
+    The lhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
+    parameter. If you don't specify an lhs matrix, i.e. you prefer to inject
+    this matrix manually, you can leave this parameter None, as it is not 
+    used.
+    
+  cell_cell_rhs_matrix_scaling: Positive integer
+    The rhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
+    parameter. If you don't specify a rhs matrix, i.e. you prefer to inject
+    this matrix manually, you can leave this parameter None, as it is not 
+    used.
+    
+  face_face_Riemann_problem_matrix: [Float] or []
+    Pass in [] if you prefer to assemble the matrix per cell yourself. This 
+    matrix represents the actual Riemann solver. It accepts the left projection
+    @f$ u^- @f$ and @f$ u^+ @f$ and yields a "reconstructed" value at this 
+    point passed into the differential operator. Therefore, this is a band
+    matrix.
   
   """
   def __init__(self,
                name,
                polynomial_degree,
                dimensions,
-               unknowns,
+               cell_unknowns,
+               face_unknowns,
                min_h,
                max_h,
-               cellCellMassMatrix,
-               cellCellSystemMatrix,
-               cellToFaceMatrix,
-               faceFaceMatrix,
+               cell_cell_lhs_matrix,
+               cell_cell_rhs_matrix,
+               cell_cell_lhs_matrix_scaling,
+               cell_cell_rhs_matrix_scaling,
+               cell_to_face_matrix,
+               face_to_cell_matrix,
+               cell_to_face_matrix_scaling,
+               face_to_cell_matrix_scaling,
+               face_face_Riemann_problem_matrix,
+               quadrature_points_in_unit_interval,
                ):
     """!
    
@@ -62,22 +496,38 @@ class DiscontinuousGalerkinDiscretisation(Solver):
                                                                  )
 
     self.polynomial_degree = polynomial_degree
-    self.unknowns          = unknowns
     self.dimensions        = dimensions
+    self.cell_unknowns     = cell_unknowns
+    self.face_unknowns     = face_unknowns
 
-    self.cellCellMassMatrix    = cellCellMassMatrix
-    self.cellCellSystemMatrix  = cellCellSystemMatrix
-    self.cellToFaceMatrix      = cellToFaceMatrix
-    self.FaceFaceMatrix        = faceFaceMatrix
+    self.cell_cell_lhs_matrix               = cell_cell_lhs_matrix
+    self.cell_cell_rhs_matrix               = cell_cell_rhs_matrix
+    self.cell_to_face_matrix                = cell_to_face_matrix
+    self.face_to_cell_matrix                = face_to_cell_matrix
+    self.face_face_Riemann_problem_matrix   = face_face_Riemann_problem_matrix
 
-    self._cell_dofs     = ((polynomial_degree + 1) ** dimensions)
-    self._face_dofs     = ((polynomial_degree + 1) **( dimensions -1 ))
+    self.cell_cell_lhs_matrix_scaling = cell_cell_lhs_matrix_scaling
+    self.cell_cell_rhs_matrix_scaling = cell_cell_rhs_matrix_scaling
+    self.cell_to_face_matrix_scaling  = cell_to_face_matrix_scaling
+    self.face_to_cell_matrix_scaling  = face_to_cell_matrix_scaling
+    
+    self.quadrature_points_in_unit_interval = quadrature_points_in_unit_interval
     
     self._cell_pde_data   = peano4.datamodel.DaStGen2( name )
-    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self.unknowns) ) )
-    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self.unknowns) ) )
+    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self.number_of_matrix_entries_per_cell) ) )
+    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self.number_of_matrix_entries_per_cell) ) )
     
     pass
+
+
+  @property
+  def nodes_per_cell(self):
+    return (self.polynomial_degree + 1) ** self.dimensions
+
+
+  @property
+  def nodes_per_face(self):
+    return (self.polynomial_degree + 1) ** (self.dimensions-1)
 
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
@@ -109,25 +559,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     solution and right-hand side. 
     
     """
-    observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
-      filename       = "solution-" + self._name,
-      cell_unknown   = self._cell_pde_data,
-      getter         = "getValue().data()",
-      description    = "u",
-      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_cell   = self.number_of_matrix_entries_per_cell,
-      guard_predicate              = "not marker.isRefined()", 
-      ))
-
-    observer.add_action_set( peano4.toolbox.PlotCellDataInPeanoBlockFormat(
-      filename       = "rhs-" + self._name,
-      cell_unknown   = self._cell_pde_data,
-      getter         = "getRhs().data()",
-      description    = "b",
-      time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_cell   = self.number_of_matrix_entries_per_cell,
-      guard_predicate              = "not marker.isRefined()", 
-      ))
+    observer.add_action_set( PlotDGDataInPeanoBlockFormat(self) )
     pass
 
 
@@ -145,12 +577,12 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     to the observer.
     
     """
-    observer.add_action_set( EnumerateDofs(self) )
+    observer.add_action_set( EnumerateDoFs(self) )
     observer.add_action_set( InitCellDoFs(self) ) 
     pass
   
   def add_to_assemble(self, observer):
-    observer.add_action_set( AssemblePETSCMatrixForMixed(self) )
+    observer.add_action_set( AssemblePetscMatrix(self) )
     pass
 
   def add_to_init_petsc(self, observer):
@@ -185,20 +617,20 @@ class DiscontinuousGalerkinDiscretisation(Solver):
         "SOLVER_INCLUDES": "",
         "MIN_H"             : self.min_h,
         "MAX_H"             : self.max_h,
-#        "CELL_DOFS"         : self._cell_dofs,
-#        "CELL_DOF_UNKNOWNS" : self.unknowns_per_cell_dof,
-#        "FACE_CARDINALITY"  : self._face_unknowns,
-#        "FACE_DOFS"         : self._face_dofs,
-#        "FACE_DOF_UNKNOWNS" : self.unknowns_per_face_dof,
         "POLYNOMIAL_DEGREE":  self.polynomial_degree,
+        "CELL_UNKNOWNS":      self.cell_unknowns,
+        "FACE_UNKNOWNS":      self.face_unknowns,
+        "CELL_CELL_LHS_MATRIX":      self.cell_cell_lhs_matrix,
+        "CELL_CELL_RHS_MATRIX":      self.cell_cell_rhs_matrix,
+        "FACE_FACE_RIEMANN_PROBLEM_MATRIX":      self.face_face_Riemann_problem_matrix,
+        "CELL_TO_FACE_MATRIX":       self.cell_to_face_matrix,
+        "FACE_TO_CELL_MATRIX":                   self.face_to_cell_matrix,
+        "QUADRATURE_POINTS_IN_UNIT_INTERVAL":    self.quadrature_points_in_unit_interval,
+        "CELL_CELL_LHS_MATRIX_SCALING": self.cell_cell_lhs_matrix_scaling,
+        "CELL_CELL_RHS_MATRIX_SCALING": self.cell_cell_rhs_matrix_scaling,
+        "CELL_TO_FACE_MATRIX_SCALING":           self.cell_to_face_matrix_scaling,
+        "FACE_TO_CELL_MATRIX_SCALING":           self.face_to_cell_matrix_scaling,
         }
-
-    dictionary["MATRICES"] = f"""
-    const tarch::la::Matrix < {self.cellCellMassMatrix.shape[0]}, {self.cellCellMassMatrix.shape[1]}, double >  _cellCellMassMatrix = {self._convertMatrixToInitList(self.cellCellMassMatrix)};
-    const tarch::la::Matrix < {self.cellCellSystemMatrix.shape[0]}, {self.cellCellSystemMatrix.shape[1]}, double >  _cellCellSystemMatrix = {self._convertMatrixToInitList(self.cellCellSystemMatrix)};
-    const tarch::la::Matrix < {self.cellToFaceMatrix.shape[0]}, {self.cellToFaceMatrix.shape[1]}, double >  _cellToFaceMatrix = {self._convertMatrixToInitList(self.cellToFaceMatrix)};
-    const tarch::la::Matrix < {self.FaceFaceMatrix.shape[0]}, {self.FaceFaceMatrix.shape[1]}, double >  _faceFaceMatrix = {self._convertMatrixToInitList(self.FaceFaceMatrix)};
-    """
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".Abstract.template.h",
@@ -216,15 +648,15 @@ class DiscontinuousGalerkinDiscretisation(Solver):
       namespace,
       ".", 
       dictionary,
-      True,
+      False,
       True)
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )
-    output.makefile.add_h_file( "Abstract" + self._name + ".h" )
-    output.makefile.add_h_file( self._name + ".h" )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
+    output.makefile.add_h_file( "Abstract" + self._name + ".h", generated=True )
+    output.makefile.add_h_file( self._name + ".h", generated=True )
+    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp", generated=True )
+    output.makefile.add_cpp_file( self._name + ".cpp", generated=True )
 
 
   @property
@@ -246,7 +678,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     problem, and need one more unknown to store the outcome of that one.
     
     """
-    return 3 * self._face_dofs * self.unknowns
+    return 3 * self.face_unknowns * self.nodes_per_face
   
   @property
   def number_of_matrix_entries_per_cell(self):
@@ -255,265 +687,5 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     This is the actual unknowns per cell
     
     """
-    return self._cell_dofs * self.unknowns
+    return self.cell_unknowns * self.nodes_per_cell
   
-  def get_solver_repository_snippets(self):
-    header = """
-    int getTotalFaceDofs();
-    int getTotalCellDofs();
-    int getTotalVertexDofs();
-
-    /**
-    * we order the matrix so that cell-cell coupling sits
-    * in the top left, with face-face coupling in the bottom right
-    */
-    int getGlobalCellIndex(std::pair<int,int> localIndex);
-    int getGlobalFaceIndex(std::pair<int,int> localIndex);
-    int getGlobalVertexIndex(std::pair<int,int> localIndex);
-
-    /*
-    * store points, weight and coefficients for gaussian
-    * quadratures. aligned left to right / bottom to top
-    */
-    const std::vector<std::vector<double>> quadPoints = {{QUADRATURE_POINTS}};
-    const std::vector<double> quadWeights             = {{WEIGHTS}};
-    const std::vector<std::vector<double>> polyCoeffs = {{POLY_COEFFS}};
-
-    const int polynomialDegree = {{POLY_DEGREE}};
-
-    /*
-    we will enumerate our DoFs 0 -> (n+1)^d.
-    for now we only have 1D basis functions, and we promote them to 2d by taking their product.
-    we do this by taking the x position of the quadrature point, and pulling out an appropriate basis function
-    and then      taking the y position of the quadrature point, and pulling out an appropriate basis function
-    and multiplying them together.
-
-    dof ordering, with polynomial degree n:
-
-
-    .......................
-    .......................
-    .......................
-    n+1 - n+2 - .... - 2n+1
-    0   - 1   - .... -    n
-
-    so this method will pick out (x,y) coords for each dof. 
-
-    This is temporary - I haven't ironed out where the dofs should sit physically. we 
-    should be able to get some correct local matrices.
-
-    TODO upgrade to 3d
-    */
-    const std::vector<int> convertDofIndexToXYCoordinate(const int& dofIndex);
-
-    /*
-    method to evaluate polynomial at given point, given a set of coefficients
-    */
-    double evalPoly( const std::vector<double>& coeffs, const double& quadPoint );
-
-    /*
-    overload to:
-      - convert index into a tuple that describes position in the cell
-      - evaluate the 1d basis at each of the points
-      - take the product
-
-      ie we promote a 1d basis to an n-dimensional basis by evaluating 
-      our basis polynomial at (x,y,z,...) and taking the product
-      poly(x)*poly(y)*poly(z)*...
-    */
-    double evalPoly( const int& index, const std::vector<double>& quadPoint );
-
-    /*
-    need to specify in which dimension we are taking derivative
-    */
-    double evalDeriv( const int& dofIndex, const int& dimension, const std::vector<double>& quadPoint );
-    double evalDeriv( const std::vector<double>& coeffs, const double& quadPoint );
-
-    tarch::la::Vector<Dimensions,double> convertQuadPointToRealLocation( 
-      const int& quadIndex,
-      const tarch::la::Vector<Dimensions,double>& cellCentre,
-      const tarch::la::Vector<Dimensions,double>& cellH
-     );
-"""
-    cpp = """
-void {{NAMESPACE | join("::")}}::repositories::computeLocalToGlobalMapsForAllSolvers() {
-  {% for SOLVER in SOLVER_INSTANCES %}
-  {{SOLVER[1]}}.getFaceLocalToGlobalMap().computeLocalToGlobalMap();
-  {{SOLVER[1]}}.getCellLocalToGlobalMap().computeLocalToGlobalMap();
-  {% endfor %}
-} 
-
-int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom() {
-  int result = 0;
-  {% for SOLVER in SOLVER_INSTANCES %}
-  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getTotalNumberOfIndices();
-  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
-  {% endfor %}
-  return result;
-}
-
-int {{NAMESPACE | join("::")}}::repositories::getTotalFaceDofs() {
-  int result = 0;
-  {% for SOLVER in SOLVER_INSTANCES %}
-  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getTotalNumberOfIndices();
-  {% endfor %}
-  return result;
-}
-
-int {{NAMESPACE | join("::")}}::repositories::getTotalCellDofs() {
-  int result = 0;
-  {% for SOLVER in SOLVER_INSTANCES %}
-  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getTotalNumberOfIndices();
-  {% endfor %}
-  return result;
-}
-
-int {{NAMESPACE | join("::")}}::repositories::getTotalVertexDofs() {
-  int result = 0;
-  {% for SOLVER in SOLVER_INSTANCES %}
-  result += {{SOLVER[1]}}.getVertexLocalToGlobalMap().getTotalNumberOfIndices();
-  {% endfor %}
-  return result;
-}
-
-int {{NAMESPACE | join("::")}}::repositories::getGlobalCellIndex(std::pair<int,int> localIndex) {
-  int result;
-  {% for SOLVER in SOLVER_INSTANCES %}
-  result += {{SOLVER[1]}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
-  {% endfor %}
-  return result;
-}
-
-int {{NAMESPACE | join("::")}}::repositories::getGlobalFaceIndex(std::pair<int,int> localIndex) {
-  int result;
-  result += getTotalCellDofs();
-  {% for SOLVER in SOLVER_INSTANCES %}
-  result += {{SOLVER[1]}}.getFaceLocalToGlobalMap().getGlobalIndex(localIndex);
-  {% endfor %}
-  return result;
-}
-
-int {{NAMESPACE | join("::")}}::repositories::getGlobalVertexIndex(std::pair<int,int> localIndex) {
-  int result;
-  {% for SOLVER in SOLVER_INSTANCES %}
-  result += {{SOLVER[1]}}.getVertexLocalToGlobalMap().getGlobalIndex(localIndex);
-  {% endfor %}
-  return result;
-}
-
-/*
-overload to actually perform polynomial eval
-*/
-double {{NAMESPACE | join("::")}}::repositories::evalPoly( const std::vector<double>& coeffs, const double& quadPoint ){
-  double output = 0;
-  double x      = 1;
-  //coeffs are ordered from highest degree to lowest degree,
-  //so iterate from back to front
-  for (auto iter=coeffs.crbegin(); iter!=coeffs.crend(); iter++){
-    output += (*iter) * x;
-    x *= quadPoint;
-  }
-  return output;
-}
-
-/*
-overload to:
-  - convert index into a tuple that describes position in the cell
-  - evaluate the 1d basis at each of the points
-  - take the product
-
-  ie we promote a 1d basis to an n-dimensional basis by evaluating 
-  our basis polynomial at (x,y,z,...) and taking the product
-  poly(x)*poly(y)*poly(z)*...
-*/
-double {{NAMESPACE | join("::")}}::repositories::evalPoly( const int& index, const std::vector<double>& quadPoint ){
-  //convert index to pair of indices
-  const std::vector<int> indices = convertDofIndexToXYCoordinate(index);
-  double output = 1;
-
-  /*
-  let our dof   indices be ordered [d0, d1, ...]
-  and our point indices be ordered [p0, p1, ...]
-
-  then we actually want to return 
-
-  eval(d0, p0) * eval(d1, p1) * ...
-  */
-
-  auto indexIter = indices.cbegin();
-  auto pointIter = quadPoint.cbegin();
-
-  for (; indexIter!=indices.end(), pointIter!=quadPoint.end(); indexIter++, pointIter++)
-    output *= evalPoly( polyCoeffs[ *indexIter ], *pointIter );
-
-  return output;
-}
-
-
-const std::vector<int> {{NAMESPACE | join("::")}}::repositories::convertDofIndexToXYCoordinate(const int& dofIndex){
-  std::vector<int> output;
-  
-  //get x coord by taking modulo with polynomialDegree + 1
-  const int x = dofIndex % (polynomialDegree + 1);
-  output.push_back(x);
-
-  //take off the x coordinate, divide by (polynomialDegree + 1) to determine
-  //how many blocks north we are
-  const int y = dofIndex / (polynomialDegree + 1);
-  output.push_back(y);
-
-  return output;
-}
-
-double {{NAMESPACE | join("::")}}::repositories::evalDeriv( const int& dofIndex, const int& dimension, const std::vector<double>& quadPoint ){
-  if (dimension >= Dimensions) throw std::runtime_error("taking derivative in wrong dimension!");
-
-  //convert index to pair of indices
-  const std::vector<int> indices = convertDofIndexToXYCoordinate(dofIndex);
-  double output = 1;
-
-  for (int iter = 0; iter!=indices.size(); iter++){
-    //we want to eval deriv, but only in one dimension
-    output *= (iter == dimension)
-      ? evalDeriv( polyCoeffs[ indices[iter] ], quadPoint[iter] )
-      : evalPoly(  polyCoeffs[ indices[iter] ], quadPoint[iter] );
-  }
-
-  return output;
-}
-
-double {{NAMESPACE | join("::")}}::repositories::evalDeriv( const std::vector<double>& coeffs, const double& quadPoint ){
-  double output = 0;
-  double x      = 1;
-  double derivFactor = 1; //factor to account for falling powers of x
-
-  for (auto iter=coeffs.crbegin()+1; iter!=coeffs.crend(); iter++){
-    output += (*iter) * x * derivFactor;
-    x *= quadPoint; derivFactor++;
-  }
-  return output;
-}
-
-tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::repositories::convertQuadPointToRealLocation(
-  const int& quadIndex,
-  const tarch::la::Vector<Dimensions,double>& cellCentre,
-  const tarch::la::Vector<Dimensions,double>& cellH
-){
-  //get the quadrature point associated with this index
-  const std::vector<double> quadPoint = quadPoints[quadIndex];
-  tarch::la::Vector<Dimensions,double> output;
-
-  for (int i=0; i<Dimensions; i++){
-    //init output to be centre of the cell
-    output[i] =  cellCentre[i];
-    
-    //move from centre -> quadpoint, weighted by the size of the cell
-    //need to divide by 2 - want to make sure that furthest from the 
-    //centre we move is h/2
-    output[i] += quadPoint[i] * cellH[i]/2;
-  }
-  return output;  
-}
-
-"""
-    return header, cpp
