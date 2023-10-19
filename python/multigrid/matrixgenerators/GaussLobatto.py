@@ -7,8 +7,12 @@ from   scipy.interpolate import lagrange
 import peano4
 
 from   .MatrixGenerator import MatrixGenerator
-
-
+from .BlockMatrix.block_matrix_dgpoisson2d import DGPoisson2dBlockMatrix
+r_press = 1
+r_vel = 1
+BM = DGPoisson2dBlockMatrix(r_press, r_vel)
+print(BM._A_CC[(0,0)][(0,0)])
+pass
 
 class GaussLobatto(MatrixGenerator):
   '''
