@@ -172,7 +172,48 @@ followed the steps above, you can now activate this vectorisation. It differs
 from solver to solver how to do this, but most offer a boolean flag in their
 constructor.
 
+#### Step 4.1: Making your kernels vectoriser friendly
 
+While vectorising any non-trivial kernel is as much art as it is engineering, there are common steps most kernels can benefit from.
+
+Start by gathering vectoriser output. If you use LLVM/Clang, recompile the appropriate object file with these flags `-Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize`
+Find the desired loop in the output. For templates, the reported file/line is of the template, not the template instantiation location. When working with nested loops, usually only the innermost loop gets vectorised, so focus on this one.
+Sample expected output:
+```
+../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:481:11: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+         for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+```
+
+Sometimes the vectoriser only mentions that the loop isn't vectorised without mentioning why. This is usually the case where the are multiple issues. A safe point to start is to try to inline any major functions called inside the loop. If your kernel consists of a loop that calls a single interaction function, manually inline this function.
+
+After inlining, the reason for not vectorising appears:
+   ```
+   ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:335:11: remark: loop not vectorized: cannot identify array bounds [-Rpass-analysis=loop-vectorize]
+             for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
+   ```
+Vectoriser output can be cryptic. The general principle is to simplify the loop. Besides inlining, a good approach is to move as many function calls and/or data accesses outside the loop as possible.
+   Specifically:
+    - all reads from the local particle should be done before the loop; results are saved as local variables
+    - inside the loop, all reads/writes that touch the local particle should be substituted with the newly created local variables
+    - all writes to the local particle should be done after the loop by loading data from the local variables
+
+When the vectoriser changes the output message, it usually means that we should switch to another technique for simplifying the loop. The error below usually means that either
+   a value from the active particle escapes the loop, or that there is a branch/conditional that the vectoriser doesn't like.
+   ```
+   ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:316:23: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
+    void swift2::kernels::computeHydroForce(
+   ```
+
+In my case I saw `auto value = newValue > value : newValue : value;` in my kernel - clearly a manually implemented `max()` function. We substitute it with an actual call to std::max <- NOTE, this only works with -Ofast or -ffast-math!
+
+This message means that the kernel is vectorised. For fully vectorised kernels, the reported width will always match the machine width (4 for AVX2 and 8 for AVX512 capable machines and double precision kernels)
+```
+../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: Disabling scalable vectorization, because target does not support scalable vectors. [-Rpass-analysis=loop-vectorize]
+            for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+            ^
+../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: the cost-model indicates that interleaving is not beneficial [-Rpass-analysis=loop-vectorize]
+../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: vectorized loop (vectorization width: 8, interleaved count: 1) [-Rpass=loop-vectorize]
+```
 
  */
- 
+
