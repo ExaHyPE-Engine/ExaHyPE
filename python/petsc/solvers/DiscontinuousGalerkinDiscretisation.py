@@ -313,8 +313,6 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     the number of rows and columns we want in the 
     petsc matrix
     */
-    int getGlobalMatrixRows();
-    int getGlobalMatrixCols();
 
     int getGlobalCellIndex(std::pair<int,int> localIndex);
     int getGlobalFaceIndex(std::pair<int,int> localIndex);

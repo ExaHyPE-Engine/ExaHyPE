@@ -12,7 +12,7 @@ gcc-build:
     - echo $CI_COMMIT_SHA
     - echo $CI_COMMIT_BRANCH
     - echo "Running CI with $(nproc) cores"
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} python3 configure.py -cc=gcc -cxx=g++ --exahype --swift --petsc --multithreading=omp
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} python3 configure.py -cc=gcc -cxx=g++ --exahype --swift --multithreading=omp
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} make -j $(nproc --all)
   artifacts:
     paths:

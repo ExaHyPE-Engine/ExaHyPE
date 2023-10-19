@@ -290,6 +290,7 @@ submodules/
 # Unit tests
 UnitTests2d*
 UnitTests3d*
+src/unittests/UnitTests*
 
 # Output files
 *patch-file*
