@@ -133,6 +133,9 @@
     and therefore hosts @f$ (p+1)^{d-1} @f$. 
     The result is written into 
     @f$ u^+ @f$ or @f$ u^- @f$ respectively on the faces.
+    Read through <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver's</a>
+    data storage section and also consult Peano's @ref multigrid_enumeration "enumeration discussion"
+    for information on the ordering.
   - The operator @f$ P_{fc} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
     the updates for the cell. 
   - The right-hand side operator is the @f$ (p+1) \times (p+1) @f$ matrix which is
@@ -144,7 +147,7 @@
 
   - The quadrature points are dumped into the solver and are mainly used for 
     the visualisation, but also to evaluate @f$ f(x) @f$ for the right-hand
-    side at the correct points.
+    side at the correct positions in space.
  
 ## The simplest Riemann solver: averaging
 

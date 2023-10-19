@@ -440,6 +440,38 @@ class DiscontinuousGalerkinDiscretisation(Solver):
   associated operators (such as projections onto the faces), but you also 
   will have to amend the plotters which are tied to these conventions.
   
+  Data on the faces is 
+  
+  - stored as AoS by default;
+  - per face, we first store the left projection @f$ x^- @f$, then the right projection @f$ x^+ @f$
+    and then the outcome of the flux or associated reconstruction. That is, all the @f$ x^- @f$
+    are held en bloc first before we hold @f$ x^+ @f$.
+  - Per @f$ x^\pm @f$, the storage of the nodes and unknowns
+    follows again the @ref multigrid_enumeration "dimension-generic conventions".
+    
+  It is important to recognise that we store three types of quantities 
+  per unknown: Its left projection, its right projection, and its 
+  outcome which can be either the flux or a reconstructed
+  income. The semantics of the outcome depend upon your operators, i.e. 
+  they are not baked into the formalism. Furthermore, there is no 
+  assumption about the spacing along the faces. Naturally, you might
+  assume that a Gauss-Lobatto layout within the cell implies a 
+  Gauss-Lobatto distribution on the faces. However, no such thing
+  is encoded within the code, as we solely work with operators. They 
+  have to encode the correct spacing. 
+  
+  Another assumptions is baked into the realisation as a default:
+  The polynomial degree on the facet result @f$ x_f @f$ equals the 
+  polynomial degree within the cell.
+
+  @todo Different polynomial degrees are simple to realise. This is
+        something to do in the future. Note that +/- are to be 
+        taken from the same space as the cell, as they are projections,
+        but maybe we want to alter this, and even provide completely 
+        different degrees for the result of the Riemann solve.
+        
+  
+  
   ## Examples
   
   Multiple examples are shipped with Peano which demonstrate how to use the 
@@ -450,39 +482,6 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     
 
 
-
-  ## Attributes
-  
-  
-  cell_cell_lhs_matrix: [Float] or []
-    Pass in [] if you prefer to assemble the matrix per cell yourself. If this
-    is the @f$ \hat \mathcal{L} @f$ part in @ref page_multigrid_numerics_Disontinuous_Galerkin.
-    
-  cell_cell_rhs_matrix: [Float] or []
-    Pass in [] if you prefer to assemble the matrix per cell yourself. This 
-    part is not extensively discussed in the @ref page_multigrid_numerics_Disontinuous_Galerkin "generic DG discussion", 
-    but it is the part that enters the right-hand side, so typically the one
-    arising from @f$ \int f \cdot v \ dx @f$. 
-
-  cell_cell_lhs_matrix_scaling: Positive integer
-    The lhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
-    parameter. If you don't specify an lhs matrix, i.e. you prefer to inject
-    this matrix manually, you can leave this parameter None, as it is not 
-    used.
-    
-  cell_cell_rhs_matrix_scaling: Positive integer
-    The rhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
-    parameter. If you don't specify a rhs matrix, i.e. you prefer to inject
-    this matrix manually, you can leave this parameter None, as it is not 
-    used.
-    
-  face_face_Riemann_problem_matrix: [Float] or []
-    Pass in [] if you prefer to assemble the matrix per cell yourself. This 
-    matrix represents the actual Riemann solver. It accepts the left projection
-    @f$ u^- @f$ and @f$ u^+ @f$ and yields a "reconstructed" value at this 
-    point passed into the differential operator. Therefore, this is a band
-    matrix.
-  
   """
   def __init__(self,
                name,
@@ -505,8 +504,67 @@ class DiscontinuousGalerkinDiscretisation(Solver):
                ):
     """!
    
- Test comment (C)
+ Constructor of DG class
     
+ 
+## Cell to face projection
+
+Consult @ref multigrid_enumeration "Peano's enumeration for multigrid" page
+for info on the ordering. For 2d with a layout as below
+   
+@image documentation/Doxygen/Multigrid/face-ordering.png
+   
+the matrix is applied to
+   
+@f$
+   P_{cf} 
+   \begin{bmatrix}
+   x_0^+ \\ x_1^+ \\ x_2^- \\ x_3^- 
+   \end{bmatrix}
+   = 
+   x_{c}
+@f$
+ 
+
+## Attributes
+
+
+@param cell_cell_lhs_matrix: [Float] or []                           
+  Pass in [] if you prefer to assemble the matrix per cell yourself. This
+  is the @f$ \tilde{\mathcal{L}} @f$ part above. The ordering of the 
+  degrees of freedom follows the discussion above. The matrix is from
+  @f$ K(p+1) \times K(p+1) @f$.
+  
+@param cell_cell_rhs_matrix: [Float] or []
+  Pass in [] if you prefer to assemble the matrix per cell yourself. This 
+  matrix arises from @f$ \int f \cdot v \ dx @f$ and is applied to the nodal
+  values of the PDE within the quadrature nodes of a cell. The matrix is 
+  from @f$ K(p+1) \times K(p+1) @f$. 
+
+@param cell_cell_lhs_matrix_scaling: Positive integer
+  The lhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
+  parameter. If you don't specify an lhs matrix, i.e. you prefer to inject
+  this matrix manually, you can leave this parameter None, as it is not 
+  used.
+  
+@param cell_cell_rhs_matrix_scaling: Positive integer
+  The rhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
+  parameter. If you don't specify a rhs matrix, i.e. you prefer to inject
+  this matrix manually, you can leave this parameter None, as it is not 
+  used.
+
+@param cell_to_face_matrix: [Float]
+  If you study the global equation system above, you recognise that
+  this matrix is applied to the left or right solutions of a cell's
+  faces. 
+
+@param face_face_Riemann_problem_matrix: [Float] or []
+  Pass in [] if you prefer to assemble the matrix per cell yourself. This 
+  matrix represents the actual Riemann solver. It accepts the left projection
+  @f$ u^- @f$ and @f$ u^+ @f$ and yields a "reconstructed" value at this 
+  point passed into the differential operator. Therefore, this is a band
+  matrix.
+
    
     """
     super( DiscontinuousGalerkinDiscretisation, self ).__init__( name,
