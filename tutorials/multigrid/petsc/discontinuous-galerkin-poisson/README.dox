@@ -2,6 +2,11 @@
 
  @page tutorials_multigrid_petsc_discontinuous_galerkin_poisson Discontinuous Galerkin for the Poisson equation with PETSc
 
+ We solve the Poisson equation 
+ 
+ @f$ -\Delta u = 2 \pi^2 \Pi _d \sin (\pi x_d) @f$ 
+ 
+ over the unit square or cube, respectively.
  Things that you should be familiar with before you read this tutorial:
  
  - Peano's @ref Multigrid "multigrid terminology";
@@ -18,52 +23,72 @@
  This page is more on the how to use the class to construct a working solver.
  
  
- # Code usage
+ # High level overview of Python script structure
   
- ## Create a project
+ ## Set up the project
  
  First, we have to create a multigrid project.
- 
+
  @snippet benchmarks/multigrid/petsc/poisson/dg.py Create project
  
- ~~~~~~~~~~~~~~~~~~~~~~~~
-project = multigrid.petsc.Project(project_name = "DG", 
-                                  namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
-                                  ) 
- ~~~~~~~~~~~~~~~~~~~~~~~~
-
  This is kind of an empty hull until we befill it with some global information 
  (such as the domain size) and also tell the API to scan the global Makefile.
  
+ We will insert the solvers into this project in a minute. Once this is done,
+ we need to configure the project
  
- 
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Configure build 
+
+ ## Introduce the solver
   
- A DG solver is instantiated similar to
+ A DG solver is created through 
+
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Create solver
+
+ We discuss the details of the parameters below, as they depend - to some 
+ degree - upon the chosen Riemann solver. For the time being, it is sufficient
+ to recognise that we create a solver object, instruct it about the matrices/operators
+ that are to be used, and the add it to the PETSc project.
  
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
-                                                                     polynomial_degree    = args.degree,
-                                                                     cell_unknowns        = 1,                      # unknowns_per_cell_dof,
-                                                                     face_unknowns        = 1,                      # unknowns_per_cell_dof,
-                                                                     dimensions           = args.dimensions,
-                                                                     min_h                = args.meshsize,
-                                                                     max_h                = args.meshsize,
-                                                                     cell_cell_rhs_matrix   = matrices.getCellCellMassMatrix(),     
-                                                                     cell_cell_lhs_matrix   = matrices.getCellCellSystemMatrixForLaplacian(),
-                                                                     cell_cell_lhs_matrix_scaling = args.dimensions-2,
-                                                                     cell_cell_rhs_matrix_scaling = args.dimensions,
-                                                                     cell_to_face_matrix     = matrices.getCellToFaceMatrix(),       
-                                                                     face_to_cell_matrix     = matrices.getCellIdentityMatrix(), 
-                                                                     cell_to_face_matrix_scaling  = 0,       
-                                                                     face_to_cell_matrix_scaling  = args.dimensions, 
-                                                                     face_face_Riemann_problem_matrix        = matrices.getAveragingRiemannSolver(),   # todo bad name    
-#                                                                     quadrature_points_in_unit_interval = matrices.getPointsInUnitInterval(),
-                                                                     quadrature_points_in_unit_interval = [0.0, 1.0],
-                                                                     )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-
- We follow the notation as used for <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation</a>
+ ## Deliver C++ code
+ 
+ Finally, we can ask the PETSc project to build a Peano project which we can 
+ translate into C++.
+ So we have a multilevel architecture: A high-level, PETSc-specific view is used
+ to construct the solver.
+ Peano's Python API breaks it down into a Peano representation which is a 
+ conceptual/logical representation of the final C++ code.
+ This Peano project then is used to actually write all code snippets and glue 
+ code to end up with a genuine C++ application. 
+ You can then either compile the code via a plain Makefile through the Python API
+ or you switch to the command line. 
+ All of these steps follow @ref page_architecture "the generic architecture of any Peano project".
+ 
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Create Peano project
+ 
+ 
+ # Created C++ code
+ 
+ Once the script has terminated, a lot of subdirectories will be there in your 
+ project repository. They contain glue code and usually don't have to be 
+ inspected. There are four files which represent your solver: An abstract
+ solver class AbstractDGPoisson (with a header and an implementation) and 
+ its implementation DGPoisson (header plus implementation).
+ 
+ You should never edit the abstract class, as it is overwritten every time 
+ you invoke the Python script. However, it is worth having a look: This
+ abstract superclass contains all the matrices, constants, ... That is, it
+ picks up the details from the Python script.
+ 
+ The actual implementation is something you can edit and alter. Unless you
+ prescribe a right-hand side (not done in the example discussed), this is 
+ the place where you introduce your problem-specific right-hand side. It is
+ also the place where you inject Dirichlet Boundary conditions for example.
+ 
+ 
+ # Solver flavours
+ 
+ Throughout the tutorial, we follow the notation as used for <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation</a>
  and obtain, for Poisson, @f$ \mathcal{L}(u) = -\Delta u = - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u @f$.
  The extension to higher dimensions is straightforward.
  Our weak formulation becomes
@@ -85,11 +110,17 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
   \int _{\text{cell}_v} f \cdot v dx 
 \f}
 
+ The volumetric parts are the same for each and every DG formalism. The
+ treatment of the face terms differs from Riemann solver to Riemann solver.
+ 
+ ## Riemann solver with simple averaging
 
-  Within the framework above, we end up with the following situation:
+ This is not a sophisticated choice, but one that highlights all key ingredients
+ and is simple to digest:
 
   - Each cell holds @f$ (p+1)^d @f$ degrees of freedom (dof). We specify this 
-    through the variable polynomial_degree. 
+    through the variable polynomial_degree. The solver class internally then
+    will take care of the +1.
   - Each node within the cell holds one unknown as we solve a scalar equation.
     Therefore, 
     
@@ -194,5 +225,9 @@ and hence not subject to any additional equations.
 The third line averages the @f$ u @f$ values from left and right, the
 fourth line addresses the normal projections of @f$ \phi @f$. 
 
+
+ # What happens under the hood (C++ view)
+ 
+ 
  
 */
