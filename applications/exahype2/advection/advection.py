@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.abspath('../../../python'))
 import peano4
 import exahype2
 
+# Some reasonable default values
 dimensions                = 2
 cell_size                 = 0.1
 amr_levels                = 0
@@ -261,17 +262,10 @@ if args.periodic_boundary_conditions:
 else:
   periodic_BC = [False, False, False]
 
-if args.dim == 2:
-  size                    = [1.0, 1.0]
-  offset                  = [0.0, 0.0]
-else:
-  size                    = [1.0, 1.0, 1.0]
-  offset                  = [0.0, 0.0, 0.0]
-
 my_project.set_global_simulation_parameters(
     dimensions=args.dim,
-    size=size,
-    offset=offset,
+    size=[1.0, 1.0, 1.0][0:args.dim],
+    offset=[0.0, 0.0, 0.0][0:args.dim],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     first_plot_time_stamp=0.0,
@@ -279,7 +273,7 @@ my_project.set_global_simulation_parameters(
     periodic_BC=periodic_BC,
 )
 
-solution_dir = "solution-advection" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
+solution_dir = "solution-advection-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
 my_project.set_output_path(solution_dir)
 if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
