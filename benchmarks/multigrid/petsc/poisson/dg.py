@@ -28,9 +28,11 @@ args = parser.parse_args()
 
 assert args.dimensions == 2, "not ready for 3d yet"
 
+//! [Create project]
 project = multigrid.petsc.Project(project_name = "DG", 
                                   namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
                                   ) 
+//! [Create project]
 
                         
 matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args.degree,
