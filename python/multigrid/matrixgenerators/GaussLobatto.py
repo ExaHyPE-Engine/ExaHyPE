@@ -6,13 +6,8 @@ from   scipy.interpolate import lagrange
 
 import peano4
 
-from   .MatrixGenerator import MatrixGenerator
+from .MatrixGenerator import MatrixGenerator
 from .BlockMatrix.block_matrix_dgpoisson2d import DGPoisson2dBlockMatrix
-r_press = 1
-r_vel = 1
-BM = DGPoisson2dBlockMatrix(r_press, r_vel)
-print(BM._A_CC[(0,0)][(0,0)])
-pass
 
 class GaussLobatto(MatrixGenerator):
   '''
@@ -47,6 +42,10 @@ class GaussLobatto(MatrixGenerator):
 
     if use_unit_interval:
       self.points1d    = self.get_points_()
+
+    r_press = self.poly_degree # polynomial order for p
+    self.block_matrix = DGPoisson2dBlockMatrix(r_press, 1) # need to remove the second arg; only one cell space now
+    pass
 
   def get_points1d(self):
     """!
@@ -134,26 +133,20 @@ class GaussLobatto(MatrixGenerator):
     return output
 
   def get_cell_system_matrix_for_laplacian(self):
-    '''!
-
-    Create a cell-cell mass matrix
-    
-    
-    needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
-    so normalise by h
+    '''Create a cell-cell mass matrix for $\nabla p \cdot \nabla v$
     '''
-    dim    = self.cell_nodes * self.unknowns_per_cell_node
-    output = np.zeros((dim,dim))
-    for i in range( self.cell_nodes ):
-      for j in range( self.cell_nodes ):
-        for k in range( self.unknowns_per_cell_node ):
-          pass
-          # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
-          #output[3*i+1, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # phi_x-u coupling
-          #output[3*i+2, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # phi_y-u coupling
-          #output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
-          #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
-    return output
+    # dim    = self.cell_nodes * self.unknowns_per_cell_node
+    # output = np.zeros((dim,dim))
+    # for i in range( self.cell_nodes ):
+    #   for j in range( self.cell_nodes ):
+    #     for k in range( self.unknowns_per_cell_node ):
+    #       pass
+    #       # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
+    #       #output[3*i+1, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # phi_x-u coupling
+    #       #output[3*i+2, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # phi_y-u coupling
+    #       #output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
+    #       #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
+    return self.block_matrix._A_CC[(0,0)][(0,0)]
 
   def get_cell_to_face_matrix(self):
     faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces

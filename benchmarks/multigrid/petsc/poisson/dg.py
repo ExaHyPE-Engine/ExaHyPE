@@ -38,7 +38,7 @@ matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args
                                                    unknowns_per_cell_node = 1,
                                                    unknowns_per_face_node = 1,  # for DG, this has to equal unknowns_per_cell_dof
                                                    )
-                        
+
 solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
                                                                      cell_unknowns        = 1,                      # unknowns_per_cell_dof,
