@@ -16,6 +16,8 @@ import numpy as np
 #from basis import Basis1d
 from .nodal_basis import NodalBasisGaussLegendre
 from .quadrature import GaussianQuadrature, Quadrature2d
+# from nodal_basis import NodalBasisGaussLegendre
+# from quadrature import GaussianQuadrature, Quadrature2d
 
 class FiniteElement(ABC):
     """Defines a finite element which describes the local function space on a reference element"""
