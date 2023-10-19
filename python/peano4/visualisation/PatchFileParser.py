@@ -163,7 +163,7 @@ class PatchFileParser(object):
             values = np.fromstring(this_line, dtype=float, sep=' ')
             
           #Add patch to list
-          if values!=None:
+          if values is not None:
             self.cell_data.append(Patch(offset, size, values, self.subdomain_number))   
       self._initialise_default_mapping_if_no_mapping_specified()
       self.parsed = True
