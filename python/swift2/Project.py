@@ -70,7 +70,7 @@ class Project(object):
             swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec
         )
         self.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalescend_memory_access
+            swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals
         )
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
