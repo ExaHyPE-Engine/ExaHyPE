@@ -6,6 +6,7 @@
 \li \subpage multigrid_tutorials
 \li \subpage multigrid_benchmarks
 \li \subpage multigrid_enumeration
+\li \subpage page_multigrid_terminology
 
 Peano's multigrid extension provides stand-alone multigrid solers. However, the
 solver ingredients are designed in a way that they can be used by other codes, 
