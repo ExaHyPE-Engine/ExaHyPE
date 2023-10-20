@@ -1003,7 +1003,7 @@ class ADERDG(object):
                 os.path.dirname(os.path.realpath(__file__))
                 + "/"
                 + "VariableShortcuts.template.h",
-                "VariableShortcuts_" + self._name,
+                "VariableShortcuts",
                 namespace,
                 ".",
                 implementationDictionary,
@@ -1011,6 +1011,7 @@ class ADERDG(object):
                 True,
             )
             output.add(generated_shortcut_file)
+            output.makefile.add_h_file("VariableShortcuts.h", generated=True)
 
         if self._use_kernel_generator:
             self.generate_kernels(namespace, output, dimensions)

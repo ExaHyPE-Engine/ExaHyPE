@@ -6,7 +6,6 @@
 // **********************************************************************************************
 #pragma once
 
-
 {{SOLVER_INCLUDES}}
 
 #include "exahype2/RefinementControl.h"
@@ -32,6 +31,9 @@
 #include <stdfloat>
 {% endif %}
 
+{% if USE_VARIABLE_SHORTCUT is sameas True %}
+#include "VariableShortcuts.h"
+{% endif %}
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -42,8 +44,6 @@
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
-
-
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::aderdg::ADERDGSolver {
   public:

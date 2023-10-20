@@ -48,12 +48,8 @@ advection_speed = 1.0
 #
 # Choose domain size and offset.
 #
-if dimensions == 2:
-    size = [1.0, 1.0]
-    offset = [0.0, 0.0]
-else:
-    size = [1.0, 1.0, 1.0]
-    offset = [0.0, 0.0, 0.0]
+size = [1.0, 1.0, 1.0]
+offset = [0.0, 0.0, 0.0]
 
 #
 # If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
@@ -187,8 +183,8 @@ my_project.add_solver(my_solver)
 #
 my_project.set_global_simulation_parameters(
     dimensions=dimensions,
-    size=size,
-    offset=offset,
+    size=size[0:dimensions],
+    offset=offset[0:dimensions],
     min_end_time=end_time,
     max_end_time=end_time,
     first_plot_time_stamp=0.0,

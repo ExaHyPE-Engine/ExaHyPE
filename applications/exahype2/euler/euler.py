@@ -69,6 +69,7 @@ storage_type = "CallStack"
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler Application Script')
 
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default=solver,             help="|".join(solvers.keys()))
+parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default="solution",         help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default=build_mode,         help="|".join(build_modes.keys()))
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
 
@@ -136,12 +137,13 @@ my_project = exahype2.Project(
   executable=executable_name
 )
 
+unknowns  = {"rho": 1, "v": args.dim, "e":1}
 my_solver = None
 if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
   my_solver = solvers[solver_type](
     name="EulerSolver",
     patch_size=args.patch_size,
-    unknowns=args.dim + 2, # [rho, u, v, (w), e]
+    unknowns=unknowns,
     auxiliary_variables=0,
     max_volume_h=args.max_cell_size,
     min_volume_h=args.max_cell_size * 3.0**(-args.amr_levels),
@@ -168,7 +170,7 @@ elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
   my_solver = solvers[solver_type](
     name="EulerSolver",
     patch_size=args.patch_size,
-    unknowns=args.dim + 2, # [rho, u, v, (w), e]
+    unknowns=unknowns,
     auxiliary_variables=0,
     max_volume_h=args.max_cell_size,
     min_volume_h=min_h,
@@ -181,7 +183,7 @@ elif solver_type in rkdg_rusanov_solvers and "Adaptive" in solver_type:
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution,
-    unknowns                  = args.dim + 2, # [rho, u, v, (w), e]
+    unknowns=unknowns,
     auxiliary_variables       = 0,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = args.max_cell_size * 3.0**(-args.amr_levels),
@@ -196,7 +198,7 @@ elif solver_type in rkdg_rusanov_solvers and "Fixed" in solver_type:
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution,
-    unknowns                  = args.dim + 2, # [rho, u, v, (w), e]
+    unknowns=unknowns,
     auxiliary_variables       = 0,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = min_h,
@@ -214,7 +216,7 @@ elif solver_type in aderdg_rusanov_solvers and "Fixed" in solver_type:
   my_solver = solvers[solver_type](
     name="EulerSolver",
     order=args.dg_order,
-    unknowns=args.dim + 2, # [rho, u, v, (w), e]
+    unknowns=unknowns,
     auxiliary_variables=0,
     max_cell_h=args.max_cell_size,
     min_cell_h=min_h,
@@ -229,7 +231,7 @@ elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
   my_solver = solvers[solver_type](
     name                      = "EulerSolver",
     order                     = args.dg_order,
-    unknowns                  = args.dim + 2, # [rho, u, v, (w), e]
+    unknowns=unknowns,
     auxiliary_variables       = 0,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = args.max_cell_size * 3.0**(-args.amr_levels),
@@ -275,7 +277,7 @@ my_project.set_global_simulation_parameters(
     periodic_BC=periodic_BC,
 )
 
-solution_dir = "solution-euler-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
+solution_dir = str(args.output_path) + "-EulerSolver-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
 my_project.set_output_path(solution_dir)
 if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)

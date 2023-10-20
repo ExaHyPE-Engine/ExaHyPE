@@ -9,10 +9,6 @@
 #include "Abstract{{CLASSNAME}}.h"
 #include "tarch/logging/Log.h"
 
-{% if USE_VARIABLE_SHORTCUT is sameas True %}
-#include "VariableShortcuts_{{CLASSNAME}}.h"
-{% endif %}
-
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 

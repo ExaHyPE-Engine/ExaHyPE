@@ -67,6 +67,7 @@ storage_type = "CallStack"
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Advection Application Script')
 
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default=solver,             help="|".join(solvers.keys()))
+parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default="solution",         help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default=build_mode,         help="|".join(build_modes.keys()))
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
 
@@ -273,7 +274,7 @@ my_project.set_global_simulation_parameters(
     periodic_BC=periodic_BC,
 )
 
-solution_dir = "solution-advection-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
+solution_dir = str(args.output_path) + "-AdvectionSolver-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
 my_project.set_output_path(solution_dir)
 if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
