@@ -214,7 +214,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
             if alter_position[i]:
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} alters the particle positions of species {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: step {} alters the particle positions of species {}".format(
                             i, current_species_set.name
                         )
                     )
@@ -226,8 +226,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 steps_to_evaluate_amr = {(i + 1) % len(steps)}
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to evaluate the AMR criterion".format(
-                            i
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: steps {} have to evaluate the AMR criterion".format(
+                            steps_to_evaluate_amr
                         )
                     )
                 for j in steps_to_evaluate_amr:
@@ -245,8 +245,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 }
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to update the particle-grid association of species {}".format(
-                            i, current_species_set.name
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: steps {} have to update the particle-grid association of species {}".format(
+                            steps_to_update_particle_grid_assocation, current_species_set.name
                         )
                     )
                 for j in steps_to_update_particle_grid_assocation:
@@ -267,8 +267,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 }
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to update the parallel state of species {}".format(
-                            i, current_species_set.name
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: steps {} have to update the parallel state of species {}".format(
+                            steps_to_update_parallel_state, current_species_set.name
                         )
                     )
                 for j in steps_to_update_parallel_state:
@@ -281,8 +281,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 steps_to_realise_amr = {(i + 2) % len(steps)}
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to realise the AMR instructions".format(
-                            i
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: steps {} have to realise the AMR instructions".format(
+                            steps_to_realise_amr
                         )
                     )
                 for j in steps_to_realise_amr:
@@ -304,7 +304,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 steps[i].add_action_set(action_set_AMR_analysis)
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.DynamicMeshRefinementAnalysis for species {} to step {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: add peano4.toolbox.particles.DynamicMeshRefinementAnalysis for species {} to step {}".format(
                             current_species_set.name, i
                         )
                     )
@@ -322,7 +322,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 steps[i].add_action_set(action_set_update_particle_grid_association)
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop for species {} to step {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: add peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop for species {} to step {}".format(
                             current_species_set.name, i
                         )
                     )
@@ -340,7 +340,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 steps[i].add_action_set(action_set_update_parallel_state)
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.UpdateParallelState for species {} to step {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: add peano4.toolbox.particles.UpdateParallelState for species {} to step {}".format(
                             current_species_set.name, i
                         )
                     )
@@ -355,7 +355,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 steps[i].add_action_set(action_set_dynamic_AMR)
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add swift2.actionsets.DynamicMeshRefinementTrigger for species {} to step {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: add swift2.actionsets.DynamicMeshRefinementTrigger for species {} to step {}".format(
                             current_species_set.name, i
                         )
                     )
@@ -404,7 +404,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
             if alter_position[i]:
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} alters the particle positions of species {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: step {} alters the particle positions of species {}".format(
                             i, current_species_set.name
                         )
                     )
@@ -416,7 +416,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                 steps_to_evaluate_amr = {(i + 1) % len(steps)}
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to evaluate the AMR criterion".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: step {} has to evaluate the AMR criterion".format(
                             i
                         )
                     )
@@ -433,7 +433,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                 }
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to update the particle-grid association of species {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: step {} has to update the particle-grid association of species {}".format(
                             i, current_species_set.name
                         )
                     )
@@ -453,7 +453,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                 }
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to update the parallel state of species {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: step {} has to update the parallel state of species {}".format(
                             i, current_species_set.name
                         )
                     )
@@ -467,7 +467,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                 steps_to_realise_amr = {(i + 2) % len(steps)}
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: step {} has to realise the AMR instructions".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: step {} has to realise the AMR instructions".format(
                             i
                         )
                     )
@@ -490,7 +490,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                 steps[i].add_action_set(action_set_AMR_analysis)
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.DynamicMeshRefinementAnalysis for species {} to step {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: add peano4.toolbox.particles.DynamicMeshRefinementAnalysis for species {} to step {}".format(
                             current_species_set.name, i
                         )
                     )
@@ -508,7 +508,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                 steps[i].add_action_set(action_set_update_particle_grid_association)
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop for species {} to step {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: add peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop for species {} to step {}".format(
                             current_species_set.name, i
                         )
                     )
@@ -526,7 +526,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                 steps[i].add_action_set(action_set_update_parallel_state)
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.UpdateParallelState for species {} to step {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: add peano4.toolbox.particles.UpdateParallelState for species {} to step {}".format(
                             current_species_set.name, i
                         )
                     )
@@ -542,7 +542,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                     steps[(i + 1) % (len(steps))].add_action_set(action_set_gather)
                     if verbose:
                         print(
-                            "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add peano4.toolbox.particles.GatherParticlesInMemoryPool for species {} to steps {} and {}".format(
+                            "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: add peano4.toolbox.particles.GatherParticlesInMemoryPool for species {} to steps {} and {}".format(
                                 current_species_set.name, i, (i + 1) % (len(steps))
                             )
                         )
@@ -554,7 +554,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                 steps[i].add_action_set(action_set_dynamic_AMR)
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting]: add swift2.actionsets.DynamicMeshRefinementTrigger for species {} to step {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: add swift2.actionsets.DynamicMeshRefinementTrigger for species {} to step {}".format(
                             current_species_set.name, i
                         )
                     )
