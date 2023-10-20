@@ -17,9 +17,14 @@ namespace toolbox {
  * Memory pool offering continuous global memory for a particle species
  *
  * Consult the @ref toolbox_particles_memorypool "generic description of memory pools" before
- * you continue to read this documentation. The pool comes along in a tandem
- * with a flavour of std::vector which is tied to the vertices. It holds a
- * reference to the pool obtained via getUniquePoolReference() or a
+ * you continue to read this documentation. This class is used by every "vertex" object, i.e.
+ * each vertex holds one instance of the pool object. Basically, the field container is used
+ * to point to all the particles scattered over the memory after we've created the particles.
+ * However, whenever we call gather(), we take all of these particles from the heap, put them 
+ * into one continuous container and then make the pointers within container point to those
+ * guys.
+ * 
+ * 
  */
 template <class T>
 struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
