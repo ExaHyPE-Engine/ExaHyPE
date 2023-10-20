@@ -1,0 +1,33 @@
+/**
+
+@page swift_graph_compiler
+
+SWIFT's graph compiler takes the @ref swift_particle_lifecycle "lifecycle of all particle species" and
+maps them onto mesh traversals. That is, it takes the lifecycles and answers 
+the following questions:
+
+1. How many times do we have to run through the mesh per time step?
+2. 
+
+
+## Different particle species
+
+SWIFT supports multiple particle species. There are two fundamentally different
+ways to handle the species:
+
+1. Run the species one by one after each other.
+2. Merge the update of the species.
+
+The two approaches have their pros and cons. If you run the species one by one,
+it is possible to skip whole species whenever you know that they won't be 
+updated. This is very useful for local time stepping for example. At the same
+time, merging multiple species is advantageous whenever we frequently update
+multiple species: In this case, the arising concurrency level and work per cell
+will be higher as we fuse multiple species updates.
+
+@todo This is something I have to think about as soon as we introduce local
+time stepping.
+
+
+ */
+ 
