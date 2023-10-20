@@ -286,8 +286,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
         # Debugging --------------------------------------------------------------------
         # Add dependency checks
-        if asserts:
-            self.add_dependency_checks()
+        #  if asserts:
+        self.add_dependency_checks()
 
     def set_parameters(self):
         """
