@@ -52,16 +52,21 @@ PrecisionType = {
     "SP": "float",
     "float": "float",
     "single": "float",
+    "fp32": "float",
     "DP": "double",
     "double": "double",
+    "fp64": "double",
     "quadruple": "long double",
     "long double": "long double",
+    "fp128": "long double",
     "half_c++23": "std::float16_t",
     "float16_t": "std::float16_t",
     "std::float16_t": "std::float16_t",
+    "fp16": "std::float16_t",
     "bfloat": "std::bfloat16_t",
     "bfloat16_t": "std::bfloat16_t",
-    "std::bfloat16_t": "std::bfloat16_t"
+    "std::bfloat16_t": "std::bfloat16_t",
+    "bf16": "std::bfloat16_t"
 }
 
 
