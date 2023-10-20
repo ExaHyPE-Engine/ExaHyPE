@@ -7,25 +7,13 @@ import peano4
 import swift2
 
 
-from enum import Enum
-
-
 from .AMRLogic import (
     add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption,
 )
 from .AMRLogic import (
     add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers,
 )
-
-
-class Optimisation(Enum):
-    """ """
-
-    NONE = 0
-    INSERT_RESORT_SWEEPS_AND_VECTORISE = 1
-
-
-# VECTORISE_WHENEVER_POSSIBLE = 1
+from .Optimisation import Optimisation
 
 
 def translate_one_step_of_species_into_mesh_traversal(
@@ -229,11 +217,11 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
     we don't have to add it actually to the project.
 
 
-    species_sets: [Species]
+    @param species_sets: [Species]
 
-    optimisation: Optimisation,
+    @param optimisation: Optimisation,
 
-    verbose: {True, False}
+    @param verbose: {True, False}
 
     """
     mesh_traversals = []
