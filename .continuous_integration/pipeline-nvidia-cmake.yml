@@ -28,7 +28,8 @@ nvidia-test-cmake:
   needs:
     - job: nvidia-build-cmake
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< ' cd build; ctest --verbose'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} python3 -m compileall -f ./
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< ' cd build; --no-compress-output --output-on-failure'
   retry: 0
 
 nvidia-tutorials-cmake:

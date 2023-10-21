@@ -31,6 +31,7 @@ intel-test:
   needs:
     - job: intel-build
   script:
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} python3 -m compileall -f ./
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} make check
   retry: 0
 

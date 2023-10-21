@@ -149,7 +149,7 @@ class MyDGSolver(exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclave
       and
       (alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AnotB or alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AdeterminesB)
     )
-""""
+""")
     
     
     # Bei compute bin ich mir echt unsicher

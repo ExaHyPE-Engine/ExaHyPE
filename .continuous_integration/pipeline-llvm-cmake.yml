@@ -28,7 +28,8 @@ llvm-test-cmake:
   needs:
     - job: llvm-build-cmake
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< ' cd build; ctest --verbose'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} python3 -m compileall -f ./
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< ' cd build; --no-compress-output --output-on-failure'
   retry: 0
 
 llvm-tutorials-cmake:

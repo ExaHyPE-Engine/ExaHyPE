@@ -31,6 +31,7 @@ gcc-test:
   needs:
     - job: gcc-build
   script:
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} python3 -m compileall -f ./
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} make check
   retry: 0
 
