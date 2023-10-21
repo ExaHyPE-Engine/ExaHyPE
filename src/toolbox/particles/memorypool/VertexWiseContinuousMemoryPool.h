@@ -35,7 +35,23 @@ struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
 
     VertexWiseContinuousMemoryPool();
 
+    /**
+     * If the data are scattered already, nothing is to be done. If not, take
+     * all the particles from the continuous memory chunk and throw them onto
+     * the heap. After that, free the en bloc allocation.
+     */
     void scatter();
+
+
+    /**
+     * Scatter the data if not scattered yet and return the updated iterator
+     *
+     * Routine is used by particleCanNotBeLiftedLocally(), grabParticle(), and
+     * deleteParticle(). Basically, we run through the particles. If we have to
+     * remove one from this list, we tell the vertex to scatter. After that, we
+     * don't want to run through the whole list again, so we expect the routine
+     * to give us an updated iterator of that particle that has to be lifted.
+     */
     typename Container::iterator scatterAndUpdateIterator( const typename Container::iterator&  p );
 
     /**
