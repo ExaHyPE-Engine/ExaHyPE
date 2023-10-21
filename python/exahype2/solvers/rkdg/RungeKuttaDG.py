@@ -263,8 +263,52 @@ class RungeKuttaDG(object):
         self._multiply_with_inverted_mass_matrix_call = "#error Please set the solver property _multiply_with_inverted_mass_matrix_call in the Python class"
         self._kernel_namespace = "#error Please set the solver property _kernel_namespace in the Python class"
 
-        self._unknowns = unknowns
-        self._auxiliary_variables = auxiliary_variables
+        """
+        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
+        auxiliary variables in the equation to be computed. Unknowns are variables that change over
+        time whereas auxiliary variables can be space-dependent but don't vary over time.
+        These can be specified either as simple ints or by a dictionary
+        (e.g.) unknowns = {'a': 1, 'b': 1, 'c': 3}
+        in which the user specifies the multiplicity of the variable (the velocity has one component
+        per dimension for example.)
+        If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
+        allows the user to specifiy a variable by name and automatically maps this to the right position
+        in an array for better legibility. Otherwise they must manually remember the position of each
+        variable manually.
+
+        use_var_shortcut is used to know whether or not the user passed their variables via a dict
+        variable_names and variable_pos are used internally to remember the names and respective
+        positions of variables if set by a dictionary.
+        """
+        self._use_var_shortcut = False
+        self._variable_names = []
+        self._variable_pos = [0]
+
+        if type(unknowns) is dict:
+            self._unknowns = sum(unknowns.values())
+            self._variable_names += list(unknowns.keys())
+            for var in list(unknowns.values()):
+                self._variable_pos.append(var + self._variable_pos[-1])
+            self._use_var_shortcut = True
+        elif type(unknowns) is int:
+            self._unknowns = unknowns
+        else:
+            raise Exception(
+                "not a valid type for parameter unknowns, needs to be int or dictionary"
+            )
+
+        if type(auxiliary_variables) is dict:
+            self._auxiliary_variables = sum(auxiliary_variables.values())
+            self._variable_names += list(auxiliary_variables.keys())
+            for var in list(auxiliary_variables.values()):
+                self._variable_pos.append(var + self._variable_pos[-1])
+            self._use_var_shortcut = True
+        elif type(auxiliary_variables) is int:
+            self._auxiliary_variables = auxiliary_variables
+        else:
+            raise Exception(
+                "not a valid type for parameter auxiliary_variables, needs to be int or dictionary"
+            )
 
         self._min_cell_h = min_cell_h
         self._max_cell_h = max_cell_h
@@ -1290,6 +1334,21 @@ We use RK("""
         output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
         output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
 
+        if self._use_var_shortcut:
+            generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
+                os.path.dirname(os.path.realpath(__file__))
+                + "/"
+                + "../VariableShortcuts.template.h",
+                "VariableShortcuts",
+                namespace,
+                ".",
+                implementationDictionary,
+                True,
+                True,
+            )
+            output.add(generated_shortcut_file)
+            output.makefile.add_h_file("VariableShortcuts.h", generated=True)
+
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
 
@@ -1401,6 +1460,10 @@ We use RK("""
         d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
 
         d["KERNEL_NAMESPACE"] = self._kernel_namespace
+
+        d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
+        d["VARIABLE_NAMES"] = self._variable_names
+        d["VARIABLE_POSITIONS"] = self._variable_pos
 
         self._basis.init_dictionary_with_default_parameters(d, False)
 

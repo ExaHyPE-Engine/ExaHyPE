@@ -1,7 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
-
 import peano4.toolbox.blockstructured
 import peano4.datamodel
 import peano4.output
@@ -81,28 +79,28 @@ class ADERDG(object):
         self._name = name
 
         """
-    polynomial order of the representation of the underlying function in each spatial dimension.
-    The number of support points used to represent this polynomial is always the order + 1
-    """
+        Polynomial order of the representation of the underlying function in each spatial dimension.
+        The number of support points used to represent this polynomial is always the order + 1
+        """
         self._order = order
 
         """
-    self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
-    auxiliary variables in the equation to be computed. Unknowns are variables that change over
-    time whereas auxiliary variables can be space-dependent but don't vary over time.
-    These can be specified either as simple ints or by a dictionary
-    (e.g.) unknowns = {'a': 1, 'b': 1, 'c': 3}
-    in which the user specifies the multiplicity of the variable (the velocity has one component
-    per dimension for example.)
-    If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
-    allows the user to specifiy a variable by name and automatically maps this to the right position
-    in an array for better legibility. Otherwise they must manually remember the position of each
-    variable manually.
+        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
+        auxiliary variables in the equation to be computed. Unknowns are variables that change over
+        time whereas auxiliary variables can be space-dependent but don't vary over time.
+        These can be specified either as simple ints or by a dictionary
+        (e.g.) unknowns = {'a': 1, 'b': 1, 'c': 3}
+        in which the user specifies the multiplicity of the variable (the velocity has one component
+        per dimension for example.)
+        If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
+        allows the user to specifiy a variable by name and automatically maps this to the right position
+        in an array for better legibility. Otherwise they must manually remember the position of each
+        variable manually.
 
-    use_var_shortcut is used to know whether or not the user passed their variables via a dict
-    variable_names and variable_pos are used internally to remember the names and respective
-    positions of variables if set by a dictionary.
-    """
+        use_var_shortcut is used to know whether or not the user passed their variables via a dict
+        variable_names and variable_pos are used internally to remember the names and respective
+        positions of variables if set by a dictionary.
+        """
         self._use_var_shortcut = False
         self._variable_names = []
         self._variable_pos = [0]
@@ -134,9 +132,9 @@ class ADERDG(object):
             )
 
         """
-    Minimal and maximal accepted sizes for the cell, domain will be subdivided until the cell size is smaller
-    than the minimal size but will never be subdivided to be smaller than the minimal size.
-    """
+        Minimal and maximal accepted sizes for the cell, domain will be subdivided until the cell size is smaller
+        than the minimal size but will never be subdivided to be smaller than the minimal size.
+        """
         self._min_cell_h = min_cell_h
         self._max_cell_h = max_cell_h
         if min_cell_h > max_cell_h:
@@ -929,28 +927,25 @@ class ADERDG(object):
             )
 
     """
-  This tells peano to add the solver files to the project. It generates any files that are not
-  specifically cell or face data or grid actions such as the actionsets.
-  Currently it generates solver implementation and header files as well as abstract solver
-  implementation and header files.
-  In addition to this if the user has specified that they would like to use shortcuts to refer
-  to their variable (e.g. specified their unknowns or aux. variables through a dict) it generates
-  a VariableShortcuts file which is then connected to the solver so that users can specify their
-  variables through name.
-  Finally, if the kernelgenerator option is chosen this calls generate_kernels() which then generates
-  optimized aderdg kernels and adds these to the makefile.
-  """
-
+    This tells peano to add the solver files to the project. It generates any files that are not
+    specifically cell or face data or grid actions such as the actionsets.
+    Currently it generates solver implementation and header files as well as abstract solver
+    implementation and header files.
+    In addition to this if the user has specified that they would like to use shortcuts to refer
+    to their variable (e.g., specified their unknowns or aux. variables through a dict) it generates
+    a VariableShortcuts file which is then connected to the solver so that users can specify their
+    variables through name.
+    Finally, if the kernelgenerator option is chosen this calls generate_kernels() which then generates
+    optimized aderdg kernels and adds these to the makefile.
+    """
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         """
-
         The ExaHyPE2 project will call this operation when it sets
         up the overall environment.
 
         This routine is typically not invoked by a user.
 
         output: peano4.output.Output
-
         """
         templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
@@ -1002,7 +997,7 @@ class ADERDG(object):
             generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
                 os.path.dirname(os.path.realpath(__file__))
                 + "/"
-                + "VariableShortcuts.template.h",
+                + "../VariableShortcuts.template.h",
                 "VariableShortcuts",
                 namespace,
                 ".",
@@ -1064,10 +1059,9 @@ class ADERDG(object):
         pass
 
     """
-  Generates a dictionary of "words" that will later be used in various templates to fill these out by adding
-  information from the solver or which was specified by the user.
-  """
-
+    Generates a dictionary of "words" that will later be used in various templates to fill these out by adding
+    information from the solver or which was specified by the user.
+    """
     def _init_dictionary_with_default_parameters(self, d):
         d["ORDER"] = self._order
         d["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
