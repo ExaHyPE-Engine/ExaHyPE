@@ -55,6 +55,16 @@ namespace toolbox {
  * They divide the memory into pages, whereas the first index defines the size
  * of the pages. Per page, we also take notes if this page is occupied at the
  * moment.
+ *
+ * Overall, this memory pool is more complex than the its vertex counterpart.
+ * It also might consume slightly more memory in total, as it might
+ * overestimate the total memory footprint. However, there are a few
+ * advantages, too:
+ *
+ * - Memory is less scattered compared to other approaches, as we try to store
+ *   everything in one huge chunk of memory.
+ * - We don't need a lot of allocs and frees anymore, as most of the memory
+ *   requests can be served from one huge chunk of memory.
  */
 template <class T>
 class toolbox::particles::memorypool::GlobalContinuousMemoryPool {
@@ -175,6 +185,14 @@ class toolbox::particles::memorypool::GlobalContinuousMemoryPool {
       void freePage( int pageNumber );
     };
 
+    /**
+     * This class attribute represents the global data space for all of the
+     * particles. I can initialise the global space with a certain size and
+     * hence ensure that the first few particles fit in. However, it seems that
+     * this is not clever: It is better to let the storage scheme use scattered
+     * heap accesses in the first time step. After that, we know exactly how
+     * much space we need and can allocate the heap accordingly.
+     */
     static GlobalMemory  _globalMemory;
 
     /**

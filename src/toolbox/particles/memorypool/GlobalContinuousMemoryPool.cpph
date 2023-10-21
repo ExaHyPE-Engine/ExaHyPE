@@ -9,7 +9,6 @@ template <class T>
 tarch::logging::Log  toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::_log( "toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>" );
 
 
-// @todo Magische Konstante
 template <class T>
 typename toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory  toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::_globalMemory(0);
 
@@ -24,7 +23,7 @@ toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalContinuousM
 template <class T>
 void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::scatter() {
   if (_gatheredDataPointer!=nullptr and not container.empty()) {
-    logInfo( "scatter()", "scatter " << container.size() << " element(s) from heap" );
+    logDebug( "scatter()", "scatter " << container.size() << " element(s) from heap" );
 
     const int oldSize = container.size();
     container.clear();
@@ -36,13 +35,13 @@ void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::scatter() {
     _gatheredDataPointer = nullptr;
   }
   else if (_globalMemoryPage!=UndefinedMemoryPage and not container.empty()) {
-    logInfo( "scatter()", "scatter " << container.size() << " element(s) from large continuous memory" );
+    logDebug( "scatter()", "scatter " << container.size() << " element(s) from large continuous memory" );
     assertion1( _globalMemory.pages[ _globalMemoryPage ].used, _globalMemoryPage );
 
     const int size  = _globalMemory.pages[ _globalMemoryPage ].size;
     const int first = _globalMemory.pages[ _globalMemoryPage ].startIndex;
 
-    logInfo( "scatter()", "page size is " << size << " starting at index " << first );
+    logDebug( "scatter()", "page size is " << size << " starting at index " << first );
 
     container.clear();
     for (int i=0; i<size; i++) {
@@ -71,7 +70,7 @@ toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::scatterAndUpdateI
     return p;
   }
   else if (_gatheredDataPointer!=nullptr) {
-    logInfo( "scatterAndUpdateIterator()", "scatter " << container.size() << " element(s) currently held on heap" );
+    logDebug( "scatterAndUpdateIterator()", "scatter " << container.size() << " element(s) currently held on heap" );
 
     Container newContainer;
     typename Container::iterator result;
@@ -93,7 +92,7 @@ toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::scatterAndUpdateI
     return result;
   }
   else {
-    logInfo( "scatterAndUpdateIterator()", "scatter " << container.size() << " element(s) currently held within page of continuous memory" );
+    logDebug( "scatterAndUpdateIterator()", "scatter " << container.size() << " element(s) currently held within page of continuous memory" );
 
     Container newContainer;
     typename Container::iterator result;
@@ -126,7 +125,7 @@ void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::gather() {
     _globalMemoryPage = _globalMemory.addPage( container.size() );
 
     if ( _globalMemoryPage==UndefinedMemoryPage) {
-      logInfo( "gather()", "have not been able to book page in continuous memory, so gather " << container.size() << " element(s) on heap" );
+      logDebug( "gather()", "have not been able to book page in continuous memory, so gather " << container.size() << " element(s) on heap" );
       _gatheredDataPointer = tarch::allocateMemory<T>( container.size(), tarch::MemoryLocation::Heap );
       int entry = 0;
       for (auto& p: container) {
@@ -140,15 +139,11 @@ void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::gather() {
         *p = _gatheredDataPointer + entry;
         p++;
       }
-      // @todo Komplett raus
-      logInfo( "gather()", "that's done" );
     }
     else {
-      logInfo( "gather()", "gather " << container.size() << " element(s) into page " << _globalMemoryPage );
+      logDebug( "gather()", "gather " << container.size() << " element(s) into page " << _globalMemoryPage );
 
       const int first = _globalMemory.pages[ _globalMemoryPage ].startIndex;
-
-      logInfo( "gather()", "first global entry is " << first );
 
       int entry = 0;
       for (auto& p: container) {
@@ -157,17 +152,12 @@ void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::gather() {
         entry++;
       }
 
-      logInfo( "gather()", "now build up index structure" );
-
       typename Container::iterator p = container.begin();
       for (int entry=0; entry<container.size(); entry++) {
         assertion( first+entry<_globalMemory.data.size() );
         *p = &( _globalMemory.data[first+entry] );
         p++;
       }
-
-      // @todo Komplett raus
-      logInfo( "gather()", "that's done" );
     }    
   }
 }
@@ -225,7 +215,7 @@ int toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory:
   }
 
   if ( freePage==UndefinedMemoryPage and totalUsedSize()+size<=data.size() ) {
-    logInfo(
+    logDebug(
       "addPage(int)", "global memory had no free page of size " << size <<
       ". Add new page, as capacity is available (used size=" << totalUsedSize() << " vs capacity=" <<
       data.size() << ")"
@@ -240,12 +230,14 @@ int toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory:
     freePage = pages.size()-1;
   }
   else {
-    logInfo(
-      "addPage(int)",
-      "global memory had no free page of size " << size << " and we cannot accommodate an additional page of size " <<
-      size << " (current used size=" << totalUsedSize() << " vs available capacity of " <<
-      data.size() << ")"
-    );
+    if (additionalEntriesRequested==0) {
+      logInfo(
+        "addPage(int)",
+        "global memory had no free page of size " << size << " and we cannot accommodate an additional page of size " <<
+        size << " (current used size=" << totalUsedSize() << " vs available capacity of " <<
+        data.size() << "). Will not report on further requests unless global memory space has grown"
+      );
+    }
     additionalEntriesRequested += size;
   }
 
@@ -261,15 +253,13 @@ void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory
 
   tarch::multicore::Lock lock( semaphore );
 
-  logInfo( "freePage(int)", "will free page " << pageNumber );
-
   pages[pageNumber].used = false;
 
   while ( not pages.empty() and not pages[pages.size()-1].used ) {
     pages.pop_back();
   }
 
-  if (pages.empty()) {
+  if (pages.empty() and additionalEntriesRequested>0) {
     logInfo(
       "freePage(int)",
       "global memory is completely empty, so use opportunity to increase total size from " <<
