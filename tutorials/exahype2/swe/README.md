@@ -92,7 +92,7 @@ the center of the domain, 0.1 anywhere else.
 
 ### Boundary Conditions
 Then we can define our boundary conditions. For this simple case, we will simply use reflecting boundary conditions.
-This means all values except the density will be the same outside of the as inside of it.
+This means all values except the momenta will be the same outside of the as inside of it.
 
 ### Eigenvalues
 Next, we can define the eigenvalues of our system.
