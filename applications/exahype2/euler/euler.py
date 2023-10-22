@@ -1,3 +1,5 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import sys
 import argparse
@@ -19,11 +21,11 @@ plot_interval             = end_time/100
 # Based on the assumption that the fluid is an ideal gas, gamma chosen for dry air.
 gamma                     = 1.4
 
-scenarios = [
-  "PointExplosion",
-  "GaussianExplosion",
-  "BreakingDam",
-]
+scenarios = {
+  "PointExplosion":1,
+  "GaussianExplosion":2,
+  "BreakingDam":3,
+}
 scenario = "PointExplosion"
 
 fv_rusanov_solvers = {
@@ -48,7 +50,7 @@ solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
 solvers.update(aderdg_rusanov_solvers)
-solver = "ADERDGRusanovGlobalAdaptive"
+solver = "FVRusanovGlobalAdaptive"
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -74,7 +76,7 @@ parser.add_argument("-m",       "--build-mode",        dest="build_mode",     ch
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
 
 parser.add_argument("-st",      "--storage",           dest="storage",        choices=storage_types.keys(), default=storage_type,     help="|".join(storage_types.keys()))
-parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default=scenario,           help="|".join(scenarios))
+parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios.keys(),   default=scenario,           help="|".join(scenarios.keys()))
 parser.add_argument("-et",      "--end-time",          dest="end_time",       type=float,                 default=end_time,           help="End time of simulation")
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
 
@@ -116,7 +118,7 @@ if args.storage not in storage_type:
     sys.exit(1)
 
 if args.scenario not in scenarios:
-    print("Error, scenario must be {} or {}, you supplied {}".format(", ".join(scenarios[:-1]), scenarios[-1], args.scenario))
+    print("Error, scenario must be {} or {}, you supplied {}".format(", ".join(list(scenarios.keys())[:-1]), list(scenarios.keys())[-1], args.scenario))
     sys.exit(1)
 
 solver_type = args.solver
@@ -129,7 +131,10 @@ if args.use_gpu:
 if args.executable:
   executable_name = args.executable
 else:
-  executable_name = "euler-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
+  executable_name = "euler-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type) + "-" + str(args.build_mode)
+  if args.use_gpu:
+    executable_name += "-GPU"
+
 my_project = exahype2.Project(
   namespace=["applications", "exahype2", "euler"],
   project_name="Euler" + args.scenario,
@@ -137,11 +142,13 @@ my_project = exahype2.Project(
   executable=executable_name
 )
 
-unknowns  = {"rho": 1, "v": args.dim, "e":1}
+solver_name = "Euler"
+unknowns  = {"rho":1, "v":args.dim, "e":1}
+
 my_solver = None
 if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
   my_solver = solvers[solver_type](
-    name="EulerSolver",
+    name=solver_name,
     patch_size=args.patch_size,
     unknowns=unknowns,
     auxiliary_variables=0,
@@ -168,7 +175,7 @@ elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
   min_h = args.max_cell_size * 3.0**(-args.amr_levels)
   admissible_time_step_size = min_h/patch_size*0.5
   my_solver = solvers[solver_type](
-    name="EulerSolver",
+    name=solver_name,
     patch_size=args.patch_size,
     unknowns=unknowns,
     auxiliary_variables=0,
@@ -179,7 +186,7 @@ elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
 elif solver_type in rkdg_rusanov_solvers and "Adaptive" in solver_type:
   from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
   my_solver = solvers[solver_type](
-    name                      = "EulerSolver",
+    name=solver_name,
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution,
@@ -194,7 +201,7 @@ elif solver_type in rkdg_rusanov_solvers and "Fixed" in solver_type:
   min_h = args.max_cell_size * 3.0**(-args.amr_levels)
   admissible_time_step_size = min_h/patch_size*0.5
   my_solver = solvers[solver_type](
-    name                      = "EulerSolver",
+    name=solver_name,
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution,
@@ -214,7 +221,7 @@ elif solver_type in aderdg_rusanov_solvers and "Fixed" in solver_type:
   min_h = args.max_cell_size * 3.0**(-args.amr_levels)
   admissible_time_step_size = 0.001
   my_solver = solvers[solver_type](
-    name="EulerSolver",
+    name=solver_name,
     order=args.dg_order,
     unknowns=unknowns,
     auxiliary_variables=0,
@@ -229,7 +236,7 @@ elif solver_type in aderdg_rusanov_solvers and "Fixed" in solver_type:
   )
 elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
   my_solver = solvers[solver_type](
-    name                      = "EulerSolver",
+    name=solver_name,
     order                     = args.dg_order,
     unknowns=unknowns,
     auxiliary_variables       = 0,
@@ -249,15 +256,20 @@ if args.use_gpu:
 my_solver.set_implementation(
     initial_conditions    = exahype2.solvers.PDETerms.User_Defined_Implementation,
     boundary_conditions   = exahype2.solvers.PDETerms.User_Defined_Implementation,
-    flux                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
-    eigenvalues           = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    flux                  = "applications::exahype2::euler::flux(Q, normal, F);",
+    eigenvalues           = "return applications::exahype2::euler::maxEigenvalue(Q, normal);",
     refinement_criterion  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term           = exahype2.solvers.PDETerms.None_Implementation,
 )
 
 if args.dim == 2:
   my_solver.plot_description = "rho, u, v, e"
 else:
   my_solver.plot_description = "rho, u, v, w, e"
+
+my_solver.add_user_solver_includes("""
+#include "EulerKernels.h"
+""")
 
 my_project.add_solver(my_solver)
 
@@ -301,17 +313,10 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 my_project.constants.export_constexpr_with_type("gamma", str(gamma), "double")
+my_project.constants.export_constexpr_with_type("scenario", str(scenarios[args.scenario]), "int")
 my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
 
-my_project.output.makefile.add_h_file("EulerSolver.h")
-my_project.output.makefile.add_cpp_file("EulerSolver.cpp")
-
-if args.scenario == "PointExplosion":
-  my_project.output.makefile.add_cpp_file("PointExplosion.cpp")
-elif args.scenario == "GaussianExplosion":
-  my_project.output.makefile.add_cpp_file("GaussianExplosion.cpp")
-elif args.scenario == "BreakingDam":
-  my_project.output.makefile.add_cpp_file("BreakingDam.cpp")
+my_project.output.makefile.add_cpp_file("Euler.cpp")
 
 my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
 
