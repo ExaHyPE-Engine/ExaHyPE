@@ -21,11 +21,11 @@ plot_interval             = end_time/100
 # Based on the assumption that the fluid is an ideal gas, gamma chosen for dry air.
 gamma                     = 1.4
 
-scenarios = {
-  "PointExplosion":1,
-  "GaussianExplosion":2,
-  "BreakingDam":3,
-}
+scenarios = [
+  "PointExplosion",
+  "GaussianExplosion",
+  "BreakingDam",
+]
 scenario = "PointExplosion"
 
 fv_rusanov_solvers = {
@@ -76,7 +76,7 @@ parser.add_argument("-m",       "--build-mode",        dest="build_mode",     ch
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
 
 parser.add_argument("-st",      "--storage",           dest="storage",        choices=storage_types.keys(), default=storage_type,     help="|".join(storage_types.keys()))
-parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios.keys(),   default=scenario,           help="|".join(scenarios.keys()))
+parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default=scenario,           help="|".join(scenarios))
 parser.add_argument("-et",      "--end-time",          dest="end_time",       type=float,                 default=end_time,           help="End time of simulation")
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
 
@@ -118,7 +118,7 @@ if args.storage not in storage_type:
     sys.exit(1)
 
 if args.scenario not in scenarios:
-    print("Error, scenario must be {} or {}, you supplied {}".format(", ".join(list(scenarios.keys())[:-1]), list(scenarios.keys())[-1], args.scenario))
+    print("Error, scenario must be {} or {}, you supplied {}".format(", ".join(scenarios[:-1]), scenarios[-1], args.scenario))
     sys.exit(1)
 
 solver_type = args.solver
@@ -260,6 +260,7 @@ my_solver.set_implementation(
     eigenvalues           = "return applications::exahype2::euler::maxEigenvalue(Q, normal);",
     refinement_criterion  = exahype2.solvers.PDETerms.User_Defined_Implementation,
     source_term           = exahype2.solvers.PDETerms.None_Implementation,
+    ncp                   = exahype2.solvers.PDETerms.None_Implementation,
 )
 
 if args.dim == 2:
@@ -312,8 +313,8 @@ my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
-my_project.constants.export_constexpr_with_type("gamma", str(gamma), "double")
-my_project.constants.export_constexpr_with_type("scenario", str(scenarios[args.scenario]), "int")
+my_project.constants.define_value("GAMMA", str(gamma))
+my_project.constants.define_value("SCENARIO", str(args.scenario))
 my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
 
 my_project.output.makefile.add_cpp_file("Euler.cpp")

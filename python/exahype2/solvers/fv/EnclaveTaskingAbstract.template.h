@@ -6,8 +6,6 @@
 // **********************************************************************************************
 #pragma once
 
-{{SOLVER_INCLUDES}}
-
 #include "exahype2/RefinementControl.h"
 #include "exahype2/Solver.h"
 #include "exahype2/NonCriticalAssertions.h"
@@ -23,6 +21,8 @@
 {% if USE_VARIABLE_SHORTCUT is sameas True %}
 #include "VariableShortcuts.h"
 {% endif %}
+
+{{SOLVER_INCLUDES}}
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {

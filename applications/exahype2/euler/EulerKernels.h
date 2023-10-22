@@ -3,34 +3,39 @@
 #pragma once
 
 #include "Constants.h"
-#include "VariableShortcuts.h"
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::euler {
-  static inline double maxEigenvalue(const double* __restrict__ Q, int normal) InlineMethod {
-    using s = VariableShortcuts;
+  enum Variables {
+    rho = 0,
+    u,
+    v,
+#if Dimensions == 3
+    w,
+#endif
+    e
+  };
 
+  static inline double maxEigenvalue(const double* __restrict__ Q, int normal) InlineMethod {
 #ifdef GPUOffloadingOff
     assertion(normal >= 0);
     assertion(normal < Dimensions);
-    assertion(Q[s::rho] != Q[s::rho]);
-    assertion(Q[s::rho] > 0);
+    assertion(Q[rho] != Q[rho]);
+    assertion(Q[rho] > 0);
 #endif
 
-    const double irho = 1.0 / std::abs(Q[s::rho]);
+    const double irho = 1.0 / std::abs(Q[rho]);
+    const double p = (GAMMA - 1) * (Q[e] - 0.5 * irho * (Q[u] * Q[u] + Q[v] * Q[v]
 #if Dimensions == 3
-    const double p
-      = (gamma - 1)
-        * (Q[s::e] - 0.5 * irho * (Q[s::v] * Q[s::v] + Q[s::v + 1] * Q[s::v + 1] + Q[s::v + 2] * Q[s::v + 2]));
-#else
-    const double p = (gamma - 1) * (Q[s::e] - 0.5 * irho * (Q[s::v] * Q[s::v] + Q[s::v + 1] * Q[s::v + 1]));
+      + Q[w] * Q[w]
 #endif
+    ));
 
 #ifdef GPUOffloadingOff
     assertion(tarch::la::greaterEquals(p, 0.0));
 #endif
-    const double c = std::sqrt(gamma * std::abs(p) * irho);
 
+    const double c      = std::sqrt(GAMMA * std::abs(p) * irho);
     const double u_n    = Q[normal + 1] * irho;
     const double result = std::max(std::abs(u_n - c), std::abs(u_n + c));
 
@@ -42,36 +47,32 @@ namespace applications::exahype2::euler {
   }
 
   static inline void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
-    using s = VariableShortcuts;
-
 #ifdef GPUOffloadingOff
     assertion3(normal >= 0, x, t, normal);
     assertion3(normal < Dimensions, x, t, normal);
-    assertion(Q[s::rho] != Q[s::rho]);
-    assertion(Q[s::rho] > 0);
+    assertion(Q[rho] != Q[rho]);
+    assertion(Q[rho] > 0);
 #endif
 
-    const double irho = 1.0 / Q[s::rho];
+    const double irho = 1.0 / Q[rho];
+    const double p = (GAMMA - 1) * (Q[e] - 0.5 * irho * (Q[u] * Q[u] + Q[v] * Q[v]
 #if Dimensions == 3
-    const double p
-      = (gamma - 1)
-        * (Q[s::e] - 0.5 * irho * (Q[s::v] * Q[s::v] + Q[s::v + 1] * Q[s::v + 1] + Q[s::v + 2] * Q[s::v + 2]));
-#else
-    const double p = (gamma - 1) * (Q[s::e] - 0.5 * irho * (Q[s::v] * Q[s::v] + Q[s::v + 1] * Q[s::v + 1]));
+      + Q[w] * Q[w]
+#endif
+    ));
+
+#ifdef GPUOffloadingOff
+    assertion(tarch::la::greaterEquals(p, 0.0));
 #endif
 
     const double coeff = irho * Q[normal + 1];
-    F[s::rho]          = coeff * Q[s::rho];
-    F[s::v]            = coeff * Q[s::v];
-    F[s::v + 1]        = coeff * Q[s::v + 1];
-
+    F[rho]             = coeff * Q[rho];
+    F[u]               = coeff * Q[u];
+    F[v]               = coeff * Q[v];
 #if Dimensions == 3
-    F[s::v + 2] = coeff * Q[s::v + 2];
-    F[s::e]     = coeff * Q[s::e] + coeff * p;
-#else
-    F[s::e] = coeff * Q[s::e] + coeff * p;
+    F[w] = coeff * Q[w];
 #endif
-
+    F[e] = coeff * Q[e] + coeff * p;
     F[normal + 1] += p;
   }
 }; // namespace applications::exahype2::euler

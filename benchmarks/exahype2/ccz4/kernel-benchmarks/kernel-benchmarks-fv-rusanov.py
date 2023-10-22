@@ -1,26 +1,12 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import sys
 import argparse
 
 sys.path.insert(0, os.path.abspath('../../../../python'))
-
 import peano4
 import exahype2
-
-cell_size             = 0.01
-patch_size            = 5
-max_patches           = 1024*2
-end_time              = 3
-output_path           = "solution"
-make                  = True
-with_scaling          = False
-plot_interval         = end_time/100 # Set to 0 to disable I/O
-accuracy              = 0 # Set to value <0 to set to machine precision. Set to 0 to disable accuracy checks.
-
-scenarios = [
-  ""
-]
-scenario = ""
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -32,26 +18,18 @@ build_modes = {
 build_mode = "Release"
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Finite Volumes Rusanov Kernel Benchmarking Script')
-parser.add_argument("-o",       "--output",             dest="output_path",       type=str,                     default=output_path,        help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
-parser.add_argument("-m",       "--build-mode",         dest="build_mode",        choices=build_modes.keys(),   default=build_mode,         help="|".join(build_modes.keys()))
-parser.add_argument("-sc",      "--scenario",           dest="scenario",          choices=scenarios,            default=scenario,           help="|".join(scenarios))
-parser.add_argument("-maxh",    "--max-cell-size",      dest="max_cell_size",     type=float,                   default=cell_size,          help="Maximum size of a single finite volume cell on each axis.")
-parser.add_argument("-ps",      "--patch-size",         dest="patch_size",        type=int,                     default=patch_size,         help="Number of finite volumes per axis (dimension) per patch")
-parser.add_argument("-mp",      "--max-patches",        dest="max_patches",       type=int,                     default=max_patches,        help="Maximal number of patches to study")
+parser.add_argument("-m",       "--build-mode",         dest="build_mode",        choices=build_modes.keys(),   default="Release",          help="|".join(build_modes.keys()))
+parser.add_argument("-ps",      "--patch-size",         dest="patch_size",        type=int,                     required=True,              help="Number of finite volumes per axis (dimension) per patch")
+parser.add_argument("-mp",      "--max-patches",        dest="max_patches",       type=int,                     default=1024+1,             help="Maximal number of patches to study")
 parser.add_argument("-s" ,      "--samples",            dest="samples",           type=int,                     default=16,                 help="Number of samples per measurement")
-parser.add_argument("-et",      "--end-time",           dest="end_time",          type=int,                     default=end_time,           help="End time of simulation")
-parser.add_argument("-pi",      "--plot-interval",      dest="plot_interval",     type=float,                   default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
-parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=accuracy,           help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
-parser.add_argument(            "--with-scaling",       dest="with_scaling",      action="store_true",          default=with_scaling,       help="Benchmark kernels according to scaling laws. When switched off, each thread replicates the problem size (off by default)." )
-parser.add_argument(            "--make",               dest="make",              action="store_true",          default=make,               help="Compile the code after generation")
+parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=0.0,                help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
+parser.add_argument(            "--make",                                         action="store_true",                                      help="Compile the code after generation")
+parser.add_argument(            "--no-make",            dest="use_make",          action="store_false",                                     help="Do not compile the code after generation")
+parser.set_defaults(use_make=True)
 args = parser.parse_args()
 
 if args.build_mode not in build_modes:
     print("Error, mode must be {} or {}, you supplied {}".format(", ".join(list(build_modes.keys())[:-1]), list(build_modes.keys())[-1],args.build_mode))
-    sys.exit(1)
-
-if args.scenario not in scenarios:
-    print("Error, scenario must be {} or {}, you supplied {}".format(", ".join(scenarios[:-1]), scenarios[-1], args.scenario))
     sys.exit(1)
 
 accuracy = args.accuracy
@@ -92,10 +70,9 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
   patch_size              = args.patch_size,
   unknowns                = sum(unknowns.values()),
   auxiliary_variables     = 0,
-  min_volume_h            = args.max_cell_size,
-  max_volume_h            = args.max_cell_size,
+  min_volume_h            = 0.001,  # max_cell_size -> arbitrary value
+  max_volume_h            = 0.001,  # min_cell_size -> arbitrary value
   time_step_relaxation    = 0.5,
-  #normalised_time_step_size = args.max_cell_size/args.patch_size*0.5,
   pde_terms_without_state = True
 )
 
@@ -124,15 +101,6 @@ for key, value in integer_constants.items():
   my_solver.add_solver_constants("static constexpr int {} = {};".format(key, value))
 for key, value in double_constants.items():
   my_solver.add_solver_constants("static constexpr double {} = {};".format(key, value))
-
-my_solver.add_user_action_set_includes( """
-#include "CCZ4Kernels.h"
-""")
-my_solver.add_user_solver_includes( """
-#include "CCZ4Kernels.h"
-#include "InitialValues.h"
-#include <cstring>
-""")
 
 my_solver.set_implementation(
   boundary_conditions  = exahype2.solvers.PDETerms.Empty_Implementation,
@@ -163,41 +131,41 @@ my_solver.set_implementation(
 """
 )
 
+my_solver.add_user_action_set_includes("""
+#include "../../../../applications/exahype2/ccz4/CCZ4Kernels.h"
+""")
+my_solver.add_user_solver_includes("""
+#include "../../../../applications/exahype2/ccz4/CCZ4Kernels.h"
+#include "../../../../applications/exahype2/ccz4/InitialValues.h"
+#include <cstring>
+""")
+
 my_project.add_solver(my_solver)
 
 my_project.set_global_simulation_parameters(
   dimensions            = 3,
   offset                = [-0.5, -0.5, -0.5],
   size                  = [   1,    1,    1],
-  min_end_time=args.end_time,
-  max_end_time=args.end_time,
+  min_end_time          = 0.1,
+  max_end_time          = 0.1,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots=args.plot_interval,
+  time_in_between_plots = 0.0,
   periodic_BC           = [True, True, True]
 )
 
-output_path = str(args.output_path)
-my_project.set_output_path(output_path)
-if not os.path.exists(output_path):
-  os.makedirs(output_path)
-
-my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 my_project.set_Peano4_installation("../../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 
-my_project.constants.export_boolean("WithScaling", args.with_scaling)
 my_project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "double")
 my_project.constants.export_constexpr_with_type("MaxPatches", str(args.max_patches), "int")
 my_project.constants.export_constexpr_with_type("NumberOfSamples", str(args.samples), "int")
-my_project.constants.export_constexpr_with_type("EndTime", str(args.end_time), "int")
 
 my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/InitialValues.cpp")
 my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp")
-my_project.output.makefile.add_header_search_path("../../../../applications/exahype2/ccz4")
-benchmark_main_file = "../../euler/kernel-benchmarks/KernelBenchmarksFVRusanov-main.cpp"
-os.system("cp {} KernelBenchmarksFVRusanov-main.cpp".format(benchmark_main_file))
+#my_project.output.makefile.add_header_search_path("../../../../applications/exahype2/ccz4")
+os.system("cp {} KernelBenchmarksFVRusanov-main.cpp".format("../../euler/kernel-benchmarks/KernelBenchmarksFVRusanov-main.cpp"))
 
-my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
+my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
 
 print("Executable is kernel-benchmarks-fv-rusanov-3d-patch-size-"+ str(args.patch_size))
 print("Clean object files via 'make clean'")

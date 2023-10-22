@@ -6,9 +6,6 @@
 // **********************************************************************************************
 #pragma once
 
-
-{{SOLVER_INCLUDES}}
-
 #include "exahype2/RefinementControl.h"
 #include "exahype2/Solver.h"
 
@@ -24,6 +21,8 @@
 #include "VariableShortcuts.h"
 {% endif %}
 
+{{SOLVER_INCLUDES}}
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
@@ -33,8 +32,6 @@
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
-
-
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
    public:

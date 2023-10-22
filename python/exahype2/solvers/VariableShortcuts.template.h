@@ -29,8 +29,7 @@ struct {{NAMESPACE | join("::")}}::VariableMetrics {
  * Q[0], Q[9] and Q[34]. Your code is meaningful in terms of physics while
  * you still access on a C-array level.
  *
- * You might want to use a typedef to shorten the notation or create
- * an instance of this class.
+ * You might want to use a typedef to shorten the notation.
  **/
 class {{NAMESPACE | join("::")}}::VariableShortcuts : public {{NAMESPACE | join("::")}}::VariableMetrics {
 public:
