@@ -15,8 +15,8 @@ enum unknowns { h = 0, hu, hv };
 namespace exahype2::saintvenant {
 
   static void boundaryConditions(
-    const double* __restrict__ Qinside, // Qinside[3+1]
-    double* __restrict__ Qoutside,      // Qoutside[3+1]
+    const double* __restrict__ Qinside, // Qinside[3+13]
+    double* __restrict__ Qoutside,      // Qoutside[3+13]
     const tarch::la::Vector<Dimensions, double>& faceCentre,
     double                                       t,
     int                                          normal,
@@ -60,8 +60,7 @@ namespace exahype2::saintvenant {
       const double ih     = 1.0 / Q[0]; // Inverse water height
       const double c      = std::sqrt(Gravity * cos(Zeta) * Q[0]);
       double       u      = 0.0;
-      // std::cout<<"max eigenvalue h>0 at t="<<t<<std::endl;
-
+  
       switch (normal) {
       case 0: // x
               // Q[1] is the momentum in x-direction but we need the velocity
@@ -77,7 +76,6 @@ namespace exahype2::saintvenant {
       }
       return result;
     }
-    //std::cout<<"max eigenvalue h=0 at t="<<t<<std::endl;
     return 0.0;
   }
 
@@ -95,8 +93,7 @@ namespace exahype2::saintvenant {
   ) {
     if(tarch::la::greater(Q[0],0.0)){
       const double ih = 1.0 / Q[0];
-      // std::cout<<"Flux h>0 at t="<<t<<std::endl;
-
+  
       switch (normal) {
       case 0:
         F[0] = Q[1];                                                       // hu_1
@@ -112,17 +109,16 @@ namespace exahype2::saintvenant {
 
     }
     else{
-      // std::cout<<"Flux h=0 at t="<<t<<std::endl;
       switch (normal) {
       case 0:
-        F[0] = 0.0;                                                       // hu_1
-        F[1] = 0.0; // h(u_1)^2 + 0.5*g*h**2
-        F[2] = 0.0;                                           // hu_1u_2
+        F[0] = 0.0;                                                      
+        F[1] = 0.0; 
+        F[2] = 0.0;                                           
         break;
       case 1:
-        F[0] = 0.0;                                                       // hu_2
-        F[1] = 0.0;                                           // hu_1u_2
-        F[2] = 0.0; // h(u_2)^2 + 0.5*g*h**2
+        F[0] = 0.0;                                                       
+        F[1] = 0.0;                                           
+        F[2] = 0.0; 
         break;
       }
     }
@@ -324,9 +320,4 @@ namespace exahype2::saintvenant {
       }
     }
   }
-
-
-  
-  
-
 }

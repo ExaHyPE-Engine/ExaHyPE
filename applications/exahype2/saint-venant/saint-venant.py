@@ -8,7 +8,7 @@ import exahype2
 
 dimensions                = 2
 auxiliary_variables       = 13
-cell_size                 = 0.0028
+cell_size                 = 0.020
 amr_levels                = 3
 patch_size                = 3
 rk_order                  = 2
@@ -239,6 +239,8 @@ preprocess_reconstructed_patch = """
 if args.scenario == "Avalanche":
   from avalanche import Avalanche
   my_scenario = Avalanche(solver=args.solver, unknowns=unknowns, auxiliary_variables=auxiliary_variables)
+  from pprint import pprint
+  pprint(vars(my_scenario))
   if "FV" in solver_type:
     my_solver.add_user_solver_includes(user_includes)
     my_solver._preprocess_reconstructed_patch = preprocess_reconstructed_patch
@@ -287,7 +289,7 @@ else:
   periodic_BC = [False, False, False]
 
 if args.dim == 2:
-  size                    = [2.0, 2.0]
+  size                    = [1.58, 0.70]
   offset                  = [0.0, 0.0]
 
 

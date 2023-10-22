@@ -2,9 +2,7 @@ import math
 
 class Avalanche:
 
-    
-
-    def __init__(self, unknowns, auxiliary_variables, solver="FVRusanovGlobalAdaptive", Zeta=23.0, Zeta1=21.0, Zeta2=30.7, Zeta3=22.2, Beta=0.136, Gamma=0, FrictionLengthScale=0.00065, Gravity=9.81):
+    def __init__(self, unknowns, auxiliary_variables, solver="FVRusanovGlobalAdaptive", Zeta=35.0, Zeta1=31.1, Zeta2=47.5, Zeta3=32.7, Beta=0.63, Gamma=0.4, BetaStar=0.47, FrictionLengthScale=0.00044, Gravity=9.81):
         self.unknowns = unknowns
         self.auxiliary_variables = auxiliary_variables
         self.solver = solver
@@ -15,6 +13,7 @@ class Avalanche:
         self.Zeta3 = Zeta3*self.Pi/180
         self.Beta = Beta
         self.Gamma = Gamma
+        self.BetaStar = BetaStar
         self.FrictionLengthScale = FrictionLengthScale
         self.Gravity = Gravity
         self.Mu1 = math.tan(self.Zeta1)
@@ -26,10 +25,10 @@ class Avalanche:
 
     def implementation_of_initial_conditions(self):
         initial_condition_string_template =  """
-        const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{0.15,1.0}};
+        const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{0.15,0.35}};
         const bool nearCentre = tarch::la::norm2({volumeCentre}-granularMaterialCenter) < 0.1;
 
-        Q[0] = (nearCentre ? 0.008 : 0.0 ); // Water height (h)
+        Q[0] = (nearCentre ? 0.008 : 0.0 ); // Granular material height (h)
         Q[1] = 0.0; // x-momentum (hu)
         Q[2] = 0.0; // y-momentum (hv)
         Q[3] = 0.0;
@@ -123,7 +122,6 @@ class Avalanche:
         }}
 
         else{{
-            // std::cout<<"ncp h=0 at t="<<t<<std::endl;
             switch (normal) {{
                 case 0: // x
                     {BTimesDeltaQ}[0] = 0.0;
@@ -160,38 +158,32 @@ class Avalanche:
             const double Zeta3 = {Zeta3};
             const double Beta = {Beta};
             const double Gamma = {Gamma};
+            const double BetaStar = {BetaStar};
             const double FrictionLengthScale = {FrictionLengthScale};
             const double Mu1 = {Mu1};
             const double Mu2 = {Mu2};
             const double Mu3 = {Mu3};
             const double Nu = {Nu};
             const double Hstart = {Hstart};
-            const double Hstop = {Hstop};
-            // std::cout<<"sourceTerm h>0 at t="<<t<<std::endl;
-
+            const double Hstop = {Hstop}; 
 
             const double Fr       = ubar / sqrt(Gravity * Q[0] * cos(Zeta));
-            const double Betastar = Beta * (Mu2 + Mu3 - 2 * Mu1) / ((Mu2 - Mu3) * (Mu2 - Mu3)) - Gamma;
-            const double Hstar    = (Betastar + Gamma) * Hstop / Beta;
+            const double Hstar    = (BetaStar + Gamma) * Hstop / Beta;
             double       Mu       = 1.0;
 
-            if (Fr > Betastar) {{
+            if (Fr > BetaStar) {{
                 const double vstop  = (Q[0] * Beta) / (Fr + Gamma);
                 const double Mustop = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
                 Mu                  = Mustop;
             }}
 
-            else if (Fr > 0 && Fr <= Betastar) {{
+            else if (Fr > 0 && Fr <= BetaStar) {{
                 const double vstart  = Q[0];
-                const double vstop   = Q[0] * Beta / (Betastar + Gamma);
+                const double vstop   = Q[0] * Beta / (BetaStar + Gamma);
                 const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
                 const double Mustop  = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
-                const double T       = Mustart + (Mustop - Mustart) * (Fr / Betastar);
+                const double T       = Mustart + (Mustop - Mustart) * (Fr / BetaStar);
                 Mu                   = T;
-                //std::cout<<"h="<<Q[0]<<std::endl;
-                //std::cout<<"Beta="<<Beta<<std::endl;
-                //std::cout<<"Betastar="<<Betastar<<std::endl;
-                //std::cout<<"Gamma="<<Gamma<<std::endl;
             }}
 
             else if (Fr == 0) {{
@@ -202,12 +194,9 @@ class Avalanche:
             
 
             if(tarch::la::equals(ubar,0.0)){{
-                // std::cout<<"sourceTerm h>0 and ubar=0 at t="<<t<<std::endl;
                 const int NumberOfUnknowns = {NumberOfUnknowns};
-                //const double hx = Q[NumberOfUnknowns + h_x]/volumeH(0);
-                //const double hy = Q[NumberOfUnknowns + h_y]/volumeH(1);
-                const double hx = 0;
-                const double hy = 0;
+                const double hx = Q[NumberOfUnknowns + h_x]/volumeH(0);
+                const double hy = Q[NumberOfUnknowns + h_y]/volumeH(1);
                 const tarch::la::Vector<Dimensions, double> frictionVector = {{tan(Zeta)-hx,-hy}};
                 const double frictionVectorMagnitude = tarch::la::norm2(frictionVector);
                 if(tarch::la::greater(Mu,frictionVectorMagnitude)){{
@@ -225,7 +214,6 @@ class Avalanche:
                 }}
             }}
             else if(tarch::la::greater(ubar,0.0)){{
-                // std::cout<<"sourceTerm h>0 ubar>0 at t="<<t<<std::endl;
                 S[0] = 0.0;
                 S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (u / ubar) * Q[0] * Gravity * cos(Zeta);
                 S[2] = -Mu * (v / ubar) * Q[0] * Gravity * cos(Zeta);
@@ -233,16 +221,22 @@ class Avalanche:
         }}
 
         else{{
-            // std::cout<<"sourceTerm h=0 at t="<<t<<std::endl;
             S[0] = 0.0;
             S[1] = 0.0;
             S[2] = 0.0;
         }}
-        """.format(Gravity=self.Gravity, Zeta=self.Zeta, Zeta1=self.Zeta1, Zeta2=self.Zeta2, Zeta3=self.Zeta3, Beta=self.Beta, Gamma=self.Gamma, FrictionLengthScale=self.FrictionLengthScale, Mu1=self.Mu1, Mu2=self.Mu2, Mu3=self.Mu3, Nu=self.Nu, Hstart=self.Hstart, Hstop=self.Hstop, NumberOfUnknowns=self.unknowns)
+        """.format(Gravity=self.Gravity, Zeta=self.Zeta, Zeta1=self.Zeta1, Zeta2=self.Zeta2, Zeta3=self.Zeta3, Beta=self.Beta, Gamma=self.Gamma, BetaStar=self.BetaStar, FrictionLengthScale=self.FrictionLengthScale, Mu1=self.Mu1, Mu2=self.Mu2, Mu3=self.Mu3, Nu=self.Nu, Hstart=self.Hstart, Hstop=self.Hstop, NumberOfUnknowns=self.unknowns)
 
 
     def implementation_of_refinement_criterion(self):
-        return """auto result = ::exahype2::RefinementCommand::Keep;
+        return """
+        auto result = ::exahype2::RefinementCommand::Keep;
+        if(volumeCentre(0)<0.79){
+            result = ::exahype2::RefinementCommand::Refine;
+        }
+        else{
+            result = ::exahype2::RefinementCommand::Erase;
+        }
         return result;
         """
 
