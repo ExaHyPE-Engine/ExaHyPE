@@ -17,7 +17,6 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
     """!
-
     Update cell in primary sweep
 
     This action set is used in the primary sweeps only. In the secondary sweep,
@@ -54,7 +53,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     that, alter self._action_set_update_cell._Template_TouchCellFirstTime_Preamble.
     I recommend to add an entry and not to replace the preamble, as the
     preamble already consists meaningful code.
-
     """
 
     TemplateUpdateCell = jinja2.Template(
@@ -795,6 +793,7 @@ class EnclaveTasking(FV):
         )
 
         output.add(generated_solver_files)
+        output.makefile.add_h_file("tasks/" + task_name + ".h", generated=True)
         output.makefile.add_cpp_file("tasks/" + task_name + ".cpp", generated=True)
 
         if self._pde_terms_without_state:

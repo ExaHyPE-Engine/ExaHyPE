@@ -1170,7 +1170,6 @@ The finest mesh width of """
 
     def add_actions_to_perform_time_step(self, step):
         """!
-
         Add action sets to time step
 
         See exahype2.solvers.fv.FV.add_actions_to_init_grid() for details on the
@@ -1180,7 +1179,6 @@ The finest mesh width of """
 
         It is important that we do the inter-grid transfer operators before we
         apply the boundary conditions.
-
         """
         d = {}
         self._init_dictionary_with_default_parameters(d)
