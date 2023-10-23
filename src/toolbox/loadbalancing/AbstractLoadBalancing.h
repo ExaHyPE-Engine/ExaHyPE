@@ -11,8 +11,9 @@
 
 #include <map>
 
-#include "Configuration.h"
 #include "Blacklist.h"
+#include "Configuration.h"
+#include "CostMetrics.h"
 #include "Statistics.h"
 
 
@@ -29,9 +30,9 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
      * Constructor
      *
      * Data ownership is handed over to the load balancing, i.e. the balancing
-     * has to delete the configuration object unless you pass in a false.
-     * Consequently, deleteInConstructor should not hold if you pass in the
-     * nullptr.
+     * has to delete the configuration object unless you pass in the nullptr.
+     * If you pass in the nullptr, you cannot use the object, so this should
+     * be done with care by any subclass.
      *
      * Many implementations of AbstractLoadBalancing change the _state field
      * immediately in their constructor. Please ensure that you invoke
@@ -42,10 +43,9 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
      * start.
      */
     AbstractLoadBalancing(
-      Configuration* configuration,
-      bool deleteInDestructor
+      Configuration*  configuration,
+      CostMetrics*    costMetrics
     );
-
 
     virtual ~AbstractLoadBalancing();
 
@@ -101,6 +101,13 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
      * in this routine.
      */
     virtual void finishStep() = 0;
+
+    /**
+     * This is only used when you concatenate balancing rules and you want
+     * to disable any deletion. Please do not invoke it unless you know exactly
+     * what you are doing.
+     */
+    void setConfigurationAndMetricsNullWithoutDelete();
   protected:
     static tarch::logging::Log  _log;
 
@@ -109,6 +116,8 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
     Statistics  _statistics;
 
     Configuration*  _configuration;
+
+    CostMetrics*    _costMetrics;
 
     /**
      * Ensure that you invoke
@@ -119,9 +128,6 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
      * view of the whole world.
      */
     State  _state;
-
-    bool _deleteInDestructor;
-
 
     /**
      * Ensure enough memory is left-over.
@@ -167,6 +173,64 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
    
     bool areRanksUnemployed() const;
 
+    /**
+     * @return -1 if there is no local tree yet
+     */
+    double getWeightOfHeaviestLocalSpacetree() const;
+
+    /**
+     * Is used by tree identification and either indicates that there are no trees
+     * at all or means that the heaviest tree is on the blacklist. See implementation
+     * remarks in class description.
+     */
+    static constexpr int NoHeaviestTreeAvailable = -1;
+
+    /**
+     * Determines the maximum spacetree size a tree should have in the
+     * optimal case.
+     *
+     * As this routine does not really adopt the blacklist, it can introduce
+     * cyclles: If we repeatedly try to split the same
+     * rank this means that we have tried to split it, have not been
+     * successful, and tried again. This can happen, as not all trees
+     * can be split. See  peano4::grid::Spacetree::isCellTopDownSplitCandidate()
+     * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate()
+     * for a discussion which cells can be split and which can't. As
+     * not all cells can't be given away, not all trees can be split up.
+     *
+     * ## Randomisation
+     *
+     * If two or more trees have the same weight, the routine should
+     * randomly return one of them.
+     *
+     * @param tolerance By default, you get the last heaviest tree. But you
+     *   can ask for a random tree
+     *
+     * @return NoHeaviestTreeAvailable If there are no local trees or
+     *   if the heaviest tree is on the blacklist, i.e. we have to
+     *   assume that it still is splitting.
+     */
+    int getIdOfHeaviestLocalSpacetree() const;
+
+
+    /**
+     * Similar to getIdOfHeaviestLocalSpacetree() but you might get one of
+     * the trees back that is close to the heaviest one up to tolerance.
+     * Tolerance here is the relative difference: So you are guaranteed
+     * that
+     *
+     * @f$ m_i \geq tolerance \cdot m_{max} @f$
+     *
+     * or
+     *
+     * @f$ \frac{m_i}{m_{max}} \geq tolerance @f$
+     *
+     *
+     *
+     */
+    int getIdOfHeaviestLocalSpacetree(
+      double tolerance
+    ) const;
 };
 
 std::ostream& operator<<(std::ostream& out, const toolbox::loadbalancing::AbstractLoadBalancing& balancing);

@@ -45,7 +45,7 @@ peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 {% if LOAD_BALANCER!="" -%}
 {{LOAD_BALANCER}}              loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
 {% else -%}
-toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
+toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
 {% endif -%}
 
 
@@ -375,9 +375,14 @@ void initLogFilters() {
 }
 
 void initSharedMemoryAndGPUEnvironment() {
+
+  {% if TIMEOUT>=0 %}
+  tarch::mpi::Rank::getInstance().setDeadlockTimeOut( {{TIMEOUT}} );
+  {% endif %}
   tarch::multicore::Core::getInstance().configure( {{NUMBER_OF_THREADS}} );
   tarch::accelerator::Device::getInstance().configure( { {{GPUS|join(",")}} } );
   tarch::multicore::setOrchestration( {{MULTICORE_ORCHESTRATION}} );
+
 }
 
 

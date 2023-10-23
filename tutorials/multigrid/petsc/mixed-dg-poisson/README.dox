@@ -1,0 +1,59 @@
+/**
+
+ @page tutorials_multigrid_petsc_mixed_dg_poisson Mixed Discontinuous Galerkin for the Poisson equation with PETSc
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+
+Following the discussion in @ref page_multigrid_numerics_Mixed_Galerkin, we instantiate
+
+
+Later on, we will use a value unknowns_per_cell_dof. This is 
+
+
+           unknowns_per_cell_dof = 3
+
+In the code, we expect the user to specify the number of unknowns equired
+per cell plus the polynomial order:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver = petsc.solvers.MixedPoisson("MP",
+                                    polynomial_degree = 2,
+                                    unknowns_per_cell_dof = 3,
+                                    [...]
+                                    )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The code takes this information, runs through the mesh and allocates (from
+PETSc) @f$ 3 \cdot (2+1)^d @f$ unknown indices. That means, so far, we are
+trying to solve a system 
+
+@f$ A x = b @f$
+
+where x has @f$ 3 |\mathbf{C}| \cdot (p+1)^d @f$ entries. This is not the 
+end of the story. Only a start. 
+
+
+
+In the code, we expect the user to specify the number of unknowns equired
+per cell plus the polynomial order:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver = petsc.solvers.MixedDiscontinuousGalerkinDiscretisation("Poisson",
+                                                           args.degree,
+                                                           unknowns_per_cell_dof = 3,
+                                                           args.meshsize,
+                                                           args.meshsize,
+                                                           )
+solver = petsc.solvers.MixedPoisson("MP",
+                                    polynomial_degree = 2,
+                                    unknowns_per_cell_dof = 3,
+                                    [...]
+                                    )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+ */

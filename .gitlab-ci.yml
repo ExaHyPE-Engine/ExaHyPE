@@ -1,5 +1,7 @@
 variables:
   RUNNER_TAG: "peano-dine-runner"
+  BASE_IMAGE_TAG: "base_latest.sif"
+  LATEX_IMAGE_TAG: "latex_latest.sif"
   AMD_IMAGE_TAG: "amd_latest.sif"
   GCC_IMAGE_TAG: "gcc_latest.sif"
   INTEL_IMAGE_TAG: "intel_latest.sif"
@@ -25,15 +27,16 @@ stages:
   - benchmarks
   - formatting
   - publish
+  - deploy
 
 include:
-  - .continuous_integration/pipeline-amd.yml
+  #- .continuous_integration/pipeline-amd.yml
   - .continuous_integration/pipeline-gcc.yml
   - .continuous_integration/pipeline-intel.yml
   - .continuous_integration/pipeline-llvm.yml
   - .continuous_integration/pipeline-nvidia.yml
 
-  - .continuous_integration/pipeline-amd-cmake.yml
+  #- .continuous_integration/pipeline-amd-cmake.yml
   - .continuous_integration/pipeline-gcc-cmake.yml
   - .continuous_integration/pipeline-intel-cmake.yml
   - .continuous_integration/pipeline-llvm-cmake.yml

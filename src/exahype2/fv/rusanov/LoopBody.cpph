@@ -234,9 +234,6 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   );
 
   // scatter
-  #if defined(SharedOMP)
-  #pragma omp unroll
-  #endif
   for (int unknown = 0; unknown < Solver::NumberOfUnknowns; unknown++) {
     QOut[QOutEnumerator(
       patchIndex, volumeIndex, unknown

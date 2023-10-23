@@ -11,6 +11,9 @@ import sys
 import exahype2.grid
 import exahype2.solvers
 
+from exahype2.solvers.aderdg.ADERDG import ADERDG
+from exahype2.solvers.aderdg.kernelgenerator import Configuration
+
 
 class Project(object):
     """!
@@ -49,6 +52,7 @@ class Project(object):
         self._log_filter_file         = "exahype.log-filter"
         self._number_of_threads       = "tarch::multicore::Core::UseDefaultNumberOfThreads"
         self._multicore_orchestration = "tarch::multicore::orchestration::createDefaultStrategy()"
+        self._timeout                 = -1
         self._gpus                    = []
         self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h", 
                                           "tarch/multicore/orchestration/StrategyFactory.h",
@@ -78,7 +82,7 @@ class Project(object):
         """
         load_balancer_name: string
           Should be full-qualified name of the load balancer.
-          By default, I recommend to pass "toolbox::loadbalancing::RecursiveSubdivision"
+          By default, I recommend to pass "toolbox::loadbalancing::strategies::RecursiveSubdivision".
 
         load_balancer_arguments: string
           If your load balancing requires parameters, add them
@@ -92,22 +96,18 @@ class Project(object):
 
     def set_log_filter_file(self, file_name):
         """! Set a log filter file name
-        
         Pass in the empty string, if you want the code to use the hard-coded
         defaults.
-         
         """
         self._log_filter_file = file_name
-        
+
     def set_number_of_threads(self, value):
         """! Set number of threads to use
-        
-        Pass in number of threads (positive integer) or a string such as 
+        Pass in number of threads (positive integer) or a string such as
         "tarch::multicore::Core::UseDefaultNumberOfThreads".
-        
         """
         self._number_of_threads = value
-        
+
     def set_multicore_orchestration(self,value):
         """! Set orchestration
         
@@ -119,6 +119,19 @@ class Project(object):
         
         """
         self._multicore_orchestration = value
+
+    def set_timeout(self,value):
+        """! Set timeout
+        
+        value has to be a number greater or equal to zero, this then sets the 
+        timeout in seconds after which a node waiting for an MPI message shall
+        quit an shutdown the whole application with an error report.
+        If zero is passed, this feature is switched off and nodes will wait
+        indefinitely.
+        """
+        if value < 0:
+            raise Exception("Timeout has to be greater or equal to 0")
+        self._timeout = value
         
     def set_gpus(self,value):
         """! Set GPUs to be used
@@ -352,6 +365,7 @@ thus appreciate any citation of the original release paper
             "LOG_FILTER_FILE":          self._log_filter_file,
             "NUMBER_OF_THREADS":        self._number_of_threads,
             "MULTICORE_ORCHESTRATION":  self._multicore_orchestration,
+            "TIMEOUT":                  self._timeout,
             "GPUS":                     self._gpus,
             "ADDITIONAL_INCLUDES":      self._additional_includes,
         }
@@ -660,6 +674,25 @@ thus appreciate any citation of the original release paper
 
         self._project.output.makefile.set_mode(self._build_mode)
 
+        for solver in self._solvers:
+            if isinstance(solver, ADERDG):
+                pathToExaHyPERoot = Configuration.pathToExaHyPERoot
+                if solver._use_BLIS:
+                    archname = ""
+                    for root, dirs, files in os.walk(pathToExaHyPERoot+ "/submodules/blis/include"):
+                        archname = dirs[0]
+                        break
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/blis/include/" + archname)
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/blis/lib/" + archname + "/libblis.a")
+                    self._project.output.makefile.add_library("-lpthread")
+                elif solver._use_Eigen:
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/eigen")
+                elif solver._use_libxsmm_JIT:
+                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/libxsmmJIT/include")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/libxsmmJIT/lib/libxsmm.a")
+                    self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/OpenBLAS/libopenblas.a")
+                    self._project.output.makefile.add_library("-lpthread")
+                break
         return self._project
 
 

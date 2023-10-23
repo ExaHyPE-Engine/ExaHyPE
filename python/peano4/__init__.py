@@ -1,11 +1,10 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-havejinja2=False
 try:
   import jinja2
 except ImportError:
-  raise("Jinja2 is not available, some functionality might not be provided.")
+  raise Exception("Jinja2 is not available, cannot generate glue code.")
 
 havepvtk=False
 try:
@@ -13,7 +12,7 @@ try:
   import paraview
   havepvtk=True
 except ImportError:
-  print("VTK and ParaView is not available, not loading peano4.visualisation")
+  print("VTK and ParaView is not available, not loading peano4.visualisation.")
 
 if havepvtk:
   import peano4.visualisation
@@ -25,4 +24,4 @@ import peano4.toolbox
 
 from .Project import Project
 
-print( "Peano 4 (C) www.peano-framework.org" )
+print("Peano 4 (C) www.peano-framework.org")

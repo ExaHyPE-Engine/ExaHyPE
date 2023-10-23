@@ -1,0 +1,193 @@
+/**
+
+ @page tutorials_multigrid_petsc_continuous_galerkin_poisson Continuous Galerkin for the Poisson equation with PETSc
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+
+ This simple example discusses the steps from the file benchmarks/multigrid/petsc/poisson/poisson.py.
+ We omit some technical details (such as the parsing of the command line) and 
+ focus on key ingredients. Therefore, it is reasonable to study this description 
+ in combination with the actual script.
+ 
+ 
+ # Code usage
+  
+ ## Create a project
+ 
+ First, we have to create a multigrid project.
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+project = petsc.Project(project_name = "Poisson", 
+                        namespace = [ "multigrid", "petsc", "poisson" ]
+                        ) 
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+
+ This is kind of an empty hull until we befill it with some global information 
+ (such as the domain size) and also tell the API to scan the global Makefile.
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+cube_size = 1.0
+project.set_global_simulation_parameters(
+  dimensions            = 2,
+  offset                = [0.0, 0.0, 0.0],
+  domain_size           = [ cube_size, cube_size, cube_size],
+)
+
+project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_Peano4_installation( args.peanodir, 
+                                 build_mode = peano4.output.CompileMode.Asserts
+                                 )
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ The routine petsc.Project.set_Peano4_installation() will parse all the 
+ settings that you used for configure (autotools) or cmake. From hereon,
+ these settings will be used by the Python API as well.
+
+
+ ## Add the solver
+ 
+ We use one of the simplest solvers that we have for the examples here:
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+ solver = petsc.solvers.CollocatedLowOrderDiscretisation("Poisson", 
+                                                        1, # a scalar
+                                                        0.01,
+                                                        0.01
+                                                        )
+
+ project.add_solver( solver )
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+
+ The solver knows, by definition, which data objects it has to build up 
+ internally and to which grid entities these data objects are associated 
+ to. As we use a collocated solver here, the scalar is attached to the 
+ mesh vertices. The call of petsc.Project.add_solver() will ensure that 
+ this solver's data structures are tied to the mesh and that the solver
+ enriches all the algorithmic steps with the required operations. 
+
+ ## Generate a Peano project and the C++ code
+ 
+ We close the solver construction by asking the multigrid API to create a 
+ Peano 4 Python project for us, and subsequently ask this Peano 4 project
+ to generate all C++ code and the Makefile:
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+peano4_project = project.generate_Peano4_project(args.verbose)
+peano4_project.generate()
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ After this last step, we can either invoke peano4.Project.build() on the
+ peano4_project object, or we can simply type in make on the command line.
+ Before we do this, we have to add the actual numerics:
+ 
+ 
+ ## Add numerics
+  
+ Now it is time to build your code. The Python API will never overwrite your
+ user code, i.e. alter the Poisson.h and Poisson.cpp file. So you are save
+ when you rerun the Python script once more and make it call 
+ 
+        peano4_project.build()
+        
+ As it is some overhead to regenerate all of that glue code, just type
+ in make on the terminal, and everything should be fine. Our implementation
+ of the Poisson setup is really simplistic. As we want to solve
+ 
+ @todo Sean can you write down stuff here?
+ 
+
+ ## Visualisation
+ 
+ Once you have built your code and invoked it, you should see an output similar
+ to
+
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+00:00:11    rank:0  ::::main()  info    terminated successfully
+00:00:11    rank:0  ::::main()  info    grid construction:           5.43634s   (avg=0.339771,#measurements=16,max=0.745847(value #10),min=0.000293452(value #1),+119.514%,-99.9136%,std-deviation=0.316354)
+00:00:11    rank:0  ::::main()  info    enumerate:                   0.589898s  (avg=0.589898,#measurements=1,max=0.589898(value #0),min=0.589898(value #0),+0%,-0%,std-deviation=3.4285e-09)
+00:00:11    rank:0  ::::main()  info    init (setup PETSc):          4.52e-07s  (avg=4.52e-07,#measurements=1,max=4.52e-07(value #0),min=4.52e-07(value #0),+0%,-0%,std-deviation=3.45865e-15)
+00:00:11    rank:0  ::::main()  info    assemble:                    0.591637s  (avg=0.591637,#measurements=1,max=0.591637(value #0),min=0.591637(value #0),+0%,-0%,std-deviation=1.74537e-09)
+00:00:11    rank:0  ::::main()  info    solve:                       4.3e-07s   (avg=4.3e-07,#measurements=1,max=4.3e-07(value #0),min=4.3e-07(value #0),+0%,-0%,std-deviation=3.29368e-15)
+00:00:11    rank:0  ::::main()  info    map solution back onto mesh: 0.575858s  (avg=0.575858,#measurements=1,max=0.575858(value #0),min=0.575858(value #0),+0%,-0%,std-deviation=3.90214e-09)
+00:00:11    rank:0  ::::main()  info    plotting:                    1.03918s   (avg=1.03918,#measurements=1,max=1.03918(value #0),min=1.03918(value #0),+0%,-0%,std-deviation=7.62111e-09)
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+
+ Furthermore, there should be patch files in our execution directory. One of 
+ them is called solution-Poisson.peano-patch-file and it is a meta file, i.e.
+ it links to all the other files written by different ranks and threads on 
+ your parallel computer. You can inspect patch files in a text editor, and 
+ their format @ref peano_patch_file "is described in the patch file format section".
+ 
+ To visualise the outcome, you can go down different paths. I have pvpython 
+ installed, i.e. Paraview with the Python terminal. In this case, we can type 
+ in 
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+ /opt/paraview/bin/pvpython ~/git/Peano/python/peano4/visualisation/render.py --filter-fine-grid solution-Poisson.peano-patch-file
+ ~~~~~~~~~~~~~~~~~~~~~~~~
+
+ which converts the patch files into a pvd file which we can open in Paraview.
+  
+  
+  ## What happens under the hood
+
+  The multigrid project will yield a Peano project which in turn will create
+  
+  - all the C++ code;
+  - a main file;
+  - a Makefile
+  
+  The main file realises one by one the different steps of a PETSc-based multigrid
+  solver and therefore follows exactly @ref peano_main "the vanilla Peano main file structure".
+  It runs through the algorithmic steps   
+  Per algorithmic step that we @ref multigrid_petsc "find in any PETSc" project one by one.
+  Per step, it issues one mesh traversal (besides for the actual solve, which is a single PETSc
+  call).
+  Per traversal, it hands in an observer.
+  
+  The observers are created by the multigrid project petsc.Project. This class
+  speaks of steps which is really what they are. The observer is the realisation
+  of these steps.
+  The steps that petsc.Project creates are more or less empty. 
+  When we invoke petsc.Project.add_solver(), the project takes the solver as passed
+  as an argument and asks the solver to add action sets, i.e. activities, to each 
+  step. Each activity is a subclass of peano4.solversteps.ActionSet.
+
+  @see peano4.petsc.actionsets.InitVertexDoFs for the actual initialisation phase.
+
+  ## Libraries
+
+  We compile with flag -lpetsc to ensure that the PETSc-specific libraries are available to us.
+  (not to be confused with -lPETSc). To ensure these are visible to the compiler, we must add
+  
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+  -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+  to the CXXFLAGS. This assumes that PETSc is installed locally, and these environment variables
+  are set up. Furthermore. we add the following to the LDFLAGS:
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+  -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib -L$PETSC_DIR/$PETSC_ARCH/lib -L/usr/lib/gcc/x86_64-linux-gnu
+  ~~~~~~~~~~~~~~~~~~~~~~~~
+
+  At time of writing, these can be seen in lines 788-815 of configure.ac, at the top level of Peano.
+
+  # Internal workflow
+
+  During EnumerateAndInit stage, we request one index in the LocalToGlobalMap for each
+  degree of freedom. Each time this occurs, we increase the index count on each subtree.
+  At the end of the traversal, we merge the LocalToGlobalMaps from each subtree back into
+  the main map. We keep a std::map which tracks how many indices were used up by each subtree,
+  so we can issue global Indices sequentially. 
+
+  During InitVertexDof stage, we store each Value and Rhs that we encounter. 
+  When it comes to the InitPetsc stage, we send these values to PetscData class, 
+  which then uses these values to initialise two Petsc vectors. So far, we have implemented 
+  a method to return the values from the solution vector from PETSc back to C++.
+
+*/
+
+ 

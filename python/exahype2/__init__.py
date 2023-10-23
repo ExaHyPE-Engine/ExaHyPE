@@ -15,8 +15,8 @@ try:
     import mpmath
     havenumpy = True
 except ImportError:
-    print("Numpy and mpmath are not available, not loading exahype2.solvers.rkdg")
-    print("Numpy and mpmath are not available, not loading exahype2.solvers.aderdg")
+    print("Numpy and mpmath are not available, not loading exahype2.solvers.rkdg.")
+    print("Numpy and mpmath are not available, not loading exahype2.solvers.aderdg.")
 if havenumpy:
     import exahype2.solvers.rkdg
     import exahype2.solvers.aderdg
@@ -27,7 +27,7 @@ try:
     import sympy
     havesympy = True
 except ImportError:
-    print("Sympy and numpy are not available, not loading exahype2.symhype")
+    print("Sympy and numpy are not available, not loading exahype2.symhype.")
 if havesympy:
     import exahype2.symhype
 
@@ -36,7 +36,7 @@ try:
     import matplotlib
     havematplotlib = True
 except ImportError:
-    print("Matplotlib is not available, not loading exahype2.postprocessing")
+    print("Matplotlib is not available, not loading exahype2.postprocessing.")
 if havematplotlib:
     import exahype2.postprocessing
 

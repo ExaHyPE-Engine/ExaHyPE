@@ -10,6 +10,7 @@ import numpy as np
 
 import jinja2
 
+from SBH import KernelParallelisation
 from SBH import Limiter
 from SBH import FD4SolverWithLimiter
 from SBH import FD4SolverWithoutLimiter
@@ -109,9 +110,21 @@ if __name__ == "__main__":
             "tailored",
             "parallel-for",
             "subtasks",
+            "subtasks-and-kernel-parallelisation"
         ],
         required=True,
         help="Task scheduler flavours",
+    )
+    parser.add_argument(
+        "-lbm",
+        "--load-balancing-metric",
+        dest="load_balancing_metric",
+        choices=[
+            "generic",
+            "tailored"
+        ],
+        required=True,
+        help="Load balancing metric",
     )
     parser.add_argument(
         "-s",
@@ -154,23 +167,33 @@ if __name__ == "__main__":
     if args.scheduler == "native-no-priorities":
         project.set_load_balancing( "tarch::multicore::orchestration::Hardcoded::createNative()" )
         enable_higher_priority_for_FV_tasks = False
-        parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.NONE
+        parallelise_interpolation           = KernelParallelisation.NONE
+        fv_kernel_parallelisation           = KernelParallelisation.NONE
     elif args.scheduler == "native":
         project.set_load_balancing( "tarch::multicore::orchestration::Hardcoded::createNative()" )
         enable_higher_priority_for_FV_tasks = True
-        parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.NONE
+        parallelise_interpolation           = KernelParallelisation.NONE
+        fv_kernel_parallelisation           = KernelParallelisation.NONE
     elif args.scheduler == "tailored":
         project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
-        parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.NONE
+        parallelise_interpolation           = KernelParallelisation.NONE
+        fv_kernel_parallelisation           = KernelParallelisation.NONE
     elif args.scheduler == "parallel-for":
         project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
-        parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.PARALLEL_FOR
+        parallelise_interpolation           = KernelParallelisation.PARALLEL_FOR
+        fv_kernel_parallelisation           = KernelParallelisation.NONE
     elif args.scheduler == "subtasks":
         project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
         enable_higher_priority_for_FV_tasks = True
-        parallelise_interpolation           = FD4SolverWithLimiter.InterpolationParallelisation.SUBTASKS
+        parallelise_interpolation           = KernelParallelisation.SUBTASKS
+        fv_kernel_parallelisation           = KernelParallelisation.NONE
+    elif args.scheduler == "subtasks-and-kernel-parallelisation":
+        project.set_load_balancing( "new benchmarks::exahype2::ccz4::MulticoreOrchestration()" )
+        enable_higher_priority_for_FV_tasks = True
+        parallelise_interpolation           = KernelParallelisation.SUBTASKS
+        fv_kernel_parallelisation           = KernelParallelisation.SUBTASKS
     else:
         assert False, "not supported yet"
 
@@ -183,6 +206,8 @@ if __name__ == "__main__":
                                                     patch_size    = FD4PatchSize,
                                                     min_cell_size = args.cell_size, 
                                                     max_cell_size = max_cell_size,
+                                                    parallelisation_of_interpolation = parallelise_interpolation,
+                                                    parallelisation_of_kernels       = fv_kernel_parallelisation
                                                     )
         project.add_solver(my_primary_solver)
         added_limiter = False
@@ -192,12 +217,14 @@ if __name__ == "__main__":
                                                  patch_size    = FD4PatchSize,
                                                  min_cell_size = args.cell_size, 
                                                  max_cell_size = max_cell_size,
-                                                 parallelisation_of_interpolation = parallelise_interpolation
+                                                 parallelisation_of_interpolation = parallelise_interpolation,
+                                                 parallelisation_of_kernels       = fv_kernel_parallelisation
                                                  )
         
         my_secondary_solver = Limiter(name                      = "CCZ4SBH",
                                       patch_size                = FD4PatchSize,
                                       amend_priorities          = enable_higher_priority_for_FV_tasks,
+                                      parallelisation_of_kernels       = fv_kernel_parallelisation
                                       )
         project.add_solver(my_primary_solver)
         project.add_solver(my_secondary_solver)
@@ -236,12 +263,17 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation(args.peanodir, build_mode)
 
-
-    # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
-    project.set_load_balancing(
-        "toolbox::loadbalancing::SpreadOutHierarchically",
-        "(new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + "))"
-    )
+    
+    if args.load_balancing_metric=="generic":
+      project.set_load_balancing(
+        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+        "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + "), new toolbox::loadbalancing::metrics::CellCount()",
+        )
+    else:
+      project.set_load_balancing(
+        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+        "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + "), new toolbox::loadbalancing::metrics::CustomCellWeight()",
+        )
 
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 

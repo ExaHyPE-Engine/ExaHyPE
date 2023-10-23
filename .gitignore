@@ -106,6 +106,10 @@ src/stamp-h1
 # (which is called by configure script))
 Makefile
 
+# CMake cache file and supporting files
+CMakeCache.txt
+/CMakeFiles
+
 .vscode/*
 .vscode/settings.json
 .vscode/tasks.json
@@ -290,12 +294,18 @@ submodules/
 # Unit tests
 UnitTests2d*
 UnitTests3d*
+src/unittests/UnitTests*
 
 # Output files
 *patch-file*
 *.pvd
 *.err
 *.out
+
+*.o.*
+*.trs*
+*.xml
+*.def
 
 # Misc
 .DS_Store

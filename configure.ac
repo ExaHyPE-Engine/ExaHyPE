@@ -81,16 +81,16 @@ srcdir_full_path=`cd $srcdir && pwd`
 # Define all the compiler and linker variables of Peano
 # ===============================================================
 #
-CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0 -O2"
-CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics -O2"
-CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g -O2"
-CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g -O2"
+CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0"
+CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics"
+CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g"
+CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g"
 CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g -O0"
 
-CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0 -O2"
-CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics -O2"
-CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g -O2"
-CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g -O2"
+CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0"
+CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics"
+CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g"
+CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g"
 CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0"
 
 LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
@@ -309,10 +309,10 @@ if test "$gpu" == cuda; then
 
   NVCC_FLAGS="-forward-unknown-to-host-compiler -I$srcdir_full_path/src -ccbin=$CXX"
 
-  NVCC_FLAGS_RELEASE="$NVCC_FLAGS -O2"
-  NVCC_FLAGS_STATS="$NVCC_FLAGS -O2"
-  NVCC_FLAGS_ASSERTS="$NVCC_FLAGS -G -O2"
-  NVCC_FLAGS_TRACE="$NVCC_FLAGS -g -O2"
+  NVCC_FLAGS_RELEASE="$NVCC_FLAGS"
+  NVCC_FLAGS_STATS="$NVCC_FLAGS"
+  NVCC_FLAGS_ASSERTS="$NVCC_FLAGS -G"
+  NVCC_FLAGS_TRACE="$NVCC_FLAGS -g"
   NVCC_FLAGS_DEBUG="$NVCC_FLAGS -G -O0"
 fi
 
@@ -463,6 +463,22 @@ if test "$use_otter" == true; then
   AC_DEFINE([UseOtter], [UseOtter], [UseOtter])
 fi
 
+#
+# libxsmm JIT
+#
+AC_ARG_WITH(libxsmmJIT,
+  AS_HELP_STRING([--with-libxsmmJIT],[enable libxsmmJIT [default=false]]),
+  [ AC_MSG_CHECKING(for libxsmmJIT)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_libxsmmJIT=false ;;
+      *)     AC_MSG_RESULT(yes);   use_libxsmmJIT=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for libxsmmJIT); AC_MSG_RESULT(no); use_libxsmmJIT=false ])
+AM_CONDITIONAL([UselibxsmmJIT],[test "x$use_libxsmmJIT" = xtrue])
+
+if test "$use_libxsmmJIT" == true; then
+  AC_DEFINE([UselibxsmmJIT], [UselibxsmmJIT], [UselibxsmmJIT])
+fi
 
 #
 # libxsmm
@@ -480,6 +496,41 @@ AM_CONDITIONAL([UseLibXSMM],[test "x$use_libxsmm" = xtrue])
 if test "$use_libxsmm" == true; then
   AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
 fi
+
+#
+# BLIS
+#
+AC_ARG_WITH(BLIS,
+  AS_HELP_STRING([--with-BLIS],[enable BLIS [default=false]]),
+  [ AC_MSG_CHECKING(for BLIS)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_BLIS=false ;;
+      *)     AC_MSG_RESULT(yes);   use_BLIS=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for BLIS); AC_MSG_RESULT(no); use_BLIS=false ])
+AM_CONDITIONAL([UseBLIS],[test "x$use_BLIS" = xtrue])
+
+if test "$use_BLIS" == true; then
+  AC_DEFINE([UseBLIS], [UseBLIS], [UseBLIS])
+fi
+
+#
+# Eigen
+#
+AC_ARG_WITH(Eigen,
+  AS_HELP_STRING([--with-Eigen],[enable Eigen [default=false]]),
+  [ AC_MSG_CHECKING(for Eigen)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_Eigen=false ;;
+      *)     AC_MSG_RESULT(yes);   use_Eigen=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for Eigen); AC_MSG_RESULT(no); use_Eigen=false ])
+AM_CONDITIONAL([UseEigen],[test "x$use_Eigen" = xtrue])
+
+if test "$use_Eigen" == true; then
+  AC_DEFINE([UseEigen], [UseEigen], [UseEigen])
+fi
+
 
 #
 # ===============================================================
@@ -902,6 +953,59 @@ if test "$toolbox_exahype" != false; then
   LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype2 "
 fi
 
+if test "$use_libxsmmJIT" != false; then
+  #libxsmm JIT
+  echo "Checking whether libxsmm JIT needs to be installed or built"
+  if @<:@ ! -d submodules @:>@; then
+    mkdir submodules
+    echo "Created libxsmmJIT directory in submodules"
+  fi
+  if @<:@ ! -e submodules/libxsmmJIT/.git @:>@; then
+    echo "Initializing libxsmm JIT in submodules/libxsmmJIT, this may take a while"
+    cd submodules
+    git clone https://github.com/libxsmm/libxsmm.git libxsmmJIT
+    cd libxsmmJIT
+    cd ../..
+  fi
+
+  # build libxsmm JIT
+  if @<:@ ! -d submodules/libxsmmJIT/lib @:>@ || @<:@ ! -e submodules/libxsmmJIT/include @:>@; then
+    REBUILD_libxsmmJIT=true
+  fi
+  if @<:@ "$REBUILD_libxsmmJIT" = true @:>@; then
+    echo "Building libxsmm JIT"
+    cd submodules/libxsmmJIT
+    make --silent
+    cd ../..
+  fi
+  echo "Finished building libxsmm JIT"
+
+  #OpenBLAS
+  echo "Checking whether OpenBLAS needs to be installed or built"
+  if @<:@ ! -d submodules @:>@; then
+    mkdir submodules
+    echo "Created OpenBLAS directory in submodules"
+  fi
+  if @<:@ ! -e submodules/OpenBLAS/.git @:>@; then
+    echo "Initializing OpenBLAS in submodules/OpenBLAS, this may take a long while"
+    cd submodules
+    git clone https://github.com/xianyi/OpenBLAS.git
+    cd OpenBLAS
+    cd ../..
+  fi
+
+  # build OpenBLAS
+    REBUILD_OpenBLAS=true
+  if @<:@ "$REBUILD_OpenBLAS" = true @:>@; then
+    echo "Building OpenBLAS"
+    cd submodules/OpenBLAS
+    make --silent
+    cd ../..
+  fi
+  echo "Finished building libxsmm JIT"
+
+fi
+
 
 if test "$use_libxsmm" != false; then
   echo "Checking whether libxsmm needs to be installed or built"
@@ -936,6 +1040,56 @@ if test "$use_libxsmm" != false; then
   fi
   echo "Finished building libxsmm generator"
 fi
+
+
+if test "$use_BLIS" != false; then
+  #BLIS
+  echo "Checking whether BLIS needs to be installed or built"
+  if @<:@ ! -d submodules @:>@; then
+    mkdir submodules
+    echo "Created BLIS directory in submodules"
+  fi
+  if @<:@ ! -e submodules/blis/.git @:>@; then
+    echo "Initializing BLIS in submodules/blis, this may take a while"
+    cd submodules
+    git clone https://github.com/flame/blis.git
+    cd blis
+    cd ../..
+  fi
+  
+  # build BLIS
+  if @<:@ ! -d submodules/blis/lib @:>@ || @<:@ ! -e submodules/blis/include @:>@; then
+    REBUILD_BLIS=true
+  fi
+  if @<:@ "$REBUILD_BLIS" = true @:>@; then
+    echo "Building BLIS"
+    cd submodules/blis
+    ./configure auto
+    make --silent
+    make check
+    cd ../..
+  fi
+  echo "Finished building BLIS"
+
+
+fi
+
+if test "$use_Eigen" != false; then
+  #Eigen
+  echo "Checking whether Eigen needs to be installed or built"
+  if @<:@ ! -d submodules @:>@; then
+    mkdir submodules
+    echo "Created Eigen directory in submodules"
+  fi
+  if @<:@ ! -e submodules/Eigen/.git @:>@; then
+    echo "Initializing Eigen in submodules/Eigen, this may take a while"
+    cd submodules
+    git clone https://gitlab.com/libeigen/eigen.git
+    cd eigen
+    cd ../..
+  fi
+fi
+
 
 
 #

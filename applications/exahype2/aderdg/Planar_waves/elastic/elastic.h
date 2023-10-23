@@ -28,6 +28,14 @@ class examples::exahype2::elastic::elastic: public Abstractelastic {
 
   public:
 
+    ::exahype2::PrecisionCommand precisionCriterion(
+      const std::bfloat16_t * __restrict__ Q, // Q[9+3]
+      const tarch::la::Vector<Dimensions,double>&         x,
+      const tarch::la::Vector<Dimensions,double>&         h,
+      double                                              t,
+      SolverState                                         currentState
+    );
+
     template<typename T>
     void initialCondition(
       T * __restrict__ Q, //Q[4+0]
