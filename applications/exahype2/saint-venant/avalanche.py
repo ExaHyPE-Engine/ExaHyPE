@@ -2,12 +2,20 @@ import math
 
 class Avalanche:
 
-    def __init__(self, unknowns, auxiliary_variables, solver="FVRusanovGlobalAdaptive", Zeta=35.0, Zeta1=31.1, Zeta2=47.5, Zeta3=32.7, Beta=0.63, Gamma=0.4, BetaStar=0.47, FrictionLengthScale=0.00044, Gravity=9.81):
+    def __init__(self, unknowns, auxiliary_variables, solver="FVRusanovGlobalAdaptive", Zeta=35.0, Zeta1=28.95, Zeta2=44.09, Zeta3=31.81, Beta=1.07, Gamma=2.01, BetaStar=0.06, FrictionLengthScale=0.00035, Gravity=9.81):
+        """
+        This constructor can be extended to take kappa as input.
+        Here kappa in the friction law is assumed to be 1.
+        Units for input parameters in constructor are:
+        Zeta, Zeta1, Zeta2, Zeta3 in degree
+        FrictionLengthScale in meter
+        Gravity in ms^-2
+        """
         self.unknowns = unknowns
         self.auxiliary_variables = auxiliary_variables
         self.solver = solver
         self.Pi = math.pi
-        self.Zeta = Zeta*self.Pi/180
+        self.Zeta = Zeta*self.Pi/180 # coversion of degree to radian
         self.Zeta1 = Zeta1*self.Pi/180
         self.Zeta2 = Zeta2*self.Pi/180
         self.Zeta3 = Zeta3*self.Pi/180
@@ -135,7 +143,6 @@ class Avalanche:
                 break;
             }}
         }}
-
         """
         if "FV" in self.solver:
             return implementation_of_ncp_string_template.format(BTimesDeltaQ="BTimesDeltaQ",Nu=self.Nu, NumberOfUnknowns=self.unknowns)
@@ -191,7 +198,6 @@ class Avalanche:
                 const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
                 Mu                   = Mustart;
             }}
-            
 
             if(tarch::la::equals(ubar,0.0)){{
                 const int NumberOfUnknowns = {NumberOfUnknowns};
@@ -237,7 +243,8 @@ class Avalanche:
         else{
             result = ::exahype2::RefinementCommand::Erase;
         }
-        return result;
+        // return result;
+        return ::exahype2::RefinementCommand::Keep;
         """
 
         

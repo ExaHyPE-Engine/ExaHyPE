@@ -268,7 +268,13 @@ namespace exahype2::saintvenant {
                                                   
         const double vXRightYRightNeighbourCell = (tarch::la::greater(oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + h],0.0) ? oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + hv]/oldQWithHalo[xRightYRightNeighbourCellSerialized * totalVariables + h] : 0.0);
                                                   
-
+        // Derivative calculation:
+        // Backward difference for single derivatives.
+        // Central difference for double derivatives.
+        // Only numerator is of the finite difference scheme is calculated here.
+        // The division by the denominator takes place in the ncp function after retrieval from average value.
+        // For single derivatives, one can change the numerical scheme to forward, central or backward by using appropriate neighbour cell values defined above.
+        // For double derivatives, only central difference can be used with the variables defined above.
 
         // h_x
         oldQWithHalo[currentCellSerialized * totalVariables + NumberOfUnknowns + h_x]

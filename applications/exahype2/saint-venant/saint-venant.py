@@ -8,7 +8,7 @@ import exahype2
 
 dimensions                = 2
 auxiliary_variables       = 13
-cell_size                 = 0.020
+cell_size                 = 0.0022
 amr_levels                = 3
 patch_size                = 3
 rk_order                  = 2
@@ -238,7 +238,7 @@ preprocess_reconstructed_patch = """
 
 if args.scenario == "Avalanche":
   from avalanche import Avalanche
-  my_scenario = Avalanche(solver=args.solver, unknowns=unknowns, auxiliary_variables=auxiliary_variables)
+  my_scenario = Avalanche(solver=args.solver, unknowns=unknowns, auxiliary_variables=auxiliary_variables, Zeta=35.0, Zeta1=28.95, Zeta2=44.09, Zeta3=31.81, Beta=1.07, Gamma=2.01, BetaStar=0.06, FrictionLengthScale=0.00035, Gravity=9.81)
   from pprint import pprint
   pprint(vars(my_scenario))
   if "FV" in solver_type:
@@ -316,7 +316,7 @@ my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically",
 #my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
-# my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
 
 
