@@ -12,6 +12,7 @@ namespace swift2 {
     bool localParticleIsLocal(const Particle& localParticle){
       return (localParticle->getParallelState() == std::remove_pointer<Particle>::type::ParallelState::Local);
     }
+
     /**
      * Overload for convenience. `marker` may be required for function prototype
      * to be passed as argument to other function.
@@ -36,6 +37,7 @@ namespace swift2 {
         localParticleIsLocal(localParticle)
       );
     }
+
     /**
      * Overload for convenience. `marker` may be required for function prototype
      * to be passed as argument to other function.
@@ -72,16 +74,9 @@ namespace swift2 {
      */
     template <typename Particle>
     bool localParticleCanBeWorkedOnVertexKernel(const Particle* localParticle){
-
-      // TODO: fix this later
-      // return true;
-      return (
-          localParticleIsLocal(localParticle)
-        // not localParticle->getCellHasUpdatedParticle()
-        // and marker.isContained(localParticle->getX()) // doesn't exist for VertexMarker
-        // and not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker) // doesn't exist for VertexMarker
-      );
+      return localParticleIsLocal(localParticle);
     }
+
     /**
      * Overload for convenience. `marker` may be required for function prototype
      * to be passed as argument to other function.
@@ -90,6 +85,7 @@ namespace swift2 {
     bool localParticleCanBeWorkedOnVertexKernel(const Particle* localParticle, const peano4::datamanagement::VertexMarker& marker){
       return localParticleCanBeWorkedOnVertexKernel(localParticle);
     }
+
 
     /**
      * @brief Dummy function that returns true, so it can be passed on as a parameter.
