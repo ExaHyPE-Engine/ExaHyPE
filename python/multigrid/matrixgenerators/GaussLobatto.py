@@ -149,11 +149,9 @@ class GaussLobatto(MatrixGenerator):
 
   def get_cell_to_face_matrix(self):
     """Top-right block: [0, 0, A_p_q^f]
+       Now returns only A_p_q^f without zero blocks
     """
-    A_p_qf = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
-    Zeros = np.zeros(np.shape(A_p_qf))
-
-    return np.concatenate((Zeros, Zeros, A_p_qf), axis=1)
+    return self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
   
     #faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces
     #cellDim = self.cell_nodes * self.unknowns_per_cell_node
