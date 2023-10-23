@@ -239,8 +239,6 @@ preprocess_reconstructed_patch = """
 if args.scenario == "Avalanche":
   from avalanche import Avalanche
   my_scenario = Avalanche(solver=args.solver, unknowns=unknowns, auxiliary_variables=auxiliary_variables, Zeta=35.0, Zeta1=28.95, Zeta2=44.09, Zeta3=31.81, Beta=1.07, Gamma=2.01, BetaStar=0.06, Kappa=1.0, FrictionLengthScale=0.00035, Gravity=9.81)
-  from pprint import pprint
-  pprint(vars(my_scenario))
   if "FV" in solver_type:
     my_solver.add_user_solver_includes(user_includes)
     my_solver._preprocess_reconstructed_patch = preprocess_reconstructed_patch

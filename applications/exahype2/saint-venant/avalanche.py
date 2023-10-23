@@ -195,7 +195,7 @@ class Avalanche:
                 const double vstop   = Q[0] * Beta / (BetaStar + Gamma);
                 const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
                 const double Mustop  = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
-                const double T       = Mustart + (Mustop - Mustart) * (Fr / BetaStar);
+                const double T       = Mustart + (Mustop - Mustart) * std::pow((Fr / BetaStar),Kappa);
                 Mu                   = T;
             }}
 

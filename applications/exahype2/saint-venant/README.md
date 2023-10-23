@@ -28,9 +28,11 @@ $$
 $$
 D(y)=\begin{pmatrix}
                 0\\-0.5\cdot\nu\sqrt{h}(1.5\cdot\frac{\partial h}{\partial y}(\frac{\partial u}{\partial y}+\frac{\partial v}{\partial x})+h(\frac{\partial^2 u}{\partial y^2}+\frac{\partial v}{\partial x \partial y}))\\-\nu\sqrt{h}(1.5\cdot\frac{\partial h}{\partial y}\frac{\partial v}{\partial y} + h\frac{\partial^2 v}{\partial y^2})
-               \end{pmatrix}.      
+               \end{pmatrix},      
 $$
-The coefficient of basal friction $\mu(Fr,h)$ is a piecewise function. The complete expression for  $\mu(Fr,h)$ can be found in the document provided by the NGI.
+where $\zeta$ is the angle of inclination of the inclined plane.
+
+The coefficient of basal friction $\mu(Fr,h)$ is a piecewise function and the coefficient of viscosity $\nu$ is a function of the material parameters. The complete expression for  $\mu(Fr,h)$ and $\nu$ can be found in the document provided by the NGI.
 
 The ncp term requires calculation of partial derivatives of $h$, $u$ and $v$. These derivatives are calculated by finite difference schemes using a 9 point stencil(ref fig).
 
