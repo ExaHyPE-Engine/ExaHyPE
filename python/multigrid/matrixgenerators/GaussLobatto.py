@@ -169,7 +169,7 @@ class GaussLobatto(MatrixGenerator):
     M_qm_qm = self.block_matrix._A_FF[(1,1)]["left"][(0,1)]
     P_qp_p = np.dot(np.linalg.inv(M_qp_qp), A_qp_p)
     P_qm_p = np.dot(np.linalg.inv(M_qm_qm), A_qm_p)
-    Zeros = np.zeros(np.shape(P_qp_p))
+    Zeros = np.zeros(np.shape(P_qp_p)) # np.zeros_like(P_qp_p)
 
     return np.concatenate((P_qp_p, P_qm_p, Zeros), axis=0)
 

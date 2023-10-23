@@ -8,6 +8,7 @@ from .block_matrix import BlockMatrix
 from .nodal_basis import NodalBasisGaussLegendre
 from .finiteelement import DGScalarElement, DGFacetElement
 from .quadrature import GaussianQuadrature, Quadrature2d
+#from ..MatrixGenerator import MatrixGenerator
 import numpy as np
 
 class DGPoisson2dBlockMatrix(BlockMatrix):
@@ -77,6 +78,8 @@ class DGPoisson2dBlockMatrix(BlockMatrix):
         self._A_FF = {fs_pair: {ent_type: self._assemble_A_FF(fs_pair, ent_type) for ent_type in self._ent_types_FF} 
                           for fs_pair in self._coupling_FF
                          }
+        
+        #MG = MatrixGenerator(r_)
 
     ###################################
     ### Assemble weak form for A_CC ###
