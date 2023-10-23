@@ -212,7 +212,7 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
        on continuous AoS data, it will crash.
        
     The latter "tweak" obviously can be ignored whenever we work without
-    coalescend memory.
+    coalesced memory.
     
     ## Tree statistics
 
@@ -231,6 +231,8 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
       the initialisation from the actual particle update steps.
 
     @param verbose: {True, False}
+    
+    @return mesh_traversals
 
     """
     mesh_traversals = []
@@ -392,7 +394,7 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(
     )
 
 
-def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalescend_memory_access(
+def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalesced_memory_access(
     species_sets,
     verbose,
 ):
