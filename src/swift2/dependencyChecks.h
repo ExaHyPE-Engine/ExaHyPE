@@ -170,6 +170,7 @@ namespace dependencyChecks {
     const Marker&                                                                             marker,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    sweepStageMarkerEnum,
+    bool stepMovedParticle,
     bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
   ) {
 
@@ -201,8 +202,9 @@ if (particle->getPartid() == 800)
         particle->setAlgorithmStepSweepStateProgression(
           index_this_stage, particle->getAlgorithmStepSweepStateProgression()[index_this_stage] + 1
         );
-      } else if (particle->getMoveState() == PartType::MoveState::Moved){
+      } else if (stepMovedParticle){
         // Freshly moved particles may not be sieved correctly into being local particles yet.
+        // See docu in Toolbox/Particles/Mesh Traversal.
         // So if `workOnParticle()` has a check whether the particle is local, it may be skipped.
         // Anticipate this, and mark it by using negative counters.
         particle->setAlgorithmStepSweepStateProgression(
@@ -225,6 +227,7 @@ if (particle->getPartid() == 800)
     const Marker&                                                                          marker,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage sweepStageMarkerEnum,
+    bool stepMovedParticle,
     bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
   ) {
 
@@ -246,6 +249,14 @@ if (particle->getPartid() == 800)
         particle->setInitStepSweepStateProgression(
           index_this_stage, particle->getInitStepSweepStateProgression()[index_this_stage] + 1
         );
+      } else if (stepMovedParticle){
+        // Freshly moved particles may not be sieved correctly into being local particles yet.
+        // See docu in Toolbox/Particles/Mesh Traversal.
+        // So if `workOnParticle()` has a check whether the particle is local, it may be skipped.
+        // Anticipate this, and mark it by using negative counters.
+        particle->setInitStepSweepStateProgression(
+          index_this_stage, particle->getInitStepSweepStateProgression()[index_this_stage] - 1
+        );
       }
     }
   }
@@ -262,6 +273,7 @@ if (particle->getPartid() == 800)
    * @param marker @TODO
    * @param algorithmStepMarkerEnum: Enum representing current main algorithm step
    * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
+   * @param stepMovedParticle
    * @param workOnParticle @ToDo
    */
   template <typename ParticleContainer, typename Marker>

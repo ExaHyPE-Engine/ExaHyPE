@@ -241,12 +241,12 @@ Particle properties:
                   marker,
                   globaldata::{NAME}::{StepType}::{0},
                   globaldata::{NAME}::SweepStage::{1},
-                  &{2}
+                  {2},
+                  &{3}
                   );\n"""
         mark_template = mark_template.replace("{NAME}", self.name)
         mark_template = mark_template.replace("{StepType}", step_type_name)
 
-        # TODO: add function here too?
         # String template for dependency check call with loop over active particles
         check_template_active_particles = """
           dependencyChecks::dependencyCheckActiveParticles{StepType}(activeParticles,
@@ -259,6 +259,15 @@ Particle properties:
             "{StepType}", step_type_name
         )
 
+        # Keep track of steps that move particles. They will corrupt the list of
+        # local particles, as the particles will need to be sorted and sieved again.
+        # See documentation in Toolbox/Particles/Mesh Traversal for details.
+        # If we encounter an algorithm step that moves particles, set this counter to 2,
+        # and decrease it by 1 for the next step. This way, both the current algorithm
+        # step (the one that actually moves particles) and the subsequent one will
+        # be marked as possibly containing corrupted local particle sets.
+        step_moves_particles = 0
+
         for i,step in enumerate(steps):
 
             # first determine which type of algorithm step we have. Depending on its
@@ -269,7 +278,9 @@ Particle properties:
             # TODO: take AlgorithmStep.Dependency into account?
             if step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN:
                 check_function = "::swift2::kernels::localParticleCanBeMoved"
+                step_moves_particles = 2
             elif step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN:
+                step_moves_particles = 2
                 raise NotImplementedError
             elif step.effect == AlgorithmStep.Effect.ALTER_LOCAL_STATE:
                 check_function = "::swift2::kernels::localParticleCanBeWorkedOn{STAGE}"
@@ -278,6 +289,11 @@ Particle properties:
 
             if check_function is None:
                 raise ValueError("Got check_function == None for step", step.name, "effect", step.effect)
+
+            step_moved_particle_string = "false"
+            if step_moves_particles > 0:
+                step_moved_particle_string = "true"
+            step_moves_particles -= 1
 
 
             # TOUCH VERTEX FIRST TIME
@@ -296,10 +312,10 @@ Particle properties:
                     "\n  dependencyChecks::clearDependencyChecks"
                     + step_type_name
                     + "(localParticles);\n"
-                    + mark_template.format(step.name, stage, check_function_full_name) + step.touch_vertex_last_time_kernel
+                    + mark_template.format(step.name, stage, step_moved_particle_string, check_function_full_name) + step.touch_vertex_last_time_kernel
                 )
             else:
-                step.touch_vertex_first_time_kernel = mark_template.format(step.name, stage, check_function_full_name) + step.touch_vertex_first_time_kernel
+                step.touch_vertex_first_time_kernel = mark_template.format(step.name, stage, step_moved_particle_string, check_function_full_name) + step.touch_vertex_first_time_kernel
 
             # Finally, add the dependency check *after* the actual function call
             step.touch_vertex_first_time_kernel += check_template.format(
@@ -315,7 +331,7 @@ Particle properties:
                 step.cell_kernel = ""
 
             # mark the step and stage we're doing before any actual content is called
-            step.cell_kernel = mark_template.format(step.name, stage, check_function_full_name) + step.cell_kernel
+            step.cell_kernel = mark_template.format(step.name, stage, step_moved_particle_string, check_function_full_name) + step.cell_kernel
 
             # Now add the dependency check *after* the actual function call
             step.cell_kernel += check_template.format(step.name, stage, check_function_full_name)
@@ -331,7 +347,7 @@ Particle properties:
 
             # mark the step and stage we're doing before any actual content is called
             step.touch_vertex_last_time_kernel = mark_template.format(
-                step.name, stage, check_function_full_name
+                step.name, stage, step_moved_particle_string, check_function_full_name
             ) + step.touch_vertex_last_time_kernel
 
             # Now add the dependency check *after* the actual function call
