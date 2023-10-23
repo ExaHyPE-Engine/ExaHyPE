@@ -2,14 +2,14 @@ import math
 
 class Avalanche:
 
-    def __init__(self, unknowns, auxiliary_variables, solver="FVRusanovGlobalAdaptive", Zeta=35.0, Zeta1=28.95, Zeta2=44.09, Zeta3=31.81, Beta=1.07, Gamma=2.01, BetaStar=0.06, FrictionLengthScale=0.00035, Gravity=9.81):
+    def __init__(self, unknowns, auxiliary_variables, solver="FVRusanovGlobalAdaptive", Zeta=35.0, Zeta1=28.95, Zeta2=44.09, Zeta3=31.81, Beta=1.07, Gamma=2.01, BetaStar=0.06, Kappa=1.0, FrictionLengthScale=0.00035, Gravity=9.81):
         """
-        This constructor can be extended to take kappa as input.
-        Here kappa in the friction law is assumed to be 1.
+        Kappa in the friction law is assumed to be 1 and is just initialised as a const double in the source function.
+        The user can apply std::pow((Fr/BetaStar),Kappa) for evaluating T in the source function in case the value of Kappa is different from 1.
         Units for input parameters in constructor are:
-        Zeta, Zeta1, Zeta2, Zeta3 in degree
-        FrictionLengthScale in meter
-        Gravity in ms^-2
+        Zeta, Zeta1, Zeta2, Zeta3 in degree.
+        FrictionLengthScale in meter.
+        Gravity in ms^-2.
         """
         self.unknowns = unknowns
         self.auxiliary_variables = auxiliary_variables
@@ -22,6 +22,7 @@ class Avalanche:
         self.Beta = Beta
         self.Gamma = Gamma
         self.BetaStar = BetaStar
+        self.Kappa = Kappa
         self.FrictionLengthScale = FrictionLengthScale
         self.Gravity = Gravity
         self.Mu1 = math.tan(self.Zeta1)
@@ -91,7 +92,7 @@ class Avalanche:
         implementation_of_ncp_string_template = """ 
         if(tarch::la::greater(Q[0],0.0)){{
             const double ih = 1.0 / Q[0];
-            const double Nu = {Nu};
+            const double Nu = {Nu}; 
             const int NumberOfUnknowns = {NumberOfUnknowns};
 
             // Partial Derivatives of unknowns
@@ -152,6 +153,10 @@ class Avalanche:
 
 
     def implementation_of_sources(self):
+        """
+        Kappa in the friction law is assumed to be 1 and is just initialised as a const double here using self.Kappa.
+        The user can apply std::pow((Fr/BetaStar),Kappa) for evaluating T here in case the value of Kappa is different from 1.
+        """
         return """
         if(tarch::la::greater(Q[0],0.0)){{    
             const double ih = 1.0 / Q[0];
@@ -166,6 +171,7 @@ class Avalanche:
             const double Beta = {Beta};
             const double Gamma = {Gamma};
             const double BetaStar = {BetaStar};
+            const double Kappa = {Kappa};
             const double FrictionLengthScale = {FrictionLengthScale};
             const double Mu1 = {Mu1};
             const double Mu2 = {Mu2};
@@ -231,7 +237,7 @@ class Avalanche:
             S[1] = 0.0;
             S[2] = 0.0;
         }}
-        """.format(Gravity=self.Gravity, Zeta=self.Zeta, Zeta1=self.Zeta1, Zeta2=self.Zeta2, Zeta3=self.Zeta3, Beta=self.Beta, Gamma=self.Gamma, BetaStar=self.BetaStar, FrictionLengthScale=self.FrictionLengthScale, Mu1=self.Mu1, Mu2=self.Mu2, Mu3=self.Mu3, Nu=self.Nu, Hstart=self.Hstart, Hstop=self.Hstop, NumberOfUnknowns=self.unknowns)
+        """.format(Gravity=self.Gravity, Zeta=self.Zeta, Zeta1=self.Zeta1, Zeta2=self.Zeta2, Zeta3=self.Zeta3, Beta=self.Beta, Gamma=self.Gamma, BetaStar=self.BetaStar, Kappa=self.Kappa, FrictionLengthScale=self.FrictionLengthScale, Mu1=self.Mu1, Mu2=self.Mu2, Mu3=self.Mu3, Nu=self.Nu, Hstart=self.Hstart, Hstop=self.Hstop, NumberOfUnknowns=self.unknowns)
 
 
     def implementation_of_refinement_criterion(self):
