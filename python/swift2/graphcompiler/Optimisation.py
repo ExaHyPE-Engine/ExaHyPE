@@ -10,4 +10,3 @@ class Optimisation(Enum):
     INSERT_RESORT_SWEEPS_AND_VECTORISE = 1
     VECTORISE_WHENEVER_POSSIBLE = 2
     
-    # @todo check das auch
