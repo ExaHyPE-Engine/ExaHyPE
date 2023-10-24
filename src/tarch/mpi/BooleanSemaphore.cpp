@@ -13,23 +13,36 @@ tarch::mpi::BooleanSemaphore::BooleanSemaphoreService  tarch::mpi::BooleanSemaph
 
 
 void tarch::mpi::BooleanSemaphore::enterCriticalSection() {
-  BooleanSemaphoreService::getInstance().acquireLock(_semaphoreNumber);
+  BooleanSemaphoreService::getInstance().acquireLock(_semaphoreNumber, _allRanksLockThisSemaphoreAtLeastOnce);
 }
 
 void tarch::mpi::BooleanSemaphore::leaveCriticalSection() {
   BooleanSemaphoreService::getInstance().releaseLock(_semaphoreNumber);
 }
 
-tarch::mpi::BooleanSemaphore::BooleanSemaphore():
-  _semaphoreNumber( _semaphoreCounter ) {
+tarch::mpi::BooleanSemaphore::BooleanSemaphore(bool allRanksLockThisSemaphoreAtLeastOnce):
+  _semaphoreNumber( _semaphoreCounter ),
+  _allRanksLockThisSemaphoreAtLeastOnce(allRanksLockThisSemaphoreAtLeastOnce) {
   _semaphoreCounter++;
 }
 
 tarch::mpi::BooleanSemaphore::~BooleanSemaphore() {}
 
-tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::BooleanSemaphoreService() {}
+tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::SemaphoreMapEntry::SemaphoreMapEntry():
+  locked(false),
+  rankThatLastLocked(-1) {
+}
 
-tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::~BooleanSemaphoreService() {}
+
+std::string tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::SemaphoreMapEntry::toString() const {
+  if (locked) {
+    return "(locked,by-rank=" + std::to_string(rankThatLastLocked) + ")";
+  }
+  else {
+    return "(free,last-lock-by-rank=" + std::to_string(rankThatLastLocked) + ")";
+  }
+}
+
 
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::init() {
   _semaphoreTag = tarch::mpi::Rank::reserveFreeTag("global semaphores");
@@ -45,7 +58,7 @@ std::string tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::toString() co
   msg << "(";
   msg << "#sections:" << _map.size();
   for (auto& p: _map) {
-    msg << "," << p.first << ":" << (p.second ? "locked" : "free" );
+    msg << "," << p.first << ":" << p.second.toString();
   } 
   msg << ",#requests:" << _pendingLockRequests.size();
   for (auto& p: _pendingLockRequests) {
@@ -66,9 +79,10 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::serveLockRequests() 
       tarch::multicore::Lock lock(_mapAccessSemaphore);
       for (auto request = _pendingLockRequests.begin(); request != _pendingLockRequests.end(); ) {
         addMapEntryLazily(request->second);
-        if ( not _map[request->second] ) {
+        if ( not _map[request->second].locked ) {
           servedLockRequest = true;
-          _map[request->second] = true;
+          _map[request->second].locked             = true;
+          _map[request->second].rankThatLastLocked = request->first;
           logDebug( "receiveDanglingMessages()", "locked sempahore " << request->second << " for rank " << request->first << ". state=" << toString() );
           MPI_Send( &(request->second), 1, MPI_INT, request->first, _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator());
           request = _pendingLockRequests.erase(request);
@@ -129,11 +143,11 @@ tarch::mpi::BooleanSemaphore::BooleanSemaphoreService& tarch::mpi::BooleanSemaph
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::addMapEntryLazily(int number) {
   assertion1( number>0, number );
   if ( _map.count(number)==0 ) {
-    _map.insert( std::pair<int,bool>(number,false) );
+    _map.insert( std::pair<int,SemaphoreMapEntry>(number,SemaphoreMapEntry()) );
   }
 }
 
-void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int number ) {
+void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int number, bool allRanksLockThisSemaphoreAtLeastOnce ) {
   if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
     {
       tarch::multicore::Lock lock(_mapAccessSemaphore);
@@ -144,19 +158,23 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
 
     bool gotLock = false;
     while (not gotLock) {
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+
       {
         tarch::multicore::Lock lock(_mapAccessSemaphore);
-        if (_map[number]==false) {
-          gotLock = true;
-          _map[number] = true;
+        if (
+          not _map[number].locked
+          and
+          (
+            not allRanksLockThisSemaphoreAtLeastOnce
+            or
+            _map[number].rankThatLastLocked!=tarch::mpi::Rank::getGlobalMasterRank()
+          )
+        ) {
+          gotLock              = true;
+          _map[number].locked  = true;
+          _map[number].rankThatLastLocked = tarch::mpi::Rank::getGlobalMasterRank();
         }
-      }
-      // only check if not successful, so someone else has the chance to release
-      // a lock
-      if (not gotLock) {
-        tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-        // See documentation on receiveDanglingMessages
-        // receiveDanglingMessages();
       }
     }
     logDebug( "acquireLock()", "successfully acquired lock " << number << " for global master");
@@ -195,8 +213,8 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::releaseLock( int num
     {
       tarch::multicore::Lock lock(_mapAccessSemaphore);
       assertion( _map.count(number)==1 );
-      assertion( _map[number]==true );
-      _map[number]=false;
+      assertion( _map[number].locked );
+      _map[number].locked = false;
       logDebug( "releaseLock()", "successfully released lock " << number << ". state=" << toString() );
     }
 

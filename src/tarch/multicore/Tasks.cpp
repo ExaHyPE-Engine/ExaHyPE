@@ -203,8 +203,14 @@ void tarch::multicore::releaseTaskNumber(int number) {
 int tarch::multicore::reserveTaskNumber() {
   tarch::multicore::Lock lock(activeTasksSemaphore);
   int                    result = activeTaskNumbers.size();
+  constexpr int Prime = 23;
+  constexpr int Max   = std::numeric_limits<int>::max()-2*Prime;
+
+  assertion2( Prime % Max!=0, Prime, Max );
+
   while (activeTaskNumbers.count(result) > 0) {
-    result += 23;
+    result = result % Max;
+    result += Prime;
   }
   activeTaskNumbers.insert(result);
   return result;
@@ -300,6 +306,11 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
   }
 
   return result;
+}
+
+void tarch::multicore::spawnTask(Task* task, int in, int out) {
+  assertion(in!=NoDependency or out!=NoDependency);
+  native::spawnTask(task,in,out);
 }
 
 void tarch::multicore::spawnTask(Task* task) {
