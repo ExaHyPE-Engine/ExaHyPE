@@ -203,8 +203,8 @@ Particle properties:
             the modified list of AlgorithmSteps, now including dependency checks
         """
 
-        ifdefs = []
-        #  ifdefs = ["PeanoDebug > 0"]
+        # Keep this here so you can modify it in a single place when playing with debugging
+        ifdefs = ["PeanoDebug > 0"]
 
         steps = copy.deepcopy(steplist)
         nsteps = len(steps)
@@ -236,7 +236,7 @@ Particle properties:
         check_template = check_template.replace("{NAME}", self.name)
         check_template = check_template.replace("{StepType}", step_type_name)
 
-        # String template for marking dependency call
+        # String template for marking a step/stage call
         mark_template = """\n  dependencyChecks::dependencyMark{StepType}(localParticles,
                   marker,
                   globaldata::{NAME}::{StepType}::{0},
@@ -275,7 +275,6 @@ Particle properties:
             # whether a particle should be worked on.
             check_function = None
 
-            # TODO: take AlgorithmStep.Dependency into account?
             if step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN:
                 check_function = "::swift2::kernels::localParticleCanBeMoved"
                 step_moves_particles = 2
@@ -370,7 +369,7 @@ Particle properties:
 
 
     def add_dependency_checks(self):
-        """
+        """!
 
         Add dependency checks: We first create Enumerations representing each
         algorithm step defined for the Particle, as well as each sweep stage of
@@ -388,12 +387,9 @@ Particle properties:
 
         This is done both for the main algorithm steps as well as for the
         initialisation steps individually.
-
-        TODO: Move a level up to peano4.toolbox.particles.Particle ?
         """
 
-        ifdefs = []
-        # ifdefs = ["PeanoDebug > 0"]
+        ifdefs = ["PeanoDebug > 0"]
 
         # First add enum to particle class for each sweep stage. These are identical
         # for both algorithm steps and initialisation steps.
