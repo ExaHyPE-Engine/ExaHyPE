@@ -12,7 +12,7 @@ try:
   import paraview
   havepvtk=True
 except ImportError:
-  print("VTK and ParaView is not available, not loading peano4.visualisation.")
+  print("VTK and ParaView are not available, not loading peano4.visualisation.")
 
 if havepvtk:
   import peano4.visualisation
