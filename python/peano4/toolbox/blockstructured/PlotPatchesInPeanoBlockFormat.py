@@ -295,7 +295,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   def get_attributes(self):
     if self._plot_cell_data:
       return """
-    static tarch::mpi::BooleanSemaphore                                              _semaphore(true);
+    static tarch::mpi::BooleanSemaphore                                              _semaphore;
       
     int                _treeNumber;
 
@@ -304,7 +304,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 """
     else:
       return """
-    static tarch::mpi::BooleanSemaphore                                              _semaphore(true);
+    static tarch::mpi::BooleanSemaphore                                              _semaphore;
     
     int                _treeNumber;
 
@@ -327,6 +327,6 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
   def get_static_initialisations(self,full_qualified_classname):
     return """
-tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore;
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore(true);
 """
     
