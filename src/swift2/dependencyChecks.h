@@ -5,8 +5,6 @@
 
 namespace dependencyChecks {
 
-// #if PeanoDebug > 0
-
   /**
    * @brief This function is meant to be called on a particle on which dependency issues
    * in the main algorithm steps have been detected. It writes the full current state of
@@ -104,8 +102,35 @@ namespace dependencyChecks {
     bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
   );
 
-  static int checkPastStages(const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* SweepStateProgression);
-  static int checkFutureStages(const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* SweepStateProgression);
+
+  /**
+   * @brief Check that all steps and stages before the current one have been completed.
+   *
+   * @param currentStep: integer value of the current algorithm step
+   * @param currentStage: integer value of the current sweep stage
+   * @param nsteps: Total number of algorithm steps
+   * @param nstages: Total number of sweep stages
+   * @param sweepStateProgression: integer array carrying flags/counters of completed sweep
+   *                               stages and algorithm steps of a particle
+   *
+   * @return errors: Number of dependency errors detected
+   */
+  static int checkPastStages(const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression);
+
+
+  /**
+   * @brief Check that all steps and stages after the current one have not been done yet.
+   *
+   * @param currentStep: integer value of the current algorithm step
+   * @param currentStage: integer value of the current sweep stage
+   * @param nsteps: Total number of algorithm steps
+   * @param nstages: Total number of sweep stages
+   * @param sweepStateProgression: integer array carrying flags/counters of completed sweep
+   *                               stages and algorithm steps of a particle
+   *
+   * @return errors: Number of dependency errors detected
+   */
+  static int checkFutureStages(const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression);
 
 
   /**
@@ -212,6 +237,3 @@ namespace dependencyChecks {
 
 #include "dependencyChecks.cpph"
 
-// #else
-// #error "You're trying to use dependency debug checks without debugging turned on."
-// #endif
