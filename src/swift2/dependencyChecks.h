@@ -21,7 +21,7 @@ namespace dependencyChecks {
    *                         to screen before exiting.
    */
   template <typename Particle>
-  void dependencyCheckAlgorithmStepDebugOutput(
+  static void dependencyCheckAlgorithmStepDebugOutput(
     const Particle*                                             particle,
     typename std::remove_pointer<Particle>::type::AlgorithmStep algorithmStepMarkerEnum,
     typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
@@ -43,7 +43,7 @@ namespace dependencyChecks {
    *                         to screen before exiting.
    */
   template <typename Particle>
-  void dependencyCheckInitStepDebugOutput(
+  static void dependencyCheckInitStepDebugOutput(
     const Particle*                                          particle,
     typename std::remove_pointer<Particle>::type::InitStep   initStepMarkerEnum,
     typename std::remove_pointer<Particle>::type::SweepStage sweepStageMarkerEnum,
@@ -68,7 +68,7 @@ namespace dependencyChecks {
    *                       of the functions defined in src/swift2/kernels/ParticleState.h
    */
   template <typename ParticleContainer, typename Marker>
-  void dependencyMarkAlgorithmStep(
+  static void dependencyMarkAlgorithmStep(
     const ParticleContainer&                                                                  localParticles,
     const Marker&                                                                             marker,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
@@ -95,7 +95,7 @@ namespace dependencyChecks {
    *                       of the functions defined in src/swift2/kernels/ParticleState.h
    */
   template <typename ParticleContainer, typename Marker>
-  void dependencyMarkInitStep(
+  static void dependencyMarkInitStep(
     const ParticleContainer&                                                               localParticles,
     const Marker&                                                                          marker,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
@@ -103,6 +103,9 @@ namespace dependencyChecks {
     bool                                                                                   stepMovedParticle,
     bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
   );
+
+  static int checkPastStages(const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* SweepStateProgression);
+  static int checkFutureStages(const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* SweepStateProgression);
 
 
   /**
@@ -121,7 +124,7 @@ namespace dependencyChecks {
    *                       of the functions defined in src/swift2/kernels/ParticleState.h
    */
   template <typename ParticleContainer, typename Marker>
-  void dependencyCheckAlgorithmStep(
+  static void dependencyCheckAlgorithmStep(
     const ParticleContainer&                                                                  localParticles,
     const Marker&                                                                             marker,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
@@ -139,7 +142,7 @@ namespace dependencyChecks {
    * @param algorithmStepMarkerEnum: Enum representing current main algorithm step
    */
   template <typename ParticleContainer>
-  void dependencyCheckActiveParticlesAlgorithmStep(
+  static void dependencyCheckActiveParticlesAlgorithmStep(
     const ParticleContainer&                                                                  activeParticles,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum
   );
@@ -161,7 +164,7 @@ namespace dependencyChecks {
    *                       of the functions defined in src/swift2/kernels/ParticleState.h
    */
   template <typename ParticleContainer, typename Marker>
-  void dependencyCheckInitStep(
+  static void dependencyCheckInitStep(
     const ParticleContainer&                                                               localParticles,
     const Marker&                                                                          marker,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
@@ -179,7 +182,7 @@ namespace dependencyChecks {
    * @param initStepMarkerEnum: Enum representing current initialisation algorithm step
    */
   template <typename ParticleContainer>
-  void dependencyCheckActiveParticlesInitStep(
+  static void dependencyCheckActiveParticlesInitStep(
     const ParticleContainer&                                                             activeParticles,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep initStepMarkerEnum
   );
@@ -192,7 +195,7 @@ namespace dependencyChecks {
    * @param localParticles: Set of particles to work on.
    */
   template <typename ParticleContainer>
-  void clearDependencyChecksAlgorithmStep(const ParticleContainer& localParticles);
+  static void clearDependencyChecksAlgorithmStep(const ParticleContainer& localParticles);
 
 
   /**
@@ -202,7 +205,8 @@ namespace dependencyChecks {
    * @param localParticles: Set of particles to work on.
    */
   template <typename ParticleContainer>
-  void clearDependencyChecksInitStep(const ParticleContainer& localParticles);
+  static void clearDependencyChecksInitStep(const ParticleContainer& localParticles);
+
 
 } // namespace dependencyChecks
 
