@@ -130,13 +130,16 @@ if args.optimisation != "none":
     project.algorithm_steps_task_graph_compiler = (
         swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
     )
+    project.algorithm_steps_task_graph_compiler = (
+        swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+    )
 
 
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
 
-name = "hydroPart"
+name = "HydroPart"
 
 dimensions = 2
 hydro_dimensions = 2  # dimensions for the hydro

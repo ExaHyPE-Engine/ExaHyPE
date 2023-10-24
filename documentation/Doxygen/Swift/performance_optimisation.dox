@@ -73,12 +73,20 @@ You can alter that in your code:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Just pick another variant (consult namespace docu) here. Please note that these
 operations do typically unfold their potential if and only if you use a fully
 vectorised solver in combination with a proper particle memory management below.
+
+Note: If you use a scheme which relies on vectorisation all the time, you have
+to also alter the initialisation via 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.initialisation_steps_task_graph_compiler  = swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalescend_memory_access
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 ### Step 2: Storage of particles and maintaining the particle-mesh association
 
