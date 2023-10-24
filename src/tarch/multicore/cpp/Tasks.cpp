@@ -48,7 +48,7 @@ namespace {
 
 
 void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
-  spawnTask(job);
+  tarch::multicore::native::spawnTask(job);
 }
 
 
