@@ -246,7 +246,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 if verbose:
                     print(
                         "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: steps {} have to update the particle-grid association of species {}".format(
-                            steps_to_update_particle_grid_assocation, current_species_set.name
+                            steps_to_update_particle_grid_assocation,
+                            current_species_set.name,
                         )
                     )
                 for j in steps_to_update_particle_grid_assocation:
