@@ -168,26 +168,25 @@ class DGPoisson2dBlockMatrix(BlockMatrix):
         
         # The following sets factors and integrands for all the pairs (k,ell);
         if fs_pair == (0, 2): # -int_F q^f v^p dF
-            # For now, compute for the left facet only!
-            if relative_position == "left":
-                factor = -0.5 # minus befor the boundary int. in the weak formulation
+            factor = -0.5 # minus befor the boundary int. in the weak formulation
+            
+            if relative_position in ["left", "right"]:
                 gamma = (0, 1) # scale by hy
+            else: # ["top", "bottom"]
+                gamma = (1, 0) # scale by hx
 
-                # Define the integrand function for different
-                def func_k(i, q):
-                    facet_coord = np.dot(restr, np.array([1.0, q])) # gives [-1, q], [1, q], [q, -1] or [q, 1]
-                    return self._fe_C[k].evaluate(i, facet_coord) # restriction of the cell-function to a facet
-                func_ell = self._fe_F[ell].evaluate
+            # Define the integrand function for different
+            def func_k(i, q):
+                facet_coord = np.dot(restr, np.array([1.0, q])) # gives [-1, q], [1, q], [q, -1] or [q, 1]
+                return self._fe_C[k].evaluate(i, facet_coord) # restriction of the cell-function to a facet
+            func_ell = self._fe_F[ell].evaluate
 
-                # Assemble local matrix A^(k,ell)
-                for i in range(ndof_k):
-                    for j in range(ndof_ell):
-                        A_k_ell[i, j] = 0.0
-                        for q, w in zip(quad.points, quad.weights):
-                            A_k_ell[i, j] += factor * w * func_k(i, q) * func_ell(j, q)
-
-            else:
-                A_k_ell = np.full((ndof_k, ndof_ell), np.nan)
+            # Assemble local matrix A^(k,ell)
+            for i in range(ndof_k):
+                for j in range(ndof_ell):
+                    A_k_ell[i, j] = 0.0
+                    for q, w in zip(quad.points, quad.weights):
+                        A_k_ell[i, j] += factor * w * func_k(i, q) * func_ell(j, q)
 
         else:
             A_k_ell = np.zeros((ndof_k, ndof_ell))
@@ -210,7 +209,6 @@ class DGPoisson2dBlockMatrix(BlockMatrix):
         ndof_k = self._fe_F[k].ndof
         ndof_ell = self._fe_C[ell].ndof
         A_k_ell = np.empty((ndof_k, ndof_ell))
-        gamma = (0, 0)
 
         # Quadrature rule: based on the max degree of basis in the function spaces pair
         max_degree = max(self._fe_F[k].degree, self._fe_C[ell].degree)
@@ -238,17 +236,21 @@ class DGPoisson2dBlockMatrix(BlockMatrix):
         else:
             raise ValueError("Invalid value of relative_position")
         
+        factor = -1.0 # minus from the def. of projection: M*q^\pm - A*p = 0
+        gamma = (0, 0) # no scaling as it's compensated by the derivative dp/dx or dp/dy
+        
         if fs_pair == (0, 0): # A_q+_p
-            # For now, compute for the left facet only!
-            if relative_position == "left":
-                factor =  -1.0 # minus from the def. of projection: M*q^\pm - A*p = 0
-                gamma = (0, 0) # no scaling as it's compensated by the derivative dp/dx
-
-                # Define the integrand function
+            if relative_position in ["left", "bottom"]: # "+"-projection from a give cell is defined on the left and bottom facets
+                # Define the integrand functions
                 func_k = self._fe_F[k].evaluate
                 def func_ell(i, q):
                     facet_coord = np.dot(restr, np.array([1.0, q])) # gives [-1, q], [1, q], [q, -1] or [q, 1]
-                    return self._fe_C[ell].evaluate_derivative(i, 0, facet_coord) # restriction of the cell-function to a facet
+                    if relative_position == "left": 
+                        # Define the integrand function: projecting x-derivative of p
+                        return self._fe_C[ell].evaluate_derivative(i, 0, facet_coord) # restriction of the cell-function to a facet
+                    else: # relative_position == "bottom"
+                        # projecting y-derivative of p
+                        return self._fe_C[ell].evaluate_derivative(i, 1, facet_coord)
 
                 # Assemble local matrix A^(k,ell)
                 for i in range(ndof_k):
@@ -257,17 +259,31 @@ class DGPoisson2dBlockMatrix(BlockMatrix):
                         for q, w in zip(quad.points, quad.weights):
                             A_k_ell[i, j] += factor * w * func_k(i, q) * func_ell(j, q)
 
-            else:
-                A_k_ell = np.full((ndof_k, ndof_ell), np.nan)
+            else: # return 0 for the right and top
+                A_k_ell = np.zeros((ndof_k, ndof_ell))
 
         elif fs_pair == (1, 0): # A_q-_p
-            # For now, compute for the left facet only!
-            if relative_position == "left":
-                gamma = (0, 0)
-                A_k_ell = np.zeros((ndof_k, ndof_ell)) # return 0, as only plus-projection is defined on the left facet
+            if relative_position in ["right", "top"]: # "-"-projection from a give cell is defined on the right and top facets
+                # Define the integrand functions
+                func_k = self._fe_F[k].evaluate
+                def func_ell(i, q):
+                    facet_coord = np.dot(restr, np.array([1.0, q])) # gives [-1, q], [1, q], [q, -1] or [q, 1]
+                    if relative_position == "right": 
+                        # Define the integrand function: projecting x-derivative of p
+                        return self._fe_C[ell].evaluate_derivative(i, 0, facet_coord) # restriction of the cell-function to a facet
+                    else: # relative_position == "top"
+                        # projecting y-derivative of p
+                        return self._fe_C[ell].evaluate_derivative(i, 1, facet_coord)
+                    
+                # Assemble local matrix A^(k,ell)
+                for i in range(ndof_k):
+                    for j in range(ndof_ell):
+                        A_k_ell[i, j] = 0.0
+                        for q, w in zip(quad.points, quad.weights):
+                            A_k_ell[i, j] += factor * w * func_k(i, q) * func_ell(j, q)
 
-            else:
-                A_k_ell = np.full((ndof_k, ndof_ell), np.nan)
+            else: # return 0 for the left and bottom
+                A_k_ell = np.zeros((ndof_k, ndof_ell))
 
         else:
             A_k_ell = np.zeros((ndof_k, ndof_ell))
@@ -300,7 +316,11 @@ class DGPoisson2dBlockMatrix(BlockMatrix):
             func_k = self._fe_F[k].evaluate
             func_ell = self._fe_F[ell].evaluate
             factor = 0.5
-            gamma = (0, 1) # ! True for the left facet only !
+
+            if relative_position in ["left", "right"]:
+                gamma = (0, 1) # scale by hy
+            else:
+                gamma = (1, 0) # scale by hx
 
             # Assemble local matrix A^(k,ell)
             for i in range(ndof_k):
