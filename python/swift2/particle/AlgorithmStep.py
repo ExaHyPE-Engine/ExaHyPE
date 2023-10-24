@@ -133,24 +133,24 @@ class AlgorithmStep(object):
                    prepare_traversals_kernel        = None,
 
         prepare_traversal_kernel: String (C++ code snippet)
-          Whenever Peano runs through the mesh, it creates one instance of the 
-          mesh observer and then runs through all subpartitions (trees) in 
+          Whenever Peano runs through the mesh, it creates one instance of the
+          mesh observer and then runs through all subpartitions (trees) in
           parallel. Each replica of the observer issues its own touchVertexFirstTime(),
           touchCellLastTime(), ... events, and each replica starts its traversal
-          with a call to beginTraversal() and endTraversal(). If you want to 
+          with a call to beginTraversal() and endTraversal(). If you want to
           plug into the phase such before these parallel instances are created,
-          you can use prepareTraversal() - the C++ code snippet passed to this 
+          you can use prepareTraversal() - the C++ code snippet passed to this
           attribute is copied into prepareTraversal(). The overview over
           @ref peano_action_sets "action sets" provides more details. Note that
-          no action set (or observer object) is created at this point, i.e. the 
-          C++ code snippet will be injected into a static routine and can 
+          no action set (or observer object) is created at this point, i.e. the
+          C++ code snippet will be injected into a static routine and can
           therefore only access static information. Often, this routine is used
           for some MPI communication (global data exchange), e.g., or to update
           some other static properties for whole sets of objects.
-          
+
         self.unprepare_traversal_kernel: String (C++ code snippet)
-          Counterpart of prepare_traversal_kernel. Consult 
-          @ref peano_action_sets "action sets" for more context. 
+          Counterpart of prepare_traversal_kernel. Consult
+          @ref peano_action_sets "action sets" for more context.
 
         """
         self.name = name

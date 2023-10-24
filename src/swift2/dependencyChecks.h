@@ -8,7 +8,7 @@
 
 namespace dependencyChecks {
 
-/* #if PeanoDebug > 0 */
+  /* #if PeanoDebug > 0 */
 
   /**
    * @brief This function is meant to be called on a particle on which dependency issues
@@ -82,7 +82,8 @@ namespace dependencyChecks {
 
     // check for errors > 0 allows you to use this function to print the particle
     // state without exiting
-    if (errors > 0) std::abort();
+    if (errors > 0)
+      std::abort();
   }
 
 
@@ -157,7 +158,8 @@ namespace dependencyChecks {
 
     // check for errors > 0 allows you to use this function to print the particle
     // state without exiting
-    if (errors > 0) std::abort();
+    if (errors > 0)
+      std::abort();
   }
 
 
@@ -170,7 +172,7 @@ namespace dependencyChecks {
     const Marker&                                                                             marker,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    sweepStageMarkerEnum,
-    bool stepMovedParticle,
+    bool                                                                                      stepMovedParticle,
     bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
   ) {
 
@@ -186,23 +188,22 @@ namespace dependencyChecks {
 
     for (auto* particle : localParticles) {
 
-if (particle->getPartid() == 800)
-  std::cout << " ==== Marking particle 800 stage=" <<
-  PartType::castAlgorithmStepToString(algorithmStepMarkerEnum) << "/"
-    << PartType::castSweepStageToString(sweepStageMarkerEnum) <<
-    " workOnParticle=" << workOnParticle(particle,marker) <<
-    " parallelState " << PartType::castMoveStateToString(particle->getMoveState()) <<
-    " localPartcleIsLocal " << swift2::kernels::localParticleIsLocal(particle)
-    <<std::endl;
+      if (particle->getPartid() == 800)
+        std::cout
+          << " ==== Marking particle 800 stage=" << PartType::castAlgorithmStepToString(algorithmStepMarkerEnum) << "/"
+          << PartType::castSweepStageToString(sweepStageMarkerEnum)
+          << " workOnParticle=" << workOnParticle(particle, marker) << " parallelState "
+          << PartType::castMoveStateToString(particle->getMoveState()) << " localPartcleIsLocal "
+          << swift2::kernels::localParticleIsLocal(particle) << std::endl;
 
 
       // Mark what we have just completed, but only if the particle was actually touched!
-      if (workOnParticle(particle, marker)){
+      if (workOnParticle(particle, marker)) {
 
         particle->setAlgorithmStepSweepStateProgression(
           index_this_stage, particle->getAlgorithmStepSweepStateProgression()[index_this_stage] + 1
         );
-      } else if (stepMovedParticle){
+      } else if (stepMovedParticle) {
         // Freshly moved particles may not be sieved correctly into being local particles yet.
         // See docu in Toolbox/Particles/Mesh Traversal.
         // So if `workOnParticle()` has a check whether the particle is local, it may be skipped.
@@ -210,10 +211,7 @@ if (particle->getPartid() == 800)
         particle->setAlgorithmStepSweepStateProgression(
           index_this_stage, particle->getAlgorithmStepSweepStateProgression()[index_this_stage] - 1
         );
-
       }
-
-
     }
   }
 
@@ -227,14 +225,14 @@ if (particle->getPartid() == 800)
     const Marker&                                                                          marker,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage sweepStageMarkerEnum,
-    bool stepMovedParticle,
+    bool                                                                                   stepMovedParticle,
     bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
   ) {
 
     using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
 
-    const int initStepMarker = static_cast<int>(initStepMarkerEnum);
-    const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
+    const int initStepMarker   = static_cast<int>(initStepMarkerEnum);
+    const int sweepStageMarker = static_cast<int>(sweepStageMarkerEnum);
 
     const int nstages = static_cast<int>(PartType::SweepStage::count);
     const int nsteps  = static_cast<int>(PartType::InitStep::count);
@@ -244,12 +242,12 @@ if (particle->getPartid() == 800)
     for (auto* particle : localParticles) {
 
       // Mark what we have just completed, but only if the particle was actually touched!
-      if (workOnParticle(particle, marker)){
+      if (workOnParticle(particle, marker)) {
 
         particle->setInitStepSweepStateProgression(
           index_this_stage, particle->getInitStepSweepStateProgression()[index_this_stage] + 1
         );
-      } else if (stepMovedParticle){
+      } else if (stepMovedParticle) {
         // Freshly moved particles may not be sieved correctly into being local particles yet.
         // See docu in Toolbox/Particles/Mesh Traversal.
         // So if `workOnParticle()` has a check whether the particle is local, it may be skipped.
@@ -260,8 +258,6 @@ if (particle->getPartid() == 800)
       }
     }
   }
-
-
 
 
   /**
@@ -297,10 +293,10 @@ if (particle->getPartid() == 800)
 
     for (auto* particle : localParticles) {
 
-if (particle->getPartid() == 800)
-  std::cout << " ==== Checking particle 800 stage=" <<
-  PartType::castAlgorithmStepToString(algorithmStepMarkerEnum) << "/"
-    << PartType::castSweepStageToString(sweepStageMarkerEnum) << std::endl;
+      if (particle->getPartid() == 800)
+        std::cout
+          << " ==== Checking particle 800 stage=" << PartType::castAlgorithmStepToString(algorithmStepMarkerEnum) << "/"
+          << PartType::castSweepStageToString(sweepStageMarkerEnum) << std::endl;
 
       // Check everything else before this stage, and check that everything
       // that should've run until now actually has run.
@@ -312,11 +308,10 @@ if (particle->getPartid() == 800)
           const int index     = step * nstages + stage;
           int       partStage = particle->getAlgorithmStepSweepStateProgression()[index];
 
-          if (partStage == 0){
-std::cout << "CHECK1 " <<
-  PartType::castAlgorithmStepToString(algorithmStepMarkerEnum) << "/" <<
-  PartType::castSweepStageToString(sweepStageMarkerEnum) << " " << step << " / " << stage <<
-  std::endl;
+          if (partStage == 0) {
+            std::cout
+              << "CHECK1 " << PartType::castAlgorithmStepToString(algorithmStepMarkerEnum) << "/"
+              << PartType::castSweepStageToString(sweepStageMarkerEnum) << " " << step << " / " << stage << std::endl;
             errors++;
           }
         }
@@ -328,8 +323,8 @@ std::cout << "CHECK1 " <<
         const int index     = algorithmStepMarker * nstages + stage;
         int       partStage = particle->getAlgorithmStepSweepStateProgression()[index];
 
-        if (partStage == 0){
-std::cout << "CHECK2" << std::endl;
+        if (partStage == 0) {
+          std::cout << "CHECK2" << std::endl;
           errors++;
         }
       }
@@ -378,7 +373,6 @@ std::cout << "CHECK2" << std::endl;
           errors,
           "localParticle check each step and sweep stage - Something in the future has been done too early (or markers haven't been reset correctly)"
         );
-
     }
   }
 
@@ -406,10 +400,11 @@ std::cout << "CHECK2" << std::endl;
 
     for (auto* particle : activeParticles) {
 
-if (particle->getPartid() == 800)
-  std::cout << " ==== Checking ACTIVE PARTICLE/particle 800 stage=" <<
-  PartType::castAlgorithmStepToString(algorithmStepMarkerEnum) << "/"
-    << PartType::castSweepStageToString(PartType::SweepStage::touchVertexLastTime) << std::endl;
+      if (particle->getPartid() == 800)
+        std::cout
+          << " ==== Checking ACTIVE PARTICLE/particle 800 stage="
+          << PartType::castAlgorithmStepToString(algorithmStepMarkerEnum) << "/"
+          << PartType::castSweepStageToString(PartType::SweepStage::touchVertexLastTime) << std::endl;
 
       // For local particles, we first mark down what step the particle completed.
       // Don't do that for active particles.
@@ -476,7 +471,6 @@ if (particle->getPartid() == 800)
           errors,
           "activeParticles dependency check in TouchVertexLastTime - Something in the future has been done too early (or markers haven't been reset correctly)"
         );
-
     }
   }
 
@@ -495,7 +489,7 @@ if (particle->getPartid() == 800)
   template <typename ParticleContainer, typename Marker>
   static void dependencyCheckInitStep(
     const ParticleContainer&                                                               localParticles,
-    const Marker&                                                                             marker,
+    const Marker&                                                                          marker,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
     typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage sweepStageMarkerEnum,
     bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
@@ -575,8 +569,9 @@ if (particle->getPartid() == 800)
           particle,
           initStepMarkerEnum,
           sweepStageMarkerEnum,
-          errors, "localParticle check each step and sweep stage - Something in the future has been done too early (or markers haven't been reset correctly)"
-          );
+          errors,
+          "localParticle check each step and sweep stage - Something in the future has been done too early (or markers haven't been reset correctly)"
+        );
     }
   }
 
@@ -713,7 +708,7 @@ if (particle->getPartid() == 800)
     }
   }
 
-/* #else */
-/* #error "You're trying to use dependency debug checks without debugging turned on." */
-/* #endif */
+  /* #else */
+  /* #error "You're trying to use dependency debug checks without debugging turned on." */
+  /* #endif */
 } // namespace dependencyChecks

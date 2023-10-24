@@ -9,7 +9,7 @@ namespace swift2 {
      * @brief is this a local particle?
      */
     template <typename Particle>
-    bool localParticleIsLocal(const Particle& localParticle){
+    bool localParticleIsLocal(const Particle& localParticle) {
       return (localParticle->getParallelState() == std::remove_pointer<Particle>::type::ParallelState::Local);
     }
 
@@ -18,7 +18,7 @@ namespace swift2 {
      * to be passed as argument to other function.
      */
     template <typename Particle, typename Marker>
-    bool localParticleIsLocal(const Particle& localParticle, const Marker& marker){
+    bool localParticleIsLocal(const Particle& localParticle, const Marker& marker) {
       return localParticleIsLocal(localParticle);
     }
 
@@ -30,11 +30,10 @@ namespace swift2 {
      * @param marker: dummy parameter so this function can be passed on as a parameter
      */
     template <typename Particle>
-    bool localParticleCanBeMoved(const Particle* localParticle){
+    bool localParticleCanBeMoved(const Particle* localParticle) {
       return (
-        localParticle->getMoveState()==std::remove_pointer<Particle>::type::MoveState::NotMovedYet
-        and
-        localParticleIsLocal(localParticle)
+        localParticle->getMoveState() == std::remove_pointer<Particle>::type::MoveState::NotMovedYet
+        and localParticleIsLocal(localParticle)
       );
     }
 
@@ -43,7 +42,7 @@ namespace swift2 {
      * to be passed as argument to other function.
      */
     template <typename Particle, typename Marker>
-    bool localParticleCanBeMoved(const Particle* localParticle, const Marker& marker){
+    bool localParticleCanBeMoved(const Particle* localParticle, const Marker& marker) {
       return localParticleCanBeMoved(localParticle);
     }
 
@@ -56,11 +55,12 @@ namespace swift2 {
      * @param marker:
      */
     template <typename Particle>
-    bool localParticleCanBeWorkedOnCellKernel(const Particle* localParticle, const peano4::datamanagement::CellMarker& marker){
+    bool localParticleCanBeWorkedOnCellKernel(
+      const Particle* localParticle, const peano4::datamanagement::CellMarker& marker
+    ) {
 
       return (
-        not localParticle->getCellHasUpdatedParticle()
-        and marker.isContained(localParticle->getX())
+        not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())
         and not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker)
       );
     }
@@ -73,7 +73,7 @@ namespace swift2 {
      * @param localParticle: particle to check for
      */
     template <typename Particle>
-    bool localParticleCanBeWorkedOnVertexKernel(const Particle* localParticle){
+    bool localParticleCanBeWorkedOnVertexKernel(const Particle* localParticle) {
       return localParticleIsLocal(localParticle);
     }
 
@@ -82,7 +82,9 @@ namespace swift2 {
      * to be passed as argument to other function.
      */
     template <typename Particle>
-    bool localParticleCanBeWorkedOnVertexKernel(const Particle* localParticle, const peano4::datamanagement::VertexMarker& marker){
+    bool localParticleCanBeWorkedOnVertexKernel(
+      const Particle* localParticle, const peano4::datamanagement::VertexMarker& marker
+    ) {
       return localParticleCanBeWorkedOnVertexKernel(localParticle);
     }
 
@@ -94,9 +96,8 @@ namespace swift2 {
      * @param marker: dummy parameter so this function can be passed on as a parameter
      */
     template <typename Particle, typename Marker>
-    bool localParticleNoRestrictions(const Particle* localParticle, const Marker& marker){
+    bool localParticleNoRestrictions(const Particle* localParticle, const Marker& marker) {
       return true;
     }
   } // namespace kernels
 } // namespace swift2
-

@@ -214,7 +214,9 @@ Particle properties:
         step_name_list = [step.name for step in steps]
         step_name_list.append("count")  # add a count so we can loop over enums
         step_name_enum = dastgen2.attributes.Enumeration(
-            step_type_name, step_name_list, ifdefs=ifdefs,
+            step_type_name,
+            step_name_list,
+            ifdefs=ifdefs,
         )
         self.data.add_attribute(step_name_enum)
 
@@ -268,17 +270,22 @@ Particle properties:
         # be marked as possibly containing corrupted local particle sets.
         step_moves_particles = 0
 
-        for i,step in enumerate(steps):
-
+        for i, step in enumerate(steps):
             # first determine which type of algorithm step we have. Depending on its
             # effects and dependencies, we need to use a different function to check
             # whether a particle should be worked on.
             check_function = None
 
-            if step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN:
+            if (
+                step.effect
+                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
+            ):
                 check_function = "::swift2::kernels::localParticleCanBeMoved"
                 step_moves_particles = 2
-            elif step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN:
+            elif (
+                step.effect
+                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+            ):
                 step_moves_particles = 2
                 raise NotImplementedError
             elif step.effect == AlgorithmStep.Effect.ALTER_LOCAL_STATE:
@@ -287,17 +294,23 @@ Particle properties:
                 check_function = "::swift2::kernels::localParticleNoRestrictions"
 
             if check_function is None:
-                raise ValueError("Got check_function == None for step", step.name, "effect", step.effect)
+                raise ValueError(
+                    "Got check_function == None for step",
+                    step.name,
+                    "effect",
+                    step.effect,
+                )
 
             step_moved_particle_string = "false"
             if step_moves_particles > 0:
                 step_moved_particle_string = "true"
             step_moves_particles -= 1
 
-
             # TOUCH VERTEX FIRST TIME
             # -----------------------
-            stage = AlgorithmStep.get_sweep_stage_name(AlgorithmStep.SweepStage.TOUCH_VERTEX_FIRST_TIME)
+            stage = AlgorithmStep.get_sweep_stage_name(
+                AlgorithmStep.SweepStage.TOUCH_VERTEX_FIRST_TIME
+            )
             check_function_full_name = check_function.replace("{STAGE}", "VertexKernel")
 
             if step.touch_vertex_first_time_kernel is None:
@@ -311,10 +324,24 @@ Particle properties:
                     "\n  dependencyChecks::clearDependencyChecks"
                     + step_type_name
                     + "(localParticles);\n"
-                    + mark_template.format(step.name, stage, step_moved_particle_string, check_function_full_name) + step.touch_vertex_last_time_kernel
+                    + mark_template.format(
+                        step.name,
+                        stage,
+                        step_moved_particle_string,
+                        check_function_full_name,
+                    )
+                    + step.touch_vertex_last_time_kernel
                 )
             else:
-                step.touch_vertex_first_time_kernel = mark_template.format(step.name, stage, step_moved_particle_string, check_function_full_name) + step.touch_vertex_first_time_kernel
+                step.touch_vertex_first_time_kernel = (
+                    mark_template.format(
+                        step.name,
+                        stage,
+                        step_moved_particle_string,
+                        check_function_full_name,
+                    )
+                    + step.touch_vertex_first_time_kernel
+                )
 
             # Finally, add the dependency check *after* the actual function call
             step.touch_vertex_first_time_kernel += check_template.format(
@@ -323,31 +350,50 @@ Particle properties:
 
             # CELL_KERNEL
             # -----------
-            stage = AlgorithmStep.get_sweep_stage_name( AlgorithmStep.SweepStage.CELL_KERNEL)
+            stage = AlgorithmStep.get_sweep_stage_name(
+                AlgorithmStep.SweepStage.CELL_KERNEL
+            )
             check_function_full_name = check_function.replace("{STAGE}", "CellKernel")
 
             if step.cell_kernel is None:
                 step.cell_kernel = ""
 
             # mark the step and stage we're doing before any actual content is called
-            step.cell_kernel = mark_template.format(step.name, stage, step_moved_particle_string, check_function_full_name) + step.cell_kernel
+            step.cell_kernel = (
+                mark_template.format(
+                    step.name,
+                    stage,
+                    step_moved_particle_string,
+                    check_function_full_name,
+                )
+                + step.cell_kernel
+            )
 
             # Now add the dependency check *after* the actual function call
-            step.cell_kernel += check_template.format(step.name, stage, check_function_full_name)
-
+            step.cell_kernel += check_template.format(
+                step.name, stage, check_function_full_name
+            )
 
             # TOUCH VERTEX LAST TIME
             # ----------------------
-            stage = AlgorithmStep.get_sweep_stage_name( AlgorithmStep.SweepStage.TOUCH_VERTEX_LAST_TIME)
+            stage = AlgorithmStep.get_sweep_stage_name(
+                AlgorithmStep.SweepStage.TOUCH_VERTEX_LAST_TIME
+            )
             check_function_full_name = check_function.replace("{STAGE}", "VertexKernel")
 
             if step.touch_vertex_last_time_kernel is None:
                 step.touch_vertex_last_time_kernel = ""
 
             # mark the step and stage we're doing before any actual content is called
-            step.touch_vertex_last_time_kernel = mark_template.format(
-                step.name, stage, step_moved_particle_string, check_function_full_name
-            ) + step.touch_vertex_last_time_kernel
+            step.touch_vertex_last_time_kernel = (
+                mark_template.format(
+                    step.name,
+                    stage,
+                    step_moved_particle_string,
+                    check_function_full_name,
+                )
+                + step.touch_vertex_last_time_kernel
+            )
 
             # Now add the dependency check *after* the actual function call
             step.touch_vertex_last_time_kernel += check_template.format(
@@ -365,8 +411,6 @@ Particle properties:
             step.includes += """\n#include "swift2/dependencyChecks.h"\n"""
 
         return steps
-
-
 
     def add_dependency_checks(self):
         """!
@@ -397,7 +441,9 @@ Particle properties:
             AlgorithmStep.get_sweep_stage_name(s) for s in AlgorithmStep.SweepStage
         ]
         stage_name_enum = dastgen2.attributes.Enumeration(
-            "SweepStage", stage_name_list, ifdefs=ifdefs,
+            "SweepStage",
+            stage_name_list,
+            ifdefs=ifdefs,
         )
         self.data.add_attribute(stage_name_enum)
 
