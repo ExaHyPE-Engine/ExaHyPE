@@ -46,6 +46,12 @@ namespace {
   }
 } // namespace
 
+
+void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
+  spawnTask(job);
+}
+
+
 void tarch::multicore::native::spawnTask(Task* job) {
   nonblockingTasksCounter++;
 

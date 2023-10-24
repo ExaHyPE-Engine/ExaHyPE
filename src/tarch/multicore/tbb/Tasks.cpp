@@ -122,6 +122,11 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 }
 
 
+void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
+  spawnTask(job);
+}
+
+
 /**
  * Spawn a single task
  *
