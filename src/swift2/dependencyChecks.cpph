@@ -2,6 +2,7 @@
 
 #include <iomanip>
 #include <iostream>
+
 #include "kernels/ParticleState.h"
 
 
@@ -24,8 +25,8 @@ static void dependencyChecks::dependencyCheckAlgorithmStepDebugOutput(
   std::cout << "Main Algorithm Step Dependency check [" << call_identifier << "]\n";
   std::cout << "Particle " << particle->getPartid() << " - found " << errors << " dependency errors\n";
   std::cout
-    << "Failed at Algorithm Step/Sweep Stage: " << PartType::castAlgorithmStepToString(algorithmStepMarkerEnum)
-    << " / " << PartType::castSweepStageToString(sweepStageMarkerEnum) << "\n";
+    << "Failed at Algorithm Step/Sweep Stage: " << PartType::castAlgorithmStepToString(algorithmStepMarkerEnum) << " / "
+    << PartType::castSweepStageToString(sweepStageMarkerEnum) << "\n";
 
   // Set up "header" of the table
   std::cout << "Particle Dependency Checks This Step:\n";
@@ -134,8 +135,6 @@ static void dependencyChecks::dependencyCheckInitStepDebugOutput(
 }
 
 
-
-
 template <typename ParticleContainer, typename Marker>
 static void dependencyChecks::dependencyMarkAlgorithmStep(
   const ParticleContainer&                                                                  localParticles,
@@ -218,7 +217,9 @@ static void dependencyChecks::dependencyMarkInitStep(
 }
 
 
-static int dependencyChecks::checkPastStages(const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression){
+static int dependencyChecks::checkPastStages(
+  const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression
+) {
 
   int errors = 0;
 
@@ -231,7 +232,8 @@ static int dependencyChecks::checkPastStages(const int currentStep, const int cu
       const int index     = step * nstages + stage;
       const int partStage = sweepStateProgression[index];
 
-      if (partStage == 0) errors++;
+      if (partStage == 0)
+        errors++;
     }
   }
 
@@ -242,15 +244,17 @@ static int dependencyChecks::checkPastStages(const int currentStep, const int cu
     const int index     = currentStep * nstages + stage;
     const int partStage = sweepStateProgression[index];
 
-    if (partStage == 0) errors++;
+    if (partStage == 0)
+      errors++;
   }
 
   return errors;
 }
 
 
-
-static int dependencyChecks::checkFutureStages(const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression){
+static int dependencyChecks::checkFutureStages(
+  const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression
+) {
 
   int errors = 0;
 
@@ -282,8 +286,6 @@ static int dependencyChecks::checkFutureStages(const int currentStep, const int 
 }
 
 
-
-
 template <typename ParticleContainer, typename Marker>
 static void dependencyChecks::dependencyCheckAlgorithmStep(
   const ParticleContainer&                                                                  localParticles,
@@ -304,8 +306,8 @@ static void dependencyChecks::dependencyCheckAlgorithmStep(
 
   for (auto* particle : localParticles) {
 
-    int errors = 0;
-    const int* arr = particle->getAlgorithmStepSweepStateProgression();
+    int        errors = 0;
+    const int* arr    = particle->getAlgorithmStepSweepStateProgression();
 
     errors = checkPastStages(algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
@@ -350,8 +352,8 @@ static void dependencyChecks::dependencyCheckActiveParticlesAlgorithmStep(
 
   for (auto* particle : activeParticles) {
 
-    int errors = 0;
-    const int* arr = particle->getAlgorithmStepSweepStateProgression();
+    int        errors = 0;
+    const int* arr    = particle->getAlgorithmStepSweepStateProgression();
 
     errors = checkPastStages(algorithmStepMarker, touchVertexLastTime, nsteps, nstages, arr);
 
@@ -401,8 +403,8 @@ static void dependencyChecks::dependencyCheckInitStep(
 
   for (auto* particle : localParticles) {
 
-    int errors = 0;
-    const int* arr = particle->getInitStepSweepStateProgression();
+    int        errors = 0;
+    const int* arr    = particle->getInitStepSweepStateProgression();
 
     errors = checkPastStages(initStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
@@ -443,9 +445,9 @@ static void dependencyChecks::dependencyCheckActiveParticlesInitStep(
 
   for (auto* particle : activeParticles) {
 
-    int errors = 0;
-    const int* arr = particle->getInitStepSweepStateProgression();
-    errors = checkPastStages(initStepMarker, touchVertexLastTime, nsteps, nstages, arr);
+    int        errors = 0;
+    const int* arr    = particle->getInitStepSweepStateProgression();
+    errors            = checkPastStages(initStepMarker, touchVertexLastTime, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
     if (errors > 0)
@@ -500,4 +502,3 @@ static void dependencyChecks::clearDependencyChecksInitStep(const ParticleContai
     }
   }
 }
-

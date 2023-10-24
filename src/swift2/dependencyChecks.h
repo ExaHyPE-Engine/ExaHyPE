@@ -24,7 +24,8 @@ namespace dependencyChecks {
     typename std::remove_pointer<Particle>::type::AlgorithmStep algorithmStepMarkerEnum,
     typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
     const int                                                   errors,
-    const std::string                                           call_identifier);
+    const std::string                                           call_identifier
+  );
 
 
   /**
@@ -46,7 +47,8 @@ namespace dependencyChecks {
     typename std::remove_pointer<Particle>::type::InitStep   initStepMarkerEnum,
     typename std::remove_pointer<Particle>::type::SweepStage sweepStageMarkerEnum,
     const int                                                errors,
-    const std::string                                        call_identifier);
+    const std::string                                        call_identifier
+  );
 
 
   /**
@@ -115,7 +117,9 @@ namespace dependencyChecks {
    *
    * @return errors: Number of dependency errors detected
    */
-  static int checkPastStages(const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression);
+  static int checkPastStages(
+    const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression
+  );
 
 
   /**
@@ -130,7 +134,9 @@ namespace dependencyChecks {
    *
    * @return errors: Number of dependency errors detected
    */
-  static int checkFutureStages(const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression);
+  static int checkFutureStages(
+    const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression
+  );
 
 
   /**
@@ -198,7 +204,7 @@ namespace dependencyChecks {
   );
 
 
-   /**
+  /**
    * @brief Dependency Check: At the final stage of a sweep (TouchVertexLastTime), check that all
    * ActiveParticles have completed all their dependencies, i.e. have been localParticles at least
    * once. This
@@ -236,4 +242,3 @@ namespace dependencyChecks {
 } // namespace dependencyChecks
 
 #include "dependencyChecks.cpph"
-
