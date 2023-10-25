@@ -6,7 +6,7 @@ namespace swift2 {
   namespace kernels {
 
     /**
-     * @brief is this a local particle?
+     * @brief is this localParticle a local particle (in the ParallelState sense)?
      */
     template <typename Particle>
     bool localParticleIsLocal(const Particle& localParticle) {
@@ -48,11 +48,10 @@ namespace swift2 {
 
 
     /**
-     * @brief Can we do work on this particle?
-     * @TODO expand doc
+     * @brief Can we do work on this particle during a cell kernel sweep stage?
      *
      * @param localParticle: particle to check for
-     * @param marker:
+     * @param marker: the cell's CellMarker
      */
     template <typename Particle>
     bool localParticleCanBeWorkedOnCellKernel(
@@ -67,8 +66,7 @@ namespace swift2 {
 
 
     /**
-     * @brief Can we do work on this particle?
-     * @TODO expand doc
+     * @brief Can we do work on this particle during a vertex kernel sweep stage?
      *
      * @param localParticle: particle to check for
      */
