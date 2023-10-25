@@ -67,7 +67,7 @@ class Project(object):
         self.algorithm_step_plot = peano4.solversteps.Step("Plot", False)
 
         self.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec
+            swift2.graphcompiler.map_onto_separate_mesh_traversals_no_vec
         )
         self.initialisation_steps_task_graph_compiler = (
             swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals

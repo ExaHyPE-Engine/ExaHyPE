@@ -4,10 +4,10 @@
 
 
 from .Sequential import (
-    serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec,
-    serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise,
+    map_onto_separate_mesh_traversals_no_vec,
+    map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise,
     serialise_initialisation_steps_and_map_onto_separate_mesh_traversals,
-    serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalesced_memory_access,
+    map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access,
 )
 
 

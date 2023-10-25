@@ -8,12 +8,16 @@ import swift2.sphtools as sphtools
 import dastgen2
 
 import shutil
-from _ast import Or
 
 
 ########################################################################################
 # Parse user input
 ########################################################################################
+
+Choices = ["none", 
+           "continuous-per-vertex", "global-continuous", "continuous-per-vertex-vectorise", "global-continuous-vectorise", 
+           "tasks",
+          ]
 
 parser = argparse.ArgumentParser(description="SPH benchmarking script")
 parser.add_argument(
@@ -93,7 +97,7 @@ parser.add_argument(
     "-opt",
     "--optimisation",
     dest="optimisation",
-    choices=["none", "continuous-per-vertex", "global-continuous", "continuous-per-vertex-vectorise", "global-continuous-vectorise" ],
+    choices=Choices,
     default="none",
     help="Optimisation strategy to use (default: none)",
 )
@@ -127,12 +131,19 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh", executable="noh2D"
 )
 
-if args.optimisation != "none":
+if args.optimisation == Choices[1] or \
+   args.optimisation == Choices[2] or \
+   args.optimisation == Choices[3] or \
+   args.optimisation == Choices[4]:
     project.algorithm_steps_task_graph_compiler = (
-        swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+        swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
     )
     project.initialisation_steps_task_graph_compiler = (
-        swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalesced_memory_access
+        swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
+    )
+if args.optimisation == Choices[5]:
+    project.algorithm_steps_task_graph_compiler = (
+        swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
     )
 
 
@@ -170,9 +181,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     min_h=max_cell_size,
     max_h=max_cell_size,
     use_optimised_coalesced_memory_access_kernels=(
-      args.optimisation== "continuous-per-vertex-vectorise"
-      or
-      args.optimisation== "global-continuous-vectorise"
+      "-vectorise" in args.optimisation
     )
 )
 
@@ -258,17 +267,9 @@ particle.data.expose_all_attributes_in_header_file()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-if (
-    args.optimisation == "continuous-per-vertex"
-    or 
-    args.optimisation == "continuous-per-vertex-vectorise"
-):
+if "continuous-per-vertex" in args.optimisation:
     particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
-elif (
-    args.optimisation == "global-continuous"
-    or
-    args.optimisation == "global-continuous-vectorise"
-):
+elif "global-continuous" in args.optimisation:
     particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
 else:
     particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
