@@ -9,9 +9,9 @@ Swift comes along with a set of test programs.
 These can be found under `/tests/swift2/`
 and should all run out-of-the-box via the provided `run.sh` scripts.
 Before you start, ensure that you have configured and built Peano as specified
-for @ref swift_home "Swift".
+for @ref section_compile_peano4_for_swift2 "Swift".
 Notice that some of these will use HDF5 files and hence require the correponding
-configuration for Peano. See @ref page_swift_initial_conditions_SwiftHDF5.
+configuration for Peano. See @ref section_compile_peano4_for_swift2.
 
 
  */
