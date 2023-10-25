@@ -29,7 +29,7 @@ parser.add_argument(
     "-pd",
     "--peano-dir",
     dest="peanodir",
-    default="../../../..",
+    default="../../..",
     help="Peano4 directory",
 )
 args = parser.parse_args()
@@ -54,7 +54,7 @@ cell_size = 0.3
 particle = swift2.particle.DastgenTestDummyParticle(
     "dummyPart",
     particles_per_cell=20,
-    min_h=cell_size / 100,
+    min_h=cell_size / 10,
     max_h=cell_size,
 )
 
@@ -99,6 +99,8 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 Npart = 100
 offset = 1 / Npart
 
+# This should always be a 3D array, even if you are using fewer
+# dimensions in your actual run
 coords = np.zeros((Npart**dimensions, 3))
 
 x = np.linspace(offset, 1, Npart, endpoint=False)

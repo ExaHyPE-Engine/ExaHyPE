@@ -1071,8 +1071,8 @@ void dastgenTest::checkConstructors(ParticleContainer& localParticles) {
 
 
   // Clean up after yourself
-  delete[] p1;
-  delete[] p2;
+  delete p1;
+  delete p2;
 }
 
 
