@@ -130,7 +130,7 @@ different particle updates, and potentially fewer mesh traversals with more
 operations.
 
 
-There is a disadvantage though: If you a species is not updated at all, the 
+There is a disadvantage though: If a species is not updated at all, the 
 zipper version might still check each and every cell if the species is to be 
 updated. In the worst case, there are three species per traversal as none of
 them does anything. 
