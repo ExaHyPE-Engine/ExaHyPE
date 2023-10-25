@@ -100,7 +100,8 @@ class toolbox::particles::memorypool::GlobalContinuousMemoryPool {
     /**
      * Gather the particle
      *
-     * If we invoke this routine on a gathered memory pool, it becomes nop.
+     * If we invoke this routine on a gathered memory pool, it becomes nop
+     * (no operation).
      * Otherwise, the routine's implementation is rather straightforward:
      *
      * - Allocate one big chunk of memory
