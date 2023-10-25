@@ -132,7 +132,7 @@ if args.optimisation != "none":
         swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
     )
     project.initialisation_steps_task_graph_compiler = (
-        swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalescend_memory_access
+        swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalesced_memory_access
     )
 
 

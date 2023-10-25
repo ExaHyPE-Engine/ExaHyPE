@@ -15,7 +15,7 @@ from .AMRLogic import (
 )
 from .Optimisation import Optimisation
 from .SpeciesStepOrdering import concatenate_steps_of_species
-from .Utils import does_one_species_require_gather, get_species_set
+from .Utils import does_one_species_require_gather, get_species_set, get_observer_prefix, StepType
 
 
 def translate_one_step_of_species_into_mesh_traversal(
@@ -24,7 +24,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     mesh_traversals,
     alter_particle_position,
     use_lists_to_construct_active_sets,
-    preamble,
+    step_type: StepType,
     verbose,
 ):
     """!
@@ -52,7 +52,7 @@ def translate_one_step_of_species_into_mesh_traversal(
 
     new_step = peano4.solversteps.Step(
         "{}{}{}_sweep{}".format(
-            preamble,
+            get_observer_prefix(step_type),
             current_species_set.particle_model.name,
             step.name,
             len(mesh_traversals),
@@ -165,7 +165,7 @@ def translate_one_step_of_species_into_mesh_traversal(
 def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
     sequence_of_steps,
     optimisation: Optimisation,
-    observer_preamble,
+    step_type: StepType,
     verbose,
 ):
     """!
@@ -238,8 +238,8 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
 
     if verbose:
         print(
-            "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: start graph construction with optimisation {} and preamble {}".format(
-                optimisation, observer_preamble
+            "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: start graph construction with optimisation {} and step type {}".format(
+                optimisation, step_type
             )
         )
 
@@ -277,7 +277,7 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
             mesh_traversals=mesh_traversals,
             alter_particle_position=alter_particle_position,
             use_lists_to_construct_active_sets=use_lists_to_construct_active_sets,
-            preamble=observer_preamble,
+            step_type=step_type,
             verbose=verbose,
         )
 
@@ -300,6 +300,9 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
             )
             mesh_traversals.append(new_step)
             alter_particle_position.append(True)
+            
+    if step_type==StepType.INITIALISATION:
+        alter_particle_position[0] = True
 
     if does_one_species_require_gather(sequence_of_steps):
         add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers(
@@ -345,7 +348,7 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec(
     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
         optimisation=Optimisation.NONE,
-        observer_preamble="Step",
+        step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
 
@@ -375,7 +378,7 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dum
     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
         optimisation=Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
-        observer_preamble="Step",
+        step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
 
@@ -397,7 +400,7 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(
     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
         optimisation=Optimisation.NONE,
-        observer_preamble="Init",
+        step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
 
@@ -419,6 +422,6 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coa
     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
         optimisation=Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
-        observer_preamble="Init",
+        step_type=StepType.INITIALISATION,
         verbose=verbose,
     )

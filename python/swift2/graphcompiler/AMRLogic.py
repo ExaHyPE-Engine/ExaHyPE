@@ -386,6 +386,12 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
     instead of two times.
 
     """
+    if verbose:
+        print(
+            "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: start to augment algorithm steps where the following steps alter the particle position: {}".format(
+                alter_position
+            )
+        )
     if len(steps) != len(alter_position):
         raise Exception(
             "number of steps does not equal number of alter_position flags: {} vs {}".format(
