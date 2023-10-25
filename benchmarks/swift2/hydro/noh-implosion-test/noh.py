@@ -170,6 +170,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     max_h=max_cell_size,
     use_optimised_coalesced_memory_access_kernels=args.optimisation
     == "vectorise-per-vertex",
+    asserts=args.asserts,
 )
 
 

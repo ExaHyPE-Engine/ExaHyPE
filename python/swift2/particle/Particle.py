@@ -402,6 +402,7 @@ Particle properties:
 
             # touch vertex last time is special: Add additional dependency check
             # which makes sure all activeParticles have been local at some point
+            # during this algorithm step
             step.touch_vertex_last_time_kernel += (
                 check_template_active_particles.format(step.name)
             )
