@@ -7,7 +7,7 @@
 
 
 template <typename Particle>
-static void dependencyChecks::dependencyCheckAlgorithmStepDebugOutput(
+static void swift2::dependencyChecks::dependencyCheckAlgorithmStepDebugOutput(
   const Particle*                                             particle,
   typename std::remove_pointer<Particle>::type::AlgorithmStep algorithmStepMarkerEnum,
   typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
@@ -72,7 +72,7 @@ static void dependencyChecks::dependencyCheckAlgorithmStepDebugOutput(
 
 
 template <typename Particle>
-static void dependencyChecks::dependencyCheckInitStepDebugOutput(
+static void swift2::dependencyChecks::dependencyCheckInitStepDebugOutput(
   const Particle*                                          particle,
   typename std::remove_pointer<Particle>::type::InitStep   initStepMarkerEnum,
   typename std::remove_pointer<Particle>::type::SweepStage sweepStageMarkerEnum,
@@ -136,7 +136,7 @@ static void dependencyChecks::dependencyCheckInitStepDebugOutput(
 
 
 template <typename ParticleContainer, typename Marker>
-static void dependencyChecks::dependencyMarkAlgorithmStep(
+static void swift2::dependencyChecks::dependencyMarkAlgorithmStep(
   const ParticleContainer&                                                                  localParticles,
   const Marker&                                                                             marker,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
@@ -177,7 +177,7 @@ static void dependencyChecks::dependencyMarkAlgorithmStep(
 
 
 template <typename ParticleContainer, typename Marker>
-static void dependencyChecks::dependencyMarkInitStep(
+static void swift2::dependencyChecks::dependencyMarkInitStep(
   const ParticleContainer&                                                               localParticles,
   const Marker&                                                                          marker,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
@@ -217,7 +217,7 @@ static void dependencyChecks::dependencyMarkInitStep(
 }
 
 
-static int dependencyChecks::checkPastStages(
+static int swift2::dependencyChecks::checkPastStages(
   const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression
 ) {
 
@@ -252,7 +252,7 @@ static int dependencyChecks::checkPastStages(
 }
 
 
-static int dependencyChecks::checkFutureStages(
+static int swift2::dependencyChecks::checkFutureStages(
   const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression
 ) {
 
@@ -287,7 +287,7 @@ static int dependencyChecks::checkFutureStages(
 
 
 template <typename ParticleContainer, typename Marker>
-static void dependencyChecks::dependencyCheckAlgorithmStep(
+static void swift2::dependencyChecks::dependencyCheckAlgorithmStep(
   const ParticleContainer&                                                                  localParticles,
   const Marker&                                                                             marker,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
@@ -337,7 +337,7 @@ static void dependencyChecks::dependencyCheckAlgorithmStep(
 
 
 template <typename ParticleContainer>
-static void dependencyChecks::dependencyCheckActiveParticlesAlgorithmStep(
+static void swift2::dependencyChecks::dependencyCheckActiveParticlesAlgorithmStep(
   const ParticleContainer&                                                                  activeParticles,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum
 ) {
@@ -384,7 +384,7 @@ static void dependencyChecks::dependencyCheckActiveParticlesAlgorithmStep(
 
 
 template <typename ParticleContainer, typename Marker>
-static void dependencyChecks::dependencyCheckInitStep(
+static void swift2::dependencyChecks::dependencyCheckInitStep(
   const ParticleContainer&                                                               localParticles,
   const Marker&                                                                          marker,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
@@ -430,7 +430,7 @@ static void dependencyChecks::dependencyCheckInitStep(
 
 
 template <typename ParticleContainer>
-static void dependencyChecks::dependencyCheckActiveParticlesInitStep(
+static void swift2::dependencyChecks::dependencyCheckActiveParticlesInitStep(
   const ParticleContainer&                                                             activeParticles,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep initStepMarkerEnum
 ) {
@@ -475,7 +475,7 @@ static void dependencyChecks::dependencyCheckActiveParticlesInitStep(
 
 
 template <typename ParticleContainer>
-static void dependencyChecks::clearDependencyChecksAlgorithmStep(const ParticleContainer& localParticles) {
+static void swift2::dependencyChecks::clearDependencyChecksAlgorithmStep(const ParticleContainer& localParticles) {
 
   using PartType    = std::remove_pointer<typename ParticleContainer::value_type>::type;
   const int nstages = static_cast<int>(PartType::SweepStage::count);
@@ -490,7 +490,7 @@ static void dependencyChecks::clearDependencyChecksAlgorithmStep(const ParticleC
 
 
 template <typename ParticleContainer>
-static void dependencyChecks::clearDependencyChecksInitStep(const ParticleContainer& localParticles) {
+static void swift2::dependencyChecks::clearDependencyChecksInitStep(const ParticleContainer& localParticles) {
 
   using PartType    = std::remove_pointer<typename ParticleContainer::value_type>::type;
   const int nstages = static_cast<int>(PartType::SweepStage::count);

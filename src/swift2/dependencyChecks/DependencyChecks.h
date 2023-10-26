@@ -3,6 +3,7 @@
 #include <string>
 #include <type_traits>
 
+namespace swift2 {
 namespace dependencyChecks {
 
   /**
@@ -240,5 +241,6 @@ namespace dependencyChecks {
 
 
 } // namespace dependencyChecks
+} // namespace swift2
 
 #include "dependencyChecks.cpph"
