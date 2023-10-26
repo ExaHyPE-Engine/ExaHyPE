@@ -195,9 +195,11 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::swapOrchestration(
 int tarch::multicore::getNumberOfReservedTaskNumbers() { return activeTaskNumbers.size(); }
 
 void tarch::multicore::releaseTaskNumber(int number) {
-  tarch::multicore::Lock activeTasksLock(activeTasksSemaphore);
-  assertionEquals(activeTaskNumbers.count(number), 1);
-  activeTaskNumbers.erase(number);
+  if (number!=NoDependency) {
+    tarch::multicore::Lock activeTasksLock(activeTasksSemaphore);
+    assertionEquals(activeTaskNumbers.count(number), 1);
+    activeTaskNumbers.erase(number);
+  }
 }
 
 int tarch::multicore::reserveTaskNumber() {

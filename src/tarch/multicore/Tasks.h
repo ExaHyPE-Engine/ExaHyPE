@@ -39,6 +39,12 @@ namespace tarch {
      */
     int reserveTaskNumber();
 
+    /**
+     * Release a task number
+     *
+     * @param number Either a valid non-negative number (as returned by
+     *   reserveTaskNumber() for example) or NoDependency.
+     */
     void releaseTaskNumber(int number);
 
     /**
