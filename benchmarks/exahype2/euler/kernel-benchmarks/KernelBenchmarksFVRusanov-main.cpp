@@ -382,12 +382,12 @@ void wrapDeviceKernel(
     evaluateMaximumEigenvalueAfterTimeStep,
     timingComputeKernel
   );
-  if (timingComputeKernel.getNumberOfMeasurements()%NumberOfSamples==0) {
-    if (timingComputeKernel.getValue() != 0) {
+  //if (timingComputeKernel.getNumberOfMeasurements()==NumberOfSamples) {
+    if (timingComputeKernel.getValue() != 0.0) {
       logInfo( "wrapDeviceKernel(...)", "core compute kernel time: " << timingComputeKernel.getValue() << " " << timingComputeKernel.toString() );
       timingComputeKernel.erase();
     }  
-  }
+  //}
 }
 
 
