@@ -197,6 +197,7 @@ list(APPEND ACCELERATOR_ARCHITECTURES
   "sm_75"
   "sm_80"
   "sm_86"
+  "sm_89"
   "sm_90"
   "gfx906"
   "gfx908"

@@ -22,7 +22,7 @@ parser.add_argument('--gpu', choices=['omp', 'cuda', 'sycl', 'cpp', 'hip'], help
 parser.add_argument('--cuda-path', type=str, help='Path to CUDA')
 parser.add_argument('--arch', choices=[
   'gfx906', 'gfx908', 'gfx90a', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
-  'sm_70', 'sm_72', 'sm_75', 'sm_80', 'sm_86', 'sm_90',
+  '70', '72', '75', '80', '86', '89', '90',
   'spir64'],
   help='Select GPU compute capability')
 args = parser.parse_args()
@@ -52,22 +52,22 @@ if args.gpu and not args.arch:
   exit(-1)
 
 if args.gpu == 'omp' and args.toolchain == "clang":
-  cxxflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=' + args.arch
+  cxxflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_' + args.arch
 
 if args.gpu == 'omp' and args.toolchain == "amd":
   cxxflags += ' -lstdc++fs --offload-arch=' + args.arch
 
 if args.gpu == 'omp' or args.gpu == 'cpp' and args.toolchain == "nvidia":
-  cxxflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
+  cxxflags += ' -cuda -mp=gpu -gpu=cc' + args.arch
 
 if args.gpu == 'omp' and args.toolchain == "gcc":
   cxxflags += ' -fopenmp -foffload=nvptx-none -march=native'
 
 if args.gpu == 'sycl' and args.toolchain == "intel":
-  cxxflags += ' -fsycl -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
+  cxxflags += ' -fsycl -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_' + args.arch
 
 if args.gpu == 'cuda':
-  nvccflags += f'-arch={args.arch}'  # arch flag is needed independent of toolchain
+  nvccflags += f'-arch=sm_{args.arch}'  # arch flag is needed independent of toolchain
 
 # Call the ./configure script with the specified arguments
 configure_args = []
