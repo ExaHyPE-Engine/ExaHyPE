@@ -6,6 +6,7 @@
 \li \subpage tests_swift2_hydro_simple_sph_noh_2d
 \li \subpage tests_swift2_hydro_simple_sph_sedov_blast
 \li \subpage tests_swift2_hydro_simple_sph_sod_1d
+\li \subpage tests_swift2_test_density_calculation
 
 
 Swift comes along with a set of test programs.
