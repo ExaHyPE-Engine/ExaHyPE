@@ -95,34 +95,34 @@ size.
 @image html face-ordering.png
 
 
-### Face to cell
+### Face to cell (or "cell from face")
 
 When you project from the faces to the cell data, you will get 2d chunks of 
 face data which are dumped into one big array. 
 All the data is then projected in one rush into the cells. 
-If both the cell and the face hold $p+1$ unknows per coordinate axis,
+If both the cell and the face hold @f$ p+1 @f$ unknows per coordinate axis,
 and each cell node (cmp @ref page_multigrid_terminology "the generic multigrid terminology")
 holds @f$ K^c @f$ unknowns, while each face node holds @f$ K^f @f$
 unknowns, the projection is formalised through 
 
 @f$
-  x^c = P_{fc} x^f
+  x^c = P_{c \leftarrow f} x^f
 @f$
 
-with @f$ P_{fc} \in \mathbb{R} ^{ K^c(p+1)^d \times 2dK^f(p+1)^{d-1} } @f$.
+with @f$ P_{c \leftarrow f} \in \mathbb{R} ^{ K^c(p+1)^d \times 2dK^f(p+1)^{d-1} } @f$.
 The chunks within the @f$ 2dK^f(p+1)^{d-1} @f$ vector on the right are
 grouped following the face enumeration convention from above.
 
 
-### Cell to face
+### Cell to face (or "face from cell")
 
 When you project from a cell to its faces, you use 
 
 @f$
-  x^\pm = P_{cf} x^c
+  x^\pm = P_{f \leftarrow c} x^c
 @f$
 
-with @f$ P_{fc} \in \mathbb{R} ^{ 2dK^f(p+1)^{d-1} } \times K^c(p+1)^d @f$.
+with @f$ P_{f \leftarrow c} \in \mathbb{R} ^{ 2dK^f(p+1)^{d-1} \times K^c(p+1)^d } @f$.
 This time, the @f$ 2d @f$ chunks within the left-hand vector are either
 the @f$ x^+ @f$ or the @f$ x^- @f$ quantities on the cell, i.e. left or
 right projections. It is Peano's multigrid backend which has to ensure that
