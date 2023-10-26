@@ -54,13 +54,9 @@ cell_size = 0.3
 particle = swift2.particle.DastgenTestDummyParticle(
     "dummyPart",
     particles_per_cell=20,
-    min_h=cell_size / 10,
+    min_h=cell_size / 100,
     max_h=cell_size,
 )
-
-# Additional Particle Parameters -----------------------------------------------
-hydro_h_max = cell_size / 2
-particle.h_hydro_max = hydro_h_max
 
 # Add particle to project --------------------------------------------
 # Notice that any change to the particle will not take effect after adding
@@ -96,7 +92,7 @@ project.set_Peano4_installation(args.peanodir, build_mode)
 
 # Set up the coordinates for the particles
 # We construct a regular (lattice) configuration.
-Npart = 100
+Npart = 10
 offset = 1 / Npart
 
 # This should always be a 3D array, even if you are using fewer
@@ -123,7 +119,7 @@ initialisation_snippet = """
        */
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0);
-      particle->setSearchRadius( GridSize_x / 2.0);
+      particle->setSearchRadius( GridSize_x / 4.0);
 """
 
 #  Finally, pass this configuration to the initialisation script
