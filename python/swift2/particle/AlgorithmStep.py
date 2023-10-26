@@ -1,7 +1,7 @@
 # This file is part of the SWIFT2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-from enum import Enum
+from enum import Enum, IntEnum
 
 from abc import abstractmethod
 
@@ -60,6 +60,35 @@ class AlgorithmStep(object):
         CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN = 2
         CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN = 3
 
+    class SweepStage(IntEnum):
+        """
+        Enumeration of different events during a grid traversal, in order of
+        their execution.
+        If this changes, make sure to also update the dict containing the
+        names of the stages in
+        """
+
+        TOUCH_VERTEX_FIRST_TIME = 0
+        CELL_KERNEL = 1
+        TOUCH_VERTEX_LAST_TIME = 2
+        STAGE_COUNT = 3
+
+    @staticmethod
+    def get_sweep_stage_name(stage: SweepStage):
+        """
+        Get the name as a string of a sweep stage for a given SweepStage enum.
+        """
+        if stage == AlgorithmStep.SweepStage.TOUCH_VERTEX_FIRST_TIME:
+            return "touchVertexFirstTime"
+        elif stage == AlgorithmStep.SweepStage.CELL_KERNEL:
+            return "cellKernel"
+        elif stage == AlgorithmStep.SweepStage.TOUCH_VERTEX_LAST_TIME:
+            return "touchVertexLastTime"
+        elif stage == AlgorithmStep.SweepStage.STAGE_COUNT:
+            return "count"
+        else:
+            raise ValueError("Unknown algorithm stage", stage)
+
     def __init__(
         self,
         name,
@@ -73,7 +102,7 @@ class AlgorithmStep(object):
         input_particles=None,
         includes="",
     ):
-        """
+        """!
 
         The algorithmic step description is a meta data object, i.e. it only
         holds properties.
@@ -104,24 +133,24 @@ class AlgorithmStep(object):
                    prepare_traversals_kernel        = None,
 
         prepare_traversal_kernel: String (C++ code snippet)
-          Whenever Peano runs through the mesh, it creates one instance of the 
-          mesh observer and then runs through all subpartitions (trees) in 
+          Whenever Peano runs through the mesh, it creates one instance of the
+          mesh observer and then runs through all subpartitions (trees) in
           parallel. Each replica of the observer issues its own touchVertexFirstTime(),
           touchCellLastTime(), ... events, and each replica starts its traversal
-          with a call to beginTraversal() and endTraversal(). If you want to 
+          with a call to beginTraversal() and endTraversal(). If you want to
           plug into the phase such before these parallel instances are created,
-          you can use prepareTraversal() - the C++ code snippet passed to this 
+          you can use prepareTraversal() - the C++ code snippet passed to this
           attribute is copied into prepareTraversal(). The overview over
           @ref peano_action_sets "action sets" provides more details. Note that
-          no action set (or observer object) is created at this point, i.e. the 
-          C++ code snippet will be injected into a static routine and can 
+          no action set (or observer object) is created at this point, i.e. the
+          C++ code snippet will be injected into a static routine and can
           therefore only access static information. Often, this routine is used
           for some MPI communication (global data exchange), e.g., or to update
           some other static properties for whole sets of objects.
-          
+
         self.unprepare_traversal_kernel: String (C++ code snippet)
-          Counterpart of prepare_traversal_kernel. Consult 
-          @ref peano_action_sets "action sets" for more context. 
+          Counterpart of prepare_traversal_kernel. Consult
+          @ref peano_action_sets "action sets" for more context.
 
         """
         self.name = name

@@ -146,6 +146,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=20,
     min_h=args.cell_size / 100,
     max_h=args.cell_size,
+    asserts=args.asserts,
 )
 
 
