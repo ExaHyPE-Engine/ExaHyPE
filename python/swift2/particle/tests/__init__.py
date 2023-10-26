@@ -5,7 +5,7 @@
 
 from swift2.particle import Particle
 
-from .testDensityCalculation              import testDensityCalculation
-from .testLeapfrogFixedTimeStepSize       import testLeapfrogFixedTimeStepSize
-from .DisappearingParticleTest            import DisappearingParticleTest
+from .testDensityCalculation import testDensityCalculation
+from .testLeapfrogFixedTimeStepSize import testLeapfrogFixedTimeStepSize
+from .DisappearingParticleTest import DisappearingParticleTest
 from .DastgenTestDummyParticle import DastgenTestDummyParticle
