@@ -5,6 +5,7 @@ import numpy as np
 import peano4
 import swift2
 import dastgen2
+from swift2.particle.tests import DastgenTestDummyParticle
 
 import shutil
 
@@ -51,7 +52,7 @@ dimensions = 2  # Peano dimensions
 cell_size = 0.3
 
 
-particle = swift2.particle.DastgenTestDummyParticle(
+particle = DastgenTestDummyParticle(
     "dummyPart",
     particles_per_cell=20,
     min_h=cell_size / 100,
