@@ -1,7 +1,7 @@
 /**
 
- @page benchmarks_swift2_hydro_simple_sph_sedov_blast Sedov Blast (Simple SPH)
- 
+ @page tests_swift2_hydro_simple_sph_sedov_blast Sedov Blast (Simple SPH)
+
 
 
 
@@ -26,12 +26,12 @@ as:
 Constants.h file.
 
  ## Script
- 
+
 ~~~~~~~~~~~~~~~~~~~~~~~~
 @htmlinclude run.sh
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 
  */
- 
- 
+
+

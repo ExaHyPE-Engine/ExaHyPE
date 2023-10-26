@@ -2,7 +2,10 @@
 
 @page swift_tests Tests
 
-\li \subpage tests_swift2_hydro_simple_sph_dastgen_test
+\li \subpage tests_swift2_dastgen_test
+\li \subpage tests_swift2_hydro_simple_sph_noh_2d
+\li \subpage tests_swift2_hydro_simple_sph_sedov_blast
+\li \subpage tests_swift2_hydro_simple_sph_sod_1d
 
 
 Swift comes along with a set of test programs.
@@ -12,6 +15,10 @@ Before you start, ensure that you have configured and built Peano as specified
 for @ref section_compile_peano4_for_swift2 "Swift".
 Notice that some of these will use HDF5 files and hence require the correponding
 configuration for Peano. See @ref section_compile_peano4_for_swift2.
+
+The tests located in `tests/swift2/hydro-simple-sph-physics` are intended to
+verify that the physics solvers are correct on classic problems. They are
+well-suited to use as first examples to get familiar with Swift2.
 
 
  */
