@@ -8,6 +8,7 @@
 \li \subpage tests_swift2_hydro_simple_sph_sod_1d
 \li \subpage tests_swift2_test_density_calculation
 \li \subpage tests_swift2_test_leapfrog
+\li \subpage test_swift2_tests_test_smoothing_length_computation_1D
 
 
 Swift comes along with a set of test programs.
