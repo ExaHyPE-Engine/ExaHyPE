@@ -702,7 +702,7 @@ class DastgenTestDummyParticle(Particle):
                 self.name
             ),
             includes="""
-                           #include "swift2/dastgenTest/dastgenTest.h"
+                           #include "swift2/dastgenTest/DastgenTest.h"
                            """,
         )
 
@@ -722,7 +722,7 @@ class DastgenTestDummyParticle(Particle):
                 "{PARTICLE}", self.name
             ),
             includes="""
-                           #include "swift2/dastgenTest/dastgenTest.h"
+                           #include "swift2/dastgenTest/DastgenTest.h"
                            """,
         )
 
