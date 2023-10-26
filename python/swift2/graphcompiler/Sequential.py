@@ -37,7 +37,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     shows if the mesh will change the particle position (or search radius)
     or not.
 
-    This routine is a helper routine of serialise_initialisation_steps_and_map_onto_separate_mesh_traversals()
+    This routine is a helper routine of map_initialisation_steps_onto_separate_mesh_traversals()
     for example. Note that the returned steps are not fully functionally.
     If a step alters the particles within the mesh, you still have to resort
     the particles. That's not done in the step added by this routine, i.e.
@@ -327,7 +327,7 @@ def map_onto_separate_mesh_traversals(
     return mesh_traversals
 
 
-def map_onto_separate_mesh_traversals_no_vec(
+def map_particle_steps_onto_separate_mesh_traversals(
     species_sets,
     verbose,
 ):
@@ -383,7 +383,7 @@ def map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vec
     )
 
 
-def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(
+def map_initialisation_steps_onto_separate_mesh_traversals(
     species_sets,
     verbose,
 ):

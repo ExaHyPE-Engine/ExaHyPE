@@ -450,9 +450,31 @@ void tarch::multicore::internal::copyInternalTaskQueueOverIntoGlobalQueue(int th
 
 int tarch::multicore::internal::getNumberOfWithholdPendingTasks() { return globalNonblockingTasks.tasks.size(); }
 
+void tarch::multicore::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
+  assertion( inDependency!=NoDependency or taskNumber!=NoDependency );
+  tarch::multicore::native::spawnTaskWithDependencies(job, inDependency, taskNumber);
+}
+
+
+void tarch::multicore::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+  assertion( not inDependencies.empty() or taskNumber!=NoDependency );
+  tarch::multicore::native::spawnTaskWithDependencies(job, inDependencies, taskNumber);
+}
+
+
 #ifndef SharedMemoryParallelisation
 
 #include <thread>
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
 
 void tarch::multicore::native::spawnTask(Task* job) {
   bool reschedule = job->run();

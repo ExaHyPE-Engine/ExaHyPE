@@ -71,7 +71,11 @@ class Step:
     def __sort(self):
         """!
 
-        Simple bubble sort on the priorities
+        Simple bubble sort the action sets, such that their ordering priority
+        is preserved. The lower(!) the priority, the 
+        earlier the action set should be called throughout the steps down.
+        
+        @see peano4.solversteps.ActionSet.priority
 
         """
         for i in range(0, len(self.action_sets)):
@@ -125,6 +129,8 @@ class Step:
         """!
 
         Return max priority over all action sets associated with this step.
+        
+        @see peano4.solversteps.ActionSet.priority
 
         """
         self.__sort()
@@ -136,6 +142,8 @@ class Step:
         """!
 
         Return minimum priority over all action sets associated with this step.
+        
+        @see peano4.solversteps.ActionSet.priority
 
         """
         self.__sort()

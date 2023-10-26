@@ -252,6 +252,31 @@ namespace tarch {
      */
     void spawnTask(Task* job);
 
+    constexpr int NoDependency = -1;
+
+    /**
+     * Spawn a task which dependencies
+     *
+     * Spawn a task that depends on one other task. Alternatively, pass in
+     * NoDependency. In this case, the task can kick off immediately. You have
+     * to specify a task number. This number allows other, follow-up tasks to
+     * become dependant on this very task. Please note that the tasks have to
+     * be spawned in order, i.e. if B depends on A, then A has to be spawned
+     * before B. Otherwise, you introduce a so-called anti-dependency. This is
+     * OpenMP jargon which we adopted ruthlessly.
+     *
+     * You may pass NoDependency as taskNumber. In this case, you have a
+     * fire-and-forget task which is just pushed out there without anybody
+     * ever waiting for it later on (at least not via task dependencies).
+     */
+    void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
+
+    /**
+     * Alternative realisation of spawnTaskWithDependencies() with multiple in
+     * dependencies.
+     */
+    void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
+
     /**
      * Run a bunch of tasks
      *
@@ -415,6 +440,9 @@ namespace tarch {
        * These are the non-blocking (ready) tasks submitted via spawnTask()
        */
       int getNumberOfPendingTasks();
+
+      void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
+      void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
     } // namespace native
 
     namespace internal {

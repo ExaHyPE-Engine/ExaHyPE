@@ -143,7 +143,10 @@ if args.optimisation == Choices[1] or \
     )
 if args.optimisation == Choices[5]:
     project.algorithm_steps_task_graph_compiler = (
-        swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+        swift2.graphcompiler.map_particle_steps_onto_task_tree
+    )
+    project.initialisation_steps_task_graph_compiler = (
+        swift2.graphcompiler.map_initialisation_steps_onto_task_tree
     )
 
 

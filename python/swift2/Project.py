@@ -67,10 +67,10 @@ class Project(object):
         self.algorithm_step_plot = peano4.solversteps.Step("Plot", False)
 
         self.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_onto_separate_mesh_traversals_no_vec
+            swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals
         )
         self.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals
+            swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals
         )
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
@@ -492,7 +492,7 @@ levels.
             self.algorithm_step_plot.use_vertex(current_species_set)
 
         #
-        # Add the cell statistics everywhere
+        # Add the cell statistics and the task markers everywhere
         #
         for current_species_set in self._particle_species_set:
             cell_marker_for_statistics = (
@@ -500,21 +500,38 @@ levels.
                     current_species_set.name
                 )
             )
+            cell_marker_for_tasks   = peano4.toolbox.TaskNumbersOnMesh.create_marker(current_species_set.name)
+            vertex_marker_for_tasks = peano4.toolbox.TaskNumbersOnMesh.create_marker(current_species_set.name)
+            
             # Enable cell statistics for this species
             self._project.datamodel.add_cell(cell_marker_for_statistics)
+            self._project.datamodel.add_cell(cell_marker_for_tasks)
+            self._project.datamodel.add_vertex(vertex_marker_for_tasks)
 
             # Add cell statistics to these action steps
             self.algorithm_step_create_grid.use_cell(cell_marker_for_statistics)
             self.algorithm_step_initial_conditions.use_cell(cell_marker_for_statistics)
             self.algorithm_step_plot.use_cell(cell_marker_for_statistics)
 
+            self.algorithm_step_create_grid.use_cell(cell_marker_for_tasks)
+            self.algorithm_step_initial_conditions.use_cell(cell_marker_for_tasks)
+            self.algorithm_step_plot.use_cell(cell_marker_for_tasks)
+
+            self.algorithm_step_create_grid.use_vertex(vertex_marker_for_tasks)
+            self.algorithm_step_initial_conditions.use_vertex(vertex_marker_for_tasks)
+            self.algorithm_step_plot.use_vertex(vertex_marker_for_tasks)
+
             for solverstep in solver_steps:
                 solverstep.use_vertex(current_species_set)
+                solverstep.use_vertex(vertex_marker_for_tasks)
                 solverstep.use_cell(cell_marker_for_statistics)
+                solverstep.use_cell(cell_marker_for_tasks)
 
             for solverstep in initialisation_steps:
                 solverstep.use_vertex(current_species_set)
+                solverstep.use_vertex(vertex_marker_for_tasks)
                 solverstep.use_cell(cell_marker_for_statistics)
+                solverstep.use_cell(cell_marker_for_tasks)
 
         action_set_plot_grid = peano4.toolbox.PlotGridInPeanoBlockFormat(
             filename="grid",
