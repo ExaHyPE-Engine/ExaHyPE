@@ -8,7 +8,7 @@
 
 
 template <typename ParticleContainer>
-void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
+void swift2::dastgenTest::checkDastgen(ParticleContainer& localParticles) {
 
   for (auto particle : localParticles) {
     checkBooleans(particle);
@@ -30,7 +30,7 @@ void dastgenTest::checkDastgen(ParticleContainer& localParticles) {
 
 
 template <typename Particle>
-void dastgenTest::checkBooleans(Particle& particle) {
+void swift2::dastgenTest::checkBooleans(Particle& particle) {
 
   // First set some values, where applicable.
   const bool initval_bool = false;
@@ -112,7 +112,7 @@ void dastgenTest::checkBooleans(Particle& particle) {
 }
 
 template <typename Particle>
-void dastgenTest::checkDoubles(Particle& particle) {
+void swift2::dastgenTest::checkDoubles(Particle& particle) {
 
   // First set some values, where applicable.
   const double initval_double = 123.456;
@@ -266,7 +266,7 @@ void dastgenTest::checkDoubles(Particle& particle) {
 
 
 template <typename Particle>
-void dastgenTest::checkEnums(Particle& particle) {
+void swift2::dastgenTest::checkEnums(Particle& particle) {
 
   // Default enums
   // ----------------
@@ -307,7 +307,7 @@ void dastgenTest::checkEnums(Particle& particle) {
 
 
 template <typename Particle>
-void dastgenTest::checkIntegers(Particle& particle) {
+void swift2::dastgenTest::checkIntegers(Particle& particle) {
 
   // First set some values, where applicable.
   const int initval_int = 4321;
@@ -460,7 +460,7 @@ void dastgenTest::checkIntegers(Particle& particle) {
 
 
 template <typename Particle>
-void dastgenTest::checkStrings(Particle& particle) {
+void swift2::dastgenTest::checkStrings(Particle& particle) {
 
   std::string var_str;
   std::string initval_str = "In a hole in the ground there lived a hobbit";
@@ -530,7 +530,7 @@ void dastgenTest::checkStrings(Particle& particle) {
 
 
 template <typename Particle>
-void dastgenTest::checkBooleanArrays(Particle& particle) {
+void swift2::dastgenTest::checkBooleanArrays(Particle& particle) {
 
   std::bitset<8> init_bool = static_cast<std::bitset<8>>(511);
   std::bitset<8> bool_var;
@@ -608,7 +608,7 @@ void dastgenTest::checkBooleanArrays(Particle& particle) {
 
 
 template <typename Particle>
-void dastgenTest::checkDoubleArrays(Particle& particle) {
+void swift2::dastgenTest::checkDoubleArrays(Particle& particle) {
 
   double init_double[8] = {1., 2., 3., 4., 5., 6., 7., 8.};
 
@@ -685,7 +685,7 @@ void dastgenTest::checkDoubleArrays(Particle& particle) {
 
 
 template <typename Particle>
-void dastgenTest::checkIntegerArrays(Particle& particle) {
+void swift2::dastgenTest::checkIntegerArrays(Particle& particle) {
 
   int init_integer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -762,7 +762,7 @@ void dastgenTest::checkIntegerArrays(Particle& particle) {
 
 
 template <typename Particle>
-void dastgenTest::checkPeanoDoubleArrays(Particle& particle) {
+void swift2::dastgenTest::checkPeanoDoubleArrays(Particle& particle) {
 
   double init_double[8] = {1., 2., 3., 4., 5., 6., 7., 8.};
 
@@ -839,7 +839,7 @@ void dastgenTest::checkPeanoDoubleArrays(Particle& particle) {
 
 
 template <typename Particle>
-void dastgenTest::checkPeanoIntegerArrays(Particle& particle) {
+void swift2::dastgenTest::checkPeanoIntegerArrays(Particle& particle) {
 
   int init_integer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -915,7 +915,7 @@ void dastgenTest::checkPeanoIntegerArrays(Particle& particle) {
 
 
 template <typename ParticleContainer>
-void dastgenTest::checkConstructors(ParticleContainer& localParticles) {
+void swift2::dastgenTest::checkConstructors(ParticleContainer& localParticles) {
 
   using Part = std::remove_pointer<typename ParticleContainer::value_type>::type;
 
@@ -1077,7 +1077,7 @@ void dastgenTest::checkConstructors(ParticleContainer& localParticles) {
 
 
 template <typename Particle>
-void dastgenTest::dummyMoveForwardInTime() {
+void swift2::dastgenTest::dummyMoveForwardInTime() {
 
   // Deliberately hardcoded for sim to run 2 steps.
   Particle::getSpecies().setTimeStepSize(0.5);
@@ -1085,7 +1085,7 @@ void dastgenTest::dummyMoveForwardInTime() {
 
 
 template <typename Particle>
-void dastgenTest::reportStep(const std::string& particleName) {
+void swift2::dastgenTest::reportStep(const std::string& particleName) {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     static tarch::logging::Log _log("dastgenTest");
 

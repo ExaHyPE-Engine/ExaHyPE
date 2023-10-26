@@ -1,6 +1,8 @@
 #pragma once
 
-namespace dastgenTest {
+
+namespace swift2 {
+  namespace dastgenTest {
 
   /**
    * Main testing function.
@@ -109,7 +111,8 @@ namespace dastgenTest {
   template <typename Particle>
   void reportStep(const std::string& particleName);
 
-} // namespace dastgenTest
+  } // namespace dastgenTest
+} // namespace swift2
 
 
 #include "dastgenTest.cpph"

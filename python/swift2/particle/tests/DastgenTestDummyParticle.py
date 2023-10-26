@@ -696,13 +696,13 @@ class DastgenTestDummyParticle(Particle):
             name="dummyDastgenTest",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""::dastgenTest::checkDastgen(localParticles);""",
+            touch_vertex_first_time_kernel="""::swift2::dastgenTest::checkDastgen(localParticles);""",
             prepare_traversal_kernel="""
-                ::dastgenTest::dummyMoveForwardInTime<globaldata::{}>();""".format(
+                ::swift2::dastgenTest::dummyMoveForwardInTime<globaldata::{}>();""".format(
                 self.name
             ),
             includes="""
-                           #include "swift2/dastgenTest.h"
+                           #include "swift2/dastgenTest/dastgenTest.h"
                            """,
         )
 
@@ -714,15 +714,15 @@ class DastgenTestDummyParticle(Particle):
             name="dummyDastgenTest2",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_last_time_kernel="""::dastgenTest::checkDastgen(localParticles);""",
+            touch_vertex_last_time_kernel="""::swift2::dastgenTest::checkDastgen(localParticles);""",
             unprepare_traversal_kernel="""
                                        globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                       ::dastgenTest::reportStep<globaldata::{PARTICLE}>( "{PARTICLE}" );
+                                       ::swift2::dastgenTest::reportStep<globaldata::{PARTICLE}>( "{PARTICLE}" );
                                        """.replace(
                 "{PARTICLE}", self.name
             ),
             includes="""
-                           #include "swift2/dastgenTest.h"
+                           #include "swift2/dastgenTest/dastgenTest.h"
                            """,
         )
 
