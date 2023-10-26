@@ -409,7 +409,9 @@ Particle properties:
 
             if step.includes is None:
                 step.includes = ""
-            step.includes += """\n#include "swift2/dependencyChecks/DependencyChecks.h"\n"""
+            step.includes += (
+                """\n#include "swift2/dependencyChecks/DependencyChecks.h"\n"""
+            )
 
         return steps
 
