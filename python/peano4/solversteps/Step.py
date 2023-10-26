@@ -71,16 +71,15 @@ class Step:
     def __sort(self):
         """!
 
-        Simple bubble sort the action sets, such that their ordering priority
-        is preserved. The lower(!) the priority, the 
-        earlier the action set should be called throughout the steps down.
+        Simple bubble sort the action sets, such that their descend_invocation_order
+        is preserved. 
         
-        @see peano4.solversteps.ActionSet.priority
+        @see peano4.solversteps.ActionSet.descend_invocation_order
 
         """
         for i in range(0, len(self.action_sets)):
             for j in range(i + 1, len(self.action_sets)):
-                if self.action_sets[i].priority > self.action_sets[j].priority:
+                if self.action_sets[i].descend_invocation_order > self.action_sets[j].descend_invocation_order:
                     tmp = self.action_sets[i]
                     self.action_sets[i] = self.action_sets[j]
                     self.action_sets[j] = tmp
@@ -125,31 +124,31 @@ class Step:
     def use_vertex(self, submodel):
         self.vertex_data.append(submodel)
 
-    def highest_priority(self):
+    def highest_descend_invocation_order(self):
         """!
 
-        Return max priority over all action sets associated with this step.
+        Return max descend_invocation_order over all action sets associated with this step.
         
-        @see peano4.solversteps.ActionSet.priority
+        @see peano4.solversteps.ActionSet.descend_invocation_order
 
         """
         self.__sort()
         if len(self.action_sets) == 0:
             return 0
-        return self.action_sets[-1].priority
+        return self.action_sets[-1].descend_invocation_order
 
-    def lowest_priority(self):
+    def lowest_descend_invocation_order(self):
         """!
 
-        Return minimum priority over all action sets associated with this step.
+        Return minimum descend_invocation_order over all action sets associated with this step.
         
-        @see peano4.solversteps.ActionSet.priority
+        @see peano4.solversteps.ActionSet.descend_invocation_order
 
         """
         self.__sort()
         if len(self.action_sets) == 0:
             return 0
-        return self.action_sets[0].priority
+        return self.action_sets[0].descend_invocation_order
 
     def get_vertex_operations_signature(self):
         result = ["marker", "const peano4::datamanagement::VertexMarker&"]

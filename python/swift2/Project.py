@@ -540,15 +540,15 @@ levels.
 #include "repositories/GlobalState.h"
 """,
         )
-        action_set_plot_grid.priority = self.algorithm_step_plot.highest_priority() + 1
+        action_set_plot_grid.descend_invocation_order = self.algorithm_step_plot.highest_descend_invocation_order() + 1
         action_set_plot_grid.parallel = True
         self.algorithm_step_plot.add_action_set(action_set_plot_grid)
 
         action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(
             self._global_max_h
         )
-        action_set_create_regular_grid.priority = (
-            self.algorithm_step_create_grid.lowest_priority() - 1
+        action_set_create_regular_grid.descend_invocation_order = (
+            self.algorithm_step_create_grid.lowest_descend_invocation_order() - 1
         )
         action_set_create_regular_grid.parallel = True
         self.algorithm_step_create_grid.add_action_set(action_set_create_regular_grid)

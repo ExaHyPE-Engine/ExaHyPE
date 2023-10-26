@@ -297,7 +297,7 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
 
         """
         super(ParticleParticleInteraction_StackOfLists, self).__init__(
-            priority=1, parallel=False
+            descend_invocation_order=1, parallel=False
         )
 
         self._particle_set = particle_set

@@ -83,8 +83,6 @@ def translate_one_step_of_species_into_mesh_traversal(
       Inout parameter. We append a new marker to this sequence.
     
     """
-    priority = 0
-
     new_step = peano4.solversteps.Step(
         "{}{}{}_sweep{}".format(
             get_observer_prefix(step_type),
@@ -109,15 +107,14 @@ def translate_one_step_of_species_into_mesh_traversal(
                 )
             )
         action_set_erase_task_markers          = peano4.toolbox.ClearTaskNumbersOnMesh(current_species_set.name)
-        action_set_erase_task_markers.priority = new_step.lowest_priority() - 1
+        action_set_erase_task_markers.descend_invocation_order = new_step.lowest_descend_invocation_order() - 1
         action_set_erase_task_markers.parallel = True
         new_step.add_action_set(action_set_erase_task_markers)
 
 
     action_set_update_marker = UpdateParticleMarker(current_species_set)
-    action_set_update_marker.priority = new_step.highest_priority() + 1
+    action_set_update_marker.descend_invocation_order = new_step.highest_descend_invocation_order() + 1
     action_set_update_marker.parallel = True
-    priority = priority + 1
     new_step.add_action_set(action_set_update_marker)
 
     #
@@ -167,11 +164,10 @@ def translate_one_step_of_species_into_mesh_traversal(
                 additional_includes=step.includes + DefaultIncludes,
                 active_particle_set=step.input_particles,
             )
-        action_set_particle_particle_interaction.priority = (
-            new_step.highest_priority() + 1
+        action_set_particle_particle_interaction.descend_invocation_order = (
+            new_step.highest_descend_invocation_order() + 1
         )
         action_set_particle_particle_interaction.parallel = True
-        priority = priority + 1
         new_step.add_action_set(action_set_particle_particle_interaction)
     elif step.dependencies == AlgorithmStep.Dependencies.SELF:
         if verbose:
@@ -193,9 +189,8 @@ def translate_one_step_of_species_into_mesh_traversal(
             additional_includes=step.includes,
             active_particle_set=step.input_particles,
         )
-        action_set_particle_update.priority = new_step.highest_priority() + 1
+        action_set_particle_update.descend_invocation_order = new_step.highest_descend_invocation_order() + 1
         action_set_particle_update.parallel = True
-        priority = priority + 1
         new_step.add_action_set(action_set_particle_update)
     else:
         assert False, "step {} seems to have no action at all".format(step)

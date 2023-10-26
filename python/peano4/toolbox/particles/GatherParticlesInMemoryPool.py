@@ -17,13 +17,13 @@ class GatherParticlesInMemoryPool(ActionSet):
 
     """
 
-    DefaultPriority = AbstractUpdateParticleGridAssociation.DefaultPriority - 1
+    DefaultDescendInvocationOrder = AbstractUpdateParticleGridAssociation.DefaultDescendInvocationOrder - 1
 
     def __init__(self, 
                  particle_set,
                  ):
         super(GatherParticlesInMemoryPool, self).__init__(
-            priority=self.DefaultPriority, parallel=False
+            descend_invocation_order=self.DefaultDescendInvocationOrder, parallel=False
         )
         self._particle_set = particle_set
         self.d = {}
