@@ -40,6 +40,8 @@
  @snippet benchmarks/multigrid/petsc/poisson/dg.py Configure build 
 
  ## Introduce the solver
+
+@todo Change the arguments' names to the "from" notation.
   
  A DG solver is created through 
 
@@ -130,34 +132,44 @@ and @f$ b @f$ is the right-hand side vector obtained from @f$ \int _{\text{cell}
  
   - Each cell holds @f$ (p+1)^d @f$ degrees of freedom (dof). We specify this 
     through the variable <code> polynomial_degree </code>. The solver class internally then
-    will take care of the +1.
+    will take care of the +1. 
 
   - Each node within the cell holds one unknown, as we solve a scalar equation.
     Therefore, 
     
-            cell_unknowns=1
+            cell_unknowns = 1
 
     If you have vector-valued PDEs, it is worth studying the documentation of
     <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver itself</a>
     and notably the section "Data storage" therein.
+    <br><br>
 
   - The operator @f$ A_{cc} @f$ takes the dofs within a cell and couples
     them with each other. As mentioned earlier, it respresents @f$ \int _{\text{cell}_v} ( \nabla u, \nabla v) \ dx @f$.
     In the interface above, it is specified by the two parameters <code> cell_cell_lhs_matrix </code>
     and <code> cell_cell_lhs_matrix_scaling </code>.
+    <br><br>
 
-  - The operator @f$ P_{cf} @f$ takes the solution from a cell and projects it 
-    the faces. Hence, @f$ P_{cf} \in \mathbb{R}^{2d(p+1)^{d-1} \times (p+1)^{d}} @f$.
+  - The operator @f$ P_{f \leftarrow c} @f$ takes the values from a cell and projects it onto
+    the faces. Hence, @f$ P_{f \leftarrow c} \in \mathbb{R}^{2d(p+1)^{d-1} \times (p+1)^{d}} @f$.
     The 2d equals the number of faces of a cell, while the cell is a submanifold
-    and therefore hosts @f$ (p+1)^{d-1} @f$. 
-    The result is written into 
-    @f$ u^+ @f$ or @f$ u^- @f$ respectively on the faces.
+    and therefore hosts @f$ (p+1)^{d-1} @f$.
+    For the Poisson equation, we need to project onto the faces not the solution itself, but the normal component of the gradient of the solution.
+    This is because the normal gradient appears in the face integral of the above weak formulation, and so it will need to be evaluated on the cell's boundary.
+    As such, the operator @f$ P_{f \leftarrow c} @f$ takes the gradient @f$ \nabla u @f$ from a cell and projects it onto the faces to get the normal component
+    @f$ ( \nabla u, n ) @f$, which is, in fact, one of @f$ \frac{\partial u}{ \partial x_i}, i = 0,..,d-1 @f$ as we have a Cartesian mesh.
+    The result is written into @f$ q^+ @f$ or @f$ q^- @f$ on the faces, depending on the relative position of the face with respect to the cell.
     Read through <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver's</a>
     data storage section and also consult Peano's @ref multigrid_enumeration "enumeration discussion"
     for information on the ordering.
+    In the interface above, it is specified by the two parameters <code> cell_to_face_matrix </code> and <code> cell_to_face_matrix_scaling </code>.
+    <br><br>
 
-  - The operator @f$ P_{fc} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
+  - The operator @f$ P_{c \leftarrow f} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
     the updates for the cell.
+    For the Poisson equation, we use it for storing the matrix @f$ A_{c \leftarrow f} @f$ responsible for the face integral of the normal gradient in the above formulation.
+    In the Python interface, it is specified by the two parameters <code> face_to_cell_matrix </code> and <code> face_to_cell_matrix_scaling </code>.
+    <br><br>
     
   - The right-hand side operator is the @f$ (p+1) \times (p+1) @f$ matrix which is
     applied to the nodal values of f, i.e. the @f$ f(x) @f$ within the Gauss-Lobatto
@@ -174,25 +186,24 @@ and @f$ b @f$ is the right-hand side vector obtained from @f$ \int _{\text{cell}
 
 @todo Tobias. Continue writing.
 
-
-
   - On the faces, we have the gradient @f$ \nabla u @f$ from the left and from
     right right. So we might be tempted to hold @f$ \nabla u^+ @f$ and
     @f$ \nabla u^- @f$. So @f$ 2d @f$ quantities in total. However, this is 
     not necessary: We are really only interested in the gradient along the 
     normal. Therefore, we set 
      
-            face_unknowns=1 
+            face_unknowns = 1 
     
     These are not really unknowns in the linear algebra sense. They are 
     helpers.        
   - The operator @f$ A_{ff} @f$ takes the @f$ 2(p+1)^{d-1} @f$ on the face
     and yields the 
     @f$ (p+1)^{d-1} @f$ averages.
+    In the interface, it is specified by the parameter <code> face_face_Riemann_problem_matrix </code>.
+
  
  
- . The
- treatment of the face terms differs from Riemann solver to Riemann solver.
+The treatment of the face terms differs from Riemann solver to Riemann solver.
 
 
 This discussion follows the Discontinuous Galerking discussion. The only
