@@ -69,7 +69,7 @@ parser.add_argument(
     "-pd",
     "--peano-dir",
     dest="peanodir",
-    default="../../../../",
+    default="../../../",
     help="Peano4 directory",
 )
 parser.add_argument(
@@ -350,6 +350,7 @@ project.algorithm_step_initial_conditions.add_action_set(
         particle_set=particle_set,
         initialisation_call=initialisation_snippet,
         coordinates=[(EARTH_X_INI, EARTH_Y_INI, 0)],
+        additional_includes = """#include "Constants.h"\n"""
     )
     # coordinates          = [ (EARTH_X_INI,EARTH_Y_INI,0), (SUN_X_COORD,SUN_Y_COORD,0) ] )
 )
@@ -383,7 +384,7 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
     particle_set,
     "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
 )
-particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
+particle_plotter.add_attribute_to_plot(particle._velocity, dimensions)
 particle_plotter.add_attribute_to_plot(energy_kin_attr, 1)
 particle_plotter.add_attribute_to_plot(energy_pot_attr, 1)
 particle_plotter.add_attribute_to_plot(energy_tot_attr, 1)
@@ -437,7 +438,7 @@ if args.clean_temporary_directories:
     for dir in dirs:
         shutil.rmtree(dir)
 
-peano4_project.generate(overwrite=1, throw_away_data_after_generation=True)
+peano4_project.generate(overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True)
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 
 # remove output files from previous runs
