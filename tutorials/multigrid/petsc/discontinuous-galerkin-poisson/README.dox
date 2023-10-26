@@ -4,7 +4,7 @@
 
  We solve the Poisson equation 
  
- @f$ -\Delta u = 2 \pi^2 \Pi _d \sin (\pi x_d) @f$ 
+ @f$ -\Delta u = 2 \pi^2 \Pi _d \sin (\pi x_d) @f$
  
  over the unit square or cube, respectively.
  Things that you should be familiar with before you read this tutorial:
@@ -107,14 +107,31 @@
   - 
   \int _{\partial \text{cell}_v} (\hat{\nabla u},n) \cdot v \ dx
   =
-  \int _{\text{cell}_v} f \cdot v dx 
+  \int _{\text{cell}_v} f \cdot v \ dx 
 \f}
+
+As the problem is discretized by chosing appropriate test functions and calculating the integrals,
+the latest equation can be written in the matrix form:
+
+\f{equation}{
+  A_{cc} \ \bar{u} + A_{c \leftarrow f} \ \bar{q}^f = b,
+\f}
+
+where @f$ \bar{u} @f$ is the vector of unknowns that contatins the values of the unknow function 
+@f$ u @f$ at the cell nodes. Here we have also introduced @f$ q^f := \left. (\hat{\nabla u},n) \right|_{\partial \text{cell}_v} @f$,
+which is the normal component of the gradient vector on the cell's boundary; and the corresponding vector @f$ \bar{q}^f @f$ for @f$ q^f @f$ evaluated 
+at all face nodes for all faces touching the given cell.
+Further, the operator @f$ A_{cc} @f$ appears from calculating the cell integral
+@f$ \int _{\text{cell}_v} ( \nabla u, \nabla v) \ dx @f$, operator @f$ A_{c \leftarrow f} @f$ represents the face integral
+@f$ - \int _{\partial \text{cell}_v} (\hat{\nabla u},n) \cdot v \ dx =: - \int _{\partial \text{cell}_v} q^f \cdot v \ dx @f$
+and @f$ b @f$ is the right-hand side vector obtained from @f$ \int _{\text{cell}_v} f \cdot v \ dx @f$.
 
  There are some ingredients that are the same for each and every DG flavour:
  
   - Each cell holds @f$ (p+1)^d @f$ degrees of freedom (dof). We specify this 
-    through the variable polynomial_degree. The solver class internally then
+    through the variable <code> polynomial_degree </code>. The solver class internally then
     will take care of the +1.
+
   - Each node within the cell holds one unknown, as we solve a scalar equation.
     Therefore, 
     
@@ -123,10 +140,12 @@
     If you have vector-valued PDEs, it is worth studying the documentation of
     <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver itself</a>
     and notably the section "Data storage" therein.
+
   - The operator @f$ A_{cc} @f$ takes the dofs within a cell and couples
-    them with each other. It respresents @f$ \int _{\text{cell}_v} ( \nabla u, \nabla v) \ dx @f$.
-    In the interface above, it is specified by the two parameters cell_cell_lhs_matrix
-    and cell_cell_lhs_matrix_scaling.
+    them with each other. As mentioned earlier, it respresents @f$ \int _{\text{cell}_v} ( \nabla u, \nabla v) \ dx @f$.
+    In the interface above, it is specified by the two parameters <code> cell_cell_lhs_matrix </code>
+    and <code> cell_cell_lhs_matrix_scaling </code>.
+
   - The operator @f$ P_{cf} @f$ takes the solution from a cell and projects it 
     the faces. Hence, @f$ P_{cf} \in \mathbb{R}^{2d(p+1)^{d-1} \times (p+1)^{d}} @f$.
     The 2d equals the number of faces of a cell, while the cell is a submanifold
@@ -136,8 +155,10 @@
     Read through <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver's</a>
     data storage section and also consult Peano's @ref multigrid_enumeration "enumeration discussion"
     for information on the ordering.
+
   - The operator @f$ P_{fc} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
-    the updates for the cell. 
+    the updates for the cell.
+    
   - The right-hand side operator is the @f$ (p+1) \times (p+1) @f$ matrix which is
     applied to the nodal values of f, i.e. the @f$ f(x) @f$ within the Gauss-Lobatto
     or Gauss-Legendre points of a cell. This default right-hand side is a ***mass matrix***
