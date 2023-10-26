@@ -14,7 +14,7 @@ All of the recommendations there apply for SWIFT, too.
 
 
 
-## Optimisting the single core performance of individual species (vectorisation)
+# Optimisting the single core performance of individual species (vectorisation)
 
 To enable proper vectorisation is not trivial within a Lagrangian framework,
 as we typically need the right instructions, i.e. compute kernels, but also
@@ -44,7 +44,7 @@ well-administered memory.
 
 
 
-### Step 1: Maintaining the active sets
+## Step 1: Maintaining the active sets
 
 There are two different versions how to maintain the active sets: We can either
 build them up as proper sets and add particles to the set whenever we
@@ -88,7 +88,7 @@ project.initialisation_steps_task_graph_compiler  = swift2.graphcompiler.seriali
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-### Step 2: Storage of particles and maintaining the particle-mesh association
+## Step 2: Storage of particles and maintaining the particle-mesh association
 
 Maintaining the association of particles to meshes is key, as Peano traverses
 the mesh and issues the particle updates for those particles tied to particular
@@ -155,7 +155,7 @@ The line above changes the particle set generator, i.e. the class which maps the
 particle set onto an implementation.
 
 
-### Step 3: Expose all particle attributes
+## Step 3: Expose all particle attributes
 
 Vectorisation requires very aggressive inlining. To facilitate such inlining,
 all the setters and getters of particle attributes have to be available in the
@@ -172,7 +172,7 @@ facilitiates very aggressive inlining via copy n paste.
 
 
 
-### Step 4: Equip your solver with vectorised kernels
+## Step 4: Equip your solver with vectorised kernels
 
 Some of Swift's solvers are already well-prepared to exploit the knowledge about
 optimised memory layouts and proper setups of action sets. Once you have
@@ -180,7 +180,7 @@ followed the steps above, you can now activate this vectorisation. It differs
 from solver to solver how to do this, but most offer a boolean flag in their
 constructor.
 
-#### Step 4.1: Making your kernels vectoriser friendly
+### Step 4.1: Making your kernels vectoriser friendly
 
 While vectorising any non-trivial kernel is as much art as it is engineering, there are common steps most kernels can benefit from.
 
@@ -224,11 +224,12 @@ This message means that the kernel is vectorised. For fully vectorised kernels, 
 ```
 
 
-## Other References
+# Further References
 
 See also
 
 - Notes in @ref benchmarks_swift2_hydro_noh_imposion_test
+- Section @ref section_new_solver_vectorisation_hints on page @ref swift_particle_new_solver
 
  */
 

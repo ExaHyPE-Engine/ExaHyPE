@@ -91,7 +91,7 @@ what fields are always present. If not, document what fields need to be present.
 It may be useful to introduce parameters which are valid for your entire particle
 species. For example, you want need a particle independent CFL factor, or maximal
 smoothing length, or resolution, etc. This can easily be achieved through use of
-static (or even const static) class variables, which you can also generate using
+`static` (or even `const static`) class variables, which you can also generate using
 DaStGen2. See the corresponding documentation on \ref page_dastgen.
 
 
@@ -104,6 +104,10 @@ DaStGen2. See the corresponding documentation on \ref page_dastgen.
 With the particle data defined, we can now set up what equations are being solved, and in
 which order, for each particle for each simulation step. This is documented in detail in
 @ref Section_SwiftAlgorithmStep on the @ref swift_particle_lifecycle page.
+
+If you are planning on using a new solver, you will need to write new solver kernels.
+Consult the documentation on that given on the
+\ref swift_particle_new_solver "create your own solver" page.
 
 
 
