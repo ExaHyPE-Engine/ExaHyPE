@@ -243,4 +243,4 @@ namespace dependencyChecks {
 } // namespace dependencyChecks
 } // namespace swift2
 
-#include "dependencyChecks.cpph"
+#include "DependencyChecks.cpph"

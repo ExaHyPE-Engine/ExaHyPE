@@ -229,7 +229,7 @@ Particle properties:
         self.data.add_attribute(step_progression)
 
         # String template for dependency check call
-        check_template = """\n  swift2::dependencyChecks::dependencyCheck{StepType}(localParticles,
+        check_template = """\n  ::swift2::dependencyChecks::dependencyCheck{StepType}(localParticles,
                   marker,
                   globaldata::{NAME}::{StepType}::{0},
                   globaldata::{NAME}::SweepStage::{1},
@@ -239,7 +239,7 @@ Particle properties:
         check_template = check_template.replace("{StepType}", step_type_name)
 
         # String template for marking a step/stage call
-        mark_template = """\n  swift2::dependencyChecks::dependencyMark{StepType}(localParticles,
+        mark_template = """\n  ::swift2::dependencyChecks::dependencyMark{StepType}(localParticles,
                   marker,
                   globaldata::{NAME}::{StepType}::{0},
                   globaldata::{NAME}::SweepStage::{1},
@@ -251,7 +251,7 @@ Particle properties:
 
         # String template for dependency check call with loop over active particles
         check_template_active_particles = """
-          swift2::dependencyChecks::dependencyCheckActiveParticles{StepType}(activeParticles,
+          ::swift2::dependencyChecks::dependencyCheckActiveParticles{StepType}(activeParticles,
                                                                      globaldata::{NAME}::{StepType}::{0}
                                                                     );\n"""
         check_template_active_particles = check_template_active_particles.replace(
@@ -321,7 +321,7 @@ Particle properties:
                 # Only exception is first AlgorithmStep: There, first re-set
                 # all counters
                 step.touch_vertex_first_time_kernel = (
-                    "\n  swift2::dependencyChecks::clearDependencyChecks"
+                    "\n  ::swift2::dependencyChecks::clearDependencyChecks"
                     + step_type_name
                     + "(localParticles);\n"
                     + mark_template.format(

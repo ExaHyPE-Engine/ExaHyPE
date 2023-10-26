@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "kernels/ParticleState.h"
+#include "swift2/kernels/ParticleState.h"
 
 
 template <typename Particle>
