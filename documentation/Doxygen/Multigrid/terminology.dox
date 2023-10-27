@@ -9,7 +9,7 @@ freedom how to arrange the weights geometrically and to pick polynomials.
 The sketch below depits a Gauss-Legendre (left) and Gauss-Lobatto (right) 
 arrangement.
 
-@image html gaussLobatto.png
+@image html GaussLobatto.png
 
 <div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
 We refer to the points which host weights of Lagrangian polynomials as ***nodes***. Each node can hold 

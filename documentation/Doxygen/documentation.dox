@@ -33,6 +33,11 @@ following terminology in mind:
   within a section where two hashes denote sections.
 
 
+The code on Peano's website is generated everytime we get a top-level push, 
+i.e. a push into the master branch p4. Therefore, the online docu will always
+lag behind the latest developments. You might be better off with creating your
+own docu on your branch locally.
+
 
 Rationale
 ============
@@ -221,16 +226,39 @@ that this mainly affects the Python code, but not the C++ documentation.
 Brief doxygen cheat sheet
 ======================
 
+The documentation of doxygen is available from https://www.doxygen.nl/manual, 
+and this page is definitely the first point of contact. In the sections below,
+we summarise some frequently used features or techniques.
+
+
+## Substructuring
+
+
 Creating new chapters within the page (note what appears in the dropdown on the left
-hand side) is done with the "=" symbol. The above chapter above is written under 
-the hood as:
+hand side) can be done in two ways:
 
 \verbatim
 
 Brief doxygen cheat sheet
 ======================
 
+
+# Brief doxygen cheat sheet
+
 \endverbatim
+
+The above chapter will then appear on the left-hand side menu.  
+Bold headings such as the one above are created with two hash symbols. This creates
+a "secondary" chapter.
+The above line, under the hood, reads:
+
+\verbatim
+## Headings
+\endverbatim
+
+You can add arbitrary levels of nested hierarchies. However, if you leave 
+out one, i.e. you have one hash and then a chapter followed by three hashes,
+the drop down menu on the left will be confused and not unroll correctly.
 
 ## Comments 
 
@@ -246,15 +274,7 @@ Anything in here is ignored by doxygen.
 
 \endverbatim
 
-## Headings
 
-Bold headings such as the one above are created with two hash symbols. This creates
-a "secondary" chapter.
-The above line, under the hood, reads:
-
-\verbatim
-## Headings
-\endverbatim
 
 ## Code snippets
 
@@ -374,6 +394,42 @@ Simply write:
 
 You can enumerate lists by starting each new line with \verbatim \li \endverbatim
 
-The standard newline character \verbatim \n \endverbatim works as expected.
+The standard newline character \verbatim \n \endverbatim works as expected. 
+However, it is easiest to create new enumerations or lists via
+
+~~~~~~~~~~~~~~~~~~~~~
+1. This is the first item
+2. This is the second item
+
+
+- This is the first item
+- This is the second item
+~~~~~~~~~~~~~~~~~~~~~
+
+
+## Links to existing code snippets
+
+This section is particularly relevant for tutorials and the documentation of 
+benchmark scripts. Whenever you want to refer to a particular part of a script,
+a convenient way is to mark this part with
+
+~~~~~~~~~~~~~~~~~~~~~~
+/ / ! [My label]
+My fancy source code
+/ / ! [My label]
+~~~~~~~~~~~~~~~~~~~~~~
+
+Please remove the spaces above between the slashes and the exlamation mark.
+They are in there, as the parser otherwise fails.
+Once the source code annotation is in, you can refer to this code snippet in the doxygen docu via
+
+
+~~~~~~~~~~~~~~~~~~~~~~
+@snippet myfile.py My label
+~~~~~~~~~~~~~~~~~~~~~~
+
+This reference will display the code snippet in the generated html code.
+The outcome resembles what we know from Jupyter notebooks.
+
 
 */

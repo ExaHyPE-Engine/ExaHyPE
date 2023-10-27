@@ -28,9 +28,11 @@ args = parser.parse_args()
 
 assert args.dimensions == 2, "not ready for 3d yet"
 
+#//! [Create project]
 project = multigrid.petsc.Project(project_name = "DG", 
                                   namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
                                   ) 
+#//! [Create project]
 
                         
 matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args.degree,
@@ -38,7 +40,8 @@ matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args
                                                    unknowns_per_cell_node = 1,
                                                    unknowns_per_face_node = 1,  # for DG, this has to equal unknowns_per_cell_dof
                                                    )
-
+                        
+#//! [Create solver]
 solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
                                                                      cell_unknowns        = 1,                      # unknowns_per_cell_dof,
@@ -59,10 +62,9 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      )
 
 project.add_solver( solver )
-                        
-#
-# Configure build
-#
+#//! [Create solver]
+
+#//! [Configure build]
 if args.mode=="release":
   build_mode = peano4.output.CompileMode.Release
 if args.mode=="stats":
@@ -82,11 +84,10 @@ project.set_global_simulation_parameters(
 
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )
+#//! [Configure build]
     
     
-#
-# Generate code and then copy cpp file over main
-#
+#//! [Create Peano project]
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.generate()
 
@@ -95,5 +96,6 @@ if args.j>0:
   os.system( "make -j{}".format(args.j) )
 else:
   os.system( "make -j" )
+#//! [Create Peano project]
   
 print("Done")
