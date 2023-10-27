@@ -55,6 +55,7 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/accelerator/sycl/accelerator.cpp \
 	tarch/accelerator/sycl/Device.cpp \
 	tarch/accelerator/sycl/DeviceInfo.cpp \
+	tarch/accelerator/sycl/GPUMemoryManager.cpp \
 	tarch/accelerator/cuda/ErrorCheck.cpp \
 	tarch/accelerator/cuda/DeviceInfo.cpp \
 	tarch/accelerator/cuda/Device.cpp \
