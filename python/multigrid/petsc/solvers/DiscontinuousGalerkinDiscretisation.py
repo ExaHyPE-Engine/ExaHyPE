@@ -79,11 +79,13 @@ class AssemblePetscMatrix(ActionSet):
             globalCellIndex+col,
             projectionCellToFaceMatrix(d * dofsPerFace + row,col)
           );
+
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalFirstDoFIndexOfRightFace + row, 
             globalCellIndex+col,
             projectionCellToFaceMatrix(d * dofsPerFace + row + Dimensions*dofsPerFace,col)
           );
+          
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalCellIndex+col,
             globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
