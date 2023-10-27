@@ -106,7 +106,7 @@ kernels are parallelised internally, others are not. Once these tests are
 complete, we allow two threads to issue the same type of kernel in parallel.
 This way, we can stress test the system.
 
-Per realisation, we get six measurements:
+Per realisation, we get nine measurements:
 
 1. The first one is the total time of a single kernel execution.
 2. The second entry is the update per degree of freedom within a single kernel.
@@ -116,7 +116,9 @@ Per realisation, we get six measurements:
    should be always be bigger than the first one. However,
 4. the fourth entry gives us the time per degree of freedom update if we launch
    multiple kernels in parallel.
-5. The fifth and sixth entry provide the raw data, so we can see the standard
+5. the fifth entry gives the time spent solely within the compute kernels.
+6. the sixth entry gives the compute kernel time per degree of freedom.
+7. The seventh, eighth and nineth entry provide the raw data, so we can see the standard
    deviation of the measurements. We also see that we usually sample each value
    multiple times to eliminate noise.
    
