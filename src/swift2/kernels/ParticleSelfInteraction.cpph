@@ -1,5 +1,7 @@
 #include <type_traits>
 
+#include "swift2/hydro_dimensions.h"
+#include "swift2/kernels/ParticleState.h"
 #include "swift2/kernels/SwiftKernelPlaceholders.h"
 #include "tarch/logging/Log.h"
 
@@ -56,7 +58,7 @@ void swift2::kernels::endDensityCalculation(const ParticleContainer& localPartic
 
     /* Some smoothing length multiples */
     const double h_inv              = 1.0 / h_a;
-    const double h_inv_dim          = std::pow(h_inv, hydroDimensions);
+    const double h_inv_dim          = swift2::hydroDimensions::pow_dimension(h_inv);
     const double h_inv_dim_plus_one = h_inv_dim * h_inv;
 
     /* Final operation. Add the self-contributions (i.e. at q=0) */
@@ -91,7 +93,7 @@ void swift2::kernels::endDensityCalculation(const ParticleContainer& localPartic
     // @TODO Mladen: Why is this here???
     {
       //        const double timeStepSize = GLOBAL_TIME_STEP_SIZE;
-      const double hydro_eta_dim = std::pow(etaFactor, hydroDimensions);
+      const double hydro_eta_dim = swift2::hydroDimensions::pow_dimension(etaFactor);
       const double eps           = hTolerance;
 
       /* h value at the start of iteration procedure
@@ -110,8 +112,8 @@ void swift2::kernels::endDensityCalculation(const ParticleContainer& localPartic
         h_old = h_init;
       }
 
-      const double h_old_dim           = std::pow(h_old, hydroDimensions);
-      const double h_old_dim_minus_one = std::pow(h_old, hydroDimensions - 1);
+      const double h_old_dim           = swift2::hydroDimensions::pow_dimension(h_old);
+      const double h_old_dim_minus_one = swift2::hydroDimensions::pow_dimension_minus_one(h_old);
 
       double h_new;
 
@@ -215,6 +217,7 @@ void swift2::kernels::endDensityCalculation(const ParticleContainer& localPartic
   }
 }
 
+
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculationWithConstantSmoothingLength(const ParticleContainer& localParticles) {
 
@@ -227,8 +230,10 @@ template <typename ParticleContainer>
 void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& localParticles) {
 
   for (auto* particle : localParticles) {
-    swift2::kernelPlaceholders::hydro_prepare_force(particle);
-    swift2::kernelPlaceholders::hydro_reset_acceleration(particle);
+    if (localParticleCanBeWorkedOnVertexKernel(particle)) {
+      swift2::kernelPlaceholders::hydro_prepare_force(particle);
+      swift2::kernelPlaceholders::hydro_reset_acceleration(particle);
+    }
   }
 }
 
@@ -236,7 +241,9 @@ template <typename ParticleContainer>
 void swift2::kernels::endHydroForceCalculation(const ParticleContainer& localParticles) {
 
   for (auto* particle : localParticles) {
-    swift2::kernelPlaceholders::hydro_end_force(particle);
+    if (localParticleCanBeWorkedOnVertexKernel(particle)) {
+      swift2::kernelPlaceholders::hydro_end_force(particle);
+    }
   }
 }
 
@@ -251,11 +258,7 @@ void swift2::kernels::flagBoundaryParticles(
 
   /* TODO MLADEN: Document parameters? */
   for (auto* particle : localParticles) {
-    if(
-      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-      and
-      not particle->getIsBoundaryParticle()
-    ){
+    if (localParticleCanBeWorkedOnVertexKernel(particle) and not particle->getIsBoundaryParticle()) {
 
       /* Flag if particle is at boundary of the simulation box */
       /* TODO MLADEN: Boundary particle width shouldn't be hardcoded like this. */

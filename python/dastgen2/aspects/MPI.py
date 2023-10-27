@@ -188,11 +188,9 @@ void """
         )
 
         for i in self._data_model._attributes:
-            if i._is_static or i._is_const_static or i._is_constexpr:
-                # No comms for static members
+            if i._is_static or i._is_const_static or i._is_constexpr or i._is_const:
+                # No comms for static/const members
                 continue
-            elif i._is_const:
-                raise NotImplementedError
             if i.ifdefs != []:
                 result += construct_ifdef_string(i.ifdefs)
                 result += "  NumberOfAttributes++;\n#endif \n"
@@ -208,11 +206,9 @@ void """
 """
 
         for i in self._data_model._attributes:
-            if i._is_static or i._is_const_static or i._is_constexpr:
-                # No comms for static members
+            if i._is_static or i._is_const_static or i._is_constexpr or i._is_const:
+                # No comms for static/const members
                 continue
-            elif i._is_const:
-                raise NotImplementedError
             if i.ifdefs != []:
                 result += construct_ifdef_string(i.ifdefs)
             for ii in i.get_native_MPI_type():
@@ -232,11 +228,9 @@ void """
 """
 
         for i in self._data_model._attributes:
-            if i._is_static or i._is_const_static or i._is_constexpr:
-                # no comms for static members
+            if i._is_static or i._is_const_static or i._is_constexpr or i._is_const:
+                # no comms for static/const members
                 continue
-            elif i._is_const:
-                raise NotImplementedError
             if i.ifdefs != []:
                 result += "\n"
                 result += construct_ifdef_string(i.ifdefs)
