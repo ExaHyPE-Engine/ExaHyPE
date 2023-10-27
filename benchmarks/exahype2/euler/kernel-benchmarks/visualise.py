@@ -26,11 +26,11 @@ Colours = [ "#ff0000",
             ]
 
 
-Devices         = ["host", "device 0", "device 1", "device 2", "device 3"]
+Devices         = ["host", "device 0"]
 CallSemantics   = ["functors", "static"]
 DataFlow        = ["patch-wise", "batched", "task-graph" ]
-Parallelisation = ["no parallelism", "parallel for", "subtasks", "map", "managed", "usm"] 
-  
+Parallelisation = ["no parallelism", "parallel for", "subtasks", "map", "managed", "usm", "copy"]
+
 
 def parse(device, call_semantics, data_flow, parallelisation):
   """"
@@ -44,8 +44,8 @@ def parse(device, call_semantics, data_flow, parallelisation):
   throughput_total   = []
   throughput_kernel  = []
   best_case_label    = ""
-  best_case_position = -1 
-  best_case_label_distance_from_coordinate_system_origin_squared = 0 
+  best_case_position = -1
+  best_case_label_distance_from_coordinate_system_origin_squared = 0
   current_number_of_threads = "xxx"
   current_number_of_patches = "xxx"
 
@@ -78,44 +78,45 @@ for device in Devices:
   plt.clf()
   marker_counter = 0
   for call_semantics in CallSemantics:
+    if device == "device 0": call_semantics = ""
     for data_flow in DataFlow:
       for parallelisation in Parallelisation:
         throughput_total, throughput_kernel, best_case_label, best_case_position = parse(device, call_semantics, data_flow, parallelisation)
         assert len(throughput_total)==len(throughput_kernel), "data cardinalities {} vs {} with {}".format( len(throughput_total), len(throughput_kernel), best_case_label )
         if len(throughput_total)>0:
           print( "data found for {}, {}, {}".format(call_semantics, data_flow, parallelisation) )
-          plt.scatter( throughput_total, 
+          plt.scatter( throughput_total,
                        throughput_kernel,
                        c      = Colours[marker_counter % len(Colours)],
                        marker = Markers[marker_counter % len(Markers)],
                        alpha  = 0.5
                        )
-          plt.scatter( throughput_total[best_case_position], 
+          plt.scatter( throughput_total[best_case_position],
                        throughput_kernel[best_case_position],
                        c      = Colours[marker_counter % len(Colours)],
                        marker = Markers[marker_counter % len(Markers)],
                        label  = call_semantics + ", " + data_flow + ", " + parallelisation,
                        )
-          plt.text( throughput_total[best_case_position], 
-                    throughput_kernel[best_case_position], 
+          plt.text( throughput_total[best_case_position],
+                    throughput_kernel[best_case_position],
                     best_case_label,
                     c      = Colours[marker_counter % len(Colours)],
                     )
           marker_counter += 1
-      
+
   plt.title( device + " (launching threads/patches per launch)")
   plt.legend()
   plt.xlabel("Total throughput (dofs/s)")
   plt.ylabel("Throughput for one kernel (dofs/s)")
-  
+
   output = args.file + "-" + device
-  plt.savefig( output + ".png" )
+  #plt.savefig( output + ".png" )
   plt.savefig( output + ".pdf" )
 
   plt.xscale('log')
   plt.yscale('log')
-  plt.savefig( output + "-log.png" )
+  #plt.savefig( output + "-log.png" )
   plt.savefig( output + "-log.pdf" )
 
-  
-  
+
+
