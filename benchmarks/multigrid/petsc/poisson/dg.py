@@ -21,9 +21,9 @@ parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-deg", "--degree",             dest="degree",         type=int, required=True, help="Polynomial degree")
-parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.1, help="Mesh size")
-parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
+parser.add_argument("-deg", "--degree",             dest="degree",         type=int, default=1, help="Polynomial degree")
+parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.4, help="Mesh size")
+parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
 assert args.dimensions == 2, "not ready for 3d yet"
@@ -52,8 +52,8 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      cell_cell_rhs_matrix_scaling = args.dimensions,
                                                                      cell_to_face_matrix     = matrices.get_cell_to_face_matrix(),       
                                                                      face_to_cell_matrix     = matrices.get_face_to_cell_matrix(), 
-                                                                     cell_to_face_matrix_scaling  = 0,       
-                                                                     face_to_cell_matrix_scaling  = args.dimensions, 
+                                                                     cell_to_face_matrix_scaling  = 1,       
+                                                                     face_to_cell_matrix_scaling  = args.dimensions - 1, 
                                                                      face_face_Riemann_problem_matrix=matrices.get_face_face_riemann_problem_matrix(),
                                                                      quadrature_points_in_unit_interval = matrices.get_points_unit_interval()
                                                                      )
@@ -69,6 +69,8 @@ if args.mode=="stats":
   build_mode = peano4.output.CompileMode.Stats
 if args.mode=="asserts":
   build_mode = peano4.output.CompileMode.Asserts
+if args.mode=="trace":
+  build_mode = peano4.output.CompileMode.Trace
 
 cube_size = 1.0
 project.set_global_simulation_parameters(

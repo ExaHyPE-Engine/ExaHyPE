@@ -105,31 +105,54 @@ double petsc::LinearEquationSystem::get(int i) const {
 
 
 void petsc::LinearEquationSystem::insert(int row, int col, double val){
+  assertion3( row >= 0, row, col, val );
+  assertion3( col >= 0, row, col, val );
+
+  logTraceInWith3Arguments( "insert()", row, col, val );
+
   MatSetValue(_A, row, col, val, INSERT_VALUES);
+
+  logTraceOut("insert()");
 }
 
 
 //storing doubles to be placed into A
 void petsc::LinearEquationSystem::increment( int row, int col, double val ){
+  assertion3( row >= 0, row, col, val );
+  assertion3( col >= 0, row, col, val );
+
+  logTraceInWith3Arguments( "increment()", row, col, val );
   MatSetValue(_A, row, col, val, ADD_VALUES);
+  logTraceOut("increment()");
 }
 
 
 void petsc::LinearEquationSystem::insert(int row, double val){
+  assertion2( row >= 0, row, val );
+  logTraceInWith2Arguments( "insert()", row, val );
+
   // insert "val" into _x 
   VecSetValue(_x, row, 0.0, INSERT_VALUES);
 
   // insert "rhs" into _b
   VecSetValue(_b, row, val, INSERT_VALUES);
+  logTraceOut("insert()");
+
 }
 
 
 void petsc::LinearEquationSystem::increment(int row, double val){
+  assertion2( row >= 0, row, val );
+
+  logTraceInWith2Arguments( "increment()", row, val );
+
   // insert "val" into _x
   VecSetValue(_x, row, 0.0, INSERT_VALUES);
 
   // insert "rhs" into _b
   VecSetValue(_b, row, val, ADD_VALUES);
+  logTraceOut("increment()");
+
 }
 
 

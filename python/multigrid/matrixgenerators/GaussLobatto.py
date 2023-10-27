@@ -146,8 +146,9 @@ class GaussLobatto(MatrixGenerator):
     #       #output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
     #       #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
     return self.block_matrix._A_CC[(0,0)][(0,0)]
+  
+  def get_face_to_cell_matrix(self):
 
-  def get_cell_to_face_matrix(self):
     """Return the cel-to-face matrix A_p^qf
     """
     A_CF_left   = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
@@ -161,7 +162,7 @@ class GaussLobatto(MatrixGenerator):
     # 
     #return np.zeros((faceDim,cellDim))
   
-  def get_face_to_cell_matrix(self):
+  def get_cell_to_face_matrix(self):
     """Return the projection operator
     """
     A_qp_p_left = self.block_matrix._A_FC[(0,0)]["left"][(0,0)]
@@ -200,8 +201,11 @@ class GaussLobatto(MatrixGenerator):
     return np.eye(dim,dim)
 
   def get_face_face_riemann_problem_matrix(self):
-    return np.array([0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5]).reshape((2,4))
-    # return np.array([0.5, 0.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.5]).reshape((4,2))
+    # return np.array([0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5]).reshape((2,4))
+
+
+
+    return np.array([0.5, 0.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.5]).reshape((2,4))
   
     # def get_face_to_face_matrix(self):
   #   """ Face-face coupling block.

@@ -24,8 +24,11 @@ info examples::exahype2::euler::observers  -1     white always-on
 trace  tarch                               -1     black always-on    
 trace  peano4                              -1     black always-on
 trace  benchmarks                          -1     black always-on
+trace  benchmarks::multigrid::petsc::poisson::observers::Assemble -1     white always-on
+trace benchmarks::multigrid::petsc::poisson::observers::Assemble2multigrid_petsc_solvers_DiscontinuousGalerkinDiscretisation0 -1     white always-on
 trace  exahype2                            -1     black always-on
 trace  toolbox                             -1     black always-on
+trace  petsc                               -1     white always-on
 
 #info  toolbox::loadbalancing              -1  black time-step
 

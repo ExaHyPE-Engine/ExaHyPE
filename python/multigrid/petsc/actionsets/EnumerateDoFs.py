@@ -64,11 +64,11 @@ class EnumerateDoFs(ActionSet):
         break;
       case false:
         fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Interior );
-        {% if FACE_CARDINALITY>0 %}
-        fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
-        {% endif %}
         break;
     }
+    {% if FACE_CARDINALITY>0 %}
+    fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
+    {% endif %}
   } 
   else {
     fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Coarse );
