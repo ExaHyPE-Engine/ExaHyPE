@@ -154,6 +154,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual void finishGridInitialisationStep() override;
 
+    virtual void suspendSolversForOneGridSweep() override;
 
 
 

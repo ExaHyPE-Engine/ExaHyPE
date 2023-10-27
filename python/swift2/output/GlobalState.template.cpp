@@ -25,7 +25,7 @@ tarch::logging::Log _log( "{{NAMESPACE | join("::")}}::GlobalState" );
 {% if LOAD_BALANCER!="" -%}
 {{LOAD_BALANCER}}              loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
 {% else -%}
-toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
+toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
 {% endif -%}
 
 

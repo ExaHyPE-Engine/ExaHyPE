@@ -1,6 +1,6 @@
-#include "SplitOversizedTree.h"
+#include "../strategies/SplitOversizedTree.h"
 
-#include "loadbalancing.h"
+#include "toolbox/loadbalancing/loadbalancing.h"
 
 #include "peano4/utils/Globals.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -13,11 +13,11 @@
 
 
 
-tarch::logging::Log  toolbox::loadbalancing::SplitOversizedTree::_log( "toolbox::loadbalancing::SplitOversizedTree" );
+tarch::logging::Log  toolbox::loadbalancing::strategies::SplitOversizedTree::_log( "toolbox::loadbalancing::strategies::SplitOversizedTree" );
 
 
-toolbox::loadbalancing::SplitOversizedTree::SplitOversizedTree(Configuration* configuration, bool deleteInDestructor):
-  AbstractLoadBalancing( configuration, deleteInDestructor ),
+toolbox::loadbalancing::strategies::SplitOversizedTree::SplitOversizedTree(Configuration* configuration, CostMetrics*   costMetrics):
+  AbstractLoadBalancing( configuration, costMetrics ),
   _roundRobinToken(0) {
   assertion( configuration!=nullptr );
   _state = State::InterRankDistribution;
@@ -25,15 +25,16 @@ toolbox::loadbalancing::SplitOversizedTree::SplitOversizedTree(Configuration* co
 }
 
 
-toolbox::loadbalancing::SplitOversizedTree::~SplitOversizedTree() {
+toolbox::loadbalancing::strategies::SplitOversizedTree::~SplitOversizedTree() {
 }
 
 
-std::string toolbox::loadbalancing::SplitOversizedTree::toString() const {
+std::string toolbox::loadbalancing::strategies::SplitOversizedTree::toString() const {
   std::ostringstream msg;
 
   msg << "(state=" << ::toString( _state )
       << ",statistics=" << _statistics.toString()
+      << ",cost-metrics=" << _costMetrics->toString()
       << ",round-robin-token=" << _roundRobinToken 
       << ",blacklist=" << _blacklist.toString()
       << ",heaviest-local-tree=" << getIdOfHeaviestLocalSpacetree() << " (analysed)"
@@ -41,14 +42,15 @@ std::string toolbox::loadbalancing::SplitOversizedTree::toString() const {
       << ",#local-trees=" << peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() 
       << ",is-inter-rank-balancing-bad=" << isInterRankBalancingBad()
       << ",is-intra-rank-balancing-bad=" << isIntraRankBalancingBad()
-      << ",target-tree-size=" << getTargetTreeSize()
+      << ",target-tree-cost=" << getTargetTreeCost()
+      << ",min-tree-size=" << _configuration->getMinTreeSize(_state)
       << ")";
 
   return msg.str();
 }
 
 
-void toolbox::loadbalancing::SplitOversizedTree::updateState() {
+void toolbox::loadbalancing::strategies::SplitOversizedTree::updateState() {
   if ( _state == State::SwitchedOff ) {
     logDebug( "updateState()", "don't update as we have switched off" );
   }
@@ -73,7 +75,7 @@ void toolbox::loadbalancing::SplitOversizedTree::updateState() {
 }
 
 
-bool toolbox::loadbalancing::SplitOversizedTree::doesLocalTreeViolateThreshold() const {
+bool toolbox::loadbalancing::strategies::SplitOversizedTree::doesLocalTreeViolateThreshold() const {
   if ( not _statistics.hasConsistentViewOfWorld()) {//
     return false;
   }
@@ -90,7 +92,7 @@ bool toolbox::loadbalancing::SplitOversizedTree::doesLocalTreeViolateThreshold()
     bool result = false;
 
     for (auto p: peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees() ) {
-      result |= peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() > getTargetTreeSize();
+      result |= _costMetrics->getCostOfLocalTree(p) > getTargetTreeCost();
     }
 
     return result;
@@ -98,17 +100,16 @@ bool toolbox::loadbalancing::SplitOversizedTree::doesLocalTreeViolateThreshold()
 }
 
 
-void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
-  // @todo
-//  #if PeanoDebug>0
+void toolbox::loadbalancing::strategies::SplitOversizedTree::updateLoadBalancing() {
+  #if PeanoDebug>0
   logInfo( "updateLoadBalancing()", "load balancing's state=" << toString() );
-//  #endif
+  #endif
 
   switch ( _state ) {
     case State::InterRankDistribution:
       {
         int heaviestSpacetree                              = getIdOfHeaviestLocalSpacetree( _configuration->getWorstCaseBalancingRatio(_state) );
-        int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
+        double weightOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
         if (
           fitsIntoMemory(_state)
           and
@@ -116,20 +117,24 @@ void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
           and
           not _blacklist.isBlacklisted(heaviestSpacetree)
           and
-          numberOfLocalUnrefinedCellsOfHeaviestSpacetree > getTargetTreeSize()
+          weightOfHeaviestSpacetree > getTargetTreeCost()
           and
-          _statistics.getLightestRank()!=tarch::mpi::Rank::getInstance().getRank()
+          _costMetrics->getLightestRank()!=tarch::mpi::Rank::getInstance().getRank()
+          and
+          computeNumberOfSplits(heaviestSpacetree)>0
         ) {
           logInfo(
             "updateLoadBalancing()",
-            "Not all ranks are used. Lightest global rank is rank " << _statistics.getLightestRank()
+            "Not all ranks are used. Split once and deploy to lightest global rank " << _costMetrics->getLightestRank()
           );
-          triggerSplit(heaviestSpacetree, _statistics.getLightestRank());
+          triggerSplit(heaviestSpacetree, _costMetrics->getLightestRank(), 1);
         }
         else if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
           logInfo(
             "updateLoadBalancing()",
-            "can't split heaviest tree " << heaviestSpacetree << " even though this tree is too heavy"
+            "can't split heaviest tree " << heaviestSpacetree <<
+            " even though this tree is too heavy " <<
+            toString()
           );
         }
       }
@@ -137,7 +142,7 @@ void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
     case State::InterRankBalancing:
       {
         int heaviestSpacetree                              = getIdOfHeaviestLocalSpacetree();
-        int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
+        int weightOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
         if (
           fitsIntoMemory(_state)
           and
@@ -145,19 +150,25 @@ void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
           and
           not _blacklist.isBlacklisted(heaviestSpacetree)
           and
-          numberOfLocalUnrefinedCellsOfHeaviestSpacetree > getTargetTreeSize()
+          weightOfHeaviestSpacetree > getTargetTreeCost()
+          and
+          computeNumberOfSplits(heaviestSpacetree)
         ) {
           logInfo(
             "updateLoadBalancing()",
             "biggest local tree " << heaviestSpacetree << " is too heavy as it hosts " <<
-            numberOfLocalUnrefinedCellsOfHeaviestSpacetree << " cells"
+            weightOfHeaviestSpacetree << " cells. Try to split tree " << computeNumberOfSplits(heaviestSpacetree) <<
+            " times and to offload subsection(s) of tree to " <<
+            _costMetrics->getLightestRank() <<
+            " " << toString()
           );
-          triggerSplit(heaviestSpacetree, _statistics.getLightestRank());
+          triggerSplit(heaviestSpacetree, _costMetrics->getLightestRank(), computeNumberOfSplits(heaviestSpacetree) );
         }
         else if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
           logInfo(
             "updateLoadBalancing()",
-            "can't split heaviest tree " << heaviestSpacetree << " and fork off to remote rank as this tree is on the blacklist or split does not fit into local memory anymore"
+            "can't split heaviest tree " << heaviestSpacetree << " and fork off to remote rank,as " <<
+            "heaviest tree is on blacklist " << toString()
           );
         }
       }
@@ -170,10 +181,18 @@ void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
             and
             not _blacklist.isBlacklisted(p)
             and
-	    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() > getTargetTreeSize()
+            _costMetrics->getCostOfLocalTree(p) > getTargetTreeCost()
+            and
+            computeNumberOfSplits(p)
           ) {
-            triggerSplit(p, tarch::mpi::Rank::getInstance().getRank());
-	  }
+            logInfo(
+              "updateLoadBalancing()",
+              "local tree " << p << " is too heavy as it has a weight of " <<
+              _costMetrics->getCostOfLocalTree(p) << ". Try to split tree " << computeNumberOfSplits(p) << " times on local rank " <<
+              toString()
+            );
+            triggerSplit(p, tarch::mpi::Rank::getInstance().getRank(), computeNumberOfSplits(p));
+          }
         }
       }
       break;
@@ -183,8 +202,9 @@ void toolbox::loadbalancing::SplitOversizedTree::updateLoadBalancing() {
 }
 
 
-void toolbox::loadbalancing::SplitOversizedTree::finishStep() {
+void toolbox::loadbalancing::strategies::SplitOversizedTree::finishStep() {
   _statistics.updateGlobalView();
+  _costMetrics->updateGlobalView();
   _blacklist.update();
 
   updateLoadBalancing();
@@ -196,15 +216,40 @@ void toolbox::loadbalancing::SplitOversizedTree::finishStep() {
 }
 
 
-void toolbox::loadbalancing::SplitOversizedTree::triggerSplit( int sourceTree, int targetRank ) {
-  int currentCells = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(sourceTree).getNumberOfLocalUnrefinedCells();
-  while (currentCells > getTargetTreeSize()) {
-    int numberOfSplitCells = currentCells < 2 * getTargetTreeSize() ? currentCells / 2 : getTargetTreeSize();
+int toolbox::loadbalancing::strategies::SplitOversizedTree::computeNumberOfSplits(int sourceTree) const {
+  int numberOfSplits = static_cast<int>(_costMetrics->getCostOfLocalTree(sourceTree) / getTargetTreeCost() )-1;
+
+  numberOfSplits = std::max(1,numberOfSplits);
+  numberOfSplits = std::min(
+    numberOfSplits,
+    _configuration->getMaxLocalTreesPerRank(_state) - static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size())
+  );
+
+  int currentSourceTreeCells = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(sourceTree).getNumberOfLocalUnrefinedCells();
+
+  while (
+    currentSourceTreeCells/(numberOfSplits+1) < _configuration->getMinTreeSize(_state)
+    and
+    numberOfSplits>0
+  ) {
+    numberOfSplits--;
+  }
+
+  return numberOfSplits;
+}
+
+
+void toolbox::loadbalancing::strategies::SplitOversizedTree::triggerSplit( int sourceTree, int targetRank, int numberOfSplits ) {
+  const int numberOfSplitCells = std::max(
+    1,
+    peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(sourceTree).getNumberOfLocalUnrefinedCells() / (1+numberOfSplits)
+  );
+  for (int i=0; i<numberOfSplits; i++) {
     bool success = peano4::parallel::SpacetreeSet::getInstance().split(
       sourceTree,
       peano4::SplitInstruction{
         numberOfSplitCells,
-	peano4::SplitInstruction::Mode::AggressiveTopDown
+        peano4::SplitInstruction::Mode::AggressiveTopDown
       },
       targetRank
     );
@@ -214,16 +259,12 @@ void toolbox::loadbalancing::SplitOversizedTree::triggerSplit( int sourceTree, i
 
     _blacklist.triggeredSplit( sourceTree );
     _statistics.incLocalNumberOfSplits();
-
-    currentCells -= getTargetTreeSize();
   }
 }
 
 
-int toolbox::loadbalancing::SplitOversizedTree::getTargetTreeSize() const {
-  return _configuration->getMinTreeSize(_state) > 0 ?
-         _configuration->getMinTreeSize(_state) :
-	 std::max( 1, _statistics.getGlobalNumberOfInnerUnrefinedCells() / tarch::mpi::Rank::getInstance().getNumberOfRanks() / tarch::multicore::Core::getInstance().getNumberOfThreads() );
+double toolbox::loadbalancing::strategies::SplitOversizedTree::getTargetTreeCost() const {
+  return _costMetrics->getGlobalCost() / tarch::mpi::Rank::getInstance().getNumberOfRanks() / tarch::multicore::Core::getInstance().getNumberOfThreads();
 }
 
 

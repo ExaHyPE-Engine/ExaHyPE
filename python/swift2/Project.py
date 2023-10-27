@@ -75,12 +75,10 @@ class Project(object):
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
         """
-
         load_balancer_name: string
           Should be full-qualified name of the load balancer.
-          By default, I recommend to pass "toolbox::loadbalancing::SpreadOutHierarchically",
-          but you might be well-advices to study different classes within the
-          namespace toolbox::loadbalancing
+          By default, I recommend to pass "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+          but you might be well-advices to study different classes within the namespace toolbox::loadbalancing.
 
         load_balancer_arguments: string
           If your load balancing requires parameters, add them
@@ -88,14 +86,13 @@ class Project(object):
           Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not.
           The only exception is the empty parameter list. Here, you can/should simply
           add the empty string.
-
         """
         self._load_balancer_name = load_balancer_name
         self._load_balancer_arguments = load_balancer_arguments
 
     """
-   The standard extensions that I use for both Peano and ExaHyPE.
-  """
+    The standard extensions that I use for both Peano and ExaHyPE.
+    """
     LibraryDebug = "_debug"
     LibraryRelease = ""
     LibraryTrace = "_trace"

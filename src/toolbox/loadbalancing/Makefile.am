@@ -8,19 +8,22 @@ endif
 
 
 ToolboxLoadBalancing_SOURCES = \
+  AbstractLoadBalancing.cpp \
   Blacklist.cpp \
   Configuration.cpp \
-  Hardcoded.cpp \
+  CostMetrics.cpp \
   loadbalancing.cpp \
-  AbstractLoadBalancing.cpp \
-  NoLoadBalancing.cpp \
-  RecursiveBipartition.cpp \
-  SplitOversizedTree.cpp \
-  SpreadOut.cpp \
-  SpreadOutHierarchically.cpp \
-  SpreadOutOnceGridStagnates.cpp \
   State.cpp \
-  Statistics.cpp
+  Statistics.cpp \
+  metrics/CellCount.cpp \
+  metrics/CustomCellWeight.cpp \
+  strategies/Hardcoded.cpp \
+  strategies/NoLoadBalancing.cpp \
+  strategies/RecursiveBipartition.cpp \
+  strategies/SplitOversizedTree.cpp \
+  strategies/SpreadOut.cpp \
+  strategies/SpreadOutHierarchically.cpp \
+  strategies/SpreadOutOnceGridStagnates.cpp
   
 
 libToolboxLoadBalancing2d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
