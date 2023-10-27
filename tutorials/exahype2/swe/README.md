@@ -19,7 +19,7 @@ To understand what it is that we have executed, let us take a look at the file w
 
     swe.py
 
-As this is a Python script, should surprise no one that we start with the following:
+As this is a Python script, it should surprise no one that we start with the following:
 
     import peano4
     import exahype2
@@ -29,7 +29,6 @@ which will let us define and build our project. For more details about
 the implementation, consider the comments in the Python script.
 
 ## Two-dimensional Shallow Water Equations
-
 The shallow water equations describe the flow of fluid given the assumption that the horizontal length scale
 is much higher than the vertical length scale and are defined by the following formula:
 
@@ -71,7 +70,7 @@ $$
     \end{array} \right).
 $$
 
-These depend on the fluid height $`h`$, velocities in x and y directions,
+These depend on the fluid height $`h`$, velocities in x- and y-directions,
 the bathymetry $`b`$ (the height of the floor underneath the fluid) and the gravity $`g`$.
 
 To implement this equation, the following things are needed: the initial condition,
@@ -79,7 +78,7 @@ the boundary conditions, the maximal eigenvalue, the flux, the non-conservative 
 refinement criterion (which we don't use in the tutorial).
 
 We also have an auxiliary variable since the bathymetry never changes.
-We can define this auxiliary variable by setting the parameter for the auxiliary variables in the solver to 1 instead of 0.
+We can define this auxiliary variable by setting the parameter for the auxiliary variables in the solver to 1.
 These auxiliary variables are accessed in the same way as the regular variables,
 except that they are not modified by the solver.
 Initial- and boundary conditions for these auxiliary variables should be defined, but no flux or non-conservative product can be set,

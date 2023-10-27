@@ -101,10 +101,10 @@ b = my_pde.name_auxiliary_variable(0, "b")
 # Gravitational constant
 g = sympy.symbols('g')
 
-# Speed in x direction
+# Speed in x-direction
 u = sympy.Piecewise((hu / h, h > 0.0), (0.0, True))
 
-# Speed in y direction
+# Speed in y-direction
 v = sympy.Piecewise((hv / h, h > 0.0), (0.0, True))
 
 #
@@ -169,7 +169,7 @@ my_pde.substitute_expression(g, 9.81)
 #
 my_solver.set_implementation(
     initial_conditions=my_pde.implementation_of_initial_conditions(),
-    boundary_conditions=my_pde.implementation_of_homogeneous_Neumann_BC(),
+    boundary_conditions=my_pde.implementation_of_boundary_conditions(),
     flux=my_pde.implementation_of_flux(),
     eigenvalues=my_pde.implementation_of_max_eigenvalue(),
     ncp = my_pde.implementation_of_ncp()
