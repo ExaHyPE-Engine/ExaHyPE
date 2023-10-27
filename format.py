@@ -14,8 +14,8 @@ default_clang_format_file_name = ".clang-format"
 target_branch = "p4"
 
 # Formatting tools versions
-black_version = "23.3.0"
-clang_version = "16.0.5"
+min_black_version = "23.3.0"
+min_clang_version = "16.0.5"
 
 # Global variables for easy access
 verbose = True  # will be overwritten by arg parser
@@ -63,18 +63,25 @@ def get_venv_path(peano_root):
     return os.path.join(peano_root, python_venv_dir)
 
 
-def check_git():
+def git_is_available():
     """
-    Make sure git is up and running.
+    Check whether git is available. Returns True is that is the case.
     """
     # Does it run?
     run = subprocess.run(
         "git --version",
         shell=True,
         stdout=subprocess.DEVNULL,
-        check=True,
+        stderr=subprocess.DEVNULL,
+        check=False,
     )
-    return
+
+    if run.returncode == 0:
+        return True
+    else:
+        if verbose:
+            print("Didn't find git. Continuing without.")
+        return False
 
 
 def check_black(black_cmd):
@@ -102,12 +109,15 @@ def check_black(black_cmd):
             raise ValueError("black --version output was:", stdout, " ???")
 
         installed_version = stdout_split[1]
-        if installed_version != black_version:
+        installed_version_number = int(installed_version.replace(".", ""))
+        min_black_version_number = int(min_black_version.replace(".", ""))
+
+        if installed_version_number < min_black_version_number:
             raise ValueError(
                 (
-                    "black formatter executable has version {0} but I require {1}.\n"
+                    "black formatter executable has version {0} but I require at least {1}.\n"
                     + "Please remove all contents from the directory '{2}' and re-run this script."
-                ).format(installed_version, black_version, python_venv_dir)
+                ).format(installed_version, min_black_version, python_venv_dir)
             )
 
         black_checked = True
@@ -140,12 +150,15 @@ def check_clang(clang_cmd):
             raise ValueError("clang-format --version output was:", stdout, " ???")
 
         installed_version = stdout_split[2]
-        if installed_version != clang_version:
+        installed_version_number = int(installed_version.replace(".", ""))
+        min_clang_version_number = int(min_clang_version.replace(".", ""))
+
+        if installed_version_number < min_clang_version_number:
             raise ValueError(
                 (
                     "clang-format executable has version {0} but I require {1}.\n"
                     + "Please remove all contents from the directory '{2}' and re-run this script."
-                ).format(installed_version, clang_version, python_venv_dir)
+                ).format(installed_version, min_clang_version, python_venv_dir)
             )
 
         clang_checked = True
@@ -169,7 +182,7 @@ def install_black_formatting_tool():
 
     # The actual install
     run = subprocess.run(
-        bfepython + " -m pip install click==8.1.3 black==" + black_version,
+        bfepython + " -m pip install click==8.1.3 black>=" + min_black_version,
         shell=True,
         check=True,
     )
@@ -197,7 +210,7 @@ def install_clang_formatting_tool():
 
     # The actual install
     run = subprocess.run(
-        clangpython + " -m pip install clang-format==" + clang_version,
+        clangpython + " -m pip install clang-format>=" + min_clang_version,
         shell=True,
         check=True,
     )
@@ -357,7 +370,7 @@ def setup_parser(peano_root, clangfile):
 
 def is_pythonfile(filename):
     """
-    Does this look like a python file?
+    Does this look like a Python file?
     """
 
     return filename.endswith(".py")
@@ -414,7 +427,7 @@ def run_python_formatter(filename, dry_run, peano_root):
 
     # If not dry run: Now actually format the file
     if verbose:
-        print(f"running {black_cmd} {filename}")
+        print(f"Running {black_cmd} {filename}")
     run = subprocess.run(
         black_cmd + " " + filename, stdout=subprocess.DEVNULL, shell=True
     )
@@ -437,7 +450,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
     # First run in dry-run mode to accurately count whether we
     # need to/do format through the return code.
     if verbose:
-        print(f"checking {filename}")
+        print(f"Checking {filename}")
     # pipe sterr to /dev/null too here. In dry run mode, every line that needs
     # to be changed will otherwise be printed to stderr.
     run = subprocess.run(
@@ -455,7 +468,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
         return returncode
 
     if verbose:
-        print(f"running {clang_cmd} {filename}")
+        print(f"Running {clang_cmd} {filename}")
     # pipe sterr to /dev/null too here. In dry run mode, every line that needs
     # to be changed will otherwise be printed to stderr.
     run = subprocess.run(
@@ -469,8 +482,10 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
 
 
 if __name__ == "__main__":
-    check_git()
-    peano_root = get_peano_root()
+    if git_is_available():
+        peano_root = get_peano_root()
+    else:
+        peano_root = peano_repo_rootdir
     clang_format_file = get_default_clang_format(peano_root)
 
     parser = setup_parser(peano_root, clang_format_file)
@@ -481,18 +496,18 @@ if __name__ == "__main__":
         clang_format_file = args.style
         if not os.path.exists(clang_format_file):
             raise FileNotFoundError(
-                "Provided clang format file '" + clang_format_file + "' doesn't exist"
+                "Provided clang format file '" + clang_format_file + "' doesn't exist."
             )
 
     verbose = args.verbose
 
     if verbose:
-        print("using clang format file", clang_format_file)
+        print("Using clang format file", clang_format_file)
 
     # is this dry run?
     dry_run = args.dry_run
     if dry_run and verbose:
-        print("starting a dry run")
+        print("Starting a dry run")
 
     # update target branch?
     if args.branch is not None:
@@ -510,7 +525,7 @@ if __name__ == "__main__":
 
     # Check first if file list was given by user
     if args.files is not None:
-        if args.files[0] == peano_root:
+        if os.path.isdir(args.files[0]):
             if verbose:
                 print("Formatting all files in this directory.")
             for root, dirs, files in os.walk(peano_root):
@@ -525,7 +540,7 @@ if __name__ == "__main__":
                     if not (is_pythonfile(f) or is_cppfile(f)):
                         if verbose:
                             print(
-                                f"File {f} doesn't look like a python nor cpp file to me, skipping it"
+                                f"File {f} doesn't look like a Python nor cpp file to me, skipping it."
                             )
                         continue
                     filelist.append(f)
@@ -541,13 +556,13 @@ if __name__ == "__main__":
                 if not (is_pythonfile(f) or is_cppfile(f)):
                     if verbose:
                         print(
-                            f"File {f} doesn't look like a python nor cpp file to me, skipping it"
+                            f"File {f} doesn't look like a Python nor cpp file to me, skipping it."
                         )
                     continue
                 filelist.append(f)
 
     else:
-        # make sure that the branch exists
+        # Make sure that the branch exists
         try:
             git_check_branch_exists_cmd = f"git rev-parse --verify {target_branch}"
             subprocess.run(
@@ -585,19 +600,19 @@ if __name__ == "__main__":
             if not os.path.exists(fullpathf):
                 if verbose:
                     print(
-                        f"File {fullpathf} doesn't exist. Did you remove it in this branch? Skipping it"
+                        f"File {fullpathf} doesn't exist. Did you remove it in this branch? Skipping it."
                     )
                 continue
             if not (is_pythonfile(fullpathf) or is_cppfile(fullpathf)):
                 if verbose:
                     print(
-                        f"File {fullpathf} doesn't look like a python nor cpp file to me, skipping it"
+                        f"File {fullpathf} doesn't look like a python nor cpp file to me, skipping it."
                     )
                 continue
             filelist.append(fullpathf)
 
     if len(filelist) == 0:
-        print("Found no files to be formatted. Exiting")
+        print("Found no files to be formatted. Exiting.")
         sys.exit(0)
 
     # keep track whether any file was or could be modified.
