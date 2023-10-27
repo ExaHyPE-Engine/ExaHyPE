@@ -160,10 +160,14 @@ std::tuple<double, int> validateOutcome(
 }
 
 
+/**
+ * @param timingKernelWithoutDataTransfer Ignored if it doesn't hold any data.
+ */
 void reportRuntime(
   const std::string&                 kernelIdentificator,
   const tarch::timing::Measurement&  timingOneKernel,
   const tarch::timing::Measurement&  timingWholeKernel,
+  const tarch::timing::Measurement&  timingKernelWithoutDataTransfer,
   int                                patches,
   int                                launchingThreads
 ) {
@@ -174,8 +178,11 @@ void reportRuntime(
     "\t| " << (timingOneKernel.getValue() / patches / NumberOfFiniteVolumesPerPatch / NumberOfSamples) <<
     "\t| " << timingWholeKernel.getValue() <<
     "\t| " << (timingWholeKernel.getValue() / patches / NumberOfFiniteVolumesPerPatch / NumberOfSamples / launchingThreads) <<
+    "\t| " << timingKernelWithoutDataTransfer.getValue() <<
+    "\t| " << (timingKernelWithoutDataTransfer.getValue() / NumberOfFiniteVolumesPerPatch ) <<
     "\t| " << timingOneKernel.toString() <<
-    "\t| " << timingWholeKernel.toString()
+    "\t| " << timingWholeKernel.toString() <<
+    "\t| " << timingKernelWithoutDataTransfer.toString()
   );
 }
 
@@ -356,6 +363,9 @@ void wrapHostKernelWithStaticCalls(
 }
 
 
+tarch::timing::Measurement timingComputeKernel;
+
+
 template <void (*Function)(
   int                     chosenDevice,
   ::exahype2::CellData&   patchData,
@@ -372,7 +382,6 @@ void wrapDeviceKernel(
 ) {
   assertion( device!=tarch::accelerator::Device::HostDevice );
 
-  static tarch::timing::Measurement timingComputeKernel;
   Function(
     device,
     patchData,
@@ -382,12 +391,6 @@ void wrapDeviceKernel(
     evaluateMaximumEigenvalueAfterTimeStep,
     timingComputeKernel
   );
-  //if (timingComputeKernel.getNumberOfMeasurements()==NumberOfSamples) {
-    if (timingComputeKernel.getValue() != 0.0) {
-      logInfo( "wrapDeviceKernel(...)", "core compute kernel time: " << timingComputeKernel.getValue() << " " << timingComputeKernel.toString() );
-      timingComputeKernel.erase();
-    }  
-  //}
 }
 
 
@@ -432,6 +435,8 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       int                device,
       int                patches
     ) -> void {
+      timingComputeKernel.erase();
+
       for (int reduceMaxTimeStep=0; reduceMaxTimeStep<2; reduceMaxTimeStep++) {
         tarch::timing::Measurement timingWholeBenchmark;
         tarch::timing::Measurement timingOneKernel;
@@ -465,10 +470,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
               int    errors        = 0;
               double maxDifference = 0.0;
               for (int i = 0; i < patches; i++) {
-				if (counter == 0 and reduceMaxTimeStep == 0) {
+                if (counter == 0 and reduceMaxTimeStep == 0) {
                   storeOutcome(patchData.QOut[i], patchData.maxEigenvalue[0]);
-			      counter++;
-				}
+                  counter++;
+                }
                 auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome(
                   patchData.QOut[i], i, patchData.maxEigenvalue[i], reduceMaxTimeStep==0
                 );
@@ -503,7 +508,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         else {
           reportedMarkerName += ", no reduction";
         }
-        reportRuntime( reportedMarkerName, timingOneKernel, timingWholeBenchmark, patches, launchingThreads );
+        reportRuntime( reportedMarkerName, timingOneKernel, timingWholeBenchmark, timingComputeKernel, patches, launchingThreads );
       }
   };
 
