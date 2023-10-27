@@ -32,6 +32,12 @@ namespace tarch {
  * send an integer message with this number to the global master through the
  * semaphore tag. If we we release it, we send the negative number back.
  *
+ * As an mpi semaphore includes all ranks and all threads, it is something that
+ * is more general than a "normal" tarch::multicore::BooleanSemaphore.
+ * Therefore, the mpi semaphore hosts the multicore semaphore in return. As
+ * long as a thread on the local rank has blocked a critical section, we don't
+ * even have to go to the global master.
+ *
  * ## Implementation
  *
  * The implementation is straightforward:
@@ -133,7 +139,10 @@ class tarch::mpi::BooleanSemaphore {
          * receivers do not check if the "go ahead" is meant to be for them, as
          * they could not re-inject the message into MPI anyway.
          */
-        tarch::multicore::BooleanSemaphore  _localRankLockRequestSemaphore;
+// @todo Deprecated and to be removed as soon as we have confirmation from
+//        large-scale runs that this has been an issue. In this case, the
+//        docu has to be amended
+//        tarch::multicore::BooleanSemaphore  _localRankLockRequestSemaphore;
 
         struct SemaphoreMapEntry {
           bool   locked;
@@ -300,6 +309,11 @@ class tarch::mpi::BooleanSemaphore {
     const int  _semaphoreNumber;
 
     const bool _allRanksLockThisSemaphoreAtLeastOnce;
+
+    /**
+     * @todo explain why we lock locally first
+     */
+    tarch::multicore::BooleanSemaphore  _localRankLockRequestSemaphore;
 
     /**
      * Waits until I can enter the critical section.

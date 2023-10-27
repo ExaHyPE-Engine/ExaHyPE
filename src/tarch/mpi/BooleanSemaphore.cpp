@@ -13,11 +13,13 @@ tarch::mpi::BooleanSemaphore::BooleanSemaphoreService  tarch::mpi::BooleanSemaph
 
 
 void tarch::mpi::BooleanSemaphore::enterCriticalSection() {
+  _localRankLockRequestSemaphore.enterCriticalSection();
   BooleanSemaphoreService::getInstance().acquireLock(_semaphoreNumber, _allRanksLockThisSemaphoreAtLeastOnce);
 }
 
 void tarch::mpi::BooleanSemaphore::leaveCriticalSection() {
   BooleanSemaphoreService::getInstance().releaseLock(_semaphoreNumber);
+  _localRankLockRequestSemaphore.leaveCriticalSection();
 }
 
 tarch::mpi::BooleanSemaphore::BooleanSemaphore(bool allRanksLockThisSemaphoreAtLeastOnce):
@@ -183,7 +185,8 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
     #ifdef Parallel
     logDebug( "acquireLock()", "have to acquire lock on global master " << tarch::mpi::Rank::getGlobalMasterRank() << " and thus send master a " << number );
     
-    tarch::multicore::Lock lock( _localRankLockRequestSemaphore );    
+    // @todo Deprecated
+    // tarch::multicore::Lock lock( _localRankLockRequestSemaphore );
     MPI_Send( &number, 1, MPI_INT, tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag, tarch::mpi::Rank::getInstance().getCommunicator() );
 
     logDebug( "acquireLock()", "wait for confirmation from global master rank" );
