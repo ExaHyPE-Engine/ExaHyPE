@@ -252,10 +252,9 @@ project.set_global_simulation_parameters(
 )
 
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )
-    
-    
+
 #
 # Generate code and then copy cpp file over main
 #

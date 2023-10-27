@@ -181,7 +181,6 @@ my_project.set_output_path(output_path)
 if not os.path.exists(output_path):
   os.makedirs(output_path)
 
-my_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 my_project.set_Peano4_installation("../../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 

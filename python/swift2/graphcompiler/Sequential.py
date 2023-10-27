@@ -7,25 +7,15 @@ import peano4
 import swift2
 
 
-from enum import Enum
-
-
 from .AMRLogic import (
     add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption,
 )
 from .AMRLogic import (
     add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers,
 )
-
-
-class Optimisation(Enum):
-    """ """
-
-    NONE = 0
-    INSERT_RESORT_SWEEPS_AND_VECTORISE = 1
-
-
-# VECTORISE_WHENEVER_POSSIBLE = 1
+from .Optimisation import Optimisation
+from .SpeciesStepOrdering import concatenate_steps_of_species
+from .Utils import does_one_species_require_gather, get_species_set
 
 
 def translate_one_step_of_species_into_mesh_traversal(
@@ -173,9 +163,9 @@ def translate_one_step_of_species_into_mesh_traversal(
 
 
 def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
-    species_sets,
+    sequence_of_steps,
     optimisation: Optimisation,
-    use_initialisation_steps,
+    observer_preamble,
     verbose,
 ):
     """!
@@ -208,32 +198,39 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
     also have to make this reasoning one by one.
 
     ## Initialisation
-    
+
     The initialisation is no different to the time stepping besides two
     places:
-    
-    1. We have to use the initialisation steps rather than the 
-       algorithm steps. 
-    2. We have to insert an additional dummy sweep initially. After 
+
+    1. We have to use the initialisation steps rather than the
+       algorithm steps.
+    2. We have to insert an additional dummy sweep initially. After
        users have inserted their particles, they are scattered all
        over the place. If the first initialisation phase then relies
        on continuous AoS data, it will crash.
-       
+
     The latter "tweak" obviously can be ignored whenever we work without
-    coalescend memory.
-    
+    coalesced memory.
+
     ## Tree statistics
 
     We assume that there is a tree marker already. So our analysis
     will create it, but we assume that it is already out there, so
     we don't have to add it actually to the project.
 
+    @param sequence_of_steps: [(Species,Step)]
+      Sequence of tuples each consisting of one species and one step. Typically
+      constructed through functions within SpeciesStepOrdering.py.
 
-    species_sets: [Species]
+    @param optimisation: Optimisation,
 
-    optimisation: Optimisation,
+    @param observer_preamble: String
+      Usually people pass in "Init" or "Step" here to distinguish observers for
+      the initialisation from the actual particle update steps.
 
-    verbose: {True, False}
+    @param verbose: {True, False}
+
+    @return mesh_traversals
 
     """
     mesh_traversals = []
@@ -241,118 +238,83 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
 
     if verbose:
         print(
-            "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: start graph construction with optimisation {} (is initialisation={})".format(
-                optimisation, use_initialisation_steps
+            "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: start graph construction with optimisation {} and preamble {}".format(
+                optimisation, observer_preamble
             )
         )
 
-    if (
-        optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE
-        and 
-        use_initialisation_steps
-       ):
-        if verbose:
-            print(
-                "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: insert initial dummy sweep"
-            )
-        new_step = peano4.solversteps.Step(
-            "InitialisationDummyStep",
-            add_user_defined_actions=False,
-            )
-        mesh_traversals.append(new_step)
-        alter_particle_position.append(True)
+    for current_entry_from_total_sequence_of_steps in sequence_of_steps:
+        current_species_set = current_entry_from_total_sequence_of_steps[0]
+        current_step_of_species = current_entry_from_total_sequence_of_steps[1]
 
-    for current_species_set in species_sets:
-        if verbose:
-            print(
-                "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: handle species set {}".format(
-                    current_species_set
-                )
+        assert (
+            optimisation == Optimisation.NONE
+            or current_species_set.generator.gather_particles
+        ), "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: ERROR have been asked to vectorise for species {}, but species does not support gathered data structures".format(
+            current_species_set.particle_model.name
+        )
+        if optimisation == Optimisation.NONE:
+            use_lists_to_construct_active_sets = False
+            add_additional_dummy_sweep = False
+        # @todo Wieder rein
+        # elif optimisation==Optimisation.VECTORISE_WHENEVER_POSSIBLE:
+        #              use_lists_to_construct_active_sets = step.effect != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN and step.effect != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN and len(alter_particle_position)>0 and not alter_particle_position[-1]
+        #              add_additional_dummy_sweep        = False
+        elif optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE:
+            use_lists_to_construct_active_sets = True
+            add_additional_dummy_sweep = (
+                current_step_of_species.effect
+                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
+                or current_step_of_species.effect
+                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
             )
-
-        if use_initialisation_steps:
-            per_species_set = current_species_set.particle_model.initialisation_steps()
-            observer_preamble = "Init"
         else:
-            per_species_set = current_species_set.particle_model.algorithm_steps()
-            observer_preamble = "Step"
+            assert False, "option not supported"
 
-        if (
-            optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE
-            and not current_species_set.generator.gather_particles
-        ):
-            # suppress warning if we run in release version without verbose, as the
-            # initialisation might always be off
-            if not use_initialisation_steps and not verbose:
+        translate_one_step_of_species_into_mesh_traversal(
+            step=current_step_of_species,
+            current_species_set=current_species_set,
+            mesh_traversals=mesh_traversals,
+            alter_particle_position=alter_particle_position,
+            use_lists_to_construct_active_sets=use_lists_to_construct_active_sets,
+            preamble=observer_preamble,
+            verbose=verbose,
+        )
+
+        if add_additional_dummy_sweep:
+            if verbose:
                 print(
-                    "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: WARNING have been asked to vectorise for species {}, but species does not support gathered data structures. Vectorisation disabled".format(
-                        current_species_set.particle_model.name
-                    )
-                )
-            optimisation = Optimisation.NONE
-
-        for step in per_species_set:
-            if optimisation == Optimisation.NONE:
-                use_lists_to_construct_active_sets = False
-                add_additional_dummy_sweep = False
-            # elif optimisation==Optimisation.VECTORISE_WHENEVER_POSSIBLE:
-            #              use_lists_to_construct_active_sets = step.effect != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN and step.effect != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN and len(alter_particle_position)>0 and not alter_particle_position[-1]
-            #              add_additional_dummy_sweep        = False
-            elif optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE:
-                assert (
-                    current_species_set.generator.gather_particles
-                ), "cannot try to vectorise without gathered data structures"
-                use_lists_to_construct_active_sets = (
-                    step.effect
-                    != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-                )
-                add_additional_dummy_sweep = (
-                    step.effect
-                    == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
-                    or step.effect
-                    == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-                )
-            else:
-                assert False, "option not supported"
-
-            translate_one_step_of_species_into_mesh_traversal(
-                step=step,
-                current_species_set=current_species_set,
-                mesh_traversals=mesh_traversals,
-                alter_particle_position=alter_particle_position,
-                use_lists_to_construct_active_sets=use_lists_to_construct_active_sets,
-                preamble=observer_preamble,
-                verbose=verbose,
-            )
-
-            if add_additional_dummy_sweep:
-                if verbose:
-                    print(
-                        "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
-                            len(mesh_traversals),
-                            step.name,
-                            current_species_set.particle_model.name,
-                        )
-                    )
-                new_step = peano4.solversteps.Step(
-                    "DummyStep{}{}_sweep{}".format(
-                        current_species_set.particle_model.name,
-                        step.name,
+                    "GRAPH COMPILER DEBUG [serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
                         len(mesh_traversals),
-                    ),
-                    add_user_defined_actions=False,
+                        current_step_of_species.name,
+                        current_species_set.particle_model.name,
+                    )
                 )
-                mesh_traversals.append(new_step)
-                alter_particle_position.append(True)
+            new_step = peano4.solversteps.Step(
+                "DummyStep{}{}_sweep{}".format(
+                    current_species_set.particle_model.name,
+                    current_step_of_species.name,
+                    len(mesh_traversals),
+                ),
+                add_user_defined_actions=False,
+            )
+            mesh_traversals.append(new_step)
+            alter_particle_position.append(True)
 
-        if current_species_set.generator.gather_particles:
-            add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers(
-                mesh_traversals, alter_particle_position, species_sets, verbose
-            )
-        else:
-            add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
-                mesh_traversals, alter_particle_position, species_sets, verbose
-            )
+    if does_one_species_require_gather(sequence_of_steps):
+        add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers(
+            mesh_traversals,
+            alter_particle_position,
+            get_species_set(sequence_of_steps),
+            verbose,
+        )
+    else:
+        add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
+            mesh_traversals,
+            alter_particle_position,
+            get_species_set(sequence_of_steps),
+            verbose,
+        )
 
     if verbose:
         print(
@@ -366,10 +328,24 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec(
     species_sets,
     verbose,
 ):
+    """!
+
+    For a sequential ordering, i.e. 1:1 mapping of steps per species onto
+    traversals, it makes no real difference how we order the progress through
+    the individual steps. So I just concatenate the steps per species.
+
+    @see serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
-        species_sets=species_sets,
+        sequence_of_steps=concatenate_steps_of_species(species_sets, False),
         optimisation=Optimisation.NONE,
-        use_initialisation_steps=False,
+        observer_preamble="Step",
         verbose=verbose,
     )
 
@@ -378,10 +354,28 @@ def serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dum
     species_sets,
     verbose,
 ):
+    """!
+
+    For a sequential ordering, i.e. 1:1 mapping of steps per species onto
+    traversals, it makes no real difference how we order the progress through
+    the individual steps. So I just concatenate the steps per species.
+
+    For a sequential ordering, i.e. 1:1 mapping of steps per species onto
+    traversals, it makes no real difference how we order the progress through
+    the individual steps. So I just concatenate the steps per species.
+
+    @see serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
-        species_sets=species_sets,
+        sequence_of_steps=concatenate_steps_of_species(species_sets, False),
         optimisation=Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
-        use_initialisation_steps=False,
+        observer_preamble="Step",
         verbose=verbose,
     )
 
@@ -390,9 +384,41 @@ def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals(
     species_sets,
     verbose,
 ):
+    """!
+
+    @see serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
     return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
-        species_sets=species_sets,
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        optimisation=Optimisation.NONE,
+        observer_preamble="Init",
+        verbose=verbose,
+    )
+
+
+def serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalesced_memory_access(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    return serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
         optimisation=Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
-        use_initialisation_steps=True,
+        observer_preamble="Init",
         verbose=verbose,
     )

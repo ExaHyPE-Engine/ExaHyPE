@@ -166,11 +166,8 @@ GAMMA = gamma_hydro_list[0]
 GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
 # SPH kernel -------------------------------------------------------
-KERNEL = kernel.upper()
 KERNEL_SYMBOL = swift2.sphtools.sph_kernel_macro_name[kernel]
-KERNEL_SUPPORT_RAD = str(
-    swift2.sphtools.sph_kernel_H_over_h[hydro_dimensions - 1][kernel]
-)
+KERNEL_SUPPORT_RAD = swift2.sphtools.sph_kernel_H_over_h[hydro_dimensions - 1][kernel]
 
 
 # Additional Particle Parameters -----------------------------------------------
@@ -228,7 +225,7 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 #  project.set_load_balancing(
-#      "toolbox::loadbalancing::RecursiveBipartition",
+#      "toolbox::loadbalancing::strategies::RecursiveBipartition",
 #      "new toolbox::loadbalancing::DefaultConfiguration()",
 #  )
 

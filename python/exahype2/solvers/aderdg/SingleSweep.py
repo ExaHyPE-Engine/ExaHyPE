@@ -202,7 +202,7 @@ class SingleSweep(ADERDG):
         to incorporate the kernel into their generated stuff
 
         """
-        self._preprocess_reconstructed_patch += kernel
+        self._preprocess_reconstructed_patch = kernel
         self.create_data_structures()
         self.create_action_sets()
 
