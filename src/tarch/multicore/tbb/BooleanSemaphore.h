@@ -4,6 +4,8 @@
 
 #include <string>
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/BooleanSemaphore.h"
+
 
 namespace tarch {
   namespace multicore {
@@ -18,6 +20,8 @@ namespace tarch {
 
 class tarch::multicore::BooleanSemaphore {
   private:
+    friend class tarch::mpi::BooleanSemaphore;
+
     tbb::spin_mutex   _mutex;
 
     friend class tarch::multicore::Lock;
