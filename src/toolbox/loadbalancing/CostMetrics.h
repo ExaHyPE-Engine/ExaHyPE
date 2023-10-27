@@ -8,7 +8,9 @@ namespace toolbox {
   }
 }
 
+
 #include <string>
+#include "tarch/mpi/mpi.h"
 
 
 class toolbox::loadbalancing::CostMetrics {
