@@ -179,7 +179,7 @@ void reportRuntime(
     "\t| " << timingWholeKernel.getValue() <<
     "\t| " << (timingWholeKernel.getValue() / patches / NumberOfFiniteVolumesPerPatch / NumberOfSamples / launchingThreads) <<
     "\t| " << timingKernelWithoutDataTransfer.getValue() <<
-    "\t| " << (timingKernelWithoutDataTransfer.getValue() / NumberOfFiniteVolumesPerPatch ) <<
+    "\t| " << (timingKernelWithoutDataTransfer.getValue() / patches / NumberOfFiniteVolumesPerPatch ) <<
     "\t| " << timingOneKernel.toString() <<
     "\t| " << timingWholeKernel.toString() <<
     "\t| " << timingKernelWithoutDataTransfer.toString()
