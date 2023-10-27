@@ -4,6 +4,7 @@ import numpy as np
 
 import peano4
 import swift2
+import swift2.sphtools as sphtools
 import dastgen2
 
 import shutil
@@ -103,6 +104,15 @@ parser.add_argument(
     default=0,
     help="Mantissa size for clang truncation (if supported by compiler). Default of 0 disables any compression",
 )
+parser.add_argument(
+    "-k",
+    "--kernel",
+    dest="kernel",
+    type=str,
+    default="quartic_spline",
+    choices=sphtools.sph_kernel_list,
+    help="SPH kernel function to use.",
+)
 args = parser.parse_args()
 
 
@@ -120,13 +130,16 @@ if args.optimisation != "none":
     project.algorithm_steps_task_graph_compiler = (
         swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
     )
+    project.algorithm_steps_task_graph_compiler = (
+        swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+    )
 
 
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
 
-name = "hydroPart"
+name = "HydroPart"
 
 dimensions = 2
 hydro_dimensions = 2  # dimensions for the hydro
@@ -157,6 +170,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     max_h=max_cell_size,
     use_optimised_coalesced_memory_access_kernels=args.optimisation
     == "vectorise-per-vertex",
+    asserts=args.asserts,
 )
 
 
@@ -190,17 +204,11 @@ GAMMA = gamma_hydro_list[0]
 GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
 # SPH kernel -------------------------------------------------------
-kernel_list = ["M5"]
-kernel_list_symbols = ["QUARTIC_SPLINE_KERNEL"]
-KERNEL = kernel_list[0]
-KERNEL_SYMBOL = kernel_list_symbols[0]
 
-if KERNEL == "M5" and HYDRO_DIMENSIONS == 1:
-    KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
-if KERNEL == "M5" and HYDRO_DIMENSIONS == 2:
-    KERNEL_SUPPORT_RAD = "1.977173"
-else:
-    print(f"Unable to determine the kernel support radius. Please check.")
+kernel = args.kernel
+KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
+KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
+
 
 hydro_h_max = max_cell_size / 2
 particle.h_hydro_max = hydro_h_max
@@ -405,9 +413,6 @@ peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 # Some sanity checks ----------------------------------------------------------
 if GAMMA not in gamma_hydro_list:
     print(f"Please check the value of GAMMA. You have chosen: {GAMMA}")
-
-if KERNEL not in kernel_list:
-    print(f"Please check the kernel. You have chosen: {KERNEL}")
 
 print("-----------------------------------------------------------------------")
 print("SPH parameters summary:")

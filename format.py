@@ -23,6 +23,27 @@ black_checked = False
 clang_checked = False
 
 
+def get_peano_root():
+    """
+    Get the root dir of the repository.
+
+    returns:
+    peano_root: str
+        root of Peano repo
+    """
+    gitrevparse = subprocess.run(
+        "git rev-parse --show-toplevel",
+        shell=True,
+        check=True,
+        capture_output=True,
+    )
+    gitstdout = gitrevparse.stdout
+    if isinstance(gitstdout, bytes):
+        gitstdout = gitstdout.decode("utf8")
+    rootdir = gitstdout.strip()
+    return rootdir
+
+
 def get_default_clang_format(peano_root):
     """
     Try and find the default clang format style file
@@ -40,6 +61,20 @@ def get_default_clang_format(peano_root):
 
 def get_venv_path(peano_root):
     return os.path.join(peano_root, python_venv_dir)
+
+
+def check_git():
+    """
+    Make sure git is up and running.
+    """
+    # Does it run?
+    run = subprocess.run(
+        "git --version",
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        check=True,
+    )
+    return
 
 
 def check_black(black_cmd):
@@ -434,7 +469,8 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
 
 
 if __name__ == "__main__":
-    peano_root = peano_repo_rootdir
+    check_git()
+    peano_root = get_peano_root()
     clang_format_file = get_default_clang_format(peano_root)
 
     parser = setup_parser(peano_root, clang_format_file)
