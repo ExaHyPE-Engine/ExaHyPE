@@ -83,7 +83,11 @@ def construct_touch_cell_first_time_call(current_species_set,
 def construct_touch_vertex_last_time_call(current_species_set,
                                           touch_vertex_last_time_kernel):
     result = """
-    tarch::multicore::waitForTasks( fineGridVertex""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getAdjacentCellsTouchLastNumber() );
+    tarch::multicore::waitForTasks( 
+      tarch::la::toSTLVector(
+        fineGridVertex""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getAdjacentCellsTouchLastNumber() 
+      )
+    );
     """
 
     if touch_vertex_last_time_kernel!=None:
