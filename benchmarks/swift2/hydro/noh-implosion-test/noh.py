@@ -183,9 +183,15 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=particles_per_cell,
     min_h=max_cell_size,
     max_h=max_cell_size,
+<<<<<<< HEAD
     use_optimised_coalesced_memory_access_kernels=(
       "-vectorise" in args.optimisation
     )
+=======
+    use_optimised_coalesced_memory_access_kernels=args.optimisation
+    == "vectorise-per-vertex",
+    asserts=args.asserts,
+>>>>>>> refs/remotes/origin/particles
 )
 
 
