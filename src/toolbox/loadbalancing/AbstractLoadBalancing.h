@@ -27,6 +27,13 @@ namespace toolbox {
 class toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
+     * Is used by tree identification and either indicates that there are no trees
+     * at all or means that the heaviest tree is on the blacklist. See implementation
+     * remarks in class description.
+     */
+    static constexpr int NoHeaviestTreeAvailable = -1;
+
+    /**
      * Constructor
      *
      * Data ownership is handed over to the load balancing, i.e. the balancing
@@ -177,13 +184,6 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
      * @return -1 if there is no local tree yet
      */
     double getWeightOfHeaviestLocalSpacetree() const;
-
-    /**
-     * Is used by tree identification and either indicates that there are no trees
-     * at all or means that the heaviest tree is on the blacklist. See implementation
-     * remarks in class description.
-     */
-    static constexpr int NoHeaviestTreeAvailable = -1;
 
     /**
      * Determines the maximum spacetree size a tree should have in the

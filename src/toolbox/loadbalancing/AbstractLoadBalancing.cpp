@@ -179,7 +179,9 @@ bool toolbox::loadbalancing::AbstractLoadBalancing::areRanksUnemployed() const {
 double toolbox::loadbalancing::AbstractLoadBalancing::getWeightOfHeaviestLocalSpacetree() const {
   const int heaviestSpacetree = getIdOfHeaviestLocalSpacetree();
   logDebug( "getWeightOfHeaviestLocalSpacetree()", "id=" << heaviestSpacetree << ", #octants=" << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(heaviestSpacetree).getNumberOfLocalUnrefinedCells() );
-  return heaviestSpacetree==NoHeaviestTreeAvailable ? -1 : peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(heaviestSpacetree).getNumberOfLocalUnrefinedCells();
+  return heaviestSpacetree==NoHeaviestTreeAvailable
+       ? -1
+       : _costMetrics->getCostOfLocalTree(heaviestSpacetree);
 }
 
 
@@ -213,7 +215,7 @@ int toolbox::loadbalancing::AbstractLoadBalancing::getIdOfHeaviestLocalSpacetree
       and
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>=ThreePowerD
     ) {
-      maxLocalCost = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
+      maxLocalCost = _costMetrics->getCostOfLocalTree(p);
     }
   }
 

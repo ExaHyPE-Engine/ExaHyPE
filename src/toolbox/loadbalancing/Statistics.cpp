@@ -18,11 +18,9 @@ toolbox::loadbalancing::Statistics::Statistics():
   _viewConsistent(false) {
   #ifdef Parallel
   _globalSumRequest            = nullptr;
-  _globalLightestRankRequest   = nullptr;
   _globalNumberOfSplitsRequest = nullptr;
   _globalNumberOfTreesRequest  = nullptr;
   _globalNumberOfRanksWithEnabledLoadBalancingRequest = nullptr;
-  _globalMinimumOfMaximumTreesPerRankRequest          = nullptr;
   _globalMaximumTreesPerRankRequest                   = nullptr;
   #endif
 }
@@ -45,14 +43,8 @@ std::string  toolbox::loadbalancing::Statistics::toString() const {
       << ",local-number-of-splits=" << _localNumberOfSplits
       << ",global-number-of-splits=" << _globalNumberOfSplits
       << ",number-of-state-updates-without-any-split=" << _numberOfStateUpdatesWithoutAnySplit
-      << ",view-consistent=" << _viewConsistent;
-
-  #if defined(Parallel)
-  msg << ",lightest-rank-no=" << _lightestRank._rank
-      << ",lightest-rank-weight=" << _lightestRank._unrefinedCells;
-  #endif
-
-  msg << ")";
+      << ",view-consistent=" << _viewConsistent
+      << ")";
 
   return msg.str();
 }
@@ -62,27 +54,21 @@ void toolbox::loadbalancing::Statistics::waitForGlobalDataExchange() {
   #ifdef Parallel
   if (_globalSumRequest != nullptr ) {
     MPI_Wait( _globalSumRequest, MPI_STATUS_IGNORE );
-    MPI_Wait( _globalLightestRankRequest, MPI_STATUS_IGNORE );
     MPI_Wait( _globalNumberOfSplitsRequest, MPI_STATUS_IGNORE );
     MPI_Wait( _globalNumberOfTreesRequest, MPI_STATUS_IGNORE );
     MPI_Wait( _globalNumberOfRanksWithEnabledLoadBalancingRequest, MPI_STATUS_IGNORE );
-    MPI_Wait( _globalMinimumOfMaximumTreesPerRankRequest, MPI_STATUS_IGNORE );
     MPI_Wait( _globalMaximumTreesPerRankRequest, MPI_STATUS_IGNORE );
 
     delete _globalSumRequest;
-    delete _globalLightestRankRequest;
     delete _globalNumberOfSplitsRequest;
     delete _globalNumberOfTreesRequest;
     delete _globalNumberOfRanksWithEnabledLoadBalancingRequest;
-    delete _globalMinimumOfMaximumTreesPerRankRequest;
     delete _globalMaximumTreesPerRankRequest;
 
     _globalSumRequest            = nullptr;
-    _globalLightestRankRequest   = nullptr;
     _globalNumberOfSplitsRequest = nullptr;
     _globalNumberOfTreesRequest  = nullptr;
     _globalNumberOfRanksWithEnabledLoadBalancingRequest = nullptr;
-    _globalMinimumOfMaximumTreesPerRankRequest = nullptr;
     _globalMaximumTreesPerRankRequest          = nullptr;
   }
   #endif
@@ -178,15 +164,6 @@ void toolbox::loadbalancing::Statistics::updateGlobalView() {
       MPI_MAX,
       tarch::mpi::Rank::getInstance().getCommunicator(),
       _globalMaximumTreesPerRankRequest
-    );
-    MPI_Iallreduce(
-      &_numberOfMaximumTreesOut,     // send
-      &_minimumOfMaximumTreesIn,      // receive
-      1,             // count
-      MPI_INT,
-      MPI_MIN,
-      tarch::mpi::Rank::getInstance().getCommunicator(),
-      _globalMinimumOfMaximumTreesPerRankRequest
     );
     #endif
   }

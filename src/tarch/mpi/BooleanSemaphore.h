@@ -32,6 +32,12 @@ namespace tarch {
  * send an integer message with this number to the global master through the
  * semaphore tag. If we we release it, we send the negative number back.
  *
+ * As an mpi semaphore includes all ranks and all threads, it is something that
+ * is more general than a "normal" tarch::multicore::BooleanSemaphore.
+ * Therefore, the mpi semaphore hosts the multicore semaphore in return. As
+ * long as a thread on the local rank has blocked a critical section, we don't
+ * even have to go to the global master.
+ *
  * ## Implementation
  *
  * The implementation is straightforward:
@@ -69,6 +75,34 @@ namespace tarch {
  * might run into a race if two threads on the global master concurrently
  * acquire a global MPI lock. Here, we have to use the multicore lock, too.
  *
+ *
+ * ## Deadlock due to rank divergence
+ *
+ * If you have a lot of point to point messages, the MPI subsystem might
+ * suddenly switch to rendezvous. This is problematic whenever rank 0 has
+ * already passed the semaphore, while others have not even hit it. What
+ * happens now is that rank 0 does something completely different while
+ * potentially all other ranks wait for their boolean semaphore to be
+ * served. Two things now can happen which are really annoying:
+ *
+ * 1. Rank 0 runs into a global communication or non-blocking send which
+ *    is not served, as the other ranks are not there yet. Unless the user
+ *    codes poll the services (which they should), the code now will
+ *    deadlock, as rank 0 waits for some input from the other ranks, while
+ *    all other ranks wait for rank 0 to serve their boolean semaphore
+ *    requests.
+ * 2. Rank n waits for 0 to serve its request, but rank 0 is so busy doing
+ *    other things that rank n is blocked for quite a while. Only eventually,
+ *    we serve rank n. In this case, we introduce almost a serialisation of the
+ *    ranks.
+ *
+ * A straightforward mitigation of this problem is the attempt to try to avoid
+ * rank divergence. This term here is used in line with thread divergence in
+ * SIMT: All ranks should more or less do the same thing and hence hit the
+ * semaphore around the same time.
+ *
+ *
+ *
  * @see Constructor for details
  *
  * @author Tobias Weinzierl
@@ -105,14 +139,25 @@ class tarch::mpi::BooleanSemaphore {
          * receivers do not check if the "go ahead" is meant to be for them, as
          * they could not re-inject the message into MPI anyway.
          */
-        tarch::multicore::BooleanSemaphore  _localRankLockRequestSemaphore;
+// @todo Deprecated and to be removed as soon as we have confirmation from
+//        large-scale runs that this has been an issue. In this case, the
+//        docu has to be amended
+//        tarch::multicore::BooleanSemaphore  _localRankLockRequestSemaphore;
+
+        struct SemaphoreMapEntry {
+          bool   locked;
+          int    rankThatLastLocked;
+
+          SemaphoreMapEntry();
+          std::string toString() const;
+        };
 
         /**
          * This is the actual map which stores per semaphore number
          * a bool that says whether it is currently taken. So false
          * means noone's requested it, true means someone holds it.
          */
-        std::map<int,bool>                  _map;
+        std::map<int,SemaphoreMapEntry>                  _map;
 
         /**
          * List of pending lock requests
@@ -124,7 +169,7 @@ class tarch::mpi::BooleanSemaphore {
          */
         std::vector< std::pair<int, int> >   _pendingLockRequests;
 
-        BooleanSemaphoreService();
+        BooleanSemaphoreService() = default;
 
         BooleanSemaphoreService( const BooleanSemaphoreService& ) = delete;
 
@@ -148,6 +193,12 @@ class tarch::mpi::BooleanSemaphore {
         void serveLockRequests();
 
         /**
+         * Add map entry
+         *
+         * Only defined/used on global master. We do not maintain a map of all
+         * existing semaphores, but build up a dictionary of these guys at
+         * runtime in a lazy fashion.
+         *
          * @number Every boolean semaphore has a globally unique positive
          *    number. The MPI messages we send around carry this number if we
          *    want to acquire a lock. They carry the negative number if we
@@ -165,7 +216,7 @@ class tarch::mpi::BooleanSemaphore {
          * (hence the name), it has to deregister itself. Otherwise, the overall
          * service landscape still might try to call receiveDanglingMessages().
          */
-        ~BooleanSemaphoreService();
+        ~BooleanSemaphoreService() = default;
 
         /**
          * Receive any lock-related dangling messages
@@ -206,7 +257,40 @@ class tarch::mpi::BooleanSemaphore {
          */
         static BooleanSemaphoreService& getInstance();
 
-        void acquireLock( int number );
+        /**
+         * Acquire the lock
+         *
+         * If this routine is called on the global master, we try to acquire a
+         * lock on the master directly. If it is called on another rank, we
+         * send a lock message to the global master.
+         *
+         *
+         * ## Global master and deadlocks
+         *
+         * We always have to call receiveDanglingMessages() quite aggressively.
+         * On the one hand, we might try to lock a semaphore which is already
+         * locked by another rank. We have to give that other rank the
+         * opportunity to free the lock again. If we don't allow this to happen,
+         * we will never get the opportunity to lock this semaphore for our own
+         * rank, i.e. the global master.
+         *
+         * There is another reason for this polling, too: It is
+         * important that we don't prematurely lock the semaphore if we are
+         * called on the master. We should always try to serve other ranks
+         * first to avoid massive MPI rank divergence. Further to that, we take
+         * the flag _localRankLockRequestSemaphore into account. If it is set,
+         * we know that each rank will request the semaphore at least once.
+         * Consequently, we do acquire it if and only if another rank has
+         * grabbed it before. Basically, we try to prioritise all other ranks
+         * and let locks by rank 0 pass through last.
+         * Please consult the class documentation on potential deadlocks.
+         */
+        void acquireLock( int number, bool allRanksLockThisSemaphoreAtLeastOnce );
+
+        /**
+         * To avoid rank divergence, we immediately serve follow-up lock
+         * requests after we've free the lock on the global master.
+         */
         void releaseLock( int number );
 
         int getNumberOfLockedSemaphores();
@@ -223,6 +307,13 @@ class tarch::mpi::BooleanSemaphore {
     static int                  _semaphoreCounter;
 
     const int  _semaphoreNumber;
+
+    const bool _allRanksLockThisSemaphoreAtLeastOnce;
+
+    /**
+     * @todo explain why we lock locally first
+     */
+    tarch::multicore::BooleanSemaphore  _localRankLockRequestSemaphore;
 
     /**
      * Waits until I can enter the critical section.
@@ -263,8 +354,12 @@ class tarch::mpi::BooleanSemaphore {
      * What happens is that the constructor grabs a unique number for this
      * MPI semaphore, and stores it in _semaphoreNumber. This number will
      * later be used globally to identify this semaphore type.
+     *
+     * @param allRanksLockThisSemaphoreAtLeastOnce This boolean parameter indicates that,
+     *   whenever this semaphore is locked, all ranks will at least lock this
+     *   one once.
      */
-    BooleanSemaphore();
+    BooleanSemaphore(bool allRanksLockThisSemaphoreAtLeastOnce);
 
     ~BooleanSemaphore();
 };

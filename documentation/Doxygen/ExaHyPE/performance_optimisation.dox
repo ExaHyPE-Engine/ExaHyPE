@@ -299,6 +299,9 @@ balancing. For some experiments, this might be reasonable. If you want to use a
 generic load balancing, you might however also consider to change the load 
 metrics. For this, you have to use a specialisation of toolbox::loadbalancing::metrics::CellCount.
 
+I recommend to consult exahype2.grid.FineGridCellLoadBalancingCostMetric, which 
+discusses step by step how to introduce a tailored load balancing.
+
 
 ## MPI optimisation
 

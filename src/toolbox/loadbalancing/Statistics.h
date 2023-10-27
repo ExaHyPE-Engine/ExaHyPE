@@ -3,6 +3,7 @@
 #pragma once
 
 
+#include "tarch/mpi/mpi.h"
 #include "tarch/logging/Log.h"
 #include "tarch/mpi/Rank.h"
 

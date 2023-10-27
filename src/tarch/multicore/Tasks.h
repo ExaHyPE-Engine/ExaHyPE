@@ -23,25 +23,34 @@ namespace tarch {
      * the current orchestration. It swaps them, so you can use setOrchestration()
      * with the result afterwards and re-obtain the original strategy.
      */
-    tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation
-    );
+    tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
     /**
-     * Usually called directly by EnclaveTask.
+     * Utility function for unique task numbers
      *
      * This routine has to return a number which is currently not in use.
-     * There is however no need for the delivered task numbers to be
+     *
+     * ## Implementation
+     *
+     * There is no need for delivered task numbers to be
      * consecutive. Therefore, I use the size of the existing task set as
      * a guideline for a task number to search for. If this initial guess
      * is already handed out, I increase the counter by a prime number and
      * try the new number again - until I've finally found a task which is
      * not yet processed.
+     *
+     * @see Task
      */
     int reserveTaskNumber();
 
+    /**
+     * Counterpart to reserveTaskNumber().
+     */
     void releaseTaskNumber(int number);
 
     /**
+     * How many task numbers are currently reserved.
+     *
      * Should usually be more than pending tasks, as it also includes tasks that have
      * finished yet have not released their number yet.
      *
@@ -65,12 +74,34 @@ namespace tarch {
       static constexpr int DontFuse        = -1;
 
       /**
-       * @param taskType Unique task (type) number for this task. All tasks that do
-       *        the same, i.e. are of the same type, should have the same task type
-       *        integer marker. Peano's tarch can use multiple tasks of the same
-       *        type and fuse/batch them into one task call. However, if you don't
-       *        want Peano to even thing about task fusion, pass in DontFuse as
-       *        argument.
+       * Construct task
+       *
+       * ## Task types and task numbers
+       *
+       * Eachtask in Peano has to have a task type. All tasks that do the same,
+       * i.e. are of the same type, should have the same task type integer
+       * marker. Peano's tarch can use multiple tasks of the same type and
+       * fuse/batch them into one task call. However, if you don't want Peano
+       * to even thing about task fusion, pass in DontFuse as argument for the
+       * type.
+       *
+       * It is totally up to the user to manage the task type numbers. Peano
+       * for example offers a factory mechanism peano4::parallel::getTaskType()
+       * to create task types, which Peano applications should use. However,
+       * the generation of the task types is not baked into the tarch.
+       *
+       * Some codes also have task numbers. They need this, if they have to
+       * identify tasks uniquely. Applications for that are task dependencies
+       * or tasks that are offloaded to other ranks. For the latter tasks, we
+       * have to match data sent back by another rank to the task that would
+       * have produced these results locally. Anyway, task numbers are not
+       * baked into the generic interface, as we don't need them for all tasks
+       * all the time, and I want to avoid that the construction of unique
+       * task numbers becomes too expensive. If you should need unique task
+       * numbers, I recommend you use reserveTaskNumber().
+       *
+       *
+       * @param taskType Unique task (type) number for this task.
        *
        * @param priority Integer value that indicates what priority you want to
        *        assign a task. Value has to be non-negative.
@@ -252,6 +283,35 @@ namespace tarch {
      */
     void spawnTask(Task* job);
 
+    constexpr int NoDependency = -1;
+
+    /**
+     * Spawn task with in and/or out dependencies
+     *
+     * This alternative version of spawnTask() creates a task with in and/or
+     * out dependencies. There are a few conventions around this one:
+     *
+     * - in and out are non-zero integers that refer to exactly one other
+     *   task. I recommend to use reserveTaskNumber() to obtain unique task
+     *   numbers that you can refer to. But this is the user's choice.
+     * - You can make either in or out be NoDependency, but it is not permitted
+     *   that both are of the value NoDependency. If this is the case, you
+     *   have to use the other spawnTask() routine.
+     * - If a task has an in dependency, i.e. in!=NoDependency, then you have
+     *   to spawn the task with the corresponding out dependency before that.
+     *   So the system has to be aware that there is an out dependency.
+     *   Otherwise, you create an anti-dependency (OpenMP jargon) and that is
+     *   not allowed.
+     * - It is up to the implementation in the respective back-end if tasks
+     *   with dependency can be held back and can be subject to fusion. You
+     *   have to guarantee from the interface.
+     *
+     * @param in    Non-zero integer or NoDependency.
+     *
+     * @param out   Non-zero integer or NoDependency.
+     */
+    void spawnTask(Task* job, int in, int out);
+
     /**
      * Run a bunch of tasks
      *
@@ -366,8 +426,15 @@ namespace tarch {
        *
        * The responsibility to destroy task is handed over to the runtime of
        * choice.
+       *
+       * @see tarch::multicore::spawnTask()
        */
       void spawnTask(Task* task);
+
+      /**
+       * @see tarch::multicore::spawnTask()
+       */
+      void spawnTask(Task* task, int in, int out);
 
       /**
        * Map onto native tasking

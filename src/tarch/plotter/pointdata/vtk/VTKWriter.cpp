@@ -4,7 +4,7 @@
 #include "tarch/plotter/griddata/unstructured/vtk/VTUTextFileWriter.h"
 
 
-tarch::mpi::BooleanSemaphore  tarch::plotter::pointdata::vtk::VTKWriter::_sempahore;
+tarch::mpi::BooleanSemaphore  tarch::plotter::pointdata::vtk::VTKWriter::_sempahore(true);
 
 
 tarch::plotter::pointdata::vtk::VTKWriter::VTKWriter(bool binaryFile, const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode, double timeStamp) {
