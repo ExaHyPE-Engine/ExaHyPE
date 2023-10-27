@@ -284,6 +284,21 @@ namespace tarch {
     void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
 
     /**
+     * Wait for set of tasks
+     *
+     * Entries in inDependencies can be NoDependency.
+     */
+    void waitForTasks( const std::vector<int>& inDependencies );
+
+    /**
+     * Wait for one task
+     *
+     * taskNumber can be NoDependency. In this case, the operation degenerates
+     * to nop.
+     */
+    void waitForTask( int taskNumber );
+
+    /**
      * Run a bunch of tasks
      *
      * The realisation is relatively straightforward:
@@ -449,6 +464,8 @@ namespace tarch {
 
       void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
       void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
+      void waitForTasks( const std::vector<int>& inDependencies );
+      void waitForTask( int taskNumber );
     } // namespace native
 
     namespace internal {

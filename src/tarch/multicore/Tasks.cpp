@@ -464,6 +464,15 @@ void tarch::multicore::spawnTaskWithDependencies(Task* job, const std::vector<in
 }
 
 
+void tarch::multicore::waitForTasks( const std::vector<int>& inDependencies ) {
+  tarch::multicore::native::waitForTasks( inDependencies );
+}
+
+
+void tarch::multicore::waitForTask( int taskNumber ) {
+  tarch::multicore::native::waitForTask( taskNumber );
+}
+
 #ifndef SharedMemoryParallelisation
 
 #include <thread>
@@ -507,5 +516,10 @@ void tarch::multicore::native::processFusedTask(
 }
 
 void tarch::multicore::native::drainTaskQueues() {}
+
+void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
+
+void tarch::multicore::native::waitForTask( int taskNumber ){}
+
 
 #endif

@@ -231,4 +231,7 @@ void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::v
 }
 
 
+void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
+
+void tarch::multicore::native::waitForTask( int taskNumber ){}
 #endif
