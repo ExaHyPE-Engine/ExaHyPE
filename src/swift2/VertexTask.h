@@ -46,9 +46,7 @@ namespace swift2 {
 
       virtual bool run() override;
 
-      int getTaskNumber() const;
     private:
-      const int    _taskNumber;
       ParticleSet  _localParticles;
       ParticleSet  _activeParticles;
       Functor      _functor;

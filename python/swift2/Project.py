@@ -500,8 +500,8 @@ levels.
                     current_species_set.name
                 )
             )
-            cell_marker_for_tasks   = peano4.toolbox.TaskNumbersOnMesh.create_marker(current_species_set.name)
-            vertex_marker_for_tasks = peano4.toolbox.TaskNumbersOnMesh.create_marker(current_species_set.name)
+            cell_marker_for_tasks   = peano4.toolbox.TaskNumbersOnMesh.create_cell_marker(current_species_set.name)
+            vertex_marker_for_tasks = peano4.toolbox.TaskNumbersOnMesh.create_vertex_marker(current_species_set.name)
             
             # Enable cell statistics for this species
             self._project.datamodel.add_cell(cell_marker_for_statistics)

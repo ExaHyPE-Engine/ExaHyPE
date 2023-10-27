@@ -23,25 +23,107 @@ DefaultIncludes = """
 #include "swift2/VertexTask.h"                
                 """
 
+
 def construct_touch_vertex_first_time_call(current_species_set,
                                            touch_vertex_first_time_kernel):
-    return """
-  auto* newTask = new ::swift2::VertexTask< decltype(localParticles) >(
-    localParticles,
-    activeParticles,
-    [=](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
-      """ + touch_vertex_first_time_kernel + """
-    }
-  );
-  
-  fineGridVertex""" + current_species_set.particle_model.name + """SetTaskMarker.setTouchLastTaskNumber(newTask->getTaskNumber());
-  tarch::multicore::spawnTaskWithDependencies( newTask, tarch::multicore::NoDependency, newTask->getTaskNumber() );
-"""
+    if touch_vertex_first_time_kernel==None:
+        return ""
+    else:
+        return """
+      const int taskNumberToBeUsed = fineGridVertex""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getTouchFirstNumber();
+      
+      if ( taskNumberToBeUsed!=tarch::multicore::NoDependency ) {
+        auto* newTask = new ::swift2::VertexTask< decltype(localParticles) >(
+          localParticles,
+          activeParticles,
+          [=](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
+            """ + touch_vertex_first_time_kernel + """
+          }
+        );
+      
+        tarch::multicore::spawnTaskWithDependencies( newTask, tarch::multicore::NoDependency, taskNumberToBeUsed );
+      }
+      else {
+        """ + touch_vertex_first_time_kernel + """
+      }
+    """
 
 
-# @todo Nicht den Enclave Vertex Task
-# @todo Nur, wenn Gitter stationaer
-# @todo Ganze Action set fehlt noch
+def construct_touch_cell_first_time_call(current_species_set,
+                                         touch_cell_first_time_kernel):
+    if touch_cell_first_time_kernel==None:
+        return ""
+    else:
+        return """
+      const int taskNumberToBeUsed = fineGridCell""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getTouchLastNumber();
+      
+      std::vector<int> adjacentVertexTask(TwoPowerD);
+      for (int i=0; i<TwoPowerD; i++) {
+        adjacentVertexTask[i] = fineGridVertices""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """(i).getTouchFirstNumber();
+      }
+
+      if ( taskNumberToBeUsed!=tarch::multicore::NoDependency ) {        
+        auto* newTask = new ::swift2::VertexTask< decltype(localParticles) >(
+          localParticles,
+          activeParticles,
+          [=](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
+            """ + touch_cell_first_time_kernel + """
+          }
+        );
+      
+        tarch::multicore::spawnTaskWithDependencies( newTask, adjacentVertexTask, taskNumberToBeUsed );
+      }
+      else {
+        tarch::multicore::waitForTasks( adjacentVertexTask );
+        """ + touch_cell_first_time_kernel + """
+      }
+    """
+
+
+def construct_touch_vertex_last_time_call(current_species_set,
+                                          touch_vertex_last_time_kernel):
+    result = """
+    tarch::multicore::waitForTasks( fineGridVertex""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getAdjacentCellsTouchLastNumber() );
+    """
+
+    if touch_vertex_last_time_kernel!=None:
+      result += touch_vertex_last_time_kernel + """
+    """
+    
+    return result
+
+
+#
+# @todo Here for final SWIFT-like task graph construction, i.e. left on purpose
+#
+#def construct_touch_vertex_last_time_call(current_species_set,
+#                                          touch_vertex_last_time_kernel):
+#    if touch_vertex_last_time_kernel==None:
+#        return ""
+#    else:
+#        return """
+#      const int taskNumberToBeUsed = fineGridVertex""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getTouchLastNumber();
+#      
+#      if ( taskNumberToBeUsed!=tarch::multicore::NoDependency ) {
+#        auto* newTask = new ::swift2::VertexTask< decltype(localParticles) >(
+#          localParticles,
+#          activeParticles,
+#          [=](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
+#            """ + touch_vertex_last_time_kernel + """
+#          }
+#        );
+#      
+#        tarch::multicore::spawnTaskWithDependencies( 
+#          newTask, 
+#          fineGridVertex""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getAdjacentCellsTouchLastNumber(),
+#          tarch::multicore::NoDependency
+#        );
+#      }
+#      else {
+#        tarch::multicore::waitForTasks( fineGridVertex""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getAdjacentCellsTouchLastNumber() );
+#        """ + touch_vertex_last_time_kernel + """
+#      }
+#    """
 
 
 def translate_one_step_of_species_into_mesh_traversal(
@@ -67,11 +149,28 @@ def translate_one_step_of_species_into_mesh_traversal(
        it at least once per particle species.
     2. Update the particle markers (analysis of particles per cell). This is
        something each and every step in Peano does.
-    3. To be written
+    3. Pick computational kernel. This is where the actual computation per step
+       is done. We have two fundamentally different kernels: one keeps track of
+       (multiscale) neighbours, while the other just updates the particles 
+       within the octant (cell).
+    4. If an action set alters the position or cut-off of a particle, then we 
+       append True to alter_particle_position. Otherwise, we append False.
+       
+       Here's where the action set differs completely from the Sequential graph
+       compiler. If we change a position, we erase all the task indices from 
+       the tree. 
+       
+    In general, we never assign any index to touchCellLastTime(), as Swift does 
+    not only one type of plug-in points. This is actually touchCellFirstTime()
+    in the realisation, so one might be tempted to mask out touchCellLastTime()
+    and only use task indices for touchCellFirstTime(). However, we have to 
+    plug into touchVertexLastTime(), too, and this one has to know about events
+    within the adjacent cells. The action set AssignTaskNumbersToMesh memorises
+    the touchCellLastTime() indices within the vertices, to we use the numbers
+    from touchCellLastTime() but actually plug into touchCellFirstTime().
+
+
     
-    @todo More documentation has to be added here once we start to write the 
-          underlying paper.
-          
     @param current_species_set: Particle
       You get a specific algorithmic step as input. The current_species_set
       highlights to which this step originally belonged to. 
@@ -97,7 +196,6 @@ def translate_one_step_of_species_into_mesh_traversal(
     # Erase task markers throughout initialisation
     #
     if step_type==StepType.INITIALISATION:
-        print( "WAS HERE" );
         if verbose:
             print(
                 "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} is initialisation step and hence uses the peano4.toolbox.ClearTaskNumbersOnMesh action set".format(
@@ -119,11 +217,6 @@ def translate_one_step_of_species_into_mesh_traversal(
 
     #
     # Pick computational kernel
-    # =========================
-    # This is where the actual computation per step is done. We have two
-    # fundamentally different kernels: one keeps track of (multiscale)
-    # neighbours, while the other just updates the particles within the
-    # octant (cell).
     #
     if step.dependencies == AlgorithmStep.Dependencies.NEIGHBOURS:
         if use_lists_to_construct_active_sets:
@@ -137,9 +230,9 @@ def translate_one_step_of_species_into_mesh_traversal(
                 )
             action_set_particle_particle_interaction = peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles(
                 particle_set=current_species_set,
-                particle_particle_interaction_kernel=step.cell_kernel,
+                particle_particle_interaction_kernel=construct_touch_cell_first_time_call(step.cell_kernel),
                 touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(current_species_set,step.touch_vertex_first_time_kernel),
-                touch_vertex_last_time_compute_particle_update_kernel=step.touch_vertex_last_time_kernel,
+                touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(step.touch_vertex_last_time_kernel),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes + DefaultIncludes,
@@ -156,9 +249,9 @@ def translate_one_step_of_species_into_mesh_traversal(
                 )
             action_set_particle_particle_interaction = peano4.toolbox.particles.ParticleParticleInteraction_Sets(
                 particle_set=current_species_set,
-                particle_particle_interaction_kernel=step.cell_kernel,
+                particle_particle_interaction_kernel=construct_touch_cell_first_time_call(current_species_set,step.cell_kernel),
                 touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(current_species_set,step.touch_vertex_first_time_kernel),
-                touch_vertex_last_time_compute_particle_update_kernel=step.touch_vertex_last_time_kernel,
+                touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(current_species_set,step.touch_vertex_last_time_kernel),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes + DefaultIncludes,
@@ -181,12 +274,12 @@ def translate_one_step_of_species_into_mesh_traversal(
 
         action_set_particle_update = peano4.toolbox.particles.ParticlePerCellUpdate(
             particle_set=current_species_set,
-            particle_cell_update_kernel=step.cell_kernel,
-            touch_vertex_first_time_compute_particle_update_kernel=step.touch_vertex_first_time_kernel,
-            touch_vertex_last_time_compute_particle_update_kernel=step.touch_vertex_last_time_kernel,
+            particle_cell_update_kernel=construct_touch_cell_first_time_call(current_species_set,step.cell_kernel),
+            touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(current_species_set,step.touch_vertex_first_time_kernel),
+            touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(current_species_set,step.touch_vertex_last_time_kernel),
             prepare_traversal_kernel=step.prepare_traversal_kernel,
             unprepare_traversal_kernel=step.unprepare_traversal_kernel,
-            additional_includes=step.includes,
+            additional_includes=step.includes + DefaultIncludes,
             active_particle_set=step.input_particles,
         )
         action_set_particle_update.descend_invocation_order = new_step.highest_descend_invocation_order() + 1
@@ -204,9 +297,36 @@ def translate_one_step_of_species_into_mesh_traversal(
         or step.effect
         == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
     ):
+        if verbose:
+            print(
+                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} alters particle state and hence uses the peano4.toolbox.ClearTaskNumbersOnMesh action set".format(
+                    len(mesh_traversals),
+                    step.name,
+                    current_species_set.particle_model.name,
+                )
+            )
         alter_particle_position.append(True)
+        action_set_erase_task_markers          = peano4.toolbox.ClearTaskNumbersOnMesh(current_species_set.name)
+        action_set_erase_task_markers.descend_invocation_order = new_step.lowest_descend_invocation_order() - 1
+        action_set_erase_task_markers.parallel = True
+        new_step.add_action_set(action_set_erase_task_markers)
     else:
+        if verbose:
+            print(
+                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} alters particle state and hence uses the peano4.toolbox.AssignTaskNumbersToMesh action set".format(
+                    len(mesh_traversals),
+                    step.name,
+                    current_species_set.particle_model.name,
+                )
+            )
         alter_particle_position.append(False)
+        action_set_erase_task_markers          = peano4.toolbox.AssignTaskNumbersToMesh(current_species_set.name,
+                                                                                        touch_cell_first_time_assignment_predicate = "false",
+                                                                                        touch_vertex_last_time_assignment_predicate = "not marker.isAdjacentToParallelDomainBoundary()"
+                                                                                        )
+        action_set_erase_task_markers.descend_invocation_order = new_step.lowest_descend_invocation_order() - 1
+        action_set_erase_task_markers.parallel = True
+        new_step.add_action_set(action_set_erase_task_markers)
 
     mesh_traversals.append(new_step)
 
