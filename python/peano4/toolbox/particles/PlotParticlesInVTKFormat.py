@@ -332,6 +332,6 @@ class PlotParticlesInVTKFormat(ActionSet):
             """
 tarch::mpi::BooleanSemaphore  """
             + full_qualified_classname
-            + """::_semaphore(true);
+            + """::_semaphore;
 """
         )
