@@ -818,6 +818,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # will cause trouble.
         self._initialisation_steps = [copy.deepcopy(i) for i in initsteps]
 
+        return
+
     def initialisation_steps(self):
         """
         Return the list of algorithm steps to be executed during initialisation.

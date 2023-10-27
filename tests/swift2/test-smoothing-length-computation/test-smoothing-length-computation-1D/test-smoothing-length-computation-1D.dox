@@ -1,6 +1,6 @@
 /**
 
-@page benchmarks_swift2_tests_test_smoothing_length_computation_1D Smoothing Length Computation Test in 1D
+@page test_swift2_tests_test_smoothing_length_computation_1D Smoothing Length Computation Test in 1D
 
 Scripts and setups to test the smoothing length computation algorithms.
 There are basically two running modes:
