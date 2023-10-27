@@ -42,7 +42,7 @@ namespace swift2 {
         const ParticleSet& activeParticles,
         Functor            functor
       );
-      ~VertexTask();
+      ~VertexTask() = default;
 
       virtual bool run() override;
 
@@ -53,3 +53,5 @@ namespace swift2 {
   };
 }
 
+
+#include "VertexTask.cpph"
