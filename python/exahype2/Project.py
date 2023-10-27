@@ -52,7 +52,7 @@ class Project(object):
         self._log_filter_file         = "exahype.log-filter"
         self._number_of_threads       = "tarch::multicore::Core::UseDefaultNumberOfThreads"
         self._multicore_orchestration = "tarch::multicore::orchestration::createDefaultStrategy()"
-        self._timeout                 = -1
+        self._timeout                 = 3600
         self._gpus                    = []
         self._additional_includes     = [ "tarch/logging/LogFilterFileReader.h", 
                                           "tarch/multicore/orchestration/StrategyFactory.h",

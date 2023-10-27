@@ -84,6 +84,8 @@ bool tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::tryLockSemaphoreOnGl
     gotLock              = true;
     _map[number].locked  = true;
     _map[number].rankThatLastLocked = tarch::mpi::Rank::getGlobalMasterRank();
+    // @todo debug
+    logInfo( "tryLockSemaphoreOnGlobalMaster(int,int)", "successfully locked semahpore " << number << " for rank " << forRank );
   }
 
   return gotLock;
@@ -95,6 +97,9 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::lockSemaphoreOnGloba
 
   tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
   tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+
+  // @todo debug
+  logInfo( "lockSemaphoreOnGlobalMaster(int,int)", "will try to lock semahpore " << number << " for rank " << forRank );
 
   bool gotLock      = false;
   bool wroteWarning = false;
@@ -114,11 +119,15 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::lockSemaphoreOnGloba
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::unlockSemaphoreOnGlobalMaster( int number, int forRank ) {
   assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
 
+
   tarch::multicore::Lock lock(_mapAccessSemaphore);
   assertion( _map.count(number)==1 );
   assertion( _map[number].locked );
+  assertionEquals( _map[number].rankThatLastLocked, forRank );
   _map[number].locked = false;
-  logDebug( "releaseLock()", "successfully released lock " << number << ". state=" << toString() );
+
+  // todo
+  logInfo( "releaseLock()", "successfully released lock " << number << ". state=" << toString() );
 }
 
 
