@@ -63,17 +63,26 @@ def get_venv_path(peano_root):
     return os.path.join(peano_root, python_venv_dir)
 
 
-def check_git():
+def git_is_available():
     """
-    Make sure git is up and running.
+    Check whether git is available. Returns True is that is the case.
     """
     # Does it run?
     run = subprocess.run(
         "git --version",
         shell=True,
         stdout=subprocess.DEVNULL,
-        check=True,
+        stderr=subprocess.DEVNULL,
+        check=False,
     )
+
+    if run.returncode == 0:
+        return True
+    else:
+        if verbose:
+            print("Didn't find git. Continuing without.")
+        return False
+
     return
 
 
@@ -469,8 +478,10 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
 
 
 if __name__ == "__main__":
-    check_git()
-    peano_root = get_peano_root()
+    if git_is_available():
+        peano_root = get_peano_root()
+    else:
+        peano_root = peano_repo_rootdir
     clang_format_file = get_default_clang_format(peano_root)
 
     parser = setup_parser(peano_root, clang_format_file)
