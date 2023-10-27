@@ -12,7 +12,7 @@ Hereby, it is important that you add the particles toolbox:
           ./configure ... --enable-particles --enable-swift
 
 If you want to use the HDF5 I/O functionalities, you also need to configure Peano with
-HDF5 enabled. How to do this is documented in @ref SwiftHDF5.
+HDF5 enabled. How to do this is documented in @ref page_swift_initial_conditions_SwiftHDF5.
 Once Peano's core libraries are all built, you can start to write a proper Swift
 application:
 
