@@ -33,19 +33,14 @@ if(NOT JINJA2_FOUND EQUAL 0)
 endif()
 
 set(TARGET_NAME {{EXECUTABLENAME}})
-set(DIMENSION {{DIM}})
-set(MODE {{MODE}})
+set(PEANO_APP_DIMENSION {{DIM}})
+set(PEANO_APP_MODE {{MODE}})
 set(GENERATOR {{GENERATOR}})
 
-# These checks are performed to check whether the generated executable can be built with the configured core project.
-if(NOT ${MODE_LOWER} IN_LIST BUILD_MODES)
-  capitalize(${MODE})
-  message(FATAL_ERROR "Build mode of the generated project ${TARGET_NAME}'s build mode (${MODE}) is different than\
-    the build of the configured CMake project. Please reconfigure the CMake project with -DCMAKE_BUILD_TYPE=${value_capitalized}")
-endif()
+capitalize(${PEANO_APP_MODE})
+set(PEANO_APP_BUILD_TYPE "${value_capitalized}" CACHE STRING "${BUILD_MODES}" FORCE)
+set(PEANO_APP_DIMENSION "${PEANO_APP_DIMENSION}" CACHE STRING "Dimensions 2;3" FORCE)
 
-capitalize(${MODE})
-set(CMAKE_BUILD_TYPE "${value_capitalized}" CACHE STRING "${BUILD_MODES}" FORCE)
 
 list(APPEND DEPENDS_CORE {% for item in CMAKE_CORE_LIBS -%} {{item+' '}} {%- endfor %})
 list(APPEND DEPENDS_OTHER {% for item in CMAKE_LIBS -%} {{item+' '}} {%- endfor %})
@@ -62,11 +57,11 @@ list(APPEND GENERATED_FORTRAN_SOURCES {% for item in GENERATED_FORTRAN_SOURCES -
 
 list(APPEND GENERATED_INCLUDE_DIRS {% for item in GENERATED_INCLUDE_DIRS -%} ${CMAKE_CURRENT_SOURCE_DIR}/{{item+" "}} {%- endfor %})
 
-string(TOLOWER ${MODE} MODE_LOWER)
+string(TOLOWER ${PEANO_APP_MODE} PEANO_APP_MODE_LOWER)
 
 # Core libraries
 foreach(depends IN LISTS DEPENDS_CORE)
-  list(APPEND DEPENDS_FULL "${depends}${DIMENSION}d_${MODE_LOWER}")
+  list(APPEND DEPENDS_FULL "${depends}${PEANO_APP_DIMENSION}d_${PEANO_APP_MODE_LOWER}")
 endforeach()
 
 # Toolboxes etc.
@@ -100,8 +95,8 @@ target_link_libraries(${TARGET_NAME} PRIVATE ${DEPENDS_FULL})
 
 # Libraries are generated at $cmake_binary_dir, just in case add it to the link directories.
 target_link_directories(${TARGET_NAME} PRIVATE ${CMAKE_BINARY_DIR})
-target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${DIMENSION} ${${MODE}_DEFINITIONS})
-target_link_options(${TARGET_NAME} PRIVATE ${${MODE}_LDFLAGS})
+target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${PEANO_APP_DIMENSION} ${${PEANO_APP_MODE}_DEFINITIONS})
+target_link_options(${TARGET_NAME} PRIVATE ${${PEANO_APP_MODE}_LDFLAGS})
 target_link_libraries(${TARGET_NAME} PRIVATE project_options)
 
 # This is due to a bug in project_options library, project_warnings fail with NVHPC compilers as host compilers
@@ -111,21 +106,21 @@ endif()
 
 # Link every toolbox, if they are enabled
 if (ENABLE_PARTICLES)
-  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxParticles${DIMENSION}d_${MODE_LOWER})
+  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxParticles${PEANO_APP_DIMENSION}d_${PEANO_APP_MODE_LOWER})
 endif()
 
 if(ENABLE_BLOCKSTRUCTURED)
-  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxBlockStructured${DIMENSION}d_${MODE_LOWER})
+  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxBlockStructured${PEANO_APP_DIMENSION}d_${PEANO_APP_MODE_LOWER})
 endif()
 
 if(ENABLE_FEM)
-  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxFiniteElements${DIMENSION}d_${MODE_LOWER})
+  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxFiniteElements${PEANO_APP_DIMENSION}d_${PEANO_APP_MODE_LOWER})
 endif()
 
 if(ENABLE_LOADBALANCING)
-  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxLoadBalancing${DIMENSION}d_${MODE_LOWER})
+  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxLoadBalancing${PEANO_APP_DIMENSION}d_${PEANO_APP_MODE_LOWER})
 endif()
 
 if(ENABLE_MULTIPRECISION)
-  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxMultiprecision${DIMENSION}d_${MODE_LOWER})
+  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxMultiprecision${PEANO_APP_DIMENSION}d_${PEANO_APP_MODE_LOWER})
 endif()
