@@ -189,7 +189,7 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::updateLoadBalancing
               "updateLoadBalancing()",
               "local tree " << p << " is too heavy as it has a weight of " <<
               _costMetrics->getCostOfLocalTree(p) << ". Try to split tree " << computeNumberOfSplits(p) << " times on local rank " <<
-              toString()
+              toString() << " (max local trees=" << _configuration->getMaxLocalTreesPerRank(_state) << ")"
             );
             triggerSplit(p, tarch::mpi::Rank::getInstance().getRank(), computeNumberOfSplits(p));
           }
