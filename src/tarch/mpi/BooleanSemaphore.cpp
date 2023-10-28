@@ -85,8 +85,7 @@ bool tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::tryLockSemaphoreOnGl
     gotLock              = true;
     _map[number].locked  = true;
     _map[number].rankThatLastLocked = forRank;
-    // @todo debug
-    logInfo( "tryLockSemaphoreOnGlobalMaster(int,int)", "successfully locked semaphore " << number << " for rank " << forRank );
+    logDebug( "tryLockSemaphoreOnGlobalMaster(int,int)", "successfully locked semaphore " << number << " for rank " << forRank );
   }
 
   return gotLock;
@@ -99,8 +98,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::lockSemaphoreOnGloba
   tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
   tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
 
-  // @todo debug
-  logInfo( "lockSemaphoreOnGlobalMaster(int,int)", "will try to lock semahpore " << number << " for rank " << forRank );
+  logDebug( "lockSemaphoreOnGlobalMaster(int,int)", "will try to lock semahpore " << number << " for rank " << forRank );
 
   bool gotLock      = false;
   bool wroteWarning = false;
@@ -109,7 +107,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::lockSemaphoreOnGloba
 
     if ( not wroteWarning and tarch::mpi::Rank::getInstance().exceededTimeOutWarningThreshold() ) {
       wroteWarning = true;
-      logInfo( "lockSemaphoreOnGlobalMaster()", "semaphore " << number << " is locked by " << _map[number].rankThatLastLocked << " and therefore cannot be locked for " << forRank );
+      logWarning( "lockSemaphoreOnGlobalMaster()", "semaphore " << number << " is locked by " << _map[number].rankThatLastLocked << " and therefore cannot be locked for " << forRank );
     }
 
     receiveDanglingMessages();
@@ -127,8 +125,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::unlockSemaphoreOnGlo
   assertionEquals( _map[number].rankThatLastLocked, forRank );
   _map[number].locked = false;
 
-  // todo
-  logInfo( "unlockSemaphoreOnGlobalMaster()", "successfully released lock " << number << ". state=" << toString() );
+  logDebug( "unlockSemaphoreOnGlobalMaster()", "successfully released lock " << number << ". state=" << toString() );
 }
 
 
