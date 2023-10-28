@@ -73,10 +73,9 @@ void toolbox::loadbalancing::strategies::RecursiveBipartition::updateState() {
 
 
 void toolbox::loadbalancing::strategies::RecursiveBipartition::updateLoadBalancing() {
-  // @todo
-//  #if PeanoDebug>0
+  #if PeanoDebug>0
   logInfo( "updateLoadBalancing()", "load balancing's state=" << toString() );
-//  #endif
+  #endif
 
   switch ( _state ) {
     case State::InterRankDistribution:
