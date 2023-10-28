@@ -265,7 +265,11 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::triggerSplit( int s
 
 
 double toolbox::loadbalancing::strategies::SplitOversizedTree::getTargetTreeCost() const {
-  return _costMetrics->getGlobalCost() / tarch::mpi::Rank::getInstance().getNumberOfRanks() / tarch::multicore::Core::getInstance().getNumberOfThreads();
+  const int TargetNumberOfThreads = std::min(
+    tarch::multicore::Core::getInstance().getNumberOfThreads(),
+    _configuration->getMaxLocalTreesPerRank(_state)
+  );
+  return _costMetrics->getGlobalCost() / tarch::mpi::Rank::getInstance().getNumberOfRanks() / TargetNumberOfThreads;
 }
 
 

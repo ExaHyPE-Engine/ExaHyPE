@@ -34,6 +34,7 @@ std::string toolbox::loadbalancing::strategies::RecursiveBipartition::toString()
 
   msg << "(state=" << ::toString( _state )
       << ",statistics=" << _statistics.toString()
+      << ",cost-metrics=" << _costMetrics->toString()
       << ",round-robin-token=" << _roundRobinToken 
       << ",blacklist=" << _blacklist.toString()
       << ",heaviest-local-tree=" << getIdOfHeaviestLocalSpacetree() << " (analysed)"
