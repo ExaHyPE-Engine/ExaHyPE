@@ -531,6 +531,8 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
   assessKernel( wrapHostKernelWithStaticCalls<::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator>,::peano4::utils::LoopParallelism::ParallelFor>, "host, static, batched, AoSoA, parallel for",   launchingThreads, tarch::accelerator::Device::HostDevice, numberOfPatches );
   assessKernel( wrapHostKernelWithStaticCalls<::exahype2::fv::rusanov::timeStepWithRusanov_batched_heap_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSoALexicographicEnumerator>,::peano4::utils::LoopParallelism::Subtasks>,    "host, static, batched, AoSoA, subtasks",       launchingThreads, tarch::accelerator::Device::HostDevice, numberOfPatches );
 
+  int device = 0;
+
     #if defined(GPUOffloadingSYCL)
   if (numberOfPatches < 256 && Dimensions == 2 && launchingThreads == 1) {
       assessKernel( wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls< FVRusanovSolver, FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch, 1, FVRusanovSolver::NumberOfUnknowns, FVRusanovSolver::NumberOfAuxiliaryVariables, exahype2::enumerator::AoSLexicographicEnumerator> >,     "device " + std::to_string(device) + ", batched, AoS, usm",   launchingThreads, device, numberOfPatches );

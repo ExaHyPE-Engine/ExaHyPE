@@ -2,14 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/timing/Measurement.h"
+
 namespace exahype2 {
   namespace fv {
     namespace rusanov {
-      /**
-       * Forward declaration
-       */
-      class GPUCellData;
-
       /**
        * The name sequential is a little bit irritating in a GPU context.
        * What it means is that the code runs logically through the patches
@@ -75,7 +72,8 @@ namespace exahype2 {
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
         )
         #if defined(UseManualInlining)
         __attribute__((always_inline))
@@ -99,7 +97,8 @@ namespace exahype2 {
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
         )
         #if defined(UseManualInlining)
         __attribute__((always_inline))
@@ -121,7 +120,8 @@ namespace exahype2 {
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
         )
         #if defined(UseManualInlining)
         __attribute__((always_inline))
@@ -145,7 +145,8 @@ namespace exahype2 {
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
         )
         #if defined(UseManualInlining)
         __attribute__((always_inline))
@@ -172,25 +173,9 @@ namespace exahype2 {
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
         ) {
-          #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__)
-            timeStepWithRusanov_patchwise_managed_static_calls<
-              Solver,
-              numberOfVolumesPerAxisInPatch,
-              haloSize,
-              unknowns,
-              auxiliaryVariables,
-              TempDataEnumerator
-            >(
-              targetDevice,
-              patchData,
-              evaluateFlux,
-              evaluateNonconservativeProduct,
-              evaluateSource,
-              evaluateMaximumEigenvalueAfterTimeStep
-            );
-          #else
             timeStepWithRusanov_patchwise_map_static_calls<
               Solver,
               numberOfVolumesPerAxisInPatch,
@@ -204,9 +189,9 @@ namespace exahype2 {
               evaluateFlux,
               evaluateNonconservativeProduct,
               evaluateSource,
-              evaluateMaximumEigenvalueAfterTimeStep
+              evaluateMaximumEigenvalueAfterTimeStep,
+              measurement
             );
-          #endif
         }
       }
     }
