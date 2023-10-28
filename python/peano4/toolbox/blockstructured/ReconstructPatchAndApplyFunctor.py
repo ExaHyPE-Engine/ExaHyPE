@@ -186,9 +186,9 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
       d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-      double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::Heap);
+      double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #elif Dimensions==3
-      double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::Heap);
+      double* oldQWithHalo = ::tarch::allocateMemory<double>(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     #endif
 """
     elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarch or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.ManagedSharedAcceleratorDeviceMemoryThroughTarchWithoutDelete:

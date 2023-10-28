@@ -66,7 +66,7 @@ namespace exahype2 {
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_patchwise_map_static_calls(
+        static void timeStepWithRusanov_patchwise_copy_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -81,7 +81,7 @@ namespace exahype2 {
         ;
 
         /**
-         * @see timeStepWithRusanov_patchwise_map_static_calls()
+         * @see timeStepWithRusanov_patchwise_copy_static_calls()
          */
         template <
           typename Solver,
@@ -91,7 +91,7 @@ namespace exahype2 {
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_batched_map_static_calls(
+        static void timeStepWithRusanov_batched_copy_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -114,7 +114,7 @@ namespace exahype2 {
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_patchwise_managed_static_calls(
+        static void timeStepWithRusanov_patchwise_usm_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -129,7 +129,7 @@ namespace exahype2 {
         ;
 
         /**
-         * @see timeStepWithRusanov_patchwise_map_static_calls()
+         * @see timeStepWithRusanov_patchwise_usm_static_calls()
          */
         template <
           typename Solver,
@@ -139,7 +139,7 @@ namespace exahype2 {
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_batched_managed_static_calls(
+        static void timeStepWithRusanov_batched_usm_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
@@ -176,7 +176,7 @@ namespace exahype2 {
           bool                    evaluateMaximumEigenvalueAfterTimeStep,
           tarch::timing::Measurement&  measurement
         ) {
-            timeStepWithRusanov_patchwise_map_static_calls<
+            timeStepWithRusanov_patchwise_copy_static_calls<
               Solver,
               numberOfVolumesPerAxisInPatch,
               haloSize,
@@ -198,7 +198,7 @@ namespace exahype2 {
   }
 }
 
-#include "Rusanov_patchwise_map_static_calls.cpph"
-#include "Rusanov_batched_map_static_calls.cpph"
-#include "Rusanov_patchwise_managed_static_calls.cpph"
-#include "Rusanov_batched_managed_static_calls.cpph"
+#include "Rusanov_batched_copy_static_calls.cpph"
+#include "Rusanov_batched_usm_static_calls.cpph"
+#include "Rusanov_patchwise_copy_static_calls.cpph"
+#include "Rusanov_patchwise_usm_static_calls.cpph"

@@ -14,7 +14,7 @@ template <
   int      auxiliaryVariables,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_calls(
+void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_usm_static_calls(
   int                     targetDevice,
   ::exahype2::CellData&   hostPatchData,
   bool                    evaluateFlux,
@@ -24,8 +24,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
   tarch::timing::Measurement&  measurement
 ) {
   static_assert(haloSize == 1);
-
-  const auto hostId = omp_get_initial_device();
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
@@ -46,19 +44,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
 
   const int numberOfCells      = hostPatchData.numberOfCells;
   double** mappedPointersToQIn = hostPatchData.QIn;
-  double* mappedPointersToQOut = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>( numberOfCells * QOutEnumerator.size(), targetDevice );
-  double* rawPointerToCellCentre = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(numberOfCells * Dimensions, targetDevice );
-  double* rawPointerToCellSize = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(numberOfCells * Dimensions, targetDevice );
-  double* t = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(numberOfCells, targetDevice );
-  double* dt = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(numberOfCells, targetDevice );
-  double* maxEigenvalue = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(numberOfCells, targetDevice );
+  double** mappedPointersToQOut = hostPatchData.QOut;
+  tarch::la::Vector<Dimensions,double>* rawPointerToCellCentre = hostPatchData.cellCentre;
+  tarch::la::Vector<Dimensions,double>* rawPointerToCellSize = hostPatchData.cellSize;
+  double* t = hostPatchData.t;
+  double* dt = hostPatchData.dt;
+  double* maxEigenvalue = hostPatchData.maxEigenvalue;
 
-  omp_target_memcpy(rawPointerToCellCentre, &hostPatchData.cellCentre[0], numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
-  omp_target_memcpy(rawPointerToCellSize, &hostPatchData.cellSize[0], numberOfCells * Dimensions * sizeof(double), 0, 0, targetDevice, hostId);
-  omp_target_memcpy(t, hostPatchData.t, numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
-  omp_target_memcpy(dt, hostPatchData.dt, numberOfCells * sizeof(double), 0, 0, targetDevice, hostId);
-
-  tarch::timing::Watch watch( "exahype2::fv::rusanov::omp", "timeStepWithRusanov_batched_managed_static_calls", false, true );
+  tarch::timing::Watch watch( "exahype2::fv::rusanov::omp", "timeStepWithRusanov_batched_usm_static_calls", false, true );
 
   if (Dimensions==2 and evaluateSource) {
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
@@ -77,7 +70,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
         volumeIndex2d(x,y),
         t[patchIndex],
         dt[patchIndex],
-        &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+        mappedPointersToQOut[patchIndex],
         QOutEnumerator
       );
     }
@@ -100,7 +93,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
           volumeIndex3d(x,y,z),
           t[patchIndex],
           dt[patchIndex],
-          &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+          mappedPointersToQOut[patchIndex],
           QOutEnumerator
         );
     }
@@ -118,7 +111,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
           patchIndex,
           volumeIndex2d(x,y),
           unknown,
-          &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+          mappedPointersToQOut[patchIndex],
           QOutEnumerator
       );
     }
@@ -137,7 +130,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
           patchIndex,
           volumeIndex3d(x,y,z),
           unknown,
-          &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+          mappedPointersToQOut[patchIndex],
           QOutEnumerator
       );
     }
@@ -212,7 +205,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
           volumeIndex2d(x,y),
           unknown,
           dt[patchIndex],
-          &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+          mappedPointersToQOut[patchIndex],
           QOutEnumerator
         );
     }
@@ -313,7 +306,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
             volumeIndex3d(x,y,z),
             unknown,
             dt[patchIndex],
-            &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+            mappedPointersToQOut[patchIndex],
             QOutEnumerator
       );
     }
@@ -384,7 +377,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
             volumeIndex2d(x,y),
             unknown,
             dt[patchIndex],
-            &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+            mappedPointersToQOut[patchIndex],
             QOutEnumerator
       );
     }
@@ -481,7 +474,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
             volumeIndex3d(x,y,z),
             unknown,
             dt[patchIndex],
-            &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+            mappedPointersToQOut[patchIndex],
             QOutEnumerator
       );
     }
@@ -554,7 +547,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
             volumeIndex2d(x,y),
             unknown,
             dt[patchIndex],
-            &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+            mappedPointersToQOut[patchIndex],
             QOutEnumerator
       );
     }
@@ -653,7 +646,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
           volumeIndex3d(x,y,z),
           unknown,
           dt[patchIndex],
-          &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+          mappedPointersToQOut[patchIndex],
           QOutEnumerator
       );
     }
@@ -671,7 +664,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
         newMaxEigenvalue = std::max(
             newMaxEigenvalue,
             internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+              mappedPointersToQOut[patchIndex],
               QOutEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -698,7 +691,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
         newMaxEigenvalue = std::max(
             newMaxEigenvalue,
             internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+              mappedPointersToQOut[patchIndex],
               QOutEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -716,14 +709,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
   watch.stop();
   measurement.setValue( watch.getCalendarTime());
 
-  std::vector<double> tmpQOut(numberOfCells * QOutEnumerator.size());
-  omp_target_memcpy(&tmpQOut[0], mappedPointersToQOut, numberOfCells * QOutEnumerator.size() * sizeof(double), 0, 0, hostId, targetDevice);
-  omp_target_memcpy(hostPatchData.maxEigenvalue, maxEigenvalue, numberOfCells * sizeof(double), 0, 0, hostId, targetDevice);
-
-  for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-    std::memcpy(hostPatchData.QOut[patchIndex], &tmpQOut[patchIndex * QOutEnumerator.size()], QOutEnumerator.size() * sizeof(double));
-  }
-
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempFluxX, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempFluxY, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempFluxZ, targetDevice );
@@ -733,11 +718,4 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_managed_static_call
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueX, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueY, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueZ, targetDevice );
-
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( mappedPointersToQOut, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( rawPointerToCellCentre, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( rawPointerToCellSize, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( t, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( dt, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( maxEigenvalue, targetDevice );
 }

@@ -11,7 +11,7 @@ template <
   int      auxiliaryVariables,
   typename TempDataEnumerator
 >
-void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls(
+void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_copy_static_calls(
   int                     targetDevice,
   ::exahype2::CellData&   hostPatchData,
   bool                    evaluateFlux,
@@ -77,7 +77,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_map_static_calls(
   #pragma omp target enter data map(to:dt[0:hostPatchData.numberOfCells]) device(targetDevice)
   #pragma omp target enter data map(alloc:maxEigenvalue[0:hostPatchData.numberOfCells]) device(targetDevice)
 
-  tarch::timing::Watch watch( "exahype2::fv::rusanov::omp", "timeStepWithRusanov_batched_map_static_calls", false, true );
+  tarch::timing::Watch watch( "exahype2::fv::rusanov::omp", "timeStepWithRusanov_batched_copy_static_calls", false, true );
 
   if (Dimensions==2 and evaluateSource) {
     #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
