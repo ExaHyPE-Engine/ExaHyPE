@@ -265,10 +265,12 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::triggerSplit( int s
 
 
 double toolbox::loadbalancing::strategies::SplitOversizedTree::getTargetTreeCost() const {
-  const int TargetNumberOfThreads = std::min(
+  const int TargetNumberOfThreads = std::min({
     tarch::multicore::Core::getInstance().getNumberOfThreads(),
-    _configuration->getMaxLocalTreesPerRank(_state)
-  );
+    _configuration->getMaxLocalTreesPerRank(_state),
+    static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size())
+  });
+
   return _costMetrics->getGlobalCost() / tarch::mpi::Rank::getInstance().getNumberOfRanks() / TargetNumberOfThreads;
 }
 
