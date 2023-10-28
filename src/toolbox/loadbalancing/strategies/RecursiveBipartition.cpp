@@ -32,7 +32,8 @@ toolbox::loadbalancing::strategies::RecursiveBipartition::~RecursiveBipartition(
 std::string toolbox::loadbalancing::strategies::RecursiveBipartition::toString() const {
   std::ostringstream msg;
 
-  msg << "(state=" << ::toString( _state )
+  msg << "(type=recursive-bipartition"
+      << ",state=" << ::toString( _state )
       << ",statistics=" << _statistics.toString()
       << ",cost-metrics=" << _costMetrics->toString()
       << ",round-robin-token=" << _roundRobinToken 

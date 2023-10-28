@@ -32,7 +32,8 @@ toolbox::loadbalancing::strategies::SplitOversizedTree::~SplitOversizedTree() {
 std::string toolbox::loadbalancing::strategies::SplitOversizedTree::toString() const {
   std::ostringstream msg;
 
-  msg << "(state=" << ::toString( _state )
+  msg << "(type=split-oversized-tree"
+      << ",state=" << ::toString( _state )
       << ",statistics=" << _statistics.toString()
       << ",cost-metrics=" << _costMetrics->toString()
       << ",round-robin-token=" << _roundRobinToken 
