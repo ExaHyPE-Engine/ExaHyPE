@@ -87,6 +87,7 @@ class tarch::mpi::BooleanSemaphore {
          * need a shared memory semaphore.
          */
         tarch::multicore::BooleanSemaphore  _mapAccessSemaphore;
+        tarch::multicore::BooleanSemaphore  _reserverationRequestsSemaphore;
 
         struct SemaphoreMapEntry {
           /**
