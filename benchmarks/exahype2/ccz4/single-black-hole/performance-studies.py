@@ -277,8 +277,7 @@ if __name__ == "__main__":
     
     if args.load_balancing_metric=="generic":
       project.set_load_balancing(
-#        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-        "toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition",
+        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
         "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + ",::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",
         )
     else:
@@ -287,8 +286,7 @@ if __name__ == "__main__":
                                                                                     "1.0 / (1.0+tarch::la::norm2(marker.x()))")
       project.add_action_set_to_create_grid( load_balancing_action_set )
       project.set_load_balancing(
-#        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-        "toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition",
+        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
         "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + ",::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CustomCellWeight()",
         )
 
