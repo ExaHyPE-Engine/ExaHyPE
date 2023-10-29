@@ -10,18 +10,6 @@
 
 #include "peano4/utils/Loop.h"
 
-#if defined(GPUOffloadingOMP) or defined(SharedOMP)
-#include "exahype2/fv/rusanov/omp/Rusanov.h"
-#endif
-
-#if defined(GPUOffloadingCPP) or defined(SharedCPP)
-#include "exahype2/fv/rusanov/cpp/Rusanov.h"
-#endif
-
-#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
-#include "exahype2/fv/rusanov/sycl/Rusanov.h"
-#endif
-
 /**
  * @page exahype2_fv_Rusanov ExaHyPE's Rusanov kernel implementation
  *
@@ -672,3 +660,15 @@ namespace exahype2 {
 #include "Rusanov_batched_functors.cpph"
 #include "Rusanov_batched_static_calls.cpph"
 #include "Rusanov_batched_in_situ_static_calls.cpph"
+
+#if defined(GPUOffloadingOMP) /*or defined(SharedOMP)*/
+#include "exahype2/fv/rusanov/omp/Rusanov.h"
+#endif
+
+#if defined(GPUOffloadingCPP) /*or defined(SharedCPP)*/
+#include "exahype2/fv/rusanov/cpp/Rusanov.h"
+#endif
+
+#if defined(GPUOffloadingSYCL) /*or defined(SharedSYCL)*/
+#include "exahype2/fv/rusanov/sycl/Rusanov.h"
+#endif
