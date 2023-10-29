@@ -10,6 +10,8 @@
 
 #include "peano4/utils/Loop.h"
 
+#include "tarch/timing/Measurement.h"
+
 /**
  * @page exahype2_fv_Rusanov ExaHyPE's Rusanov kernel implementation
  *
