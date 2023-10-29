@@ -91,7 +91,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         source_term=None,
         material_parameters=None,
         point_source=0,
-        eigenvalues=None,
         additional_action_set_includes="",
         additional_user_includes="",
     ):
