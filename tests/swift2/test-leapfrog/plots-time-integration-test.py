@@ -1,4 +1,3 @@
-import meshio
 import numpy as np
 import glob, os
 
@@ -8,8 +7,9 @@ from matplotlib import gridspec
 from matplotlib.colors import LogNorm
 from matplotlib import mathtext
 import math
-from scipy import stats 
+from scipy import stats
 from tkinter import Tcl
+from peano4.toolbox.particles.postprocessing.ParticleVTUReader import ParticleVTUReader
 
 #Plot Setup
 font = {'size':12}
@@ -38,26 +38,28 @@ t_all = np.zeros( len(files) )
 
 # Read snapshots and gather data
 for N_snapshot, file in enumerate(files, start=0):
-    
+
     print("N_snapshot: ", N_snapshot)
     time = N_snapshot * snapshot_rate * time_step_sim
     t_all[N_snapshot] = time
-    
+
     print('Reading snapshot: ' + file )
     print("time of simulation = ", time)
     print("********************************************")
 
-    mesh = meshio.read( file )
-    print(mesh.point_data_to_sets)
+    reader = ParticleVTUReader(vtufile=file)
+    partData = reader.load()
+    partData.show_attribute_list()
+
     print("********************************************")
 
     # Read coordinates
-    pos = mesh.point_data["x"]
+    pos = partData.x
     x = pos[:,0]
     y = pos[:,1]
 
     # Read energy
-    E_tot = mesh.point_data["energyTot"][:,0]
+    E_tot = partData.energyTot
     E_tot = np.sum(E_tot)
     E_dif = (E_tot - E_ini) / E_ini
     E_dif_all[N_snapshot] = E_dif
@@ -68,7 +70,7 @@ for N_snapshot, file in enumerate(files, start=0):
     print("Relative Energy difference = ", E_dif )
     print("********************************************")
 
-print("Done reading all snapshots. Total= ", N_snapshot )
+print("Done reading all snapshots. Total= ", len(files) )
 
 # Plot radial profile
 fig = plt.figure( figsize=(6, 4) )
@@ -86,6 +88,7 @@ plt.tight_layout()
 
 #plt.show()
 fig.savefig('energy_conservation_profile.pdf')
+print("saved energy_conservation_profile.pdf")
 #plt.close()
 
 # Check energy conservation
