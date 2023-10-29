@@ -301,7 +301,7 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0AfterGridInitialisation or
       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0 or
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
-      repositories::{}.getSolverState()=={}::SolverState::Plotting
+      repositories::{}.getSolverState()=={}::SolverState::Plotting or
       repositories::{}.getSolverState()=={}::SolverState::Suspended
     )""".format(
             self.get_name_of_global_instance(), self._name,

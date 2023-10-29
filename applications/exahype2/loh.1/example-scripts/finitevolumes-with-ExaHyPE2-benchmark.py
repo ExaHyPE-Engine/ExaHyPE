@@ -116,7 +116,7 @@ project.set_global_simulation_parameters(
 )
 
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(0.9)" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveSubdivision", "(0.9)" )
 
 
 

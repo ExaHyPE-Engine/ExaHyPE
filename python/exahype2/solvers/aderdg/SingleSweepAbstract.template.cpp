@@ -247,10 +247,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
-  const {{PREDICTOR_STORAGE_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  {{PREDICTOR_STORAGE_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
 ) {

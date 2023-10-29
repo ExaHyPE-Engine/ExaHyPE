@@ -316,7 +316,7 @@ if __name__ == "__main__":
     #probe_point = [0,0,0]
     #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
+    project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision")
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 

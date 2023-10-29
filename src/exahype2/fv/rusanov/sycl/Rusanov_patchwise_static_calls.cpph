@@ -876,6 +876,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_usm_static_calls
     evaluateSource,
     evaluateMaximumEigenvalueAfterTimeStep
   );
+  watch.stop();
   measurement.setValue( watch.getCalendarTime());
 
   gpuPatchData.destroy(patchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
@@ -931,6 +932,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_copy_static_call
     evaluateSource,
     evaluateMaximumEigenvalueAfterTimeStep
   );
+  watch.stop();
   measurement.setValue( watch.getCalendarTime());
 
   gpuPatchData.destroy(patchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
@@ -985,6 +987,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_patchwise_managed_static_c
     evaluateSource,
     evaluateMaximumEigenvalueAfterTimeStep
   );
+  watch.stop();
   measurement.setValue( watch.getCalendarTime());
 
   gpuPatchData.destroy(patchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);

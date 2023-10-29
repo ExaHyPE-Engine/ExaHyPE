@@ -245,7 +245,7 @@ if visualise:
 # For an overview of available load balancer refer to the documentation.
 #
 my_project.set_load_balancing(
-    "toolbox::loadbalancing::SpreadOutHierarchically",
+    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 

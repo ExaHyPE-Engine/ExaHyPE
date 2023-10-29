@@ -1,0 +1,504 @@
+#pragma once
+
+#include <iomanip>
+#include <iostream>
+
+#include "swift2/kernels/ParticleState.h"
+
+
+template <typename Particle>
+static void swift2::dependencyChecks::dependencyCheckAlgorithmStepDebugOutput(
+  const Particle*                                             particle,
+  typename std::remove_pointer<Particle>::type::AlgorithmStep algorithmStepMarkerEnum,
+  typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
+  const int                                                   errors,
+  const std::string                                           call_identifier
+) {
+
+  using PartType = std::remove_pointer<Particle>::type;
+
+  const int nsteps  = static_cast<int>(PartType::AlgorithmStep::count);
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+
+
+  std::cout << "-----------------------------------------\n";
+  std::cout << "Main Algorithm Step Dependency check [" << call_identifier << "]\n";
+  std::cout << "Particle " << particle->getPartid() << " - found " << errors << " dependency errors\n";
+  std::cout
+    << "Failed at Algorithm Step/Sweep Stage: " << PartType::castAlgorithmStepToString(algorithmStepMarkerEnum) << " / "
+    << PartType::castSweepStageToString(sweepStageMarkerEnum) << "\n";
+
+  // Set up "header" of the table
+  std::cout << "Particle Dependency Checks This Step:\n";
+  std::cout << std::left << std::setw(40) << "Algorithm Step ";
+  for (int s = 0; s < nstages; s++) {
+    // all stage names that we account for
+    std::cout << PartType::castSweepStageToString(static_cast<PartType::SweepStage>(s));
+    if (s < nstages - 1) {
+      std::cout << std::setw(3) << " / ";
+    }
+  }
+  std::cout << "\n";
+
+  // write out what particle has actually done
+  int i = 0;
+  for (int a = 0; a < nsteps; a++) {
+
+    // write out algorithm step name
+    std::cout
+      << std::left << std::setw(40) << PartType::castAlgorithmStepToString(static_cast<PartType::AlgorithmStep>(a));
+
+    // write out counters for sweep stages of that algorithm step
+    for (int s = 0; s < nstages; s++) {
+      std::cout << std::setw(5) << particle->getAlgorithmStepSweepStateProgression(i);
+      if (s < nstages - 1) {
+        std::cout << std::setw(3) << " / ";
+      }
+      i++;
+    }
+    std::cout << "\n";
+  }
+
+  std::cout << "Particle data:" << particle->toString() << "\n";
+
+  // flush before you quit
+  std::cout << std::endl;
+
+  // check for errors > 0 allows you to use this function to print the particle
+  // state without exiting
+  if (errors > 0)
+    std::abort();
+}
+
+
+template <typename Particle>
+static void swift2::dependencyChecks::dependencyCheckInitStepDebugOutput(
+  const Particle*                                          particle,
+  typename std::remove_pointer<Particle>::type::InitStep   initStepMarkerEnum,
+  typename std::remove_pointer<Particle>::type::SweepStage sweepStageMarkerEnum,
+  const int                                                errors,
+  const std::string                                        call_identifier
+) {
+
+  using PartType = std::remove_pointer<Particle>::type;
+
+  const int nsteps  = static_cast<int>(PartType::InitStep::count);
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+
+
+  std::cout << "-----------------------------------------\n";
+  std::cout << "Initialisation Step Dependency check [" << call_identifier << "]\n";
+  std::cout << "Particle " << particle->getPartid() << " - found " << errors << " dependency errors\n";
+  std::cout
+    << "Failed at Init Step/Sweep Stage: " << PartType::castInitStepToString(initStepMarkerEnum) << " / "
+    << PartType::castSweepStageToString(sweepStageMarkerEnum) << "\n";
+
+  // Set up "header" of the table
+  std::cout << "Particle Dependency Checks This Step:\n";
+  std::cout << std::left << std::setw(40) << "Init Step ";
+  for (int s = 0; s < nstages; s++) {
+    // all stage names that we account for
+    std::cout << PartType::castSweepStageToString(static_cast<PartType::SweepStage>(s));
+    if (s < nstages - 1) {
+      std::cout << std::setw(3) << " / ";
+    }
+  }
+  std::cout << "\n";
+
+  // write out what particle has actually done
+  int i = 0;
+  for (int a = 0; a < nsteps; a++) {
+
+    // write out init step name
+    std::cout << std::left << std::setw(40) << PartType::castInitStepToString(static_cast<PartType::InitStep>(a));
+
+    // write out counters for sweep stages of that init step
+    for (int s = 0; s < nstages; s++) {
+      std::cout << std::setw(5) << particle->getInitStepSweepStateProgression(i);
+      if (s < nstages - 1) {
+        std::cout << std::setw(3) << " / ";
+      }
+      i++;
+    }
+    std::cout << "\n";
+  }
+
+  std::cout << "Particle data:" << particle->toString() << "\n";
+
+  // flush before you quit
+  std::cout << std::endl;
+
+  // check for errors > 0 allows you to use this function to print the particle
+  // state without exiting
+  if (errors > 0)
+    std::abort();
+}
+
+
+template <typename ParticleContainer, typename Marker>
+static void swift2::dependencyChecks::dependencyMarkAlgorithmStep(
+  const ParticleContainer&                                                                  localParticles,
+  const Marker&                                                                             marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    sweepStageMarkerEnum,
+  bool                                                                                      stepMovedParticle,
+  bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
+) {
+
+  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
+  const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
+
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+  const int nsteps  = static_cast<int>(PartType::AlgorithmStep::count);
+
+  const int index_this_stage = algorithmStepMarker * nstages + sweepStageMarker;
+
+  for (auto* particle : localParticles) {
+
+    // Mark what we have just completed, but only if the particle was actually touched!
+    if (workOnParticle(particle, marker)) {
+
+      particle->setAlgorithmStepSweepStateProgression(
+        index_this_stage, particle->getAlgorithmStepSweepStateProgression()[index_this_stage] + 1
+      );
+    } else if (stepMovedParticle) {
+      // Freshly moved particles may not be sieved correctly into being local particles yet.
+      // See docu in Toolbox/Particles/Mesh Traversal.
+      // So if `workOnParticle()` has a check whether the particle is local, it may be skipped.
+      // Anticipate this, and mark it by using negative counters.
+      particle->setAlgorithmStepSweepStateProgression(
+        index_this_stage, particle->getAlgorithmStepSweepStateProgression()[index_this_stage] - 1
+      );
+    }
+  }
+}
+
+
+template <typename ParticleContainer, typename Marker>
+static void swift2::dependencyChecks::dependencyMarkInitStep(
+  const ParticleContainer&                                                               localParticles,
+  const Marker&                                                                          marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage sweepStageMarkerEnum,
+  bool                                                                                   stepMovedParticle,
+  bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
+) {
+
+  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  const int initStepMarker   = static_cast<int>(initStepMarkerEnum);
+  const int sweepStageMarker = static_cast<int>(sweepStageMarkerEnum);
+
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+  const int nsteps  = static_cast<int>(PartType::InitStep::count);
+
+  const int index_this_stage = initStepMarker * nstages + sweepStageMarker;
+
+  for (auto* particle : localParticles) {
+
+    // Mark what we have just completed, but only if the particle was actually touched!
+    if (workOnParticle(particle, marker)) {
+
+      particle->setInitStepSweepStateProgression(
+        index_this_stage, particle->getInitStepSweepStateProgression()[index_this_stage] + 1
+      );
+    } else if (stepMovedParticle) {
+      // Freshly moved particles may not be sieved correctly into being local particles yet.
+      // See docu in Toolbox/Particles/Mesh Traversal.
+      // So if `workOnParticle()` has a check whether the particle is local, it may be skipped.
+      // Anticipate this, and mark it by using negative counters.
+      particle->setInitStepSweepStateProgression(
+        index_this_stage, particle->getInitStepSweepStateProgression()[index_this_stage] - 1
+      );
+    }
+  }
+}
+
+
+static int swift2::dependencyChecks::checkPastStages(
+  const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression
+) {
+
+  int errors = 0;
+
+  // Check everything else before this stage, and check that everything
+  // that should've run until now actually has run.
+  for (int step = 0; step < currentStep; step++) {
+
+    for (int stage = 0; stage < nstages; stage++) {
+
+      const int index     = step * nstages + stage;
+      const int partStage = sweepStateProgression[index];
+
+      if (partStage == 0)
+        errors++;
+    }
+  }
+
+
+  // for the current sweep, only check up to the current stage.
+  for (int stage = 0; stage < currentStage; stage++) {
+
+    const int index     = currentStep * nstages + stage;
+    const int partStage = sweepStateProgression[index];
+
+    if (partStage == 0)
+      errors++;
+  }
+
+  return errors;
+}
+
+
+static int swift2::dependencyChecks::checkFutureStages(
+  const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression
+) {
+
+  int errors = 0;
+
+  // Check everything *after* this stage, and check that everything
+  // that shouldn't have run until now actually hasn't run.
+  for (int step = currentStep + 1; step < nsteps; step++) {
+
+    for (int stage = 0; stage < nstages; stage++) {
+
+      const int index     = step * nstages + stage;
+      const int partStage = sweepStateProgression[index];
+
+      if (partStage != 0)
+        errors++;
+    }
+  }
+
+  // for the current sweep, only check beginning with the next stage.
+  for (int stage = currentStage + 1; stage < nstages; stage++) {
+
+    const int index     = currentStep * nstages + stage;
+    const int partStage = sweepStateProgression[index];
+
+    if (partStage != 0)
+      errors++;
+  }
+
+  return errors;
+}
+
+
+template <typename ParticleContainer, typename Marker>
+static void swift2::dependencyChecks::dependencyCheckAlgorithmStep(
+  const ParticleContainer&                                                                  localParticles,
+  const Marker&                                                                             marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    sweepStageMarkerEnum,
+  bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
+) {
+
+  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
+  const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
+
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+  const int nsteps  = static_cast<int>(PartType::AlgorithmStep::count);
+
+
+  for (auto* particle : localParticles) {
+
+    int        errors = 0;
+    const int* arr    = particle->getAlgorithmStepSweepStateProgression();
+
+    errors = checkPastStages(algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    if (errors > 0)
+      dependencyCheckAlgorithmStepDebugOutput(
+        particle,
+        algorithmStepMarkerEnum,
+        sweepStageMarkerEnum,
+        errors,
+        "localParticle check each step and sweep stage - Something in the past has not been completed"
+      );
+
+    errors = checkFutureStages(algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    if (errors > 0)
+      dependencyCheckAlgorithmStepDebugOutput(
+        particle,
+        algorithmStepMarkerEnum,
+        sweepStageMarkerEnum,
+        errors,
+        "localParticle check each step and sweep stage - Something in the future has been done too early (or markers haven't been reset correctly)"
+      );
+  }
+}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencyChecks::dependencyCheckActiveParticlesAlgorithmStep(
+  const ParticleContainer&                                                                  activeParticles,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum
+) {
+
+  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
+  const int touchVertexLastTime = static_cast<int>(PartType::SweepStage::touchVertexLastTime);
+
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+  const int nsteps  = static_cast<int>(PartType::AlgorithmStep::count);
+
+  for (auto* particle : activeParticles) {
+
+    int        errors = 0;
+    const int* arr    = particle->getAlgorithmStepSweepStateProgression();
+
+    errors = checkPastStages(algorithmStepMarker, touchVertexLastTime, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    if (errors > 0)
+      dependencyCheckAlgorithmStepDebugOutput(
+        particle,
+        algorithmStepMarkerEnum,
+        PartType::SweepStage::touchVertexLastTime,
+        errors,
+        "activeParticles dependency check in TouchVertexLastTime"
+      );
+
+
+    errors = checkFutureStages(algorithmStepMarker, touchVertexLastTime, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    if (errors > 0)
+      dependencyCheckAlgorithmStepDebugOutput(
+        particle,
+        algorithmStepMarkerEnum,
+        PartType::SweepStage::touchVertexLastTime,
+        errors,
+        "activeParticles dependency check in TouchVertexLastTime - Something in the future has been done too early (or markers haven't been reset correctly)"
+      );
+  }
+}
+
+
+template <typename ParticleContainer, typename Marker>
+static void swift2::dependencyChecks::dependencyCheckInitStep(
+  const ParticleContainer&                                                               localParticles,
+  const Marker&                                                                          marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage sweepStageMarkerEnum,
+  bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
+) {
+
+  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  const int initStepMarker   = static_cast<int>(initStepMarkerEnum);
+  const int sweepStageMarker = static_cast<int>(sweepStageMarkerEnum);
+
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+  const int nsteps  = static_cast<int>(PartType::InitStep::count);
+
+
+  for (auto* particle : localParticles) {
+
+    int        errors = 0;
+    const int* arr    = particle->getInitStepSweepStateProgression();
+
+    errors = checkPastStages(initStepMarker, sweepStageMarker, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    if (errors > 0)
+      dependencyCheckInitStepDebugOutput(
+        particle, initStepMarkerEnum, sweepStageMarkerEnum, errors, "localParticle check each step and sweep stage"
+      );
+
+    errors = checkFutureStages(initStepMarker, sweepStageMarker, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    if (errors > 0)
+      dependencyCheckInitStepDebugOutput(
+        particle,
+        initStepMarkerEnum,
+        sweepStageMarkerEnum,
+        errors,
+        "localParticle check each step and sweep stage - Something in the future has been done too early (or markers haven't been reset correctly)"
+      );
+  }
+}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencyChecks::dependencyCheckActiveParticlesInitStep(
+  const ParticleContainer&                                                             activeParticles,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep initStepMarkerEnum
+) {
+
+  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  const int initStepMarker      = static_cast<int>(initStepMarkerEnum);
+  const int touchVertexLastTime = static_cast<int>(PartType::SweepStage::touchVertexLastTime);
+
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+  const int nsteps  = static_cast<int>(PartType::InitStep::count);
+
+  for (auto* particle : activeParticles) {
+
+    int        errors = 0;
+    const int* arr    = particle->getInitStepSweepStateProgression();
+    errors            = checkPastStages(initStepMarker, touchVertexLastTime, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    if (errors > 0)
+      dependencyCheckInitStepDebugOutput(
+        particle,
+        initStepMarkerEnum,
+        PartType::SweepStage::touchVertexLastTime,
+        errors,
+        "activeParticles dependency check in TouchVertexLastTime"
+      );
+
+    errors = checkFutureStages(initStepMarker, touchVertexLastTime, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    if (errors > 0)
+      dependencyCheckInitStepDebugOutput(
+        particle,
+        initStepMarkerEnum,
+        PartType::SweepStage::touchVertexLastTime,
+        errors,
+        "activeParticles dependency check in TouchVertexLastTime - Something in the future has been done too early (or markers haven't been reset correctly)"
+      );
+  }
+}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencyChecks::clearDependencyChecksAlgorithmStep(const ParticleContainer& localParticles) {
+
+  using PartType    = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+  const int nsteps  = static_cast<int>(PartType::AlgorithmStep::count);
+
+  for (auto* particle : localParticles) {
+    for (int i = 0; i < nsteps * nstages; i++) {
+      particle->setAlgorithmStepSweepStateProgression(i, 0);
+    }
+  }
+}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencyChecks::clearDependencyChecksInitStep(const ParticleContainer& localParticles) {
+
+  using PartType    = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+  const int nsteps  = static_cast<int>(PartType::InitStep::count);
+
+  for (auto* particle : localParticles) {
+    for (int i = 0; i < nsteps * nstages; i++) {
+      particle->setInitStepSweepStateProgression(i, 0);
+    }
+  }
+}

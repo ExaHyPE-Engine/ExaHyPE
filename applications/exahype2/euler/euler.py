@@ -305,9 +305,9 @@ if args.visualise:
   sys.exit(0)
 
 if args.trees > 0:
-  my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + ")")
+  my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + ")")
 else:
-  my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
+  my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
 
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)

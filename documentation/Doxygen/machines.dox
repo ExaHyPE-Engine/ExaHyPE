@@ -108,7 +108,7 @@ I used this to configure Peano with Intel's TBB enabled
 source /opt/intel/oneapi/setvars.sh
 module load cuda
 
-./configure CC=clang CXX=clang++ LIBS="-ltbb" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
+./configure CC=icx CXX=icpx LIBS="-ltbb" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" CXXFLAGS="-O3 -std=c++20 -fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Codeplay's website has some useful information on compiler flags. Here's
@@ -124,11 +124,9 @@ a short explaination of the above SYCL related flags:
   A100 with compute capability 8.0.
 
 It also needs at least 2023.0.0 version of oneAPI with Codeplay's nvidia
-GPU plugin which is not installed on NCC. They encourage the use of 
-Intel's own compiler (`icx` and `icpx`), however, I have issues getting
-them to work when compiling for multiple devices.Additionally, `icpx` 
-seems to use a lower precision by default in favour of performance, use 
-`-fp-model` to change this behaviour.
+GPU plugin which is not installed on NCC. Intel encourages the use of their own
+compiler, `icpx`. However, they use a lower precision by default in favour of 
+performance, use `-fp-model` to change this behaviour.
 
 I had linker errors about undefined referennces when building Peano with
 TBB. Just add the path to any relevant library if you experienced this.

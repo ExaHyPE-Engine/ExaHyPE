@@ -950,6 +950,7 @@ INPUT                  = src \
                          python \
                          tutorials \
                          benchmarks \
+                         tests \
                          applications \
                          documentation/Doxygen \
 

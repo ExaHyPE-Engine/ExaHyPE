@@ -44,7 +44,7 @@ def create_abstract_solver_declarations(
     );
 {% endif %}
 
-{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+{% if FLUX_IMPLEMENTATION!="<user-defined>" %}
     virtual void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -53,10 +53,10 @@ def create_abstract_solver_declarations(
       double                                       dt,
       int                                          normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
-    ) = 0;
+    );
 {% endif %}
 
-{% if NCP_IMPLEMENTATION=="<user-defined>" %}
+{% if NCP_IMPLEMENTATION!="<user-defined>" %}
     virtual void nonconservativeProduct(
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
@@ -65,11 +65,11 @@ def create_abstract_solver_declarations(
     double t,
     double dt,
     int normal,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ) = 0;
+    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ);
 {% endif %}
 
-{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) = 0;
+{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
+    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
 {% endif %}
 
 {% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}
@@ -128,7 +128,7 @@ def create_abstract_solver_definitions(
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 
 {% if EIGENVALUES_IMPLEMENTATION!="<empty>" and EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,

@@ -96,7 +96,7 @@ into the domain, these calculations are best modelled as
 <!-- Use 'section' command here to be able to reference the section somewhere
     else rather than the entire page. 'section' corresponds to h1. First word
     after 'section' cmd will be the anchor ID you need to use with the 'ref' cmd. -->
-@section SwiftHDF5 Insert particles from an HDF5 file
+@section page_swift_initial_conditions_SwiftHDF5 Insert particles from an HDF5 file
 
 A basic HDF5 reader that is compatible with IC files from the original Swift code is
 implemented in ```InsertParticlesFromHDF5File.py```.
