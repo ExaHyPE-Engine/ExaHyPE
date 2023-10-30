@@ -278,7 +278,7 @@ if __name__ == "__main__":
     if args.load_balancing_metric=="generic":
       project.set_load_balancing(
         "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-        "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + "), new toolbox::loadbalancing::metrics::CellCount()",
+        "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + ",::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",
         )
     else:
       load_balancing_cell_label = exahype2.grid.FineGridCellLoadBalancingCostMetric.create_cell_label(project)
@@ -287,7 +287,7 @@ if __name__ == "__main__":
       project.add_action_set_to_create_grid( load_balancing_action_set )
       project.set_load_balancing(
         "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-        "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + "), new toolbox::loadbalancing::metrics::CustomCellWeight()",
+        "new ::exahype2::LoadBalancingConfiguration(0.98, 1, " + str(args.trees) + ",::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CustomCellWeight()",
         )
 
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)
