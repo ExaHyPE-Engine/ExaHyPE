@@ -1,12 +1,6 @@
 [build-system]
 requires = [
-"setuptools>=61.0", 
-"jinja2", 
-"numpy", 
-"sympy", 
-"matplotlib", 
-"h5py",
-"VTUinterface"
+    "setuptools>=61.0",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -45,6 +39,14 @@ classifiers = [
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    "jinja2",
+    "numpy",
+    "sympy",
+    "matplotlib",
+    "h5py",
+    "VTUinterface",
+]
 
 [project.urls]
 "Homepage" = "http://www.peano-framework.org"
@@ -52,9 +54,9 @@ classifiers = [
 [tool.setuptools]
 packages=[
     "dastgen2",
-    "exahype2",  
-    "multigrid",  
-    "peano4", 
-    "petsc", 
+    "exahype2",
+    "multigrid",
+    "peano4",
+    "petsc",
     "swift2",
 ]
