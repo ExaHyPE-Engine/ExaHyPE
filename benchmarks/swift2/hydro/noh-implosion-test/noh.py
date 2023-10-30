@@ -79,6 +79,14 @@ parser.add_argument(
     help="Value of the CFL constant",
 )
 parser.add_argument(
+    "-ppc",
+    "--particles-per-cell",
+    dest="particles_per_cell",
+    type=int,
+    default=200,
+    help="Particles per cell (200 is default)",
+)
+parser.add_argument(
     "-pd",
     "--peano-dir",
     dest="peanodir",
@@ -159,11 +167,12 @@ name = "HydroPart"
 dimensions = 2
 hydro_dimensions = 2  # dimensions for the hydro
 
-particles_per_cell = 200
+particles_per_cell = args.particles_per_cell
 total_number_of_particles = args.particle_number**hydro_dimensions
 total_number_of_cells = total_number_of_particles / particles_per_cell
 cells_per_dimension = total_number_of_cells ** (1.0 / hydro_dimensions)
 max_cell_size = 1.0 / cells_per_dimension
+
 print(
     "{} particles in total fit into {} cells, i.e. {} cells per dimension. This gives h={}".format(
         total_number_of_particles,
