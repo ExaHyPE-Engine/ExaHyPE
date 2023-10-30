@@ -8,9 +8,9 @@ parser.add_argument('--cmake', help='Use CMake')
 parser.add_argument('-t', '--toolchain', choices=['gcc', 'llvm', 'nvidia', 'amd', 'intel'], help='Select toolchain')
 parser.add_argument('-cc', '--cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
 parser.add_argument('-cxx', '--cxx', type=str, default=os.environ.get('CXX'), help='C++ compiler to use')
+parser.add_argument('--exahype', action='store_true', help='Enable ExaHyPE')
 parser.add_argument('--swift', action='store_true', help='Enable Swift')
 parser.add_argument('--particles', action='store_true', help='Enable particles support')
-parser.add_argument('--exahype', action='store_true', help='Enable ExaHyPE')
 parser.add_argument('--loadbalancing', action='store_true', help='Enable load balancing support')
 parser.add_argument('--blockstructured', action='store_true', help='Enable block structured grid support')
 parser.add_argument('--fem', action='store_true', help='Enable finite elements support')
@@ -19,11 +19,12 @@ parser.add_argument('--libxsmm', action='store_true', help='Enable libxsmm suppo
 parser.add_argument('--multithreading', choices=['omp', 'tbb', 'sycl', 'cpp'], help='Enable multithreading support')
 parser.add_argument('--mpi', help='Enable MPI support')
 parser.add_argument('--gpu', choices=['omp', 'cuda', 'sycl', 'cpp', 'hip'], help='Enable GPU support')
+parser.add_argument('--asm', action='store_true', help='Dump generated assembly code')
 parser.add_argument('--cuda-path', type=str, help='Path to CUDA')
 parser.add_argument('--arch', choices=[
-  'gfx906', 'gfx908', 'gfx90a', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
+  'gfx906', 'gfx908', 'gfx90a', 'gfx1030', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
   'sm_70', 'sm_72', 'sm_75', 'sm_80', 'sm_86', 'sm_90',
-  'spir64'],
+  'spir64',],
   help='Select GPU compute capability')
 args = parser.parse_args()
 
@@ -53,18 +54,28 @@ if args.gpu and not args.arch:
 
 if args.gpu == 'omp' and args.toolchain == "clang":
   cxxflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=' + args.arch
+  if args.asm:
+    cxxflags += ' -save-temps'
 
 if args.gpu == 'omp' and args.toolchain == "amd":
   cxxflags += ' -lstdc++fs --offload-arch=' + args.arch
 
 if args.gpu == 'omp' or args.gpu == 'cpp' and args.toolchain == "nvidia":
   cxxflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
+  if args.asm:
+   cxxflags += ' -gpu=keep'
 
 if args.gpu == 'omp' and args.toolchain == "gcc":
   cxxflags += ' -fopenmp -foffload=nvptx-none -march=native'
+  if args.asm:
+    cxxflags += ' -save-temps'
 
 if args.gpu == 'sycl' and args.toolchain == "intel":
-  cxxflags += ' -fsycl -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
+  if "gfx" in args.arch:
+    cxxflags += ' -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch=' + args.arch
+  elif "cc" in args.arch:
+    #cxxflags += ' -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
+    cxxflags += ' -fsycl -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
 
 if args.gpu == 'cuda':
   nvccflags += f'-arch={args.arch}'  # arch flag is needed independent of toolchain
