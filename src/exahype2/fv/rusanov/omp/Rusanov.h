@@ -2,8 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "tarch/timing/Measurement.h"
-
 namespace exahype2 {
   namespace fv {
     namespace rusanov {

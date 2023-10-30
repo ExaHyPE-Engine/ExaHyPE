@@ -28,6 +28,8 @@
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 
+#include "tarch/timing/Measurement.h"
+
 #if defined(UseSmartMPI)
 #include "communication/Tags.h"
 #endif
