@@ -46,8 +46,6 @@ class AssemblePetscMatrix(ActionSet):
     
     auto rhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
 
-
-
     for (int row=0; row<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; row++) {
       double rhs = 0.0;
       for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
@@ -64,6 +62,15 @@ class AssemblePetscMatrix(ActionSet):
     logTraceInWith4Arguments( "touchCellFirstTime::projection", globalCellIndex, marker.toString(), projectionCellToFaceMatrix.toString(), projectionFaceToCellMatrix.toString() );
 
     int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
+    int dofsPerCell = repositories::{{SOLVER_INSTANCE}}.DoFsPerCell;
+
+    /*
+    The following loop is done "dimensions" different times. The first time around, 
+    the left and right faces are with respect to the x axis. 
+    The second time around, it's with respect to the y axis.
+
+    We insert each element from the relevant matrices one-by-one for ease of debugging.
+    */
     for (int d=0; d<Dimensions; d++) {
       std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
       std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
@@ -73,24 +80,29 @@ class AssemblePetscMatrix(ActionSet):
       logTraceInWith2Arguments( "touchCellFirstTime::projectLeftAndRightFace()", globalFirstDoFIndexOfLeftFace, globalFirstDoFIndexOfRightFace );
       
       for (int row=0; row<dofsPerFace; row++ ) {
-        for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+        for (int col=0; col<dofsPerCell; col++) {
+          // Cell to Face projection for left face
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
             globalCellIndex+col,
             projectionCellToFaceMatrix(d * dofsPerFace + row,col)
           );
 
+          // Cell to Face projection for right face
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalFirstDoFIndexOfRightFace + row, 
             globalCellIndex+col,
             projectionCellToFaceMatrix(d * dofsPerFace + row + Dimensions*dofsPerFace,col)
           );
           
+          // Face to Cell projection for left face
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalCellIndex+col,
             globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
             projectionFaceToCellMatrix(col, d * dofsPerFace + row)
           );
+
+          // Face to Cell projection for right face
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalCellIndex+col,
             globalFirstDoFIndexOfRightFace + row + 2 * dofsPerFace, 
