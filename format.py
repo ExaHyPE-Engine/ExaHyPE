@@ -14,8 +14,8 @@ default_clang_format_file_name = ".clang-format"
 target_branch = "p4"
 
 # Formatting tools versions
-min_black_version = "23.3.0"
-min_clang_version = "16.0.5"
+black_version = "23.3.0"
+clang_version = "16.0.5"
 
 # Global variables for easy access
 verbose = True  # will be overwritten by arg parser
@@ -109,15 +109,12 @@ def check_black(black_cmd):
             raise ValueError("black --version output was:", stdout, " ???")
 
         installed_version = stdout_split[1]
-        installed_version_number = int(installed_version.replace(".", ""))
-        min_black_version_number = int(min_black_version.replace(".", ""))
-
-        if installed_version_number < min_black_version_number:
+        if installed_version != black_version:
             raise ValueError(
                 (
-                    "black formatter executable has version {0} but I require at least {1}.\n"
+                    "black formatter executable has version {0} but I require {1}.\n"
                     + "Please remove all contents from the directory '{2}' and re-run this script."
-                ).format(installed_version, min_black_version, python_venv_dir)
+                ).format(installed_version, black_version, python_venv_dir)
             )
 
         black_checked = True
@@ -150,15 +147,12 @@ def check_clang(clang_cmd):
             raise ValueError("clang-format --version output was:", stdout, " ???")
 
         installed_version = stdout_split[2]
-        installed_version_number = int(installed_version.replace(".", ""))
-        min_clang_version_number = int(min_clang_version.replace(".", ""))
-
-        if installed_version_number < min_clang_version_number:
+        if installed_version != clang_version:
             raise ValueError(
                 (
                     "clang-format executable has version {0} but I require {1}.\n"
                     + "Please remove all contents from the directory '{2}' and re-run this script."
-                ).format(installed_version, min_clang_version, python_venv_dir)
+                ).format(installed_version, clang_version, python_venv_dir)
             )
 
         clang_checked = True
@@ -182,7 +176,7 @@ def install_black_formatting_tool():
 
     # The actual install
     run = subprocess.run(
-        bfepython + " -m pip install click==8.1.3 black>=" + min_black_version,
+        bfepython + " -m pip install click==8.1.3 black==" + black_version,
         shell=True,
         check=True,
     )
@@ -210,7 +204,7 @@ def install_clang_formatting_tool():
 
     # The actual install
     run = subprocess.run(
-        clangpython + " -m pip install clang-format>=" + min_clang_version,
+        clangpython + " -m pip install clang-format==" + clang_version,
         shell=True,
         check=True,
     )
