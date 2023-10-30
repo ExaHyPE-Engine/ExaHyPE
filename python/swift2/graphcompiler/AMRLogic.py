@@ -492,7 +492,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                     min_h=current_species_set.particle_model.min_h,
                     max_h=current_species_set.particle_model.max_h,
                 )
-                action_set_AMR_analysis.descend_invocation_order = steps[i].lowest_priority() - 1
+                action_set_AMR_analysis.descend_invocation_order = steps[i].lowest_descend_invocation_order() - 1
                 action_set_AMR_analysis.parallel = True
                 steps[i].add_action_set(action_set_AMR_analysis)
                 if verbose:
@@ -509,7 +509,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                     )
                 )
                 action_set_update_particle_grid_association.descend_invocation_order = (
-                    steps[i].lowest_priority() - 1
+                    steps[i].lowest_descend_invocation_order() - 1
                 )
                 action_set_update_particle_grid_association.parallel = True
                 steps[i].add_action_set(action_set_update_particle_grid_association)
@@ -527,7 +527,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                     )
                 )
                 action_set_update_parallel_state.descend_invocation_order = (
-                    steps[i].lowest_priority() - 1
+                    steps[i].lowest_descend_invocation_order() - 1
                 )
                 action_set_update_parallel_state.parallel = True
                 steps[i].add_action_set(action_set_update_parallel_state)
@@ -543,7 +543,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                             particle_set=current_species_set,
                         )
                     )
-                    action_set_gather.descend_invocation_order = steps[i].lowest_priority() - 1
+                    action_set_gather.descend_invocation_order = steps[i].lowest_descend_invocation_order() - 1
                     action_set_gather.parallel = True
                     steps[i].add_action_set(action_set_gather)
                     steps[(i + 1) % (len(steps))].add_action_set(action_set_gather)

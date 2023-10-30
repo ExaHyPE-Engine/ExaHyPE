@@ -74,21 +74,21 @@
 -------|-----------|-------|------------------------|
    100 |      1e-1 |   100 |                      * |
    100 |      1e-1 |   200 |               9x9 (81) |
-   200 |      1e-2 |   200 |            27x27 (729) |
-   200 |      1e-2 |   800 |               9x9 (81) |
-   400 |      1e-3 |   200 |                      * |
-   400 |      1e-3 |   800 |            27x27 (729) |
-   400 |      1e-3 |  2000 |               9x9 (81) |
-   800 |      1e-4 |   200 |        81x81 (6,561) x |
-   800 |      1e-4 |  1200 |            27x27 (729) |
-   800 |      1e-4 |  8000 |               9x9 (81) |
-  1200 |      1e-4 |   800 |          81x81 (6,561) |
-  1200 |      1e-4 | 12000 |            27x27 (729) |
-  1200 |      1e-4 | 24000 |               9x9 (81) |
-  2400 |      1e-5 |   200 |       243x243 (59,049) |
-  2400 |      1e-5 |  1200 |          81x81 (6,561) |
-  2400 |      1e-5 |  8000 |            27x27 (729) |
-  2400 |      1e-5 | 84000 |               9x9 (81) |
+   200 |      1e-1 |   200 |            27x27 (729) |
+   200 |      1e-1 |   800 |               9x9 (81) |
+   400 |      1e-2 |   200 |                      * |
+   400 |      1e-2 |   800 |            27x27 (729) |
+   400 |      1e-2 |  2000 |               9x9 (81) |
+   800 |      1e-2 |   200 |        81x81 (6,561) x |
+   800 |      1e-2 |  1200 |            27x27 (729) |
+   800 |      1e-2 |  8000 |               9x9 (81) |
+  1200 |      1e-3 |   800 |          81x81 (6,561) |
+  1200 |      1e-3 | 12000 |            27x27 (729) |
+  1200 |      1e-3 | 24000 |               9x9 (81) |
+  2400 |      5e-4 |   200 |       243x243 (59,049) |
+  2400 |      5e-4 |  1200 |          81x81 (6,561) |
+  2400 |      5e-4 |  8000 |            27x27 (729) |
+  2400 |      5e-4 | 84000 |               9x9 (81) |
   
  @todo We have to extend this list
   
@@ -117,7 +117,34 @@
  be imbalanced right from the start.
  
 
+
  # Impact of memory layouts
+ 
+ The impact of the various memory layouts has to be assessed using a 
+ representative and reasonably large setup. Furthermore, it might make sense
+ to restrict the studies to one NUMA node only on a production-level chip. The
+ rationale here is that most codes would deploy one MPI rank per NUMA domain
+ to avoid NUMA effects/penalties.
+ 
+ On a low-spec machine, I usually use the setup
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ python3 noh.py -np 2400 -plot 0 -et 1e-3 -ppc 1200
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ as a test starting point. From hereon, the three predominant storage schemes 
+ can be enabled via the opt argument: 
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -opt none
+ python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -opt continuous-per-vertex
+ python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -opt global-continuous
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ So on my local laptop with eight cores, the first setup needs 777s. 
+ With the continuous per vertex option, we need 829s.
+ 
+ 
  
   
  
