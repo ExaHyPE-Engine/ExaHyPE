@@ -32,8 +32,10 @@ toolbox::loadbalancing::strategies::RecursiveBipartition::~RecursiveBipartition(
 std::string toolbox::loadbalancing::strategies::RecursiveBipartition::toString() const {
   std::ostringstream msg;
 
-  msg << "(state=" << ::toString( _state )
+  msg << "(type=recursive-bipartition"
+      << ",state=" << ::toString( _state )
       << ",statistics=" << _statistics.toString()
+      << ",cost-metrics=" << _costMetrics->toString()
       << ",round-robin-token=" << _roundRobinToken 
       << ",blacklist=" << _blacklist.toString()
       << ",heaviest-local-tree=" << getIdOfHeaviestLocalSpacetree() << " (analysed)"
@@ -73,10 +75,9 @@ void toolbox::loadbalancing::strategies::RecursiveBipartition::updateState() {
 
 
 void toolbox::loadbalancing::strategies::RecursiveBipartition::updateLoadBalancing() {
-  // @todo
-//  #if PeanoDebug>0
+  #if PeanoDebug>0
   logInfo( "updateLoadBalancing()", "load balancing's state=" << toString() );
-//  #endif
+  #endif
 
   switch ( _state ) {
     case State::InterRankDistribution:
