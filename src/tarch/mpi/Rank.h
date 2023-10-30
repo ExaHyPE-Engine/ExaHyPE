@@ -488,6 +488,10 @@ class tarch::mpi::Rank {
       int                 numberOfExpectedMessages = 1
     );
 
+    bool exceededTimeOutWarningThreshold() const;
+
+    bool exceededDeadlockThreshold() const;
+
     void plotMessageQueues();
 
     /**

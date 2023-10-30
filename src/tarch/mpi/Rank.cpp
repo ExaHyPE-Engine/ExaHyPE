@@ -98,6 +98,24 @@ void tarch::mpi::Rank::plotMessageQueues() {
 }
 
 
+bool tarch::mpi::Rank::exceededTimeOutWarningThreshold() const {
+  return _areTimeoutsEnabled
+      and
+      _timeOutWarning>std::chrono::seconds(0)
+      and
+      std::chrono::system_clock::now() > _globalTimeOutDeadlock;
+}
+
+
+bool tarch::mpi::Rank::exceededDeadlockThreshold() const {
+  return     _areTimeoutsEnabled
+    and
+    _deadlockTimeOut>std::chrono::seconds(0)
+    and
+    std::chrono::system_clock::now() > _globalTimeOutDeadlock;
+}
+
+
 void tarch::mpi::Rank::triggerDeadlockTimeOut(
   const std::string&  className,
   const std::string&  methodName,
@@ -106,13 +124,7 @@ void tarch::mpi::Rank::triggerDeadlockTimeOut(
   int                 numberOfExpectedMessages,
   const std::string&  comment
 ) {
-  if (
-    _areTimeoutsEnabled
-    and
-    _deadlockTimeOut>std::chrono::seconds(0)
-    and
-    std::chrono::system_clock::now() > _globalTimeOutDeadlock
-  ) {
+  if ( exceededDeadlockThreshold() ) {
     std::ostringstream out;
     out << "operation " << className << "::" << methodName << " on node "
         << getRank() << " had to wait more than " << std::to_string(_deadlockTimeOut.count())
@@ -135,13 +147,7 @@ void tarch::mpi::Rank::writeTimeOutWarning(
   int                 tag,
   int                 numberOfExpectedMessages
 ) {
-  if (
-    _areTimeoutsEnabled
-    and
-    _timeOutWarning>std::chrono::seconds(0)
-    and
-    std::chrono::system_clock::now() > _globalTimeOutDeadlock
-  ) {
+  if ( exceededTimeOutWarningThreshold() ) {
     logWarning(
       "writeTimeOutWarning(...)",
       "operation " << className << "::" << methodName << " on node "
