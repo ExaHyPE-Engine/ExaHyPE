@@ -2,22 +2,79 @@
 
  @page benchmarks_swift2_hydro_noh_imposion_test Noh implosion test
  
- Simple Noh implosion test benchmark with @f$ N ^d @f$ particles. You specify 
- the @f$ N @f$ on the command line, as well as some other arguments. The setup
- will yield snapshots similar to the ones below.
+ Simple Noh implosion test benchmark with @f$ N ^d @f$ particles. The setup
+ yields snapshots similar to the ones below.
  
   @image html noh_0.png
   @image html noh_150.png
   @image html noh_300.png
  
  
- As with all Swift 2 experiments, you have to ensure that you translate with --enable-particles --enable-swift.
+ As with all Swift 2 experiments, you have to ensure that you translate with 
+ ```--enable-particles --enable-swift``` before you start working with the
+ scripts. Furthermore, the Python path has to be set properly:
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  export PYTHONPATH=~/git/Peano/python
- python3 noh.py -np 400 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ The benchmark suite is designed to study three different things:
+ 
+ 1. The impact of the mesh concept on the computational cost, i.e. to which 
+    degree does the mesh introduce overhead or manage to reduce the 
+    computational complexity.
+ 2. The impact of different memory layouts on the time to solution.
+ 3. The efficacy and efficiency of the vectorisation over selected kernels.
+ 
+ Obviously, these three properties are tightly interconnected. 
+ 
+ 
+ 
+ # Clean-up data
+ 
+ Once you have created your executables, you might want to get rid of all the
+ generated glue code that sits in your directory.
+ To clean up all generated data, type in 
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ rm *patch-file *.vtu *.pvd
+ rm vertexdata celldata globaldata repositories observers
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
+ # The impact of the mesh on the global runtime
+ 
+ The present setup does work with constant cut-off radii. That is, once the 
+ particles are created, they do not change their interaction range. This is not
+ what you will find in a lot of "realistic" SPH simulations, where the cut-off
+ radius adopts to the particle distribution in space. However, it is reasonable
+ to eliminate this dimension of complexity to assess the algortihmic impact of 
+ the cut-off.
+ 
+ To start a proper discussion of the latter, we first have to understand the 
+ cost relative to the particle count without any mesh. Unfortunately, Peano 
+ cannot work all without a mesh. We can however make the mesh comprise only 
+ 3x3 cells (see snapshots above). The script shipped with the present code does
+ not allow us to set the mesh directly, but we can specify the number of 
+ particles per cell that we want to obain. This is, we can control the mesh 
+ resolution indirectly.
+
+
+ ## Create benchmark executables
+ 
+ We usually start from a fixed 
+ 
+ np | total particle count | ppc | 
+----|----------------------|-----|
+ 10 |            9 (3x3) |                   81 (9x9) |
+ 20 |            9 (3x3) |                   81 (9x9) |
+ 40 |            9 (3x3) |                   81 (9x9) |
+ 80 |           81 (9x9) |                729 (27x27) |
+160 |        729 (27x27) |              6,561 (81x81) |
+320 |        729 (27x27) |              6,561 (81x81) |
+640 |      6,561 (81x81) |             59,049 |
+ 
+ 
+ # Old docu
  
  ## Experimental setup
  
