@@ -8,11 +8,11 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
   void* result = nullptr;
   switch (location) {
     case MemoryLocation::Heap:
-      result = aligned_alloc(AlignmentOnHeap, size);
+      result = std::aligned_alloc(AlignmentOnHeap, size);
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       assertionMsg(false, "not implemented yet" );
-      result = aligned_alloc(AlignmentOnHeap, size);
+      result = std::aligned_alloc(AlignmentOnHeap, size);
       break;
   }
   return result;
@@ -21,10 +21,10 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
 void tarch::freeMemory(void* data, MemoryLocation location) {
   switch (location) {
     case MemoryLocation::Heap:
-      free(data);
+      std::free(data);
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-      free(data);
+      std::free(data);
       break;
   }
 }
