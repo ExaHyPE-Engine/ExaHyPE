@@ -12,7 +12,7 @@ def perserveCartesianTracerLayout(solver,particle_spacing):
     This constraint is used in combination particle-particle interaction
     for tracers. A typical invocation resembles
         
-project.add_action_set_to_timestepping( peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles(
+project.add_action_set_to_timestepping( peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverContiguousParticles(
   particle_set = tracer_particles,
   cell_compute_kernel = exahype2.tracer.perserveCartesianTracerLayout(thesolver,particle_spacing),
   additional_includes = "#include "toolbox/particles/potentials/Springs.h"

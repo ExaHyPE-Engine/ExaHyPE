@@ -27,19 +27,23 @@ class ParticlePerCellUpdate(ActionSet):
     centre is contained within the cell.
     The set of active particles are also the particles which are centred
     within the cell. If the active_particle_set attribute is None, then 
-    the active set and the local set are the same.
-    However, you can set the active set to another species of particles
+    the active set and the local set are of the same type. They are 
+    however not the same sets, as one contains only the particles held
+    within the cell.
+    You can set the active set to another species of particles
     and thus couple two types of particles.
 
     Besides the cell kernel which is there to realise per-cell updates, 
     we also have a vertex kernel which we call whenever a
     vertex is loaded for the first time. That is, you can assume that the
     vertex kernel has been launched for all 2^d vertices of a cell before
-    its cell kernel is triggered. The vertex kernel is also passed the
-    active and local set. These sets contain all the particles
+    its cell kernel is triggered. The vertex kernel has access to a local
+    set: These sets contain all the particles
     whose centre lies within the square/cube around the vertex with mesh size
     2h. So this area goes h along each each coordinate axis into the
-    neighbouring cells.
+    neighbouring cells. The vertex's local particles also have to reside
+    on the same resolution level, i.e. this action set does not couple
+    any cells on different resolutions.
 
 
     ## Arguments
@@ -99,7 +103,6 @@ class ParticlePerCellUpdate(ActionSet):
   __Template_TouchVertexFirstTime = jinja2.Template("""
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
   auto& localParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  auto& activeParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}};
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
@@ -109,7 +112,6 @@ class ParticlePerCellUpdate(ActionSet):
   __Template_TouchVertexLastTime = jinja2.Template("""
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
   auto& localParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  auto& activeParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}};
 
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}
@@ -120,11 +122,10 @@ class ParticlePerCellUpdate(ActionSet):
   {% if PARTICLE_CELL_UPDATE_KERNEL!=None %}
   std::list< globaldata::{{LOCAL_PARTICLE}}* >   localParticles;
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  activeParticles;
+
   for (int i=0; i<TwoPowerD; i++) {
     for (auto* p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
-      if ( marker.isContained( p->getX() ) ) {
-        activeParticles.push_front( p );
-      }
+      activeParticles.push_front( p );
     }
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
       if ( marker.isContained( p->getX() ) ) {

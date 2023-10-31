@@ -14,8 +14,9 @@ from .ParticleSet                   import ParticleSetGenerator_GlobalContinuous
 
 
 from .ParticleParticleInteraction_Sets         import ParticleParticleInteraction_Sets
-from .ParticleParticleInteraction_StackOfListsOverStaticParticles import ParticleParticleInteraction_StackOfListsOverStaticParticles
+from .ParticleParticleInteraction_StackOfListsOverContiguousParticles import ParticleParticleInteraction_StackOfListsOverContiguousParticles
 from .ParticlePerCellUpdate                    import ParticlePerCellUpdate
+from .ParticlePerCellUpdateOverContiguousParticles import ParticlePerCellUpdateOverContiguousParticles
 
 
 from .ParticleTreeAnalysis          import create_cell_marker

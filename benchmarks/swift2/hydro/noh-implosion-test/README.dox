@@ -143,7 +143,7 @@
  
  So on my local laptop with eight cores, the first setup needs 777s. 
  With the continuous per vertex option, we need 829s.
- 
+ With the globally continuous memory, I get 878s.
  
  
   

@@ -230,7 +230,7 @@ For Swift 2 users:
 ## Set realisations
 
 The particle toolbox offers two actions sets, 
-peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles and
+peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverContiguousParticles and
 peano4.toolbox.particles.ParticleParticleInteraction_Sets,
 which both assemble the active and local sets while they run throug the mesh.
 These particle sets are not persistent, i.e. they are built up on-the-fly.

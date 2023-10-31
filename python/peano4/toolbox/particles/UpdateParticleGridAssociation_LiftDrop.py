@@ -104,6 +104,14 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
 
     Hanging vertices do never hold information and therefore are never assigned
     any particles.
+    
+    
+    ## Interpolay with particle storage
+
+    This sorting scheme should not be used if you use a particle memory pool,
+    i.e. if you try to store particles continuously - unless you insert 
+    explicit gather/resort steps. Read through the @ref toolbox_particles_memorypool "memory implications for any particle sorting".
+
 
     """
 

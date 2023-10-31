@@ -11,9 +11,28 @@
  * pointers around. By default, all creational routines allocate particles via
  * a simple new. This can lead to memory fragmentation. It also means that
  * compute kernels over lists of particles might induce scattered memory
- * accesses. The toolbox therefore offers action sets which take the particles
+ * accesses.
+ *
+ * The toolbox therefore offers action sets which take the particles
  * and consolidate them into larger, continuous chunks of memory. They employ
- * a memory pool.
+ * a memory pool. The idea of a memory pool is that we try to store (parts of)
+ * the particles consecutively in memory. By default, Peano's particle
+ * toolbox scatters data over the memory:
+ *
+ * @image html toolbox/particles/ParticleSetGenerator_ScatteredOnHeap.png
+ *
+ * You can alter the storage by picking a particular particle set generator.
+ * Consult peano4.toolbox.particles.ParticleSet for details.
+ *
+ * The intention behind the continuous, compact storage is not only a more
+ * efficient memory handling and a reduction of fragmentation. It also enables
+ * the code to efficiently encode the active and local lists and, eventually,
+ * to vectorise. toolbox.particles.ParticleParticleInteraction_StackOfLists
+ * is the prime example of such a tree walker which uses the fact that
+ * particles are stored an bloc.
+ *
+ *
+ * # Realisation
  *
  * There are different ways to realise memory pools. Originally, I
  * considered overloading the new and delete operator, i.e. to plug into the
@@ -88,8 +107,34 @@
  * generators shipped with peano4.toolbox.particles.ParticleSet for further
  * flavours.
  *
+ *
+ * # Gather
+ *
+ * Enabling a particle pool is only the first step. You still have to ensure
+ * that a mesh traversal takes the data scattered all over the heap and dumps
+ * it into the memory pool. As we use a @ref page_toolbox_particles_mesh_storage "vertex-centred storage",
+ * we have to ensure that the mesh traversal invokes gather() on the vertices;
+ * and in return also calls scatter if particles leave their position in the
+ * mesh aka memory.
+ *
+ * Within the Python API, you can use toolbox.particles.GatherParticlesInMemoryPool
+ * to inject the gather behaviour. Scattering should be realised automatically,
+ * as the particle set generator ensures that scatter is invoked every time you
+ * lift of drop particles.
+ *
+ *
+ * # Resorting
+ *
+ *
+ *
  * You can trigger the resorting in various places. I do recommend to use
  * the parallel state update. Swift for example implements it there as
  * documented in swift2.graphcompiler.AMRLogic.add_dynamic_mesh_refinement_and_particle_resorting().
+ *
+ *
+ * # Efficient compute kernels
+ *
+ * Efficient tree traversals which exploit the optimised storage are, for example,
+ * peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverContiguousParticles and
  *
  */

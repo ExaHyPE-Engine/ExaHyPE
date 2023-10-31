@@ -15,7 +15,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     All subclasses realise the particle in dual tree storage scheme.
     Please read through @ref page_toolbox_particles_mesh_storage and
     @ref page_toolbox_particles_mesh_consistency besides the current
-    class documentation.
+    class documentation. If you use a particle memory pool, i.e. if you
+    don't hold the particles scattered all over the place, then it is also
+    relevant to read through the @ref toolbox_particles_memorypool "implications for any particle sorting".
 
 
     If you add the action set

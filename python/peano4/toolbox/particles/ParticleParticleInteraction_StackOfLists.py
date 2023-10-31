@@ -18,6 +18,12 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
     through the underlying spacetree top down and builds up
     @ref page_toolbox_particles_mesh_storage "the active set and the local set".
     These sets can then be used to trigger mesh events.
+    
+    This version of the interactions makes no assumptions on how the particles
+    are stored. Hence, it cannot expose any such information. If you want to 
+    offer information about consecutive storage, e.g., please use 
+    ParticleParticleInteraction_StackOfListsOverContiguousParticles in combination 
+    with @ref toolbox_particles_memorypool "the memory pool".
 
 
     The code is slightly more sophisticated compared to the set-based tree
@@ -327,7 +333,6 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
         """
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
   auto& localParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  auto& activeParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}};
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
@@ -338,7 +343,6 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
         """
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
   auto& localParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  auto& activeParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}};
 
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}
