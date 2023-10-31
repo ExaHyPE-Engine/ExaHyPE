@@ -10,24 +10,29 @@
 
 #include <map>
 
-#include "AbstractLoadBalancing.h"
+#include "toolbox/loadbalancing/AbstractLoadBalancing.h"
+
+#include "toolbox/loadbalancing/metrics/CellCount.h"
 
 
 namespace toolbox {
   namespace loadbalancing {
-    class RecursiveBipartition;
+    namespace strategies {
+      class SplitOversizedTree;
+    }
   }
 }
 
 
 /**
- * Recursive load balancing micking the behaviour of the guided partitioning in OpenMP
+ * Find trees that are bigger than largest tree size and split them
  *
- * This is one of the simplest load balancing strategies one can think about.
- * We try to mimick the behaviour of OpenMP's guided scheduling: We determine
- * the maximum number vs the minimum number of unrefined inner cells within a
- * check set. If the ratio between the two is worse than the balancing
- * threshold, we split the maximum tree into two parts.
+ * This routine works if and only if you prescribe a maximum tree size. If you
+ * do not specify a maximum tree size, it takes the optimal subtree size per
+ * core as guideline. Whenever a tree is bigger than this threshold, it forks
+ * off a new tree. However, the forked off tree is at most as big as the
+ * threshold, as we don't want to create recursive splitting patterns. See
+ * RecursiveBipartition if you are interested in the latter.
  *
  * This strategy is often used "late" throughout the grid construction. We can
  * phrase it the other way round: As it is an incremental strategy, we have to
@@ -37,8 +42,27 @@ namespace toolbox {
  * and  peano4::grid::Spacetree::isCellBottomUpSplitCandidate(),
  * peano4::grid::Spacetree::splitOrJoinCell() and the general
  * @ref peano_domain_decomposition "domain decomposition overview".
+ *
+ * While forking off trees once they exceed a certain threshold is not as
+ * elegant as iterative, recursive splits, this strategy avoids very deep
+ * tree topologies. These become an issue in line with
+ * @ref page_peano_domain_decomposition "some domain split-up constraints",
+ * as the logical tree topology's depth obviously is constraint by the
+ * depth of the global spacetree. That is, this load balancing scheme is
+ * advantageous if recursive splitting fails.
+ *
+ * I recommend to use this strategy if the following things hold:
+ *
+ * 1. Another strategy has already spread out over all ranks, so all ranks are
+ *    busy with at least one tree. In this case, we use this strategy as a
+ *    post-balancing step within a cascade of decompositions.
+ * 2. We have a good grasp of the load distribution at the time when this load
+ *    balancing step kicks in already.
+ *
+ * The second item implies that I've seen this strategy struggle for strongly
+ * adaptive, fine meshes and meshes with a very inhomogeneous load pattern.
  */
-class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancing::AbstractLoadBalancing {
+class toolbox::loadbalancing::strategies::SplitOversizedTree: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     /**
      * Set up recursive subdivision
@@ -46,15 +70,14 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * The ownership of the pointer goes over to the recursive subdivision
      * instance, i.e. you don't have to delete the passed object.
      */
-    RecursiveBipartition(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
-    virtual ~RecursiveBipartition();
+    SplitOversizedTree(Configuration* configuration = new DefaultConfiguration(), CostMetrics*   costMetrics   = new toolbox::loadbalancing::metrics::CellCount());
+    virtual ~SplitOversizedTree();
 
     /**
      * Triggers actual load balancing data exchange, triggers rebalancing, and
      * dumps statistics.
      *
-     * ## Spread equally
-     *
+     * <h2> Spread equally </h2>
      * This step is usually called early throughout the grid construction. At
      * this point, we want to bring in ranks as soon as possible. However, it
      * is very unlikely that the grid at that point will allow us to balance
@@ -86,6 +109,14 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
     int _roundRobinToken;
 
     /**
+     * Is the balancing on the rank ok
+     *
+     */
+    bool doesLocalTreeViolateThreshold() const;
+
+    double getTargetTreeCost() const;
+
+    /**
      * Wrapper around the spacetree set which also updates the blacklist.
      *
      * ## Rationale
@@ -101,7 +132,7 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      *
      *
      */
-    void triggerSplit( int sourceTree, int numberOfCells, int targetRank );
+    void triggerSplit( int sourceTree, int targetRank, int numberOfSplits );
 
     /**
      * <h2> Init has-spread-over-all-ranks flag </h2>
@@ -151,6 +182,8 @@ class toolbox::loadbalancing::RecursiveBipartition: public toolbox::loadbalancin
      * Please call this routine before you invoke updateState().
      */
     void updateLoadBalancing();
+
+    int computeNumberOfSplits(int sourceTree) const;
 };
 
 

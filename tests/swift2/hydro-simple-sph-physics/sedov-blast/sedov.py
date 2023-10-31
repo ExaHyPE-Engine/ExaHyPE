@@ -235,7 +235,7 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::RecursiveBipartition",
+    "toolbox::loadbalancing::strategies::RecursiveBipartition",
     "new toolbox::loadbalancing::DefaultConfiguration()",
 )
 

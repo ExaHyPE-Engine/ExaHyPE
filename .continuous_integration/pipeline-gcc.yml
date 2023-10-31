@@ -74,6 +74,9 @@ gcc-applications:
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; python3 advection.py --no-make --executable=advection'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/saint-venant; python3 saint-venant.py --no-make --executable=saint-venant'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/saint-venant; make -j'
   retry: 0
 
 gcc-benchmarks:

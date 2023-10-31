@@ -17,11 +17,11 @@ std::string tarch::toString( MemoryLocation value ) {
 
 void* tarch::internal::allocateRawData(int size, [[maybe_unused]] MemoryLocation location) {
   assertion2( size>0, size, toString(location) );
-  return aligned_alloc(AlignmentOnHeap, size);
+  return std::aligned_alloc(AlignmentOnHeap, size);
 }
 
 void tarch::freeMemory(void* data, [[maybe_unused]] MemoryLocation location) {
-  free(data);
+  std::free(data);
 }
 
 void tarch::gpuAbort() {

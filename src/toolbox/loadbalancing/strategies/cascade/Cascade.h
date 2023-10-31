@@ -2,14 +2,18 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "LoadBalancing.h"
-#include "State.h"
-
+#include "toolbox/loadbalancing/AbstractLoadBalancing.h"
+#include "toolbox/loadbalancing/State.h"
+#include "toolbox/loadbalancing/metrics/CellCount.h"
 
 namespace toolbox {
   namespace loadbalancing {
-    template<typename HostedLoadBalancing0, typename HostedLoadBalancing1>
-    class Cascade;
+    namespace strategies {
+      namespace cascade {
+        template<typename HostedLoadBalancing0, typename HostedLoadBalancing1>
+        class Cascade;
+      }
+    }
   }
 }
 
@@ -24,27 +28,29 @@ namespace toolbox {
  * multiple reasons, so I went down the manual way.
  */
 template<typename HostedLoadBalancing0, typename HostedLoadBalancing1>
-class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalancing {
+class toolbox::loadbalancing::strategies::cascade::Cascade: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
     Cascade(
-      Configuration* configuration = new DefaultConfiguration(),
-      bool deleteInDestructor = true
+        Configuration* configuration = new DefaultConfiguration(),
+        CostMetrics*   costMetrics   = new toolbox::loadbalancing::metrics::CellCount()
     ):
-      LoadBalancing( configuration, deleteInDestructor ),
-      _configuration(configuration),
-      _deleteInDestructor(deleteInDestructor),
-      _hostedLoadBalancing0(configuration, false),
-      _hostedLoadBalancing1(configuration, false),
+      AbstractLoadBalancing( configuration, costMetrics),
+      _hostedLoadBalancing0(configuration, costMetrics),
+      _hostedLoadBalancing1(configuration, costMetrics),
       _activeLoadBalancing(0) {
     }
 
 
     /**
-     * Delete configuration if this is wanted by the user. Note that we
-     * may not delete the object directly in the constructor - even though
-     * it seems not be used within this class. It is used by the aggregates.
+     * We have piped through any pointers to a configuration and the cost
+     * metrics. Now we set these pointers manually to nullptr, so no piped
+     * through attribute is actually deleted. Instead, we trust on the
+     * current class' supertype to actually destroy object.
      */
-    virtual ~Cascade() = default;
+    virtual ~Cascade() {
+      _hostedLoadBalancing0.setConfigurationAndMetricsNullWithoutDelete();
+      _hostedLoadBalancing1.setConfigurationAndMetricsNullWithoutDelete();
+    }
 
 
     /**
@@ -131,16 +137,17 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
     virtual void enable(bool value) override {
       _hostedLoadBalancing0.enable(value);
       _hostedLoadBalancing1.enable(value);
-      LoadBalancing::enable(value);
-      logInfo( "enable(bool)", "lb0=" << _hostedLoadBalancing0.toString() );
-      logInfo( "enable(bool)", "lb1=" << _hostedLoadBalancing1.toString() );
+      AbstractLoadBalancing::enable(value);
+      if (_activeLoadBalancing==0) {
+        logInfo( "enable(bool)", "lb0=" << _hostedLoadBalancing0.toString() );
+      }
+      else {
+        logInfo( "enable(bool)", "lb1=" << _hostedLoadBalancing1.toString() );
+      }
     }
 
   private:
     static tarch::logging::Log  _log;
-
-    Configuration*        _configuration;
-    bool                  _deleteInDestructor;
 
     HostedLoadBalancing0  _hostedLoadBalancing0;
     HostedLoadBalancing1  _hostedLoadBalancing1;
@@ -153,4 +160,4 @@ class toolbox::loadbalancing::Cascade: public toolbox::loadbalancing::LoadBalanc
 
 
 template<typename HostedLoadBalancing0, typename HostedLoadBalancing1>
-tarch::logging::Log toolbox::loadbalancing::Cascade<HostedLoadBalancing0, HostedLoadBalancing1>::_log( "toolbox::loadbalancing::Cascade" );
+tarch::logging::Log toolbox::loadbalancing::strategies::cascade::Cascade<HostedLoadBalancing0, HostedLoadBalancing1>::_log( "toolbox::loadbalancing::strategies::cascade::Cascade" );

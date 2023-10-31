@@ -10,12 +10,16 @@
 
 #include <map>
 
-#include "AbstractLoadBalancing.h"
+#include "toolbox/loadbalancing/AbstractLoadBalancing.h"
+
+#include "toolbox/loadbalancing/metrics/CellCount.h"
 
 
 namespace toolbox {
   namespace loadbalancing {
-    class SpreadOutOnceGridStagnates;
+    namespace strategies {
+      class SpreadOutOnceGridStagnates;
+    }
   }
 }
 
@@ -38,9 +42,9 @@ namespace toolbox {
  * @ref peano_domain_decomposition "domain decomposition overview" for the
  * rationale.
  */
-class toolbox::loadbalancing::SpreadOutOnceGridStagnates: public toolbox::loadbalancing::AbstractLoadBalancing {
+class toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates: public toolbox::loadbalancing::AbstractLoadBalancing {
   public:
-    SpreadOutOnceGridStagnates(Configuration* configuration = new DefaultConfiguration(), bool deleteInDestructor = true);
+    SpreadOutOnceGridStagnates(Configuration* configuration = new DefaultConfiguration(), CostMetrics*   costMetrics = new toolbox::loadbalancing::metrics::CellCount() );
     virtual ~SpreadOutOnceGridStagnates();
 
     virtual void finishStep() override;

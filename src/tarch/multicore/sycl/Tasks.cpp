@@ -37,6 +37,13 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   tarch::multicore::getHostSYCLQueue().wait();
 }
 
+
+void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
+
 /**
  * Read spawnAndWaitAsTaskLoop() first.
  *
