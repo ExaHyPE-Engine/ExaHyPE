@@ -38,6 +38,7 @@ parser.add_argument("-sc",      "--scenario",           dest="scenario",        
 parser.add_argument("-maxh",    "--max-cell-size",      dest="max_cell_size",     type=float,                   default=cell_size,          help="Maximum size of a single finite volume cell on each axis.")
 parser.add_argument("-ps",      "--patch-size",         dest="patch_size",        type=int,                     default=patch_size,         help="Number of finite volumes per axis (dimension) per patch")
 parser.add_argument("-mp",      "--max-patches",        dest="max_patches",       type=int,                     default=max_patches,        help="Maximal number of patches to study")
+parser.add_argument("-mt",      "--max-threads",        dest="max_threads",       type=int,                     default=1,                  help="Maximal number of launching threads")
 parser.add_argument("-s" ,      "--samples",            dest="samples",           type=int,                     default=16,                 help="Number of samples per measurement")
 parser.add_argument("-et",      "--end-time",           dest="end_time",          type=int,                     default=end_time,           help="End time of simulation")
 parser.add_argument("-pi",      "--plot-interval",      dest="plot_interval",     type=float,                   default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
@@ -187,11 +188,15 @@ if not os.path.exists(output_path):
 my_project.set_Peano4_installation("../../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 
-my_project.constants.export_boolean("WithScaling", args.with_scaling)
 my_project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "double")
-my_project.constants.export_constexpr_with_type("MaxPatches", str(args.max_patches), "int")
 my_project.constants.export_constexpr_with_type("NumberOfSamples", str(args.samples), "int")
-my_project.constants.export_constexpr_with_type("EndTime", str(args.end_time), "int")
+my_project.constants.export_constexpr_with_type("MaxNumberOfPatchesToStudy", str(args.max_patches), "int")
+my_project.constants.export_constexpr_with_type("MaxNumberOfLaunchingThreads", str(args.max_threads), "int")
+
+my_project.constants.export_boolean("EvaluateFlux", False)
+my_project.constants.export_boolean("EvaluateNonconservativeProduct", True)
+my_project.constants.export_boolean("EvaluateSource", True)
+my_project.constants.export_boolean("EvaluateMaximumEigenvalueAfterTimeStep", True)
 
 my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/InitialValues.cpp")
 my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp")
