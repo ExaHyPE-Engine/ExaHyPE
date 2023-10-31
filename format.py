@@ -14,8 +14,8 @@ default_clang_format_file_name = ".clang-format"
 target_branch = "p4"
 
 # Formatting tools versions
-min_black_version = "23.3.0"
-min_clang_version = "16.0.5"
+black_version = "23.3.0"
+clang_version = "16.0.5"
 
 # Global variables for easy access
 verbose = True  # will be overwritten by arg parser
@@ -31,8 +31,15 @@ def get_peano_root():
     peano_root: str
         root of Peano repo
     """
+
+    cmd = "git rev-parse --show-toplevel"
+
+    if verbose:
+        print("Searching for Peano root dir via git.")
+        print("Running '", cmd, "'")
+
     gitrevparse = subprocess.run(
-        "git rev-parse --show-toplevel",
+        cmd,
         shell=True,
         check=True,
         capture_output=True,
@@ -68,8 +75,14 @@ def git_is_available():
     Check whether git is available. Returns True is that is the case.
     """
     # Does it run?
+    cmd = "git --version"
+
+    if verbose:
+        print("Checking if git is available")
+        print("Running '", cmd, "'")
+
     run = subprocess.run(
-        "git --version",
+        cmd,
         shell=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -90,10 +103,18 @@ def check_black(black_cmd):
     The subprocess call crashes if there is an error with black.
     """
     global black_checked
+
     if not black_checked:
         # Does it run?
+
+        cmd = black_cmd + " --version"
+
+        if verbose:
+            print("Checking black formatter runs.")
+            print("Running '", cmd, "'")
+
         run = subprocess.run(
-            black_cmd + " --version",
+            cmd,
             shell=True,
             stdout=None,
             check=True,
@@ -109,15 +130,12 @@ def check_black(black_cmd):
             raise ValueError("black --version output was:", stdout, " ???")
 
         installed_version = stdout_split[1]
-        installed_version_number = int(installed_version.replace(".", ""))
-        min_black_version_number = int(min_black_version.replace(".", ""))
-
-        if installed_version_number < min_black_version_number:
+        if installed_version != black_version:
             raise ValueError(
                 (
-                    "black formatter executable has version {0} but I require at least {1}.\n"
+                    "black formatter executable has version {0} but I require {1}.\n"
                     + "Please remove all contents from the directory '{2}' and re-run this script."
-                ).format(installed_version, min_black_version, python_venv_dir)
+                ).format(installed_version, black_version, python_venv_dir)
             )
 
         black_checked = True
@@ -150,15 +168,12 @@ def check_clang(clang_cmd):
             raise ValueError("clang-format --version output was:", stdout, " ???")
 
         installed_version = stdout_split[2]
-        installed_version_number = int(installed_version.replace(".", ""))
-        min_clang_version_number = int(min_clang_version.replace(".", ""))
-
-        if installed_version_number < min_clang_version_number:
+        if installed_version != clang_version:
             raise ValueError(
                 (
                     "clang-format executable has version {0} but I require {1}.\n"
                     + "Please remove all contents from the directory '{2}' and re-run this script."
-                ).format(installed_version, min_clang_version, python_venv_dir)
+                ).format(installed_version, clang_version, python_venv_dir)
             )
 
         clang_checked = True
@@ -181,8 +196,13 @@ def install_black_formatting_tool():
         )
 
     # The actual install
+    cmd = (bfepython + " -m pip install click==8.1.3 black==" + black_version,)
+    if verbose:
+        print("Installing black formatter.")
+        print("Running '", cmd, "'")
+
     run = subprocess.run(
-        bfepython + " -m pip install click==8.1.3 black>=" + min_black_version,
+        cmd,
         shell=True,
         check=True,
     )
@@ -209,8 +229,13 @@ def install_clang_formatting_tool():
         )
 
     # The actual install
+    cmd = clangpython + " -m pip install clang-format==" + clang_version
+    if verbose:
+        print("Installing clang-format.")
+        print("Running '", cmd, "'")
+
     run = subprocess.run(
-        clangpython + " -m pip install clang-format>=" + min_clang_version,
+        cmd,
         shell=True,
         check=True,
     )
@@ -232,7 +257,12 @@ def setup_venv(peano_root):
     if not os.path.exists(venv_path):
         print("Python formatting env not found, installing it")
         os.mkdir(venv_path)
-        run = subprocess.run("python3 -m venv " + venv_path, shell=True, check=True)
+
+        cmd = "python3 -m venv " + venv_path
+
+        if verbose:
+            print("Running '", cmd, "'")
+        run = subprocess.run(cmd, shell=True, check=True)
 
         if not os.path.exists(venv_path):
             raise FileNotFoundError("Something went horribly wrong when creating venv.")
@@ -412,11 +442,11 @@ def run_python_formatter(filename, dry_run, peano_root):
 
     # First run in dry-run mode to accurately count whether we
     # need to/do format through the return code.
+    cmd = black_cmd + " --check "
+
     if verbose:
-        print(f"checking {filename}")
-    run = subprocess.run(
-        black_cmd + " --check " + filename, stdout=subprocess.DEVNULL, shell=True
-    )
+        print(f"checking {filename} using '", cmd, "'")
+    run = subprocess.run(cmd + filename, stdout=subprocess.DEVNULL, shell=True)
 
     returncode = run.returncode
     if returncode != 0:
@@ -449,12 +479,14 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
 
     # First run in dry-run mode to accurately count whether we
     # need to/do format through the return code.
+
+    cmd = clang_cmd + " --dry-run "
     if verbose:
-        print(f"Checking {filename}")
+        print(f"Checking {filename} using '", cmd, "'")
     # pipe sterr to /dev/null too here. In dry run mode, every line that needs
     # to be changed will otherwise be printed to stderr.
     run = subprocess.run(
-        clang_cmd + " --dry-run " + filename,
+        cmd + filename,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         shell=True,
