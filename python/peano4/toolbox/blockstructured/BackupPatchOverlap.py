@@ -27,7 +27,7 @@ class BackupPatchOverlap(ActionSet):
   
   
   def __init__(self,patch_overlap_in,patch_overlap_out,invoke_in_touch_first,guard="",additional_includes=""):
-    super(BackupPatchOverlap,self).__init__(priority=1,parallel=False)
+    super(BackupPatchOverlap,self).__init__(descend_invocation_order=1,parallel=False)
     self.d = {}
     self.d[ "UNKNOWNS" ]           = str(patch_overlap_in.no_of_unknowns)
     self.d[ "DOFS_PER_AXIS" ]      = str(patch_overlap_in.dim[1])
