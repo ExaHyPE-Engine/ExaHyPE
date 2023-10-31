@@ -296,7 +296,7 @@ remarks with respect to vecorisation as well as Swift's discussion of @ref swift
 
         """
         super(ParticleParticleInteraction_StackOfListsOverStaticParticles, self).__init__(
-            descend_invocation_order=1, parallel=False
+            priority=1, parallel=False
         )
 
         self._particle_set = particle_set

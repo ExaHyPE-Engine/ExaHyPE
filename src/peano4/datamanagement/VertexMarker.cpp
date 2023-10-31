@@ -20,7 +20,6 @@ peano4::datamanagement::VertexMarker::VertexMarker(
   _isLocal                                = event.getIsVertexLocal();
   _isParentCellLocal                      = event.getIsParentCellLocal();
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
-  _isAdjacentToParallelDomainBoundary     = event.getIsVertexAdjacentToParallelDomainBoundary();
 
   _isHanging = 0;
   for (int i=0; i<TwoPowerD; i++) {
@@ -188,15 +187,5 @@ bool peano4::datamanagement::VertexMarker::isHanging() const {
 
 bool peano4::datamanagement::VertexMarker::isHanging(int i) const {
   return _isHanging[i];
-}
-
-
-bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary() const {
-  return isAdjacentToParallelDomainBoundary( _select );
-}
-
-
-bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary(int i) const {
-  return _isAdjacentToParallelDomainBoundary[i];
 }
 

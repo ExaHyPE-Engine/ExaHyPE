@@ -1,14 +1,5 @@
 #include <limits>
 
-
-template <int Size, typename Scalar>
-std::vector<Scalar> tarch::la::toSTLVector(const Vector<Size, Scalar>& vector) {
-  std::vector<Scalar> result(Size);
-  for (int i=0; i<Size; i++) result[i] = vector(i);
-  return result;
-}
-
-
 template <int Size, typename Scalar>
 int tarch::la::count(const Vector<Size, Scalar>& vector, const Scalar& value) {
   int result = 0;

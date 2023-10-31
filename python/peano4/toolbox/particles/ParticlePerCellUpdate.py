@@ -76,7 +76,7 @@ class ParticlePerCellUpdate(ActionSet):
       
 
     """
-    super(ParticlePerCellUpdate,self).__init__(descend_invocation_order=1,parallel=False)
+    super(ParticlePerCellUpdate,self).__init__(priority=1,parallel=False)
     
     self._particle_set = particle_set
     self.d = {}

@@ -14,7 +14,7 @@ class AbstractRKFDActionSet( ActionSet ):
       Reference to creating class 
    
     """
-    super(AbstractRKFDActionSet,self).__init__(descend_invocation_order=1,parallel=False)
+    super(AbstractRKFDActionSet,self).__init__(priority=1,parallel=False)
     self._solver = solver
     pass
   

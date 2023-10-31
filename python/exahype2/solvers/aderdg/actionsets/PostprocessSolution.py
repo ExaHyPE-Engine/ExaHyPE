@@ -59,7 +59,7 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
         super(DoFWisePostprocessSolution, self).__init__(solver)
         self.guard = "true"
         self._compute_kernel = ""
-        self.descend_invocation_order = 1
+        self.priority = 1
 
     def add_postprocessing_kernel(self, operation_per_point):
         """

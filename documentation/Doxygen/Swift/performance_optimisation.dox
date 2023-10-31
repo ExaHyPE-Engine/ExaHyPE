@@ -73,7 +73,7 @@ You can alter that in your code:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Just pick another variant (consult namespace docu) here. Please note that these
