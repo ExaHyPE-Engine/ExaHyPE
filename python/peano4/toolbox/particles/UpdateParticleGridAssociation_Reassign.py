@@ -110,6 +110,13 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
     If you disable drops, the action set becomes idempotent.
 
 
+    ## Interpolay with particle storage
+
+    This sorting scheme should not be used if you use a particle memory pool,
+    i.e. if you try to store particles continuously - unless you insert
+    explicit gather/resort steps. Read through the @ref toolbox_particles_memorypool "memory implications for any particle sorting".
+
+
     ## Parameters
 
     drop_into_hanging_vertices: Boolean

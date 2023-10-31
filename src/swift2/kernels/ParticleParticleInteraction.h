@@ -199,7 +199,7 @@ namespace swift2 {
      * numberOfParticlesPerLocalVertex. It implicitly knows how the particles
      * are stored through the naming convention/the fact that you have to use
      * it with a memory pool. The Python class
-     * peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles.ParticleParticleInteraction_StackOfListsOverStaticParticles
+     * peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
      * provides a lot of information how we construct the passed lists over
      * particles.
      *
