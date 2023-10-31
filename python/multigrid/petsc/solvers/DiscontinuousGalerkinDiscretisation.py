@@ -125,6 +125,14 @@ class AssemblePetscMatrix(ActionSet):
     int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex);
     logTraceInWith7Arguments( "touchFaceFirstTime()", marker.toString(), _spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.toString(), localFirstDoFIndex.first, localFirstDoFIndex.second, globalFirstDoFIndex, RiemannSolverMatrix.toString() );
     for (int row=0; row<dofsPerFace; row++)
+
+    // we have col<2*dofsPerFace here since we have left and right projections here.
+    // ie, we have a certain number of "true" dofsPerFace and then twice as many
+    // helper dofs to hold the projections. 
+    // In this loop, we are setting the values of the true face Dofs, using the 
+    // left and right projections. This is why we get the global index of the 
+    // face and offset by 2*dofsPerFace: this will index the true dofs,
+    // which are enumerated AFTER the projections.
     for (int col=0; col<2*dofsPerFace; col++) {
       repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
         globalFirstDoFIndex + 2*dofsPerFace + row,
