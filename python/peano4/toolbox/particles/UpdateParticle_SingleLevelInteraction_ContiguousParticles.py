@@ -56,6 +56,12 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
        doSomethingFancy( firstParticle+currentParticleNo );
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    ## Validity if particles change their position of cut-off radius
+    
+    If particles change their position or cut-off radius, you have to resort 
+    them. See also UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles 
+    for a discussion of the data validity.
     
 
     """

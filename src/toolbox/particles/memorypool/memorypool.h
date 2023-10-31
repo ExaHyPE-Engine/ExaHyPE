@@ -125,8 +125,6 @@
  *
  * # Resorting
  *
- *
- *
  * You can trigger the resorting in various places. I do recommend to use
  * the parallel state update. Swift for example implements it there as
  * documented in swift2.graphcompiler.AMRLogic.add_dynamic_mesh_refinement_and_particle_resorting().
@@ -134,7 +132,11 @@
  *
  * # Efficient compute kernels
  *
- * Efficient tree traversals which exploit the optimised storage are, for example,
+ * Efficient tree traversals which exploit the optimised storage are
  * peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles and
+ * peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles.
+ * Please consult their documentation re what happens if data are scattered over the memory,
+ * i.e. if vertices have not been gathered yet or if particles have changed their position
+ * or cut-off radius.
  *
  */

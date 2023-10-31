@@ -13,43 +13,47 @@ import dastgen2.attributes.Integer
 class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
   """!
 
-Tree walker to realise particle-particle interactions with particles held by different adjacent cells or on different mesh levels.
-
-This code has the same semantics as peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.
-However, it provides a different implementation. Please consult the 
-documentation of UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles for a description
-of the arguments, plug-in points and the semantics of the two sets. Before you 
-do so, read throuth @ref page_toolbox_particles_mesh_traversal "the generic set discussion"
-for the overall context.
-
-
-## Realisation
-
-Both the active set and the local set are realised as proper sets over 
-pointers. The sets are updated in touchCellFirstTime() and touchCellLastTime(),
-i.e. when we walk down the tree or up again:
-
-In touchCellFirstTime(), i.e. while we go from coarse to fine, we first
-look at all the particles which are associated to an adjacent vertex of 
-the cell and are contained within the cell itself. These particles form 
-the local set. 
-
-Furthermore, we take the active set from coarser levels, and we add all 
-the particles which are associated with an adjacent vertex of the current
-cell. If particles more from coarse to fine while we walk through the tree, 
-we encounter one out of two situations:
-- If they are sieved within "our" current tree, we add them twice to the 
-  active set. Once on the coarser level and then again on the finer one
-  into which they are sieved. For the present tree walker, this does not 
-  matter, as we work with a set of pointers. The particle might be added
-  "too early", but it is not added multiple times to the active set.
-- If they are sieved within another tree eventually, we might add it to 
-  the active set even though they should be sieved down into another 
-  branch of the tree. Should not make a difference.
-  
-In touchCellLastTime(), we take all the particles which are associated to
-any adjacent vertex of the current cell, and we remove those particles 
-from the active set. 
+    Tree walker to realise particle-particle interactions which span multiple levels.
+    
+    This code has the same semantics as peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists.
+    However, it uses a different container to maintain the active and local sets. Please consult the 
+    documentation of UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles for a description
+    of the arguments, plug-in points and the semantics of the two sets. Before you 
+    do so, read throuth @ref page_toolbox_particles_mesh_traversal "the generic set discussion"
+    for the overall context.
+    
+    As this class uses a ***set*** to maintain the active set and local set, the
+    tree walker works even if your particles change position and mesh level while
+    you traverse the mesh.
+    
+    
+    ## Realisation
+    
+    Both the active set and the local set are realised as proper sets over 
+    pointers. The sets are updated in touchCellFirstTime() and touchCellLastTime(),
+    i.e. when we walk down the tree or up again:
+    
+    In touchCellFirstTime(), i.e. while we go from coarse to fine, we first
+    look at all the particles which are associated to an adjacent vertex of 
+    the cell and are contained within the cell itself. These particles form 
+    the local set. 
+    
+    Furthermore, we take the active set from coarser levels, and we add all 
+    the particles which are associated with an adjacent vertex of the current
+    cell. If particles more from coarse to fine while we walk through the tree, 
+    we encounter one out of two situations:
+    - If they are sieved within "our" current tree, we add them twice to the 
+      active set. Once on the coarser level and then again on the finer one
+      into which they are sieved. For the present tree walker, this does not 
+      matter, as we work with a set of pointers. The particle might be added
+      "too early", but it is not added multiple times to the active set.
+    - If they are sieved within another tree eventually, we might add it to 
+      the active set even though they should be sieved down into another 
+      branch of the tree. Should not make a difference.
+      
+    In touchCellLastTime(), we take all the particles which are associated to
+    any adjacent vertex of the current cell, and we remove those particles 
+    from the active set. 
       
 
     """

@@ -88,6 +88,14 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
       a remote subdomain.
     - If you change a particle position while the action set runs, you might
       end up with inconsistent data view.
+
+
+    ## Validity if particles change their position of cut-off radius
+    
+    This particular action set constructs its active and local sets totally
+    on-the-fly. It does not maintain any data while is marches through the 
+    mesh. Consequently, it is robust w.r.t. particle position updates or 
+    lift and drops and in general any resorting.
     
 
     ## Arguments

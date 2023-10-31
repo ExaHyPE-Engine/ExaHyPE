@@ -80,12 +80,32 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     up and down within the tree while we walk. It should work perfectly
     fine if particles do not move. If particles move up and down, the
     present algorithms might have redundant pointers within the active set.
-    I am also not 100% sure if we might run into memory issues if particles
-    suddenly leave cells and hence "disappear" from the active sets.
+    It is therefore absolutely key that this action set is not used in 
+    combination with any other action set which lifts data, as a lift
+    destroys contributions made by coarser mesh cells. If particles drop,
+    we also cannot use this action set, as, again, it might corrupt the
+    active sets constructed by coarser meshes. The issue with the lifts
+    notably becomes apparent once you take into account that lifts trigger
+    a scatter on gathered vertices. That is, we descend within the tree and
+    build up our continuous index spaces. Then, later, we decide that we 
+    lift one particle. This lift means that particles associated with a 
+    coarser vertex are scattered. However, our active set assumes that 
+    we had a valid, continous memory for them. So all of our active sets
+    are now invalid. Sieves in contrast work, as long as their action 
+    set is used before the current one. They merely add data to the 
+    active set that's constructed next.
+    
+    - No lifts.
+    - No drops.
+    - Sieves are fine as long as they happen before touchVertexFirstTime()
+      of this action set.
+    - Lifts into a global sieve list are fine, as long as they happen in 
+      touchVertexLastTime() called after this action set.
     
     In the case of a dynamic setup, i.e. in combinatino with the action
     set UpdateParticleGridAssociation, you might be better of with using
     the set-based implementation of the particle-particle interaction.
+    
     
     
     ## Further plug-in points
