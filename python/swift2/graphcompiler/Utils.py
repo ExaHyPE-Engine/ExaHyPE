@@ -1,5 +1,22 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+from enum import Enum
+
+
+class StepType(Enum):
+    """ """
+
+    TIME_STEP = 0
+    INITIALISATION = 1
+
+
+def get_observer_prefix(step_type: StepType):
+    if step_type==StepType.TIME_STEP:
+        return "Step"
+    elif step_type==StepType.INITIALISATION:
+        return "Init"
+    else:
+        assert False, "not valid switch"
 
 
 def does_one_species_require_gather(sequence_of_steps):

@@ -73,7 +73,7 @@ You can alter that in your code:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Just pick another variant (consult namespace docu) here. Please note that these
@@ -95,13 +95,14 @@ the mesh and issues the particle updates for those particles tied to particular
 vertices or cells. We distinguish different ways how the particles themselves
 are organised in the memory and how the indices over the particles are built
 up and maintained. All particles are always stored on the heap, but how they
-populate the heap can be changed.
+populate the heap can be changed by using different
+@ref toolbox_particles_memorypool "memor pools".
 
 
 You can alter the scheme per particle species by taking your
 instance of peano4.toolbox.particles.ParticleSet. Each particle set hosts an
 attribute generator. You can exchange the generator and thus switch
-administration and storage variants.
+administration and storage variants per species.
 
 
 Feature | Generator | Semantics
@@ -109,6 +110,7 @@ Feature | Generator | Semantics
 scattered particles, list index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ScatteredOnHeap_IndexByList | Scatter the particles all over the heap. The pointers per vertex to the particles are organised as a linked list.
 scattered particles, vector index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ScatteredOnHeap_IndexByVector | Almost the same as peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList, but the lists of pointers are realised through std::vector.
 arrays of particles per vertex | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ContinuousPerVertex | The code tries to hold the particles associated with one vertex in one consecutive array. Whenever this is not possible, we use a linked list to reference the particles scattered over the memory.
+global array of particles | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_GlobalContinuous | The code tries to hold the particles in one big consecutive array where all particles associated with one vertex are held en bloc.
 
 
 The scattered variants holds the particles somewhere on the global heap, and

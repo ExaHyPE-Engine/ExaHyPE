@@ -30,7 +30,7 @@ class InsertParticlesFromHDF5File(ActionSet):
             hydro scheme?
 
         """
-        super(InsertParticlesFromHDF5File, self).__init__(priority=1, parallel=False)
+        super(InsertParticlesFromHDF5File, self).__init__(descend_invocation_order=1, parallel=False)
 
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
