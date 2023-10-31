@@ -38,15 +38,23 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
     centre is contained within the cell.
     The set of active particles are all particles which are associated 
     with an adjacent vertex of the cell. 
+    In line with @ref page_toolbox_particles_mesh_storage "Peano's particle storage scheme",
+    this effectively means that the active particles are those from the 
+    cell plus its h/2 environment.
 
-
-If the active_particle_set attribute is None, then 
+    If the active_particle_set attribute is None, then 
     the active set and the local set are of the same type. They are 
     however not the same sets, as one contains only the particles held
     within the cell.
     You can set the active set to another species of particles
     and thus couple two types of particles.
 
+    The local set is a strict subset of the active set per cell. The code has
+    not checked beforehand if its particles overlap with the current cell.
+    
+    
+    ## Per vertex updates
+    
     Besides the cell kernel which is there to realise per-cell updates, 
     we also have a vertex kernel which we call whenever a
     vertex is loaded for the first time. That is, you can assume that the
@@ -56,41 +64,68 @@ If the active_particle_set attribute is None, then
     whose centre lies within the square/cube around the vertex with mesh size
     2h. So this area goes h along each each coordinate axis into the
     neighbouring cells. The vertex's local particles also have to reside
-    on the same resolution level, i.e. this action set does not couple
-    any cells on different resolutions.
+    on the same resolution level.
 
+
+    ## Type of updates
+    
+    - You can use this action set to realise particle updates without any 
+      dependencies on other particles.
+    - You can use this action set to realise particle updates where the 
+      particle depends on other particles which are stored on the same 
+      level.
+      
+    The following constraints apply:
+    
+    - If you work with the local set within the cell, you are on the safe
+      side, though the association of particles to cells is not unique.
+      There is a tiny overlap between cells, i.e. particles on the face
+      between two cells might be associated to both cells. If you update
+      particles, you should employ a boolean flag to memorise if a particle
+      has been updated already or not.
+    - If you work with the local set within a vertex, this local set overlaps
+      with adjacent cells (see previous item), and it might even overlap with
+      a remote subdomain.
+    - If you change a particle position while the action set runs, you might
+      end up with inconsistent data view.
+    
 
     ## Arguments
     
-    particle_set: ParticleSet
+    @param particle_set: ParticleSet
 
-    particle_particle_interaction_kernel: String holding C++ code
+    @param particle_particle_interaction_kernel: String holding C++ code
       This C++ code can access three different types of variables: There's
       a list of particles called activeParticles, there's a list of particles
       called localParticles, and there's the cell marker. See the guidebook
       for further info. A typical kernel resembles
 
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           for (auto* localParticle: localParticles ) 
           for (auto* activeParticle: activeParticles ) {
             localParticle->doSomethingFancy( activeParticle );
-          }
+          }      
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       
-    active_particle_set: ParticleSet or None
+    @param active_particle_set: ParticleSet or None
       You can compare different particles species with this argument. It
       allows you to make the active particles stem from another species than
       the local ones that you actually update. Pick None if both sets are of
       the same type.
       
-    touch_vertex_first_time_compute_particle_update_kernel: String or None
+    @param touch_vertex_first_time_compute_particle_update_kernel: String or None
       Can be empty, but if you wanna move particles, then a minimal example
       string passed equals
         
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           for (auto* localParticle: localParticles ) {
             localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
           }
+      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
       i.e. you will have a variable localParticle available in this kernel
-      and it is a pointer.
+      and it is a pointer. There is no notion of an active variable for 
+      touch first or touch last.
       
 
     """

@@ -20,10 +20,43 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
     
     Update particles without non-local interaction
 
-    This action set is very similar to UpdateParticle_SingleLevelInteraction but it 
-    assumes that data are stored @ref toolbox_particles_memorypool "continuously in memory".
-    Therefore, we can basically provide meta information how many particles
-    we have per vertex stored en bloc: Per cell, there's a @f$ 2^d @f$ 
+    This action set is very similar to UpdateParticle_SingleLevelInteraction,
+    but it assumes that data are stored @ref toolbox_particles_memorypool "continuously in memory".
+    Therefore, we can provide meta information how many particles we have per 
+    vertex stored en bloc.
+    
+    Per cell, there's a @f$ 2^d @f$ vector over integers called 
+    numberOfActiveParticles. It encodes how many particles are contributed
+    towards the active set from each vertex. If you employ contiguous particle
+    storage schemes, you can loop over this integer range rather than the 
+    particle set, and you can exploit the fact that data within the index set
+    is contigous.
+    
+    A cell update then resembles
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    auto localParticlesIterator = activeParticles.begin();
+    // There is some parallelism here if you wanna exploit it
+    for (int vertex=0; vertex<TwoPowerD; vertex++) {
+      auto* firstParticle = *localParticlesIterator;
+      std::advance( localParticlesIterator, numberOfActiveParticles[vertex] );
+      // This loop encodes vector-level parallelism (SIMD)
+      for (int currentParticleNo = 0; currentParticleNo < numberOfActiveParticles[vertex]; currentParticleNo++) {
+         doSomethingFancy( firstParticle+currentParticleNo );
+      }
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    
+    A vertex update resembles
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    auto* firstParticle = *localParticles.begin();
+    // This loop encodes vector-level parallelism (SIMD)
+    for (int currentParticleNo = 0; currentParticleNo < numberOfActiveParticles; currentParticleNo++) {
+       doSomethingFancy( firstParticle+currentParticleNo );
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
 
     """
     super(UpdateParticle_SingleLevelInteraction_ContiguousParticles,self).__init__(descend_invocation_order=1,parallel=False)
