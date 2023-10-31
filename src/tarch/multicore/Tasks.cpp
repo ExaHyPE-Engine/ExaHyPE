@@ -195,9 +195,11 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::swapOrchestration(
 int tarch::multicore::getNumberOfReservedTaskNumbers() { return activeTaskNumbers.size(); }
 
 void tarch::multicore::releaseTaskNumber(int number) {
-  tarch::multicore::Lock activeTasksLock(activeTasksSemaphore);
-  assertionEquals(activeTaskNumbers.count(number), 1);
-  activeTaskNumbers.erase(number);
+  if (number!=NoDependency) {
+    tarch::multicore::Lock activeTasksLock(activeTasksSemaphore);
+    assertionEquals(activeTaskNumbers.count(number), 1);
+    activeTaskNumbers.erase(number);
+  }
 }
 
 int tarch::multicore::reserveTaskNumber() {
@@ -450,9 +452,40 @@ void tarch::multicore::internal::copyInternalTaskQueueOverIntoGlobalQueue(int th
 
 int tarch::multicore::internal::getNumberOfWithholdPendingTasks() { return globalNonblockingTasks.tasks.size(); }
 
+void tarch::multicore::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
+  assertion( inDependency!=NoDependency or taskNumber!=NoDependency );
+  tarch::multicore::native::spawnTaskWithDependencies(job, inDependency, taskNumber);
+}
+
+
+void tarch::multicore::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+  assertion( not inDependencies.empty() or taskNumber!=NoDependency );
+  tarch::multicore::native::spawnTaskWithDependencies(job, inDependencies, taskNumber);
+}
+
+
+void tarch::multicore::waitForTasks( const std::vector<int>& inDependencies ) {
+  tarch::multicore::native::waitForTasks( inDependencies );
+}
+
+
+void tarch::multicore::waitForTask( int taskNumber ) {
+  tarch::multicore::native::waitForTask( taskNumber );
+}
+
 #ifndef SharedMemoryParallelisation
 
 #include <thread>
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
 
 void tarch::multicore::native::spawnTask(Task* job) {
   bool reschedule = job->run();
@@ -483,5 +516,10 @@ void tarch::multicore::native::processFusedTask(
 }
 
 void tarch::multicore::native::drainTaskQueues() {}
+
+void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
+
+void tarch::multicore::native::waitForTask( int taskNumber ){}
+
 
 #endif
