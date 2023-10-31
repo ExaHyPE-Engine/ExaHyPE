@@ -18,11 +18,11 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     through the underlying spacetree top down and builds up
     @ref page_toolbox_particles_mesh_storage "the active set and the local set".
     These sets can then be used to trigger mesh events.
-    
+
     This version of the interactions makes no assumptions on how the particles
-    are stored. Hence, it cannot expose any such information. If you want to 
-    offer information about consecutive storage, e.g., please use 
-    UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles in combination 
+    are stored. Hence, it cannot expose any such information. If you want to
+    offer information about consecutive storage, e.g., please use
+    UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles in combination
     with @ref toolbox_particles_memorypool "the memory pool".
 
 

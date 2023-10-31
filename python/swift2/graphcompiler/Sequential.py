@@ -15,7 +15,12 @@ from .AMRLogic import (
 )
 from .Optimisation import Optimisation
 from .SpeciesStepOrdering import concatenate_steps_of_species
-from .Utils import does_one_species_require_gather, get_species_set, get_observer_prefix, StepType
+from .Utils import (
+    does_one_species_require_gather,
+    get_species_set,
+    get_observer_prefix,
+    StepType,
+)
 
 
 def translate_one_step_of_species_into_mesh_traversal(
@@ -59,7 +64,9 @@ def translate_one_step_of_species_into_mesh_traversal(
     )
 
     action_set_update_marker = UpdateParticleMarker(current_species_set)
-    action_set_update_marker.descend_invocation_order = new_step.highest_descend_invocation_order() + 1
+    action_set_update_marker.descend_invocation_order = (
+        new_step.highest_descend_invocation_order() + 1
+    )
     action_set_update_marker.parallel = True
     new_step.add_action_set(action_set_update_marker)
 
@@ -125,7 +132,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                         current_species_set.particle_model.name,
                     )
                 )
-    
+
             action_set_particle_update = peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles(
                 particle_set=current_species_set,
                 particle_cell_update_kernel=step.cell_kernel,
@@ -136,7 +143,9 @@ def translate_one_step_of_species_into_mesh_traversal(
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
             )
-            action_set_particle_update.descend_invocation_order = new_step.highest_descend_invocation_order() + 1
+            action_set_particle_update.descend_invocation_order = (
+                new_step.highest_descend_invocation_order() + 1
+            )
             action_set_particle_update.parallel = True
             new_step.add_action_set(action_set_particle_update)
         else:
@@ -148,7 +157,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                         current_species_set.particle_model.name,
                     )
                 )
-    
+
             action_set_particle_update = peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction(
                 particle_set=current_species_set,
                 particle_cell_update_kernel=step.cell_kernel,
@@ -159,7 +168,9 @@ def translate_one_step_of_species_into_mesh_traversal(
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
             )
-            action_set_particle_update.descend_invocation_order = new_step.highest_descend_invocation_order() + 1
+            action_set_particle_update.descend_invocation_order = (
+                new_step.highest_descend_invocation_order() + 1
+            )
             action_set_particle_update.parallel = True
             new_step.add_action_set(action_set_particle_update)
     else:
@@ -319,8 +330,8 @@ def map_onto_separate_mesh_traversals(
             )
             mesh_traversals.append(new_step)
             alter_particle_position.append(True)
-            
-    if step_type==StepType.INITIALISATION:
+
+    if step_type == StepType.INITIALISATION:
         alter_particle_position[0] = True
 
     if does_one_species_require_gather(sequence_of_steps):
