@@ -6,7 +6,7 @@ import jinja2
 
 
 
-class ParticlePerCellUpdate(ActionSet):
+class UpdateParticle_SingleLevelInteraction(ActionSet):
   def __init__(self, 
                particle_set, 
                particle_cell_update_kernel=None, 
@@ -18,15 +18,29 @@ class ParticlePerCellUpdate(ActionSet):
                active_particle_set=None ):
     """!
     
-    Update particles without non-local interaction
+    Update particles on a single level
+    
+    To be used if you want to update particles within their cell, while they
+    either
+    
+    - do not interact at all; or
+    - interact only with particles on the same mesh level.
 
     This code snippet creates a tree walker, i.e. an action set that runs
-    through the underlying spacetree top-down. 
-    Per tree node there are two different sets. 
-    The set of local particles of a cell are all of these particles whose
+    through the underlying spacetree top-down. Users can plug into what 
+    happens per cell and what happens when we touch a set of particles for
+    the first and for the last time.
+    
+    ## Per cell updates
+    
+    Per tree node (cell) there are two different sets. 
+    The set of local particles of a cell are all of the particles whose
     centre is contained within the cell.
-    The set of active particles are also the particles which are centred
-    within the cell. If the active_particle_set attribute is None, then 
+    The set of active particles are all particles which are associated 
+    with an adjacent vertex of the cell. 
+
+
+If the active_particle_set attribute is None, then 
     the active set and the local set are of the same type. They are 
     however not the same sets, as one contains only the particles held
     within the cell.
@@ -80,7 +94,7 @@ class ParticlePerCellUpdate(ActionSet):
       
 
     """
-    super(ParticlePerCellUpdate,self).__init__(descend_invocation_order=1,parallel=False)
+    super(UpdateParticle_SingleLevelInteraction,self).__init__(descend_invocation_order=1,parallel=False)
     
     self._particle_set = particle_set
     self.d = {}

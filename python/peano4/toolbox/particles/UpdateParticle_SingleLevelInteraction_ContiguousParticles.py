@@ -6,7 +6,7 @@ import jinja2
 
 
 
-class ParticlePerCellUpdateOverContiguousParticles(ActionSet):
+class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
   def __init__(self, 
                particle_set, 
                particle_cell_update_kernel=None, 
@@ -20,13 +20,13 @@ class ParticlePerCellUpdateOverContiguousParticles(ActionSet):
     
     Update particles without non-local interaction
 
-    This action set is very similar to ParticlePerCellUpdate but it 
+    This action set is very similar to UpdateParticle_SingleLevelInteraction but it 
     assumes that data are stored @ref toolbox_particles_memorypool "continuously in memory".
     Therefore, we can basically provide meta information how many particles
     we have per vertex stored en bloc: Per cell, there's a @f$ 2^d @f$ 
 
     """
-    super(ParticlePerCellUpdateOverContiguousParticles,self).__init__(descend_invocation_order=1,parallel=False)
+    super(UpdateParticle_SingleLevelInteraction_ContiguousParticles,self).__init__(descend_invocation_order=1,parallel=False)
     
     self._particle_set = particle_set
     self.d = {}

@@ -10,14 +10,14 @@ import dastgen2.attributes.Integer
 
 
 
-class ParticleParticleInteraction_Sets(ActionSet):
+class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
   """!
 
 Tree walker to realise particle-particle interactions with particles held by different adjacent cells or on different mesh levels.
 
-This code has the same semantics as peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverContiguousParticles.
+This code has the same semantics as peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.
 However, it provides a different implementation. Please consult the 
-documentation of ParticleParticleInteraction_StackOfListsOverContiguousParticles for a description
+documentation of UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles for a description
 of the arguments, plug-in points and the semantics of the two sets. Before you 
 do so, read throuth @ref page_toolbox_particles_mesh_traversal "the generic set discussion"
 for the overall context.
@@ -63,7 +63,7 @@ from the active set.
                unprepare_traversal_kernel="", 
                additional_includes="", 
                active_particle_set=None ):
-    super(ParticleParticleInteraction_Sets,self).__init__()
+    super(UpdateParticle_MultiLevelInteraction_Sets,self).__init__()
     self._particle_set = particle_set
     self.d = {}
     self.d[ "LOCAL_PARTICLE" ]                    = particle_set.particle_model.name

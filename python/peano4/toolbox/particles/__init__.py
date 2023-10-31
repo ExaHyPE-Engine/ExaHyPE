@@ -13,10 +13,10 @@ from .ParticleSet                   import ParticleSetGenerator_ContinuousPerVer
 from .ParticleSet                   import ParticleSetGenerator_GlobalContinuous
 
 
-from .ParticleParticleInteraction_Sets         import ParticleParticleInteraction_Sets
-from .ParticleParticleInteraction_StackOfListsOverContiguousParticles import ParticleParticleInteraction_StackOfListsOverContiguousParticles
-from .ParticlePerCellUpdate                    import ParticlePerCellUpdate
-from .ParticlePerCellUpdateOverContiguousParticles import ParticlePerCellUpdateOverContiguousParticles
+from .UpdateParticle_MultiLevelInteraction_Sets                             import UpdateParticle_MultiLevelInteraction_Sets
+from .UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles import UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
+from .UpdateParticle_SingleLevelInteraction                                 import UpdateParticle_SingleLevelInteraction
+from .UpdateParticle_SingleLevelInteraction_ContiguousParticles import UpdateParticle_SingleLevelInteraction_ContiguousParticles
 
 
 from .ParticleTreeAnalysis          import create_cell_marker

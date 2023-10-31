@@ -9,7 +9,7 @@ import peano4.datamodel.DaStGen2
 import dastgen2.attributes.Integer
 
 
-class ParticleParticleInteraction_StackOfLists(ActionSet):
+class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
     """!
 
     Tree walker to realise particle-particle interactions with particles held by different adjacent cells or on different mesh levels
@@ -22,7 +22,7 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
     This version of the interactions makes no assumptions on how the particles
     are stored. Hence, it cannot expose any such information. If you want to 
     offer information about consecutive storage, e.g., please use 
-    ParticleParticleInteraction_StackOfListsOverContiguousParticles in combination 
+    UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles in combination 
     with @ref toolbox_particles_memorypool "the memory pool".
 
 
@@ -115,7 +115,7 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
     Once you rewrite your kernels that way, you can exploit the integers
     _numberOfActiveParticlesPerVertex and numberOfParticlesPerLocalVertex:
 
-    @image html ParticleParticleInteraction_StackOfLists_continuous-memory.png
+    @image html UpdateParticle_MultiLevelInteraction_StackOfLists_continuous-memory.png
 
     Assume you enter a cell and you get the particlesAssociatedWithLocalVertices
     list hosting 19 pointers. Further to that, you receive the array
@@ -302,7 +302,7 @@ class ParticleParticleInteraction_StackOfLists(ActionSet):
 
 
         """
-        super(ParticleParticleInteraction_StackOfLists, self).__init__(
+        super(UpdateParticle_MultiLevelInteraction_StackOfLists, self).__init__(
             descend_invocation_order=1, parallel=False
         )
 

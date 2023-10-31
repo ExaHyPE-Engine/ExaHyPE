@@ -33,7 +33,7 @@ over lists of particle pointers with alternative kernel invocations:
    that all data is continuous.
 3. Replace the cell kernel calls with calls to your new bespoke kernels
    that we introduce below.
-4. Ensure that the graph compiler uses peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverContiguousParticles
+4. Ensure that the graph compiler uses peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
    to run through the mesh and build up the local and active sets.
 
 
@@ -64,7 +64,7 @@ willNotBeSievedIntoNextLevel(). We can omit this one here, as we said
 beforehand that we use the optimised kernels if and only if we know that
 the particle-mesh association is stationary and consistent.
 
-We now follow the discussion of peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverContiguousParticles
+We now follow the discussion of peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
 and replace this kernel invocation by
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -112,8 +112,8 @@ the Makefile:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
-	rm observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverContiguousParticles4.o
-	$(CXX) -qopt-report=3 $(CXXFLAGS) -c -o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverContiguousParticles4.o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverContiguousParticles4.cpp
+	rm observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.o
+	$(CXX) -qopt-report=3 $(CXXFLAGS) -c -o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.cpp
 	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -125,7 +125,7 @@ force kernel is actually used. We then retranslate this single object file with
 Intel's -opt-report flag which provides ample evidence which vectorisation
 optimisation has been performed by the compiler.
 
-You should get a file observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverContiguousParticles4.optrpt
+You should get a file observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.optrpt
 which summarises if the compiler has vectorised your code and even how much
 speedup you might expect. Please note that every rerun of the Python script
 overwrites the Makefile. However, there's no need to do this while you tweak

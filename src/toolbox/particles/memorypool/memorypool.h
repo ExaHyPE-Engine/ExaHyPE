@@ -27,7 +27,7 @@
  * The intention behind the continuous, compact storage is not only a more
  * efficient memory handling and a reduction of fragmentation. It also enables
  * the code to efficiently encode the active and local lists and, eventually,
- * to vectorise. toolbox.particles.ParticleParticleInteraction_StackOfLists
+ * to vectorise. toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists
  * is the prime example of such a tree walker which uses the fact that
  * particles are stored an bloc.
  *
@@ -135,6 +135,6 @@
  * # Efficient compute kernels
  *
  * Efficient tree traversals which exploit the optimised storage are, for example,
- * peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverContiguousParticles and
+ * peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles and
  *
  */
