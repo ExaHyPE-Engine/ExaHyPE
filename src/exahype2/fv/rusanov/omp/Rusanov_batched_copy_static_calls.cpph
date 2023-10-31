@@ -22,6 +22,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_copy_static_calls(
 ) {
   static_assert(haloSize == 1);
 
+  static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
+  logTraceIn("timeStepWithRusanov_batched_copy_static_calls()");
+
   exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
   TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   haloSize, unknowns, 0);
@@ -827,4 +830,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_copy_static_calls(
   if (tempEigenvalueX!=nullptr) delete[] tempEigenvalueX;
   if (tempEigenvalueY!=nullptr) delete[] tempEigenvalueY;
   if (tempEigenvalueZ!=nullptr) delete[] tempEigenvalueZ;
+
+  logTraceOut("timeStepWithRusanov_batched_copy_static_calls()");
 }

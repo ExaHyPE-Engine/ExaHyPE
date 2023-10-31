@@ -25,6 +25,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_usm_static_calls(
 ) {
   static_assert(haloSize == 1);
 
+  static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
+  logTraceIn("timeStepWithRusanov_patchwise_usm_static_calls()");
+
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
   exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
   //exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
@@ -597,4 +600,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanov_patchwise_usm_static_calls(
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueX, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueY, targetDevice );
   tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueZ, targetDevice );
+
+  logTraceOut("timeStepWithRusanov_patchwise_usm_static_calls()");
 }

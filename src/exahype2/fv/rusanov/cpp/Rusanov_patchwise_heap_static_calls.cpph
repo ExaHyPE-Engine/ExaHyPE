@@ -21,6 +21,9 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   #if defined(GPUOffloadingCPP)
   constexpr int solversHaloSize = 1;
 
+  static tarch::logging::Log _log("exahype2::fv::rusanov::cpp");
+  logTraceIn("timeStepWithRusanov_patchwise_heap_static_calls()");
+
   exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator(
     1,
     numberOfVolumesPerAxisInPatch,
@@ -866,4 +869,6 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_patchwise_heap_static_calls
   #else
   assertionMsg(false, "this routine should only be used in combination with CPP offloading, as it has a device parameter" );
   #endif
+
+  logTraceOut("timeStepWithRusanov_patchwise_heap_static_calls()");
 }

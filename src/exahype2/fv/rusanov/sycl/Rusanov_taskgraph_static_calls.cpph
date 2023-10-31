@@ -24,6 +24,9 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_taskgraph_static
   bool                  evaluateMaximumEigenvalueAfterTimeStep
 ) {
 #if defined(GPUOffloadingSYCL)
+  static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
+  logTraceIn("timeStepWithRusanov_taskgraph_static_calls()");
+
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   /*
@@ -880,6 +883,8 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_taskgraph_static
     false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
   );
 #endif
+
+  logTraceOut("timeStepWithRusanov_taskgraph_static_calls()");
 }
 
 
@@ -900,6 +905,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
   bool                  evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingSYCL)
+  static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
+  logTraceIn("timeStepWithRusanov_taskgraph_usm_static_calls()");
+
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
@@ -932,6 +940,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
     false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
   );
   #endif
+
+  logTraceOut("timeStepWithRusanov_taskgraph_usm_static_calls()");
 }
 
 
@@ -952,6 +962,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_copy_static_call
   bool                  evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingSYCL)
+  static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
+  logTraceIn("timeStepWithRusanov_taskgraph_copy_static_calls()");
+
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
@@ -984,6 +997,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_copy_static_call
     false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
   );
   #endif
+
+  logTraceOut("timeStepWithRusanov_taskgraph_copy_static_calls()");
 }
 
 
@@ -1003,6 +1018,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_managed_static_c
   bool                  evaluateMaximumEigenvalueAfterTimeStep
 ) {
   #if defined(GPUOffloadingSYCL)
+  static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
+  logTraceIn("timeStepWithRusanov_taskgraph_managed_static_calls()");
+
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
@@ -1035,6 +1053,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_managed_static_c
     false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
   );
   #endif
+
+  logTraceOut("timeStepWithRusanov_taskgraph_managed_static_calls()");
 }
 
 
@@ -1055,6 +1075,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
   tarch::timing::Measurement&  measurement
 ) {
   #if defined(GPUOffloadingSYCL)
+  static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
+  logTraceIn("timeStepWithRusanov_taskgraph_usm_static_calls()");
+
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
@@ -1090,6 +1113,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
     false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
   );
   #endif
+
+  logTraceOut("timeStepWithRusanov_taskgraph_usm_static_calls()");
 }
 
 
@@ -1111,6 +1136,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_copy_static_call
   tarch::timing::Measurement&  measurement
 ) {
   #if defined(GPUOffloadingSYCL)
+  static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
+  logTraceIn("timeStepWithRusanov_taskgraph_copy_static_calls()");
+
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
@@ -1146,6 +1174,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_copy_static_call
     false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
   );
   #endif
+
+  logTraceOut("timeStepWithRusanov_taskgraph_copy_static_calls()");
 }
 
 
@@ -1166,6 +1196,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_managed_static_c
   tarch::timing::Measurement&  measurement
 ) {
   #if defined(GPUOffloadingSYCL)
+  static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
+  logTraceIn("timeStepWithRusanov_taskgraph_managed_static_calls()");
+
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
@@ -1201,4 +1234,6 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_managed_static_c
     false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
   );
   #endif
+
+  logTraceOut("timeStepWithRusanov_taskgraph_managed_static_calls()");
 }
