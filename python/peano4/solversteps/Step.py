@@ -71,15 +71,12 @@ class Step:
     def __sort(self):
         """!
 
-        Simple bubble sort the action sets, such that their descend_invocation_order
-        is preserved. 
-        
-        @see peano4.solversteps.ActionSet.descend_invocation_order
+        Simple bubble sort on the priorities
 
         """
         for i in range(0, len(self.action_sets)):
             for j in range(i + 1, len(self.action_sets)):
-                if self.action_sets[i].descend_invocation_order > self.action_sets[j].descend_invocation_order:
+                if self.action_sets[i].priority > self.action_sets[j].priority:
                     tmp = self.action_sets[i]
                     self.action_sets[i] = self.action_sets[j]
                     self.action_sets[j] = tmp
@@ -124,31 +121,27 @@ class Step:
     def use_vertex(self, submodel):
         self.vertex_data.append(submodel)
 
-    def highest_descend_invocation_order(self):
+    def highest_priority(self):
         """!
 
-        Return max descend_invocation_order over all action sets associated with this step.
-        
-        @see peano4.solversteps.ActionSet.descend_invocation_order
+        Return max priority over all action sets associated with this step.
 
         """
         self.__sort()
         if len(self.action_sets) == 0:
             return 0
-        return self.action_sets[-1].descend_invocation_order
+        return self.action_sets[-1].priority
 
-    def lowest_descend_invocation_order(self):
+    def lowest_priority(self):
         """!
 
-        Return minimum descend_invocation_order over all action sets associated with this step.
-        
-        @see peano4.solversteps.ActionSet.descend_invocation_order
+        Return minimum priority over all action sets associated with this step.
 
         """
         self.__sort()
         if len(self.action_sets) == 0:
             return 0
-        return self.action_sets[0].descend_invocation_order
+        return self.action_sets[0].priority
 
     def get_vertex_operations_signature(self):
         result = ["marker", "const peano4::datamanagement::VertexMarker&"]

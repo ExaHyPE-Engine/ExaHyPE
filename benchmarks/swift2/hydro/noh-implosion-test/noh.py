@@ -14,11 +14,6 @@ import shutil
 # Parse user input
 ########################################################################################
 
-Choices = ["none", 
-           "continuous-per-vertex", "global-continuous", "continuous-per-vertex-vectorise", "global-continuous-vectorise", 
-           "tasks",
-          ]
-
 parser = argparse.ArgumentParser(description="SPH benchmarking script")
 parser.add_argument(
     "-j", "--parallel-builds", dest="j", type=int, default=-1, help="Parallel builds"
@@ -79,14 +74,6 @@ parser.add_argument(
     help="Value of the CFL constant",
 )
 parser.add_argument(
-    "-ppc",
-    "--particles-per-cell",
-    dest="particles_per_cell",
-    type=int,
-    default=200,
-    help="Particles per cell (200 is default)",
-)
-parser.add_argument(
     "-pd",
     "--peano-dir",
     dest="peanodir",
@@ -105,7 +92,7 @@ parser.add_argument(
     "-opt",
     "--optimisation",
     dest="optimisation",
-    choices=Choices,
+    choices=["none", "continuous-per-vertex", "vectorise-per-vertex"],
     default="none",
     help="Optimisation strategy to use (default: none)",
 )
@@ -139,22 +126,12 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh", executable="noh2D"
 )
 
-if args.optimisation == Choices[1] or \
-   args.optimisation == Choices[2] or \
-   args.optimisation == Choices[3] or \
-   args.optimisation == Choices[4]:
+if args.optimisation != "none":
     project.algorithm_steps_task_graph_compiler = (
-        swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+        swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
     )
-    project.initialisation_steps_task_graph_compiler = (
-        swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
-    )
-if args.optimisation == Choices[5]:
     project.algorithm_steps_task_graph_compiler = (
-        swift2.graphcompiler.map_particle_steps_onto_task_tree
-    )
-    project.initialisation_steps_task_graph_compiler = (
-        swift2.graphcompiler.map_initialisation_steps_onto_task_tree
+        swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
     )
 
 
@@ -167,12 +144,11 @@ name = "HydroPart"
 dimensions = 2
 hydro_dimensions = 2  # dimensions for the hydro
 
-particles_per_cell = args.particles_per_cell
+particles_per_cell = 200
 total_number_of_particles = args.particle_number**hydro_dimensions
 total_number_of_cells = total_number_of_particles / particles_per_cell
 cells_per_dimension = total_number_of_cells ** (1.0 / hydro_dimensions)
 max_cell_size = 1.0 / cells_per_dimension
-
 print(
     "{} particles in total fit into {} cells, i.e. {} cells per dimension. This gives h={}".format(
         total_number_of_particles,
@@ -192,9 +168,9 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=particles_per_cell,
     min_h=max_cell_size,
     max_h=max_cell_size,
-    use_optimised_coalesced_memory_access_kernels=(
-      "-vectorise" in args.optimisation
-    ),
+    use_optimised_coalesced_memory_access_kernels=args.optimisation
+    == "vectorise-per-vertex",
+    asserts=args.asserts,
 )
 
 
@@ -279,15 +255,19 @@ particle.data.expose_all_attributes_in_header_file()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-if "continuous-per-vertex" in args.optimisation:
-    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
-elif "global-continuous" in args.optimisation:
-    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
+if (
+    args.optimisation == "continuous-per-vertex"
+    or args.optimisation == "vectorise-per-vertex"
+):
+    particle_set.generator = (
+        peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+    )
 else:
-    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
+    particle_set.generator = (
+        peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
             particle_set
         )
-
+    )
 
 
 if args.asserts:

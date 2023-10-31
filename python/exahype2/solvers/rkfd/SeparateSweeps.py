@@ -354,7 +354,7 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
         """
         super(SeparateSweeps, self).create_action_sets()
         self._action_set_update_cell = UpdateCell(self)
-        self._action_set_update_cell.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 4
+        self._action_set_update_cell.priority = self._baseline_action_set_priority + 4
         self._action_set_compute_final_linear_combination.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(
             self.get_name_of_global_instance(),
             self._name,

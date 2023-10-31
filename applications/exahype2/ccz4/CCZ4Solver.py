@@ -591,7 +591,7 @@ def add_tracer_to_FV_solver(
     init_action_set = exahype2.tracer.InsertParticlesByCoordinates(
         particle_set=tracer_particles, coordinates=coordinates
     )
-    init_action_set.descend_invocation_order = 0
+    init_action_set.priority = 0
     project.add_action_set_to_initialisation(init_action_set)
 
     project_on_tracer_properties_kernel = ""
@@ -620,7 +620,7 @@ def add_tracer_to_FV_solver(
         solver,
         project_on_tracer_properties_kernel=project_on_tracer_properties_kernel,
     )
-    tracing_action_set.descend_invocation_order = solver._action_set_update_cell.descend_invocation_order + 1
+    tracing_action_set.priority = solver._action_set_update_cell.priority + 1
     project.add_action_set_to_timestepping(tracing_action_set)
     project.add_action_set_to_initialisation(tracing_action_set)
 
@@ -634,7 +634,7 @@ def add_tracer_to_FV_solver(
         time_delta_between_two_snapsots = time_delta_between_two_snapsots,
         clearDatabaseAfterFlush         = True,
     )
-    dump_into_database_action_set.descend_invocation_order = solver._action_set_update_cell.descend_invocation_order + 2
+    dump_into_database_action_set.priority = solver._action_set_update_cell.priority + 2
     project.add_action_set_to_timestepping(dump_into_database_action_set)
 
 
@@ -691,8 +691,8 @@ def add_tracer_to_FD4_solver(
         solver,
         project_on_tracer_properties_kernel=project_on_tracer_properties_kernel,
     )
-    tracing_action_set.descend_invocation_order = (
-        solver._action_set_compute_final_linear_combination.descend_invocation_order + 1
+    tracing_action_set.priority = (
+        solver._action_set_compute_final_linear_combination.priority + 1
     )
     project.add_action_set_to_timestepping(tracing_action_set)
 
@@ -706,8 +706,8 @@ def add_tracer_to_FD4_solver(
         time_delta_between_two_snapsots = time_delta_between_two_snapsots,
         clearDatabaseAfterFlush         = True,
     )
-    dump_into_database_action_set.descend_invocation_order = (
-        solver._action_set_compute_final_linear_combination.descend_invocation_order + 2
+    dump_into_database_action_set.priority = (
+        solver._action_set_compute_final_linear_combination.priority + 2
     )
     project.add_action_set_to_timestepping(dump_into_database_action_set)
 
@@ -1136,7 +1136,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
         init_action_set = exahype2.tracer.InsertParticlesByCoordinates(
             particle_set=tracer_particles, coordinates=coordinates
         )
-        init_action_set.descend_invocation_order = 0
+        init_action_set.priority = 0
         project.add_action_set_to_initialisation(init_action_set)
 
         project_on_tracer_properties_kernel = ""
@@ -1162,8 +1162,8 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             self,
             project_on_tracer_properties_kernel=project_on_tracer_properties_kernel,
         )
-        tracing_action_set.descend_invocation_order = (
-            self._action_set_compute_final_linear_combination.descend_invocation_order + 1
+        tracing_action_set.priority = (
+            self._action_set_compute_final_linear_combination.priority + 1
         )
         project.add_action_set_to_timestepping(tracing_action_set)
         project.add_action_set_to_initialisation(tracing_action_set)
@@ -1178,8 +1178,8 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             time_delta_between_two_snapsots = time_delta_between_two_snapsots,
             clearDatabaseAfterFlush         = True,
         )
-        dump_into_database_action_set.descend_invocation_order = (
-            self._action_set_compute_final_linear_combination.descend_invocation_order + 2
+        dump_into_database_action_set.priority = (
+            self._action_set_compute_final_linear_combination.priority + 2
         )
         project.add_action_set_to_timestepping(dump_into_database_action_set)
 
@@ -1336,7 +1336,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
         init_action_set = exahype2.tracer.InsertParticlesByCoordinates(
             particle_set=tracer_particles, coordinates=coordinates
         )
-        init_action_set.descend_invocation_order = 0
+        init_action_set.priority = 0
         project.add_action_set_to_initialisation(init_action_set)
 
         assert tracer_unknowns == None
@@ -1346,8 +1346,8 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
             solver=self,
             project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
         )
-        tracing_action_set.descend_invocation_order = (
-            self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order
+        tracing_action_set.priority = (
+            self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority
             + 1
         )
         project.add_action_set_to_timestepping(tracing_action_set)
@@ -1363,8 +1363,8 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
             time_delta_between_two_snapsots = time_delta_between_two_snapsots,
             clearDatabaseAfterFlush         = True,
         )
-        dump_into_database_action_set.descend_invocation_order = (
-            self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order
+        dump_into_database_action_set.priority = (
+            self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority
             + 1
         )
         project.add_action_set_to_timestepping(dump_into_database_action_set)

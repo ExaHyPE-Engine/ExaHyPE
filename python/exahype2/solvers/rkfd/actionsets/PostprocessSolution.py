@@ -18,7 +18,7 @@ class EmptyPostprocessSolution(AbstractRKFDActionSet):
     AbstractRKFDActionSet.__init__(self,solver)
     # Is there for compatibility reasons
     self.guard               = "true"
-    self.priodescend_invocation_orderrity            = 1 
+    self.priority            = 1 
 
 
   def get_body_of_operation(self,operation_name):
@@ -80,7 +80,7 @@ class CellWisePostprocessSolution(AbstractRKFDActionSet):
     AbstractRKFDActionSet.__init__(self,solver)
     self.guard               = "true"
     self._compute_kernel     = ""
-    self.descend_invocation_order            = 2
+    self.priority            = 2
 
 
   def add_postprocessing_kernel(self, operation_per_point):

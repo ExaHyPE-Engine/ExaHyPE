@@ -98,21 +98,21 @@ class ActionSet(object):
     to which action set.
 
 
-    descend_invocation_order: Integer
-      Each action set has a descend_invocation_order. The action sets are invoked later
-      in order following their descend_invocation_order throughout the steps down within
+    priority: Integer
+      Each action set has a priority. The action sets are invoked later
+      in order following their priority throughout the steps down within
       the tree. Their call order is inverted when we backtrace within the
       tree. The order allows you to add the action sets in a different
       order than they are actually used later on. See peano4.solversteps.Step.add_action_set().
 
     parallel: Boolean
-      If two action sets have the same descend_invocation_order and if they all holds the
+      If two action sets have the same priority and if they all holds the
       parallel flag, then the observer may run them in parallel.
 
     """
 
-    def __init__(self, descend_invocation_order=0, parallel=True):
-        self.descend_invocation_order = descend_invocation_order
+    def __init__(self, priority=0, parallel=True):
+        self.priority = priority
         self.parallel = parallel
         pass
 

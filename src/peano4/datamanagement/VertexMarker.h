@@ -94,7 +94,8 @@ private:
 
   bool isParentLocal() const;
 
-  std::bitset<TwoPowerD>  _isAdjacentToParallelDomainBoundary;
+
+  // std::bitset<TwoPowerD>  _isAdjacentToParallelDomainBoundary;
 
   /**
    * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
@@ -183,18 +184,6 @@ public:
 
   bool isHanging(int i) const;
 
-  /**
-   * Is currently selected/analysed vertex adjacent to parallel domain boundary
-   */
-  bool isAdjacentToParallelDomainBoundary() const;
-
-  /**
-   * Is one vertex of cell adjacent to parallel domain boundary
-   *
-   * Peano runs through the mesh cell by cell. Within a cell, you can ask if
-   * the ith vertex actually is adjacent to a parallel domain boundary.
-   */
-  bool isAdjacentToParallelDomainBoundary(int i) const;
 
   /**
    * Whenever we touch a vertex the first or the last time, we touch

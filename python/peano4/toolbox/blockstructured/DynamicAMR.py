@@ -47,7 +47,7 @@ class DynamicAMR(ActionSet):
         number of unknowns that you use per coordinate axis.
         
     """
-    super(DynamicAMR,self).__init__(descend_invocation_order=1,parallel=False)
+    super(DynamicAMR,self).__init__(priority=1,parallel=False)
     self.d = {}
     if patch_overlap_interpolation.dim[0] % 2 != 0:
       raise Exception( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )

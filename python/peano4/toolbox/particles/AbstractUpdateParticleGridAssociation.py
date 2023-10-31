@@ -104,7 +104,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     ## Priorities
 
     The update association should precede any other action set in your step. The
-    descend_invocation_order value thus should be very small. As priorities are inverted when we
+    priority value thus should be very small. As priorities are inverted when we
     walk from fine to coarse resolutions, this means that all dropping into the mesh
     (in the second grid sweep) happens before anybody else touches the particles,
     while the extraction of particles or moves from fine to coarse are epilogues to
@@ -112,11 +112,11 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
     """
 
-    DefaultDescendInvocationOrder = -65536
+    DefaultPriority = -65536
 
     def __init__(self, particle_set, guard="true"):
         super(AbstractUpdateParticleGridAssociation, self).__init__(
-            descend_invocation_order=-65536, parallel=False
+            priority=-65536, parallel=False
         )
         self._particle_set = particle_set
         self.d = {}

@@ -250,7 +250,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
         super(MergeEnclaveTaskOutcome, self).__init__(solver)
         self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
         self.guard = "true"
-        self.descend_invocation_order = solver._baseline_action_set_descend_invocation_order
+        self.priority = solver._baseline_action_set_priority
 
     def get_body_of_operation(self, operation_name):
         result = ""
