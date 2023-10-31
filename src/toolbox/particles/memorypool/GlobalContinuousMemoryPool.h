@@ -65,6 +65,9 @@ namespace toolbox {
  *   everything in one huge chunk of memory.
  * - We don't need a lot of allocs and frees anymore, as most of the memory
  *   requests can be served from one huge chunk of memory.
+ *
+ * It is very important that you read through the @ref toolbox_particles_memorypool "implications for the particle sorting" that
+ * arise if you use a global memory pool.
  */
 template <class T>
 class toolbox::particles::memorypool::GlobalContinuousMemoryPool {
