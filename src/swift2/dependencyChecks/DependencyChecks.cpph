@@ -142,7 +142,7 @@ static void swift2::dependencyChecks::dependencyMarkAlgorithmStep(
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    sweepStageMarkerEnum,
   bool                                                                                      stepMovedParticle,
-  bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
+  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
 ) {
 
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
@@ -183,7 +183,7 @@ static void swift2::dependencyChecks::dependencyMarkInitStep(
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage sweepStageMarkerEnum,
   bool                                                                                   stepMovedParticle,
-  bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
+  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
 ) {
 
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
@@ -292,7 +292,7 @@ static void swift2::dependencyChecks::dependencyCheckAlgorithmStep(
   const Marker&                                                                             marker,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    sweepStageMarkerEnum,
-  bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
+  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
 ) {
 
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
@@ -389,7 +389,7 @@ static void swift2::dependencyChecks::dependencyCheckInitStep(
   const Marker&                                                                          marker,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage sweepStageMarkerEnum,
-  bool (*workOnParticle)(const benchmarks::swift2::sod::globaldata::hydroPart*, const Marker&)
+  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
 ) {
 
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
