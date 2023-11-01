@@ -99,5 +99,15 @@ The markers of relevance are
 
 ## Sequence and parallelisation of actions
 
+An algorithmic step (Observer) within Python corresonds 1:1 to a class of the
+type peano4::grid::TraversalObserver, and it holds a set of actions. Actions 
+are represented by the Python class peano4.solversteps.ActionSet. The class has
+two orchestration attributes: A parallelisation flag which indicates that this
+action set could be run parallel to others, and an integer which - similar to 
+a priority flag - tells Peano which partial invocation orders are mandatory 
+for the Peano to preserve. The Python class documentation provides further details.
+
+@todo Parallel feature is not there yet
+
 
 */
