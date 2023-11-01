@@ -18,6 +18,7 @@
 
 namespace swift2 {
   namespace legacy {
+    namespace kernelHydro {
 
 #if defined(QUARTIC_SPLINE_KERNEL)
     /* ------------------------------------------------------------------------- */
@@ -221,5 +222,7 @@ namespace swift2 {
       dW_dx = dw_dx * kernel_constant * kernel_gamma_inv_dim_plus_one;
     }
 
+
+    } // namespace kernelHydro
   } // namespace legacy
 } // namespace swift2

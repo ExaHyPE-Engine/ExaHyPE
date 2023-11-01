@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tarch/tarch.h" // for InlineMethod
+
 /**
  * @file hydro_dimensions.h
  * @brief File containing macro-riddled functions related to dimensions.
@@ -8,6 +10,7 @@
 
 namespace swift2 {
   namespace legacy {
+    namespace hydroDimensions {
 
     /**
      * returns x^ndim
@@ -61,5 +64,6 @@ namespace swift2 {
     }
 
 
+    } // namespace hydroDimensions
   } // namespace legacy
 } // namespace swift2

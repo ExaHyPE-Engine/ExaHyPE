@@ -13,6 +13,7 @@
 
 namespace swift2 {
   namespace legacy {
+    namespace eos {
 
     // @TODO we need to make this modular. This is only valid for ideal gases. It needs to be exchangeable.
 
@@ -28,7 +29,7 @@ namespace swift2 {
       double density, double entropy
     ) {
 
-      return entropy * pow_gamma_minus_one(density) * hydro_one_over_gamma_minus_one;
+      return entropy * adiabaticIndex::pow_gamma_minus_one(density) * hydro_one_over_gamma_minus_one;
     }
 
     /**
@@ -43,7 +44,7 @@ namespace swift2 {
       double density, double entropy
     ) {
 
-      return entropy * pow_gamma(density);
+      return entropy * adiabaticIndex::pow_gamma(density);
     }
 
     /**
@@ -59,7 +60,7 @@ namespace swift2 {
       double density, double pressure
     ) {
 
-      return pressure * pow_minus_gamma(density);
+      return pressure * adiabaticIndex::pow_minus_gamma(density);
     }
 
     /**
@@ -74,7 +75,7 @@ namespace swift2 {
       double density, double entropy
     ) {
 
-      return std::sqrt(hydro_gamma * pow_gamma_minus_one(density) * entropy);
+      return std::sqrt(hydro_gamma * adiabaticIndex::pow_gamma_minus_one(density) * entropy);
     }
 
     /**
@@ -89,7 +90,7 @@ namespace swift2 {
       double density, double u
     ) {
 
-      return hydro_gamma_minus_one * u * pow_minus_gamma_minus_one(density);
+      return hydro_gamma_minus_one * u * adiabaticIndex::pow_minus_gamma_minus_one(density);
     }
 
     /**
@@ -148,5 +149,6 @@ namespace swift2 {
       return std::sqrt(hydro_gamma * P / density);
     }
 
+    } // namespace eos
   } // namespace legacy
 } // namespace swift2

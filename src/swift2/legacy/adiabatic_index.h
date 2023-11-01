@@ -9,6 +9,7 @@
 
 namespace swift2 {
   namespace legacy {
+    namespace adiabaticIndex {
 
 /* Powers of the adiabatic index */
 #if defined(HYDRO_GAMMA_5_3)
@@ -502,5 +503,6 @@ namespace swift2 {
 #endif
     }
 
+    } // namespace adiabaticIndex
   } // namespace legacy
 } // namespace swift2
