@@ -1,12 +1,13 @@
 #pragma once
 
 /**
- * File containing macro-riddled functions related to dimensions.
+ * @file hydro_dimensions.h
+ * @brief File containing macro-riddled functions related to dimensions.
+ * This is a legacy file - kept as closely to the SWIFT original files as possible.
  */
 
-
 namespace swift2 {
-  namespace hydroDimensions {
+  namespace legacy {
 
     /**
      * returns x^ndim
@@ -60,5 +61,5 @@ namespace swift2 {
     }
 
 
-  } // namespace hydroDimensions
+  } // namespace legacy
 } // namespace swift2

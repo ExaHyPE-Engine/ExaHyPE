@@ -1,7 +1,18 @@
 #pragma once
 
 #include "cmath"
-#include "swift2/adiabatic_index.h"
+#include "swift2/legacy/adiabatic_index.h"
+
+
+/**
+ * @file equation_of_state.h
+ * @brief contains functions and definitions related to the equation of state
+ * of ideal gases.
+ * This is a legacy file - kept as closely to the SWIFT original files as possible.
+ */
+
+namespace swift2 {
+  namespace legacy {
 
 // @TODO we need to make this modular. This is only valid for ideal gases. It needs to be exchangeable.
 
@@ -126,3 +137,6 @@ __attribute__((always_inline, const)) inline static double gas_soundspeed_from_p
 
   return std::sqrt(hydro_gamma * P / density);
 }
+
+  } // namespace legacy
+} // namespace swift2

@@ -8,10 +8,16 @@
  *
  * Constants and kernel coefficients are taken from table 1 of
  * Dehnen & Aly, MNRAS, 425, pp. 1062-1082 (2012).
+ *
+ * This is a legacy file - kept as closely to the SWIFT original files as possible.
  */
 
 #include "peano4/utils/Globals.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
+
+
+namespace swift2{
+  namespace legacy{
 
 #if defined(QUARTIC_SPLINE_KERNEL)
 /* ------------------------------------------------------------------------- */
@@ -214,3 +220,7 @@ static void kernel_deval(double u, double& W, double& dW_dx) InlineMethod {
   W     = w * kernel_constant * kernel_gamma_inv_dim;
   dW_dx = dw_dx * kernel_constant * kernel_gamma_inv_dim_plus_one;
 }
+
+  } // namespace legacy
+} // namespace swift2
+

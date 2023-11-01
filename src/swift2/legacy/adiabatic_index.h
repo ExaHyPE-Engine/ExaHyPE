@@ -1,5 +1,15 @@
 #pragma once
 
+/**
+ * @file adiabatic_index.h
+ * @brief contains functions and definitions related to the adiabatic index
+ * of the gas.
+ * This is a legacy file - kept as closely to the SWIFT original files as possible.
+ */
+
+namespace swift2{
+  namespace legacy{
+
 /* Powers of the adiabatic index */
 #if defined(HYDRO_GAMMA_5_3)
 
@@ -491,3 +501,6 @@ __attribute__((always_inline, const)) inline static double pow_three_gamma_minus
 
 #endif
 }
+
+  } // namespace legacy
+} // namespace swift2
