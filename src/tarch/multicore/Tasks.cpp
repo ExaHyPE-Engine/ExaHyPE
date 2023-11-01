@@ -310,10 +310,6 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
   return result;
 }
 
-void tarch::multicore::spawnTask(Task* task, int in, int out) {
-  assertion(in!=NoDependency or out!=NoDependency);
-  native::spawnTask(task,in,out);
-}
 
 void tarch::multicore::spawnTask(Task* task) {
   assertion(task != nullptr);
