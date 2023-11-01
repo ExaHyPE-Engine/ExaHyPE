@@ -69,24 +69,24 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
   }
   
   EnumeratorTemplateTypes = {
-    KernelVariant.PatchWiseAoSStack:               "::exahype2::enumerator::AoSLexicographicEnumerator",
-    KernelVariant.PatchWiseAoSoAStack:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
-    KernelVariant.PatchWiseSoAStack:               "::exahype2::enumerator::SoALexicographicEnumerator",
-    KernelVariant.PatchWiseAoSHeap:               "::exahype2::enumerator::AoSLexicographicEnumerator",
-    KernelVariant.PatchWiseAoSoAHeap:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
-    KernelVariant.PatchWiseSoAHeap:               "::exahype2::enumerator::SoALexicographicEnumerator",
-    KernelVariant.BatchedAoSStack:                 "::exahype2::enumerator::AoSLexicographicEnumerator",
-    KernelVariant.BatchedAoSoAStack:               "::exahype2::enumerator::AoSoALexicographicEnumerator",
-    KernelVariant.BatchedSoAStack:                 "::exahype2::enumerator::SoALexicographicEnumerator",
-    KernelVariant.BatchedAoSHeap:                 "::exahype2::enumerator::AoSLexicographicEnumerator",
-    KernelVariant.BatchedAoSoAHeap:               "::exahype2::enumerator::AoSoALexicographicEnumerator",
-    KernelVariant.BatchedSoAHeap:                 "::exahype2::enumerator::SoALexicographicEnumerator",
-    KernelVariant.TaskGraphAoSHeap:               "::exahype2::enumerator::AoSLexicographicEnumerator",
-    KernelVariant.TaskGraphAoSoAHeap:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
-    KernelVariant.TaskGraphSoAHeap:               "::exahype2::enumerator::SoALexicographicEnumerator",
-    KernelVariant.GenericAoS:                     "::exahype2::enumerator::AoSLexicographicEnumerator",
-    KernelVariant.GenericAoSoA:                   "::exahype2::enumerator::AoSoALexicographicEnumerator",
-    KernelVariant.GenericSoA:                     "::exahype2::enumerator::SoALexicographicEnumerator",
+    KernelVariant.PatchWiseAoSStack:               "::exahype2::enumerators::AoSLexicographicEnumerator",
+    KernelVariant.PatchWiseAoSoAStack:             "::exahype2::enumerators::AoSoALexicographicEnumerator",
+    KernelVariant.PatchWiseSoAStack:               "::exahype2::enumerators::SoALexicographicEnumerator",
+    KernelVariant.PatchWiseAoSHeap:               "::exahype2::enumerators::AoSLexicographicEnumerator",
+    KernelVariant.PatchWiseAoSoAHeap:             "::exahype2::enumerators::AoSoALexicographicEnumerator",
+    KernelVariant.PatchWiseSoAHeap:               "::exahype2::enumerators::SoALexicographicEnumerator",
+    KernelVariant.BatchedAoSStack:                 "::exahype2::enumerators::AoSLexicographicEnumerator",
+    KernelVariant.BatchedAoSoAStack:               "::exahype2::enumerators::AoSoALexicographicEnumerator",
+    KernelVariant.BatchedSoAStack:                 "::exahype2::enumerators::SoALexicographicEnumerator",
+    KernelVariant.BatchedAoSHeap:                 "::exahype2::enumerators::AoSLexicographicEnumerator",
+    KernelVariant.BatchedAoSoAHeap:               "::exahype2::enumerators::AoSoALexicographicEnumerator",
+    KernelVariant.BatchedSoAHeap:                 "::exahype2::enumerators::SoALexicographicEnumerator",
+    KernelVariant.TaskGraphAoSHeap:               "::exahype2::enumerators::AoSLexicographicEnumerator",
+    KernelVariant.TaskGraphAoSoAHeap:             "::exahype2::enumerators::AoSoALexicographicEnumerator",
+    KernelVariant.TaskGraphSoAHeap:               "::exahype2::enumerators::SoALexicographicEnumerator",
+    KernelVariant.GenericAoS:                     "::exahype2::enumerators::AoSLexicographicEnumerator",
+    KernelVariant.GenericAoSoA:                   "::exahype2::enumerators::AoSoALexicographicEnumerator",
+    KernelVariant.GenericSoA:                     "::exahype2::enumerators::SoALexicographicEnumerator",
   }
 
   template  = KernelCalls[kernel_variant]
@@ -154,7 +154,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
 );
   """
   elif solver_variant == SolverVariant.Stateless:
-    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>(
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerators::AoSLexicographicEnumerator>(
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
@@ -163,7 +163,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     );
   """
   elif solver_variant == SolverVariant.Multicore:
-    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>(
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerators::AoSLexicographicEnumerator>(
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
@@ -173,7 +173,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     );
   """
   elif solver_variant == SolverVariant.AcceleratorWithExplicitCopy:
-    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerator::AoSLexicographicEnumerator>(
+    template += """_static_calls<{{SOLVER_NAME}},{{NUMBER_OF_VOLUMES_PER_AXIS}},{{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}, ::exahype2::enumerators::AoSLexicographicEnumerator>(
       targetDevice,
       patchData,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},

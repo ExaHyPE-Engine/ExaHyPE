@@ -33,8 +33,8 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
     
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+    ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+    ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
     
     dfor( dof, {{ORDER}}+1 ) {
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
@@ -109,5 +109,5 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
 
   def get_includes(self):
     return super(LinearCombinationOfEstimates,self).get_includes() + """
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
 """    

@@ -81,7 +81,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 template <>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   const double* __restrict__ QIn,
-  const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+  const exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
   exahype2::fv::rusanov::Source                           source,
   const tarch::la::Vector<Dimensions, double>&            patchCentre,
   const tarch::la::Vector<Dimensions, double>&            patchSize,
@@ -90,7 +90,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   double                                                  t,
   double                                                  dt,
   double* __restrict__ QOut,
-  const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
+  const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator
 ) {
   source(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -213,7 +213,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
 template <class Solver>
 void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   const double* __restrict__ QIn,
-  const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+  const exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions, double>&            patchCentre,
   const tarch::la::Vector<Dimensions, double>&            patchSize,
   int                                                     patchIndex,
@@ -221,7 +221,7 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
   double                                                  t,
   double                                                  dt,
   double* __restrict__ QOut,
-  const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
+  const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator
 ) {
   Solver::sourceTerm(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -313,7 +313,7 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
 template <class QMaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
   const double* __restrict__ QIn,
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator,
   exahype2::fv::rusanov::MaxEigenvalue             maxEigenvalue,
   const tarch::la::Vector<Dimensions, double>&     patchCentre,
   const tarch::la::Vector<Dimensions, double>&     patchSize,
@@ -374,7 +374,7 @@ void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
 template <typename Solver, class QMaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody(
   const double* __restrict__ QIn,
-  const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+  const exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions, double>&            patchCentre,
   const tarch::la::Vector<Dimensions, double>&            patchSize,
   int                                                     patchIndex,
@@ -440,7 +440,7 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
 template <>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
   const double* __restrict__ QOut,
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator,
   exahype2::fv::rusanov::MaxEigenvalue             maxEigenvalue,
   const tarch::la::Vector<Dimensions, double>&     patchCentre,
   const tarch::la::Vector<Dimensions, double>&     patchSize,
@@ -508,7 +508,7 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
 template <typename Solver>
 double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
   const double* __restrict__ QOut,
-  const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+  const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator,
   const tarch::la::Vector<Dimensions, double>&            patchCentre,
   const tarch::la::Vector<Dimensions, double>&            patchSize,
   int                                                     patchIndex,
@@ -578,7 +578,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 template <class QFluxEnumeratorType>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     const double* __restrict__                QIn,
-    exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
+    exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator,
     exahype2::fv::rusanov::Flux         flux,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -612,7 +612,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__ QIn,
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator,
   exahype2::fv::rusanov::Flux                      flux,
   const tarch::la::Vector<Dimensions, double>&     patchCentre,
   const tarch::la::Vector<Dimensions, double>&     patchSize,
@@ -622,7 +622,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   double                                           dt,
   int                                              normal,
   double* __restrict__ QFlux,
-  exahype2::enumerator::AoSLexicographicEnumerator QFluxEnumerator
+  exahype2::enumerators::AoSLexicographicEnumerator QFluxEnumerator
 ) {
   flux(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -683,7 +683,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 template <typename Solver, int numberOfUnknowns, int numberOfAuxiliaryVariables, class QFluxEnumeratorType>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__ QIn,
-  const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+  const exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions, double>&            patchCentre,
   const tarch::la::Vector<Dimensions, double>&            patchSize,
   int                                                     patchIndex,
@@ -721,7 +721,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 template <typename Solver, int numberOfUnknowns, int numberOfAuxiliaryVariables>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__ QIn,
-  const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
+  const exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions, double>&            patchCentre,
   const tarch::la::Vector<Dimensions, double>&            patchSize,
   int                                                     patchIndex,
@@ -730,7 +730,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   double                                                  dt,
   int                                                     normal,
   double* __restrict__ QFlux,
-  const exahype2::enumerator::AoSLexicographicEnumerator& QFluxEnumerator
+  const exahype2::enumerators::AoSLexicographicEnumerator& QFluxEnumerator
 ) {
   Solver::flux(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),

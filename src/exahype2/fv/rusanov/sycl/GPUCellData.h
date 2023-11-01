@@ -5,7 +5,7 @@
 #if !defined(_EXAHYPE2_FV_RUSANOV_SYCL_GPUCELLDATA_H_) and defined(GPUOffloadingSYCL)
 #define _EXAHYPE2_FV_RUSANOV_SYCL_GPUCELLDATA_H_
 
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
@@ -135,14 +135,14 @@ namespace exahype2 {
            */
           GPUUSMCellData(
             const ::exahype2::CellData&                               hostObject,
-            const ::exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
-            const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+            const ::exahype2::enumerators::AoSLexicographicEnumerator& inEnumerator,
+            const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
             ::sycl::queue&                                            queue
           );
 
           void destroy(
             ::exahype2::CellData&                                     hostObject,
-            const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+            const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
             bool                                                      copyEigenvaluesBack,
             ::sycl::queue&                                            queue
           );
@@ -171,7 +171,7 @@ namespace exahype2 {
          * over into one huge chunk. Therefore, you can either use
          *
          * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         * exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+         * exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
          *   1,
          *   numberOfVolumesPerAxisInPatch,
          *   haloSize,
@@ -183,7 +183,7 @@ namespace exahype2 {
          * over the individual QIn[i] pointers, or you can use
          *
          * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         * exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+         * exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
          *   numberOfPatches,
          *   numberOfVolumesPerAxisInPatch,
          *   haloSize,
@@ -261,14 +261,14 @@ namespace exahype2 {
            */
           GPUCopyCellData(
             const ::exahype2::CellData&                               hostObject,
-            const ::exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
-            const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+            const ::exahype2::enumerators::AoSLexicographicEnumerator& inEnumerator,
+            const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
             ::sycl::queue&                                            queue
           );
 
           void destroy(
             ::exahype2::CellData&                                     hostObject,
-            const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+            const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
             bool                                                      copyEigenvaluesBack,
             ::sycl::queue&                                            queue
           );
@@ -353,14 +353,14 @@ namespace exahype2 {
            */
           GPUManagedCellData(
             const ::exahype2::CellData&                               hostObject,
-            const ::exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
-            const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+            const ::exahype2::enumerators::AoSLexicographicEnumerator& inEnumerator,
+            const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
             ::sycl::queue&                                            queue
           );
 
           void destroy(
             ::exahype2::CellData&                                     hostObject,
-            const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+            const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
             bool                                                      copyEigenvaluesBack,
             ::sycl::queue&                                            queue
           );

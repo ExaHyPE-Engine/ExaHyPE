@@ -36,10 +36,10 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_taskgraph_static
   */
   constexpr int solversHaloSize = 1;
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
     1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
   );
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
     1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
   );
   TempDataEnumerator fluxEnumerator(
@@ -910,10 +910,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
     1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
   );
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
     1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
   );
   GPUUSMCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
@@ -967,10 +967,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_copy_static_call
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
     1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
   );
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
     1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
   );
   GPUCopyCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
@@ -1023,10 +1023,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_managed_static_c
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
     1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
   );
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
     1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
   );
   GPUManagedCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
@@ -1080,10 +1080,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_usm_static_calls
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
     1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
   );
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
     1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
   );
   GPUUSMCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
@@ -1141,10 +1141,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_copy_static_call
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
     1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
   );
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
     1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
   );
   GPUCopyCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
@@ -1201,10 +1201,10 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanov_taskgraph_managed_static_c
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
     1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
   );
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
     1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
   );
   GPUManagedCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);

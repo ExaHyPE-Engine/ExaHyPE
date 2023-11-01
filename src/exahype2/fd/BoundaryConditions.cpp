@@ -7,7 +7,7 @@
 #include "tarch/accelerator/accelerator.h"
 
 #include "exahype2/fd/PatchUtils.h"
-#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/FaceAoSLexicographicEnumerator.h"
 
 
 void exahype2::fd::applyBoundaryConditions(
@@ -33,7 +33,7 @@ void exahype2::fd::applyBoundaryConditions(
   static tarch::logging::Log _log( "exahype2::fd" );
   logTraceInWith4Arguments( "applyBoundaryConditions(...)", faceCentre, patchSize, numberOfGridCellsPerPatchPerAxis, faceNumber);
 
-  exahype2::enumerator::FaceAoSLexicographicEnumerator enumerator(
+  exahype2::enumerators::FaceAoSLexicographicEnumerator enumerator(
     faceNumber,
     numberOfGridCellsPerPatchPerAxis,
     overlap,
@@ -111,7 +111,7 @@ void exahype2::fd::applySommerfeldConditions(
   static tarch::logging::Log _log( "exahype2::fd" );
   logTraceInWith4Arguments( "applySommerfeldConditions(...)", faceCentre, patchSize, numberOfGridCellsPerPatchPerAxis, faceNumber);
 
-  exahype2::enumerator::FaceAoSLexicographicEnumerator enumerator(
+  exahype2::enumerators::FaceAoSLexicographicEnumerator enumerator(
     faceNumber,
     numberOfGridCellsPerPatchPerAxis,
     overlap,

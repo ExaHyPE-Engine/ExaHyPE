@@ -24,12 +24,12 @@ void exahype2::fv::riemann::timeStepWithRiemann_patchwise_heap_functors(
 
   assertionEquals(haloSize,1);
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-  exahype2::enumerator::AoSLexicographicEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
-  exahype2::enumerator::AoSLexicographicEnumerator maxEigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,1,0);
-  exahype2::enumerator::AoSLexicographicEnumerator riemannEnumerator   (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
-  exahype2::enumerator::AoSLexicographicEnumerator eigenvaluesEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+  exahype2::enumerators::AoSLexicographicEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
+  exahype2::enumerators::AoSLexicographicEnumerator maxEigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,1,0);
+  exahype2::enumerators::AoSLexicographicEnumerator riemannEnumerator   (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
+  exahype2::enumerators::AoSLexicographicEnumerator eigenvaluesEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,0);
 
   double* tempEigenvaluesX            =                                    tarch::allocateMemory<double>( eigenvaluesEnumerator.size(),      tarch::MemoryLocation::Heap );
   double* tempEigenvaluesY            =                                    tarch::allocateMemory<double>( eigenvaluesEnumerator.size(),      tarch::MemoryLocation::Heap );

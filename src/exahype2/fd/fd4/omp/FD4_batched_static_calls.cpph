@@ -27,8 +27,8 @@ namespace exahype2 {
           bool                    evaluateAlgebraicSource, //real source
           bool                    copyOldTimeStepAndScaleWithTimeStepSize,
           DifferentialSourceTermVariant                  variant,
-          const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-          const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+          const exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
+          const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator,
           const TempDataEnumerator& fluxEnumerator,
           const TempDataEnumerator& differentialSourceEnumerator,
           const TempDataEnumerator& KODissipationEnumerator,
@@ -625,8 +625,8 @@ void exahype2::fd::fd4::omp::timeStep_batched_heap_multicore_static_calls(
 
   const bool evaluateKODissipation = KOSigma>0.0;
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,0);
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,0);
 
   TempDataEnumerator fluxEnumerator              (patchData.numberOfCells, numberOfGridCellsPerPatchPerAxis, 0, unknowns, 0);
   TempDataEnumerator differentialSourceEnumerator(patchData.numberOfCells, numberOfGridCellsPerPatchPerAxis, 0, unknowns, 0);

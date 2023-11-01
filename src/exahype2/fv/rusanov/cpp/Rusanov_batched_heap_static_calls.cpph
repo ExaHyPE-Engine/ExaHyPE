@@ -24,14 +24,14 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   static tarch::logging::Log _log("exahype2::fv::rusanov::cpp");
   logTraceIn("timeStepWithRusanov_batched_heap_static_calls()");
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInHostEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QInHostEnumerator(
     1,
     numberOfVolumesPerAxisInPatch,
     haloSize,
     unknowns,
     auxiliaryVariables
   );
-  exahype2::enumerator::AoSLexicographicEnumerator QOutHostEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QOutHostEnumerator(
     1,
     numberOfVolumesPerAxisInPatch,
     0,
@@ -190,14 +190,14 @@ void exahype2::fv::rusanov::cpp::timeStepWithRusanov_batched_heap_static_calls(
   );
 
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
     1,
     numberOfVolumesPerAxisInPatch,
     haloSize,
     unknowns,
     auxiliaryVariables
   );
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
     1,
     numberOfVolumesPerAxisInPatch,
     0,

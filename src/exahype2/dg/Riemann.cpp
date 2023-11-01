@@ -1,8 +1,8 @@
 #include "Riemann.h"
 
 #include "exahype2/VolumeIndex.h"
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/FaceAoSLexicographicEnumerator.h"
 
 #include "peano4/utils/Loop.h"
 #include "peano4/datamanagement/FaceMarker.h"
@@ -15,7 +15,7 @@ void exahype2::dg::interpolateRiemannSolution(
   const double* __restrict__                 coarseGridFaceQ,
   double* __restrict__                       fineGridFaceQ
 ) {
-  exahype2::enumerator::FaceAoSLexicographicEnumerator faceEnumerator(
+  exahype2::enumerators::FaceAoSLexicographicEnumerator faceEnumerator(
     marker.getSelectedFaceNumber(),
     order+1,
     1,                     // overlap
@@ -80,7 +80,7 @@ void exahype2::dg::restrictAndAccumulateProjectedFacePolynomial(
   // @todo Remove as it should work in principle for other values as well, but I haven't tested it
   assertionEquals(numberOfProjectedQuantities,1);
 
-  exahype2::enumerator::FaceAoSLexicographicEnumerator faceEnumerator(
+  exahype2::enumerators::FaceAoSLexicographicEnumerator faceEnumerator(
     marker.getSelectedFaceNumber(),
     order+1,
     numberOfProjectedQuantities,
@@ -176,9 +176,9 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   [[maybe_unused]] double* const __restrict__          faceQUp
 ) {
 #if Dimensions==2
-  exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
+  exahype2::enumerators::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
 
   // Project left/right
   for (int y=0; y<order+1; y++) {
@@ -232,10 +232,10 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   [[maybe_unused]] double* const __restrict__          faceQBack
 ) {
 #if Dimensions==3
-  exahype2::enumerator::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator frontBackFaceEnumerator(2,order+1,1,unknowns,auxiliaryVariables);
+  exahype2::enumerators::AoSLexicographicEnumerator     cellEnumerator(1,order+1,0,unknowns,auxiliaryVariables);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator leftRightFaceEnumerator(0,order+1,1,unknowns,auxiliaryVariables);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,order+1,1,unknowns,auxiliaryVariables);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator frontBackFaceEnumerator(2,order+1,1,unknowns,auxiliaryVariables);
 
   // Project left/right
   for (int y=0; y<order+1; y++) {
@@ -345,7 +345,7 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
 #if Dimensions==2
   [[maybe_unused]] const int strideQ = unknowns + auxiliaryVariables;
 
-  exahype2::enumerator::AoSLexicographicEnumerator QEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QEnumerator(
     1,           // number of cells in one memory chunk
     order+1,     // numberOfDoFsPerAxisInCell
     0,           // no halo
@@ -353,10 +353,10 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     0            // no auxiliary variables here
   );
 
-  exahype2::enumerator::FaceAoSLexicographicEnumerator leftFaceEnumerator  (0,            order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator rightFaceEnumerator (0+Dimensions, order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomFaceEnumerator(1,            order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator (1+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator leftFaceEnumerator  (0,            order+1, 1, unknowns, 0);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator rightFaceEnumerator (0+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator bottomFaceEnumerator(1,            order+1, 1, unknowns, 0);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator upperFaceEnumerator (1+Dimensions, order+1, 1, unknowns, 0);
 
   dfor( dof, order+1 ) {
     const double coeffLeft    = MassMatrixDiagonal1d[dof[1]]*BasisFunctionValuesLeft[dof[0]]       * cellSize(1);
@@ -402,7 +402,7 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
   [[maybe_unused]] double* __restrict__                cellQ
 ) {
 #if Dimensions==3
-  exahype2::enumerator::AoSLexicographicEnumerator QEnumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator QEnumerator(
     1,           // number of cells in one memory chunk
     order+1,     // numberOfDoFsPerAxisInCell
     0,           // no halo
@@ -410,12 +410,12 @@ void exahype2::dg::integrateOverRiemannSolutionsAndAddToVolume_GaussLegendre(
     0            // no auxiliary variables here
   );
 
-  exahype2::enumerator::FaceAoSLexicographicEnumerator leftFaceEnumerator  (0,            order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator rightFaceEnumerator (0+Dimensions, order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomFaceEnumerator(1,            order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator upperFaceEnumerator( 1+Dimensions, order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator frontFaceEnumerator( 2,            order+1, 1, unknowns, 0);
-  exahype2::enumerator::FaceAoSLexicographicEnumerator backFaceEnumerator(  2+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator leftFaceEnumerator  (0,            order+1, 1, unknowns, 0);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator rightFaceEnumerator (0+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator bottomFaceEnumerator(1,            order+1, 1, unknowns, 0);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator upperFaceEnumerator( 1+Dimensions, order+1, 1, unknowns, 0);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator frontFaceEnumerator( 2,            order+1, 1, unknowns, 0);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator backFaceEnumerator(  2+Dimensions, order+1, 1, unknowns, 0);
 
   dfor( dof, order+1 ) {
     //coefficients of faces in x direction

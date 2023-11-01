@@ -18,8 +18,8 @@ namespace exahype2 { namespace fv{ namespace rusanov{ namespace internal{
     bool                    evaluateSource,
     bool                    evaluateMaximumEigenvalueAfterTimeStep,
     peano4::utils::LoopParallelism   loopParallelism,
-    const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
-    const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+    const exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
+    const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator,
     const TempDataEnumerator& fluxEnumerator,
     const TempDataEnumerator& ncpEnumerator,
     const TempDataEnumerator& eigenvalueEnumerator,
@@ -377,8 +377,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_call_stack_static_call
 ) {
   assertionEquals(haloSize, 1);
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
   TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
   TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
@@ -435,8 +435,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_static_calls(
 ) {
   assertionEquals(haloSize, 1);
 
-  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
+  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
   TempDataEnumerator fluxEnumerator      (patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
   TempDataEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);

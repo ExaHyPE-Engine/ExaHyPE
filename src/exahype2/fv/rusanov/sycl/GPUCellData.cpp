@@ -6,14 +6,14 @@
 #include <cstring>
 
 #include "exahype2/CellData.h"
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
 #include "tarch/accelerator/sycl/GPUMemoryManager.h"
 
 
 exahype2::fv::rusanov::sycl::GPUCopyCellData::GPUCopyCellData(
   const ::exahype2::CellData&                               hostObject,
-  const ::exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
-  const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+  const ::exahype2::enumerators::AoSLexicographicEnumerator& inEnumerator,
+  const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
   ::sycl::queue&                                            queue
 ) {
   numberOfCells = hostObject.numberOfCells;
@@ -55,7 +55,7 @@ exahype2::fv::rusanov::sycl::GPUCopyCellData::GPUCopyCellData(
 
 void exahype2::fv::rusanov::sycl::GPUCopyCellData::destroy(
   ::exahype2::CellData&                                     hostObject,
-  const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+  const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
   bool                                                      copyEigenvaluesBack,
   ::sycl::queue&                                            queue
 ) {
@@ -86,8 +86,8 @@ void exahype2::fv::rusanov::sycl::GPUCopyCellData::destroy(
 
 exahype2::fv::rusanov::sycl::GPUUSMCellData::GPUUSMCellData(
   const ::exahype2::CellData&                               hostObject,
-  const ::exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
-  const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+  const ::exahype2::enumerators::AoSLexicographicEnumerator& inEnumerator,
+  const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
   ::sycl::queue&                                            queue
 ) {
   numberOfCells = hostObject.numberOfCells;
@@ -118,7 +118,7 @@ exahype2::fv::rusanov::sycl::GPUUSMCellData::GPUUSMCellData(
 
 void exahype2::fv::rusanov::sycl::GPUUSMCellData::destroy(
   ::exahype2::CellData&                                     hostObject,
-  const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+  const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
   bool                                                      copyEigenvaluesBack,
   ::sycl::queue&                                            queue
 ) {
@@ -147,8 +147,8 @@ void exahype2::fv::rusanov::sycl::GPUUSMCellData::destroy(
 
 exahype2::fv::rusanov::sycl::GPUManagedCellData::GPUManagedCellData(
   const ::exahype2::CellData&                               hostObject,
-  const ::exahype2::enumerator::AoSLexicographicEnumerator& inEnumerator,
-  const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+  const ::exahype2::enumerators::AoSLexicographicEnumerator& inEnumerator,
+  const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
   ::sycl::queue&                                            queue
 ) {
   numberOfCells = hostObject.numberOfCells;
@@ -190,7 +190,7 @@ exahype2::fv::rusanov::sycl::GPUManagedCellData::GPUManagedCellData(
 
 void exahype2::fv::rusanov::sycl::GPUManagedCellData::destroy(
   ::exahype2::CellData&                                     hostObject,
-  const ::exahype2::enumerator::AoSLexicographicEnumerator& outEnumerator,
+  const ::exahype2::enumerators::AoSLexicographicEnumerator& outEnumerator,
   bool                                                      copyEigenvaluesBack,
   ::sycl::queue&                                            queue
 ) {
