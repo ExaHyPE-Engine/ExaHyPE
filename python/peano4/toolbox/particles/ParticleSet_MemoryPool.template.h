@@ -19,6 +19,7 @@
 
 #include "toolbox/particles/ParticleSet.h"
 #include "toolbox/particles/memorypool/VertexWiseContinuousMemoryPool.h"
+#include "toolbox/particles/memorypool/GlobalContinuousMemoryPool.h"
 
 
 {% for item in NAMESPACE -%}

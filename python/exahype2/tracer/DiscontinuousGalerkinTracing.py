@@ -8,7 +8,7 @@ import jinja2
 
 
 class DiscontinuousGalerkinTracing(
-    peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles
+    peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
 ):
     """!
 
@@ -92,7 +92,7 @@ if (
   }
 """
 
-        peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles.__init__(
+        peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.__init__(
             self,
             particle_set,
             jinja2.Template(cell_compute_kernel).render(**self.tracerDict),
@@ -102,7 +102,7 @@ if (
         )
 
     # def get_body_of_operation(self,operation_name):
-    #  result = peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles.get_body_of_operation(self,operation_name)
+    #  result = peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.get_body_of_operation(self,operation_name)
     #  if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
     #    result = self.__Template_BeginIteration.render(**self.tracerDict)
     #  return result
@@ -125,7 +125,7 @@ if (
 """
         )
         return (
-            peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles.get_includes(
+            peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.get_includes(
                 self
             )
             + "\n"
@@ -134,7 +134,7 @@ if (
 
     def get_attributes(self):
         return (
-            peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles.get_attributes(
+            peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles.get_attributes(
                 self
             )
             + """

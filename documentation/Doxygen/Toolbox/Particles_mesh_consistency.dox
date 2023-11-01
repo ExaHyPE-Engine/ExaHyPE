@@ -54,6 +54,14 @@ will simply reside on the coarser level until you decide to issue a new
 sort anyway.
 
 
+The way how we sort particles is not decoupled from the way that we store the 
+particles. If the particles are all scattered over the memory, you can sort in 
+various ways. However, if you want to store particles en bloc (to vectorise, e.g.)
+then it is important to understand that your sorting has to take this storage
+constraint into account. Some of these aspects are discussed on 
+@ref toolbox_particles_memorypool "in the context of memory pools". 
+
+
 # Tunneling
 
 Tunneling means that a particle moves more than one mesh cell per time

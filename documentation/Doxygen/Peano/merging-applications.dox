@@ -1,0 +1,18 @@
+/**
+
+  @page page_peano_mergin_applications Merging various applications
+
+<!-- Add this one for href links to subitems -->
+\tableofcontents
+
+  Peano's Python API is a mere wrapper around the Peano C++ core, i.e. it 
+  provides a high-level abstraction of Peano's @ref peano_action_sets "action sets",
+  the data held by a Peano application, its Makefile, and so forth. Popular 
+  Peano extensions then 
+  
+  
+
+
+
+ */
+ 

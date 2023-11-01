@@ -1,22 +1,22 @@
 /**
 
-@page swift_particle_new_solver Create new solvers
+@page swift_particle_new_solver Creating new solvers
 
 
 
 # New solver kernels
 
 If you want to equip your new solver with vectorisation facilities, you have to
-invest some work to be able to exploit 
+invest some work to be able to exploit
 @ref page_toolbox_particles_mesh_traversal "Peano's optimised memory storage schemes".
 
 
 ## Python API
 
-Vectorisation can work if and only if the underlying memory over multiple 
+Vectorisation can work if and only if the underlying memory over multiple
 particles is continuous and therefore allows for coalescent memory access.
-Likley, it nowadays can work for scattered memory, too, but that is more 
-work. You would then have to gather the particles before you invoke the 
+Likley, it nowadays can work for scattered memory, too, but that is more
+work. You would then have to gather the particles before you invoke the
 actual compute kernel. I discuss here only solutions where this gathering
 is already done within the mesh. If you decide to gather yourself, you can,
 after this is complete, follow the recipes below.
@@ -27,16 +27,16 @@ over lists of particle pointers with alternative kernel invocations:
 1. Delegate the responsibility to use a proper memory pool to the user.
    This can be done via a comment.
 2. Ensure that the step you want to vectorise can be based upon continuous
-   memory. You can either be sure that this is the case (as you know that 
+   memory. You can either be sure that this is the case (as you know that
    previous steps have not altered the memory layout), or you can use a
-   graph compiler which always inserts explicit sorting steps to ensure 
+   graph compiler which always inserts explicit sorting steps to ensure
    that all data is continuous.
 3. Replace the cell kernel calls with calls to your new bespoke kernels
    that we introduce below.
-4. Ensure that the graph compiler uses peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles
+4. Ensure that the graph compiler uses peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
    to run through the mesh and build up the local and active sets.
-   
-   
+
+
 ## Wrapping the point to point kernels
 
 Typical Swift 2 kernels look similar to
@@ -55,16 +55,16 @@ Typical Swift 2 kernels look similar to
   }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You loop over the local particles. From the local particles, you pick only 
+You loop over the local particles. From the local particles, you pick only
 those guys which actually reside within the cell and have not been updated
 yet. The rationale behind these ifs are provided @ref page_toolbox_particles_mesh_traversal
-"by the generic particle mesh traversal discussion". Note that the 
-recommendation there says that you should also add a check like 
-willNotBeSievedIntoNextLevel(). We can omit this one here, as we said 
+"by the generic particle mesh traversal discussion". Note that the
+recommendation there says that you should also add a check like
+willNotBeSievedIntoNextLevel(). We can omit this one here, as we said
 beforehand that we use the optimised kernels if and only if we know that
 the particle-mesh association is stationary and consistent.
 
-We now follow the discussion of peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles
+We now follow the discussion of peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
 and replace this kernel invocation by
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -99,7 +99,7 @@ and replace this kernel invocation by
 
 Note that the force kernel is now replaced by a rewrite that we will discuss
 next. You might be able to work without such an overwrite in your particular
-case. 
+case.
 
 
 ## Makeing compiler feedback guide your development
@@ -112,22 +112,22 @@ the Makefile:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
-	rm observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4.o
-	$(CXX) -qopt-report=3 $(CXXFLAGS) -c -o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4.o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4.cpp
+	rm observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.o
+	$(CXX) -qopt-report=3 $(CXXFLAGS) -c -o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.cpp
 	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-where the observer file names have to be replaced with the name of the file 
+where the observer file names have to be replaced with the name of the file
 which uses your altered kernel invocation.
 This tweaked makefile builds all object files. After that, it deletes the object
-file behind the action set StephydroPartForceLoop. This is the step where the 
-force kernel is actually used. We then retranslate this single object file with 
-Intel's -opt-report flag which provides ample evidence which vectorisation 
+file behind the action set StephydroPartForceLoop. This is the step where the
+force kernel is actually used. We then retranslate this single object file with
+Intel's -opt-report flag which provides ample evidence which vectorisation
 optimisation has been performed by the compiler.
 
-You should get a file observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4.optrpt
-which summarises if the compiler has vectorised your code and even how much 
-speedup you might expect. Please note that every rerun of the Python script 
+You should get a file observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.optrpt
+which summarises if the compiler has vectorised your code and even how much
+speedup you might expect. Please note that every rerun of the Python script
 overwrites the Makefile. However, there's no need to do this while you tweak
 the kernels. Just re-invoke make.
 
@@ -141,7 +141,7 @@ If the optimisation report contains a section like
 
                 LOOP BEGIN at ../../../../src/swift2/kernels/kernel_hydro.h (148, 3)
                     remark #15344: Loop was not vectorized: vector dependence prevents vectorization
-                    remark #15346: vector dependence: assumed FLOW dependence between w (150:19) and w (150:15) 
+                    remark #15346: vector dependence: assumed FLOW dependence between w (150:19) and w (150:15)
                     remark #25436: Loop completely unrolled by 3
                 LOOP END
             LOOP END
@@ -151,45 +151,45 @@ If the optimisation report contains a section like
         LOOP END
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-then this is really bad news. Line 556 is the loop that you want to be 
-vectorised, so the 
+then this is really bad news. Line 556 is the loop that you want to be
+vectorised, so the
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 for (int activeParticleNumberInThisChunk=0; activeParticleNumberInThisChunk<activeParticlesChunkSize; activeParticleNumberInThisChunk++) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 No vectorisation has happened in this case (and the report actually
-tells you in this example that kernel_hydro.h:148 is to blame. Once the 
-compiler manages to optimise, you will see a detailed breakdown of the 
+tells you in this example that kernel_hydro.h:148 is to blame. Once the
+compiler manages to optimise, you will see a detailed breakdown of the
 predicted speedup.
 
 
 
-## Making the core routine vectorise
+\subsection section_new_solver_vectorisation_hints Making the core routine vectorise
 
 We've started to collect a list of todos and no-goes for the vectorisation
-below. You might want to weak this in one way or the other and it will be 
+below. You might want to weak this in one way or the other and it will be
 incomplete. But it is a reasonable starting point:
 
-- You cannot collapse the two for loops that invoke the force kernel. That would lead to a scattered 
+- You cannot collapse the two for loops that invoke the force kernel. That would lead to a scattered
   iteration space in memory and hence make any vectorisation impossible.
 - The active loop has to be the inner one.
 - The compiler has to be able to inline. According to https://clang.llvm.org/docs/AttributeReference.html#always-inline-force-inline
   this is something one should be able to control via the annotation
-  
+
           [[clang::always_inline]]
-          
+
   but this led to multiple compiler crashes (again with Intel). To some
   degree this makes sense: The function has to be in the header! I played
   around with ipo, but that did not resolve the fundamental issues. So you
   have to put everything used in the for loops into headers.
-- You might have to recursively study all inlined methods and make the 
-  stuff they use inline as well. 
-- Big if branches are challenging for the vectoriser. Hence, I compute one 
-  scalar which is either set to 1.0 if we should update and otherwise 0.0. By 
-  multiplying all updates with this scalar, we can effectively mask out the 
+- You might have to recursively study all inlined methods and make the
+  stuff they use inline as well.
+- Big if branches are challenging for the vectoriser. Hence, I compute one
+  scalar which is either set to 1.0 if we should update and otherwise 0.0. By
+  multiplying all updates with this scalar, we can effectively mask out the
   kernel or keep its action. This works as long as all updates are additive,
-  i.e. we take the existing value and add something onto it, though some 
+  i.e. we take the existing value and add something onto it, though some
   slight tweaking also makes it work with the max and min function.
 - The tarch::la macros like smaller() or smallerEquals() might stop the
   vectorisation. In this case, you have to move the implementations
@@ -202,7 +202,7 @@ incomplete. But it is a reasonable starting point:
   is not clear if there is still a specialised version of pow for
   integers. However, all seems to vectorise nicely even if we use
   the power with the Intel 2023.2 compiler.
-- Complex statements such as 
+- Complex statements such as
 
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Update the signal velocity
@@ -220,8 +220,11 @@ incomplete. But it is a reasonable starting point:
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   vectorisation seems to work.
-  
+
+
+  See also notes on vectorisation in @ref page_swift_performance_optimisation.
+
 
  */
- 
- 
+
+
