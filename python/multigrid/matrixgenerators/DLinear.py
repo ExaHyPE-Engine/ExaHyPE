@@ -1,9 +1,6 @@
 # This file is part of the Peano multigrid project. For conditions of 
 # distribution and use, please see the copyright notice at www.peano-framework.org
 import numpy as np
-from   numpy.polynomial.legendre  import leggauss
-from   scipy.interpolate import lagrange
-
 import peano4
 
 from   .MatrixGenerator import MatrixGenerator
@@ -118,6 +115,6 @@ class DLinear(MatrixGenerator):
 
     @todo - Currently this just pads the same matrix out to each of the multiple dofs per node. Maybe provide option to not do this, eg just leave some of them empty
     """
-    for _ in range(self.unknowns_per_vertex_dof):
+    for _ in range(self.unknowns_per_vertex_dof - 1):
       matrix = np.concatenate((matrix, matrix))
     return matrix

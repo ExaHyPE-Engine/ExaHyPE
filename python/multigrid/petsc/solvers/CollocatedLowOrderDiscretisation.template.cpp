@@ -17,11 +17,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::vertexInit(
   tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
   tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
 ) {
-  double tempRhs = Dimensions * tarch::la::PI * tarch::la::PI;
+  double tempRhs = 2 * tarch::la::PI * tarch::la::PI;
   for (int i = 0; i < Dimensions; i++){
 
-    //we add scaling by cell width here
-    tempRhs *= std::sin( tarch::la::PI * x[i] ) * h[i];
+    tempRhs *= std::sin( tarch::la::PI * x[i] );
   }
   // put this into the rhs vector
   for (int i=0; i<rhs.size(); i++)

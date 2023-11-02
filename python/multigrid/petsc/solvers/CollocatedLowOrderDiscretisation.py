@@ -67,11 +67,14 @@ class AssemblePetscMatrix(ActionSet):
       // rhs
       auto   rhs = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
       for (int i=0; i<TwoPowerD; i++) {
+      logTraceInWith2Arguments( "TCFT::RHS", marker.toString(), rhs );
         if (fineGridVertices{{SOLVER_NAME}}PETScData(i).getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
           double rhsContribution = 0.0;
           for (int j=0; j<TwoPowerD; j++) {
             double rhsValue = fineGridVertices{{SOLVER_NAME}}(j).getRhs(0);
             rhsContribution += rhs(i,j) * rhsValue;
+            logTraceInWith3Arguments("AssembleRhs", rhs(i,j), rhsContribution, rhsValue);
+            logTraceOut("AssembleRhs");
           }
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().increment(
             enumeratedIndices[i],
@@ -79,6 +82,7 @@ class AssemblePetscMatrix(ActionSet):
           );
         }
       }
+      logTraceOut( "TCFT::RHS" );
   }
   """
 

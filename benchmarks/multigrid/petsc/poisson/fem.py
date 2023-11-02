@@ -23,7 +23,7 @@ parser.add_argument("-v",   "--verbose",            dest="verbose",        actio
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-upv", "--unknowns_per_vertex",dest="upv",            type=int, default=1, help="Unknowns per vertex")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.1, help="Mesh size")
-parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
+parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
 
@@ -37,13 +37,13 @@ matrices = multigrid.matrixgenerators.DLinear(dimensions              = args.dim
                                               )
                         
 solver = multigrid.petsc.solvers.CollocatedLowOrderDiscretisation(name                 = "CollocatedPoisson",
-                                                                  unknowns             = args.upv,                      # unknowns_per_cell_dof,
+                                                                  unknowns             = args.upv,
                                                                   dimensions           = args.dimensions,
                                                                   min_h                = args.meshsize,
                                                                   max_h                = args.meshsize,
                                                                   cell_lhs_matrix      = matrices.get_cell_system_matrix_for_laplacian(),
                                                                   cell_rhs_matrix      = matrices.get_cell_identity_matrix(),
-                                                                  cell_lhs_matrix_scaling = args.dimensions-2,
+                                                                  cell_lhs_matrix_scaling = -2,
                                                                   cell_rhs_matrix_scaling = args.dimensions,
                                                                   )
 
@@ -58,6 +58,8 @@ if args.mode=="stats":
   build_mode = peano4.output.CompileMode.Stats
 if args.mode=="asserts":
   build_mode = peano4.output.CompileMode.Asserts
+if args.mode=="trace":
+  build_mode = peano4.output.CompileMode.Trace
 
 cube_size = 1.0
 project.set_global_simulation_parameters(

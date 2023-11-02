@@ -43,6 +43,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
+    static constexpr int        VertexUnknowns = {{VERTEX_CARDINALITY}};
+
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
 

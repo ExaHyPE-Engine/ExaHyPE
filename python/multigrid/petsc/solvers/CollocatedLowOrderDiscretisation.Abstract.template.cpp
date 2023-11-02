@@ -28,8 +28,13 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
       {% endfor %}
   };
   double scaling = 1.0;
+  {% if CELL_LHS_MATRIX_SCALING >= 0 %}
   for (int i=0; i<{{CELL_LHS_MATRIX_SCALING}}; i++) {
     scaling *= cellSize(0);
+  {% else %}
+  for (int i=0; i<(-1)*{{CELL_LHS_MATRIX_SCALING}}; i++) {
+    scaling /= cellSize(0);
+  {% endif %}
   }
   return scaling * result;
 }
@@ -48,8 +53,13 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
       {% endfor %}
   };
   double scaling = 1.0;
+  {% if CELL_RHS_MATRIX_SCALING >= 0 %}
   for (int i=0; i<{{CELL_RHS_MATRIX_SCALING}}; i++) {
     scaling *= cellSize(0);
+  {% else %}
+  for (int i=0; i<(-1)*{{CELL_RHS_MATRIX_SCALING}}; i++) {
+    scaling /= cellSize(0);
+  {% endif %}
   }
   return scaling * result;
 }
