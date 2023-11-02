@@ -76,8 +76,8 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAM
   {% else %}
   for (int i=0; i<(-1)*{{CELL_CELL_RHS_MATRIX_SCALING}}; i++) {
     scaling /= cellSize(0);
-  }
   {% endif %}
+  }
   return scaling * result;
 }
 {% endif %}

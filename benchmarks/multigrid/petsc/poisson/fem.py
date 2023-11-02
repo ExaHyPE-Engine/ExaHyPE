@@ -35,7 +35,9 @@ project = multigrid.petsc.Project(project_name = "CollocatedFEM",
 matrices = multigrid.matrixgenerators.DLinear(dimensions              = args.dimensions,
                                               unknowns_per_vertex_dof = args.upv,
                                               )
-                        
+
+from pdb import set_trace as bp 
+bp()
 solver = multigrid.petsc.solvers.CollocatedLowOrderDiscretisation(name                 = "CollocatedPoisson",
                                                                   unknowns             = args.upv,
                                                                   dimensions           = args.dimensions,
