@@ -4,6 +4,7 @@ import numpy as np
 
 import peano4
 import swift2
+import swift2.sphtools as sphtools
 import dastgen2
 
 import shutil
@@ -95,6 +96,15 @@ parser.add_argument(
     default=False,
     help="Switch on assertions",
 )
+parser.add_argument(
+    "-k",
+    "--kernel",
+    dest="kernel",
+    type=str,
+    default="quartic_spline",
+    choices=sphtools.sph_kernel_list,
+    help="SPH kernel function to use.",
+)
 args = parser.parse_args()
 
 
@@ -128,6 +138,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=20,
     min_h=args.cell_size,
     max_h=args.cell_size,
+    asserts=args.asserts,
 )
 
 
@@ -161,17 +172,10 @@ GAMMA = gamma_hydro_list[0]
 GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
 # SPH kernel -------------------------------------------------------
-kernel_list = ["M5"]
-kernel_list_symbols = ["QUARTIC_SPLINE_KERNEL"]
-KERNEL = kernel_list[0]
-KERNEL_SYMBOL = kernel_list_symbols[0]
 
-if KERNEL == "M5" and HYDRO_DIMENSIONS == 1:
-    KERNEL_SUPPORT_RAD = "1.936492"  #  1D SWIFT M5 Kernel
-if KERNEL == "M5" and HYDRO_DIMENSIONS == 2:
-    KERNEL_SUPPORT_RAD = "1.977173"
-else:
-    print(f"Unable to determine the kernel support radius. Please check.")
+kernel = args.kernel
+KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
+KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
 
 # Additional Particle Parameters -----------------------------------------------
@@ -223,7 +227,7 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::RecursiveBipartition",
+    "toolbox::loadbalancing::strategies::RecursiveBipartition",
     "new toolbox::loadbalancing::DefaultConfiguration()",
 )
 
@@ -299,9 +303,6 @@ peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 # Some sanity checks ----------------------------------------------------------
 if GAMMA not in gamma_hydro_list:
     print(f"Please check the value of GAMMA. You have chosen: {GAMMA}")
-
-if KERNEL not in kernel_list:
-    print(f"Please check the kernel. You have chosen: {KERNEL}")
 
 print("-----------------------------------------------------------------------")
 print("SPH parameters summary:")

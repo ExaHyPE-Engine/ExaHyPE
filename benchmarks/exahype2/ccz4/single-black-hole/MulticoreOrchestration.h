@@ -62,7 +62,8 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
     int _nestedBSPLevels;
 
     /**
-     * Maximum number of finite volume tasks in the system
+     * Maximum number of finite volume tasks in the system. I don't use this
+     * value at the moment, but might want to use it for GPUs.
      *
      * @see startBSPSection()
      */
@@ -102,7 +103,6 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
     /**
      * How many tasks should be held back
      *
-     * If we are not within a BSP section, no tasks are to be held back.
      * If we have a GPU and we are given a FV task, we hold it back, as we
      * know that fuseTasksImmediatelyWhenSpawned(int taskType) yields true immediately
      * and we hence offload. If there is no GPU, we map FV tasks onto proper
@@ -111,8 +111,6 @@ class benchmarks::exahype2::ccz4::MulticoreOrchestration: public tarch::multicor
      * The routine is basically where the magic happens and where the logic
      * of the class description is realised.
      *
-     * There is one more tweak compared to the class description: We try to
-     * find out
      */
     virtual int             getNumberOfTasksToHoldBack(int taskType) override;
 

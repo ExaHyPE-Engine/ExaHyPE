@@ -80,7 +80,7 @@ for example, but also where basic information about the plotting behaviour is de
 
 Finally, given all the information above we can generate and build a working application.
 
-    my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+    my_project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
     my_project.set_Peano4_installation( "../../../", mode=peano4.output.CompileMode.Release )
     my_project = my_project.generate_Peano4_project(verbose=True)
     my_project.build(make_clean_first=True, throw_away_data_after_build=True)

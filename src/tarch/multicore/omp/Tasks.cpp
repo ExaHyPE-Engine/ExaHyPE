@@ -155,6 +155,12 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 
 int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
 
+
+void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
 void  tarch::multicore::native::spawnTask(Task* job) {
   #pragma omp atomic
   numberOfSpawnedTasks++;

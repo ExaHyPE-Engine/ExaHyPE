@@ -1,6 +1,20 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/multicore.h"
+
+namespace tarch {
+  namespace multicore {
+    class BooleanSemaphore;
+    class Lock;
+  }
+
+  namespace mpi {
+    class BooleanSemaphore;
+  }
+}
+
+
+
 #if defined(SharedCPP)
   #include "cpp/BooleanSemaphore.h"
 #elif defined(SharedTBB)
@@ -14,12 +28,6 @@
 
 #include <string>
 
-namespace tarch {
-  namespace multicore {
-    class BooleanSemaphore;
-    class Lock;
-  }
-}
 
 /**
  * Boolean Semaphore
@@ -113,6 +121,7 @@ class tarch::multicore::BooleanSemaphore {
   private:
     friend class tarch::multicore::Lock;
     friend class RecursiveSemaphore;
+    friend class tarch::mpi::BooleanSemaphore;
 
     /**
      * Waits until I can enter the critical section.

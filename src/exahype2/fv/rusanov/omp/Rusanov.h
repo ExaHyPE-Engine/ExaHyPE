@@ -6,11 +6,6 @@ namespace exahype2 {
   namespace fv {
     namespace rusanov {
       /**
-       * Forward declaration
-       */
-      class GPUCellData;
-
-      /**
        * The name sequential is a little bit irritating in a GPU context.
        * What it means is that the code runs logically through the patches
        * one by one and issues all kernel on one patch before it continues
@@ -69,13 +64,14 @@ namespace exahype2 {
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_patchwise_map_static_calls(
+        static void timeStepWithRusanov_patchwise_copy_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
         )
         #if defined(UseManualInlining)
         __attribute__((always_inline))
@@ -83,7 +79,7 @@ namespace exahype2 {
         ;
 
         /**
-         * @see timeStepWithRusanov_patchwise_map_static_calls()
+         * @see timeStepWithRusanov_patchwise_copy_static_calls()
          */
         template <
           typename Solver,
@@ -93,13 +89,14 @@ namespace exahype2 {
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_batched_map_static_calls(
+        static void timeStepWithRusanov_batched_copy_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
         )
         #if defined(UseManualInlining)
         __attribute__((always_inline))
@@ -115,13 +112,14 @@ namespace exahype2 {
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_patchwise_managed_static_calls(
+        static void timeStepWithRusanov_patchwise_usm_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
         )
         #if defined(UseManualInlining)
         __attribute__((always_inline))
@@ -129,7 +127,7 @@ namespace exahype2 {
         ;
 
         /**
-         * @see timeStepWithRusanov_patchwise_map_static_calls()
+         * @see timeStepWithRusanov_patchwise_usm_static_calls()
          */
         template <
           typename Solver,
@@ -139,13 +137,14 @@ namespace exahype2 {
           int      auxiliaryVariables,
           typename TempDataEnumerator
         >
-        static void timeStepWithRusanov_batched_managed_static_calls(
+        static void timeStepWithRusanov_batched_usm_static_calls(
           int                     targetDevice,
           ::exahype2::CellData&   patchData,
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
         )
         #if defined(UseManualInlining)
         __attribute__((always_inline))
@@ -172,10 +171,10 @@ namespace exahype2 {
           bool                    evaluateFlux,
           bool                    evaluateNonconservativeProduct,
           bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
+          bool                    evaluateMaximumEigenvalueAfterTimeStep,
+          tarch::timing::Measurement&  measurement
         ) {
-          #if defined(__NVCOMPILER_CUDA__) or defined(__HIPCC__)
-            timeStepWithRusanov_patchwise_managed_static_calls<
+            timeStepWithRusanov_patchwise_copy_static_calls<
               Solver,
               numberOfVolumesPerAxisInPatch,
               haloSize,
@@ -188,32 +187,16 @@ namespace exahype2 {
               evaluateFlux,
               evaluateNonconservativeProduct,
               evaluateSource,
-              evaluateMaximumEigenvalueAfterTimeStep
+              evaluateMaximumEigenvalueAfterTimeStep,
+              measurement
             );
-          #else
-            timeStepWithRusanov_patchwise_map_static_calls<
-              Solver,
-              numberOfVolumesPerAxisInPatch,
-              haloSize,
-              unknowns,
-              auxiliaryVariables,
-              TempDataEnumerator
-            >(
-              targetDevice,
-              patchData,
-              evaluateFlux,
-              evaluateNonconservativeProduct,
-              evaluateSource,
-              evaluateMaximumEigenvalueAfterTimeStep
-            );
-          #endif
         }
       }
     }
   }
 }
 
-#include "Rusanov_patchwise_map_static_calls.cpph"
-#include "Rusanov_batched_map_static_calls.cpph"
-#include "Rusanov_patchwise_managed_static_calls.cpph"
-#include "Rusanov_batched_managed_static_calls.cpph"
+#include "Rusanov_batched_copy_static_calls.cpph"
+#include "Rusanov_batched_usm_static_calls.cpph"
+#include "Rusanov_patchwise_copy_static_calls.cpph"
+#include "Rusanov_patchwise_usm_static_calls.cpph"

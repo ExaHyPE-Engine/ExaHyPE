@@ -9,7 +9,7 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
         dastgen2.attributes.IntegerArray.__init__(
             self, name, cardinality, min_value, max_value, ifdefs=ifdefs
         )
-        self._cardinality = cardinality
+        self._cardinality = str(cardinality)
 
     def get_methods(self, _full_qualified_class_name, for_declaration=True):
         accessor_name = self._name[:1].title() + self._name[1:]
@@ -30,7 +30,7 @@ class Peano4IntegerArray(dastgen2.attributes.IntegerArray):
             ("set" + accessor_name + "(int index, int value)", "void"),
         ]
 
-    def get_plain_C_attributes(self):
+    def get_plain_C_attributes(self, for_constructor=False):
         if self.compress:
             return [
                 (

@@ -179,7 +179,8 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
       {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
       {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+      {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
+      measurement
     );
   """
   else:

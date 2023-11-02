@@ -185,7 +185,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
   ::tarch::mpi::DoubleMessage dtMessage;
   ::tarch::mpi::IntegerMessage taskIdMessage;
   ::peano4::datamanagement::CellMarker markerMessage(dummyEvent);
-  double* inputValues = tarch::allocateMemory( NumberOfInputValues, tarch::MemoryLocation::Heap );
+  double* inputValues = tarch::allocateMemory( NumberOfInputValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 
   ::peano4::datamanagement::CellMarker::receive( markerMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::receive( tMessage, rank, tag, communicator );
@@ -214,10 +214,10 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
-  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 
 //  _functor(_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue);
-//  tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
+//  tarch::freeMemory(_inputValues,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
   _functor();
 
   logInfo(
@@ -256,7 +256,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
     " via tag " << tag
   );
 
-  // tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
+  // tarch::freeMemory(_outputValues,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 }
 
 
@@ -275,7 +275,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
   ::tarch::mpi::DoubleMessage eValueMessage;
   ::tarch::mpi::IntegerMessage taskIdMessage;
   ::peano4::datamanagement::CellMarker markerMessage(dummyEvent);
-  double* outputValues = tarch::allocateMemory( NumberOfResultValues, tarch::MemoryLocation::Heap );
+  double* outputValues = tarch::allocateMemory( NumberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 
   ::peano4::datamanagement::CellMarker::receive( markerMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::receive( tMessage, rank, tag, communicator );
@@ -349,7 +349,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
-    patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+    patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
     delete p;
     currentTask++;
   }
@@ -359,7 +359,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   patchData.t[currentTask]           = _t;
   patchData.dt[currentTask]          = _dt;
   patchData.id[currentTask]          = _taskNumber;
-  patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+  patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
 
 
   //
@@ -403,7 +403,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==================
   //
   for (int i=0; i<patchData.numberOfCells; i++) {
-    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::Heap );
+    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
   }
 
