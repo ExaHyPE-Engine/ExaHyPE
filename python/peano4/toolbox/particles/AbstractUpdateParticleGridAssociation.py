@@ -15,7 +15,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     All subclasses realise the particle in dual tree storage scheme.
     Please read through @ref page_toolbox_particles_mesh_storage and
     @ref page_toolbox_particles_mesh_consistency besides the current
-    class documentation.
+    class documentation. If you use a particle memory pool, i.e. if you
+    don't hold the particles scattered all over the place, then it is also
+    relevant to read through the @ref toolbox_particles_memorypool "implications for any particle sorting".
 
 
     If you add the action set
@@ -104,7 +106,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     ## Priorities
 
     The update association should precede any other action set in your step. The
-    priority value thus should be very small. As priorities are inverted when we
+    descend_invocation_order value thus should be very small. As priorities are inverted when we
     walk from fine to coarse resolutions, this means that all dropping into the mesh
     (in the second grid sweep) happens before anybody else touches the particles,
     while the extraction of particles or moves from fine to coarse are epilogues to
@@ -112,11 +114,11 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
     """
 
-    DefaultPriority = -65536
+    DefaultDescendInvocationOrder = -65536
 
     def __init__(self, particle_set, guard="true"):
         super(AbstractUpdateParticleGridAssociation, self).__init__(
-            priority=-65536, parallel=False
+            descend_invocation_order=-65536, parallel=False
         )
         self._particle_set = particle_set
         self.d = {}

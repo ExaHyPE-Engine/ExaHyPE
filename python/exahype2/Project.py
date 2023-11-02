@@ -400,8 +400,8 @@ thus appreciate any citation of the original release paper
         name,
         attribute_count=0,
         plot=True,
-        sort_priority_within_action_sets=-1,
-        plot_priority_within_action_sets=65536,
+        sort_descend_invocation_order_within_action_sets=-1,
+        plot_descend_invocation_order_within_action_sets=65536,
     ):
         """!
 

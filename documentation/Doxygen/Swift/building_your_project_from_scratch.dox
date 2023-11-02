@@ -3,20 +3,6 @@
 @page swift_building_project_from_scratch Building your project from scratch
 
 
-As Swift 2 is a Peano extension, you first have to
-@ref page_installation "configure and build the core Peano code base",
-i.e. its libraries, before you start any work.
-Hereby, it is important that you add the particles toolbox:
-
-
-          ./configure ... --enable-particles --enable-swift
-
-If you want to use the HDF5 I/O functionalities, you also need to configure Peano with
-HDF5 enabled. How to do this is documented in @ref page_swift_initial_conditions_SwiftHDF5.
-Once Peano's core libraries are all built, you can start to write a proper Swift
-application:
-
-
 # Introduction
 
 Our interface for Swift 2 is almost complete realised in Python. We configure
@@ -26,8 +12,10 @@ can inject C++ code manually into the Python code (which is great for
 prototyping). Once the Python script is executed, it generates a plain C++ code
 with a makefile which waves Peano's core and the SPH kernels together.
 
-
-
+Before you start, make sure you configured and compiled Peano4 correctly so that
+Swift2 can run. See @ref section_compile_peano4_for_swift2 "the instructions".
+Once Peano's core libraries are all built, you can start to write a proper Swift
+application:
 
 
 # Generating a swift2.project
@@ -103,7 +91,7 @@ what fields are always present. If not, document what fields need to be present.
 It may be useful to introduce parameters which are valid for your entire particle
 species. For example, you want need a particle independent CFL factor, or maximal
 smoothing length, or resolution, etc. This can easily be achieved through use of
-static (or even const static) class variables, which you can also generate using
+`static` (or even `const static`) class variables, which you can also generate using
 DaStGen2. See the corresponding documentation on \ref page_dastgen.
 
 
@@ -116,6 +104,10 @@ DaStGen2. See the corresponding documentation on \ref page_dastgen.
 With the particle data defined, we can now set up what equations are being solved, and in
 which order, for each particle for each simulation step. This is documented in detail in
 @ref Section_SwiftAlgorithmStep on the @ref swift_particle_lifecycle page.
+
+If you are planning on using a new solver, you will need to write new solver kernels.
+Consult the documentation on that given on the
+\ref swift_particle_new_solver "create your own solver" page.
 
 
 

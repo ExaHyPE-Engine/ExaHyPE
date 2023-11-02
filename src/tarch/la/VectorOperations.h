@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <sstream>
+#include <vector>
 
 #include "tarch/la/ScalarOperations.h"
 
@@ -157,6 +158,9 @@ namespace tarch {
 
     template <int Size, typename Scalar>
     int isEntryFinite(const Vector<Size, Scalar>& vector);
+
+    template <int Size, typename Scalar>
+    std::vector<Scalar> toSTLVector(const Vector<Size, Scalar>& vector);
   } // namespace la
 } // namespace tarch
 

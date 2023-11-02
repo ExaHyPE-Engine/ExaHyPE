@@ -1,15 +1,15 @@
 /**
 
- @page benchmarks_swift2_hydro_simple_sph_sod_1d Sod Shockwave 1d (Simple SPH)
+ @page tests_swift2_hydro_simple_sph_sod_1d Sod Shockwave 1d (Simple SPH)
 
-The setup runs the 1d sod shockwave with a simple SPH scheme, i.e. fixed 
-interaction radius. By default, we embed the 1d setup into a 2d mesh, but 
+The setup runs the 1d sod shockwave with a simple SPH scheme, i.e. fixed
+interaction radius. By default, we embed the 1d setup into a 2d mesh, but
 you can also change it to three dimensions.
 
 
 ## Prepare the run
 
-First of all, we have to create the initial conditions. 
+First of all, we have to create the initial conditions.
 
 
         python3 makeIC.py
@@ -17,7 +17,7 @@ First of all, we have to create the initial conditions.
 This one should give you a file ```sodShock.hdf5```. If you encounter
 issues around HDF5, it makes sense to consult our general discussion of
 @ref swift_initial_conditions "Swift's initial conditions".
-        
+
 
 ## Create the setup
 
@@ -26,10 +26,10 @@ The setup can be defined via one simple Python call
 
         python3 sod.py
 
-        
-Passing in --help gives you all the instructions needed. This documentation 
-hosts a script (below) which you can alternatively copy n paste into your 
-terminal.        
+
+Passing in --help gives you all the instructions needed. This documentation
+hosts a script (below) which you can alternatively copy n paste into your
+terminal.
 
 
 ## Postprocessing
@@ -102,5 +102,5 @@ fi
 ~~~~~~~~~~~~~~~~~~
 
  */
- 
- 
+
+

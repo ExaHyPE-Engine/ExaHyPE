@@ -1,0 +1,13 @@
+/**
+
+ @page tests_swift2_test_density_calculation Density Calculation Test
+
+ Runs only the density (with constant search radius) algorithm step of the
+ SPH particle life cycle.
+
+ Consult `run.sh` on how to run the program.
+
+
+ */
+
+

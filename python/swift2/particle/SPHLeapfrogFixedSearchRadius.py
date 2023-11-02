@@ -117,7 +117,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
     This type can be used with aggressively optimised kernels if you follow
     @ref page_swift_performance_optimisation Performance optimisation and use
-    the serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+    the map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
     graph compiler from the Sequential suite. We have not tested it with other
     graph compiler flavours.
 
@@ -817,6 +817,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # modifications down the line (like the dependency checks)
         # will cause trouble.
         self._initialisation_steps = [copy.deepcopy(i) for i in initsteps]
+
+        return
 
     def initialisation_steps(self):
         """

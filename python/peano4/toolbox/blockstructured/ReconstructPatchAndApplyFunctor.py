@@ -87,7 +87,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   them.
   
     """
-    super(ReconstructPatchAndApplyFunctor,self).__init__(priority=1,parallel=False)
+    super(ReconstructPatchAndApplyFunctor,self).__init__(descend_invocation_order=1,parallel=False)
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
       assert( patch_overlap.dim[0] % 2 == 0 )

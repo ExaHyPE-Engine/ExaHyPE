@@ -51,7 +51,7 @@ i.e. mesh sweep, which sets up the inition condition. That is, if you
 want to insert particles, you have to add action sets to this algorithm
 step calling add_action_set(). The passed action sets have to
 throw all the particles you want to have into your mesh.
-There are two mainstream ways to implement initial conditions for the
+There are three mainstream ways to implement initial conditions for the
 simulations:
 
   - Insert particle by coordinates (```python/swift2/input/InsertParticlesByCoordinates.py```).
@@ -100,47 +100,13 @@ into the domain, these calculations are best modelled as
 
 A basic HDF5 reader that is compatible with IC files from the original Swift code is
 implemented in ```InsertParticlesFromHDF5File.py```.
-In order to make use of the HDF5 reader, Peano must have been configured with
-
-          ./configure ... --enable-particles --enable-swift --with-hdf5
-
-
-## With Spack/containers
-
-We assume that ``$HDF5_ROOT`` names the directory that contains your local HDF5 installation,
-e.g. ``/usr`` or ``/usr/lib/x86_64-linux-gnu/hdf5/serial/``.
-In this case, it is recommended to include the following flags:
-
-          ./configure ...  --enable-particles --enable-swift --with-hdf5 \
-                CXXFLAGS="-I/$HDF5_ROOT/include" \
-                LDFLAGS="-I/$HDF5_ROOT/lib" \
-                LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++"
+In order to make use of the HDF5 Initial conditions reader, Peano must have been
+configured with HDF5 enabled and linked. Instructions are provided
+@ref section_compile_swift2_with_hdf5 "here". Also make sure to install the
+@ref section_swift2_python_hdf5 "Python hdf5 libraries", which may be required for
+python scripts which generate the initial conditions.
 
 
-
-## Ubuntu
-
-With Ubuntu, the packages you need are
-
-- libhdf5-serial-dev
-- hdf5-tools
-
-and then you can configure with
-
-
-         ./configure --enable-particles --enable-swift --enable-loadbalancing \
-             --enable-blockstructured --enable-exahype2 --with-hdf5 \
-             CXXFLAGS="--std=c++20 -I/usr/include/hdf5/serial" \
-             LDFLAGS="-L/usr/lib/x86_64-linux-gnu/hdf5/serial" \
-             LIBS="-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++" \
-             --build=x86_64 --host=x86_64
-
-## Python
-
-Some of Swift's Python scripts use HDF5, too, and therefore need the package
-h5py which you can install via pip, e.g.
-
-         pip install h5py
 
 
 # General remarks on particle insertion
