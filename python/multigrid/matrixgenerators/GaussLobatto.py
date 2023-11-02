@@ -7,7 +7,8 @@ from   scipy.interpolate import lagrange
 import peano4
 
 from .MatrixGenerator import MatrixGenerator
-from .BlockMatrix.block_matrix_dgpoisson2d import DGPoisson2dBlockMatrix
+#from .BlockMatrix.block_matrix_dgpoisson2d import DGPoisson2dBlockMatrix
+from .BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
 
 class GaussLobatto(MatrixGenerator):
   '''
@@ -44,7 +45,8 @@ class GaussLobatto(MatrixGenerator):
       self.points1d    = self.get_points_()
 
     r_press = self.poly_degree # polynomial order for p
-    self.block_matrix = DGPoisson2dBlockMatrix(r_press)
+    self.block_matrix = DGPoisson2dPenaltyBlockMatrix(r_press)
+    #self.block_matrix = DGPoisson2dBlockMatrix(r_press)
 
   def get_points1d(self):
     """!
@@ -155,7 +157,9 @@ class GaussLobatto(MatrixGenerator):
     A_CF_bottom = self.block_matrix._A_CF[(0,2)]["bottom"][(1,0)]
     A_CF_right  = self.block_matrix._A_CF[(0,2)]["right"][(0,1)]
     A_CF_top    = self.block_matrix._A_CF[(0,2)]["top"][(1,0)]
-    return np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
+    A_CF_conc = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
+    Placeholder = np.zeros_like(A_CF_conc)
+    return np.concatenate((A_CF_conc, Placeholder), axis=1)
   
     #faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces
     #cellDim = self.cell_nodes * self.unknowns_per_cell_node
@@ -165,22 +169,43 @@ class GaussLobatto(MatrixGenerator):
   def get_cell_to_face_matrix(self):
     """Return the projection operator
     """
-    A_qp_p_left = self.block_matrix._A_FC[(0,0)]["left"][(0,0)]
-    A_qp_p_bottom = self.block_matrix._A_FC[(0,0)]["bottom"][(0,0)]
-    A_qm_p_right = self.block_matrix._A_FC[(1,0)]["right"][(0,0)]
-    A_qm_p_top = self.block_matrix._A_FC[(1,0)]["top"][(0,0)]
+    ### Compute the normal gradient projections
+    A_qp_u_left = self.block_matrix._A_FC[(0,0)]["left"][(0,0)]
+    A_qp_u_bottom = self.block_matrix._A_FC[(0,0)]["bottom"][(0,0)]
+    A_qm_u_right = self.block_matrix._A_FC[(1,0)]["right"][(0,0)]
+    A_qm_u_top = self.block_matrix._A_FC[(1,0)]["top"][(0,0)]
 
     M_qp_qp_left   = self.block_matrix._A_FF[(0,0)]["left"][(0,1)]   # These are now the same;
     M_qp_qp_bottom = self.block_matrix._A_FF[(0,0)]["bottom"][(1,0)] # keep for generality
     M_qm_qm_right = self.block_matrix._A_FF[(1,1)]["right"][(0,1)]   #
     M_qm_qm_top  = self.block_matrix._A_FF[(1,1)]["top"][(1,0)]      #
 
-    P_qp_p_left = np.dot(np.linalg.inv(M_qp_qp_left), A_qp_p_left)
-    P_qp_p_bottom = np.dot(np.linalg.inv(M_qp_qp_bottom), A_qp_p_bottom)
-    P_qm_p_right = np.dot(np.linalg.inv(M_qm_qm_right), A_qm_p_right)
-    P_qm_p_top = np.dot(np.linalg.inv(M_qm_qm_top), A_qm_p_top)
+    P_qp_u_left = -np.dot(np.linalg.inv(M_qp_qp_left), A_qp_u_left)
+    P_qp_u_bottom = -np.dot(np.linalg.inv(M_qp_qp_bottom), A_qp_u_bottom)
+    P_qm_u_right = -np.dot(np.linalg.inv(M_qm_qm_right), A_qm_u_right)
+    P_qm_u_top = -np.dot(np.linalg.inv(M_qm_qm_top), A_qm_u_top)
 
-    return np.concatenate((P_qp_p_left, P_qp_p_bottom, P_qm_p_right, P_qm_p_top), axis=0)
+    P_gradient = np.concatenate((P_qp_u_left, P_qp_u_bottom, P_qm_u_right, P_qm_u_top), axis=0)
+
+    ### Compute the solution projections
+    A_up_u_left = self.block_matrix._A_FC[(3,0)]["left"][(0,1)]
+    A_up_u_bottom = self.block_matrix._A_FC[(3,0)]["bottom"][(1,0)]
+    A_um_u_right = self.block_matrix._A_FC[(4,0)]["right"][(0,1)]
+    A_um_u_top = self.block_matrix._A_FC[(4,0)]["top"][(1,0)]
+
+    M_up_up_left   = self.block_matrix._A_FF[(3,3)]["left"][(0,1)]   # These are now the same;
+    M_up_up_bottom = self.block_matrix._A_FF[(3,3)]["bottom"][(1,0)] # keep for generality
+    M_um_um_right = self.block_matrix._A_FF[(4,4)]["right"][(0,1)]   #
+    M_um_um_top  = self.block_matrix._A_FF[(4,4)]["top"][(1,0)]      #
+
+    P_up_u_left = -np.dot(np.linalg.inv(M_up_up_left), A_up_u_left)
+    P_up_u_bottom = -np.dot(np.linalg.inv(M_up_up_bottom), A_up_u_bottom)
+    P_um_u_right = -np.dot(np.linalg.inv(M_um_um_right), A_um_u_right)
+    P_um_u_top = -np.dot(np.linalg.inv(M_um_um_top), A_um_u_top)
+
+    P_solution = np.concatenate((P_up_u_left, P_up_u_bottom, P_um_u_right, P_um_u_top), axis=0)
+
+    return np.concatenate((P_gradient, P_solution), axis=0)
 
   def get_averaging_riemann_solver(self):
     """!
@@ -202,9 +227,6 @@ class GaussLobatto(MatrixGenerator):
 
   def get_face_face_riemann_problem_matrix(self):
     # return np.array([0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5]).reshape((2,4))
-
-
-
     return np.array([0.5, 0.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.5]).reshape((2,4))
   
     # def get_face_to_face_matrix(self):
