@@ -10,8 +10,6 @@
   @image html noh_150.png
   @image html noh_300.png
 
-@TODO Mladen: Clean this up once you modify test away from benchmark purposes.
-
  As with all Swift 2 experiments, you have to ensure that you translate with --enable-particles --enable-swift.
 
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

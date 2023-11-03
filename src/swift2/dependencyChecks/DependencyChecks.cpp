@@ -1,9 +1,3 @@
-// @todo will have to go away once we have proper config objects
-// #define HYDRO_DIMENSION 2
-// #define HYDRO_GAMMA_5_3
-// #define QUARTIC_SPLINE_KERNEL
-
-
 #include "DependencyChecks.h"
 
 //

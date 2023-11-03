@@ -76,8 +76,6 @@ namespace swift2 {
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    sweepStageMarkerEnum,
       bool                                                                                      stepMovedParticle,
-      // bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type, const
-      // Marker&)
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
     );
 
