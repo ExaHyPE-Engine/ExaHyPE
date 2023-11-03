@@ -14,8 +14,8 @@ import shutil
 # Parse user input
 ########################################################################################
 
-Choices = ["none", 
-           "continuous-per-vertex", "global-continuous", "continuous-per-vertex-vectorise", "global-continuous-vectorise", 
+Choices = ["none",
+           "continuous-per-vertex", "global-continuous", "continuous-per-vertex-vectorise", "global-continuous-vectorise",
            "tasks",
           ]
 
@@ -195,6 +195,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     use_optimised_coalesced_memory_access_kernels=(
       "-vectorise" in args.optimisation
     ),
+    asserts=args.asserts,
 )
 
 
