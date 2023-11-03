@@ -26,16 +26,24 @@ the solver in the first place. This happens in get_includes().
   """
   TemplateInitVertex = """
   if ( fineGridVertex{{SOLVER_NAME}}PETScData.getType() != vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+    
     tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> value;
     tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> rhs;
+
+    // use vertexInit to get all the values we want to place
+    // into each vertex dof
     repositories::{{SOLVER_INSTANCE}}.vertexInit(
       marker.x(),
       marker.h(),
       value,
       rhs
     );
-    fineGridVertex{{SOLVER_NAME}}.setValue(value);
-    fineGridVertex{{SOLVER_NAME}}.setRhs(rhs);
+
+    for (int i=0; i<{{VERTEX_CARDINALITY}}; i++)
+    {
+      fineGridVertex{{SOLVER_NAME}}.setValue(i, value[i]);
+      fineGridVertex{{SOLVER_NAME}}.setRhs(i, rhs[i]);
+    }
   }
 """
   
