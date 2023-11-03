@@ -94,7 +94,8 @@ class DLinear(MatrixGenerator):
     so normalise by h
 
     '''
-    dim    = (self.poly_degree + 1) ** self.Dimensions
+    # making it 2^D since this is number of vertices per cell
+    dim    = self._cell_dofs
     output = np.zeros((dim,dim))
 
     for i in range(output.shape[0]):
@@ -115,6 +116,12 @@ class DLinear(MatrixGenerator):
 
     @todo - Currently this just pads the same matrix out to each of the multiple dofs per node. Maybe provide option to not do this, eg just leave some of them empty
     """
-    for _ in range(self.unknowns_per_vertex_dof - 1):
-      matrix = np.concatenate((matrix, matrix))
-    return matrix
+    shape  = matrix.shape
+    # make it bigger 
+    output_shape  = [ self.unknowns_per_vertex_dof * s for s in shape ]
+    output        = np.zeros( output_shape )
+
+    for u in range( self.unknowns_per_vertex_dof ):
+      output[ shape[0]*u: shape[0]*(1+u), shape[1]*u:shape[1]*(1+u) ] = matrix
+    
+    return output
