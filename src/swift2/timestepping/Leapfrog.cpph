@@ -9,25 +9,29 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
   const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                                 .getMinTimeStepSize();
 
-  for (auto* particle : localParticles) {
+  const auto newState = std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved;
 
-    if (swift2::kernels::localParticleCanBeMoved(particle) and not particle->getIsBoundaryParticle()) {
+    auto *minPtr = (typename ParticleContainer::value_type) -1;
+    auto maxPtr = (typename ParticleContainer::value_type) nullptr;
 
-      // Drift the particle (update position for a full time-step). It's important
-      // to take the "V_full" here, not the fluid velocity V. V_full doesn't get
-      // touched outside of kicks. V will be interpolated/integrated in time as the
-      // time step progresses. V_full is the correct choice here.
+  for (auto *particle : localParticles) {
+      if (particle < minPtr) minPtr = particle;
+      if (particle > maxPtr) maxPtr = particle;
+  }
 
-      particle->setX(particle->getX() + timeStepSize * particle->getV_full());
+  if (minPtr + localParticles.size() != maxPtr) {
+      printf("Non-continuous memory!\n");
+      exit(1);
+  }
 
-      assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
+  auto particleCount = localParticles.size();
+  for (auto i = 0; i < particleCount; i++) {
+      auto *particle = minPtr + i;
 
-      // Note that original SWIFT predicts the velocities at this point. We moved that
-      // into computePredictHydro()
+      auto mask = (double) (swift2::kernels::localParticleCanBeMoved(particle) & !particle->getIsBoundaryParticle());
 
-      /* Flag this particle as Moved */
-      particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
-    }
+      particle->setX(particle->getX() + mask * timeStepSize * particle->getV_full());
+      particle->setMoveState(newState);
   }
 }
 
