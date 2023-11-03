@@ -66,6 +66,13 @@ class AssemblePetscMatrix(ActionSet):
             double rhsContribution = 0.0;
             for (int j=0; j<TwoPowerD; j++) {
               double rhsValue = fineGridVertices{{SOLVER_NAME}}(j).getRhs(d);
+              
+              /*
+              we call d*TwoPowerD+i here because the rhs matrix typically has dimensions
+              TwoPowerD x TwoPowerD. When we promote to n unknowns, we make the matrix
+              larger: n*TwoPowerD x n*TwoPowerD. So, we call d*TwoPowerD+i so that we can
+              skip past the parts of the matrix we are no longer interested in.
+              */
               rhsContribution += rhs(d*TwoPowerD+i,d*TwoPowerD+j) * rhsValue;
               logTraceInWith3Arguments("AssembleRhs", rhs(d*TwoPowerD+i,d*TwoPowerD+j), rhsContribution, rhsValue);
               logTraceOut("AssembleRhs");
