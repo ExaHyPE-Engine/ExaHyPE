@@ -14,10 +14,14 @@ import shutil
 # Parse user input
 ########################################################################################
 
-Choices = ["none", 
-           "continuous-per-vertex", "global-continuous", "continuous-per-vertex-vectorise", "global-continuous-vectorise", 
-           "tasks",
-          ]
+Choices = [
+    "none",
+    "continuous-per-vertex",
+    "global-continuous",
+    "continuous-per-vertex-vectorise",
+    "global-continuous-vectorise",
+    "tasks",
+]
 
 parser = argparse.ArgumentParser(description="SPH benchmarking script")
 parser.add_argument(
@@ -139,10 +143,12 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh", executable="noh2D"
 )
 
-if args.optimisation == Choices[1] or \
-   args.optimisation == Choices[2] or \
-   args.optimisation == Choices[3] or \
-   args.optimisation == Choices[4]:
+if (
+    args.optimisation == Choices[1]
+    or args.optimisation == Choices[2]
+    or args.optimisation == Choices[3]
+    or args.optimisation == Choices[4]
+):
     project.algorithm_steps_task_graph_compiler = (
         swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
     )
@@ -192,9 +198,8 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=particles_per_cell,
     min_h=max_cell_size,
     max_h=max_cell_size,
-    use_optimised_coalesced_memory_access_kernels=(
-      "-vectorise" in args.optimisation
-    ),
+    use_optimised_coalesced_memory_access_kernels=("-vectorise" in args.optimisation),
+    asserts=args.asserts,
 )
 
 
@@ -280,14 +285,19 @@ particle.data.expose_all_attributes_in_header_file()
 particle_set = project.add_particle_species(particle)
 
 if "continuous-per-vertex" in args.optimisation:
-    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+    particle_set.generator = (
+        peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+    )
 elif "global-continuous" in args.optimisation:
-    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
+    particle_set.generator = (
+        peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
+    )
 else:
-    particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
+    particle_set.generator = (
+        peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
             particle_set
         )
-
+    )
 
 
 if args.asserts:
@@ -356,7 +366,7 @@ initialisation_snippet = ICs.initialisation_snippet
 #  initialisation_call = initialisation_snippet,
 #  coordinates         = coords,
 #  additional_includes = """
-##include "swift2/kernels/equation_of_state.h"
+##include "swift2/legacy/equation_of_state.h"
 # """
 #  )
 # )
@@ -367,7 +377,7 @@ project.algorithm_step_initial_conditions.add_action_set(
         initialisation_call=initialisation_snippet,
         distance_between_particles_along_one_axis=1.0 / args.particle_number,
         additional_includes="""
-#include "swift2/kernels/equation_of_state.h"
+#include "swift2/legacy/equation_of_state.h"
 """,
     )
 )

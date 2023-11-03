@@ -1,13 +1,18 @@
 #include <cfloat>
 
-#include "swift2/hydro_dimensions.h"
 #include "swift2/kernels/SwiftKernelPlaceholders.h"
+#include "swift2/kernels/ParticleParticleInteraction.h"
+#include "swift2/legacy/hydro_dimensions.h"
 #include "tarch/logging/Log.h"
 
 template <typename Particle, typename ParticleContainer>
 void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
   Particle& localParticle, const ParticleContainer& activeParticles
 ) {
+
+  // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
+  using namespace swift2::legacy::kernelHydro;
+
   static tarch::logging::Log _log("swift2::kernels");
 
   /* Grab static parameters */
@@ -18,7 +23,7 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
   const double hydro_h_min = localParticle->getSmlMin();
   const double sml_tolerance_epsilon = localParticle->getSmlTolerance();
   const double eta                   = localParticle->getEtaFactor();
-  const double eta_dim               = swift2::hydroDimensions::pow_dimension(eta);
+  const double eta_dim               = legacy::hydroDimensions::pow_dimension(eta);
   const int    max_iterations        = localParticle->getSmlMaxIterations();
 
   double left  = hydro_h_min;
@@ -47,8 +52,8 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
 
     // Now on to the smoothing length computation
     const double h_old               = localParticle->getSmoothingLength();
-    const double h_old_dim           = swift2::hydroDimensions::pow_dimension(h_old);
-    const double h_old_dim_minus_one = swift2::hydroDimensions::pow_dimension_minus_one(h_old);
+    const double h_old_dim           = legacy::hydroDimensions::pow_dimension(h_old);
+    const double h_old_dim_minus_one = legacy::hydroDimensions::pow_dimension_minus_one(h_old);
     double       h_new;
 
     // for now, make sure this fails even without debug mode
@@ -146,8 +151,8 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
 
       // Bisect the remaining interval
       const double temp = 0.5
-                          * (swift2::hydroDimensions::pow_dimension(left) + swift2::hydroDimensions::pow_dimension(right));
-      localParticle->setSmoothingLength(1. / swift2::hydroDimensions::pow_dimension(temp));
+                          * (legacy::hydroDimensions::pow_dimension(left) + legacy::hydroDimensions::pow_dimension(right));
+      localParticle->setSmoothingLength(1. / legacy::hydroDimensions::pow_dimension(temp));
     } else {
       // Normal case
       localParticle->setSmoothingLength(h_new);
