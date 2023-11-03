@@ -12,58 +12,58 @@ namespace swift2 {
   namespace legacy {
     namespace hydroDimensions {
 
-    /**
-     * returns x^ndim
-     */
-    template <typename T>
-    InlineMethod T pow_dimension(T x) {
+      /**
+       * returns x^ndim
+       */
+      template <typename T>
+      InlineMethod T pow_dimension(T x) {
 #if (HYDRO_DIMENSION == 3)
-      return x * x * x;
+        return x * x * x;
 #elif (HYDRO_DIMENSION == 2)
-      return x * x;
+        return x * x;
 #elif (HYDRO_DIMENSION == 1)
-      return x;
+        return x;
 #else
 #pragma error "HYDRO_DIMENSION undefined?"
 #endif
-    }
+      }
 
 
-    /**
-     * returns x^{ndim+1}
-     */
-    template <typename T>
-    InlineMethod T pow_dimension_plus_one(T x) {
+      /**
+       * returns x^{ndim+1}
+       */
+      template <typename T>
+      InlineMethod T pow_dimension_plus_one(T x) {
 #if (HYDRO_DIMENSION == 3)
-      T temp = x * x;
-      return temp * temp;
+        T temp = x * x;
+        return temp * temp;
 #elif (HYDRO_DIMENSION == 2)
-      return x * x * x;
+        return x * x * x;
 #elif (HYDRO_DIMENSION == 1)
-      return x * x;
+        return x * x;
 #else
 #pragma error "HYDRO_DIMENSION undefined?"
 #endif
-    }
+      }
 
 
-    /**
-     * returns x^{ndim-1}
-     */
-    template <typename T>
-    InlineMethod T pow_dimension_minus_one(T x) {
+      /**
+       * returns x^{ndim-1}
+       */
+      template <typename T>
+      InlineMethod T pow_dimension_minus_one(T x) {
 #if (HYDRO_DIMENSION == 3)
-      return = x * x;
+        return = x * x;
 #elif (HYDRO_DIMENSION == 2)
-      return x;
+        return x;
 #elif (HYDRO_DIMENSION == 1)
-      return 1.;
+        return 1.;
 #else
 #pragma error "HYDRO_DIMENSION undefined?"
 #endif
-    }
+      }
 
 
     } // namespace hydroDimensions
-  } // namespace legacy
+  }   // namespace legacy
 } // namespace swift2

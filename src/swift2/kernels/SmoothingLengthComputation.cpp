@@ -3,8 +3,9 @@
 #define HYDRO_GAMMA_5_3
 #define QUARTIC_SPLINE_KERNEL
 
-#include "ParticleParticleInteraction.h" // needed for densityKernel()
 #include "SmoothingLengthComputation.h"
+
+#include "ParticleParticleInteraction.h" // needed for densityKernel()
 
 //
 // This file is delibarately empty. However, it includes the header and we
