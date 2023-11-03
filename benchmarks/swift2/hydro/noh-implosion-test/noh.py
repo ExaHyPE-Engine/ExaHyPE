@@ -366,7 +366,7 @@ initialisation_snippet = ICs.initialisation_snippet
 #  initialisation_call = initialisation_snippet,
 #  coordinates         = coords,
 #  additional_includes = """
-##include "swift2/kernels/equation_of_state.h"
+##include "swift2/legacy/equation_of_state.h"
 # """
 #  )
 # )
@@ -377,7 +377,7 @@ project.algorithm_step_initial_conditions.add_action_set(
         initialisation_call=initialisation_snippet,
         distance_between_particles_along_one_axis=1.0 / args.particle_number,
         additional_includes="""
-#include "swift2/kernels/equation_of_state.h"
+#include "swift2/legacy/equation_of_state.h"
 """,
     )
 )

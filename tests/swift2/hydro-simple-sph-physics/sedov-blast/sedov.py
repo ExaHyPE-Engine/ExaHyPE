@@ -285,7 +285,7 @@ project.algorithm_step_initial_conditions.add_action_set(
         initialisation_call=initialisation_snippet,
         coordinates=coords,
         additional_includes="""
-#include "swift2/kernels/equation_of_state.h"
+#include "swift2/legacy/equation_of_state.h"
 """,
     )
 )
