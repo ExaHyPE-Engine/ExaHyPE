@@ -7,7 +7,9 @@
 
 #include "peano4/utils/Globals.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/la/Vector.h"
+#include "tarch/multicore/multicore.h"
 
 namespace exahype2::enumerators {
   /**
@@ -40,8 +42,8 @@ namespace exahype2::enumerators {
    *   active information, i.e., data you write to.
    */
   struct AoSLexicographicEnumerator {
-  public:
-    constexpr inline AoSLexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+    constexpr KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod
+      AoSLexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
       _numberOfCells(numberOfCells),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),
@@ -55,7 +57,8 @@ namespace exahype2::enumerators {
      * indices if you want.
      *
      */
-    inline int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const InlineMethod {
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const
+      InlineMethod {
       if constexpr (Dimensions == 2) {
         return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
                  * (_unknowns + _numberOfAuxiliaryVariables)
@@ -75,7 +78,7 @@ namespace exahype2::enumerators {
     std::string toString() const;
 #endif
 
-    inline int size() const InlineMethod {
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int size() const InlineMethod {
       if constexpr (Dimensions == 2) {
         return _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables);
       } else {
@@ -84,7 +87,7 @@ namespace exahype2::enumerators {
       }
     }
 
-    inline int numberOfDofsPerCell() const InlineMethod {
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int numberOfDofsPerCell() const InlineMethod {
       if constexpr (Dimensions == 2) {
         return (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize);
       } else {

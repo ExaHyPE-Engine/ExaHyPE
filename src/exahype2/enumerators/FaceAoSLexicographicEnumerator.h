@@ -7,7 +7,9 @@
 
 #include "peano4/utils/Globals.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/la/Vector.h"
+#include "tarch/multicore/multicore.h"
 
 namespace exahype2::enumerators {
   /**
@@ -54,7 +56,6 @@ namespace exahype2::enumerators {
    *
    */
   struct FaceAoSLexicographicEnumerator {
-  public:
     /**
      *
      * @param faceNumber An integer value between 0 (inclusive) and
@@ -76,7 +77,8 @@ namespace exahype2::enumerators {
      *   properties such as the first derivative along the normal. Some
      *   code snippets within ExaHyPE 2 call the haloSize overlap.
      */
-    constexpr inline FaceAoSLexicographicEnumerator(int faceNumber, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+    constexpr KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod
+      FaceAoSLexicographicEnumerator(int faceNumber, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
       _faceNumber(faceNumber),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),
@@ -86,7 +88,7 @@ namespace exahype2::enumerators {
     /**
      * Access a dof
      */
-    inline int operator()(const tarch::la::Vector<Dimensions, int>& dofIndex, int unknown) const {
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int operator()(const tarch::la::Vector<Dimensions, int>& dofIndex, int unknown) const {
       int base   = 1;
       int result = 0;
       for (int d = 0; d < Dimensions; d++) {
@@ -112,7 +114,7 @@ namespace exahype2::enumerators {
     std::string toString() const;
 #endif
 
-    inline int size() const {
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int size() const {
       if constexpr (Dimensions == 2) {
         return (_numberOfDoFsPerAxisInCell) * (2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables);
       } else {

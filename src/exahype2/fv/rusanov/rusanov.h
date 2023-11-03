@@ -2,14 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "Functors.h"
-#include "LoopBody.h"
-
 #include "exahype2/CellData.h"
 #include "exahype2/VolumeIndex.h"
-
+#include "Functors.h"
+#include "LoopBody.h"
 #include "peano4/utils/Loop.h"
-
 #include "tarch/timing/Measurement.h"
 
 /**
@@ -75,7 +72,8 @@
  * Volume carries, per PDE unknown, a constant function both in space (over
  * this volume) and time yields
  *
- * @f$ \int _\Omega Q(t+\Delta t) - Q(t) dx + \Delta t \cdot \int _\Omega div F_i(Q) dx + \Delta t \cdot \sum _i \int _\Omega B_i \nabla_i Q dx = \Delta t \cdot \int _\Omega S dx @f$
+ * @f$ \int _\Omega Q(t+\Delta t) - Q(t) dx + \Delta t \cdot \int _\Omega div F_i(Q) dx + \Delta t \cdot \sum _i \int _\Omega B_i \nabla_i Q dx = \Delta t \cdot \int _\Omega S dx
+@f$
  *
  * where we have already evaluated the time integral. Next, we read this as
  * a weak formulation with a test function, where the characteristic function
@@ -110,14 +108,14 @@
  * numerical approximations
  *
  * \f{eqnarray*}{
- \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x) 
+ \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x)
  & = &\sum_{\partial v} h^{d-1} (n, \Big[ \frac{1}{2} \left( F_i(Q^+) + F_i(Q^-) \right)  \\
   && + \frac{1}{2}(Q^+ + Q^-) B_i( \frac{1}{2}(Q^+ + Q^-) )    \\
   &&  - \frac{1}{2} max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \Big])
    \f}
  *
  * where we average @f$ [[Q]] \approx \frac{1}{2}(Q^+ + Q^-) @f$ and assume a linear F. the @f$ Q^+ @f$
- * and @f$ Q^- @f$ represent the unknowns values on the right and on the left of the considered face respectively. Notice the inner 
+ * and @f$ Q^- @f$ represent the unknowns values on the right and on the left of the considered face respectively. Notice the inner
  * product with the face normal vector provides a minus sign for the left faces in the following calculation.
  *
  * The update of a volume hence depends on the source term contribution within the volume,
@@ -130,7 +128,7 @@
  * contribution over the non-conservative term.
  * We notice that we can move the unknown @f$ Q @f$ out of the integral, as it is constant.
  * The remaining volume integral over @f$ div B_i @f$ gives us again a surface contribution of @f$ B_i @f$.
- * multiplied with the normal. These 
+ * multiplied with the normal. These
  * contributions depend on the relative position of the face and volume:
  * \f{eqnarray*}{
 \int _{v} Q div B_i dx =Q \int_v div B_i dx =Q \oint_{\partial v} ([[B_i]],n) dS(x)=
@@ -142,14 +140,14 @@ Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
  * \f{eqnarray*}{
 {\rm flux}^d_{\rm left} &=& \left[-\frac{\Delta t}{h^d} \cdot \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x)
     + \frac{\Delta t}{h^d} \int _{v} Q div B_i dx \right]_{\rm for \ a \ single \ left \ face \ in \ d \ direction}\\
-&=& \frac{\Delta t}{2h}\left[ \left( F_d(Q^+) + F_d(Q^-) \right) 
+&=& \frac{\Delta t}{2h}\left[ \left( F_d(Q^+) + F_d(Q^-) \right)
   -(Q^+ - Q^-) B_d( \frac{1}{2}(Q^+ + Q^-) )
   - max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \right]
    \f}
  * \f{eqnarray*}{
 {\rm flux}^d_{\rm right} &=& \left[-\frac{\Delta t}{h^d} \cdot \oint _{\partial v} ([[F_i(Q)+B_i Q]],n) dS(x)
     + \frac{\Delta t}{h^d} \int _{v} Q div B_i dx \right]_{\rm for \ a \ single \ right \ face \ in \ d \ direction}\\
-&=& \frac{\Delta t}{2h}\left[- \left( F_d(Q^+) + F_d(Q^-) \right) 
+&=& \frac{\Delta t}{2h}\left[- \left( F_d(Q^+) + F_d(Q^-) \right)
   -(Q^+ - Q^-) B_d( \frac{1}{2}(Q^+ + Q^-) )
   + max(\lambda _{max}(Q^-),\lambda _{max}(Q^+)) (Q^+ - Q^-) \right]
    \f}
@@ -378,94 +376,80 @@ namespace exahype2 {
        * optimised.
        */
       static void timeStepWithRusanov_patchwise_heap_functors(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        Flux                    flux,
-        NonconservativeProduct  nonconservativeProduct,
-        Source                  source,
-        MaxEigenvalue           maxEigenvalue,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
+        ::exahype2::CellData&          patchData,
+        int                            numberOfVolumesPerAxisInPatch,
+        int                            haloSize,
+        int                            unknowns,
+        int                            auxiliaryVariables,
+        bool                           evaluateFlux,
+        bool                           evaluateNonconservativeProduct,
+        bool                           evaluateSource,
+        bool                           evaluateMaximumEigenvalueAfterTimeStep,
+        Flux                           flux,
+        NonconservativeProduct         nonconservativeProduct,
+        Source                         source,
+        MaxEigenvalue                  maxEigenvalue,
+        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
       )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+#if defined(UseManualInlining)
+        __attribute__((always_inline))
+#endif
+        ;
 
 
       /**
        * @see timeStepWithRusanov_patchwise_heap_functors()
        */
       static void timeStepWithRusanov_batched_heap_functors(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        Flux                    flux,
-        NonconservativeProduct  nonconservativeProduct,
-        Source                  source,
-        MaxEigenvalue           maxEigenvalue,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
+        ::exahype2::CellData&          patchData,
+        int                            numberOfVolumesPerAxisInPatch,
+        int                            haloSize,
+        int                            unknowns,
+        int                            auxiliaryVariables,
+        bool                           evaluateFlux,
+        bool                           evaluateNonconservativeProduct,
+        bool                           evaluateSource,
+        bool                           evaluateMaximumEigenvalueAfterTimeStep,
+        Flux                           flux,
+        NonconservativeProduct         nonconservativeProduct,
+        Source                         source,
+        MaxEigenvalue                  maxEigenvalue,
+        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
       )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+#if defined(UseManualInlining)
+        __attribute__((always_inline))
+#endif
+        ;
 
 
-      template <
-        typename Solver,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        typename TempDataEnumerator
-      >
+      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables, typename TempDataEnumerator>
       static void timeStepWithRusanov_patchwise_call_stack_static_calls(
-        ::exahype2::CellData&   patchData,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
+        ::exahype2::CellData&          patchData,
+        bool                           evaluateFlux,
+        bool                           evaluateNonconservativeProduct,
+        bool                           evaluateSource,
+        bool                           evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
       )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+#if defined(UseManualInlining)
+        __attribute__((always_inline))
+#endif
+        ;
 
 
-      template <
-        typename Solver,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        typename TempDataEnumerator
-      >
+      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables, typename TempDataEnumerator>
       static void timeStepWithRusanov_patchwise_heap_static_calls(
-        ::exahype2::CellData&   patchData,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
+        ::exahype2::CellData&          patchData,
+        bool                           evaluateFlux,
+        bool                           evaluateNonconservativeProduct,
+        bool                           evaluateSource,
+        bool                           evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
       )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+#if defined(UseManualInlining)
+        __attribute__((always_inline))
+#endif
+        ;
 
 
       /**
@@ -482,68 +466,49 @@ namespace exahype2 {
        * I originally thought I could collapse over the all the loops, as there
        * are no race conditions, but this seems not to work. I have no clue why.
        */
-      template <
-        typename Solver,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables
-      >
+      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables>
       static void timeStepWithRusanov_patchwise_in_situ_static_calls(
-        ::exahype2::CellData&              patchData,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
+        ::exahype2::CellData&          patchData,
+        bool                           evaluateFlux,
+        bool                           evaluateNonconservativeProduct,
+        bool                           evaluateSource,
+        bool                           evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
       )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+#if defined(UseManualInlining)
+        __attribute__((always_inline))
+#endif
+        ;
 
 
-      template <
-        typename Solver,
-        int      numberOfVolumesPerAxisInPatch,
-        int      haloSize,
-        int      unknowns,
-        int      auxiliaryVariables
-      >
+      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables>
       static void timeStepWithRusanov_batched_in_situ_static_calls(
-        ::exahype2::CellData&              patchData,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
+        ::exahype2::CellData&          patchData,
+        bool                           evaluateFlux,
+        bool                           evaluateNonconservativeProduct,
+        bool                           evaluateSource,
+        bool                           evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
       )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+#if defined(UseManualInlining)
+        __attribute__((always_inline))
+#endif
+        ;
 
 
-      template <
-        typename Solver,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        typename TempDataEnumerator
-      >
+      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables, typename TempDataEnumerator>
       static void timeStepWithRusanov_patchwise_split_terms_call_stack_static_calls(
-        ::exahype2::CellData&              patchData,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
+        ::exahype2::CellData&          patchData,
+        bool                           evaluateFlux,
+        bool                           evaluateNonconservativeProduct,
+        bool                           evaluateSource,
+        bool                           evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
       )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+#if defined(UseManualInlining)
+        __attribute__((always_inline))
+#endif
+        ;
 
 
       /**
@@ -552,48 +517,40 @@ namespace exahype2 {
        * I tried to collapse the inner loop over x and the iteration over the patches.
        * This did not work. It led to a seg fault on Hamilton's AMD EPYC processors.
        */
-      template <
-        typename Solver,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        typename TempDataEnumerator
-      >
+      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables, typename TempDataEnumerator>
       static void timeStepWithRusanov_batched_call_stack_static_calls(
-        ::exahype2::CellData&              patchData,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
+        ::exahype2::CellData&          patchData,
+        bool                           evaluateFlux,
+        bool                           evaluateNonconservativeProduct,
+        bool                           evaluateSource,
+        bool                           evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
       )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+#if defined(UseManualInlining)
+        __attribute__((always_inline))
+#endif
+        ;
 
 
       template <
         typename Solver,
-        int                     numberOfVolumesPerAxisInPatch,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables,
-        typename TempDataEnumerator = exahype2::enumerators::AoSoALexicographicEnumerator
-      >
+        int numberOfVolumesPerAxisInPatch,
+        int haloSize,
+        int unknowns,
+        int auxiliaryVariables,
+        typename TempDataEnumerator = exahype2::enumerators::AoSoALexicographicEnumerator>
       static void timeStepWithRusanov_batched_heap_static_calls(
-        ::exahype2::CellData&   patchData,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
+        ::exahype2::CellData&          patchData,
+        bool                           evaluateFlux,
+        bool                           evaluateNonconservativeProduct,
+        bool                           evaluateSource,
+        bool                           evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
       )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
+#if defined(UseManualInlining)
+        __attribute__((always_inline))
+#endif
+        ;
 
 
       /**
@@ -602,66 +559,49 @@ namespace exahype2 {
        * in Python without knowing which kernel variants are on offer for
        * a particular GPU backend.
        */
-      template <
-        typename Solver,
-        int      numberOfVolumesPerAxisInPatch,
-        int      haloSize,
-        int      unknowns,
-        int      auxiliaryVariables,
-        typename TempDataEnumerator
-      >
+      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables, typename TempDataEnumerator>
       static void timeStepWithRusanov_generic_static_calls(
-        ::exahype2::CellData&   patchData,
-        bool                    evaluateFlux,
-        bool                    evaluateNonconservativeProduct,
-        bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism   loopParallelism = peano4::utils::LoopParallelism::None
+        ::exahype2::CellData&          patchData,
+        bool                           evaluateFlux,
+        bool                           evaluateNonconservativeProduct,
+        bool                           evaluateSource,
+        bool                           evaluateMaximumEigenvalueAfterTimeStep,
+        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
       ) {
-        timeStepWithRusanov_patchwise_heap_static_calls<
-          Solver,
-          numberOfVolumesPerAxisInPatch,
-          haloSize,
-          unknowns,
-          auxiliaryVariables,
-          TempDataEnumerator
-        >(
-          patchData,
-          evaluateFlux,
-          evaluateNonconservativeProduct,
-          evaluateSource,
-          evaluateMaximumEigenvalueAfterTimeStep,
-          loopParallelism
+        timeStepWithRusanov_patchwise_heap_static_calls<Solver, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables, TempDataEnumerator>(
+          patchData, evaluateFlux, evaluateNonconservativeProduct, evaluateSource, evaluateMaximumEigenvalueAfterTimeStep, loopParallelism
         );
       }
 
       namespace internal {
-        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables);
-        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesUnknowns(int numberOfVolumesPerAxisInPatch, int unknowns);
+        tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables);
+        tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesUnknowns(int numberOfVolumesPerAxisInPatch, int unknowns);
 
-        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesPatches(int numberOfVolumesPerAxisInPatch, int patches);
-        tarch::la::Vector<Dimensions+2,int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables, int patches);
-        tarch::la::Vector<Dimensions+2,int> rangeOverVolumesTimesUnknownsTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int patches);
+        tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatches(int numberOfVolumesPerAxisInPatch, int patches);
+        tarch::la::Vector<Dimensions + 2, int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(
+          int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables, int patches
+        );
+        tarch::la::Vector<Dimensions + 2, int> rangeOverVolumesTimesUnknownsTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int patches);
 
-        tarch::la::Vector<Dimensions,int> rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch);
-        tarch::la::Vector<Dimensions,int> rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch);
-        tarch::la::Vector<3,int>          rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch);
+        tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch);
+        tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch);
+        tarch::la::Vector<3, int>          rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch);
 
-        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesPatchesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int patches);
-        tarch::la::Vector<Dimensions+1,int> rangeOverVolumesTimesPatchesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int patches);
-        tarch::la::Vector<3+1,int>          rangeOverVolumesTimesPatchesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int patches);
-      }
-    }
-  }
-}
+        tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int patches);
+        tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int patches);
+        tarch::la::Vector<3 + 1, int>          rangeOverVolumesTimesPatchesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int patches);
+      } // namespace internal
+    }   // namespace rusanov
+  }     // namespace fv
+} // namespace exahype2
 
+#include "Rusanov_batched_functors.cpph"
+#include "Rusanov_batched_in_situ_static_calls.cpph"
+#include "Rusanov_batched_static_calls.cpph"
 #include "Rusanov_patchwise_functors.cpph"
-#include "Rusanov_patchwise_static_calls.cpph"
 #include "Rusanov_patchwise_in_situ_static_calls.cpph"
 #include "Rusanov_patchwise_split_terms_static_calls.cpph"
-#include "Rusanov_batched_functors.cpph"
-#include "Rusanov_batched_static_calls.cpph"
-#include "Rusanov_batched_in_situ_static_calls.cpph"
+#include "Rusanov_patchwise_static_calls.cpph"
 
 #if defined(GPUOffloadingOMP) /*or defined(SharedOMP)*/
 #include "exahype2/fv/rusanov/omp/Rusanov.h"

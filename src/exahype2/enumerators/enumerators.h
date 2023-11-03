@@ -2,13 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "AoSLexicographicEnumerator.h"
 #include "AoSoALexicographicEnumerator.h"
 #include "FaceAoSLexicographicEnumerator.h"
 #include "SingleDoFEnumerator.h"
 #include "SoALexicographicEnumerator.h"
-
 
 namespace exahype2::enumerators {
   /**

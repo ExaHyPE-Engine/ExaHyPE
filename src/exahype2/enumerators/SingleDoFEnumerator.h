@@ -7,7 +7,9 @@
 
 #include "peano4/utils/Globals.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/la/Vector.h"
+#include "tarch/multicore/multicore.h"
 
 namespace exahype2::enumerators {
   /**
@@ -18,8 +20,7 @@ namespace exahype2::enumerators {
    *
    */
   struct SingleDoFEnumerator {
-  public:
-    constexpr inline SingleDoFEnumerator(int unknowns, int numberOfAuxiliaryVariables):
+    constexpr KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod SingleDoFEnumerator(int unknowns, int numberOfAuxiliaryVariables):
       _unknowns(unknowns),
       _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables) {}
 
@@ -30,13 +31,15 @@ namespace exahype2::enumerators {
      * indices if you want.
      *
      */
-    inline int operator()(int, const tarch::la::Vector<Dimensions, int>&, int unknown) const InlineMethod { return unknown; }
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int operator()(int, const tarch::la::Vector<Dimensions, int>&, int unknown) const InlineMethod {
+      return unknown;
+    }
 
 #if defined(GPUOffloadingOff)
     std::string toString() const;
 #endif
 
-    inline int size() const { return (_unknowns + _numberOfAuxiliaryVariables); }
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int size() const { return (_unknowns + _numberOfAuxiliaryVariables); }
 
     const int _unknowns;
     const int _numberOfAuxiliaryVariables;

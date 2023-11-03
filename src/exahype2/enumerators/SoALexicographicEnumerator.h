@@ -3,12 +3,13 @@
 #pragma once
 
 #include <functional>
-#include <iostream>
 #include <string>
 
 #include "peano4/utils/Globals.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/la/Vector.h"
+#include "tarch/multicore/multicore.h"
 
 namespace exahype2::enumerators {
   /**
@@ -36,7 +37,8 @@ namespace exahype2::enumerators {
    * @see enumerators.h for a generic description of attribute semantics.
    */
   struct SoALexicographicEnumerator {
-    constexpr inline SoALexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+    constexpr KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod
+      SoALexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
       _numberOfCells(numberOfCells),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),
@@ -49,7 +51,8 @@ namespace exahype2::enumerators {
      * The index always refers to the interior of the cells. So you can use negative
      * indices if you want.
      */
-    inline int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const InlineMethod {
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const
+      InlineMethod {
       if constexpr (Dimensions == 2) {
         return unknown * _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
                + (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
@@ -70,7 +73,7 @@ namespace exahype2::enumerators {
     /**
      * Returns the total size.
      */
-    inline int size() const InlineMethod {
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int size() const InlineMethod {
       if constexpr (Dimensions == 2) {
         return _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables);
       } else {
