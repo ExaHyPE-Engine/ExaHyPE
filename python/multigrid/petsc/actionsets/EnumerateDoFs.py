@@ -99,14 +99,14 @@ class EnumerateDoFs(ActionSet):
     case facedata::{{SOLVER_NAME}}PETScData::Type::Interior:
       {
         if (isOnBoundary(marker.x())) {
-          logWarning( "touchVertexFirstTime(...)", "face at " << marker.toString() << " labelled as interior even though it is located at global domain boundary" );
+          logWarning( "touchFaceFirstTime(...)", "face at " << marker.toString() << " labelled as interior even though it is located at global domain boundary" );
         }
         if ( marker.willBeRefined() ) { 
           fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Coarse );
         }
         else {
           fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Interior );
-          fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localVertexMap.reserveIndex( {{FACE_CARDINALITY}} ) );
+          fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
         }
       }
       break;
@@ -159,6 +159,13 @@ class EnumerateDoFs(ActionSet):
 
   
   TemplateEndTraversal = """
+  logInfo( 
+    "endTraversal()", 
+    "vertex dofs=" << _localVertexMap.getTotalNumberOfIndices() <<
+    ", face dofs=" << _localFaceMap.getTotalNumberOfIndices() <<
+    ", cell dofs=" << _localCellMap.getTotalNumberOfIndices()
+  );
+    
   repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localVertexMap );
   repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localFaceMap );
   repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localCellMap );

@@ -18,6 +18,9 @@ degrees of freedom and the global mapping for indices on faces and cells
   """
   
   TemplateInitFace="""
+    @todo This is a left-over. Not yet maintained
+    
+    
   // lambda to determine the pair of vertices that determine 
   // whether face i is on the boundary or not
   // eg if vertices 0 and 1 are both dirichlet, then face 1 must

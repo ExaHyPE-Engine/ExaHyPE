@@ -38,15 +38,6 @@
  find per mesh entity.
  
  
- You don't have to initialise Coarse entities. This is done by default within
- Peano. All fine grid entities however have to be initialised. 
- 
- 
- 
- This initialisation also has to be done for non-primary degrees of freedom. Indeed,    
-
- 
- 
  # Mesh deformation
  
  @todo Yet to be written/sketched
