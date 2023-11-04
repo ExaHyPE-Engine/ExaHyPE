@@ -295,6 +295,16 @@ take into account
 
 # Adding additional mesh sweeps
 
+Some applications of ExaHyPE have to add additional mesh sweeps. This can be
+due to added functionality or as they want to couple the ExaHyPE solver with
+another code. The latter approach is the most flexible use case. We therefore
+discuss this one here, as it covers the "simpler" ambition to add only an 
+additional mesh sweep to an existing ExaHyPE solver. Therefore, our dicussions
+follows the @ref page_peano_mergin_applications "Peano's generic coupling description".
+Please read through this discussion before continuing with this section (the
+description actually refers back to this page at one point).
+
+
 Adding an additional mesh sweep comprises of two major steps: First, you have
 to declare the sweep to ExaHyPE, and then you have to ensure that your main 
 function invokes this sweep. The default main function by ExaHyPE is not 

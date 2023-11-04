@@ -23,5 +23,6 @@ import peano4.output
 import peano4.toolbox
 
 from .Project import Project
+from .Project import merge
 
 print("Peano 4 (C) www.peano-framework.org")

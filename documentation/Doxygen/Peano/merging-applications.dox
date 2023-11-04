@@ -1,6 +1,6 @@
 /**
 
-  @page page_peano_mergin_applications Merging various applications
+  @page page_peano_mergin_applications Merging/coupling various applications
 
 <!-- Add this one for href links to subitems -->
 \tableofcontents
@@ -8,8 +8,46 @@
   Peano's Python API is a mere wrapper around the Peano C++ core, i.e. it 
   provides a high-level abstraction of Peano's @ref peano_action_sets "action sets",
   the data held by a Peano application, its Makefile, and so forth. Popular 
-  Peano extensions then 
+  Peano extensions then create a layer on top of this API which eventually
+  yields a Peano project. Obviously, once you have lowered the abstraction
+  level into a Peano project, you can still alter this whole application 
+  model. Indeed, you can now add technical details that have previously 
+  been hidden, or you can combine different projects.
   
+  We distinguish various different terms in the context of coupling:
+  
+  - Multiplicative coupling means that two different solvers or applications
+    take turns. If you have a solver A and a solver B, and if you write down
+    their action as a function, you would write down the overall action of 
+    these solvers as @f$ ... \circ  A \circ B \circ A \circ B @f$. This is 
+    where the name multiplicative comes from.
+  - Additive coupling means that two solvers run in parallel for a while and
+    eventually exchange data after that. The name additive results from the 
+    fact that you might want to write down such a solver as 
+    @f$ \circ (A + B) \circ (A+B)@f$.
+  - Separate coupling sweeps are runs through the mesh which do not invoke any
+    solver functionality but instead synchronise data and exchange all data.
+   
+   
+  # Lowering two codes into a Peano project
+  
+  Skip this part if you work with only one extension and want to add additional
+  helper grid sweeps, e.g. If you have two extensions - such as ExaHyPE and
+  Swift - which both create Peano projects, you end up with a high-level code
+  which resembles
+  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  first_peano_project  = my_first_extension_project.generate_Peano4_project()
+  second_peano_project = my_second_extension_project.generate_Peano4_project()
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  These two projects now have to be merged into one:
+  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  peano_project = peano4.merge( first_peano_project, second_peano_project)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+  @todo Dmity, can you please write this function? The blueprint is there already
   
 
 
