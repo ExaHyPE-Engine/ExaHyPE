@@ -12,6 +12,7 @@ from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
 from multigrid.petsc.actionsets.InitCellDoFs              import InitCellDoFs
 from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
 from multigrid.petsc.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
+from multigrid.petsc.actionsets.ImposeDirichletBoundaryConditions   import ImposeDirichletBoundaryConditions 
 
 from abc import abstractmethod
 
@@ -115,9 +116,12 @@ class AssemblePetscMatrix(ActionSet):
   TemplateTouchFaceFirstTime="""
   auto RiemannSolverMatrix = repositories::{{SOLVER_INSTANCE}}.getRiemannSolver(marker.x(),marker.h());
   int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
-  if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() != facedata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+  if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
     std::pair<int,int> localFirstDoFIndex = std::make_pair(_spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex);
+
+    assertion( globalFirstDoFIndex>=0 );
+
     for (int row=0; row<dofsPerFace; row++)
     for (int col=0; col<2*dofsPerFace; col++) {
       repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
@@ -684,6 +688,7 @@ the matrix is applied to
   
   def add_to_assemble(self, observer):
     observer.add_action_set( AssemblePetscMatrix(self) )
+    observer.add_action_set( ImposeDirichletBoundaryConditions(self) )
     pass
 
   def add_to_init_petsc(self, observer):
