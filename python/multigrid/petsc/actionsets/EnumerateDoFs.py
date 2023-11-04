@@ -11,6 +11,10 @@ class EnumerateDoFs(ActionSet):
 
   Enumerate the vertices, cells and face entries
   
+  Boundary data are never given an index, as we assume that their solution is 
+  built into the equation system. This is completely different to the behaviour
+  of the matrix-free solvers.
+  
   """
   
   
