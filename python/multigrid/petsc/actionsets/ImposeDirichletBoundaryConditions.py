@@ -19,8 +19,27 @@ class ImposeDirichletBoundaryConditions(ActionSet):
   the missing coupling.
   
   For every cell that we visit (and that is not outside the computational 
-  domain), 
+  domain), we check its 2d faces, i.e. the left and right face along each
+  axis. If this face is an interior, nothing is to be done. We only have to do
+  something for boundary faces. In this action set, we assume that each face 
+  is a Dirichlet face. 
   
+  If a face is a Dirichlet face, we loop over the nodes on the face. For 
+  this, we emply Peano's exclusive d-dimensional for (dfore), which is a 
+  d-dimensional for loop skipping one dimension. Per dof, we compute the 
+  dof's coordinate x and ask the user's solver what the value there should be.
+  This gives us the right-hand side for the equation system row that 
+  imposes the condition.
+  
+  Next, we use compute the projection of the solution to the boundary. This
+  might be a different projection than used for the faces, even though the
+  code is basically the same. For some solvers, we project solely the 
+  derivatives along the normal onto the face, for others, we 
+  
+  
+  @todo We need the projection matrix for the solution!
+  @todo We have to add the corresponding matrix entries below, as well as
+    the right-hand side
 
   """
   TemplateTouchCellFirstTime = """
