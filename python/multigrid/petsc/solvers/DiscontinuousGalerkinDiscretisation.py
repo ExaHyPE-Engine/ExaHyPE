@@ -707,6 +707,7 @@ the matrix is applied to
         "CELL_CELL_RHS_MATRIX_SCALING": self.cell_cell_rhs_matrix_scaling,
         "CELL_TO_FACE_MATRIX_SCALING":           self.cell_to_face_matrix_scaling,
         "FACE_TO_CELL_MATRIX_SCALING":           self.face_to_cell_matrix_scaling,
+        "SOLVER_NAME":                           self.typename(),
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

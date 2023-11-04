@@ -29,11 +29,16 @@
    vertices can be on boundaries. Cells can not.
  - Outside. Mesh entity that's there to make the data structure mesh a cube 
    again. But it is outside of the computational domain.
+ - Undefined. This flag indicates that there are no dofs associated with this
+   mesh entity.
 
- Peano's 
- multigrid extension will ensure that each mesh entity (cell, face, vertex)
+ Peano's multigrid extension will ensure that each mesh entity (cell, face, vertex)
  hosts a meta data object (for PETSc, you will recognise it by the extension
- PETScData). You don't have to initialise Coarse entities. This is done by default within
+ PETScData). From hereon, it will query the solver which type of entity you 
+ find per mesh entity.
+ 
+ 
+ You don't have to initialise Coarse entities. This is done by default within
  Peano. All fine grid entities however have to be initialised. 
  
  
