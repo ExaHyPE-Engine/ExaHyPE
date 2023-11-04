@@ -72,6 +72,13 @@ either Peano's routines, routines from the toolbox, or functions from the
 solver objects. These action sets define what happens if the code reads a
 vertex for the first time of a mesh traversal, e.g.
 
+
+## Links to high level concepts
+
+- For the types of mesh entities, please consult @ref documentation_multigrid_boundary_conditions.
+
+
+
   """
   
   
@@ -97,9 +104,9 @@ vertex for the first time of a mesh traversal, e.g.
     self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Integer( "unknownBaseNumber" ) )
     self._cell_petsc_data.data.add_attribute(   dastgen2.attributes.Integer( "unknownBaseNumber" ) )
 
-    self._vertex_petsc_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse"] ) )
-    self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse"] ) )
-    self._cell_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Interior", "Coarse"] ) )
+    self._vertex_petsc_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside"] ) )
+    self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside"] ) )
+    self._cell_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Interior", "Coarse", "Outside"] ) )
     pass
     
     

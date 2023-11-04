@@ -478,7 +478,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
   plain Discontiuous Galerking solver:
   
   - benchmarks/multigrid/petsc/poisson/dg.py Hosts a simple solver for the 
-    Poisson equation. All the rationale are discussed in @ref benchmarks_multigrid_petsc_poisson.
+    Poisson equation. All the rationale are discussed in @ref benchmarks_documentation_multigrid_petsc_poisson.
     
 
 

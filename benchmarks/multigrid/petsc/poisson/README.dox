@@ -1,6 +1,6 @@
 /**
 
- @page benchmarks_multigrid_petsc_poisson Poisson equation
+ @page benchmarks_documentation_multigrid_petsc_poisson Poisson equation
 
  We solve the Poisson equation 
  
@@ -27,7 +27,7 @@
 
  # Solver description
  
- The Discontinuous Galerkin solver is described as part of the @ref tutorials_multigrid_petsc_discontinuous_galerkin_poisson "DG tutorial with PETSc".
+ The Discontinuous Galerkin solver is described as part of the @ref tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson "DG tutorial with PETSc".
  
  
  

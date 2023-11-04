@@ -11,9 +11,16 @@ class EnumerateDoFs(ActionSet):
 
   Enumerate the vertices, cells and face entries
   
-  Boundary data are never given an index, as we assume that their solution is 
-  built into the equation system. This is completely different to the behaviour
-  of the matrix-free solvers.
+  This is the first step in a typical PETSc algorithm, as discussed on @ref documentation_multigrid_petsc.
+  It has to ensure that each mesh entity hosts the appropriate number of 
+  degrees of freedom. It hence strongly depends on the solver chosen, as 
+  different solvers place different amounts of data and auxiliary quantities on
+  the mesh entities. The information on data cardinality is queried from the 
+  solver objects. The added logic contributed by this action set is if a mesh
+  entity really holds unknowns or not. That is, this action set injects the 
+  domain layout and boundary data knowledge into the mesh. This guiding 
+  principles of this injection are discussed on 
+  @ref documentation_multigrid_boundary_conditions "Peano's generic boundary condition pages".
   
   """
   

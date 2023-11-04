@@ -1,0 +1,49 @@
+/**
+
+ @page documentation_multigrid_boundary_conditions Boundary Conditions
+
+ Peano works with cubic domains by default. They can be generalised to 
+ hexahedrons, but you have to check carefully if the solvers are prepared to
+ handle non-cube finite elements. Complicated domains can be used by embedding
+ the domain into a cube and then refining accordingly. There's also the 
+ opportunity to use mesh deformation techniques, obviously. In all cases, 
+ you will need to set proper boundary conditions.
+ 
+ 
+ # Initialising the domain
+ 
+ If you work with a cubic computational domain or decide to cut out a non-cubic
+ domain - in both cases, you will need to ensure that the boundary degrees of 
+ freedom are properly initialised (or eliminated). First of all, the code has
+ to be informed what type of unknowns you want to use. Each cell, face, vertex
+ in the code has a type which is either
+ 
+ - Coarse. This degree of freedom is member of a coarser geometric mesh than 
+   the actual compute mesh. It might be used by a geometric, matrix-free 
+   multigrid solver, but there is no need to initialise values tied to such a 
+   manifold.
+ - Interior. All the degrees of freedom tied to this mesh entity hold proper
+   values that feed into the equation system to be solved.
+ - Boundary. The degrees of freedom tied to this mesh entity are somehow 
+   prescribed by the PDE and hence are no dofs in the classic sense. Faces and
+   vertices can be on boundaries. Cells can not.
+ - Outside. Mesh entity that's there to make the data structure mesh a cube 
+   again. But it is outside of the computational domain.
+
+ Peano's 
+ multigrid extension will ensure that each mesh entity (cell, face, vertex)
+ hosts a meta data object (for PETSc, you will recognise it by the extension
+ PETScData). You don't have to initialise Coarse entities. This is done by default within
+ Peano. All fine grid entities however have to be initialised. 
+ 
+ 
+ 
+ This initialisation also has to be done for non-primary degrees of freedom. Indeed,    
+
+ 
+ 
+ # Mesh deformation
+ 
+ @todo Yet to be written/sketched
+    
+*/
