@@ -44,6 +44,14 @@ class EnumerateDoFs(ActionSet):
     case vertexdata::{{SOLVER_NAME}}PETScData::Type::Boundary:
       {
         fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Boundary );
+        {% if BOUNDARY_VERTICES_HOLD_DATA %}
+        if ( marker.willBeRefined() ) { 
+          fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+        }
+        else {
+          fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localVertexMap.reserveIndex( {{VERTEX_CARDINALITY}} ) );
+        }
+        {% endif %}
       }
       break;
     case vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior:
@@ -94,6 +102,14 @@ class EnumerateDoFs(ActionSet):
     case facedata::{{SOLVER_NAME}}PETScData::Type::Boundary:
       {
         fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Boundary );
+        {% if BOUNDARY_FACES_HOLD_DATA %}
+        if ( marker.willBeRefined() ) { 
+          fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+        }
+        else {
+          fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
+        }
+        {% endif %}
       }
       break;
     case facedata::{{SOLVER_NAME}}PETScData::Type::Interior:
@@ -173,7 +189,10 @@ class EnumerateDoFs(ActionSet):
 
 
   def __init__(self,
-               solver):
+               solver,
+               boundary_vertices_hold_data,
+               boundary_faces_hold_data,
+               ):
     """!A
     
 Enumerate vertex-associated degrees of freedom
@@ -193,6 +212,8 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     self.d["VERTEX_CARDINALITY"] = solver.number_of_matrix_entries_per_vertex
     self.d["FACE_CARDINALITY"]   = solver.number_of_matrix_entries_per_face
     self.d["CELL_CARDINALITY"]   = solver.number_of_matrix_entries_per_cell
+    self.d["BOUNDARY_VERTICES_HOLD_DATA"] = boundary_vertices_hold_data
+    self.d["BOUNDARY_FACES_HOLD_DATA"]    = boundary_faces_hold_data
 
 
   def get_body_of_operation(self,operation_name):

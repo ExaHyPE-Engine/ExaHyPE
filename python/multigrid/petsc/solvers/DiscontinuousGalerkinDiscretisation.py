@@ -12,7 +12,7 @@ from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
 from multigrid.petsc.actionsets.InitCellDoFs              import InitCellDoFs
 from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
 from multigrid.petsc.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
-from multigrid.petsc.actionsets.ImposeDirichletBoundaryConditions   import ImposeDirichletBoundaryConditions 
+from multigrid.petsc.actionsets.ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod   import ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod 
 
 from abc import abstractmethod
 
@@ -66,7 +66,11 @@ class AssemblePetscMatrix(ActionSet):
       // =================================
       // Project to left face along axis d
       // =================================
-      if ( fineGridFaces{{SOLVER_NAME}}PETScData(d).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
+      if ( 
+        fineGridFaces{{SOLVER_NAME}}PETScData(d).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Interior 
+        or
+        fineGridFaces{{SOLVER_NAME}}PETScData(d).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Boundary
+      ) {
         std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
         int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
       
@@ -88,7 +92,11 @@ class AssemblePetscMatrix(ActionSet):
         }
       }
       
-      if ( fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
+      if ( 
+        fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Interior 
+        or
+        fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Boundary
+      ) {
         std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
         int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
       
@@ -682,13 +690,18 @@ the matrix is applied to
     to the observer.
     
     """
-    observer.add_action_set( EnumerateDoFs(self) )
+    observer.add_action_set( EnumerateDoFs(self,
+                                           boundary_vertices_hold_data = False,
+                                           boundary_faces_hold_data = True,
+                                           ))
+    
+    
     observer.add_action_set( InitCellDoFs(self) ) 
     pass
   
   def add_to_assemble(self, observer):
     observer.add_action_set( AssemblePetscMatrix(self) )
-    observer.add_action_set( ImposeDirichletBoundaryConditions(self) )
+    observer.add_action_set( ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(self) )
     pass
 
   def add_to_init_petsc(self, observer):

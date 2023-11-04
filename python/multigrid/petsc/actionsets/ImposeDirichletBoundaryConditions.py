@@ -10,6 +10,9 @@ import jinja2
 class ImposeDirichletBoundaryConditions(ActionSet):
   """!
 
+  @todo This version is not yet implemented, and maybe we don't need it ever!
+  
+  
   Add those contributions to matrix which impose the boundary conditions
   
   Dirichlet (and really all boundary) faces do not hold any artificial or real
