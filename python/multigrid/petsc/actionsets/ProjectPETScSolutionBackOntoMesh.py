@@ -20,9 +20,9 @@ corresponding entry in the solution vector reads like.
   """
   
   
-  TemplateInitCell = """
-  if ( not marker.willBeRefined() ) { 
-    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
+  TemplateTouchCellFirstTime = """
+  if ( fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
+    logTraceIn( "touchCellFirstTime(...)" );
     
     // Commenting out so that we don't get compilation errors, as we are halfway through making changes
     /*
@@ -39,7 +39,7 @@ corresponding entry in the solution vector reads like.
     
     */
 
-    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
+    logTraceOut( "touchCellFirstTime(...)" );
   }
 """
   
@@ -77,7 +77,7 @@ in init().
     """
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
+      result = jinja2.Template(self.TemplateTouchCellFirstTime).render(**self.d)
       pass 
     return result
 

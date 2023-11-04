@@ -30,6 +30,9 @@ class AssemblePetscMatrix(ActionSet):
     std::pair<int,int> localCellIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalCellIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localCellIndex);
 
+    // ================================
+    // Left-hand side A_cc contribution
+    // ================================
     auto lhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
     for (int row=0; row<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; row++) 
     for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
@@ -40,6 +43,9 @@ class AssemblePetscMatrix(ActionSet):
       );
     }
     
+    // ================================
+    // Right-hand side vector contribution (multiply rhs (mass) matrix with rhs initial values
+    // ================================
     auto rhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
     for (int row=0; row<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; row++) {
       double rhs = 0.0;
@@ -54,36 +60,54 @@ class AssemblePetscMatrix(ActionSet):
     auto projectionCellToFaceMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfCellDataOntoFace(marker.x(),marker.h());
     auto projectionFaceToCellMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfRiemannSolutionOntoCell(marker.x(),marker.h());
     int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
+    
     for (int d=0; d<Dimensions; d++) {
-      std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
-      std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
-      int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
-      int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
+      // =================================
+      // Project to left face along axis d
+      // =================================
+      if ( fineGridFaces{{SOLVER_NAME}}PETScData(d).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
+        std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
+        int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
       
-      for (int row=0; row<dofsPerFace; row++ ) {
-        for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
-            globalCellIndex+col,
-            projectionCellToFaceMatrix(d * dofsPerFace + row,col)
-          );
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalFirstDoFIndexOfRightFace + row, 
-            globalCellIndex+col,
-            projectionCellToFaceMatrix(d * dofsPerFace + row + Dimensions*dofsPerFace,col)
-          );
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalCellIndex+col,
-            globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
-            projectionFaceToCellMatrix(col, d * dofsPerFace + row)
-          );
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalCellIndex+col,
-            globalFirstDoFIndexOfRightFace + row + 2 * dofsPerFace, 
-            projectionFaceToCellMatrix(col, d * dofsPerFace + row + Dimensions*dofsPerFace)
-          );
+        assertion1(globalFirstDoFIndexOfLeftFace>=0,  marker.toString());
+      
+        for (int row=0; row<dofsPerFace; row++ ) {
+          for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
+              globalCellIndex+col,
+              projectionCellToFaceMatrix(d * dofsPerFace + row,col)
+            );
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalCellIndex+col,
+              globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
+              projectionFaceToCellMatrix(col, d * dofsPerFace + row)
+            );
+          }
         }
       }
+      
+      if ( fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
+        std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
+        int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
+      
+        assertion1(globalFirstDoFIndexOfRightFace>=0, marker.toString());
+        
+        for (int row=0; row<dofsPerFace; row++ ) {
+          for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalFirstDoFIndexOfRightFace + row, 
+              globalCellIndex+col,
+              projectionCellToFaceMatrix(d * dofsPerFace + row + Dimensions*dofsPerFace,col)
+            );
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalCellIndex+col,
+              globalFirstDoFIndexOfRightFace + row + 2 * dofsPerFace, 
+              projectionFaceToCellMatrix(col, d * dofsPerFace + row + Dimensions*dofsPerFace)
+            );
+          }
+        }
+      } // end of if interior face
     }
   }
   """

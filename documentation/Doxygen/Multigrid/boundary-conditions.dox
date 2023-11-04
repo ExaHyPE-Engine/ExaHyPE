@@ -36,8 +36,30 @@
  hosts a meta data object (for PETSc, you will recognise it by the extension
  PETScData). From hereon, it will query the solver which type of entity you 
  find per mesh entity.
+
+ The DoF enumeration (if required) as well as the initialisation will take the 
+ DoF type, and it will assign each interior mesh entity a number (if we use a 
+ global matrix), and initialise all the proper degrees of freedoms of mesh
+ intenties marked as interior with the user's intiial guess and the right-hand
+ side.
  
  
+ # Boundary conditions for DG
+ 
+ In our DG implementations, we flag faces as boundary or interior (or outside, 
+ but we don't have to discuss anything for outside). At the same time, only 
+ the cells hold "proper" degrees of freedom, i.e. span the solution. Therefore,
+ the faces do not know about their boundary type or values, and all the 
+ boundary handling is exclusively realised within the cells.
+ 
+ - Boundary faces do not hold any degrees of freedom, i.e. they have no indices.
+ - No data is to be projected onto boundary faces, and no data is to be 
+   projected from boundary faces.
+ - The user code has to amend the degrees of freedom within the cell such that
+   they realise the boundary conditions. That is, we project the boundary rules
+   into the volumes adjacent to the boundary.
+ 
+  
  # Mesh deformation
  
  @todo Yet to be written/sketched
