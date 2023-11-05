@@ -26,7 +26,7 @@ toolbox::loadbalancing::strategies::NoLoadBalancing::NoLoadBalancing(
 
 void toolbox::loadbalancing::strategies::NoLoadBalancing::finishStep() {
   _statistics.updateGlobalView();
-  _costMetrics->updateGlobalView();
+  if (_costMetrics!=nullptr) _costMetrics->updateGlobalView();
   _blacklist.update();
 }
 
