@@ -332,7 +332,16 @@ def map_onto_separate_mesh_traversals(
             alter_particle_position.append(True)
 
     if step_type == StepType.INITIALISATION:
-        alter_particle_position[0] = True
+        # When we insert particles initially, they will be scattered. So it is 
+        # important that we immediately gather them. We cannot flag step -1 as
+        # one that changes teh particle position, but we can present to the 
+        # graph compiler that the last step will change the ordering. The graph
+        # compiler does not distinguish initialisation from time stepping and
+        # hence thinks that the sweep prior to the first sweep has changed the 
+        # particle order. Which is exactly what we want. We also flag the first
+        # sweep as change, as the initial insertion indeed might be buggy.
+        alter_particle_position[0]  = True
+        alter_particle_position[-1] = True
 
     if does_one_species_require_gather(sequence_of_steps):
         add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers(

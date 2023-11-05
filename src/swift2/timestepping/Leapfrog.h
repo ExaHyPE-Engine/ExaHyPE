@@ -26,16 +26,35 @@ namespace swift2 {
      */
 
     /**
-     * Drift step. In this, we move the particles by a full time-step using:
+     * Drift step.
      *
-     *    {\bf x}^{n+1} = {\bf x}^{n} + {\bf v}^{n+1/2}{\Delta t}
+     * In this, we move the particles by a full time-step using:
+     *
+     * @f$ {\bf x}^{n+1} = {\bf x}^{n} + {\bf v}^{n+1/2}{\Delta t} @f$
      *
      * Notice that this operation modifies the particle topology and hence
      * particles must be re-sorted before further operations can be executed.
      */
-
     template <typename ParticleContainer>
-    void computeLeapfrogDriftWithGlobalTimeStepSize(const ParticleContainer& localParticles);
+    void computeLeapfrogDriftWithGlobalTimeStepSize(const ParticleContainer& particles);
+
+    /**
+     * Vectorised alternative to computeLeapfrogDriftWithGlobalTimeStepSize().
+     *
+     * This routine assumes that the numberOfParticles are all consecutive in
+     * memory so we can simply loop over them. Obviously, there's some
+     * redundancy in this code, as we expect
+     *
+     *          particles.size()==numberOfParticles
+     *
+     * Having the size as explicit argument is convenient, as it means that we
+     * can overload the function.
+     */
+    template <typename ParticleContainer>
+    void computeLeapfrogDriftWithGlobalTimeStepSize(
+      const ParticleContainer& particles,
+	  int                      numberOfParticles
+	);
 
     /**
      *  Kick steps. There are two kick steps in the KDK scheme, in which we
