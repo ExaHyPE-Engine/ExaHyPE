@@ -383,7 +383,7 @@ def map_particle_steps_onto_separate_mesh_traversals(
     )
 
 
-def map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise(
+def map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access(
     species_sets,
     verbose,
 ):

@@ -117,9 +117,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
     This type can be used with aggressively optimised kernels if you follow
     @ref page_swift_performance_optimisation Performance optimisation and use
-    the map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
-    graph compiler from the Sequential suite. We have not tested it with other
-    graph compiler flavours.
+    the map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access
+    graph compiler from the Sequential suite; or literally any other
+    flavour which yields coalesced memory.
 
 
 

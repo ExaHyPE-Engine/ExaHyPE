@@ -14,14 +14,70 @@ import shutil
 # Parse user input
 ########################################################################################
 
+Parallelisation_DomainDecomposition = "domain-decomposition"
+Parallelisation_Tasks               = "tasks"
+
+Storage_Scattered           = "scattered"
+Storage_ContinuousPerVertex = "continuous-per-vertex"
+Storage_GlobalContinuous    = "global-continuous"
+ 
+Sorting_InsertSweeps        = "insert-sorts"
+Sorting_OnTheFly            = "sort-on-the-fly"
+
 Choices = [
-    "none",
-    "continuous-per-vertex",
-    "global-continuous",
-    "continuous-per-vertex-vectorise",
-    "global-continuous-vectorise",
-    "tasks",
+    Parallelisation_DomainDecomposition + "/" + Storage_Scattered,
+    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_InsertSweeps,
+    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_OnTheFly,
+#    "continuous-per-vertex-vectorise",
+#    "global-continuous-vectorise",
+#    "tasks",
 ]
+
+
+def use_continuous_per_vertex_data_layout(realisation):
+    """!
+    
+    @param realisation: String from Choices
+    
+    """
+    return realisation.split("/")[1] == Storage_ContinuousPerVertex
+
+
+def use_globally_continuous_data_layout(realisation):
+    """!
+    
+    @param realisation: String from Choices
+    
+    """
+    return realisation.split("/")[1] == Storage_GlobalContinuous
+
+
+def use_vectorised_kernels(realisation):
+    """!
+    
+    @param realisation: String from Choices
+    
+    """
+    return len(realisation.split("/"))>3 and realisation.split("/")[3]==Storage_GlobalContinuous
+
+
+def use_on_the_fly_sorting(realisation):
+    """!
+    
+    @param realisation: String from Choices
+    
+    """
+    return len(realisation.split("/"))>2 and realisation.split("/")[2]==Sorting_OnTheFly
+
+
+def use_separate_sorting_sweeps(realisation):
+    """!
+    
+    @param realisation: String from Choices
+    
+    """
+    return len(realisation.split("/"))>2 and realisation.split("/")[2]==Sorting_InsertSweeps
+    
 
 parser = argparse.ArgumentParser(description="SPH benchmarking script")
 parser.add_argument(
@@ -106,12 +162,12 @@ parser.add_argument(
     help="Switch on assertions",
 )
 parser.add_argument(
-    "-opt",
-    "--optimisation",
-    dest="optimisation",
+    "-rea",
+    "--realisation",
+    dest="realisation",
     choices=Choices,
-    default="none",
-    help="Optimisation strategy to use (default: none)",
+    default=Choices[0],
+    help="Realisation to use",
 )
 parser.add_argument(
     "-ms",
@@ -143,25 +199,40 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Noh", executable="noh2D"
 )
 
-if (
-    args.optimisation == Choices[1]
-    or args.optimisation == Choices[2]
-    or args.optimisation == Choices[3]
-    or args.optimisation == Choices[4]
-):
+
+if ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition 
+     and
+     args.realisation.split("/")[1] == Storage_Scattered
+     ):
+    pass
+elif ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition 
+       and
+       use_continuous_per_vertex_data_layout(args.realisation)
+       and 
+       use_separate_sorting_sweeps(args.realisation)
+       ):
     project.algorithm_steps_task_graph_compiler = (
-        swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+        swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access
     )
     project.initialisation_steps_task_graph_compiler = (
         swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
     )
-if args.optimisation == Choices[5]:
-    project.algorithm_steps_task_graph_compiler = (
-        swift2.graphcompiler.map_particle_steps_onto_task_tree
-    )
-    project.initialisation_steps_task_graph_compiler = (
-        swift2.graphcompiler.map_initialisation_steps_onto_task_tree
-    )
+    pass
+else:
+    raise "Realisation " + args.realisation + " not supported"
+#if (
+#    args.optimisation.split("/") == Choices[1]
+#    or args.optimisation == Choices[2]
+#    or args.optimisation == Choices[3]
+#    or args.optimisation == Choices[4]
+#):
+#if args.optimisation == Choices[5]:
+#    project.algorithm_steps_task_graph_compiler = (
+#        swift2.graphcompiler.map_particle_steps_onto_task_tree
+#    )
+#    project.initialisation_steps_task_graph_compiler = (
+#        swift2.graphcompiler.map_initialisation_steps_onto_task_tree
+#    )
 
 
 # Initialise the SPH particle --------------------------------------------------
@@ -198,7 +269,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=particles_per_cell,
     min_h=max_cell_size,
     max_h=max_cell_size,
-    use_optimised_coalesced_memory_access_kernels=("-vectorise" in args.optimisation),
+    use_optimised_coalesced_memory_access_kernels=use_vectorised_kernels(args.realisation),
     asserts=args.asserts,
 )
 
@@ -284,14 +355,16 @@ particle.data.expose_all_attributes_in_header_file()
 # the particle_set to the project
 particle_set = project.add_particle_species(particle)
 
-if "continuous-per-vertex" in args.optimisation:
+if use_continuous_per_vertex_data_layout(args.realisation):
     particle_set.generator = (
         peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
     )
-elif "global-continuous" in args.optimisation:
+    print( "Benchmark: Use continuous per vertex data layout")
+elif use_globally_continuous_data_layout(args.realisation):
     particle_set.generator = (
         peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
     )
+    print( "Benchmark: Use globally continuous data layout")
 else:
     particle_set.generator = (
         peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
