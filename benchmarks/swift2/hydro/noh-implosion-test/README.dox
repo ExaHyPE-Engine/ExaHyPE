@@ -146,9 +146,17 @@
  
  
  
- So on my local laptop with eight cores, the first setup needs 777s. 
- With the continuous per vertex option, we need 829s.
- With the globally continuous memory, I get 878s.
+ So on my local laptop with eight cores, these setups complete in approximately
+ the following times:
+ 
+| Name | Time (laptop) |
+|------|---------------|
+| domain-decomposition/scattered | 731 |
+| domain-decomposition/continuous-per-vertex/insert-sorts | 867
+| domain-decomposition/continuous-per-vertex/sort-on-the-fly | 723
+| domain-decomposition/global-continuous/insert-sorts | 870
+| domain-decomposition/global-continuous/sort-on-the-fly | 744
+
  
  
   
