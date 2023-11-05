@@ -399,6 +399,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
     @param species_sets: [Species]
     
     @param sort_with_lifts_and_drops: {True, False}
+      If this flag is set, we use peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop
+      to sort the particles into the mesh. If it is not set, we use 
 
     @param verbose: {True, False}
       Controls how much debug information is dropped.
@@ -521,11 +523,16 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                     )
 
             if global_steps_to_update_particle_grid_assocation[i]:
-                action_set_update_particle_grid_association = (
-                    peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(
-                        current_species_set
-                    )
-                )
+                if sort_with_lifts_and_drops:
+                    action_set_update_particle_grid_association = (
+                        peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(
+                            current_species_set
+                        ))
+                else:
+                    action_set_update_particle_grid_association = (
+                        peano4.toolbox.particles.UpdateParticleGridAssociation_BucketSort(
+                            current_species_set
+                        ))
                 action_set_update_particle_grid_association.descend_invocation_order = (
                     steps[i].lowest_descend_invocation_order() - 1
                 )
@@ -533,8 +540,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                 steps[i].add_action_set(action_set_update_particle_grid_association)
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: add peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop for species {} to step {}".format(
-                            current_species_set.name, i
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: add {} for species {} to step {}".format(
+                            type(action_set_update_particle_grid_association), current_species_set.name, i
                         )
                     )
 

@@ -118,9 +118,9 @@
  
 
 
- # Impact of memory layouts
+ # Impact of memory layouts and sorting
  
- The impact of the various memory layouts has to be assessed using a 
+ The impact of the various memory layouts and the sorting variations have to be assessed using a 
  representative and reasonably large setup. Furthermore, it might make sense
  to restrict the studies to one NUMA node only on a production-level chip. The
  rationale here is that most codes would deploy one MPI rank per NUMA domain
@@ -136,10 +136,15 @@
  can be enabled via the opt argument: 
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
- python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -opt none
- python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -opt continuous-per-vertex
- python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -opt global-continuous
+ python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea domain-decomposition/scattered
+ python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea domain-decomposition/continuous-per-vertex/insert-sorts
+ python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea domain-decomposition/continuous-per-vertex/sort-on-the-fly
+ python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea domain-decomposition/global-continuous/insert-sorts
+ python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea domain-decomposition/global-continuous/sort-on-the-fly
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ 
+ 
  
  So on my local laptop with eight cores, the first setup needs 777s. 
  With the continuous per vertex option, we need 829s.

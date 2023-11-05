@@ -24,10 +24,18 @@ Storage_GlobalContinuous    = "global-continuous"
 Sorting_InsertSweeps        = "insert-sorts"
 Sorting_OnTheFly            = "sort-on-the-fly"
 
+Enable_Vectorisation        = "vectorise"
+
 Choices = [
     Parallelisation_DomainDecomposition + "/" + Storage_Scattered,
     Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_InsertSweeps,
     Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_OnTheFly,
+    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_InsertSweeps,
+    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_OnTheFly,
+    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_InsertSweeps + "/" + Enable_Vectorisation,
+    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_OnTheFly + "/" + Enable_Vectorisation,
+    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_InsertSweeps + "/" + Enable_Vectorisation,
+    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_OnTheFly + "/" + Enable_Vectorisation,
 #    "continuous-per-vertex-vectorise",
 #    "global-continuous-vectorise",
 #    "tasks",
@@ -58,7 +66,7 @@ def use_vectorised_kernels(realisation):
     @param realisation: String from Choices
     
     """
-    return len(realisation.split("/"))>3 and realisation.split("/")[3]==Storage_GlobalContinuous
+    return len(realisation.split("/"))>3 and realisation.split("/")[3]==Enable_Vectorisation
 
 
 def use_on_the_fly_sorting(realisation):
@@ -206,8 +214,6 @@ if ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition
      ):
     pass
 elif ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition 
-       and
-       use_continuous_per_vertex_data_layout(args.realisation)
        and 
        use_separate_sorting_sweeps(args.realisation)
        ):
@@ -218,8 +224,6 @@ elif ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition
         swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
     )
 elif ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition 
-       and
-       use_continuous_per_vertex_data_layout(args.realisation)
        and 
        use_on_the_fly_sorting(args.realisation)
        ):
@@ -231,19 +235,6 @@ elif ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition
     )
 else:
     assert False, "realisation " + args.realisation + " not supported"
-#if (
-#    args.optimisation.split("/") == Choices[1]
-#    or args.optimisation == Choices[2]
-#    or args.optimisation == Choices[3]
-#    or args.optimisation == Choices[4]
-#):
-#if args.optimisation == Choices[5]:
-#    project.algorithm_steps_task_graph_compiler = (
-#        swift2.graphcompiler.map_particle_steps_onto_task_tree
-#    )
-#    project.initialisation_steps_task_graph_compiler = (
-#        swift2.graphcompiler.map_initialisation_steps_onto_task_tree
-#    )
 
 
 # Initialise the SPH particle --------------------------------------------------
