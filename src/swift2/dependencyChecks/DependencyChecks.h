@@ -5,6 +5,20 @@
 
 
 namespace swift2 {
+  /**
+   * @namespace Dependency checks
+   *
+   * A set of routines which do dependency checks, i.e. validate per particle
+   * if the particle has completed its previous algorithmic steps before we
+   * allow it to do the next state transition. Basically, this flag ensures
+   * that we do not leave out particles and forget to update them or jump
+   * the queue.
+   *
+   * The macros are automatically inserted into the code whenever you compile
+   * with assertions. This happens in swift2.particle.Particle.
+   *
+   * @todo Namespaces should be all lowercase.
+   */
   namespace dependencyChecks {
 
     /**
@@ -175,16 +189,26 @@ namespace swift2 {
 
 
     /**
-     * @brief Dependency Check: At the final stage of a sweep (TouchVertexLastTime), check that all
+     * @brief Dependency Check: At the final stage of a sweep, i.e. touchVertexLastTime(), check that all
      * ActiveParticles have completed all their dependencies, i.e. have been localParticles at least
      * once.
+     *
+     * Within the vertex events touchVertexFirstTime() and
+     * touchVertexLastTime(), we have no active and local particles anymore.
+     * There are solely the ones around the vertex. We do not maintain any type of multiscale
+     * hierarchy. However, there are no global active and local particels
+     * anyway: Both sets are views onto the global particle set and they adopt
+     * per cell. These views are not even exclusive, i.e. local particles are
+     * always a subset of active ones. We know that cells update only local
+     * particles. Within a subsequent touchVertexLastTime(), every particles has
+     * have to be updated, i.e. every particle has been local at least once.
      *
      * @param activeParticles: set of active Particles to perform checks on
      * @param algorithmStepMarkerEnum: Enum representing current main algorithm step
      */
     template <typename ParticleContainer>
     static void dependencyCheckActiveParticlesAlgorithmStep(
-      const ParticleContainer&                                                                  activeParticles,
+      const ParticleContainer&                                                                  localParticles,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum
     );
 

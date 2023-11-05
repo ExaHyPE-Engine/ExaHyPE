@@ -22,7 +22,9 @@ class Particle(peano4.toolbox.particles.Particle):
     toolbox. In line with the docu there, you can use this particle and add
     further attributes via
 
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         my_particle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
@@ -181,26 +183,25 @@ Particle properties:
         )
 
     def _dependency_checks_modify_steps(self, steplist, step_type_name):
-        """
+        """!
+        
+        Add dependency checks to algorithm steps
+        
         This function actually modifies the AlgorithmSteps to contain the
         debug dependency checks. Is called by self.add_dependency_checks()
+        and uses the validation routines from swift2::dependencyChecks.
 
-        Parameters
-        ----------
 
-        Steplist:       list
+        @param Steplist:       list
             list of AlgorithmStep objects to work on
 
-        step_type_name: str
+        @param step_type_name: str
             name of type of steps we're dealing with. Either AlgorithmStep
             or InitStep.
 
-
-        Returns
-        -------
-
-        steps: list
+        @return steps: list
             the modified list of AlgorithmSteps, now including dependency checks
+            
         """
 
         # Keep this here so you can modify it in a single place when playing with debugging
@@ -249,15 +250,14 @@ Particle properties:
         mark_template = mark_template.replace("{NAME}", self.name)
         mark_template = mark_template.replace("{StepType}", step_type_name)
 
-        # String template for dependency check call with loop over active particles
-        check_template_active_particles = """
-          ::swift2::dependencyChecks::dependencyCheckActiveParticles{StepType}(activeParticles,
+        check_template_local_particles_after_sweep = """
+          ::swift2::dependencyChecks::dependencyCheckActiveParticles{StepType}(localParticles,
                                                                      globaldata::{NAME}::{StepType}::{0}
                                                                     );\n"""
-        check_template_active_particles = check_template_active_particles.replace(
+        check_template_local_particles_after_sweep = check_template_local_particles_after_sweep.replace(
             "{NAME}", self.name
         )
-        check_template_active_particles = check_template_active_particles.replace(
+        check_template_local_particles_after_sweep = check_template_local_particles_after_sweep.replace(
             "{StepType}", step_type_name
         )
 
@@ -404,7 +404,7 @@ Particle properties:
             # which makes sure all activeParticles have been local at some point
             # during this algorithm step
             step.touch_vertex_last_time_kernel += (
-                check_template_active_particles.format(step.name)
+                check_template_local_particles_after_sweep.format(step.name)
             )
 
             if step.includes is None:
