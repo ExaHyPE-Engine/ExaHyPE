@@ -15,6 +15,7 @@ toolbox::loadbalancing::strategies::SpreadOut::SpreadOut(Configuration* configur
   _previousNumberOfCells(-1),
   _numberOfStableGridIterations(0) {
   assertion( configuration!=nullptr );
+  assertion( costMetrics!=nullptr );
   _state = State::InterRankDistribution;
   _statistics.notifyOfStateChange(_state);
 }

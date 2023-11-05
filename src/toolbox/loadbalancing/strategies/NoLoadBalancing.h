@@ -47,6 +47,11 @@ class toolbox::loadbalancing::strategies::NoLoadBalancing: public toolbox::loadb
 
     virtual ~NoLoadBalancing() = default;
 
+    /**
+     * Finish a mesh sweep
+     *
+     * This
+     */
     virtual void finishStep() override;
 
     /**
