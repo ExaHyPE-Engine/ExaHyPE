@@ -119,7 +119,7 @@ plt.show()
 
 
 
-A few scripts are included among the SPH benchmarks, which can be used as
-reference.
+A few scripts are included among the tests in `/tests/swift2/hydro-simple-sph-physics/`,
+which can be used as reference.
 
 */

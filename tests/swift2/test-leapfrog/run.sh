@@ -8,21 +8,16 @@
 # set threads number
 export OMP_NUM_THREADS=1
 
-# Parameters
-DIMENSIONS=2
-END_TIME=0.01
-N_PART=32
-CELL_SIZE=0.3
-
 # Run python script to generate the experiment
-python3 test-density-calculation.py -et $END_TIME -np $N_PART -cs $CELL_SIZE -d $DIMENSIONS
+# TODO: I'm not sure this is the intended way of running, which also would conserve energy and pass this test.
+python3 ./planet-orbit-leapfrog.py
 
 # run experiment
 echo 'running experiment...'
-./test_density > output.txt
+./orbit-0.3 > output.txt
 
 # generate Peano grid for Paraview (if needed)
-pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
+# pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
 
+python3 ./plots-time-integration-test.py
 
-# @TODO: run plot script

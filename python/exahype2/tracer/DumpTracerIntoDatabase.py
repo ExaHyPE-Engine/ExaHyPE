@@ -83,7 +83,7 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
           
         clearDatabaseAfterFlush: Boolean
         """
-        super(DumpTracerIntoDatabase, self).__init__(priority=1, parallel=False)
+        super(DumpTracerIntoDatabase, self).__init__(descend_invocation_order=1, parallel=False)
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
         self.d["PARTICLES_CONTAINER"] = particle_set.name

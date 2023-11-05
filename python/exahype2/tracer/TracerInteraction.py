@@ -3,35 +3,37 @@
 import jinja2
 
 
+def perserveCartesianTracerLayout(solver, particle_spacing):
+    """
 
+        This constraint is used in combination particle-particle interaction
+        for tracers. A typical invocation resembles
 
+    project.add_action_set_to_timestepping( peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
+      particle_set = tracer_particles,
+      cell_compute_kernel = exahype2.tracer.perserveCartesianTracerLayout(thesolver,particle_spacing),
+      additional_includes = "#include "toolbox/particles/potentials/Springs.h"
+    ))
 
-def perserveCartesianTracerLayout(solver,particle_spacing):
-  """
-  
-    This constraint is used in combination particle-particle interaction
-    for tracers. A typical invocation resembles
-        
-project.add_action_set_to_timestepping( peano4.toolbox.particles.ParticleParticleInteraction_StackOfListsOverStaticParticles(
-  particle_set = tracer_particles,
-  cell_compute_kernel = exahype2.tracer.perserveCartesianTracerLayout(thesolver,particle_spacing),
-  additional_includes = "#include "toolbox/particles/potentials/Springs.h"
-))
-
-  """
-  return """
+    """
+    return (
+        """
 //Run over local set
 for (auto* p: localParticles) {
   if ( marker.isContained( p->getX() ) ) {
     tarch::la::Vector<Dimensions,double> updatedX = p->getX();
     for (auto* pp: activeParticles) {
       if (p->getNumber()!=pp->getNumber()) {
-        updatedX += repositories::""" + solver.get_name_of_global_instance() + """ benutze den Time Stamp vom Cell Marker hier!.getMaxTimeStepSize()
-                  * toolbox::particles::potentials::springPotential(p->getX(), pp->getX(), """ + str(particle_spacing) + """ );
+        updatedX += repositories::"""
+        + solver.get_name_of_global_instance()
+        + """ benutze den Time Stamp vom Cell Marker hier!.getMaxTimeStepSize()
+                  * toolbox::particles::potentials::springPotential(p->getX(), pp->getX(), """
+        + str(particle_spacing)
+        + """ );
       }
     }
     p->setX(updatedX);
   }
 }
 """
-  
+    )

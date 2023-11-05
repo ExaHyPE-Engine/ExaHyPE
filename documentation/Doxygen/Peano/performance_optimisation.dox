@@ -54,7 +54,7 @@ you are interested in. After that, create the Makefile (only once, as it will
 be overwritten). Within the makefile, alter the linker step:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-OPTIMISED_FILE=observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_ParticleParticleInteraction_StackOfListsOverStaticParticles4
+OPTIMISED_FILE=observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4
 
 
 #
