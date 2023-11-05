@@ -18,7 +18,6 @@ toolbox::loadbalancing::AbstractLoadBalancing::AbstractLoadBalancing(
   _configuration(configuration),
   _costMetrics(costMetrics),
   _state( State::Undefined ) {
-  assertion( _costMetrics!=nullptr );
 }
 
 toolbox::loadbalancing::AbstractLoadBalancing::~AbstractLoadBalancing() {

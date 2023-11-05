@@ -5,6 +5,9 @@
 #include <list>
 #include <unordered_set>
 
+#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/VertexMarker.h"
+
 namespace swift2 {
   namespace kernels {
     /**

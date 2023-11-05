@@ -347,8 +347,8 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
-  auto& localParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  int  numberOfActiveParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}}.size();
+  auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  int  numberOfAssignedParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}}.size();
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
@@ -358,8 +358,8 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
     __Template_TouchVertexLastTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
-  auto& localParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  int  numberOfActiveParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}}.size();
+  auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  int  numberOfAssignedParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}}.size();
 
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}
