@@ -12,6 +12,7 @@ from .SpeciesStepOrdering import (
 from .Sequential import (
     map_particle_steps_onto_separate_mesh_traversals,
     map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access,
+    map_particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_for_coalesced_memory_access,
     map_initialisation_steps_onto_separate_mesh_traversals,
     map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access,
 )

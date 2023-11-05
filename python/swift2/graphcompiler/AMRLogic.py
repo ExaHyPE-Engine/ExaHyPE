@@ -11,8 +11,10 @@ from swift2.actionsets.DynamicMeshRefinementAnalysis import (
 from swift2.actionsets.DynamicMeshRefinementTrigger import DynamicMeshRefinementTrigger
 
 
-def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
-    steps, alter_position, species_sets, verbose
+def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(steps, 
+                                                                                alter_position, 
+                                                                                species_sets, 
+                                                                                verbose
 ):
     """!
 
@@ -185,13 +187,13 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
 
     ## Arguments
 
-    steps: [peano4.solversteps.Step]
+    @param steps: [peano4.solversteps.Step]
 
-    alter_position: [{True,False}]
+    @param alter_position: [{True,False}]
 
-    species_sets: [Species]
-
-    verbose: {True, False}
+    @param species_sets: [Species]
+    
+    @param verbose: {True, False}
       Controls how much debug information is dropped.
 
     """
@@ -362,8 +364,11 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                     )
 
 
-def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers(
-    steps, alter_position, species_sets, verbose
+def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers(steps, 
+                                                                                          alter_position, 
+                                                                                          species_sets, 
+                                                                                          sort_with_lifts_and_drops,
+                                                                                          verbose
 ):
     """!
 
@@ -384,6 +389,19 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
     then we introduce the additional gather routines. As we do not update the
     association four times but only twice, we can also update the state only once
     instead of two times.
+
+    ## Arguments
+
+    @param steps: [peano4.solversteps.Step]
+
+    @param alter_position: [{True,False}]
+
+    @param species_sets: [Species]
+    
+    @param sort_with_lifts_and_drops: {True, False}
+
+    @param verbose: {True, False}
+      Controls how much debug information is dropped.
 
     """
     if verbose:

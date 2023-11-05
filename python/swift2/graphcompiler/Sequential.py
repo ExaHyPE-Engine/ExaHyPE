@@ -286,20 +286,19 @@ def map_onto_separate_mesh_traversals(
         if optimisation == Optimisation.NONE:
             use_lists_to_construct_active_sets = False
             add_additional_dummy_sweep = False
-        # @todo Wieder rein
-        # elif optimisation==Optimisation.VECTORISE_WHENEVER_POSSIBLE:
-        #              use_lists_to_construct_active_sets = step.effect != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN and step.effect != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN and len(alter_particle_position)>0 and not alter_particle_position[-1]
-        #              add_additional_dummy_sweep        = False
-        elif optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE:
+        elif optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE or step_type == StepType.INITIALISATION:
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = (
-                current_step_of_species.effect
-                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
-                or current_step_of_species.effect
-                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-            )
+                current_step_of_species.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
+                or 
+                current_step_of_species.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+                )
+        elif optimisation == Optimisation.SORT_ON_THE_FLY:
+            use_lists_to_construct_active_sets = True
+            add_additional_dummy_sweep = False
         else:
             assert False, "option not supported"
+            
 
         translate_one_step_of_species_into_mesh_traversal(
             step=current_step_of_species,
@@ -348,7 +347,8 @@ def map_onto_separate_mesh_traversals(
             mesh_traversals,
             alter_particle_position,
             get_species_set(sequence_of_steps),
-            verbose,
+            sort_with_lifts_and_drops = (optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE or step_type == StepType.INITIALISATION),
+            verbose = verbose,
         )
     else:
         add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
@@ -402,6 +402,28 @@ def map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coa
     traversals, it makes no real difference how we order the progress through
     the individual steps. So I just concatenate the steps per species.
 
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    return map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, False),
+        optimisation=Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
+        step_type=StepType.TIME_STEP,
+        verbose=verbose,
+    )
+
+
+def map_particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_for_coalesced_memory_access(
+    species_sets,
+    verbose,
+):
+    """!
+
     For a sequential ordering, i.e. 1:1 mapping of steps per species onto
     traversals, it makes no real difference how we order the progress through
     the individual steps. So I just concatenate the steps per species.
@@ -416,7 +438,7 @@ def map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coa
     """
     return map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
-        optimisation=Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
+        optimisation=Optimisation.SORT_ON_THE_FLY,
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )

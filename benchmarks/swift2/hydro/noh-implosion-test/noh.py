@@ -217,9 +217,20 @@ elif ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition
     project.initialisation_steps_task_graph_compiler = (
         swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
     )
-    pass
+elif ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition 
+       and
+       use_continuous_per_vertex_data_layout(args.realisation)
+       and 
+       use_on_the_fly_sorting(args.realisation)
+       ):
+    project.algorithm_steps_task_graph_compiler = (
+        swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_for_coalesced_memory_access
+    )
+    project.initialisation_steps_task_graph_compiler = (
+        swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
+    )
 else:
-    raise "Realisation " + args.realisation + " not supported"
+    assert False, "realisation " + args.realisation + " not supported"
 #if (
 #    args.optimisation.split("/") == Choices[1]
 #    or args.optimisation == Choices[2]
