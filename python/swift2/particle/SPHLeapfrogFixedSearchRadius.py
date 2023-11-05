@@ -415,19 +415,37 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         )
         self.algorithm_steps_dict["Kick1"] = kick1
 
-        drift = AlgorithmStep(
-            name="Drift",
-            dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN,
-            touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
-            touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles );""",
-            includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/timestepping/Leapfrog.h"
-                                       #include "swift2/timestepping/GlobalTimeStepping.h"
-                                       #include "swift2/timestepping/TimeStepping.h"
-                                       """,
-        )
+        if self._use_optimised_coalesced_memory_access_kernels:
+            drift = AlgorithmStep(
+                name="Drift",
+                dependencies=AlgorithmStep.Dependencies.SELF,
+                effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN,
+                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
+                #
+                # Cmp below: We use overloading to identify the vectorised kernel
+                #
+                touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles, numberOfAssignedParticles );""",
+                includes="""
+                                           #include "Constants.h"
+                                           #include "swift2/timestepping/Leapfrog.h"
+                                           #include "swift2/timestepping/GlobalTimeStepping.h"
+                                           #include "swift2/timestepping/TimeStepping.h"
+                                           """,
+            )
+        else:
+            drift = AlgorithmStep(
+                name="Drift",
+                dependencies=AlgorithmStep.Dependencies.SELF,
+                effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN,
+                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
+                touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles );""",
+                includes="""
+                                           #include "Constants.h"
+                                           #include "swift2/timestepping/Leapfrog.h"
+                                           #include "swift2/timestepping/GlobalTimeStepping.h"
+                                           #include "swift2/timestepping/TimeStepping.h"
+                                           """,
+            )
         self.algorithm_steps_dict["Drift"] = drift
 
         # From the SPH side of things, this doesn't need to be an AlgorithmStep

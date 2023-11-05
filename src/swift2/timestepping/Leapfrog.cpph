@@ -9,24 +9,55 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
   const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                                 .getMinTimeStepSize();
 
+  for (auto* particle : localParticles) {
+
+    if (swift2::kernels::localParticleCanBeMoved(particle) and not particle->getIsBoundaryParticle()) {
+
+      // Drift the particle (update position for a full time-step). It's important
+      // to take the "V_full" here, not the fluid velocity V. V_full doesn't get
+      // touched outside of kicks. V will be interpolated/integrated in time as the
+      // time step progresses. V_full is the correct choice here.
+
+      particle->setX(particle->getX() + timeStepSize * particle->getV_full());
+
+      assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
+
+      // Note that original SWIFT predicts the velocities at this point. We moved that
+      // into computePredictHydro()
+
+      /* Flag this particle as Moved */
+      particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
+    }
+  }
+}
+
+
+template <typename ParticleContainer>
+void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
+  const ParticleContainer&  particles,
+  int                       numberOfParticles
+) {
+
+  const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
+                                .getMinTimeStepSize();
+
   const auto newState = std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved;
 
     auto *minPtr = (typename ParticleContainer::value_type) -1;
     auto maxPtr = (typename ParticleContainer::value_type) nullptr;
 
-  for (auto *particle : localParticles) {
+  for (auto *particle : particles) {
       if (particle < minPtr) minPtr = particle;
       if (particle > maxPtr) maxPtr = particle;
   }
 
-  if (minPtr + localParticles.size() != maxPtr) {
+  if (minPtr + particles.size() != maxPtr) {
       printf("Non-continuous memory!\n");
       exit(1);
   }
 
-  auto particleCount = localParticles.size();
-  for (auto i = 0; i < particleCount; i++) {
-      auto *particle = minPtr + i;
+  for (auto i = 0; i < numberOfParticles; i++) {
+      auto* particle = minPtr + i;
 
       auto mask = (double) (swift2::kernels::localParticleCanBeMoved(particle) & !particle->getIsBoundaryParticle());
 
