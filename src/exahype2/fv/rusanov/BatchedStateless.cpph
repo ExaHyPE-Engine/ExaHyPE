@@ -13,7 +13,7 @@ namespace exahype2::fv::rusanov::internal {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  void timeStepWithRusanovBatchedStateless(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedStateless(
     CellData&                                      patchData,
     peano4::utils::LoopParallelism                 loopParallelism,
     const enumerators::AoSLexicographicEnumerator& QInEnumerator,
@@ -30,7 +30,7 @@ namespace exahype2::fv::rusanov::internal {
     double*                                        tempEigenvalueX,
     double*                                        tempEigenvalueY,
     double*                                        tempEigenvalueZ
-  ) {
+  ) InlineMethod {
     static_assert(HaloSize == 1);
 
     static tarch::logging::Log _log("exahype2::fv::rusanov");

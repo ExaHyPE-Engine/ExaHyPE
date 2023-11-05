@@ -763,6 +763,44 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     numberOfPatches
   );
 
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseInsituStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep>,
+      ::peano4::utils::LoopParallelism::None>,
+    "host, stateless, patch-wise, insitu, sequential",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    numberOfPatches
+  );
+
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedInsituStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep>,
+      ::peano4::utils::LoopParallelism::None>,
+    "host, stateless, batched, insitu, sequential",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    numberOfPatches
+  );
+
   int device = 0;
 
   /*#if defined(GPUOffloadingSYCL)

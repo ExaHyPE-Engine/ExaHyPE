@@ -8,7 +8,6 @@ namespace exahype2::fv::rusanov::tests {
   class ApplySplit1DRiemannToPatchTest;
 } // namespace exahype2::fv::rusanov::tests
 
-
 class exahype2::fv::rusanov::tests::ApplySplit1DRiemannToPatchTest: public tarch::tests::TestCase {
 private:
   void testIterateGrid();

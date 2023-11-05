@@ -8,7 +8,6 @@ namespace exahype2::fv::rusanov::tests {
   class CopyPatchTest;
 } // namespace exahype2::fv::rusanov::tests
 
-
 class exahype2::fv::rusanov::tests::CopyPatchTest: public tarch::tests::TestCase {
 private:
   void testCopyPatch();

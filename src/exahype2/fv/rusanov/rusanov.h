@@ -661,10 +661,10 @@ namespace exahype2::fv::rusanov {
 } // namespace exahype2::fv::rusanov
 
 #include "BatchedFunctors.cpph"
-// #include "BatchedInsitu.cpph"
+#include "BatchedInsitu.cpph"
 #include "BatchedStateless.cpph"
 #include "PatchwiseFunctors.cpph"
-// #include "PatchwiseInsitu.cpph"
+#include "PatchwiseInsitu.cpph"
 #include "PatchwiseStateless.cpph"
 
 #if defined(GPUOffloadingOMP)
