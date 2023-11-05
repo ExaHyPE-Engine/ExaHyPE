@@ -70,9 +70,6 @@ Aborted (core dumped)
 
   public:
     InterpolationRestrictionTest();
-
-    /**
-     * This routine is triggered by the TestCaseCollection
-     */
+    
     virtual void run();
 };

@@ -79,7 +79,7 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
   double* __restrict__ QOut,
   const enumerators::AoSLexicographicEnumerator& QOutEnumerator
 ) {
-  source(
+  sourceFunctor(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
     getVolumeCentre(patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex),
     getVolumeSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell),
@@ -171,7 +171,7 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
 #if defined(SharedOMP)
 #pragma omp simd
 #endif
-  for (int unknown = NumberOfUnknowns; unknown < SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables; unknown++) {
+  for (int unknown = SolverType::NumberOfUnknowns; unknown < SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables; unknown++) {
     QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] = QIn[QInEnumerator(patchIndex, volumeIndex, unknown)];
 #if defined(GPUOffloadingOff)
     assertion4(
@@ -255,7 +255,7 @@ void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
   double                                       dt,
   int                                          normal,
   double* __restrict__ maxEigenvalue,
-  MaxEigenvalueEnumeratorType maxEigenvalueEnumerator
+  const MaxEigenvalueEnumeratorType& maxEigenvalueEnumerator
 ) InlineMethod {
   double QInGathered[NumberOfUnknowns + NumberOfAuxiliaryVariables];
 
@@ -278,20 +278,20 @@ void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
 }
 
 
-template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class MaxEigenvalueEnumeratorType>
+template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
 void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
   const double* __restrict__ QIn,
-  enumerators::AoSLexicographicEnumerator      QInEnumerator,
-  const MaxEigenvalueFunctor&                  maxEigenvalueFunctor,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
+  const enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
+  const tarch::la::Vector<Dimensions, double>&   patchCentre,
+  const tarch::la::Vector<Dimensions, double>&   patchSize,
+  int                                            patchIndex,
+  const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
   double* __restrict__ maxEigenvalue,
-  MaxEigenvalueEnumeratorType maxEigenvalueEnumerator
+  const enumerators::AoSLexicographicEnumerator& maxEigenvalueEnumerator
 ) {
   maxEigenvalue[maxEigenvalueEnumerator(patchIndex, volumeIndex, 0)] = maxEigenvalueFunctor(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -652,7 +652,7 @@ void exahype2::fv::rusanov::loopbodies::computeFlux(
   double                                         dt,
   int                                            normal,
   double* __restrict__ flux,
-  const FluxEnumeratorType& fluxEnumerator,
+  const FluxEnumeratorType& fluxEnumerator
 ) {
   double fluxGathered[SolverType::NumberOfUnknowns];
 
@@ -936,7 +936,7 @@ void exahype2::fv::rusanov::loopbodies::computeNonconservativeFlux(
   double                                       dt,
   int                                          normal,
   double* __restrict__ ncp,
-  const NCPFaceEnumeratorType& ncpEnumerator,
+  const NCPFaceEnumeratorType& ncpEnumerator
 ) {
   double QAverage[SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables];
   double DeltaQ[SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables];
@@ -1050,11 +1050,11 @@ void exahype2::fv::rusanov::loopbodies::updateSolutionWithNonconservativeFlux(
   if (leftVolume(normal) >= 0) {
     QOut[QOutEnumerator(
       patchIndex, leftVolume, unknown
-    )] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * ncp[fluxEnumerator(patchIndex, faceIndex, unknown)] * 0.5;
+    )] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * ncp[ncpEnumerator(patchIndex, faceIndex, unknown)] * 0.5;
   }
   if (rightVolume(normal) < QOutEnumerator._numberOfDoFsPerAxisInCell) {
     QOut[QOutEnumerator(
       patchIndex, rightVolume, unknown
-    )] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * ncp[fluxEnumerator(patchIndex, faceIndex, unknown)] * 0.5;
+    )] -= dt / patchSize(normal) * QOutEnumerator._numberOfDoFsPerAxisInCell * ncp[ncpEnumerator(patchIndex, faceIndex, unknown)] * 0.5;
   }
 }

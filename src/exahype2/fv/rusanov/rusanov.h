@@ -5,16 +5,18 @@
 #include "exahype2/CellData.h"
 #include "exahype2/VolumeIndex.h"
 #include "Functors.h"
-#include "LoopBody.h"
+#include "LoopBodies.h"
 #include "peano4/utils/Loop.h"
 #include "tarch/timing/Measurement.h"
+#include "tarch/timing/Watch.h"
 
 /**
- * @page exahype2_fv_Rusanov ExaHyPE's Rusanov kernel implementation
+ * @page exahype2_fv_rusanov ExaHyPE's finite volumes Rusanov kernel implementation
  *
  * ExaHyPE's Finite Volume compute kernels rely on a block-structured mesh.
  * Each cell of the spacetree carries a patch of @f$ p \times p \times p @f$
- * Finite Volumes. This is basically a simple double array. We can also read the patch as a regular Cartesian mesh. It is
+ * Finite Volumes. This is basically a simple double array.
+ * We can also read the patch as a regular Cartesian mesh. It is
  * supplemented by a halo layer of volumes of size k. Halo layers are also
  * called ghost cells here. ExaHyPE currently does not support transversal
  * waves (diagonals). So while we effectively have data of a
@@ -49,7 +51,7 @@
  * In the pictures above, we map the left regular patch to the right one (with
  * the darker grey). The bright grey data are the core input data supplemented
  * with a ghost layer of one from the left, upper, right and bottom neighbour.
- * The empty volumes are in the data structure to make things easier, i.e. to
+ * The empty volumes are in the data structure to make things easier, i.e., to
  * avoid weird index re-calculations. But they do not hold valid data. We work
  * with a halo layer of one in this illustration.
  *
@@ -66,7 +68,7 @@
  *
  * @f$ \partial _t Q + div F_i(Q) + \sum _i B_i \nabla_i Q = S(Q) @f$
  *
- * We assume this ordering in the compute kernels, i.e. all terms but the
+ * We assume this ordering in the compute kernels, i.e., all terms but the
  * source term S are found on the left-hand side in the PDE formulation.
  * Integration over space and time and the assumption that each Finite
  * Volume carries, per PDE unknown, a constant function both in space (over
@@ -100,7 +102,7 @@
  *
  * which exploits the chain rule to separate the non-conservative term into a
  * conservative part and the remainder: @f$ div \left( B_i\ Q \right) = Q div B_i + \sum_i B_i \nabla_i Q @f$
- * i.e. @f$ \sum_i B_i \nabla_i Q = div \left( B_i\ Q \right) - Q div B_i @f$. double brackets @f$ [[]] @f$ means
+ * i.e., @f$ \sum_i B_i \nabla_i Q = div \left( B_i\ Q \right) - Q div B_i @f$. double brackets @f$ [[]] @f$ means
  * the quantites needs to be evaluated on the face position.
  *
  *
@@ -192,7 +194,7 @@ Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
  * - (5) Per volume: Add @f$ \Delta t \cdot S(Q(t)) @f$ to @f$ Q(t+\Delta t) @f$.
  * - (6.1) Per volume: Compute @f$ \lambda _{max} Q(t+\Delta a) @f$.
  * - (6.2) Reduce @f$ \lambda _{max} Q(t+\Delta a) @f$ over all the Finite
- *   Volumes, i.e. compute the patch-global maximum eigenvalue.
+ *   Volumes, i.e., compute the patch-global maximum eigenvalue.
  *
  *
  * ## High level design of kernels
@@ -214,9 +216,9 @@ Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
  *
  * - The Rusanov solver is first of all a collection of compute steps which realise
  *   (2.1)+(2.2), (3.1)+(3.2) or (4.1). These computeXXX routines can all be found
- *   in LoopBody.h. Each one accepts an integer vector which clarifies on which
+ *   in LoopBodies.h. Each one accepts an integer vector which clarifies on which
  *   voxel or face it operates and a pointer to the input and output.
- * - Actually, we work with a scratchpad design, i.e. each compute routine gets the
+ * - Actually, we work with a scratchpad design, i.e., each compute routine gets the
  *   pointer to some large array and then an enumerator which allows the routine to
  *   map a logical index (volume position plus unknown index) onto a memory location.
  *   This is a strict separation of concern: If we change the enumeration of any
@@ -228,7 +230,7 @@ Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
  * - Each compute routine is accompanied with a corresponding updateXX routine which
  *   takes the outcome(s) and adds it to the volume's @f$ Q(t+\Delta t) @f$.
  * - If a term does not exist in the PDE, we simply ignore the corresponding for loops.
- * - Once the core compute steps are realised within LoopBody.h, we can write the
+ * - Once the core compute steps are realised within LoopBodies.h, we can write the
  *   loops around these steps.
  * - If we have a set of P patches each $f@ p \times p \times p $f@, we end up with
  *   three to five nested loops how to update or write into the image array. These
@@ -247,7 +249,7 @@ Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
  *
  * The last observation implies that we can port codes to GPUs. In this context, a
  * GPU developer only focuses on the for loops around the compute steps, while the
- * same compute steps are used both on the devide and the host. This idea has been
+ * same compute steps are used both on the device and the host. This idea has been
  * proposed by Dominic E. Charrier within ExaHyPE 2, while the ExaHyPE (1) compute
  * kernels did resemble the in-situ code variant.
  *
@@ -256,10 +258,10 @@ Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
  *
  * The in-situ update requires us to interleave the column/row updates if we work
  * in parallel: We first do all the odd faces with a normal along the x-axis, then
- * all the even ondes, then all the odd ones with normals along y, and so forth.
+ * all the even ones, then all the odd ones with normals along y, and so forth.
  * This way, we avoid any race condition as we write to the output.
  *
- * @image html applyRiemannToPatch_in_situ.png
+ * @image html ApplyRiemannToPatchInsitu.png
  *
  *
  * ## Patch updates with temporary scratchpads
@@ -274,9 +276,9 @@ Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
  *
  * The choice of the ordering within the scratchpad means that we kind of permute
  * the unknown ordering on-the-fly: input and output data always are AoS, as this
- * is the format ExaHyPE uses internally. When we compute the fluxes for example
+ * is the format ExaHyPE 2 uses internally. When we compute the fluxes for example
  * and pipe the outcome as SoA, we can read this as the fusion of a permutation
- * and the actual computation. Actually, nothing stops you from doing the reording
+ * and the actual computation. Actually, nothing stops you from doing the reordering
  * manually as post- or pre-processing step. You also don't have to change anything
  * within the core compute routines. You simply have to ensure that you use the
  * right enumerators when you invoke the compute bodies.
@@ -296,321 +298,383 @@ Q\sum_{\partial v}h^{d-1}(B_i(\frac{1}{2}(Q^+ + Q^-)),n)
  * @author Tobias Weinzierl
  */
 
-namespace exahype2 {
-  namespace fv {
-    namespace rusanov {
-      /**
-       * Apply the Rusanov Riemann solver over a set of patches.
-       *
-       * Here's the explanation of the implementation details marked via _subscript:
-       *
-       * _sequential: This solver runs through the individual patches one by one.
-       *   We neither exploit any parallelism, not do we merge the patch traversals.
-       *   All the operations on patch 0 are completed, then we trigger all steps on
-       *   patch 1, and so forth.
-       *
-       * _batched: We run through the individual steps of the finite volume update,
-       *   and in each step we complete the work on all the patches handed in.
-       *
-       * There are two variants of the kernels: One that accepts a functor, and one
-       * that works with the solver object and involves the static PDE term variants.
-       * Both are annotated with Otter pragmas, so you can find out how much parallelism
-       * there is.
-       *
-       *
-       * ## Implementation details (signatures)
-       *
-       * The function is marked as static and put into a header file. I still want to
-       * separate the declaration from the definition, so the actual implementation is
-       * in a file with the extension cpph. This indicates that it should (logically)
-       * be in a cpp file, but to allow the compiler to inline aggressively, it has to
-       * be in the header.
-       *
-       * As I put the routine in a header and as multiple code parts might include it,
-       * we often end up with multiple definition errors in Clang. Therefore, I mark the
-       * routine as static.
-       *
-       * Please study the comments on the namespace internal (hosted in LoopBody.h) for
-       * further details why certain code parts are written the way they are written.
-       * The punchline is that the routines here host the loops, but the actual loop
-       * bodies then are separated into routines of their own. We inline them aggressively,
-       * so that doesn't come at additional cost. This way, we can re-use the same loop
-       * body within different loop implementations, orderings, ...
-       *
-       *
-       * ## Vectorisation
-       *
-       * I only vectorise the static variants of the routines, and I do so if and only
-       * if OpenMP is enabled.
-       *
-       * Most of the time, I discuss within the individual loop bodies how to vectorise
-       * and what things have to be taken into account. That is, the knowledge around
-       * optimisation is documented with the corresponding loop bodies. There is one
-       * exception:
-       *
-       * If I evaluate the fluxes, I have to take into account that diagonal volumes
-       * don't hold valid data. After all, we only use split or face-normal fluxes, but
-       * do not support transversal waves. So we should mask out those diagonal volumes
-       * and should not compute anything on them. Indeed, some applications use
-       * assertions to ensure that their user functions are not invoked on uninitialised
-       * data and then fail. Unfortunately, such a mask stops the vectoriser from doing
-       * its job, as the control flow simply becomes too complicated. So I enable the
-       * masking if and only if I am not in release mode.
-       *
-       *
-       * ## Memory management
-       *
-       * See ::exahype2::CellData() for details
-       *
-       *
-       * ## Headers vs implementation files
-       *
-       * This should be a proper routine (and thus not static). But I decided
-       * to make it consistent with the templates for the static evaluation and
-       * to move the routine into the header, too. The advantage is that the
-       * compiler now cans inline routines straightforwardly without any ipo.
-       *
-       * Next, all the integers and booleans are known. So, once inlined, the
-       * compiler can trivialise the compute kernel and perform vectorisation et
-       * al even though we have functors which can not trivially be inlined and
-       * optimised.
-       */
-      static void timeStepWithRusanov_patchwise_heap_functors(
-        ::exahype2::CellData&          patchData,
-        int                            numberOfVolumesPerAxisInPatch,
-        int                            haloSize,
-        int                            unknowns,
-        int                            auxiliaryVariables,
-        bool                           evaluateFlux,
-        bool                           evaluateNonconservativeProduct,
-        bool                           evaluateSource,
-        bool                           evaluateMaximumEigenvalueAfterTimeStep,
-        Flux                           flux,
-        NonconservativeProduct         nonconservativeProduct,
-        Source                         source,
-        MaxEigenvalue                  maxEigenvalue,
-        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
-      )
-#if defined(UseManualInlining)
-        __attribute__((always_inline))
+namespace exahype2::fv::rusanov {
+  /**
+   * Apply the Rusanov Riemann solver over a set of patches.
+   *
+   * Here's the explanation of the implementation details marked via _subscript:
+   *
+   * _patchwise: This solver runs through the individual patches one by one.
+   *   All the operations on patch 0 are completed, then we trigger all steps on
+   *   patch 1, and so forth.
+   *
+   * _batched: We run through the individual steps of the finite volume update,
+   *   and in each step we complete the work on all the patches handed in.
+   *
+   * There are two variants of the kernels: One that accepts a functor, and one
+   * that works with the solver object and involves the static (stateless) PDE term variants.
+   * Both are annotated with Otter pragmas, so you can find out how much parallelism
+   * there is.
+   *
+   *
+   * ## Implementation details (signatures)
+   *
+   * The function is marked as stateless and put into a header file. I still want to
+   * separate the declaration from the definition, so the actual implementation is
+   * in a file with the extension cpph. This indicates that it should (logically)
+   * be in a cpp file, but to allow the compiler to inline aggressively, it has to
+   * be in the header.
+   *
+   * Please study the comments on the namespace loopbodies (hosted in LoopBodies.h) for
+   * further details why certain code parts are written the way they are written.
+   * The punchline is that the routines here host the loops, but the actual loop
+   * bodies then are separated into routines of their own. We inline them aggressively,
+   * so that doesn't come at additional cost. This way, we can re-use the same loop
+   * body within different loop implementations, orderings, etc.
+   *
+   *
+   * ## Vectorisation
+   *
+   * Most of the time, I discuss within the individual loop bodies how to vectorise
+   * and what things have to be taken into account. That is, the knowledge around
+   * optimisation is documented with the corresponding loop bodies. There is one
+   * exception:
+   *
+   * If I evaluate the fluxes, I have to take into account that diagonal volumes
+   * don't hold valid data. After all, we only use split or face-normal fluxes, but
+   * do not support transversal waves. So we should mask out those diagonal volumes
+   * and should not compute anything on them. Indeed, some applications use
+   * assertions to ensure that their user functions are not invoked on uninitialised
+   * data and then fail. Unfortunately, such a mask stops the vectoriser from doing
+   * its job, as the control flow simply becomes too complicated. So I enable the
+   * masking if and only if I am not in release mode.
+   *
+   *
+   * ## Memory management
+   *
+   * See ::exahype2::CellData() for details
+   *
+   *
+   * ## Headers vs. implementation files
+   *
+   * This should be a proper routine (and thus not static). But I decided
+   * to make it consistent with the templates for the static evaluation and
+   * to move the routine into the header, too. The advantage is that the
+   * compiler now cans inline routines straightforwardly without any ipo.
+   *
+   * Next, all the integers and booleans are known. So, once inlined, the
+   * compiler can trivialise the compute kernel and perform vectorisation et
+   * al even though we have functors which can not trivially be inlined and
+   * optimised.
+   */
+  template <
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseHeapFunctors(
+    CellData&                            patchData,
+    const FluxFunctor&                   fluxFunctor,
+    const NonconservativeProductFunctor& nonconservativeProductFunctor,
+    const SourceFunctor&                 sourceFunctor,
+    const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
+    tarch::timing::Measurement&          measurement,
+    peano4::utils::LoopParallelism       loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseHeapFunctors(
+    CellData&                            patchData,
+    const FluxFunctor&                   fluxFunctor,
+    const NonconservativeProductFunctor& nonconservativeProductFunctor,
+    const SourceFunctor&                 sourceFunctor,
+    const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
+    peano4::utils::LoopParallelism       loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  /**
+   * @see timeStepWithRusanovPatchwiseHeapFunctors()
+   */
+  template <
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedHeapFunctors(
+    CellData&                            patchData,
+    const FluxFunctor&                   fluxFunctor,
+    const NonconservativeProductFunctor& nonconservativeProductFunctor,
+    const SourceFunctor&                 sourceFunctor,
+    const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
+    tarch::timing::Measurement&          measurement,
+    peano4::utils::LoopParallelism       loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedHeapFunctors(
+    CellData&                            patchData,
+    const FluxFunctor&                   fluxFunctor,
+    const NonconservativeProductFunctor& nonconservativeProductFunctor,
+    const SourceFunctor&                 sourceFunctor,
+    const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
+    peano4::utils::LoopParallelism       loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseCallStackStateless(
+    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseCallStackStateless(
+    CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseHeapStateless(
+    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseHeapStateless(
+    CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseInsituStateless(
+    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseInsituStateless(
+    CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedInsituStateless(
+    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedInsituStateless(
+    CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedCallStackStateless(
+    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedCallStackStateless(
+    CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedHeapStateless(
+    ::exahype2::CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedHeapStateless(
+    ::exahype2::CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  namespace internal {
+    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables);
+    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesUnknowns(int numberOfVolumesPerAxisInPatch, int unknowns);
+
+    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatches(int numberOfVolumesPerAxisInPatch, int patches);
+    tarch::la::Vector<Dimensions + 2, int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(
+      int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables, int patches
+    );
+    tarch::la::Vector<Dimensions + 2, int> rangeOverVolumesTimesUnknownsTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int patches);
+
+    tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch);
+    tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch);
+    tarch::la::Vector<3, int>          rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch);
+
+    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int patches);
+    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int patches);
+    tarch::la::Vector<3 + 1, int>          rangeOverVolumesTimesPatchesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int patches);
+  } // namespace internal
+} // namespace exahype2::fv::rusanov
+
+#include "BatchedFunctors.cpph"
+// #include "BatchedInsitu.cpph"
+#include "BatchedStateless.cpph"
+#include "PatchwiseFunctors.cpph"
+// #include "PatchwiseInsitu.cpph"
+#include "PatchwiseStateless.cpph"
+
+#if defined(GPUOffloadingOMP)
+#include "exahype2/fv/rusanov/omp/rusanov.h"
 #endif
-        ;
 
-
-      /**
-       * @see timeStepWithRusanov_patchwise_heap_functors()
-       */
-      static void timeStepWithRusanov_batched_heap_functors(
-        ::exahype2::CellData&          patchData,
-        int                            numberOfVolumesPerAxisInPatch,
-        int                            haloSize,
-        int                            unknowns,
-        int                            auxiliaryVariables,
-        bool                           evaluateFlux,
-        bool                           evaluateNonconservativeProduct,
-        bool                           evaluateSource,
-        bool                           evaluateMaximumEigenvalueAfterTimeStep,
-        Flux                           flux,
-        NonconservativeProduct         nonconservativeProduct,
-        Source                         source,
-        MaxEigenvalue                  maxEigenvalue,
-        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
-      )
-#if defined(UseManualInlining)
-        __attribute__((always_inline))
-#endif
-        ;
-
-
-      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables, typename TempDataEnumerator>
-      static void timeStepWithRusanov_patchwise_call_stack_static_calls(
-        ::exahype2::CellData&          patchData,
-        bool                           evaluateFlux,
-        bool                           evaluateNonconservativeProduct,
-        bool                           evaluateSource,
-        bool                           evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
-      )
-#if defined(UseManualInlining)
-        __attribute__((always_inline))
-#endif
-        ;
-
-
-      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables, typename TempDataEnumerator>
-      static void timeStepWithRusanov_patchwise_heap_static_calls(
-        ::exahype2::CellData&          patchData,
-        bool                           evaluateFlux,
-        bool                           evaluateNonconservativeProduct,
-        bool                           evaluateSource,
-        bool                           evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
-      )
-#if defined(UseManualInlining)
-        __attribute__((always_inline))
-#endif
-        ;
-
-
-      /**
-       *
-       * ## Implementation
-       *
-       * @todo Write some descriptions around illustration below
-       *
-       * @image html applyRiemannToPatch.png
-       * @image html applyRiemannToPatch_in_situ.png
-       *
-       * ## Loop collapsing
-       *
-       * I originally thought I could collapse over the all the loops, as there
-       * are no race conditions, but this seems not to work. I have no clue why.
-       */
-      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables>
-      static void timeStepWithRusanov_patchwise_in_situ_static_calls(
-        ::exahype2::CellData&          patchData,
-        bool                           evaluateFlux,
-        bool                           evaluateNonconservativeProduct,
-        bool                           evaluateSource,
-        bool                           evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
-      )
-#if defined(UseManualInlining)
-        __attribute__((always_inline))
-#endif
-        ;
-
-
-      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables>
-      static void timeStepWithRusanov_batched_in_situ_static_calls(
-        ::exahype2::CellData&          patchData,
-        bool                           evaluateFlux,
-        bool                           evaluateNonconservativeProduct,
-        bool                           evaluateSource,
-        bool                           evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
-      )
-#if defined(UseManualInlining)
-        __attribute__((always_inline))
-#endif
-        ;
-
-
-      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables, typename TempDataEnumerator>
-      static void timeStepWithRusanov_patchwise_split_terms_call_stack_static_calls(
-        ::exahype2::CellData&          patchData,
-        bool                           evaluateFlux,
-        bool                           evaluateNonconservativeProduct,
-        bool                           evaluateSource,
-        bool                           evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
-      )
-#if defined(UseManualInlining)
-        __attribute__((always_inline))
-#endif
-        ;
-
-
-      /**
-       * ## Vectorisation
-       *
-       * I tried to collapse the inner loop over x and the iteration over the patches.
-       * This did not work. It led to a seg fault on Hamilton's AMD EPYC processors.
-       */
-      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables, typename TempDataEnumerator>
-      static void timeStepWithRusanov_batched_call_stack_static_calls(
-        ::exahype2::CellData&          patchData,
-        bool                           evaluateFlux,
-        bool                           evaluateNonconservativeProduct,
-        bool                           evaluateSource,
-        bool                           evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
-      )
-#if defined(UseManualInlining)
-        __attribute__((always_inline))
-#endif
-        ;
-
-
-      template <
-        typename Solver,
-        int numberOfVolumesPerAxisInPatch,
-        int haloSize,
-        int unknowns,
-        int auxiliaryVariables,
-        typename TempDataEnumerator = exahype2::enumerators::AoSoALexicographicEnumerator>
-      static void timeStepWithRusanov_batched_heap_static_calls(
-        ::exahype2::CellData&          patchData,
-        bool                           evaluateFlux,
-        bool                           evaluateNonconservativeProduct,
-        bool                           evaluateSource,
-        bool                           evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
-      )
-#if defined(UseManualInlining)
-        __attribute__((always_inline))
-#endif
-        ;
-
-
-      /**
-       * Dummy version delegating to one well-defined proper kernel. By
-       * offering such a routine, we can generate generic compute code
-       * in Python without knowing which kernel variants are on offer for
-       * a particular GPU backend.
-       */
-      template <typename Solver, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int auxiliaryVariables, typename TempDataEnumerator>
-      static void timeStepWithRusanov_generic_static_calls(
-        ::exahype2::CellData&          patchData,
-        bool                           evaluateFlux,
-        bool                           evaluateNonconservativeProduct,
-        bool                           evaluateSource,
-        bool                           evaluateMaximumEigenvalueAfterTimeStep,
-        peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
-      ) {
-        timeStepWithRusanov_patchwise_heap_static_calls<Solver, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables, TempDataEnumerator>(
-          patchData, evaluateFlux, evaluateNonconservativeProduct, evaluateSource, evaluateMaximumEigenvalueAfterTimeStep, loopParallelism
-        );
-      }
-
-      namespace internal {
-        tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables);
-        tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesUnknowns(int numberOfVolumesPerAxisInPatch, int unknowns);
-
-        tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatches(int numberOfVolumesPerAxisInPatch, int patches);
-        tarch::la::Vector<Dimensions + 2, int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(
-          int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables, int patches
-        );
-        tarch::la::Vector<Dimensions + 2, int> rangeOverVolumesTimesUnknownsTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int patches);
-
-        tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch);
-        tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch);
-        tarch::la::Vector<3, int>          rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch);
-
-        tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int patches);
-        tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int patches);
-        tarch::la::Vector<3 + 1, int>          rangeOverVolumesTimesPatchesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int patches);
-      } // namespace internal
-    }   // namespace rusanov
-  }     // namespace fv
-} // namespace exahype2
-
-#include "Rusanov_batched_functors.cpph"
-#include "Rusanov_batched_in_situ_static_calls.cpph"
-#include "Rusanov_batched_static_calls.cpph"
-#include "Rusanov_patchwise_functors.cpph"
-#include "Rusanov_patchwise_in_situ_static_calls.cpph"
-#include "Rusanov_patchwise_split_terms_static_calls.cpph"
-#include "Rusanov_patchwise_static_calls.cpph"
-
-#if defined(GPUOffloadingOMP) /*or defined(SharedOMP)*/
-#include "exahype2/fv/rusanov/omp/Rusanov.h"
+#if defined(GPUOffloadingCPP)
+#include "exahype2/fv/rusanov/cpp/rusanov.h"
 #endif
 
-#if defined(GPUOffloadingCPP) /*or defined(SharedCPP)*/
-#include "exahype2/fv/rusanov/cpp/Rusanov.h"
-#endif
-
-#if defined(GPUOffloadingSYCL) /*or defined(SharedSYCL)*/
-#include "exahype2/fv/rusanov/sycl/Rusanov.h"
+#if defined(GPUOffloadingSYCL)
+#include "exahype2/fv/rusanov/sycl/rusanov.h"
 #endif

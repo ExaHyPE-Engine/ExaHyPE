@@ -5,6 +5,7 @@
 #include "exahype2/fd/BoundaryConditions.h"
 #include "exahype2/enumerators/enumerators.h"
 
+#include <iostream>
 
 void toolbox::blockstructured::projectPatchSolutionOntoFaces(
     int    numberOfVolumesPerAxisInPatch,

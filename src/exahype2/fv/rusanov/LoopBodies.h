@@ -71,7 +71,6 @@ namespace exahype2::fv::rusanov::loopbodies {
    * @param volumeIndex: Which volume is to be updated within the target
    *   patch. This index refers to the target index.
    */
-#pragma omp declare simd
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod auto copySolution =
     [](
       const double* __restrict__ QIn,
@@ -221,7 +220,7 @@ namespace exahype2::fv::rusanov::loopbodies {
     double                                       dt,
     int                                          normal,
     double* __restrict__ maxEigenvalue,
-    MaxEigenvalueEnumeratorType maxEigenvalueEnumerator
+    const MaxEigenvalueEnumeratorType& maxEigenvalueEnumerator
   ) InlineMethod;
 
 
@@ -229,7 +228,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    * Specialisation if input data is already in AoS format. This holds for
    * all of our kernels unless you explicitly reorder the input.
    */
-  template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class MaxEigenvalueEnumeratorType>
+  template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeMaxEigenvalue(
     const double* __restrict__ QIn,
     const enumerators::AoSLexicographicEnumerator& QInEnumerator,
@@ -242,7 +241,7 @@ namespace exahype2::fv::rusanov::loopbodies {
     double                                         dt,
     int                                            normal,
     double* __restrict__ maxEigenvalue,
-    MaxEigenvalueEnumeratorType maxEigenvalueEnumerator
+    const enumerators::AoSLexicographicEnumerator& maxEigenvalueEnumerator
   ) InlineMethod;
 
 
@@ -449,7 +448,7 @@ namespace exahype2::fv::rusanov::loopbodies {
 
 #pragma omp declare simd
   template <class SolverType>
-  static KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod computeFlux(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void computeFlux(
     const double* __restrict__ QIn,
     const enumerators::AoSLexicographicEnumerator& QInEnumerator,
     const tarch::la::Vector<Dimensions, double>&   patchCentre,
@@ -641,7 +640,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    * The NCP is defined over faces, i.e., we know that ncpX, ncpY, ncpZ
    * hold one (vector) entry per face and ncpEnumerator is aware that we
    * work with faces. So we compute the left and the right face and we get
-   * the corresponing non-conservative flux from there. This flux is now
+   * the corresponding non-conservative flux from there. This flux is now
    * scaled with the time step size, as we do an explicit Euler step, i.e.,
    * the right-hand side of the PDE
    *

@@ -2,32 +2,20 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/tests/TestCase.h"
 
-namespace exahype2 {
-  namespace fv {
-    namespace rusanov {
-      namespace tests {
-        class CopyPatchTest;
-      }
-    }
-  }
-}
+namespace exahype2::fv::rusanov::tests {
+  class CopyPatchTest;
+} // namespace exahype2::fv::rusanov::tests
 
 
 class exahype2::fv::rusanov::tests::CopyPatchTest: public tarch::tests::TestCase {
-  private:
-    void testMe();
+private:
+  void testCopyPatch();
 
-  public:
-    /**
-     * Constructor.
-     */
-    CopyPatchTest();
+public:
+  CopyPatchTest();
+  virtual ~CopyPatchTest() override = default;
 
-    /**
-     * This routine is triggered by the TestCaseCollection
-     */
-    virtual void run() override;
+  virtual void run() override;
 };

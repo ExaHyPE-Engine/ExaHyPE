@@ -95,6 +95,6 @@ namespace exahype2::enumerators {
     const int _numberOfDoFsPerAxisInCell;
     const int _haloSize;
     const int _unknowns;
-    const int _numberOfAuxiliaryVarFiables;
+    const int _numberOfAuxiliaryVariables;
   };
 } // namespace exahype2::enumerators
