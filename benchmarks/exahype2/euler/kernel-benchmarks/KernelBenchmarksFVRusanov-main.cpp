@@ -32,6 +32,7 @@
 #include "tasks/FVRusanovSolverEnclaveTask.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
+using namespace benchmarks::exahype2::kernelbenchmarks;
 static ::tarch::logging::Log                _log("::");
 static double                               validMaxEigenvalue = 0;
 static double*                              validOutcome       = nullptr;
@@ -42,7 +43,6 @@ static constexpr double                     CellOffset         = 4.0;
 static ::tarch::timing::Measurement         timingComputeKernel;
 static ::tarch::multicore::BooleanSemaphore validateOutcomeSemaphore;
 static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
-using namespace benchmarks::exahype2::kernelbenchmarks;
 
 #if Dimensions == 2
 static constexpr int NumberOfInputEntries = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2) * (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2)
