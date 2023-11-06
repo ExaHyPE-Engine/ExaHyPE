@@ -185,7 +185,7 @@ class GaussLobatto(MatrixGenerator):
     P_qm_u_right = -np.dot(np.linalg.inv(M_qm_qm_right), A_qm_u_right)
     P_qm_u_top = -np.dot(np.linalg.inv(M_qm_qm_top), A_qm_u_top)
 
-    P_gradient = np.concatenate((P_qp_u_left, P_qp_u_bottom, P_qm_u_right, P_qm_u_top), axis=0)
+    #P_gradient = np.concatenate((P_qp_u_left, P_qp_u_bottom, P_qm_u_right, P_qm_u_top), axis=0)
 
     ### Compute the solution projections
     A_up_u_left = self.block_matrix._A_FC[(3,0)]["left"][(0,1)]
@@ -203,9 +203,17 @@ class GaussLobatto(MatrixGenerator):
     P_um_u_right = -np.dot(np.linalg.inv(M_um_um_right), A_um_u_right)
     P_um_u_top = -np.dot(np.linalg.inv(M_um_um_top), A_um_u_top)
 
-    P_solution = np.concatenate((P_up_u_left, P_up_u_bottom, P_um_u_right, P_um_u_top), axis=0)
+    #P_solution = np.concatenate((P_up_u_left, P_up_u_bottom, P_um_u_right, P_um_u_top), axis=0)
 
-    return np.concatenate((P_gradient, P_solution), axis=0)
+    #return np.concatenate((P_gradient, P_solution), axis=0)
+  
+    P_left = np.concatenate((P_qp_u_left, P_up_u_left), axis=0)
+    P_bottom = np.concatenate((P_qp_u_bottom, P_up_u_bottom), axis=0)
+    P_right = np.concatenate((P_qm_u_right, P_um_u_right), axis=0)
+    P_top = np.concatenate((P_qm_u_top, P_um_u_top), axis=0)
+
+    return np.concatenate((P_left, P_bottom, P_right, P_top), axis=0)
+
 
   def get_averaging_riemann_solver(self):
     """!
