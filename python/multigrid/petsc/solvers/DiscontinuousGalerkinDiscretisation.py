@@ -80,21 +80,28 @@ class AssemblePetscMatrix(ActionSet):
         int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
       
         assertion1(globalFirstDoFIndexOfLeftFace>=0,  marker.toString());
-      
+        logTraceInWith4Arguments( "TCFT::LeftProjection", globalFirstDoFIndexOfLeftFace, globalCellIndex , projectionCellToFaceMatrix, projectionFaceToCellMatrix );
+
         for (int row=0; row<dofsPerFace; row++ ) {
           for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+            logTraceIn("CellToFace");
             repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
               globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
               globalCellIndex+col,
               projectionCellToFaceMatrix(d * dofsPerFace + row,col)
             );
+            logTraceOut("CellToFace");
+
+            logTraceIn("FaceToCell");
             repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
               globalCellIndex+col,
               globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
               projectionFaceToCellMatrix(col, d * dofsPerFace + row)
             );
+            logTraceOut("FaceToCell");
           }
         }
+        logTraceOut( "TCFT::LeftProjection" );
       }
       
       if ( 
@@ -106,6 +113,8 @@ class AssemblePetscMatrix(ActionSet):
         int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
       
         assertion1(globalFirstDoFIndexOfRightFace>=0, marker.toString());
+
+        logTraceInWith2Arguments( "TCFT::RightProjection", globalFirstDoFIndexOfRightFace, marker.toString() );
         
         for (int row=0; row<dofsPerFace; row++ ) {
           for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
@@ -122,6 +131,8 @@ class AssemblePetscMatrix(ActionSet):
           }
         }
       } // end of if interior face
+
+      logTraceOut( "TCFT::RightProjection" );
     }
   
   }
