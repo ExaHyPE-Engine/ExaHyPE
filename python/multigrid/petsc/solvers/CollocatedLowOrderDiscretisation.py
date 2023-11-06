@@ -430,3 +430,6 @@ class CollocatedLowOrderDiscretisation(Solver):
     """
     return 0
 
+  @property
+  def name(self):
+    return self._name

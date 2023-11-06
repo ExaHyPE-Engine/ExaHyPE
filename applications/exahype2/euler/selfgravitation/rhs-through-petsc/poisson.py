@@ -23,7 +23,7 @@ parser.add_argument("-pd",  "--peano-dir",                dest="peanodir",      
 parser.add_argument("-cd",  "--configure-dir",            dest="configuredir",                        default="../../../../../", help="Location of configure" )
 parser.add_argument("-v",   "--verbose",                  dest="verbose",                 action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",               dest="dimensions",              type=int,   default=2, help="Dimensions")
-#parser.add_argument("-upcd","--unknowns_per_vertex_dof",  dest="unknowns_per_vertex_dof", type=int,   default=3, help="unknowns per vertex dof")
+parser.add_argument("-upvd","--unknowns_per_vertex_dof",  dest="unknowns_per_vertex_dof", type=int,   default=3, help="unknowns per vertex dof")
 parser.add_argument("-et",  "--end-time",                 dest="end_time",                type=float, default=1.0, help="Number of timesteps")
 parser.add_argument("-amr", "--adaptive-levels",          dest="adaptivity_levels",       type=int,   default=0, help="Number of AMR grid levels on top of hmax (0 by default)")
 parser.add_argument("-t",   "--type",                     dest="type",                    choices=["global-fixed", "global-adaptive"], required=True)
@@ -55,9 +55,15 @@ matrices = DLinear(args.dimensions,
 #
 project = exahype2.Project(
   namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
+  project_name  = "Euler",
+  directory     = ".",
+  executable    = "selfgravitation-euler"
+)
+petsc_project = petsc.Project(
+  namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
   project_name  = "Poisson",
   directory     = ".",
-  executable    = "selfgravitation-with-petsc"
+  executable    = "poisson-with-petsc"
 )
 
 #
@@ -91,7 +97,7 @@ if args.type=="global-fixed":
     source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
   # class DLinearFixedTimeStep(DLinear) # just the LHS matrix modification?
-  matrices = DLinearFixedTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
+  # matrices = DLinearFixedTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
 if args.type=="global-adaptive":
   euler_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     "Euler",
@@ -104,24 +110,27 @@ if args.type=="global-adaptive":
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
-  # class DLinearFixedTimeStep(DLinear) # just the LHS matrix modification?
-  matrices = DLinearAdaptiveTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
+  # class DLinearAdaptiveTimeStep(DLinear) # just the LHS matrix modification?
+  # matrices = DLinearAdaptiveTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
+matrices = DLinear(args.dimensions, args.unknowns_per_vertex_dof)
 
 # @todo: Or is it about an individual CollocatedLowOrderDiscretisation for every type of solver?
 poisson_solver = petsc.solvers.CollocatedLowOrderDiscretisation(
     "Poisson",
     1,
     args.dimensions,
-    args.meshsize,
-    args.meshsize,
-    matrices.getCellSystemMatrixForLaplacian(),
-    matrices.getCellMassMatrix()
+    args.h,
+    args.h,
+    matrices.get_cell_system_matrix_for_laplacian(),
+    matrices.get_cell_mass_matrix(),
+    1,
+    1,
   )
 
 euler_solver.set_implementation(refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation)
 
 project.add_solver(euler_solver)
-project.add_solver(poisson_solver)
+petsc_project.add_solver(poisson_solver)
 
 #
 # Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
@@ -140,53 +149,54 @@ euler_solver.add_user_action_set_includes( """
 euler_solver.postprocess_updated_patch = """
  ::toolbox::blockstructured::copyUnknown(
    {},      // no of unknowns per dimension
-   fineGridCellEulerQ.value, // source
+   fineGridCell{}Q.value, // source
    0,       // the first index (0) is rho
    5+3,     // unknowns in source (incl material parameters)
    0,       // no overlap/halo here
-   fineGridCellPoissonQ.value, // dest
+   fineGridCell{}PETScData.value, // dest
    4,       // index four in destination, i.e. fifth entry
    4+1,     // four unknowns in source (incl material parameters)
    0        // no overlap/halo here
  );
-""".format(args.patch_size)
+""".format(args.patch_size, euler_solver.name, poisson_solver.name)
 
-poisson_solver.add_user_action_set_includes( """
-#include "toolbox/blockstructured/Derivative.h"
-""")
-poisson_solver.postprocess_updated_patch = """
- double delta =
- ::toolbox::blockstructured::computeGradientAndReturnMaxDifference(
-   {},      // no of unknowns per dimension
-   fineGridCellPoissonQ.value, // source
-   0,       // take first entry of solution vector, ignore helper entries
-   4+1,     // unknowns in source (incl material parameters)
-   0,       // no overlap/halo here
-   fineGridCellEulerQ.value, // source
-   #if Dimensions==2
-   {{5,6}},   // indices to which we write the gradient. Depends on dimension
-   #else
-   {{5,6,7}}, // and uses two brackets as escape symbol
-   #endif
-   5+3,     // four unknowns in source (incl material parameters)
-   0,       // no overlap/halo here
-   marker.h()
- );
- repositories::InstanceOf{}.reportGradientDelta( delta );
-""".format(args.patch_size, poisson_solver.name)
+# poisson_solver.add_user_action_set_includes( """
+# #include "toolbox/blockstructured/Derivative.h"
+# """)
+
+# poisson_solver.postprocess_updated_patch = """
+#  double delta =
+#  ::toolbox::blockstructured::computeGradientAndReturnMaxDifference(
+#    {},      // no of unknowns per dimension
+#    fineGridCellPoissonQ.value, // source
+#    0,       // take first entry of solution vector, ignore helper entries
+#    4+1,     // unknowns in source (incl material parameters)
+#    0,       // no overlap/halo here
+#    fineGridCellEulerQ.value, // source
+#    #if Dimensions==2
+#    {{5,6}},   // indices to which we write the gradient. Depends on dimension
+#    #else
+#    {{5,6,7}}, // and uses two brackets as escape symbol
+#    #endif
+#    5+3,     // four unknowns in source (incl material parameters)
+#    0,       // no overlap/halo here
+#    marker.h()
+#  );
+#  repositories::InstanceOf{}.reportGradientDelta( delta );
+# """.format(args.patch_size, poisson_solver.name)
 
 #
 # Ensure the Poisson solver does never overtake the Euler
 #
-poisson_solver._compute_new_time_step_size += """
-if (fineGridCell""" + poisson_solver.name + "CellLabel.getTimeStamp() > fineGridCell" + euler_solver.name + """CellLabel.getTimeStamp() ) {
-  timeStamp = fineGridCell""" + euler_solver.name + """CellLabel.getTimeStamp(); // reset time step size
-  timeStepSize = 0.0;           // invalidate time step size; the one chosen didn't make sense
-  fineGridCell""" + poisson_solver.name + """CellLabel.setTimeStamp( timeStamp );
-}
-else {
-}
-"""
+# poisson_solver._compute_new_time_step_size += """
+# if (fineGridCell""" + poisson_solver.name + "CellLabel.getTimeStamp() > fineGridCell" + euler_solver.name + """CellLabel.getTimeStamp() ) {
+#   timeStamp = fineGridCell""" + euler_solver.name + """CellLabel.getTimeStamp(); // reset time step size
+#   timeStepSize = 0.0;           // invalidate time step size; the one chosen didn't make sense
+#   fineGridCell""" + poisson_solver.name + """CellLabel.setTimeStamp( timeStamp );
+# }
+# else {
+# }
+# """
 
 if args.dimensions == 2:
   size                    = [1.0, 1.0]
@@ -208,6 +218,11 @@ project.set_global_simulation_parameters(
   time_in_between_plots = args.plot_snapshot_interval,      # snapshots
   periodic_BC = [False, False, False]
 )
+petsc_project.set_global_simulation_parameters(
+  dimensions            = args.dimensions,
+  offset                = offset,
+  domain_size           = size,
+)
 
 #
 # So here's the parallel stuff. This is new compared to the serial
@@ -215,13 +230,31 @@ project.set_global_simulation_parameters(
 #
 project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 project.set_Peano4_installation(args.peanodir, modes[args.mode])
-peano4_project = project.generate_Peano4_project(args.verbose)
-peano4_project.output.makefile.add_cpp_file("Euler.cpp")
+petsc_project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()")
+petsc_project.set_Peano4_installation(args.peanodir, modes[args.mode])
 
-#@todo not sure yet if this is a part of PETSc solver for Poisson (assuming this was for Peano)
-#for now, just copying the essential files into this subfolder
-# peano4_project.output.makefile.add_h_file("Poisson.h")
-# peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
+#
+# Build first the Peano4 project for Poisson
+#
+petsc_peano4_project=petsc_project.generate_Peano4_project(args.verbose)
+petsc_peano4_project.output.makefile.add_h_file("Poisson.h")
+petsc_peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
+petsc_peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+if args.j==0:
+    petsc_peano4_project.generate()
+else:
+    petsc_peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+print("PETSc project is created!")
+
+
+#
+# Build now the Peano4 project for Euler which already can access the generated files for Poisson
+#
+peano4_project = project.generate_Peano4_project(args.verbose, petsc_project, args.configuredir)
+peano4_project.output.makefile.add_h_file("Euler.h")
+peano4_project.output.makefile.add_cpp_file("Euler.cpp")
+peano4_project.output.makefile.add_h_file("Poisson.h")
+peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
 
 peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
 if args.j==0:
