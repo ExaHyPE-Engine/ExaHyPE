@@ -318,7 +318,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     timingComputeKernel.erase();
     ::tarch::timing::Measurement timingKernelLaunch;
 
-    for (int j = 0; j < NumberOfSamples; j++) {
+    for (int j = 0; j < NumberOfSamples + 1; j++) {
       parallelFor(launchingThread, launchingThreads) {
         ::exahype2::CellData patchData(patches);
         for (int i = 0; i < patches; i++) {
@@ -334,7 +334,9 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
         kernel(device, patchData);
         watchKernelLaunch.stop();
-        timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
+        if (j > 0) { // We skip the first measurement (warmup phase)
+          timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
+        }
 
         if constexpr (Accuracy > 0.0) {
           int    errors        = 0;
@@ -1408,6 +1410,7 @@ int main(int argc, char** argv) {
   logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
   logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
   logInfo("main()", "Number of samples per measurement: " << NumberOfSamples);
+  logInfo("main()", "Evaluate max. eigenvalue (reduction step): " << EvaluateMaximumEigenvalueAfterTimeStep);
   logInfo("main()", "Dimensions: " << Dimensions);
   logInfo("main()", "===============================================================");
 
