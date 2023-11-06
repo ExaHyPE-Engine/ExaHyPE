@@ -12,6 +12,7 @@ from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
 from multigrid.petsc.actionsets.InitCellDoFs              import InitCellDoFs
 from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
 from multigrid.petsc.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
+from multigrid.petsc.actionsets.ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod   import ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod 
 
 from abc import abstractmethod
 
@@ -30,6 +31,9 @@ class AssemblePetscMatrix(ActionSet):
     std::pair<int,int> localCellIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalCellIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localCellIndex);
 
+    // ================================
+    // Left-hand side A_cc contribution
+    // ================================
     auto lhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
 
     logTraceInWith3Arguments( "touchCellFirstTime()", globalCellIndex, lhsCellMatrix.toString(), marker.toString() );
@@ -44,6 +48,9 @@ class AssemblePetscMatrix(ActionSet):
     }
     logTraceOut( "touchCellFirstTime()" );
     
+    // ================================
+    // Right-hand side vector contribution (multiply rhs (mass) matrix with rhs initial values
+    // ================================
     auto rhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
 
     for (int row=0; row<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; row++) {
@@ -58,79 +65,77 @@ class AssemblePetscMatrix(ActionSet):
     
     auto projectionCellToFaceMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfCellDataOntoFace(marker.x(),marker.h());
     auto projectionFaceToCellMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfRiemannSolutionOntoCell(marker.x(),marker.h());
-
-    logTraceInWith4Arguments( "touchCellFirstTime::projection", globalCellIndex, marker.toString(), projectionCellToFaceMatrix.toString(), projectionFaceToCellMatrix.toString() );
-
-    int dofsPerFace  = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
-    int nodesPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace;
-
-    int dofsPerCell  = repositories::{{SOLVER_INSTANCE}}.DoFsPerCell;
-
-    /*
-    The following loop is done "dimensions" different times. The first time around, 
-    the left and right faces are with respect to the x axis. 
-    The second time around, it's with respect to the y axis.
-
-    We insert each element from the relevant matrices one-by-one for ease of debugging.
-    */
+    int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
+    
     for (int d=0; d<Dimensions; d++) {
-      std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
-      std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
-      int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
-      int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
-
-      logTraceInWith3Arguments( "touchCellFirstTime::projectLeftAndRightFace()", globalFirstDoFIndexOfLeftFace, globalFirstDoFIndexOfRightFace, d );
+      // =================================
+      // Project to left face along axis d
+      // =================================
+      if ( 
+        fineGridFaces{{SOLVER_NAME}}PETScData(d).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Interior 
+        or
+        fineGridFaces{{SOLVER_NAME}}PETScData(d).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Boundary
+      ) {
+        std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
+        int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
       
-      for (int row=0; row<dofsPerFace; row++ ) {
-        for (int col=0; col<dofsPerCell; col++) {
-          
-          logTraceInWith2Arguments("Projections", row, col);
-
-          // Cell to Face projection for left face
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
-            globalCellIndex+col,
-            projectionCellToFaceMatrix(d * dofsPerFace + row,col)
-          );
-
-          // Cell to Face projection for right face
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalFirstDoFIndexOfRightFace + row, 
-            globalCellIndex+col,
-            projectionCellToFaceMatrix(d * dofsPerFace + row + Dimensions*dofsPerFace,col)
-          );
-          
-          // Face to Cell projection for left face
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalCellIndex+col,
-            globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
-            projectionFaceToCellMatrix(col, d * dofsPerFace + row)
-          );
-
-          // Face to Cell projection for right face
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalCellIndex+col,
-            globalFirstDoFIndexOfRightFace + row + 2 * dofsPerFace, 
-            projectionFaceToCellMatrix(col, d * dofsPerFace + row + Dimensions*dofsPerFace)
-          );
-
-          logTraceOut("Projections");
+        assertion1(globalFirstDoFIndexOfLeftFace>=0,  marker.toString());
+      
+        for (int row=0; row<dofsPerFace; row++ ) {
+          for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
+              globalCellIndex+col,
+              projectionCellToFaceMatrix(d * dofsPerFace + row,col)
+            );
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalCellIndex+col,
+              globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
+              projectionFaceToCellMatrix(col, d * dofsPerFace + row)
+            );
+          }
         }
       }
-      logTraceOut( "touchCellFirstTime::projectLeftAndRightFace()" );
+      
+      if ( 
+        fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Interior 
+        or
+        fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Boundary
+      ) {
+        std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
+        int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
+      
+        assertion1(globalFirstDoFIndexOfRightFace>=0, marker.toString());
+        
+        for (int row=0; row<dofsPerFace; row++ ) {
+          for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalFirstDoFIndexOfRightFace + row, 
+              globalCellIndex+col,
+              projectionCellToFaceMatrix(d * dofsPerFace + row + Dimensions*dofsPerFace,col)
+            );
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalCellIndex+col,
+              globalFirstDoFIndexOfRightFace + row + 2 * dofsPerFace, 
+              projectionFaceToCellMatrix(col, d * dofsPerFace + row + Dimensions*dofsPerFace)
+            );
+          }
+        }
+      } // end of if interior face
     }
   
-  logTraceOut("touchCellFirstTime::projection");
   }
   """
 
   TemplateTouchFaceFirstTime="""
   auto RiemannSolverMatrix = repositories::{{SOLVER_INSTANCE}}.getRiemannSolver(marker.x(),marker.h());
   int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
-  if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() != facedata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+  if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
     std::pair<int,int> localFirstDoFIndex = std::make_pair(_spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex);
-    logTraceInWith7Arguments( "touchFaceFirstTime()", marker.toString(), _spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.toString(), localFirstDoFIndex.first, localFirstDoFIndex.second, globalFirstDoFIndex, RiemannSolverMatrix.toString() );
+
+    assertion( globalFirstDoFIndex>=0 );
+
     for (int row=0; row<dofsPerFace; row++)
 
     // we have col<2*dofsPerFace here since we have left and right projections here.
@@ -147,7 +152,6 @@ class AssemblePetscMatrix(ActionSet):
         RiemannSolverMatrix(row, col)
       );
     }
-    logTraceOut("touchFaceFirstTime");
   }
   """
   
@@ -524,7 +528,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
   plain Discontiuous Galerking solver:
   
   - benchmarks/multigrid/petsc/poisson/dg.py Hosts a simple solver for the 
-    Poisson equation. All the rationale are discussed in @ref benchmarks_multigrid_petsc_poisson.
+    Poisson equation. All the rationale are discussed in @ref benchmarks_documentation_multigrid_petsc_poisson.
     
 
 
@@ -700,12 +704,18 @@ the matrix is applied to
     to the observer.
     
     """
-    observer.add_action_set( EnumerateDoFs(self) )
+    observer.add_action_set( EnumerateDoFs(self,
+                                           boundary_vertices_hold_data = False,
+                                           boundary_faces_hold_data = True,
+                                           ))
+    
+    
     observer.add_action_set( InitCellDoFs(self) ) 
     pass
   
   def add_to_assemble(self, observer):
     observer.add_action_set( AssemblePetscMatrix(self) )
+    observer.add_action_set( ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(self) )
     pass
 
   def add_to_init_petsc(self, observer):
@@ -753,6 +763,7 @@ the matrix is applied to
         "CELL_CELL_RHS_MATRIX_SCALING": self.cell_cell_rhs_matrix_scaling,
         "CELL_TO_FACE_MATRIX_SCALING":           self.cell_to_face_matrix_scaling,
         "FACE_TO_CELL_MATRIX_SCALING":           self.face_to_cell_matrix_scaling,
+        "SOLVER_NAME":                           self.typename(),
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

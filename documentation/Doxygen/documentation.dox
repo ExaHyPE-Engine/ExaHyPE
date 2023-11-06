@@ -402,9 +402,20 @@ My fancy source code
 / / ! [My label]
 ~~~~~~~~~~~~~~~~~~~~~~
 
+In Python, it is 
+
+~~~~~~~~~~~~~~~~~~~~~~
+#! [My label]
+My fancy source code
+#! [My label]
+~~~~~~~~~~~~~~~~~~~~~~
+
+
 Please remove the spaces above between the slashes and the exlamation mark.
 They are in there, as the parser otherwise fails.
 Once the source code annotation is in, you can refer to this code snippet in the doxygen docu via
+
+
 
 
 ~~~~~~~~~~~~~~~~~~~~~~

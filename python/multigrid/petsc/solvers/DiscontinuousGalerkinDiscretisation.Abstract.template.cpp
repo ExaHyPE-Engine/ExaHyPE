@@ -148,3 +148,37 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAM
 }
 {% endif %}
 
+
+
+{{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h
+) {
+  return vertexdata::{{SOLVER_NAME}}PETScData::Type::Outside;
+}
+
+
+{{NAMESPACE | join("::")}}::facedata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceDoFType(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h
+) {
+  auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double >&  x) -> bool {
+    bool isOnBoundary = false;
+    for (int d=0; d<Dimensions; d++) {
+      isOnBoundary |= tarch::la::smallerEquals( x(d), DomainOffset(d) );
+      isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
+    }
+    return isOnBoundary;
+  };
+
+  return isOnBoundary(x) ? facedata::{{SOLVER_NAME}}PETScData::Type::Boundary : facedata::{{SOLVER_NAME}}PETScData::Type::Interior;
+}
+
+
+{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellDoFType(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h
+) {
+  return celldata::{{SOLVER_NAME}}PETScData::Type::Interior;
+}
+

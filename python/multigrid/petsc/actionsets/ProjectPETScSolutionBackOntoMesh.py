@@ -20,22 +20,20 @@ corresponding entry in the solution vector reads like.
   """
   
   
-  TemplateInitCell = """
-  if ( not marker.willBeRefined() ) { 
-    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
+  TemplateTouchCellFirstTime = """
+  if ( fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
+    logTraceIn( "touchCellFirstTime(...)" );
     
     std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber() );
     int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
 
-    tarch::la::Vector<{{CELL_CARDINALITY}}, double> cellDofs;
     for (int i=0; i<{{CELL_CARDINALITY}}; i++){
-      cellDofs[i] = repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().get(globalIndex + i);
+      // place values into mesh
+      fineGridCell{{SOLVER_NAME}}.setValue( i,
+        repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().get(globalIndex + i) );
     }
 
-    //place this vector into the mesh
-    fineGridCell{{SOLVER_NAME}}.setValue(cellDofs);
-    
-    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
+    logTraceOut( "touchCellFirstTime(...)" );
   }
 """
   
@@ -73,7 +71,7 @@ in init().
     """
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
+      result = jinja2.Template(self.TemplateTouchCellFirstTime).render(**self.d)
       pass 
     return result
 

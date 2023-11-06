@@ -1,6 +1,6 @@
 /**
 
- @page tutorials_multigrid_petsc_discontinuous_galerkin_poisson Discontinuous Galerkin for the Poisson equation with PETSc
+ @page tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson Discontinuous Galerkin for the Poisson equation with PETSc
 
  We solve the Poisson equation 
  
@@ -11,7 +11,7 @@
  
  - Peano's @ref Multigrid "multigrid terminology";
  - DG basics (from a math point of view, though no in-depth knowledge is required);
- - How to @ref page_installation "install and build Peano" and notably how to enable it's @ref multigrid_petsc "PETSc backend".
+ - How to @ref page_installation "install and build Peano" and notably how to enable it's @ref documentation_multigrid_petsc "PETSc backend".
  
  
  This simple example discusses the steps and code snippets from the file benchmarks/multigrid/petsc/poisson/dg.py.
