@@ -1322,7 +1322,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
   );
 
   assessKernel(
-    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
       FVRusanovSolver,
       FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
       1,
@@ -1339,7 +1339,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     numberOfPatches
   );
   assessKernel(
-    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
       FVRusanovSolver,
       FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
       1,
@@ -1356,7 +1356,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     numberOfPatches
   );
   assessKernel(
-    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
       FVRusanovSolver,
       FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
       1,
