@@ -24,10 +24,8 @@ corresponding entry in the solution vector reads like.
   if ( not marker.willBeRefined() ) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
     
-    // Commenting out so that we don't get compilation errors, as we are halfway through making changes
-    /*
     std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber() );
-    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
+    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
 
     tarch::la::Vector<{{CELL_CARDINALITY}}, double> cellDofs;
     for (int i=0; i<{{CELL_CARDINALITY}}; i++){
@@ -37,8 +35,6 @@ corresponding entry in the solution vector reads like.
     //place this vector into the mesh
     fineGridCell{{SOLVER_NAME}}.setValue(cellDofs);
     
-    */
-
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   }
 """
