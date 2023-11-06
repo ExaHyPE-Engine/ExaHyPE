@@ -1,1567 +1,1197 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "Rusanov.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-#include "exahype2/fv/rusanov/LoopBody.h"
-#include "tarch/timing/Watch.h"
 
-template <
-  typename Solver,
-  int      numberOfVolumesPerAxisInPatch,
-  int      haloSize,
-  int      unknowns,
-  int      auxiliaryVariables,
-  typename TempDataEnumerator
->
-void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_copy_static_calls(
-  int                     targetDevice,
-  ::exahype2::CellData&   hostPatchData,
-  bool                    evaluateFlux,
-  bool                    evaluateNonconservativeProduct,
-  bool                    evaluateSource,
-  bool                    evaluateMaximumEigenvalueAfterTimeStep,
-  tarch::timing::Measurement&  measurement
-) {
-  static_assert(haloSize == 1);
-
-  static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
-  logTraceIn("timeStepWithRusanov_batched_copy_static_calls()");
-
-  exahype2::enumerators::AoSLexicographicEnumerator QInHostEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
-  exahype2::enumerators::AoSLexicographicEnumerator QOutHostEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
-  TempDataEnumerator fluxHostEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   haloSize, unknowns, 0);
-  TempDataEnumerator ncpHostEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, haloSize, unknowns, 0);
-  TempDataEnumerator eigenvalueHostEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   haloSize,        1, 0);
-
-  double* tempFluxX = new double[fluxHostEnumerator.size()];
-  double* tempFluxY = new double[fluxHostEnumerator.size()];
-  double* tempFluxZ = new double[fluxHostEnumerator.size()];
-  double* tempNonconservativeProductX = new double[ncpHostEnumerator.size()];
-  double* tempNonconservativeProductY = new double[ncpHostEnumerator.size()];
-  double* tempNonconservativeProductZ = new double[ncpHostEnumerator.size()];
-  double* tempEigenvalueX = new double[eigenvalueHostEnumerator.size()];
-  double* tempEigenvalueY = new double[eigenvalueHostEnumerator.size()];
-  double* tempEigenvalueZ = new double[eigenvalueHostEnumerator.size()];
-
-  #pragma omp target enter data map(alloc:tempFluxX[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempFluxY[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempFluxZ[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempNonconservativeProductX[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempNonconservativeProductY[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempNonconservativeProductZ[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempEigenvalueX[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempEigenvalueY[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target enter data map(alloc:tempEigenvalueZ[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
-
-  double**  mappedPointersToQIn  = new double*[ hostPatchData.numberOfCells ];
-  double**  mappedPointersToQOut = new double*[ hostPatchData.numberOfCells ];
-
-  for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    const double* currentQIn  = hostPatchData.QIn[patchIndex];
-    double*       currentQOut = hostPatchData.QOut[patchIndex];
-
-    #pragma omp target enter data map(to:currentQIn[0:QInHostEnumerator.size()] ) device(targetDevice)
-    #pragma omp target enter data map(alloc:currentQOut[0:QOutHostEnumerator.size()] ) device(targetDevice)
-
-    mappedPointersToQIn[patchIndex]  = (double*) omp_get_mapped_ptr( currentQIn,  targetDevice );
-    mappedPointersToQOut[patchIndex] = (double*) omp_get_mapped_ptr( currentQOut, targetDevice );
-  }
-
-  const int numberOfCells            = hostPatchData.numberOfCells;
-  double*   rawPointerToCellCentre   = hostPatchData.cellCentre[0].data();
-  double*   rawPointerToCellSize     = hostPatchData.cellSize[0].data();
-  double*   t                        = hostPatchData.t;
-  double*   dt                       = hostPatchData.dt;
-  double*   maxEigenvalue            = hostPatchData.maxEigenvalue;
-
-  #pragma omp target enter data map(to:rawPointerToCellCentre[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
-  #pragma omp target enter data map(to:rawPointerToCellSize[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
-  #pragma omp target enter data map(to:mappedPointersToQIn[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(to:mappedPointersToQOut[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(to:t[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(to:dt[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target enter data map(alloc:maxEigenvalue[0:hostPatchData.numberOfCells]) device(targetDevice)
-
-  tarch::timing::Watch watch( "exahype2::fv::rusanov::omp", "timeStepWithRusanov_batched_copy_static_calls", false, true );
-
-  if (Dimensions==2 and evaluateSource) {
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-        mappedPointersToQIn[patchIndex],
-        QInEnumerator,
-        rawPointerToCellCentre[patchIndex],
-        rawPointerToCellSize[patchIndex],
-        patchIndex,
-        volumeIndex2d(x,y),
-        t[patchIndex],
-        dt[patchIndex],
-        mappedPointersToQOut[patchIndex],
-        QOutEnumerator
-      );
+namespace exahype2::fv::rusanov::omp::internal {
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedStateless(
+    int                                            targetDevice,
+    int                                            numberOfCells,
+    double**                                       mappedPointersToQIn,
+    double*                                        rawPointerToCellCentre,
+    double*                                        rawPointerToCellSize,
+    double*                                        t,
+    double*                                        dt,
+    double*                                        maxEigenvalue,
+    double**                                       mappedPointersToQOut,
+    const enumerators::AoSLexicographicEnumerator& QInEnumerator,
+    const enumerators::AoSLexicographicEnumerator& QOutEnumerator,
+    const TempDataEnumeratorType&                  fluxEnumerator,
+    const TempDataEnumeratorType&                  ncpEnumerator,
+    const TempDataEnumeratorType&                  eigenvalueEnumerator,
+    double*                                        tempFluxX,
+    double*                                        tempFluxY,
+    double*                                        tempFluxZ,
+    double*                                        tempNonconservativeProductX,
+    double*                                        tempNonconservativeProductY,
+    double*                                        tempNonconservativeProductZ,
+    double*                                        tempEigenvalueX,
+    double*                                        tempEigenvalueY,
+    double*                                        tempEigenvalueZ
+  ) InlineMethod {
+    // ====================================================
+    // Copy solution over and evaluate source (if required)
+    // ====================================================
+    if constexpr (EvaluateSource) {
+#if Dimensions == 2
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+            loopbodies::copySolutionAndAddSourceTerm<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeIndex(x, y),
+              t[patchIndex],
+              dt[patchIndex],
+              mappedPointersToQOut[patchIndex],
+              QOutEnumerator
+            );
+          }
+        }
+      }
+#else
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+              loopbodies::copySolutionAndAddSourceTerm<SolverType>(
+                mappedPointersToQIn[patchIndex],
+                QInEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x, y, z),
+                t[patchIndex],
+                dt[patchIndex],
+                mappedPointersToQOut[patchIndex],
+                QOutEnumerator
+              );
+            }
+          }
+        }
+      }
+#endif
+    } else {
+#if Dimensions == 2
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+            for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+              loopbodies::copySolution(mappedPointersToQIn[patchIndex], QInEnumerator, patchIndex, volumeIndex(x, y), unknown, mappedPointersToQOut[patchIndex], QOutEnumerator);
+            }
+          }
+        }
+      }
+#else
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+              for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+                loopbodies::copySolution(
+                  mappedPointersToQIn[patchIndex], QInEnumerator, patchIndex, volumeIndex(x, y, z), unknown, mappedPointersToQOut[patchIndex], QOutEnumerator
+                );
+              }
+            }
+          }
+        }
+      }
+#endif
     }
-  }
-  else if (Dimensions==3 and evaluateSource) {
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y,z),
-          t[patchIndex],
-          dt[patchIndex],
-          mappedPointersToQOut[patchIndex],
-          QOutEnumerator
-        );
-    }
-  }
-  else if (Dimensions==2) {
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::copySolution_LoopBody(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          patchIndex,
-          volumeIndex2d(x,y),
-          unknown,
-          mappedPointersToQOut[patchIndex],
-          QOutEnumerator
-      );
-    }
-  }
-  else {
-    #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::copySolution_LoopBody(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          patchIndex,
-          volumeIndex3d(x,y,z),
-          unknown,
-          mappedPointersToQOut[patchIndex],
-          QOutEnumerator
-      );
-    }
-  }
-
-  if (Dimensions==2) {
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+    // ====================================================
+    // Compute damping due to max eigenvalue
+    // ====================================================
+#if Dimensions == 2
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+      for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+        for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; x++) {
+          loopbodies::computeMaxEigenvalue<SolverType>(
             mappedPointersToQIn[patchIndex],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x-haloSize,y),
-            t[patchIndex], dt[patchIndex],
+            volumeIndex(x - HaloSize, y),
+            t[patchIndex],
+            dt[patchIndex],
             0,
             tempEigenvalueX,
             eigenvalueEnumerator
-      );
+          );
+        }
+      }
     }
 
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+      for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
+        for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+          loopbodies::computeMaxEigenvalue<SolverType>(
             mappedPointersToQIn[patchIndex],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x,y-haloSize),
-            t[patchIndex], dt[patchIndex],
+            volumeIndex(x, y - HaloSize),
+            t[patchIndex],
+            dt[patchIndex],
             1,
             tempEigenvalueY,
             eigenvalueEnumerator
-      );
+          );
+        }
+      }
     }
 
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown = 0; unknown < unknowns; unknown++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          tempEigenvalueX,
-          tempEigenvalueY,
-          tempEigenvalueZ,
-          eigenvalueEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y),
-          unknown,
-          dt[patchIndex],
-          mappedPointersToQOut[patchIndex],
-          QOutEnumerator
-        );
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+      for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+        for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+          for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+            loopbodies::updateSolutionWithEigenvalueDamping(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              tempEigenvalueX,
+              tempEigenvalueY,
+              tempEigenvalueZ,
+              eigenvalueEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeIndex(x, y),
+              unknown,
+              dt[patchIndex],
+              mappedPointersToQOut[patchIndex],
+              QOutEnumerator
+            );
+          }
+        }
+      }
     }
-  }
-  else {
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+#else
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+      for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; x++) {
+            loopbodies::computeMaxEigenvalue<SolverType>(
               mappedPointersToQIn[patchIndex],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
               patchIndex,
-              volumeIndex3d(x-haloSize,y,z),
-              t[patchIndex], dt[patchIndex],
+              volumeIndex(x - HaloSize, y, z),
+              t[patchIndex],
+              dt[patchIndex],
               0,
               tempEigenvalueX,
               eigenvalueEnumerator
-      );
+            );
+          }
+        }
+      }
     }
 
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+      for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+            loopbodies::computeMaxEigenvalue<SolverType>(
               mappedPointersToQIn[patchIndex],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
               patchIndex,
-              volumeIndex3d(x,y-haloSize,z),
-              t[patchIndex], dt[patchIndex],
+              volumeIndex(x, y - HaloSize, z),
+              t[patchIndex],
+              dt[patchIndex],
               1,
               tempEigenvalueY,
               eigenvalueEnumerator
-      );
+            );
+          }
+        }
+      }
     }
 
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*haloSize; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+      for (int z = 0; z < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; z++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+            loopbodies::computeMaxEigenvalue<SolverType>(
               mappedPointersToQIn[patchIndex],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
               patchIndex,
-              volumeIndex3d(x,y,z-haloSize),
-              t[patchIndex], dt[patchIndex],
+              volumeIndex(x, y, z - HaloSize),
+              t[patchIndex],
+              dt[patchIndex],
               2,
               tempEigenvalueZ,
               eigenvalueEnumerator
-      );
+            );
+          }
+        }
+      }
     }
 
-    #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown = 0; unknown < unknowns; unknown++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::updateSolutionWithEigenvalueDamping_LoopBody(
-            mappedPointersToQIn[patchIndex],
-            QInEnumerator,
-            tempEigenvalueX,
-            tempEigenvalueY,
-            tempEigenvalueZ,
-            eigenvalueEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            unknown,
-            dt[patchIndex],
-            mappedPointersToQOut[patchIndex],
-            QOutEnumerator
-      );
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice)
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+      for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+            for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+              loopbodies::updateSolutionWithEigenvalueDamping(
+                mappedPointersToQIn[patchIndex],
+                QInEnumerator,
+                tempEigenvalueX,
+                tempEigenvalueY,
+                tempEigenvalueZ,
+                eigenvalueEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x, y, z),
+                unknown,
+                dt[patchIndex],
+                mappedPointersToQOut[patchIndex],
+                QOutEnumerator
+              );
+            }
+          }
+        }
+      }
     }
-  }
+#endif
 
-  if (evaluateFlux and Dimensions==2) {
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x-haloSize,y),
-          t[patchIndex],
-          dt[patchIndex],
-          0, // normal
-          tempFluxX,
-          fluxEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize;  y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y-haloSize),
-          t[patchIndex],
-          dt[patchIndex],
-          1, // normal
-          tempFluxY,
-          fluxEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::updateSolutionWithFlux_LoopBody(
-            tempFluxX, tempFluxY, tempFluxZ,
-            fluxEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x,y),
-            unknown,
-            dt[patchIndex],
-            mappedPointersToQOut[patchIndex],
-            QOutEnumerator
-      );
-    }
-  }
-  else if (evaluateFlux and Dimensions==3) {
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x-haloSize,y,z),
-          t[patchIndex],
-          dt[patchIndex],
-          0, // normal
-          tempFluxX,
-          fluxEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y-haloSize,z),
-          t[patchIndex],
-          dt[patchIndex],
-          1, // normal
-          tempFluxY,
-          fluxEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*haloSize;  z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y,z-haloSize),
-          t[patchIndex],
-          dt[patchIndex],
-          2, // normal
-          tempFluxZ,
-          fluxEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::updateSolutionWithFlux_LoopBody(
-            tempFluxX, tempFluxY, tempFluxZ,
-            fluxEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            unknown,
-            dt[patchIndex],
-            mappedPointersToQOut[patchIndex],
-            QOutEnumerator
-      );
-    }
-  }
-
-  if (evaluateNonconservativeProduct and Dimensions==2) {
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize-1; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x-haloSize,y),
-          t[patchIndex],
-          dt[patchIndex],
-          0, // normal
-          tempNonconservativeProductX,
-          ncpEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize-1; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y-haloSize),
-          t[patchIndex],
-          dt[patchIndex],
-          1, // normal
-          tempNonconservativeProductY,
-          ncpEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::updateSolutionWithNonconservativeFlux_LoopBody(
-            tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
-            ncpEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x,y),
-            unknown,
-            dt[patchIndex],
-            mappedPointersToQOut[patchIndex],
-            QOutEnumerator
-      );
-    }
-  }
-  else if (evaluateNonconservativeProduct and Dimensions==3) {
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize-1; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-            mappedPointersToQIn[patchIndex],
-            QInEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x-haloSize,y,z),
-            t[patchIndex],
-            dt[patchIndex],
-            0, // normal
-            tempNonconservativeProductX,
-            ncpEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize-1; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-            mappedPointersToQIn[patchIndex],
-            QInEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y-haloSize,z),
-            t[patchIndex],
-            dt[patchIndex],
-            1, // normal
-            tempNonconservativeProductY,
-            ncpEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*haloSize-1; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-        internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-            mappedPointersToQIn[patchIndex],
-            QInEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z-haloSize),
-            t[patchIndex],
-            dt[patchIndex],
-            2, // normal
-            tempNonconservativeProductZ,
-            ncpEnumerator
-        );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      internal::updateSolutionWithNonconservativeFlux_LoopBody(
-          tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ,
-          ncpEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y,z),
-          unknown,
-          dt[patchIndex],
-          mappedPointersToQOut[patchIndex],
-          QOutEnumerator
-      );
-    }
-  }
-
-  if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-    #pragma omp target teams distribute device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
-
-      double newMaxEigenvalue = 0.0;
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        newMaxEigenvalue = std::max(
-            newMaxEigenvalue,
-            internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              mappedPointersToQOut[patchIndex],
-              QOutEnumerator,
+    // ====================================================
+    // Normal (conservative) flux
+    // ====================================================
+    if constexpr (EvaluateFlux) {
+#if Dimensions == 2
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; x++) {
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
               patchIndex,
-              volumeIndex2d(x,y),
+              volumeIndex(x - HaloSize, y),
               t[patchIndex],
-              dt[patchIndex]
-            )
-        );
+              dt[patchIndex],
+              0, // normal
+              tempFluxX,
+              fluxEnumerator
+            );
+          }
+        }
       }
-      maxEigenvalue[patchIndex] = newMaxEigenvalue;
-    }
-  }
-  else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    #pragma omp target teams distribute device(targetDevice)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-      exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch,haloSize,unknowns,auxiliaryVariables);
-      exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,       0,unknowns,auxiliaryVariables);
-      TempDataEnumerator fluxEnumerator      (numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
-      TempDataEnumerator ncpEnumerator       (numberOfCells, numberOfVolumesPerAxisInPatch+1,haloSize,unknowns,0);
-      TempDataEnumerator eigenvalueEnumerator(numberOfCells, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-      double newMaxEigenvalue = 0.0;
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        newMaxEigenvalue = std::max(
-            newMaxEigenvalue,
-            internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              mappedPointersToQOut[patchIndex],
-              QOutEnumerator,
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
               patchIndex,
-              volumeIndex3d(x,y,z),
+              volumeIndex(x, y - HaloSize),
               t[patchIndex],
-              dt[patchIndex]
-            )
-        );
+              dt[patchIndex],
+              1, // normal
+              tempFluxY,
+              fluxEnumerator
+            );
+          }
+        }
       }
-      maxEigenvalue[patchIndex] = newMaxEigenvalue;
+
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+            for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+              loopbodies::updateSolutionWithFlux(
+                tempFluxX,
+                tempFluxY,
+                tempFluxZ,
+                fluxEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x, y),
+                unknown,
+                dt[patchIndex],
+                mappedPointersToQOut[patchIndex],
+                QOutEnumerator
+              );
+            }
+          }
+        }
+      }
+#else
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; x++) {
+              loopbodies::computeFlux<SolverType>(
+                mappedPointersToQIn[patchIndex],
+                QInEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x - HaloSize, y, z),
+                t[patchIndex],
+                dt[patchIndex],
+                0, // normal
+                tempFluxX,
+                fluxEnumerator
+              );
+            }
+          }
+        }
+      }
+
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+              loopbodies::computeFlux<SolverType>(
+                mappedPointersToQIn[patchIndex],
+                QInEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x, y - HaloSize, z),
+                t[patchIndex],
+                dt[patchIndex],
+                1, // normal
+                tempFluxY,
+                fluxEnumerator
+              );
+            }
+          }
+        }
+      }
+
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+              loopbodies::computeFlux<SolverType>(
+                mappedPointersToQIn[patchIndex],
+                QInEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x, y, z - HaloSize),
+                t[patchIndex],
+                dt[patchIndex],
+                2, // normal
+                tempFluxZ,
+                fluxEnumerator
+              );
+            }
+          }
+        }
+      }
+
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+              for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+                loopbodies::updateSolutionWithFlux(
+                  tempFluxX,
+                  tempFluxY,
+                  tempFluxZ,
+                  fluxEnumerator,
+                  rawPointerToCellCentre[patchIndex],
+                  rawPointerToCellSize[patchIndex],
+                  patchIndex,
+                  volumeIndex(x, y, z),
+                  unknown,
+                  dt[patchIndex],
+                  mappedPointersToQOut[patchIndex],
+                  QOutEnumerator
+                );
+              }
+            }
+          }
+        }
+      }
+#endif
+    }
+
+    if constexpr (EvaluateNonconservativeProduct) {
+#if Dimensions == 2
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; x++) {
+            loopbodies::computeNonconservativeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeIndex(x - HaloSize, y),
+              t[patchIndex],
+              dt[patchIndex],
+              0, // normal
+              tempNonconservativeProductX,
+              ncpEnumerator
+            );
+          }
+        }
+      }
+
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+            loopbodies::computeNonconservativeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeIndex(x, y - HaloSize),
+              t[patchIndex],
+              dt[patchIndex],
+              1, // normal
+              tempNonconservativeProductY,
+              ncpEnumerator
+            );
+          }
+        }
+      }
+
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+            for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+              loopbodies::updateSolutionWithNonconservativeFlux(
+                tempNonconservativeProductX,
+                tempNonconservativeProductY,
+                tempNonconservativeProductZ,
+                ncpEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x, y),
+                unknown,
+                dt[patchIndex],
+                mappedPointersToQOut[patchIndex],
+                QOutEnumerator
+              );
+            }
+          }
+        }
+      }
+#else
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; x++) {
+              loopbodies::computeNonconservativeFlux<SolverType>(
+                mappedPointersToQIn[patchIndex],
+                QInEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x - HaloSize, y, z),
+                t[patchIndex],
+                dt[patchIndex],
+                0, // normal
+                tempNonconservativeProductX,
+                ncpEnumerator
+              );
+            }
+          }
+        }
+      }
+
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+              loopbodies::computeNonconservativeFlux<SolverType>(
+                mappedPointersToQIn[patchIndex],
+                QInEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x, y - HaloSize, z),
+                t[patchIndex],
+                dt[patchIndex],
+                1, // normal
+                tempNonconservativeProductY,
+                ncpEnumerator
+              );
+            }
+          }
+        }
+      }
+
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+              loopbodies::computeNonconservativeFlux<SolverType>(
+                mappedPointersToQIn[patchIndex],
+                QInEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x, y, z - HaloSize),
+                t[patchIndex],
+                dt[patchIndex],
+                2, // normal
+                tempNonconservativeProductZ,
+                ncpEnumerator
+              );
+            }
+          }
+        }
+      }
+
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+              for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
+                loopbodies::updateSolutionWithNonconservativeFlux(
+                  tempNonconservativeProductX,
+                  tempNonconservativeProductY,
+                  tempNonconservativeProductZ,
+                  ncpEnumerator,
+                  rawPointerToCellCentre[patchIndex],
+                  rawPointerToCellSize[patchIndex],
+                  patchIndex,
+                  volumeIndex(x, y, z),
+                  unknown,
+                  dt[patchIndex],
+                  mappedPointersToQOut[patchIndex],
+                  QOutEnumerator
+                );
+              }
+            }
+          }
+        }
+      }
+#endif
+    }
+
+    if constexpr (EvaluateMaximumEigenvalueAfterTimeStep) {
+#if Dimensions == 2
+#pragma omp target teams distribute device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        double newMaxEigenvalue = 0.0;
+#pragma omp parallel for simd collapse(2) reduction(max : newMaxEigenvalue)
+        for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+          for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+            newMaxEigenvalue = std::max(
+              newMaxEigenvalue,
+              loopbodies::reduceMaxEigenvalue<SolverType>(
+                mappedPointersToQOut[patchIndex],
+                QOutEnumerator,
+                rawPointerToCellCentre[patchIndex],
+                rawPointerToCellSize[patchIndex],
+                patchIndex,
+                volumeIndex(x, y),
+                t[patchIndex],
+                dt[patchIndex]
+              )
+            );
+          }
+        }
+        maxEigenvalue[patchIndex] = newMaxEigenvalue;
+      }
+#else
+#pragma omp target teams distribute device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+        double newMaxEigenvalue = 0.0;
+#pragma omp parallel for simd       collapse(3) reduction(max : newMaxEigenvalue)
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+          for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
+            for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
+              newMaxEigenvalue = std::max(
+                newMaxEigenvalue,
+                loopbodies::reduceMaxEigenvalue<SolverType>(
+                  mappedPointersToQOut[patchIndex],
+                  QOutEnumerator,
+                  rawPointerToCellCentre[patchIndex],
+                  rawPointerToCellSize[patchIndex],
+                  patchIndex,
+                  volumeIndex(x, y, z),
+                  t[patchIndex],
+                  dt[patchIndex]
+                )
+              );
+            }
+          }
+        }
+        maxEigenvalue[patchIndex] = newMaxEigenvalue;
+      }
+#endif
     }
   }
+} // namespace exahype2::fv::rusanov::omp::internal
 
+
+template <
+  class SolverType,
+  int  NumberOfVolumesPerAxisInPatch,
+  int  HaloSize,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement) {
+  static_assert(HaloSize == 1);
+
+  static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
+  logTraceIn("timeStepWithRusanovBatchedUSMStateless()");
+
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+
+  double* tempFluxX                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(fluxEnumerator.size(), targetDevice);
+  double* tempFluxY                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(fluxEnumerator.size(), targetDevice);
+  double* tempFluxZ                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? fluxEnumerator.size() : 1, targetDevice);
+  double* tempNonconservativeProductX = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(ncpEnumerator.size(), targetDevice);
+  double* tempNonconservativeProductY = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(ncpEnumerator.size(), targetDevice);
+  double* tempNonconservativeProductZ = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? ncpEnumerator.size() : 1, targetDevice);
+  double* tempEigenvalueX             = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(eigenvalueEnumerator.size(), targetDevice);
+  double* tempEigenvalueY             = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(eigenvalueEnumerator.size(), targetDevice);
+  double* tempEigenvalueZ = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? eigenvalueEnumerator.size() : 1, targetDevice);
+
+  const int numberOfCells          = patchData.numberOfCells;
+  double**  mappedPointersToQIn    = patchData.QIn;
+  double**  mappedPointersToQOut   = patchData.QOut;
+  double*   rawPointerToCellCentre = patchData.cellCentre[0].data();
+  double*   rawPointerToCellSize   = patchData.cellSize[0].data();
+  double*   t                      = patchData.t;
+  double*   dt                     = patchData.dt;
+  double*   maxEigenvalue          = patchData.maxEigenvalue;
+
+  tarch::timing::Watch watch("exahype2::fv::rusanov::omp", "timeStepWithRusanovBatchedUSMStateless", false, true);
+  internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(
+    targetDevice,
+    numberOfCells,
+    mappedPointersToQIn,
+    rawPointerToCellCentre,
+    rawPointerToCellSize,
+    t,
+    dt,
+    maxEigenvalue,
+    mappedPointersToQOut,
+    QInEnumerator,
+    QOutEnumerator,
+    fluxEnumerator,
+    ncpEnumerator,
+    eigenvalueEnumerator,
+    tempFluxX,
+    tempFluxY,
+    tempFluxZ,
+    tempNonconservativeProductX,
+    tempNonconservativeProductY,
+    tempNonconservativeProductZ,
+    tempEigenvalueX,
+    tempEigenvalueY,
+    tempEigenvalueZ
+  );
   watch.stop();
-  measurement.setValue( watch.getCalendarTime());
+  measurement.setValue(watch.getCalendarTime());
 
-  #pragma omp target exit data map(delete:rawPointerToCellCentre[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
-  #pragma omp target exit data map(delete:rawPointerToCellSize[0:hostPatchData.numberOfCells*Dimensions]) device(targetDevice)
-  #pragma omp target exit data map(delete:mappedPointersToQIn[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target exit data map(delete:mappedPointersToQOut[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target exit data map(delete:t[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target exit data map(delete:dt[0:hostPatchData.numberOfCells]) device(targetDevice)
-  #pragma omp target exit data map(from:maxEigenvalue[0:hostPatchData.numberOfCells]) device(targetDevice)
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxX, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxY, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxZ, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductX, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductY, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductZ, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueX, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueY, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueZ, targetDevice);
 
-  #pragma omp target exit data map(delete:tempFluxX[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempFluxY[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempFluxZ[0:fluxHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempNonconservativeProductX[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempNonconservativeProductY[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempNonconservativeProductZ[0:ncpHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempEigenvalueX[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempEigenvalueY[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
-  #pragma omp target exit data map(delete:tempEigenvalueZ[0:eigenvalueHostEnumerator.size()] ) device(targetDevice)
+  logTraceOut("timeStepWithRusanovBatchedUSMStateless()");
+}
 
-  for (int patchIndex=0; patchIndex<hostPatchData.numberOfCells; patchIndex++) {
-    [[maybe_unused]] const double* currentQIn  = hostPatchData.QIn[patchIndex];
-    [[maybe_unused]] double*       currentQOut = hostPatchData.QOut[patchIndex];
-    #pragma omp target exit data map(delete:currentQIn[0:QInHostEnumerator.size()] ) device(targetDevice)
-    #pragma omp target exit data map(from:currentQOut[0:QOutHostEnumerator.size()] ) device(targetDevice)
+
+template <
+  class SolverType,
+  int  NumberOfVolumesPerAxisInPatch,
+  int  HaloSize,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData& patchData) {
+  static_assert(HaloSize == 1);
+
+  static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
+  logTraceIn("timeStepWithRusanovBatchedUSMStateless()");
+
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+
+  double* tempFluxX                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(fluxEnumerator.size(), targetDevice);
+  double* tempFluxY                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(fluxEnumerator.size(), targetDevice);
+  double* tempFluxZ                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? fluxEnumerator.size() : 1, targetDevice);
+  double* tempNonconservativeProductX = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(ncpEnumerator.size(), targetDevice);
+  double* tempNonconservativeProductY = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(ncpEnumerator.size(), targetDevice);
+  double* tempNonconservativeProductZ = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? ncpEnumerator.size() : 1, targetDevice);
+  double* tempEigenvalueX             = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(eigenvalueEnumerator.size(), targetDevice);
+  double* tempEigenvalueY             = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(eigenvalueEnumerator.size(), targetDevice);
+  double* tempEigenvalueZ = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? eigenvalueEnumerator.size() : 1, targetDevice);
+
+  const int numberOfCells          = patchData.numberOfCells;
+  double**  mappedPointersToQIn    = patchData.QIn;
+  double**  mappedPointersToQOut   = patchData.QOut;
+  double*   rawPointerToCellCentre = patchData.cellCentre[0].data();
+  double*   rawPointerToCellSize   = patchData.cellSize[0].data();
+  double*   t                      = patchData.t;
+  double*   dt                     = patchData.dt;
+  double*   maxEigenvalue          = patchData.maxEigenvalue;
+
+  internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(
+    targetDevice,
+    numberOfCells,
+    mappedPointersToQIn,
+    rawPointerToCellCentre,
+    rawPointerToCellSize,
+    t,
+    dt,
+    maxEigenvalue,
+    mappedPointersToQOut,
+    QInEnumerator,
+    QOutEnumerator,
+    fluxEnumerator,
+    ncpEnumerator,
+    eigenvalueEnumerator,
+    tempFluxX,
+    tempFluxY,
+    tempFluxZ,
+    tempNonconservativeProductX,
+    tempNonconservativeProductY,
+    tempNonconservativeProductZ,
+    tempEigenvalueX,
+    tempEigenvalueY,
+    tempEigenvalueZ
+  );
+
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxX, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxY, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxZ, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductX, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductY, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductZ, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueX, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueY, targetDevice);
+  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueZ, targetDevice);
+
+  logTraceOut("timeStepWithRusanovBatchedUSMStateless()");
+}
+
+
+template <
+  class SolverType,
+  int  NumberOfVolumesPerAxisInPatch,
+  int  HaloSize,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement) {
+  static_assert(HaloSize == 1);
+
+  static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
+  logTraceIn("timeStepWithRusanovBatchedCopyStateless()");
+
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+
+  double* tempFluxX                   = new double[fluxEnumerator.size()];
+  double* tempFluxY                   = new double[fluxEnumerator.size()];
+  double* tempFluxZ                   = new double[fluxEnumerator.size()];
+  double* tempNonconservativeProductX = new double[ncpEnumerator.size()];
+  double* tempNonconservativeProductY = new double[ncpEnumerator.size()];
+  double* tempNonconservativeProductZ = new double[ncpEnumerator.size()];
+  double* tempEigenvalueX             = new double[eigenvalueEnumerator.size()];
+  double* tempEigenvalueY             = new double[eigenvalueEnumerator.size()];
+  double* tempEigenvalueZ             = new double[eigenvalueEnumerator.size()];
+
+#pragma omp target enter data map(alloc : tempFluxX[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempFluxY[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempFluxZ[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductX[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductY[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductZ[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueX[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueY[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueZ[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+
+  double** mappedPointersToQIn  = new double*[patchData.numberOfCells];
+  double** mappedPointersToQOut = new double*[patchData.numberOfCells];
+
+  for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
+    const double* currentQIn  = patchData.QIn[patchIndex];
+    double*       currentQOut = patchData.QOut[patchIndex];
+#pragma omp target enter data map(to : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
+    mappedPointersToQIn[patchIndex]  = static_cast<double*>(omp_get_mapped_ptr(currentQIn, targetDevice));
+    mappedPointersToQOut[patchIndex] = static_cast<double*>(omp_get_mapped_ptr(currentQOut, targetDevice));
+  }
+
+  const int numberOfCells          = patchData.numberOfCells;
+  double*   rawPointerToCellCentre = patchData.cellCentre[0].data();
+  double*   rawPointerToCellSize   = patchData.cellSize[0].data();
+  double*   t                      = patchData.t;
+  double*   dt                     = patchData.dt;
+  double*   maxEigenvalue          = patchData.maxEigenvalue;
+
+#pragma omp target enter data map(to : rawPointerToCellCentre[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target enter data map(to : rawPointerToCellSize[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target enter data map(to : mappedPointersToQIn[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : mappedPointersToQOut[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : t[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : dt[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(alloc : maxEigenvalue[0 : numberOfCells]) device(targetDevice)
+
+  tarch::timing::Watch watch("exahype2::fv::rusanov::omp", "timeStepWithRusanovBatchedCopyStateless", false, true);
+  internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(
+    targetDevice,
+    numberOfCells,
+    mappedPointersToQIn,
+    rawPointerToCellCentre,
+    rawPointerToCellSize,
+    t,
+    dt,
+    maxEigenvalue,
+    mappedPointersToQOut,
+    QInEnumerator,
+    QOutEnumerator,
+    fluxEnumerator,
+    ncpEnumerator,
+    eigenvalueEnumerator,
+    tempFluxX,
+    tempFluxY,
+    tempFluxZ,
+    tempNonconservativeProductX,
+    tempNonconservativeProductY,
+    tempNonconservativeProductZ,
+    tempEigenvalueX,
+    tempEigenvalueY,
+    tempEigenvalueZ
+  );
+  watch.stop();
+  measurement.setValue(watch.getCalendarTime());
+
+#pragma omp target exit data map(delete : rawPointerToCellCentre[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target exit data map(delete : rawPointerToCellSize[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target exit data map(delete : mappedPointersToQIn[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : mappedPointersToQOut[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : t[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : dt[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(from : maxEigenvalue[0 : numberOfCells]) device(targetDevice)
+
+#pragma omp target exit data map(delete : tempFluxX[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempFluxY[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempFluxZ[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductX[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductY[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductZ[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueX[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueY[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueZ[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+
+  for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+    const double* currentQIn  = patchData.QIn[patchIndex];
+    double*       currentQOut = patchData.QOut[patchIndex];
+#pragma omp target exit data map(delete : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(from : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
   }
 
   delete[] mappedPointersToQIn;
   delete[] mappedPointersToQOut;
 
-  if (tempFluxX!=nullptr) delete[] tempFluxX;
-  if (tempFluxY!=nullptr) delete[] tempFluxY;
-  if (tempFluxZ!=nullptr) delete[] tempFluxZ;
-  if (tempNonconservativeProductX!=nullptr) delete[] tempNonconservativeProductX;
-  if (tempNonconservativeProductY!=nullptr) delete[] tempNonconservativeProductY;
-  if (tempNonconservativeProductZ!=nullptr) delete[] tempNonconservativeProductZ;
-  if (tempEigenvalueX!=nullptr) delete[] tempEigenvalueX;
-  if (tempEigenvalueY!=nullptr) delete[] tempEigenvalueY;
-  if (tempEigenvalueZ!=nullptr) delete[] tempEigenvalueZ;
+  if (tempFluxX != nullptr) {
+    delete[] tempFluxX;
+  }
+  if (tempFluxY != nullptr) {
+    delete[] tempFluxY;
+  }
+  if (tempFluxZ != nullptr) {
+    delete[] tempFluxZ;
+  }
+  if (tempNonconservativeProductX != nullptr) {
+    delete[] tempNonconservativeProductX;
+  }
+  if (tempNonconservativeProductY != nullptr) {
+    delete[] tempNonconservativeProductY;
+  }
+  if (tempNonconservativeProductZ != nullptr) {
+    delete[] tempNonconservativeProductZ;
+  }
+  if (tempEigenvalueX != nullptr) {
+    delete[] tempEigenvalueX;
+  }
+  if (tempEigenvalueY != nullptr) {
+    delete[] tempEigenvalueY;
+  }
+  if (tempEigenvalueZ != nullptr) {
+    delete[] tempEigenvalueZ;
+  }
 
-  logTraceOut("timeStepWithRusanov_batched_copy_static_calls()");
+  logTraceOut("timeStepWithRusanovBatchedCopyStateless()");
 }
 
 
-// This file is part of the ExaHyPE2 project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
-#include "Rusanov.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-#include "tarch/accelerator/omp/GPUMemoryManager.h"
-#include "exahype2/fv/rusanov/LoopBody.h"
-#include "tarch/timing/Watch.h"
-
-#include <cstring>
-
 template <
-  typename Solver,
-  int      numberOfVolumesPerAxisInPatch,
-  int      haloSize,
-  int      unknowns,
-  int      auxiliaryVariables,
-  typename TempDataEnumerator
->
-void exahype2::fv::rusanov::omp::timeStepWithRusanov_batched_usm_static_calls(
-  int                     targetDevice,
-  ::exahype2::CellData&   hostPatchData,
-  bool                    evaluateFlux,
-  bool                    evaluateNonconservativeProduct,
-  bool                    evaluateSource,
-  bool                    evaluateMaximumEigenvalueAfterTimeStep,
-  tarch::timing::Measurement&  measurement
-) {
-  static_assert(haloSize == 1);
+  class SolverType,
+  int  NumberOfVolumesPerAxisInPatch,
+  int  HaloSize,
+  int  NumberOfUnknowns,
+  int  NumberOfAuxiliaryVariables,
+  bool EvaluateFlux,
+  bool EvaluateNonconservativeProduct,
+  bool EvaluateSource,
+  bool EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int targetDevice, CellData& patchData) {
+  static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
-  logTraceIn("timeStepWithRusanov_batched_usm_static_calls()");
+  logTraceIn("timeStepWithRusanovBatchedCopyStateless()");
 
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                        1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables);
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                        1, numberOfVolumesPerAxisInPatch,        0, unknowns, auxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
-  const TempDataEnumerator fluxEnumerator      (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   haloSize, unknowns, 0);
-  const TempDataEnumerator ncpEnumerator       (hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch+1, haloSize, unknowns, 0);
-  const TempDataEnumerator eigenvalueEnumerator(hostPatchData.numberOfCells, numberOfVolumesPerAxisInPatch,   haloSize,        1, 0);
+  double* tempFluxX                   = new double[fluxEnumerator.size()];
+  double* tempFluxY                   = new double[fluxEnumerator.size()];
+  double* tempFluxZ                   = new double[fluxEnumerator.size()];
+  double* tempNonconservativeProductX = new double[ncpEnumerator.size()];
+  double* tempNonconservativeProductY = new double[ncpEnumerator.size()];
+  double* tempNonconservativeProductZ = new double[ncpEnumerator.size()];
+  double* tempEigenvalueX             = new double[eigenvalueEnumerator.size()];
+  double* tempEigenvalueY             = new double[eigenvalueEnumerator.size()];
+  double* tempEigenvalueZ             = new double[eigenvalueEnumerator.size()];
 
-  double* tempFluxX = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>( fluxEnumerator.size(), targetDevice );
-  double* tempFluxY = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>( fluxEnumerator.size(), targetDevice );
-  double* tempFluxZ = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? fluxEnumerator.size() : 1, targetDevice );
-  double* tempNonconservativeProductX = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>( ncpEnumerator.size(), targetDevice );
-  double* tempNonconservativeProductY = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>( ncpEnumerator.size(), targetDevice );
-  double* tempNonconservativeProductZ = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? ncpEnumerator.size() : 1, targetDevice );
-  double* tempEigenvalueX = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>( eigenvalueEnumerator.size(), targetDevice );
-  double* tempEigenvalueY = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>( eigenvalueEnumerator.size(), targetDevice );
-  double* tempEigenvalueZ = tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>( Dimensions==3 ? eigenvalueEnumerator.size() : 1, targetDevice );
+#pragma omp target enter data map(alloc : tempFluxX[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempFluxY[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempFluxZ[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductX[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductY[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductZ[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueX[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueY[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueZ[0 : eigenvalueEnumerator.size()]) device(targetDevice)
 
-  const int numberOfCells      = hostPatchData.numberOfCells;
-  double** mappedPointersToQIn = hostPatchData.QIn;
-  double** mappedPointersToQOut = hostPatchData.QOut;
-  tarch::la::Vector<Dimensions,double>* rawPointerToCellCentre = hostPatchData.cellCentre;
-  tarch::la::Vector<Dimensions,double>* rawPointerToCellSize = hostPatchData.cellSize;
-  double* t = hostPatchData.t;
-  double* dt = hostPatchData.dt;
-  double* maxEigenvalue = hostPatchData.maxEigenvalue;
+  double** mappedPointersToQIn  = new double*[patchData.numberOfCells];
+  double** mappedPointersToQOut = new double*[patchData.numberOfCells];
 
-  tarch::timing::Watch watch( "exahype2::fv::rusanov::omp", "timeStepWithRusanov_batched_usm_static_calls", false, true );
-
-  if (Dimensions==2 and evaluateSource) {
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-        is_device_ptr(mappedPointersToQIn, mappedPointersToQOut, \
-            rawPointerToCellCentre, rawPointerToCellSize, \
-            t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-        mappedPointersToQIn[patchIndex],
-        QInEnumerator,
-        rawPointerToCellCentre[patchIndex],
-        rawPointerToCellSize[patchIndex],
-        patchIndex,
-        volumeIndex2d(x,y),
-        t[patchIndex],
-        dt[patchIndex],
-        mappedPointersToQOut[patchIndex],
-        QOutEnumerator
-      );
-    }
-  }
-  else if (Dimensions==3 and evaluateSource) {
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(mappedPointersToQIn, mappedPointersToQOut, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y,z),
-          t[patchIndex],
-          dt[patchIndex],
-          mappedPointersToQOut[patchIndex],
-          QOutEnumerator
-        );
-    }
-  }
-  else if (Dimensions==2) {
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(mappedPointersToQIn, mappedPointersToQOut)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-      internal::copySolution_LoopBody(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          patchIndex,
-          volumeIndex2d(x,y),
-          unknown,
-          mappedPointersToQOut[patchIndex],
-          QOutEnumerator
-      );
-    }
-  }
-  else {
-    #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) \
-      is_device_ptr(mappedPointersToQIn, mappedPointersToQOut)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-      internal::copySolution_LoopBody(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          patchIndex,
-          volumeIndex3d(x,y,z),
-          unknown,
-          mappedPointersToQOut[patchIndex],
-          QOutEnumerator
-      );
-    }
+  for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
+    const double* currentQIn  = patchData.QIn[patchIndex];
+    double*       currentQOut = patchData.QOut[patchIndex];
+#pragma omp target enter data map(to : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
+    mappedPointersToQIn[patchIndex]  = static_cast<double*>(omp_get_mapped_ptr(currentQIn, targetDevice));
+    mappedPointersToQOut[patchIndex] = static_cast<double*>(omp_get_mapped_ptr(currentQOut, targetDevice));
   }
 
-  if (Dimensions==2) {
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-      is_device_ptr(tempEigenvalueX, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize; x++) {
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
-            mappedPointersToQIn[patchIndex],
-            QInEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x-haloSize,y),
-            t[patchIndex],
-            dt[patchIndex],
-            0,
-            tempEigenvalueX,
-            eigenvalueEnumerator
-      );
-    }
+  const int numberOfCells          = patchData.numberOfCells;
+  double*   rawPointerToCellCentre = patchData.cellCentre[0].data();
+  double*   rawPointerToCellSize   = patchData.cellSize[0].data();
+  double*   t                      = patchData.t;
+  double*   dt                     = patchData.dt;
+  double*   maxEigenvalue          = patchData.maxEigenvalue;
 
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-      is_device_ptr(tempEigenvalueY, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
-            mappedPointersToQIn[patchIndex],
-            QInEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x,y-haloSize),
-            t[patchIndex],
-            dt[patchIndex],
-            1,
-            tempEigenvalueY,
-            eigenvalueEnumerator
-      );
-    }
+#pragma omp target enter data map(to : rawPointerToCellCentre[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target enter data map(to : rawPointerToCellSize[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target enter data map(to : mappedPointersToQIn[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : mappedPointersToQOut[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : t[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : dt[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(alloc : maxEigenvalue[0 : numberOfCells]) device(targetDevice)
 
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-        mappedPointersToQIn, mappedPointersToQOut, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown = 0; unknown < unknowns; unknown++) {
-      internal::updateSolutionWithEigenvalueDamping_LoopBody(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          tempEigenvalueX,
-          tempEigenvalueY,
-          tempEigenvalueZ,
-          eigenvalueEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y),
-          unknown,
-          dt[patchIndex],
-          mappedPointersToQOut[patchIndex],
-          QOutEnumerator
-        );
-    }
-  }
-  else {
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempEigenvalueX, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize; x++) {
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
-              mappedPointersToQIn[patchIndex],
-              QInEnumerator,
-              rawPointerToCellCentre[patchIndex],
-              rawPointerToCellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x-haloSize,y,z),
-              t[patchIndex],
-              dt[patchIndex],
-              0,
-              tempEigenvalueX,
-              eigenvalueEnumerator
-      );
-    }
+  internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(
+    targetDevice,
+    numberOfCells,
+    mappedPointersToQIn,
+    rawPointerToCellCentre,
+    rawPointerToCellSize,
+    t,
+    dt,
+    maxEigenvalue,
+    mappedPointersToQOut,
+    QInEnumerator,
+    QOutEnumerator,
+    fluxEnumerator,
+    ncpEnumerator,
+    eigenvalueEnumerator,
+    tempFluxX,
+    tempFluxY,
+    tempFluxZ,
+    tempNonconservativeProductX,
+    tempNonconservativeProductY,
+    tempNonconservativeProductZ,
+    tempEigenvalueX,
+    tempEigenvalueY,
+    tempEigenvalueZ
+  );
 
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempEigenvalueY, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
-              mappedPointersToQIn[patchIndex],
-              QInEnumerator,
-              rawPointerToCellCentre[patchIndex],
-              rawPointerToCellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x,y-haloSize,z),
-              t[patchIndex],
-              dt[patchIndex],
-              1,
-              tempEigenvalueY,
-              eigenvalueEnumerator
-      );
-    }
+#pragma omp target exit data map(delete : rawPointerToCellCentre[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target exit data map(delete : rawPointerToCellSize[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target exit data map(delete : mappedPointersToQIn[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : mappedPointersToQOut[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : t[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : dt[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(from : maxEigenvalue[0 : numberOfCells]) device(targetDevice)
 
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempEigenvalueZ, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*haloSize; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::computeMaxEigenvalue_LoopBody<Solver>(
-              mappedPointersToQIn[patchIndex],
-              QInEnumerator,
-              rawPointerToCellCentre[patchIndex],
-              rawPointerToCellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x,y,z-haloSize),
-              t[patchIndex],
-              dt[patchIndex],
-              2,
-              tempEigenvalueZ,
-              eigenvalueEnumerator
-      );
-    }
+#pragma omp target exit data map(delete : tempFluxX[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempFluxY[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempFluxZ[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductX[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductY[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductZ[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueX[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueY[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueZ[0 : eigenvalueEnumerator.size()]) device(targetDevice)
 
-    #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) \
-      is_device_ptr(tempEigenvalueX, tempEigenvalueY, tempEigenvalueZ, \
-        mappedPointersToQIn, mappedPointersToQOut, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown = 0; unknown < unknowns; unknown++) {
-      internal::updateSolutionWithEigenvalueDamping_LoopBody(
-            mappedPointersToQIn[patchIndex],
-            QInEnumerator,
-            tempEigenvalueX,
-            tempEigenvalueY,
-            tempEigenvalueZ,
-            eigenvalueEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            unknown,
-            dt[patchIndex],
-            mappedPointersToQOut[patchIndex],
-            QOutEnumerator
-      );
-    }
+  for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+    const double* currentQIn  = patchData.QIn[patchIndex];
+    double*       currentQOut = patchData.QOut[patchIndex];
+#pragma omp target exit data map(delete : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(from : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
   }
 
-  if (evaluateFlux and Dimensions==2) {
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-      is_device_ptr(tempFluxX, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize; x++) {
-      internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x-haloSize,y),
-          t[patchIndex],
-          dt[patchIndex],
-          0, // normal
-          tempFluxX,
-          fluxEnumerator
-      );
-    }
+  delete[] mappedPointersToQIn;
+  delete[] mappedPointersToQOut;
 
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-      is_device_ptr(tempFluxY, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize;  y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y-haloSize),
-          t[patchIndex],
-          dt[patchIndex],
-          1, // normal
-          tempFluxY,
-          fluxEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-        mappedPointersToQOut, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      internal::updateSolutionWithFlux_LoopBody(
-            tempFluxX, tempFluxY, tempFluxZ,
-            fluxEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x,y),
-            unknown,
-            dt[patchIndex],
-            mappedPointersToQOut[patchIndex],
-            QOutEnumerator
-      );
-    }
+  if (tempFluxX != nullptr) {
+    delete[] tempFluxX;
   }
-  else if (evaluateFlux and Dimensions==3) {
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempFluxX, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize; x++) {
-      internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x-haloSize,y,z),
-          t[patchIndex],
-          dt[patchIndex],
-          0, // normal
-          tempFluxX,
-          fluxEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempFluxY, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y-haloSize,z),
-          t[patchIndex],
-          dt[patchIndex],
-          1, // normal
-          tempFluxY,
-          fluxEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempFluxZ, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*haloSize;  z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y,z-haloSize),
-          t[patchIndex],
-          dt[patchIndex],
-          2, // normal
-          tempFluxZ,
-          fluxEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) \
-      is_device_ptr(tempFluxX, tempFluxY, tempFluxZ, \
-        mappedPointersToQOut, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      internal::updateSolutionWithFlux_LoopBody(
-            tempFluxX, tempFluxY, tempFluxZ,
-            fluxEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z),
-            unknown,
-            dt[patchIndex],
-            mappedPointersToQOut[patchIndex],
-            QOutEnumerator
-      );
-    }
+  if (tempFluxY != nullptr) {
+    delete[] tempFluxY;
+  }
+  if (tempFluxZ != nullptr) {
+    delete[] tempFluxZ;
+  }
+  if (tempNonconservativeProductX != nullptr) {
+    delete[] tempNonconservativeProductX;
+  }
+  if (tempNonconservativeProductY != nullptr) {
+    delete[] tempNonconservativeProductY;
+  }
+  if (tempNonconservativeProductZ != nullptr) {
+    delete[] tempNonconservativeProductZ;
+  }
+  if (tempEigenvalueX != nullptr) {
+    delete[] tempEigenvalueX;
+  }
+  if (tempEigenvalueY != nullptr) {
+    delete[] tempEigenvalueY;
+  }
+  if (tempEigenvalueZ != nullptr) {
+    delete[] tempEigenvalueZ;
   }
 
-  if (evaluateNonconservativeProduct and Dimensions==2) {
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-      is_device_ptr(tempNonconservativeProductX, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize-1; x++) {
-      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x-haloSize,y),
-          t[patchIndex],
-          dt[patchIndex],
-          0, // normal
-          tempNonconservativeProductX,
-          ncpEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) \
-      is_device_ptr(tempNonconservativeProductY, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize-1; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-          mappedPointersToQIn[patchIndex],
-          QInEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex2d(x,y-haloSize),
-          t[patchIndex],
-          dt[patchIndex],
-          1, // normal
-          tempNonconservativeProductY,
-          ncpEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-        mappedPointersToQOut, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      internal::updateSolutionWithNonconservativeFlux_LoopBody(
-            tempNonconservativeProductX,
-            tempNonconservativeProductY,
-            tempNonconservativeProductZ,
-            ncpEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x,y),
-            unknown,
-            dt[patchIndex],
-            mappedPointersToQOut[patchIndex],
-            QOutEnumerator
-      );
-    }
-  }
-  else if (evaluateNonconservativeProduct and Dimensions==3) {
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempNonconservativeProductX, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch+2*haloSize-1; x++) {
-      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-            mappedPointersToQIn[patchIndex],
-            QInEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x-haloSize,y,z),
-            t[patchIndex],
-            dt[patchIndex],
-            0, // normal
-            tempNonconservativeProductX,
-            ncpEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempNonconservativeProductY, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch+2*haloSize-1; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-            mappedPointersToQIn[patchIndex],
-            QInEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y-haloSize,z),
-            t[patchIndex],
-            dt[patchIndex],
-            1, // normal
-            tempNonconservativeProductY,
-            ncpEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) \
-      is_device_ptr(tempNonconservativeProductZ, \
-        mappedPointersToQIn, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch+2*haloSize-1; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-      internal::computeNonconservativeFlux_LoopBody<Solver,unknowns,auxiliaryVariables>(
-            mappedPointersToQIn[patchIndex],
-            QInEnumerator,
-            rawPointerToCellCentre[patchIndex],
-            rawPointerToCellSize[patchIndex],
-            patchIndex,
-            volumeIndex3d(x,y,z-haloSize),
-            t[patchIndex],
-            dt[patchIndex],
-            2, // normal
-            tempNonconservativeProductZ,
-            ncpEnumerator
-      );
-    }
-
-    #pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) \
-      is_device_ptr(tempNonconservativeProductX, tempNonconservativeProductY, tempNonconservativeProductZ, \
-        mappedPointersToQOut, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        dt)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++)
-    for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-    for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      internal::updateSolutionWithNonconservativeFlux_LoopBody(
-          tempNonconservativeProductX,
-          tempNonconservativeProductY,
-          tempNonconservativeProductZ,
-          ncpEnumerator,
-          rawPointerToCellCentre[patchIndex],
-          rawPointerToCellSize[patchIndex],
-          patchIndex,
-          volumeIndex3d(x,y,z),
-          unknown,
-          dt[patchIndex],
-          mappedPointersToQOut[patchIndex],
-          QOutEnumerator
-      );
-    }
-  }
-
-  if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-    #pragma omp target teams distribute device(targetDevice) \
-      is_device_ptr(mappedPointersToQOut, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt, maxEigenvalue)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-      double newMaxEigenvalue = 0.0;
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        newMaxEigenvalue = std::max(
-            newMaxEigenvalue,
-            internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              mappedPointersToQOut[patchIndex],
-              QOutEnumerator,
-              rawPointerToCellCentre[patchIndex],
-              rawPointerToCellSize[patchIndex],
-              patchIndex,
-              volumeIndex2d(x,y),
-              t[patchIndex],
-              dt[patchIndex]
-            )
-        );
-      }
-      maxEigenvalue[patchIndex] = newMaxEigenvalue;
-    }
-  }
-  else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    #pragma omp target teams distribute device(targetDevice) \
-      is_device_ptr(mappedPointersToQOut, \
-        rawPointerToCellCentre, rawPointerToCellSize, \
-        t, dt, maxEigenvalue)
-    for (int patchIndex=0; patchIndex<numberOfCells; patchIndex++) {
-      double newMaxEigenvalue = 0.0;
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        newMaxEigenvalue = std::max(
-            newMaxEigenvalue,
-            internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              mappedPointersToQOut[patchIndex],
-              QOutEnumerator,
-              rawPointerToCellCentre[patchIndex],
-              rawPointerToCellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x,y,z),
-              t[patchIndex],
-              dt[patchIndex]
-            )
-        );
-      }
-      maxEigenvalue[patchIndex] = newMaxEigenvalue;
-    }
-  }
-
-  watch.stop();
-  measurement.setValue( watch.getCalendarTime());
-
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempFluxX, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempFluxY, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempFluxZ, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductX, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductY, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempNonconservativeProductZ, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueX, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueY, targetDevice );
-  tarch::accelerator::omp::GPUMemoryManager::getInstance().free( tempEigenvalueZ, targetDevice );
-
-  logTraceOut("timeStepWithRusanov_batched_usm_static_calls()");
+  logTraceOut("timeStepWithRusanovBatchedCopyStateless()");
 }

@@ -190,7 +190,6 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
       {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
       {{TEMP_DATA_ENUMERATOR}}
       >(patchData, peano4::utils::LoopParallelism::Subtasks);
-    );
   """
   elif solver_variant == SolverVariant.AcceleratorWithExplicitCopy:
    template += """Stateless<
@@ -205,7 +204,6 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
       {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
       {{TEMP_DATA_ENUMERATOR}}
       >(targetDevice, patchData);
-    );
   """
   else:
     assert False, "not supported combination: {} x {}".format( solver_variant, kernel_variant )
