@@ -180,7 +180,7 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
   def user_action_set_includes(self):
     return super(SubcyclingAdaptiveTimeStepWithEnclaveTasking, self).user_action_set_includes + """
 #include "exahype2/TimeStepping.h"
-#include "exahype2/fv/rusanov/Rusanov.h"
+#include "exahype2/fv/rusanov/rusanov.h"
 """
 
 
