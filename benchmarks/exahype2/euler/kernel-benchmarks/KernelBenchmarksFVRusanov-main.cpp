@@ -46,17 +46,17 @@ static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 
 
 #if Dimensions == 2
 static constexpr int NumberOfInputEntries = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2) * (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2)
-                                     * FVRusanovSolver::NumberOfUnknowns;
+                                            * FVRusanovSolver::NumberOfUnknowns;
 static constexpr int NumberOfOutputEntries = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 0) * (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 0)
-                                      * FVRusanovSolver::NumberOfUnknowns;
+                                             * FVRusanovSolver::NumberOfUnknowns;
 static constexpr int NumberOfFiniteVolumesPerPatch = FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch * FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch;
 #else
 static constexpr int NumberOfInputEntries = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2) * (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2)
-                                     * (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2) * FVRusanovSolver::NumberOfUnknowns;
+                                            * (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 2) * FVRusanovSolver::NumberOfUnknowns;
 static constexpr int NumberOfOutputEntries = (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 0) * (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 0)
-                                      * (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 0) * FVRusanovSolver::NumberOfUnknowns;
+                                             * (FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch + 0) * FVRusanovSolver::NumberOfUnknowns;
 static constexpr int NumberOfFiniteVolumesPerPatch = FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch * FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch
-                                              * FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch;
+                                                     * FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch;
 #endif
 
 
@@ -1401,11 +1401,15 @@ int main(int argc, char** argv) {
   OTTER_INITIALISE();
   feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
+  logInfo("main()", "===============================================================");
+  logInfo("main()", "Number of threads launching compute kernels: " << NumberOfLaunchingThreads);
+  logInfo("main()", "Number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy);
   logInfo("main()", "Number of compute threads: " << ::tarch::multicore::Core::getInstance().getNumberOfThreads());
   logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
   logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
   logInfo("main()", "Number of samples per measurement: " << NumberOfSamples);
   logInfo("main()", "Dimensions: " << Dimensions);
+  logInfo("main()", "===============================================================");
 
 #if defined(SharedOMP)
 #pragma omp parallel
@@ -1413,20 +1417,10 @@ int main(int argc, char** argv) {
 #pragma omp master
     {
 #endif
-      for (int launchingThreads = 1; launchingThreads <= MaxNumberOfLaunchingThreads; launchingThreads *= 2) {
-        for (int numberOfPatches = launchingThreads; numberOfPatches <= MaxNumberOfPatchesToStudy; numberOfPatches *= 2) {
-          std::stringstream msg;
-          msg << "kernel-benchmarks-" << numberOfPatches << "-patches-" << ::tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
-          OTTER_PHASE_SWITCH(msg.str().c_str());
-
-          logInfo("main()", "===============================================================");
-          logInfo("main()", "  Number of threads launching compute kernels: " << launchingThreads);
-          logInfo("main()", "  Number of patches per thread/compute kernel launch: " << numberOfPatches);
-          logInfo("main()", "===============================================================");
-
-          runBenchmarks(numberOfPatches, launchingThreads);
-        }
-      }
+      std::stringstream msg;
+      msg << "kernel-benchmarks-" << NumberOfPatchesToStudy << "-patches-" << ::tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
+      OTTER_PHASE_SWITCH(msg.str().c_str());
+      runBenchmarks(NumberOfPatchesToStudy, NumberOfLaunchingThreads);
 #if defined(SharedOMP)
     }
   }

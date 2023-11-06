@@ -14,30 +14,31 @@ namespace exahype2::fv::rusanov::omp::internal {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseStateless(
-    int                                            targetDevice,
-    int                                            numberOfCells,
-    double**                                       mappedPointersToQIn,
-    double*                                        rawPointerToCellCentre,
-    double*                                        rawPointerToCellSize,
-    double*                                        t,
-    double*                                        dt,
-    double*                                        maxEigenvalue,
-    double**                                       mappedPointersToQOut,
-    const enumerators::AoSLexicographicEnumerator& QInEnumerator,
-    const enumerators::AoSLexicographicEnumerator& QOutEnumerator,
-    const TempDataEnumeratorType&                  fluxEnumerator,
-    const TempDataEnumeratorType&                  ncpEnumerator,
-    const TempDataEnumeratorType&                  eigenvalueEnumerator,
-    double*                                        tempFluxX,
-    double*                                        tempFluxY,
-    double*                                        tempFluxZ,
-    double*                                        tempNonconservativeProductX,
-    double*                                        tempNonconservativeProductY,
-    double*                                        tempNonconservativeProductZ,
-    double*                                        tempEigenvalueX,
-    double*                                        tempEigenvalueY,
-    double*                                        tempEigenvalueZ
+    int           targetDevice,
+    int           numberOfCells,
+    double**      mappedPointersToQIn,
+    const double* rawPointerToCellCentre,
+    const double* rawPointerToCellSize,
+    const double* t,
+    const double* dt,
+    double*       maxEigenvalue,
+    double**      mappedPointersToQOut,
+    double*       tempFluxX,
+    double*       tempFluxY,
+    double*       tempFluxZ,
+    double*       tempNonconservativeProductX,
+    double*       tempNonconservativeProductY,
+    double*       tempNonconservativeProductZ,
+    double*       tempEigenvalueX,
+    double*       tempEigenvalueY,
+    double*       tempEigenvalueZ
   ) InlineMethod {
+    const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+    const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+    const TempDataEnumeratorType                  fluxEnumerator(numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+    const TempDataEnumeratorType                  ncpEnumerator(numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+    const TempDataEnumeratorType                  eigenvalueEnumerator(numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+
 #pragma omp target teams distribute device(targetDevice)
     for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       // ====================================================
@@ -684,11 +685,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless(int ta
     dt,
     maxEigenvalue,
     mappedPointersToQOut,
-    QInEnumerator,
-    QOutEnumerator,
-    fluxEnumerator,
-    ncpEnumerator,
-    eigenvalueEnumerator,
     tempFluxX,
     tempFluxY,
     tempFluxZ,
@@ -778,11 +774,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless(int ta
     dt,
     maxEigenvalue,
     mappedPointersToQOut,
-    QInEnumerator,
-    QOutEnumerator,
-    fluxEnumerator,
-    ncpEnumerator,
-    eigenvalueEnumerator,
     tempFluxX,
     tempFluxY,
     tempFluxZ,
@@ -870,6 +861,14 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless(int t
   double*   dt                     = patchData.dt;
   double*   maxEigenvalue          = patchData.maxEigenvalue;
 
+#pragma omp target enter data map(to : rawPointerToCellCentre[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target enter data map(to : rawPointerToCellSize[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target enter data map(to : mappedPointersToQIn[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : mappedPointersToQOut[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : t[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : dt[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(alloc : maxEigenvalue[0 : numberOfCells]) device(targetDevice)
+
   tarch::timing::Watch watch("exahype2::fv::rusanov::omp", "timeStepWithRusanovPatchwiseCopyStateless", false, true);
   internal::timeStepWithRusanovPatchwiseStateless<
     SolverType,
@@ -891,11 +890,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless(int t
     dt,
     maxEigenvalue,
     mappedPointersToQOut,
-    QInEnumerator,
-    QOutEnumerator,
-    fluxEnumerator,
-    ncpEnumerator,
-    eigenvalueEnumerator,
     tempFluxX,
     tempFluxY,
     tempFluxZ,
@@ -1059,11 +1053,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless(int t
     dt,
     maxEigenvalue,
     mappedPointersToQOut,
-    QInEnumerator,
-    QOutEnumerator,
-    fluxEnumerator,
-    ncpEnumerator,
-    eigenvalueEnumerator,
     tempFluxX,
     tempFluxY,
     tempFluxZ,
