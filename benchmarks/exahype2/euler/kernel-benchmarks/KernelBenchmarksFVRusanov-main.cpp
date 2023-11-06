@@ -1379,11 +1379,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 }
 
 int main(int argc, char** argv) {
-  constexpr int ExitCodeSuccess      = 0;
-  constexpr int ExitCodeInvalidBuild = 3;
-
   peano4::initParallelEnvironment(&argc, &argv);
-
   ::exahype2::setDefaultLogStatements();
   tarch::logging::CommandLineLogger::getInstance().setLogFormat(
     " ",   // const std::string& columnSeparator
@@ -1395,23 +1391,17 @@ int main(int argc, char** argv) {
     false, // bool logTrace,
     ""     // const std::string& outputLogFileName
   );
-
   tarch::multicore::Core::getInstance().configure(tarch::multicore::Core::UseDefaultNumberOfThreads);
   tarch::accelerator::Device::getInstance().configure();
-
   exahype2::initNonCritialAssertionEnvironment();
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
-
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
     logError("main()", "MPI runs without multithreading are not supported currently.");
-    return ExitCodeInvalidBuild;
+    return EXIT_FAILURE;
   }
-
   // peano4::runTestsAndBenchmarks();
-
   OTTER_INITIALISE();
-
   feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
   logInfo("main()", "Number of compute threads: " << tarch::multicore::Core::getInstance().getNumberOfThreads());
@@ -1445,7 +1435,6 @@ int main(int argc, char** argv) {
   }
 #endif
 
-
   if constexpr (Accuracy > 0.0) {
     logInfo("main()", "all kernels yield the same outcome up to a accuracy of " << Accuracy << " unless reported otherwise");
   } else {
@@ -1453,9 +1442,7 @@ int main(int argc, char** argv) {
   }
 
   OTTER_FINALISE();
-
   delete[] validOutcome;
   peano4::shutdownParallelEnvironment();
-
-  return ExitCodeSuccess;
+  return EXIT_SUCCESS;
 }

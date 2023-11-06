@@ -4,8 +4,8 @@
 
 #include "exahype2/enumerators/enumerators.h"
 #include "exahype2/fv/PatchUtils.h"
-#include "exahype2/fv/Rusanov/Functors.h"
 #include "exahype2/Solver.h"
+#include "Functors.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/multicore/multicore.h"
