@@ -61,8 +61,10 @@ class AssemblePetscMatrix(ActionSet):
 
     logTraceInWith4Arguments( "touchCellFirstTime::projection", globalCellIndex, marker.toString(), projectionCellToFaceMatrix.toString(), projectionFaceToCellMatrix.toString() );
 
-    int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
-    int dofsPerCell = repositories::{{SOLVER_INSTANCE}}.DoFsPerCell;
+    int dofsPerFace  = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
+    int nodesPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace;
+
+    int dofsPerCell  = repositories::{{SOLVER_INSTANCE}}.DoFsPerCell;
 
     /*
     The following loop is done "dimensions" different times. The first time around, 
@@ -77,10 +79,13 @@ class AssemblePetscMatrix(ActionSet):
       int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
       int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
 
-      logTraceInWith2Arguments( "touchCellFirstTime::projectLeftAndRightFace()", globalFirstDoFIndexOfLeftFace, globalFirstDoFIndexOfRightFace );
+      logTraceInWith3Arguments( "touchCellFirstTime::projectLeftAndRightFace()", globalFirstDoFIndexOfLeftFace, globalFirstDoFIndexOfRightFace, d );
       
       for (int row=0; row<dofsPerFace; row++ ) {
         for (int col=0; col<dofsPerCell; col++) {
+          
+          logTraceInWith2Arguments("Projections", row, col);
+
           // Cell to Face projection for left face
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
@@ -108,6 +113,8 @@ class AssemblePetscMatrix(ActionSet):
             globalFirstDoFIndexOfRightFace + row + 2 * dofsPerFace, 
             projectionFaceToCellMatrix(col, d * dofsPerFace + row + Dimensions*dofsPerFace)
           );
+
+          logTraceOut("Projections");
         }
       }
       logTraceOut( "touchCellFirstTime::projectLeftAndRightFace()" );
