@@ -22,7 +22,7 @@ parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       defau
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-deg", "--degree",             dest="degree",         type=int, required=True, help="Polynomial degree")
-parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.1, help="Mesh size")
+parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.4, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts"], required=True, help="Pick build type" )
 args = parser.parse_args()
 

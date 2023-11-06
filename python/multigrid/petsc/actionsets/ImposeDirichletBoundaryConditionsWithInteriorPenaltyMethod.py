@@ -40,7 +40,7 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
         rhs
       );
       
-      for (int unknown = 0; unknown<repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; unknown) {
+      for (int unknown = 0; unknown<repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; unknown++) {
         int globalMatrixRow = globalFaceIndex + row + 2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
         // @todo Alex, your code
         row++;          
