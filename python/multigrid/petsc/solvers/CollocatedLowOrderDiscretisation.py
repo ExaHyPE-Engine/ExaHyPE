@@ -330,7 +330,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     to the observer.
     
     """
-    observer.add_action_set( EnumerateDoFs(self) )
+    observer.add_action_set( EnumerateDoFs(self, True, False) )
     observer.add_action_set( InitVertexDoFs(self) ) 
     pass
   

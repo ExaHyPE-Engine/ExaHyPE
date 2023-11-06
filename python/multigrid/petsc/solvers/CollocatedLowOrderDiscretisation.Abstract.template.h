@@ -58,6 +58,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
     ) = 0;
 
+    virtual vertexdata::{{SOLVER_NAME}}PETScData::Type getVertexDoFType(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h
+    ) final;
+
     /**
      * Called after assembly is complete.
      *
