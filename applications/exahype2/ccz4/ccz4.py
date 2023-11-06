@@ -1086,7 +1086,7 @@ if __name__ == "__main__":
     if args.DC_flag==True:
       userinfo.append(("Enable double communication, make sure you are using the Second formulism.", None))
       Additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
-                                           add_user_defined_actions=False,
+                                           add_user_defined_actions=True,
                                            )
       project.register_new_user_defined_algorithmic_step( Additional_mesh_traversal )
       peano4_project.solversteps.add_step( Additional_mesh_traversal )

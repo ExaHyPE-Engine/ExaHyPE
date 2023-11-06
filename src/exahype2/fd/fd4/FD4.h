@@ -79,6 +79,17 @@ namespace exahype2 {
       #endif
       ;
 
+      void AlgorithmStep_patchwise_reconstruct_first_derivatives(
+        ::exahype2::CellData&   patchData,
+        int                     numberOfGridCellsPerPatchPerAxis,
+        int                     haloSize,
+        int                     unknowns,
+        int                     auxiliaryVariables
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
 
       template <
         typename Solver,
