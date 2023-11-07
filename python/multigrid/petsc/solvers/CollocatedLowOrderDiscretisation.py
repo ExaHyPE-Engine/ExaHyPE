@@ -382,6 +382,7 @@ class CollocatedLowOrderDiscretisation(Solver):
         "VERTEX_CARDINALITY": self.number_of_matrix_entries_per_vertex,
         "CELL_LHS_MATRIX_SCALING": self.cell_lhs_matrix_scaling,
         "CELL_RHS_MATRIX_SCALING": self.cell_rhs_matrix_scaling,
+        "SOLVER_NAME":                           self.typename(),
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
