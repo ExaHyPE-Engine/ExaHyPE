@@ -27,7 +27,7 @@ patch_size = 16
 #
 # The size of a finite volume/cell per axis.
 #
-volume_size = 0.05
+volume_size = 0.01
 
 #
 # The simulation end time.
@@ -38,12 +38,12 @@ end_time = 1
 # Choose domain size and offset.
 #
 size=[2.0, 2.0]
-offset=[-1.0, -1.0]
+offset=[0.0, 0.0]
 
 #
 # If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
 #
-use_make = True
+use_make = False
 
 #
 # Set to true, to visualise/convert the output data using a postprocessor.
@@ -152,7 +152,7 @@ my_pde.initial_values[0] = 1 # Water height (h)
 my_pde.initial_values[1] = 0 # x-momentum (hu)
 my_pde.initial_values[2] = 0 # y-momentum (hv)
 
-volume_centre = sympy.sqrt((0.5 - my_pde.x[0])**2 + (0.5 - my_pde.x[1])**2)
+volume_centre = sympy.sqrt((1.0 - my_pde.x[0])**2 + (1.0 - my_pde.x[1])**2)
 my_pde.initial_values[3] = sympy.Piecewise((0.0, volume_centre < 0.4), (0.1, True)) # Bathymetry (b)
 
 my_pde.boundary_values[0] = h

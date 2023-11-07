@@ -172,4 +172,4 @@ t=0.0             |  t=1.0
 :-------------------------:|:-------------------------:
 ![](Euler_3D_start.png)  |  ![](Euler_3D_end.png)
 
--------------------------*The computed energy of the 3D Euler equations at times t=0.0 and t=1.0*-------------------------
+-------------------------*The computed energy of the 3D Euler equations at times t=0.0s and t=1.0s.*-------------------------

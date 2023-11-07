@@ -56,7 +56,7 @@ offset = [0.0, 0.0, 0.0]
 #
 # If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
 #
-use_make = True
+use_make = False
 
 #
 # Set to true, to visualise/convert the output data using a postprocessor.

@@ -82,7 +82,7 @@ We can define this auxiliary variable by setting the parameter for the auxiliary
 These auxiliary variables are accessed in the same way as the regular variables,
 except that they are not modified by the solver.
 Initial- and boundary conditions for these auxiliary variables should be defined, but no flux or non-conservative product can be set,
-as they can never change anyways.
+as they can never change anyway.
 
 ### Initial Conditions
 We start with the initial conditions: For this, we want the initial water height to be 1.0 everywhere,
@@ -107,7 +107,7 @@ The directions of the flux are defined by the normal parameter.
 This parameter defines through which surface, and therefore in which direction,
 the flux is being computed. Here if the normal is 0, we are computing the flux in x-direction
 and if the normal is 1, we are computing the flux in y-direction.
-For higher dimensions, there would logically be additional directions to implement the flux in.
+For higher dimensions, there would logically be additional directions to implement the flux.
 
 ### Non-conservative Term
 Finally, we fill in the non-conservative part in the function $`nonconservativeProduct`$.
@@ -115,10 +115,12 @@ This needs to go into the variable $`BTimesDeltaQ`$.
 This function has a parameter $`deltaQ`$ through which you can access the space derivatives of the unknowns and
 auxiliary variables in the direction defined by the normal's current value.
 
-![](SWE_end.png)
+t=0.0             |  t=1.0
+:-------------------------:|:-------------------------:
+![](SWE_start.png)  |  ![](SWE_end.png)
 
-*The computed height of the fluid according to our computation of the shallow water equations after 0.2s.
-The fluid has rushed in from the sides to fill the depression at the center.*
+-------------------------*The computed height of the fluid according to our computation of the shallow water equations at times t=0.0s and t=1.0s.
+The fluid has rushed in from the sides to fill the depression at the center.*-------------------------
 
 ## Increasing Resolution
 If you've completed the implementation, you may have noticed that the resolution is somewhat low.

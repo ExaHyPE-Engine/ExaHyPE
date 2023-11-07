@@ -54,6 +54,9 @@ gcc-tutorials:
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/advection; python3 advection.py'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/advection; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/swe; python3 swe.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/swe; make -j'
   retry: 0
 
 gcc-applications:

@@ -51,6 +51,9 @@ llvm-tutorials-cmake:
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/advection; python3 advection.py'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/advection; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/swe; python3 swe.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/swe; make -j'
   retry: 0
 
 llvm-applications-cmake:
