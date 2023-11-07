@@ -40,15 +40,14 @@ class AssemblePetscMatrix(ActionSet):
         }
       }
       
+      //lhs
+      auto lhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
       // loop over the dofs
       for (int d=0; d<{{VERTEX_CARDINALITY}}; d++)
       {
-        //lhs
         for (int i=0; i<TwoPowerD; i++) {
           for (int j=0; j<TwoPowerD; j++) {
             if (vertexIndices[i] != -1 and vertexIndices[j] != -1) {
-              auto lhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
-      
               repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().increment(
                 vertexIndices[i] + d, //d for dof
                 vertexIndices[j] + d, 

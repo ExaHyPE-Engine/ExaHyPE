@@ -69,13 +69,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     /*
     In this experiement, we have data only on vertices, so the following
-    two methods return Outside
+    method returns Outside
     */
     virtual facedata::{{SOLVER_NAME}}PETScData::Type getFaceDoFType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
 
+    /*
+    We need the cells to be marked Interior. Only cells marked interior
+    are ones that we add elements to PETSc matrix.
+    */
     virtual celldata::{{SOLVER_NAME}}PETScData::Type getCellDoFType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h

@@ -93,7 +93,7 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
-  return celldata::{{SOLVER_NAME}}PETScData::Type::Outside;
+  return celldata::{{SOLVER_NAME}}PETScData::Type::Interior;
 }
 
 ::petsc::LocalToGlobalMap&  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLocalToGlobalMap() {
