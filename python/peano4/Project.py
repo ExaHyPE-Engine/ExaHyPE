@@ -294,14 +294,14 @@ class Project (object):
       # ), "global simulation parameters of the projects being merged don't match"
 
       # an internal utility function to merge two dictionaries
-      def _merge(lhs_dict: dict, rhs_dict: dict) -> dict:
-        dict_merged = lhs_dict.copy()
-        for key,value in rhs_dict.items():
-          if key in dict_merged:
-              dict_merged[key] += value
-          else:
-              dict_merged[key] = value
-        return dict_merged
+      # def _merge(lhs_dict: dict, rhs_dict: dict) -> dict:
+      #   dict_merged = lhs_dict.copy()
+      #   for key,value in rhs_dict.items():
+      #     if key in dict_merged:
+      #         dict_merged[key] += value
+      #     else:
+      #         dict_merged[key] = value
+      #   return dict_merged
 
       result_project = Project(lhs.namespace, project_name, executable)
       result_project._executable_name = executable
@@ -337,7 +337,7 @@ class Project (object):
 
       # ...
 
-      result_project.constants.d = _merge(lhs.constants.d, rhs.constants.d)
+      result_project.constants.d = {**lhs.constants.d, **rhs.constants.d} #_merge(lhs.constants.d, rhs.constants.d)
       
       # @todo Dmitry please befill
       
