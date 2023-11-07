@@ -16,7 +16,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
 
     Order of function spaces (used in the output dictionaries):
     0 |  0   1   2   3   4   5
-    p | q^+ q^- q^f u^+ u^- u^f
+    u | q^+ q^- q^f u^+ u^- u^f
     """
 
     def __init__(self, r_press, basis=NodalBasisGaussLegendre(2)):
@@ -30,19 +30,19 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
         self.basis = basis
         self._L_C = [r_press]
         self._L_F = 6 * [r_press]
-        self._fs_labels_C = ["p"]
+        self._fs_labels_C = ["u"]
         self._fs_labels_F = ["q+", "q-", "qf", "u+", "u-", "uf"] # projections of the normal derivative onto facets and "flux" 
 
         # All pairs of function spaces that couple
-        self._coupling_CC = [(0, 0)] # _p_p
+        self._coupling_CC = [(0, 0)] # _u_u
         
-        self._coupling_CF = [(0, 2), # _p_qf
-                             (0, 5)] # _p_uf
+        self._coupling_CF = [(0, 2), # _u_qf
+                             (0, 5)] # _u_uf
         
-        self._coupling_FC = [(0, 0), # _q+_p
-                             (1, 0), # _q-_p
-                             (3, 0), # _u+_p
-                             (4, 0)  # _u-_p
+        self._coupling_FC = [(0, 0), # _q+_u
+                             (1, 0), # _q-_u
+                             (3, 0), # _u+_u
+                             (4, 0)  # _u-_u
                              ]
         
         self._coupling_FF = [(0, 0), # _q+_q+
@@ -175,7 +175,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
             raise ValueError("Invalid value of relative_position")        
         
         # The following sets factors and integrands for all the pairs (k,ell);
-        if fs_pair == (0, 2): # -int_F q^f v^p dF
+        if fs_pair == (0, 2): # -int_F q^f v^u dF
             factor = -0.5 # minus befor the boundary int. in the weak formulation
             
             if relative_position in ["left", "right"]:
@@ -247,8 +247,9 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
         factor = -1.0 # minus from the def. of projection: M*q^\pm + A*p = 0, so A = -integral(...)
         gamma = (0, 0) # no scaling as it's compensated by the derivative dp/dx or dp/dy
         
-        if fs_pair == (0, 0): # A_q+_p
+        if fs_pair == (0, 0): # A_q+_u
             if relative_position in ["left", "bottom"]: # "+"-projection from a give cell is defined on the left and bottom facets
+                factor = factor * (-1.0) # * -1 = normal_component: nx for the left or ny for the bottom
                 # Define the integrand functions
                 func_k = self._fe_F[k].evaluate
                 def func_ell(i, q):
@@ -270,8 +271,9 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
             else: # return 0 for the right and top
                 A_k_ell = np.zeros((ndof_k, ndof_ell))
 
-        elif fs_pair == (1, 0): # A_q-_p
+        elif fs_pair == (1, 0): # A_q-_u
             if relative_position in ["right", "top"]: # "-"-projection from a give cell is defined on the right and top facets
+                # factor = factor * (1.0) # * 1 = normal_component: nx for the right or ny for the top
                 # Define the integrand functions
                 func_k = self._fe_F[k].evaluate
                 def func_ell(i, q):
@@ -293,8 +295,10 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
             else: # return 0 for the left and bottom
                 A_k_ell = np.zeros((ndof_k, ndof_ell))
 
-        elif fs_pair == (3, 0): # A_u+_p
-            factor = -0.5 # minus from the def. of projection: M*u^\pm + A*u = 0, , so A = -integral(...)
+        elif fs_pair == (3, 0): # A_u+_u
+            factor = -0.5 # minus from the def. of projection: M*u^\pm + A*u = 0, so A = -integral(...)
+            factor = factor * (-1.0) # ! now, the plus-prujections are {(-1)*solution} and the minus-projections are {(+1)*solution}
+                                     # ! This is to have the jumps (u^- - u^+) in the penalty formulation
             if relative_position in ["left", "bottom"]:
                 if relative_position == "left":
                     gamma = (0, 1) # scale by hy
@@ -319,8 +323,8 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
                 A_k_ell = np.zeros((ndof_k, ndof_ell))
 
         # REMAKE THIS, PUT (3, 0) AND (4, 0) TOGETHER AS THE INTEGRANDS ARE THE SAME    
-        elif fs_pair == (4, 0): # A_u-_p
-            factor = -0.5 # minus from the def. of projection: M*u^\pm + A*u = 0, , so A = -integral(...) 
+        elif fs_pair == (4, 0): # A_u-_u
+            factor = -0.5 # minus from the def. of projection: M*u^\pm + A*u = 0, so A = -integral(...) 
             if relative_position in ["right", "top"]:
                 if relative_position == "right":
                     gamma = (0, 1) # scale by hy
