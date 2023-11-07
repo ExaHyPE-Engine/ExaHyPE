@@ -566,7 +566,7 @@ The finest mesh width of """
           to interpolate in time.
 
         _patch_overlap_update: Patch (2xNxN)
-          This is hte new update. After the time step, I roll this
+          This is the new update. After the time step, I roll this
           information over into _patch_overlap_new, while I backup the
           previous _patch_overlap_new into _patch_overlap_old. If I
           worked with regular meshes only, I would not need this update

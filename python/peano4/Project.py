@@ -264,19 +264,83 @@ class Project (object):
     return success
 
 
+  # @staticmethod
+  def merge(lhs: 'Project',
+            rhs: 'Project',
+            project_name = 'merged_project',
+            executable = 'merged_executable'
+            ) -> 'Project':
+      """!
+      Merges two Peano 4 projects
+      """
 
-def merge(lhs: Project,
-          rhs: Project,
-          ):
-    """!
-    
-    Merges two Peano 4 projects
-    
-    """
-    result_project = Project()
-    
-    # @todo Dmitry please befill
-    
-    return result_project
+      assert (
+          lhs.namespace == rhs.namespace
+      ), "namespaces of the projects being merged don't match"
+
+      assert (
+          lhs.directory == rhs.directory
+      ), "directories of the projects being merged don't match"
+
+      assert (
+          lhs.output.makefile.d["CXX"] == lhs.output.makefile.d["CXX"]
+      ), "CXX compilers of the projects being merged don't match"
+
+      # assert (
+      #   lhs._domain_offset == rhs._domain_offset and
+      #   lhs._domain_size == rhs._domain_size and
+      #   lhs._dimensions == rhs._dimensions and
+      #   lhs._plotter_precision == rhs._plotter_precision
+      # ), "global simulation parameters of the projects being merged don't match"
+
+      # an internal utility function to merge two dictionaries
+      def _merge(lhs_dict: dict, rhs_dict: dict) -> dict:
+        dict_merged = lhs_dict.copy()
+        for key,value in rhs_dict.items():
+          if key in dict_merged:
+              dict_merged[key] += value
+          else:
+              dict_merged[key] = value
+        return dict_merged
+
+      result_project = Project(lhs.namespace, project_name, executable)
+      result_project._executable_name = executable
+
+      result_project.output.makefile.d["CXX"] = lhs.output.makefile.d["CXX"]
+
+      lhs_list_of_cxxflags = lhs.output.makefile.d["CXXFLAGS"].split(" ")
+      rhs_list_of_cxxflags = rhs.output.makefile.d["CXXFLAGS"].split(" ")
+      result_project.output.makefile.d["CXXFLAGS"] = lhs.output.makefile.d["CXXFLAGS"]
+      for cxxflag in rhs_list_of_cxxflags:
+        if cxxflag in lhs_list_of_cxxflags:
+          result_project.output.makefile.d["CXXFLAGS"] += " " + cxxflag
+
+      for v in lhs.datamodel.vertex_data:
+        result_project.datamodel.add_vertex(v)
+      for v in rhs.datamodel.vertex_data:
+        result_project.datamodel.add_vertex(v)
+
+      for f in lhs.datamodel.face_data:
+        result_project.datamodel.add_face(f)
+      for f in rhs.datamodel.face_data:
+        result_project.datamodel.add_face(f)
+
+      for c in lhs.datamodel.cell_data:
+        result_project.datamodel.add_cell(c)
+      for c in rhs.datamodel.cell_data:
+        result_project.datamodel.add_cell(c)
+
+      for g in lhs.datamodel.global_data:
+        result_project.datamodel.add_global(g)
+      for g in rhs.datamodel.global_data:
+        result_project.datamodel.add_global(g)
+
+      # ...
+
+      result_project.constants.d = _merge(lhs.constants.d, rhs.constants.d)
+      
+      # @todo Dmitry please befill
+      
+      return result_project
 
 

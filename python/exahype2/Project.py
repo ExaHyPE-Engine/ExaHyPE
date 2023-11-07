@@ -721,13 +721,13 @@ thus appreciate any citation of the original release paper
                     for root, dirs, files in os.walk(pathToExaHyPERoot+ "/submodules/blis/include"):
                         archname = dirs[0]
                         break
-                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/blis/include/" + archname)
+                    self._project.output.makefile.add_header_search_path(pathToExaHyPERoot + "/submodules/blis/include/" + archname)
                     self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/blis/lib/" + archname + "/libblis.a")
                     self._project.output.makefile.add_library("-lpthread")
                 elif solver._use_Eigen:
-                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/eigen")
+                    self._project.output.makefile.add_header_search_path(pathToExaHyPERoot + "/submodules/eigen")
                 elif solver._use_libxsmm_JIT:
-                    self._project.output.makefile.add_header_search_path(" " + pathToExaHyPERoot + "/submodules/libxsmmJIT/include")
+                    self._project.output.makefile.add_header_search_path(pathToExaHyPERoot + "/submodules/libxsmmJIT/include")
                     self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/libxsmmJIT/lib/libxsmm.a")
                     self._project.output.makefile.add_linker_flag(pathToExaHyPERoot + "/submodules/OpenBLAS/libopenblas.a")
                     self._project.output.makefile.add_library("-lpthread")

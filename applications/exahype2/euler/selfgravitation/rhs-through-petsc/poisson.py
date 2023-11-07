@@ -53,17 +53,17 @@ matrices = DLinear(args.dimensions,
 # Create a project and configure it to end up in a subnamespace (and thus
 # subdirectory).
 #
-project = exahype2.Project(
+euler_project = exahype2.Project(
   namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
   project_name  = "Euler",
   directory     = ".",
   executable    = "selfgravitation-euler"
 )
-petsc_project = petsc.Project(
+poisson_project = petsc.Project(
   namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
   project_name  = "Poisson",
   directory     = ".",
-  executable    = "poisson-with-petsc"
+  executable    = "selfgravitation-poisson"
 )
 
 #
@@ -129,8 +129,8 @@ poisson_solver = petsc.solvers.CollocatedLowOrderDiscretisation(
 
 euler_solver.set_implementation(refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation)
 
-project.add_solver(euler_solver)
-petsc_project.add_solver(poisson_solver)
+euler_project.add_solver(euler_solver)
+poisson_project.add_solver(poisson_solver)
 
 #
 # Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
@@ -208,7 +208,7 @@ else:
 #
 # Lets configure some global parameters
 #
-project.set_global_simulation_parameters(
+euler_project.set_global_simulation_parameters(
   dimensions = args.dimensions,
   offset = offset,
   size = size,
@@ -218,7 +218,7 @@ project.set_global_simulation_parameters(
   time_in_between_plots = args.plot_snapshot_interval,      # snapshots
   periodic_BC = [False, False, False]
 )
-petsc_project.set_global_simulation_parameters(
+poisson_project.set_global_simulation_parameters(
   dimensions            = args.dimensions,
   offset                = offset,
   domain_size           = size,
@@ -228,38 +228,41 @@ petsc_project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
-project.set_Peano4_installation(args.peanodir, modes[args.mode])
-petsc_project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()")
-petsc_project.set_Peano4_installation(args.peanodir, modes[args.mode])
+euler_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
+euler_project.set_Peano4_installation(args.peanodir, modes[args.mode])
+poisson_project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()")
+poisson_project.set_Peano4_installation(args.peanodir, modes[args.mode])
 
 #
-# Build first the Peano4 project for Poisson
+# Create the first Peano4 project for Euler
 #
-petsc_peano4_project=petsc_project.generate_Peano4_project(args.verbose)
-petsc_peano4_project.output.makefile.add_h_file("Poisson.h")
-petsc_peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
-petsc_peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
-if args.j==0:
-    petsc_peano4_project.generate()
-else:
-    petsc_peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
-print("PETSc project is created!")
+euler_peano4_project = euler_project.generate_Peano4_project(args.verbose)
+
+#
+# Create the second Peano4 project for Poisson
+#
+poisson_peano4_project = poisson_project.generate_Peano4_project(args.verbose)
 
 
 #
-# Build now the Peano4 project for Euler which already can access the generated files for Poisson
+# Merge two Peano4 projects into one and build
 #
-peano4_project = project.generate_Peano4_project(args.verbose, petsc_project, args.configuredir)
+peano4_project = peano4.Project.merge(
+   euler_peano4_project,
+   poisson_peano4_project,
+   project_name="EulerPoisson",
+   executable="selfgravitation-with-petsc",
+)
+
 peano4_project.output.makefile.add_h_file("Euler.h")
 peano4_project.output.makefile.add_cpp_file("Euler.cpp")
 peano4_project.output.makefile.add_h_file("Poisson.h")
 peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
 
-peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
-if args.j==0:
-  peano4_project.generate()
-else:
-  peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+# peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+# if args.j==0:
+#   peano4_project.generate()
+# else:
+#   peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 
 print("Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")
