@@ -21,14 +21,11 @@ namespace exahype2::fv::rusanov::omp {
    * As we use explicit allocs and frees, the map clauses basically
    * replicate the heap behaviour on the accelerator.
    *
-   * I'd like to assign the host pointers null, as the actual temporary data
-   * is to be create on the GPU. Such a 'create a pointer which is a
+   * We assign the host pointers null, as the actual temporary data
+   * is to be created on the GPU. Such a 'create a pointer which is a
    * nullptr' ensures that the code still compiles on the host even though
    * it is semantically broken as the temporary data is not allocated.
    *
-   * However, we have to create the right buffer size on the host,
-   * as the NVIDIA tools otherwise complain. On the long term, this should
-   * not be necessary.
    *
    * ## Patch data transfer
    *
@@ -36,7 +33,7 @@ namespace exahype2::fv::rusanov::omp {
    * actual patch sizes and positions. Trivially copyable means that they are
    * plain double arrays. That is, we can map them onto the device. The actual
    * input and output data is stored as pointer to pointers. Here, we have to
-   * loop over the entries and copy each individual pointer over separatedly.
+   * loop over the entries and copy each individual pointer over separately.
    *
    * The positions and sizes of the patches are in principle trivially copyable
    * as well, as they simply host arrays of known sizes. However, it is quite

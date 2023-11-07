@@ -318,7 +318,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     timingComputeKernel.erase();
     ::tarch::timing::Measurement timingKernelLaunch;
 
-    for (int j = 0; j < NumberOfSamples + 1; j++) {
+    for (int j = 0; j < NumberOfSamples; j++) {
       parallelFor(launchingThread, launchingThreads) {
         ::exahype2::CellData patchData(patches);
         for (int i = 0; i < patches; i++) {
@@ -334,9 +334,11 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
         kernel(device, patchData);
         watchKernelLaunch.stop();
-        if (j > 0) { // We skip the first measurement (warmup phase)
-          timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
-        }
+        // if (j > 0) { // We skip the first measurement (warmup phase)
+        //  TODO: Not very good to do it like this. Should use something like
+        //  timingKernelLaunch.pop_front();
+        timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
+        //}
 
         if constexpr (Accuracy > 0.0) {
           int    errors        = 0;
@@ -1375,6 +1377,112 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     numberOfPatches
   );
 #endif
+
+#if defined(GPUOffloadingCPP)
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerators::AoSLexicographicEnumerator>>,
+    "device " + std::to_string(device) + ", batched, AoS, usm",
+    launchingThreads,
+    device,
+    numberOfPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerators::SoALexicographicEnumerator>>,
+    "device " + std::to_string(device) + ", batched, SoA, usm",
+    launchingThreads,
+    device,
+    numberOfPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
+    "device " + std::to_string(device) + ", batched, AoSoA, usm",
+    launchingThreads,
+    device,
+    numberOfPatches
+  );
+
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerators::AoSLexicographicEnumerator>>,
+    "device " + std::to_string(device) + ", patch-wise, AoS, usm",
+    launchingThreads,
+    device,
+    numberOfPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerators::SoALexicographicEnumerator>>,
+    "device " + std::to_string(device) + ", patch-wise, SoA, usm",
+    launchingThreads,
+    device,
+    numberOfPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
+    "device " + std::to_string(device) + ", patch-wise, AoSoA, usm",
+    launchingThreads,
+    device,
+    numberOfPatches
+  );
+#endif
 }
 
 int main(int argc, char** argv) {
@@ -1404,6 +1512,7 @@ int main(int argc, char** argv) {
   feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
   logInfo("main()", "===============================================================");
+  logInfo("main()", "Dimensions: " << Dimensions);
   logInfo("main()", "Number of threads launching compute kernels: " << NumberOfLaunchingThreads);
   logInfo("main()", "Number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy);
   logInfo("main()", "Number of compute threads: " << ::tarch::multicore::Core::getInstance().getNumberOfThreads());
@@ -1411,7 +1520,9 @@ int main(int argc, char** argv) {
   logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
   logInfo("main()", "Number of samples per measurement: " << NumberOfSamples);
   logInfo("main()", "Evaluate max. eigenvalue (reduction step): " << EvaluateMaximumEigenvalueAfterTimeStep);
-  logInfo("main()", "Dimensions: " << Dimensions);
+  if constexpr (Accuracy > 0.0) {
+    logInfo("main()", "Performing accuracy checks with precision: " << Accuracy);
+  }
   logInfo("main()", "===============================================================");
 
 #if defined(SharedOMP)
