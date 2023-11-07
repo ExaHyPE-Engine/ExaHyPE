@@ -205,7 +205,7 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
 
     def __init__(self, solver):
         super(MergeEnclaveTaskOutcome, self).__init__(solver)
-        self.priority = -1
+        self.descend_invocation_order = -1
         self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
 
     def get_body_of_operation(self, operation_name):

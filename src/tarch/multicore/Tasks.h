@@ -44,7 +44,10 @@ namespace tarch {
     int reserveTaskNumber();
 
     /**
-     * Counterpart to reserveTaskNumber().
+     * Release a task number
+     *
+     * @param number Either a valid non-negative number (as returned by
+     *   reserveTaskNumber() for example) or NoDependency.
      */
     void releaseTaskNumber(int number);
 
@@ -286,31 +289,42 @@ namespace tarch {
     constexpr int NoDependency = -1;
 
     /**
-     * Spawn task with in and/or out dependencies
+     * Spawn a task which dependencies
      *
-     * This alternative version of spawnTask() creates a task with in and/or
-     * out dependencies. There are a few conventions around this one:
+     * Spawn a task that depends on one other task. Alternatively, pass in
+     * NoDependency. In this case, the task can kick off immediately. You have
+     * to specify a task number. This number allows other, follow-up tasks to
+     * become dependant on this very task. Please note that the tasks have to
+     * be spawned in order, i.e. if B depends on A, then A has to be spawned
+     * before B. Otherwise, you introduce a so-called anti-dependency. This is
+     * OpenMP jargon which we adopted ruthlessly.
      *
-     * - in and out are non-zero integers that refer to exactly one other
-     *   task. I recommend to use reserveTaskNumber() to obtain unique task
-     *   numbers that you can refer to. But this is the user's choice.
-     * - You can make either in or out be NoDependency, but it is not permitted
-     *   that both are of the value NoDependency. If this is the case, you
-     *   have to use the other spawnTask() routine.
-     * - If a task has an in dependency, i.e. in!=NoDependency, then you have
-     *   to spawn the task with the corresponding out dependency before that.
-     *   So the system has to be aware that there is an out dependency.
-     *   Otherwise, you create an anti-dependency (OpenMP jargon) and that is
-     *   not allowed.
-     * - It is up to the implementation in the respective back-end if tasks
-     *   with dependency can be held back and can be subject to fusion. You
-     *   have to guarantee from the interface.
-     *
-     * @param in    Non-zero integer or NoDependency.
-     *
-     * @param out   Non-zero integer or NoDependency.
+     * You may pass NoDependency as taskNumber. In this case, you have a
+     * fire-and-forget task which is just pushed out there without anybody
+     * ever waiting for it later on (at least not via task dependencies).
      */
-    void spawnTask(Task* job, int in, int out);
+    void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
+
+    /**
+     * Alternative realisation of spawnTaskWithDependencies() with multiple in
+     * dependencies.
+     */
+    void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
+
+    /**
+     * Wait for set of tasks
+     *
+     * Entries in inDependencies can be NoDependency.
+     */
+    void waitForTasks( const std::vector<int>& inDependencies );
+
+    /**
+     * Wait for one task
+     *
+     * taskNumber can be NoDependency. In this case, the operation degenerates
+     * to nop.
+     */
+    void waitForTask( int taskNumber );
 
     /**
      * Run a bunch of tasks
@@ -482,6 +496,11 @@ namespace tarch {
        * These are the non-blocking (ready) tasks submitted via spawnTask()
        */
       int getNumberOfPendingTasks();
+
+      void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
+      void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
+      void waitForTasks( const std::vector<int>& inDependencies );
+      void waitForTask( int taskNumber );
     } // namespace native
 
     namespace internal {

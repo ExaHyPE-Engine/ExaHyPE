@@ -96,6 +96,7 @@ host, static, patch-wise, AoS, subtasks              | 0.188723      | 2.24976e-
 host, static, patch-wise, SoA, no parallelism        | 0.200957      | 2.39559e-08   | 0.214007      | 1.27558e-08   | (avg=0.200957,#measurements=64,max=0.330422(value #6),min=0.19601(value #30),+64.4245%,-2.46173%,std-deviation=0.0166154)            | (avg=0.214007,#measurements=64,max=0.339868(value #6),min=0.204642(value #54),+58.8119%,-4.37606%,std-deviation=0.0228694)
 host, static, patch-wise, SoA, parallel for          | 0.202134      | 2.40962e-08   | 0.219515      | 1.30841e-08   | (avg=0.202134,#measurements=64,max=0.245362(value #7),min=0.195662(value #26),+21.386%,-3.20153%,std-deviation=0.00875163)           | (avg=0.219515,#measurements=64,max=0.3627(value #15),min=0.205485(value #27),+65.2281%,-6.3914%,std-deviation=0.0262641)
 host, static, patch-wise, SoA, subtasks              | 0.195796      | 2.33407e-08   | 0.23713       | 1.41341e-08   | (avg=0.195796,#measurements=64,max=0.263654(value #59),min=0.125698(value #54),+34.6573%,-35.8016%,std-deviation=0.0432795)          | (avg=0.23713,#measurements=64,max=0.271936(value #59),min=0.223204(value #15),+14.6781%,-5.87283%,std-deviation=0.0104714)
+device 0, patch-wise, AoS, copy, no reduction| 0.00330875     | 2.52438e-08   | 0.00369093    | 2.81595e-08       | 0.000443006   | 2.76879e-05   | (avg=0.00330875,#measurements=16,max=0.00547678(value #0),min=0.00309123(value #7),+65.524%,-6.57417%,std-deviation=0.000561352)      | (avg=0.00369093,#measurements=16,max=0.00587166(value #0),min=0.00347145(value #7),+59.0837%,-5.94636%,std-deviation=0.000564649) | (avg=0.000443006,#measurements=32,max=0.00257013(value #16),min=0.00029872(value #23),+480.156%,-32.5698%,std-deviation=0.000516137)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We get sets of experiments for different combinations of number of threads that
@@ -106,7 +107,7 @@ kernels are parallelised internally, others are not. Once these tests are
 complete, we allow two threads to issue the same type of kernel in parallel.
 This way, we can stress test the system.
 
-Per realisation, we get six measurements:
+Per realisation, we get nine measurements:
 
 1. The first one is the total time of a single kernel execution.
 2. The second entry is the update per degree of freedom within a single kernel.
@@ -116,7 +117,9 @@ Per realisation, we get six measurements:
    should be always be bigger than the first one. However,
 4. the fourth entry gives us the time per degree of freedom update if we launch
    multiple kernels in parallel.
-5. The fifth and sixth entry provide the raw data, so we can see the standard
+5. the fifth entry gives the time spent solely within the compute kernels.
+6. the sixth entry gives the compute kernel time per degree of freedom.
+7. The seventh, eighth and nineth entry provide the raw data, so we can see the standard
    deviation of the measurements. We also see that we usually sample each value
    multiple times to eliminate noise.
    

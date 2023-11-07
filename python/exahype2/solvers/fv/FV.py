@@ -165,7 +165,7 @@ class FV(object):
         max_volume_h,
         plot_grid_properties,
         kernel_namespace,
-        baseline_action_set_priority=0,
+        baseline_action_set_descend_invocation_order=0,
     ):
         """!
 
@@ -325,7 +325,7 @@ class FV(object):
         self._cell_data_storage = Storage.CallStack
         self._face_data_storage = Storage.CallStack
 
-        self._baseline_action_set_priority = baseline_action_set_priority
+        self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
         self.create_data_structures()
         self.create_action_sets()
@@ -807,36 +807,36 @@ The finest mesh width of """
 
         self._action_set_update_cell = None
 
-        self._action_set_initial_conditions.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_initial_conditions.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_initial_conditions_for_grid_construction.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_AMR.priority = self._baseline_action_set_priority + 2
-        self._action_set_AMR_commit_without_further_analysis.priority = (
-            self._baseline_action_set_priority + 2
+        self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 2
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
         )
-        self._action_set_handle_boundary.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_handle_boundary.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_project_patch_onto_faces.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_project_patch_onto_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )  # touch cell last time, i.e. leave cell
-        self._action_set_roll_over_update_of_faces.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_roll_over_update_of_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_copy_new_faces_onto_old_faces.priority = (
-            self._baseline_action_set_priority
+        self._action_set_copy_new_faces_onto_old_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_postprocess_solution.priority = (
-            self._baseline_action_set_priority
+        self._action_set_postprocess_solution.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )  # touch cell last time, i.e. leave cell
-        self._action_set_preprocess_solution.priority = (
-            self._baseline_action_set_priority
+        self._action_set_preprocess_solution.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )
 
     def _provide_cell_data_to_compute_kernels_default_guard(self):
@@ -1047,8 +1047,8 @@ The finest mesh width of """
 
         """
         assert (
-            self._action_set_copy_new_faces_onto_old_faces.priority
-            < self._action_set_roll_over_update_of_faces.priority
+            self._action_set_copy_new_faces_onto_old_faces.descend_invocation_order
+            < self._action_set_roll_over_update_of_faces.descend_invocation_order
         )
 
         step.add_action_set(self._action_set_preprocess_solution)
@@ -1147,7 +1147,7 @@ The finest mesh width of """
             time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
             select_dofs=self.select_dofs_to_print,
         )
-        plot_patches_action_set.priority = self._baseline_action_set_priority
+        plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
         step.add_action_set(plot_patches_action_set)
 
         if self._plot_grid_properties:
@@ -1161,8 +1161,8 @@ The finest mesh width of """
 #include "../repositories/SolverRepository.h"
 """,
             )
-            plot_grid_properties_action_set.priority = (
-                self._baseline_action_set_priority
+            plot_grid_properties_action_set.descend_invocation_order = (
+                self._baseline_action_set_descend_invocation_order
             )
             step.add_action_set(plot_grid_properties_action_set)
 
