@@ -6,33 +6,33 @@
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::euler {
-  enum Variables {
-    rho = 0,
-    u,
-    v,
-#if Dimensions == 3
-    w,
-#endif
-    e
-  };
-
   static inline double maxEigenvalue(const double* __restrict__ Q, int normal) InlineMethod {
+    const double rho = Q[0];
+    const double u = Q[1];
+    const double v = Q[2];
+#if Dimensions == 3
+    const double w = Q[3];
+    const double e = Q[4];
+#else
+    const double e = Q[3];
+#endif
+
 #ifdef GPUOffloadingOff
     assertion(normal >= 0);
     assertion(normal < Dimensions);
-    assertion(Q[rho] != Q[rho]);
-    assertion(Q[rho] > 0);
+    assertion(rho != rho);
+    assertion(rho > 0);
 #endif
 
-    const double irho = 1.0 / std::abs(Q[rho]);
-    const double p = (GAMMA - 1) * (Q[e] - 0.5 * irho * (Q[u] * Q[u] + Q[v] * Q[v]
+    const double irho = 1.0 / std::abs(rho);
+    const double p = (GAMMA - 1) * (e - 0.5 * irho * (u * u + v * v
 #if Dimensions == 3
-      + Q[w] * Q[w]
+      + w * w
 #endif
     ));
 
 #ifdef GPUOffloadingOff
-    assertion(tarch::la::greaterEquals(p, 0.0));
+    assertion(::tarch::la::greaterEquals(p, 0.0));
 #endif
 
     const double c      = std::sqrt(GAMMA * std::abs(p) * irho);
@@ -47,17 +47,27 @@ namespace applications::exahype2::euler {
   }
 
   static inline void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
+    const double rho = Q[0];
+    const double u = Q[1];
+    const double v = Q[2];
+#if Dimensions == 3
+    const double w = Q[3];
+    const double e = Q[4];
+#else
+    const double e = Q[3];
+#endif
+
 #ifdef GPUOffloadingOff
     assertion3(normal >= 0, x, t, normal);
     assertion3(normal < Dimensions, x, t, normal);
-    assertion(Q[rho] != Q[rho]);
-    assertion(Q[rho] > 0);
+    assertion(rho != rho);
+    assertion(rho > 0);
 #endif
 
-    const double irho = 1.0 / Q[rho];
-    const double p = (GAMMA - 1) * (Q[e] - 0.5 * irho * (Q[u] * Q[u] + Q[v] * Q[v]
+    const double irho = 1.0 / rho;
+    const double p = (GAMMA - 1) * (e - 0.5 * irho * (u * u + v * v
 #if Dimensions == 3
-      + Q[w] * Q[w]
+      + w * w
 #endif
     ));
 
@@ -66,13 +76,15 @@ namespace applications::exahype2::euler {
 #endif
 
     const double coeff = irho * Q[normal + 1];
-    F[rho]             = coeff * Q[rho];
-    F[u]               = coeff * Q[u];
-    F[v]               = coeff * Q[v];
+    F[0]             = coeff * rho;
+    F[1]             = coeff * u;
+    F[2]             = coeff * v;
 #if Dimensions == 3
-    F[w] = coeff * Q[w];
+    F[3] = coeff * w;
+    F[4] = coeff * e + coeff * p;
 #endif
-    F[e] = coeff * Q[e] + coeff * p;
+    F[3] = coeff * e + coeff * p;
+
     F[normal + 1] += p;
   }
-}; // namespace applications::exahype2::euler
+} // namespace applications::exahype2::euler

@@ -95,10 +95,8 @@ parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       ty
 
 parser.add_argument("--trees",                         dest="trees",          type=int,                   default=0,                  help="Number of trees (subpartitions) per rank.")
 
-parser.add_argument(            "--make",                                     action="store_true",                                    help="Compile the code after generation")
-parser.add_argument(            "--no-make",           dest="use_make",       action="store_false",                                   help="Do not compile the code after generation")
-parser.set_defaults(use_make=True)
-parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
+parser.add_argument(            "--make",              dest="make",                                       action="store_true",        help="Compile the code after generation")
+parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by given parameters.")
 args = parser.parse_args()
 
 if args.dim not in [2, 3]:
@@ -319,7 +317,7 @@ my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
 
 my_project.output.makefile.add_cpp_file("Euler.cpp")
 
-my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
+my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
 
 print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")
