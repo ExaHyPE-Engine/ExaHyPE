@@ -99,11 +99,14 @@ class AssemblePetscMatrix(ActionSet):
     
     assertion3(globalIndex>=0, globalIndex, marker.toString(), fineGridVertex{{SOLVER_NAME}}PETScData.toString() );
 
-    //get the rhs that was present in the mesh
-    double rhs = fineGridVertex{{SOLVER_NAME}}.getRhs(0);
+    for (int i=0; i<{{VERTEX_CARDINALITY}}; i++)
+    {
+      //get the rhs that was present in the mesh
+      double rhs = fineGridVertex{{SOLVER_NAME}}.getRhs(i);
 
-    //send these to petsc
-    repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(globalIndex, rhs);
+      //send these to petsc
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(globalIndex + i, rhs);
+    }
 
   }
   """
