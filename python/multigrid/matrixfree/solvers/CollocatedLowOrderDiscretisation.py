@@ -5,14 +5,14 @@ import dastgen2
 import os
 
 from .Solver                                   import Solver
-from multigrid.matrixfree.actionsets.InitDoFs  import InitVertexDoFs
+from multigrid.matrixfree.actionsets.InitDofs  import InitDofs
 from multigrid.matrixfree.actionsets.Solve     import Solve
 
 from abc import abstractmethod
 from peano4.solversteps.ActionSet import ActionSet
 
 
-class CollocatedLowOrderDiscretisation(solver):
+class CollocatedLowOrderDiscretisation(Solver):
   """!
 
   Matrix-free remake of the petsc-based collocated solver
@@ -123,7 +123,7 @@ class CollocatedLowOrderDiscretisation(solver):
         "MIN_H": self.min_h,
         "MAX_H": self.max_h,
         "LOCAL_ASSEMBLY_MATRIX": self._local_assembly_matrix,
-        "LOCAL_ASSEMBLY_MATRIX_SCALING": self._local_assembly_matrix_scaling
+        "LOCAL_ASSEMBLY_MATRIX_SCALING": self._local_assembly_matrix_scaling,
         "VERTEX_CARDINALITY": self._unknowns_per_vertex,
         "SOLVER_NAME":             self.typename(),
         }

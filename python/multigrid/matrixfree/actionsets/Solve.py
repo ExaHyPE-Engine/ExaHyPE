@@ -10,7 +10,7 @@ class Solve(ActionSet):
   
   def __init__(self,
                solver):
-    super( InitVertexDoFs, self ).__init__()
+    super( Solve, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()

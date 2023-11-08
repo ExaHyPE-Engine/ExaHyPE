@@ -1,5 +1,5 @@
-from .Project import Project
-from .Main    import Main
+from .Project   import Project
+from .MFMain    import MFMain
 
 import multigrid.matrixfree.solvers
 

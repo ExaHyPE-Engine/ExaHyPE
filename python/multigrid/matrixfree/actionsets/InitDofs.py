@@ -4,13 +4,13 @@ import peano4
 import jinja2
 
 
-class Solve(ActionSet):
+class InitDofs(ActionSet):
   templateTVFT = """ """
   templateTCFT = """ """
   
   def __init__(self,
                solver):
-    super( InitVertexDoFs, self ).__init__()
+    super( InitDofs, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
