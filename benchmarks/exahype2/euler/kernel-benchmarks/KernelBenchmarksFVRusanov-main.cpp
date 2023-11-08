@@ -33,15 +33,15 @@
 #include "toolbox/loadbalancing/loadbalancing.h"
 
 using namespace benchmarks::exahype2::kernelbenchmarks;
-static ::tarch::logging::Log                _log("::");
-static double                               validMaxEigenvalue = 0;
-static double*                              validOutcome       = nullptr;
-static constexpr double                     TimeStamp          = 0.5;
-static constexpr double                     TimeStepSize       = 1e-6;
-static constexpr double                     CellSize           = 0.1;
-static constexpr double                     CellOffset         = 4.0;
-static ::tarch::timing::Measurement         timingComputeKernel;
-static ::tarch::multicore::BooleanSemaphore validateOutcomeSemaphore;
+::tarch::logging::Log                _log("::");
+double                               validMaxEigenvalue = 0;
+double*                              validOutcome       = nullptr;
+static constexpr double              TimeStamp          = 0.5;
+static constexpr double              TimeStepSize       = 1e-6;
+static constexpr double              CellSize           = 0.1;
+static constexpr double              CellOffset         = 4.0;
+::tarch::timing::Measurement         timingComputeKernel;
+::tarch::multicore::BooleanSemaphore validateOutcomeSemaphore;
 static_assert(Accuracy >= std::numeric_limits<double>::epsilon() || Accuracy == 0.0);
 
 #if Dimensions == 2
