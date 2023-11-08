@@ -119,8 +119,8 @@ class CollocatedLowOrderDiscretisation(solver):
         "SOLVER_INCLUDES": "",
         "MIN_H": self.min_h,
         "MAX_H": self.max_h,
-        "CELL_LHS_MATRIX": self.cell_lhs_matrix,
-        "CELL_RHS_MATRIX": self.cell_rhs_matrix,
+        "LOCAL_ASSEMBLY_MATRIX": self._local_assembly_matrix,
+        "LOCAL_ASSEMBLY_MATRIX_SCALING": self._local_assembly_matrix_scaling
         "VERTEX_CARDINALITY": self._unknowns_per_vertex,
         "SOLVER_NAME":             self.typename(),
         }
