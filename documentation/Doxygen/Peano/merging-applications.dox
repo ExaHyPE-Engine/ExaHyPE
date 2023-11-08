@@ -52,7 +52,7 @@
   peano4_project = peano4.merge( peano_project_A, peano_project_B )
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
-  @todo Dmity, can you please write this function? The blueprint is there already
+  @todo Dmitry, can you please write this function? The blueprint is there already
   
   Once lowered, you can also add new algorithmic steps as they are required for
   separate coupling sweeps, e.g. From hereon, the (merged) Peano 4 project is 
@@ -74,7 +74,7 @@
   the originally had been defined and MySolverA is the name of the first 
   solver. 
    
-  @Dmity, we need to let merge() rename the steps.
+  @todo Dmitry, we need to let merge() rename the steps.
 
 
   # Add additional mesh sweeps manually
