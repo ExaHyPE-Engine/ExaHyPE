@@ -147,6 +147,7 @@ class AssemblePetscMatrix(ActionSet):
 
     assertion( globalFirstDoFIndex>=0 );
 
+    logTraceInWith2Arguments("TFFT", globalFirstDoFIndex, RiemannSolverMatrix);
     for (int row=0; row<dofsPerFace; row++)
 
     // we have col<2*dofsPerFace here since we have left and right projections here.
@@ -163,6 +164,7 @@ class AssemblePetscMatrix(ActionSet):
         RiemannSolverMatrix(row, col)
       );
     }
+    logTraceOut("TFFT");
   }
   """
   
