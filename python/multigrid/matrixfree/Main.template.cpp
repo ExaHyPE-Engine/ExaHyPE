@@ -108,3 +108,73 @@ bool selectNextAlgorithmicStep() {
   }
   return continueToSolve;
 }
+
+void step() {
+  int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
+  auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
+
+  static tarch::logging::Log _log("");
+#if PeanoDebug > 0
+#else
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster())
+#endif
+  logInfo("step()", "run " << repositories::StepRepository::toString(stepName));
+
+  static tarch::timing::Watch watch("::", "step()", false);
+
+  static int creepingNumberOfLocalCells = 0;
+
+  switch ( stepName ) {
+    case repositories::StepRepository::Steps::CreateGrid:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
+
+        observers::CreateGrid  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        createGridMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+
+    case repositories::StepRepository::Steps::EnumerateAndInitSolution:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate-and-init-solution" );
+
+        observers::EnumerateAndInitSolution  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        enumerateMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    
+    case repositories::StepRepository::Steps::Solve:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
+
+        watch.start();
+        repositories::solve();
+        watch.stop();
+
+        solveMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+
+    case repositories::StepRepository::Steps::Plot:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
+
+        observers::Plot  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        plotMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    case repositories::StepRepository::Steps::Undef:
+      assertion(false);
+      break;
+  }
+}
+
