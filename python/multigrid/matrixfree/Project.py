@@ -12,10 +12,10 @@ class Project:
   Here we recreate a multigrid project, without using PETSc. 
 
   We keep some of the basic steps:
-  - algorithm_step_create_grid
-  - algorithm_step_enumerate_and_init_solution
+  - _algorithm_step_create_grid
+  - _algorithm_step_enumerate_and_init_solution
   - _algorithm_step_solve
-  - algorithm_step_plot
+  - _algorithm_step_plot
 
   The rest is yet to be fleshed out.
 
