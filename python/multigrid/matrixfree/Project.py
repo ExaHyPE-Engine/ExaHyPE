@@ -57,10 +57,10 @@ class Project:
 
     self._solvers = []
 
-    self.algorithm_step_create_grid                  = peano4.solversteps.Step( "CreateGrid",                False )
-    self.algorithm_step_enumerate_and_init_solution  = peano4.solversteps.Step( "EnumerateAndInitSolution",  False )
-    self.algorithm_step_solve                        = peano4.solversteps.Step( "Solve",                     False )
-    self.algorithm_step_plot                         = peano4.solversteps.Step( "Plot",                      False )
+    self.algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
+    self.algorithm_step_init_solution  = peano4.solversteps.Step( "InitSolution", False )
+    self.algorithm_step_solve          = peano4.solversteps.Step( "Solve", False )
+    self.algorithm_step_plot           = peano4.solversteps.Step( "Plot", False )
 
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
     """
@@ -158,7 +158,7 @@ Peano setup.
                               )
 
     self._project.solversteps.add_step(self.algorithm_step_create_grid)
-    self._project.solversteps.add_step(self.algorithm_step_enumerate_and_init_solution)
+    self._project.solversteps.add_step(self.algorithm_step_init_solution)
     self._project.solversteps.add_step(self.algorithm_step_solve)
     self._project.solversteps.add_step(self.algorithm_step_plot)
 
@@ -208,15 +208,15 @@ Peano setup.
     solver.add_to_Peano4_datamodel( self._project.datamodel, verbose=False )
 
     solver.add_use_statements(self.algorithm_step_create_grid)
-    solver.add_use_statements(self.algorithm_step_enumerate_and_init_solution)
+    solver.add_use_statements(self.algorithm_step_init_solution)
     solver.add_use_statements(self.algorithm_step_solve)
     solver.add_use_statements(self.algorithm_step_plot)
 
 
-    solver.add_to_create_grid                (self.algorithm_step_create_grid)
-    solver.add_to_enumerate_and_init_solution(self.algorithm_step_enumerate_and_init_solution)
-    solver.add_to_solve                      (self.algorithm_step_solve)
-    solver.add_to_plot                       (self.algorithm_step_plot)
+    solver.add_to_create_grid  (self.algorithm_step_create_grid)
+    solver.add_to_init_solution(self.algorithm_step_init_solution)
+    solver.add_to_solve        (self.algorithm_step_solve)
+    solver.add_to_plot         (self.algorithm_step_plot)
 
     solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
     

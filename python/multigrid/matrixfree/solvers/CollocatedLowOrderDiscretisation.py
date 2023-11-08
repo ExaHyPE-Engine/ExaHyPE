@@ -4,9 +4,9 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
 import os
 
-from .Solver                                         import Solver
-from multigrid.matrixfree.actionsets.EnumerateDoFs   import EnumerateDoFs
-from multigrid.matrixfree.actionsets.InitVertexDoFs  import InitVertexDoFs
+from .Solver                                   import Solver
+from multigrid.matrixfree.actionsets.InitDoFs  import InitVertexDoFs
+from multigrid.matrixfree.actionsets.Solve     import Solve
 
 from abc import abstractmethod
 from peano4.solversteps.ActionSet import ActionSet
@@ -90,7 +90,7 @@ class CollocatedLowOrderDiscretisation(solver):
     observer.add_action_set(peano4.toolbox.CreateRegularGrid(self.max_h))
     pass
 
-  def add_to_enumerate_and_init_solution(self, observer):
+  def add_to_init_solution(self, observer):
     """!
     
     Solution initialisation
@@ -99,8 +99,11 @@ class CollocatedLowOrderDiscretisation(solver):
     to the observer.
     
     """
-    observer.add_action_set( EnumerateDoFs(self) )
-    observer.add_action_set( InitVertexDoFs(self) ) 
+    observer.add_action_set( InitDoFs(self) ) 
+    pass
+
+  def add_to_solve(self, observer):
+    observer.add_action_set( Solve(self) )
     pass
   
   def add_implementation_files_to_project(self, namespace, output):
