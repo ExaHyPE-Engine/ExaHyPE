@@ -140,7 +140,7 @@ class AssemblePetscMatrix(ActionSet):
 
   TemplateTouchFaceFirstTime="""
   auto RiemannSolverMatrix = repositories::{{SOLVER_INSTANCE}}.getRiemannSolver(marker.x(),marker.h());
-  int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
+  int dofsPerFace          = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
   if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
     std::pair<int,int> localFirstDoFIndex = std::make_pair(_spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex);
@@ -164,6 +164,21 @@ class AssemblePetscMatrix(ActionSet):
         RiemannSolverMatrix(row, col)
       );
     }
+
+    // 3*dofsPerFace so that each of the -, + and solution variables receive an identity here.
+    for (int i=0; i<3*dofsPerFace; i++)
+    {
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        globalFirstDoFIndex + i,
+        globalFirstDoFIndex + i,
+        -1
+      );
+    }
+
+    else if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Boundary ){
+      // add some more identities!
+    }
+
     logTraceOut("TFFT");
   }
   """
