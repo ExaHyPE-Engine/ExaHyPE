@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-
 Markers = [ "o", "s", "<", ">", "^", "v", "D" ]
 Colours = [ "#ff0000",
             "#00ff00",
@@ -27,19 +26,16 @@ Colours = [ "#ff0000",
 
 
 Devices         = ["host", "device 0"]
-CallSemantics   = ["functors", "static"]
+CallSemantics   = ["functors", "stateless"]
 DataFlow        = ["patch-wise", "batched", "task-graph" ]
-Parallelisation = ["no parallelism", "parallel for", "subtasks", "map", "managed", "usm", "copy"]
+Parallelisation = ["sequential", "parallel-for", "subtasks", "managed", "usm", "copy"]
 
 
 def parse(device, call_semantics, data_flow, parallelisation):
   """"
   Parse file and search for entries for particular argument combination
-  
   We return two lists: The first one gives the total throughput per measurement
   while the second one gives the throughput for one kernel.
-  
-  
   """
   throughput_total   = []
   throughput_kernel  = []
@@ -104,19 +100,16 @@ for device in Devices:
                     )
           marker_counter += 1
 
-  plt.title( device + " (launching threads/patches per launch)")
+  plt.title(device + " (launching threads/patches per launch)")
   plt.legend()
   plt.xlabel("Total throughput (dofs/s)")
   plt.ylabel("Throughput for one kernel (dofs/s)")
 
   output = args.file + "-" + device
-  #plt.savefig( output + ".png" )
-  plt.savefig( output + ".pdf" )
+  plt.savefig( output + ".png")
+  plt.savefig(output + ".pdf")
 
   plt.xscale('log')
   plt.yscale('log')
-  #plt.savefig( output + "-log.png" )
-  plt.savefig( output + "-log.pdf" )
-
-
-
+  plt.savefig(output + "-log.png")
+  plt.savefig(output + "-log.pdf")
