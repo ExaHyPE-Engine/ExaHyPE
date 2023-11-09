@@ -187,12 +187,12 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
             else: # ["top", "bottom"]
                 gamma = (1, 0) # scale by hx
 
-            # # Direction of integration
-            # if relative_position in ["bottom", "right"]:
-            #     sg = +1.0
-            # else: # ["left", "top"]:
-            #     sg = -1.0
-            # factor = factor * sg
+            # Direction of integration
+            if relative_position in ["bottom", "right"]:
+                sg = +1.0
+            else: # ["left", "top"]:
+                sg = -1.0
+            factor = factor * sg
 
             # Define the integrand function for different
             def func_k(i, q):
@@ -208,10 +208,12 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
                         A_k_ell[i, j] += factor * w * func_k(i, q) * func_ell(j, q)
 
         elif fs_pair == (0, 5):
+            ### Compute first penalty term \theta * <[[u]], {n*\nabla v}>
             factor = 1.0 
-            gamma = (0, 0) # saling compensated by \grad(v)
+            gamma = (0, 0) # factor 0.5 and saling h compensated by \grad(v)
                            # assuming hx = hy; correct later: should be (\pm 1, \pm 1) in general
 
+            # Define the integrand function for different
             def func_k(i, q):
                 facet_coord = np.dot(restr, np.array([1.0, q])) # gives [-1, q], [1, q], [q, -1] or [q, 1]
                 if relative_position in ["left", "right"]:
@@ -219,8 +221,43 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
                 else:
                     return n_sign * self._fe_C[k].evaluate_derivative(i, 1, facet_coord) # restriction of the cell-function to a facet
             func_ell = self._fe_F[ell].evaluate
+            
+            # Assemble the penalty term matrix
+            A_penalty_1 = np.zeros_like(A_k_ell)
+            for i in range(ndof_k):
+                for j in range(ndof_ell):
+                    for q, w in zip(quad.points, quad.weights):
+                        A_penalty_1[i, j] += self._theta * factor * w * func_k(i, q) * func_ell(j, q)
 
-            pass
+            ### Compute second penalty term \gamma_F * <[[u], [[v]]]>
+            # Direction of integration
+            if relative_position in ["bottom", "right"]:
+                sg = +1.0
+            else: # ["left", "top"]:
+                sg = -1.0
+
+            factor = 0.5*sg
+            # ! SCALING IS REMOVED FOR THE SECOND PENALTY TERMS ! SHOULD BE A SEPARATE KEY->VALUES IN THE OUTPUT DICTIONARY
+            # if relative_position in ["left", "right"]:
+            #     gamma = (0, 1) # scale by hy
+            # else:
+            #     gamma = (1, 0) # scale by hx
+
+            # Define the integrand function for different
+            def func_k(i, q):
+                facet_coord = np.dot(restr, np.array([1.0, q])) # gives [-1, q], [1, q], [q, -1] or [q, 1]
+                return self._fe_C[k].evaluate(i, facet_coord) # restriction of the cell-function to a facet
+            func_ell = self._fe_F[ell].evaluate
+
+            # Assemble the penalty term matrix
+            A_penalty_2 = np.zeros_like(A_k_ell)
+            for i in range(ndof_k):
+                for j in range(ndof_ell):
+                    for q, w in zip(quad.points, quad.weights):
+                        A_penalty_2[i, j] += self._gamma_F * factor * w * func_k(i, q) * func_ell(j, q)
+
+            # Assemble local matrix A^(k,ell)
+            A_k_ell = A_penalty_1 + A_penalty_2
 
         else:
             A_k_ell = np.zeros((ndof_k, ndof_ell))
