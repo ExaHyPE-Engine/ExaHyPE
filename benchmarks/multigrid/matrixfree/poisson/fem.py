@@ -1,8 +1,9 @@
 import os, sys
 import argparse
 import peano4
+import numpy as np
 
-import multigrid
+import multigrid.matrixfree
 
 print( """
 
@@ -26,3 +27,15 @@ project = multigrid.matrixfree.Project( project_name = "CollocatedFEM",
                                         namespace = [ "benchmarks", "multigrid", "matrixfree", "poisson" ]
                                          )
 
+local_assembly_matrix = np.eye( 2**args.dimensions )
+
+solver = multigrid.matrixfree.solvers.CollocatedLowOrderDiscretisation("CollocatedPoisson",
+                                                                       args.upv,
+                                                                       args.dimensions,
+                                                                       args.meshsize,
+                                                                       args.meshsize,
+                                                                       local_assembly_matrix,
+                                                                       local_assembly_matrix_scaling=0
+                                                                       )
+
+project.add_solver(solver)

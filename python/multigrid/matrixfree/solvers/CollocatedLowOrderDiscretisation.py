@@ -72,7 +72,7 @@ class CollocatedLowOrderDiscretisation(Solver):
       getter         = "getValue().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_vertex = self._unknowns,
+      number_of_unknows_per_vertex = self._unknowns_per_vertex,
       guard_predicate              = "true", 
       ))
     observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
@@ -81,7 +81,7 @@ class CollocatedLowOrderDiscretisation(Solver):
       getter         = "getRhs().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
-      number_of_unknows_per_vertex = self._unknowns,
+      number_of_unknows_per_vertex = self._unknowns_per_vertex,
       guard_predicate              = "true", 
       ))
     pass
@@ -99,7 +99,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     to the observer.
     
     """
-    observer.add_action_set( InitDoFs(self) ) 
+    observer.add_action_set( InitDofs(self) ) 
     pass
 
   def add_to_solve(self, observer):
