@@ -153,13 +153,27 @@ class GaussLobatto(MatrixGenerator):
 
     """Return the cel-to-face matrix A_p^qf
     """
-    A_CF_left   = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
-    A_CF_bottom = self.block_matrix._A_CF[(0,2)]["bottom"][(1,0)]
-    A_CF_right  = self.block_matrix._A_CF[(0,2)]["right"][(0,1)]
-    A_CF_top    = self.block_matrix._A_CF[(0,2)]["top"][(1,0)]
-    A_CF_conc = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
-    Placeholder = np.zeros_like(A_CF_conc)
-    return np.concatenate((A_CF_conc, Placeholder), axis=1)
+    A_CF_q_left   = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
+    A_CF_q_bottom = self.block_matrix._A_CF[(0,2)]["bottom"][(1,0)]
+    A_CF_q_right  = self.block_matrix._A_CF[(0,2)]["right"][(0,1)]
+    A_CF_q_top    = self.block_matrix._A_CF[(0,2)]["top"][(1,0)]
+
+    # !!! A_{C<-F} has penalty components of different scaling!  
+    # For now, we just sum them up into one matrix with scaling (0,0)
+    # Need to work out how to separate them in the solver.
+    A_CF_u_left   = self.block_matrix._A_CF[(0,5)]["left"][(0,0)] # + block_matrix._A_CF[(0,5)]["left"][(0,1)]
+    A_CF_u_bottom = self.block_matrix._A_CF[(0,5)]["bottom"][(0,0)] # + block_matrix._A_CF[(0,5)]["bottom"][(1,0)]
+    A_CF_u_right  = self.block_matrix._A_CF[(0,5)]["right"][(0,0)] # + block_matrix._A_CF[(0,5)]["right"][(0,1)]
+    A_CF_u_top    = self.block_matrix._A_CF[(0,5)]["top"][(0,0)] # + block_matrix._A_CF[(0,5)]["top"][(1,0)]
+
+    A_CF_left = np.concatenate((A_CF_q_left, A_CF_u_left), axis=1)
+    A_CF_bottom = np.concatenate((A_CF_q_bottom, A_CF_u_bottom), axis=1)
+    A_CF_right = np.concatenate((A_CF_q_right, A_CF_u_right), axis=1)
+    A_CF_top = np.concatenate((A_CF_q_top, A_CF_u_top), axis=1)
+
+    A_CF_result = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
+    
+    return A_CF_result
   
     #faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces
     #cellDim = self.cell_nodes * self.unknowns_per_cell_node
@@ -185,8 +199,6 @@ class GaussLobatto(MatrixGenerator):
     P_qm_u_right = -np.dot(np.linalg.inv(M_qm_qm_right), A_qm_u_right)
     P_qm_u_top = -np.dot(np.linalg.inv(M_qm_qm_top), A_qm_u_top)
 
-    #P_gradient = np.concatenate((P_qp_u_left, P_qp_u_bottom, P_qm_u_right, P_qm_u_top), axis=0)
-
     ### Compute the solution projections
     A_up_u_left = self.block_matrix._A_FC[(3,0)]["left"][(0,1)]
     A_up_u_bottom = self.block_matrix._A_FC[(3,0)]["bottom"][(1,0)]
@@ -203,10 +215,7 @@ class GaussLobatto(MatrixGenerator):
     P_um_u_right = -np.dot(np.linalg.inv(M_um_um_right), A_um_u_right)
     P_um_u_top = -np.dot(np.linalg.inv(M_um_um_top), A_um_u_top)
 
-    #P_solution = np.concatenate((P_up_u_left, P_up_u_bottom, P_um_u_right, P_um_u_top), axis=0)
-
-    #return np.concatenate((P_gradient, P_solution), axis=0)
-  
+    # Components of the resulting matrix  
     P_left = np.concatenate((P_qp_u_left, P_up_u_left), axis=0)
     P_bottom = np.concatenate((P_qp_u_bottom, P_up_u_bottom), axis=0)
     P_right = np.concatenate((P_qm_u_right, P_um_u_right), axis=0)
