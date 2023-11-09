@@ -31,7 +31,11 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
         self._L_C = [r_press]
         self._L_F = 6 * [r_press]
         self._fs_labels_C = ["u"]
-        self._fs_labels_F = ["q+", "q-", "qf", "u+", "u-", "uf"] # projections of the normal derivative onto facets and "flux" 
+        self._fs_labels_F = ["q+", "q-", "qf", "u+", "u-", "uf"] # projections of the normal derivative onto facets and "flux"
+
+        # Penalty method parameters
+        self._theta = 1.0
+        self._gamma_F = 0.0
 
         # All pairs of function spaces that couple
         self._coupling_CC = [(0, 0)] # _u_u
@@ -158,19 +162,19 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
         if relative_position == "left":
             restr = np.array([[-1.0, 0.0],
                               [ 0.0, 1.0]])
-            # nx, ny = -1.0, 0.0 # outward unit normal components
+            n_sign = -1.0 # nx, ny = -1.0, 0.0 # outward unit normal components
         elif relative_position == "right":
             restr = np.array([[1.0, 0.0],
                               [0.0, 1.0]])
-            # nx, ny = +1.0, 0.0
+            n_sign = +1.0 # nx, ny = +1.0, 0.0
         elif relative_position == "bottom":
             restr = np.array([[ 0.0, 1.0],
                               [-1.0, 0.0]])
-            # nx, ny = 0.0, -1.0
+            n_sign = -1.0 # nx, ny = 0.0, -1.0
         elif relative_position == "top":
             restr = np.array([[0.0, 1.0],
                               [1.0, 0.0]])
-            # nx, ny = 0.0, +1.0
+            n_sign = +1.0 # nx, ny = 0.0, +1.0
         else:
             raise ValueError("Invalid value of relative_position")        
         
@@ -182,6 +186,13 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
                 gamma = (0, 1) # scale by hy
             else: # ["top", "bottom"]
                 gamma = (1, 0) # scale by hx
+
+            # # Direction of integration
+            # if relative_position in ["bottom", "right"]:
+            #     sg = +1.0
+            # else: # ["left", "top"]:
+            #     sg = -1.0
+            # factor = factor * sg
 
             # Define the integrand function for different
             def func_k(i, q):
@@ -196,6 +207,21 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
                     for q, w in zip(quad.points, quad.weights):
                         A_k_ell[i, j] += factor * w * func_k(i, q) * func_ell(j, q)
 
+        elif fs_pair == (0, 5):
+            factor = 1.0 
+            gamma = (0, 0) # saling compensated by \grad(v)
+                           # assuming hx = hy; correct later: should be (\pm 1, \pm 1) in general
+
+            def func_k(i, q):
+                facet_coord = np.dot(restr, np.array([1.0, q])) # gives [-1, q], [1, q], [q, -1] or [q, 1]
+                if relative_position in ["left", "right"]:
+                    return n_sign * self._fe_C[k].evaluate_derivative(i, 0, facet_coord) # restriction of the cell-function to a facet
+                else:
+                    return n_sign * self._fe_C[k].evaluate_derivative(i, 1, facet_coord) # restriction of the cell-function to a facet
+            func_ell = self._fe_F[ell].evaluate
+
+            pass
+
         else:
             A_k_ell = np.zeros((ndof_k, ndof_ell))
         
@@ -205,7 +231,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
     ###################################
     ### Assemble weak form for A_FC ###
     ###################################
-    def _assemble_A_FC(self, fs_pair, relative_position):
+    def _assemble_A_FC(self, fs_pair, relative_position): # Matrices that form projections being multiplied by inv(M) from _A_FF
         """Assemble weak form for A_{CF}^{(k,ell)}
         :arg fs_pair: pair of function space indices that couple
         k = fs_pair[0]: first function space (to-space): a facet function space
