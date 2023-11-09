@@ -257,6 +257,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
                         A_penalty_2[i, j] += self._gamma_F * factor * w * func_k(i, q) * func_ell(j, q)
 
             # Assemble local matrix A^(k,ell)
+            # ! Now both components hve the same scaling (0,0)
             A_k_ell = A_penalty_1 + A_penalty_2
 
         else:

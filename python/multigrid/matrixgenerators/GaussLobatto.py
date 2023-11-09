@@ -153,13 +153,27 @@ class GaussLobatto(MatrixGenerator):
 
     """Return the cel-to-face matrix A_p^qf
     """
-    A_CF_left   = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
-    A_CF_bottom = self.block_matrix._A_CF[(0,2)]["bottom"][(1,0)]
-    A_CF_right  = self.block_matrix._A_CF[(0,2)]["right"][(0,1)]
-    A_CF_top    = self.block_matrix._A_CF[(0,2)]["top"][(1,0)]
-    A_CF_conc = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
-    Placeholder = np.zeros_like(A_CF_conc)
-    return np.concatenate((A_CF_conc, Placeholder), axis=1)
+    A_CF_q_left   = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
+    A_CF_q_bottom = self.block_matrix._A_CF[(0,2)]["bottom"][(1,0)]
+    A_CF_q_right  = self.block_matrix._A_CF[(0,2)]["right"][(0,1)]
+    A_CF_q_top    = self.block_matrix._A_CF[(0,2)]["top"][(1,0)]
+
+    # !!! A_{C<-F} has penalty components of different scaling!  
+    # For now, we just sum them up into one matrix with scaling (0,0)
+    # Need to work out how to separate them in the solver.
+    A_CF_u_left   = self.block_matrix._A_CF[(0,5)]["left"][(0,0)] # + block_matrix._A_CF[(0,5)]["left"][(0,1)]
+    A_CF_u_bottom = self.block_matrix._A_CF[(0,5)]["bottom"][(0,0)] # + block_matrix._A_CF[(0,5)]["bottom"][(1,0)]
+    A_CF_u_right  = self.block_matrix._A_CF[(0,5)]["right"][(0,0)] # + block_matrix._A_CF[(0,5)]["right"][(0,1)]
+    A_CF_u_top    = self.block_matrix._A_CF[(0,5)]["top"][(0,0)] # + block_matrix._A_CF[(0,5)]["top"][(1,0)]
+
+    A_CF_left = np.concatenate((A_CF_q_left, A_CF_u_left), axis=1)
+    A_CF_bottom = np.concatenate((A_CF_q_bottom, A_CF_u_bottom), axis=1)
+    A_CF_right = np.concatenate((A_CF_q_right, A_CF_u_right), axis=1)
+    A_CF_top = np.concatenate((A_CF_q_top, A_CF_u_top), axis=1)
+
+    A_CF_result = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
+    
+    return A_CF_result
   
     #faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces
     #cellDim = self.cell_nodes * self.unknowns_per_cell_node
