@@ -43,7 +43,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     self._vertex_pde_data = peano4.datamodel.DaStGen2( name )
     self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",      str(unknowns_per_vertex) ) )
     self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",        str(unknowns_per_vertex) ) )
-    self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "field_diag", str(unknowns_per_vertex) ) )
+    self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "fieldDiag", str(unknowns_per_vertex) ) )
     self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "residual",   str(unknowns_per_vertex) ) )
 
     self._local_assembly_matrix         = local_assembly_matrix

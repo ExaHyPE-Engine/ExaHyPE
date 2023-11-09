@@ -5,7 +5,69 @@ import jinja2
 
 
 class InitDofs(ActionSet):
-  templateTVFT = """ """
+  # need to set the type of the vertex and give it a value
+  templateTVFT = """
+  // this is done inside getDofType. included here for sanity check
+  auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & x ) -> bool{
+    bool isOnBoundary = false;
+    for (int d=0; d<Dimensions; d++) {
+      isOnBoundary |= tarch::la::smallerEquals( x(d), DomainOffset(d) );
+      isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
+    }
+    return isOnBoundary;
+  };
+
+  vertexdata::{{SOLVER_NAME}}MFData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+
+  switch(dofType)
+  {
+    case vertexdata::{{SOLVER_NAME}}MFData::Type::Boundary:
+    {
+      if ( marker.willBeRefined() )
+      {
+        // Coarse grid vertex. Mark it as such for later
+        fineGridVertex{{SOLVER_NAME}}MFData.setType( vertexdata::{{SOLVER_NAME}}MFData::Type::Coarse );
+      }
+      else
+      {
+        // we have boundary vertex
+        fineGridVertex{{SOLVER_NAME}}MFData.setType( vertexdata::{{SOLVER_NAME}}MFData::Type::Boundary );
+      }
+    }
+    break;
+
+    case vertexdata::{{SOLVER_NAME}}MFData::Type::Interior:
+    {
+      if (isOnBoundary(marker.x())) 
+      {
+        logWarning( "touchVertexFirstTime(...)", "vertex at " << marker.toString() << " labelled as interior even though it is located at global domain boundary" );
+      }
+
+      if ( marker.willBeRefined() )
+      {
+        fineGridVertex{{SOLVER_NAME}}MFData.setType( vertexdata::{{SOLVER_NAME}}MFData::Type::Coarse );
+      }
+
+      else
+      {
+        fineGridVertex{{SOLVER_NAME}}MFData.setType( vertexdata::{{SOLVER_NAME}}MFData::Type::Interior );
+      }
+    }
+    break;
+
+    case vertexdata::{{SOLVER_NAME}}MFData::Type::Coarse:
+      assertionMsg(false, "should not be returned by user" );
+      break;
+
+    case vertexdata::{{SOLVER_NAME}}MFData::Type::Undefined:
+      assertionMsg(false, "should not be returned by user" );
+      break;
+  }
+
+  logTraceInWith3Arguments("InitDofs::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}MFData.toString());
+
+  logTraceOut("InitDofs::TVFT");
+   """
   templateTCFT = """ """
   
   def __init__(self,
