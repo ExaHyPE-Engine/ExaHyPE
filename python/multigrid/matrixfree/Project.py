@@ -99,8 +99,6 @@ mode: peano4.output.CompileMode
   def __configure_makefile(self):
     """!
 
-Configure the makefile of the PETSc project
-
 We parse the configure script's/CMAKE outcome first via parse_configure_script_outcome().
 After that, we set the dimension manually as well as the executable name and 
 the build mode. The values for these parameters step from set_Peano4_installation().
@@ -145,13 +143,6 @@ Build project
 Construct and return the Peano4 project, i.e. all the action sets et al that 
 you require to run this Peano4 application with PETSc. 
      
-This routine generates a Peano project, i.e. the domain-specific 
-view is translated into a Peano model. Once you have called this routine,
-any changes to the PETSc project configuration do not propagate into the Peano
-setup anymore. If you alter the project setup, you have to call 
-generate_Peano4_project() again to get a new snapshot/version of the
-Peano setup.
-
     """
     self._project.main = MFMain(self._project,
                                 self._domain_offset,

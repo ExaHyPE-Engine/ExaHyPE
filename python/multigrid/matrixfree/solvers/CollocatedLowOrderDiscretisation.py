@@ -95,9 +95,6 @@ class CollocatedLowOrderDiscretisation(Solver):
     
     Solution initialisation
     
-    Close to trivial: Just add the action set petsc.actionsets.InitVertexDoFs
-    to the observer.
-    
     """
     observer.add_action_set( InitDofs(self) ) 
     pass

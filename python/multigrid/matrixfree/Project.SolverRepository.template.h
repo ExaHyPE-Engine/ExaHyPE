@@ -1,5 +1,4 @@
 //
-// Peano's PETSc extension
 // Generated through Peano's Python API
 // www.peano-framework.org
 //
@@ -26,3 +25,4 @@ namespace {{N}} {
 }
 {% endfor %}
 
+}

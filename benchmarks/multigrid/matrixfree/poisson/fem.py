@@ -64,3 +64,12 @@ project.set_Peano4_installation( args.peanodir, build_mode )
 
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.generate()
+
+os.system( "make clean" )
+if args.j>0:
+  os.system( "make -j{}".format(args.j) )
+else:
+  os.system( "make -j" )
+  
+print("Done")
+

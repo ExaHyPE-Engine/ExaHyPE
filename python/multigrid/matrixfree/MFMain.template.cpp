@@ -1,7 +1,7 @@
 #include "{{MAIN_NAME}}.h"
 
 #include "observers/CreateGrid.h"
-#include "observers/EnumerateAndInitSolution.h"
+#include "observers/InitSolution.h"
 #include "observers/Solve.h"
 #include "observers/Plot.h"
 
@@ -40,7 +40,6 @@ using namespace {{NAMESPACE | join("::")}};
 tarch::logging::Log _log("::");
 
 tarch::timing::Measurement createGridMeasurement;
-tarch::timing::Measurement enumerateMeasurement;
 tarch::timing::Measurement initMeasurement;
 tarch::timing::Measurement solveMeasurement;
 tarch::timing::Measurement plotMeasurement;
@@ -60,22 +59,22 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::CreateGrid:
         {
             peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::EnumerateAndInitSolution )
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitSolution )
             );
         }
         break;
      
-      case repositories::StepRepository::Steps::EnumerateAndInitSolution:
+      case repositories::StepRepository::Steps::InitSolution:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitPETSc )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
           );
         }
         break;
       case repositories::StepRepository::Steps::Solve:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::MapSolutionOntoMesh )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
           );
         }
         break;
@@ -137,24 +136,25 @@ void step() {
       }
       break;
 
-    case repositories::StepRepository::Steps::EnumerateAndInitSolution:
+    case repositories::StepRepository::Steps::InitSolution:
       {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate-and-init-solution" );
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-solution" );
 
-        observers::EnumerateAndInitSolution  observer;
+        observers::InitSolution  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
-        enumerateMeasurement.setValue( watch.getCalendarTime() );
+        initMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
     
     case repositories::StepRepository::Steps::Solve:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
-
+        
+        observers::Solve observer;
         watch.start();
-        repositories::solve();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
 
         solveMeasurement.setValue( watch.getCalendarTime() );
@@ -187,7 +187,6 @@ int main(int argc, char** argv) {
   const int ExitCodeInvalidBuild     = 3;
 
   peano4::initParallelEnvironment(&argc, &argv);
-  petsc::initParallelEnvironment(&argc, &argv);
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
@@ -203,7 +202,7 @@ int main(int argc, char** argv) {
 
   if (not tarch::logging::LogFilterFileReader::parsePlainTextFile("multigrid.log-filter")) {
     logWarning(
-      "main()", "no petsc.log-filter file found or file has been corrupted. Use default logging configuration"
+      "main()", "no multigrid.log-filter file found or file has been corrupted. Use default logging configuration"
     );
   }
 
@@ -218,7 +217,6 @@ int main(int argc, char** argv) {
   unitTests->addTestCase(peano4::getUnitTests());
   unitTests->addTestCase(tarch::getUnitTests());
   unitTests->addTestCase(toolbox::finiteelements::getUnitTests());
-  unitTests->addTestCase(petsc::getUnitTests());
   unitTests->run();
   if (unitTests->getNumberOfErrors() != 0) {
     logError("main()", "unit tests failed. Quit.");
@@ -259,12 +257,7 @@ int main(int argc, char** argv) {
         );
         logInfo(
           "main()",
-          "enumerate:                   " << enumerateMeasurement.getAccumulatedValue(
-          ) << "s\t" << enumerateMeasurement.toString()
-        );
-        logInfo(
-          "main()",
-          "init (setup PETSc):          " << initMeasurement.getAccumulatedValue(
+          "init:                        " << initMeasurement.getAccumulatedValue(
           ) << "s\t" << initMeasurement.toString()
         );
         logInfo(
@@ -299,7 +292,6 @@ int main(int argc, char** argv) {
 
   OTTER_FINALISE();
 
-  // repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().cleanUpPetscObjects();
 
   peano4::shutdownSingletons();
   repositories::DataRepository::shutdownDatatypes();

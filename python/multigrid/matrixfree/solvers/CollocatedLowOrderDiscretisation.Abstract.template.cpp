@@ -1,8 +1,14 @@
 #include "{{CLASSNAME}}.h"
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {}
+
+
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {}
+
+
 {% if LOCAL_ASSEMBLY_MATRIX!=[] %}
-tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLhsMatrix(
+tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLocalAssemblyMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
@@ -20,7 +26,7 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
 {% endif %}
 
 
-{{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
+{{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}MFData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
@@ -33,12 +39,12 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
     return isOnBoundary;
   };
 
-  return isOnBoundary(x) ? vertexdata::{{SOLVER_NAME}}PETScData::Type::Boundary : vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior;
+  return isOnBoundary(x) ? vertexdata::{{SOLVER_NAME}}MFData::Type::Boundary : vertexdata::{{SOLVER_NAME}}MFData::Type::Interior;
 }
 
-{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellDoFType(
+{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}MFData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellDoFType(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
-  return celldata::{{SOLVER_NAME}}PETScData::Type::Interior;
+  return celldata::{{SOLVER_NAME}}MFData::Type::Interior;
 }
