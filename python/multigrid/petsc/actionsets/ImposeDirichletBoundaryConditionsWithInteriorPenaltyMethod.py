@@ -19,10 +19,13 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
     int globalFaceIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFaceIndex);
     
     assertion( globalFaceIndex>=0 );
+
+    logTraceInWith2Arguments("TFFT::Boundary", globalFaceIndex, marker.toString());
     
     int faceNormalAxis = marker.getSelectedFaceNumber()%Dimensions;
     int row = 0;        
     dfore(faceNode, repositories::{{SOLVER_INSTANCE}}.Order+1, faceNormalAxis, 0) {
+
       tarch::la::Vector<Dimensions,double> x = marker.x(); // centre of face
       for (int dd=0; dd<Dimensions; dd++) {
         if (dd!=faceNormalAxis) {
@@ -30,6 +33,8 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
           x(dd) += repositories::{{SOLVER_INSTANCE}}.QuadraturePointsInUnitInterval[ faceNode(dd) ] * marker.h()(dd);
         }
       }
+
+      logTraceInWith5Arguments("TFFT::dfore", faceNode, faceNormalAxis, marker.x(), x,repositories::{{SOLVER_INSTANCE}}.FaceUnknowns);
           
       // Look up the value: rhs is not relevant here, but I want to reuse the existing signatures 
       double value, rhs;
@@ -47,8 +52,10 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
       }
 //      int 
 //NodesPerFace
+      logTraceOut("TFFT::dfore");
 
     }
+    logTraceOut("TFFT::Boundary");
   }
   """
   

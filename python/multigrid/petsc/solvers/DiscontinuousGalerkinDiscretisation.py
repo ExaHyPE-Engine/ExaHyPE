@@ -175,11 +175,11 @@ class AssemblePetscMatrix(ActionSet):
       );
     }
 
-    else if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Boundary ){
-      // add some more identities!
-    }
+  logTraceOut("TFFT");
 
-    logTraceOut("TFFT");
+  }
+  else if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Boundary ){
+    // add some more identities!
   }
   """
   
