@@ -230,7 +230,11 @@ class GaussLobatto(MatrixGenerator):
 
   def get_face_face_riemann_problem_matrix(self):
     # return np.array([0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5]).reshape((2,4))
-    return np.array([0.5, 0.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.5]).reshape((2,4))
+    # return np.array([0.5, 0.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.5]).reshape((2,4))
+    return np.array([0.5,  0,  0,  0,0.5,  0,  0,  0,
+                       0,0.5,  0,  0,  0,0.5,  0,  0,
+                       0,  0,0.5,  0,  0,  0,0.5,  0,
+                       0,  0,  0,0.5,  0,  0,  0,0.5]).reshape(4,8)
   
     # def get_face_to_face_matrix(self):
   #   """ Face-face coupling block.

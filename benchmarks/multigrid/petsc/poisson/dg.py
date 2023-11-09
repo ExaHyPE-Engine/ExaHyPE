@@ -23,7 +23,7 @@ parser.add_argument("-v",   "--verbose",            dest="verbose",        actio
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-deg", "--degree",             dest="degree",         type=int, default=1, help="Polynomial degree")
 parser.add_argument("-upcn", "--cell-unknowns",     dest="upcn",           type=int, default=1, help="Unknowns per cell node")
-parser.add_argument("-upfn", "--face-unknowns",     dest="upfn",           type=int, default=1, help="Unknowns per face node")
+parser.add_argument("-upfn", "--face-unknowns",     dest="upfn",           type=int, default=2, help="Unknowns per face node")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.4, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
