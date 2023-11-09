@@ -57,3 +57,7 @@ Return the name of the object that will be created for this solver.
     
     """
     return "instanceOf" + self.typename()  
+
+  @abstractmethod
+  def create_readme_descriptor(self):
+    return "not written yet"

@@ -5,6 +5,7 @@ import dastgen2
 
 from .MFMain import MFMain
 
+import os,sys
 
 class Project:
   """!
@@ -152,10 +153,10 @@ generate_Peano4_project() again to get a new snapshot/version of the
 Peano setup.
 
     """
-    self._project.main = Main(self._project,
-                              self._domain_offset,
-                              self._domain_size,
-                              )
+    self._project.main = MFMain(self._project,
+                                self._domain_offset,
+                                self._domain_size,
+                                )
 
     self._project.solversteps.add_step(self.algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_init_solution)

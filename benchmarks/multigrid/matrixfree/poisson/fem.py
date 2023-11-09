@@ -39,3 +39,28 @@ solver = multigrid.matrixfree.solvers.CollocatedLowOrderDiscretisation("Collocat
                                                                        )
 
 project.add_solver(solver)
+
+#
+# Configure build
+#
+if args.mode=="release":
+  build_mode = peano4.output.CompileMode.Release
+if args.mode=="stats":
+  build_mode = peano4.output.CompileMode.Stats
+if args.mode=="asserts":
+  build_mode = peano4.output.CompileMode.Asserts
+if args.mode=="trace":
+  build_mode = peano4.output.CompileMode.Trace
+
+cube_size = 1.0
+project.set_global_simulation_parameters(
+  dimensions            = args.dimensions,
+  offset                = [ 0.0       for _ in range(args.dimensions) ],
+  domain_size           = [ cube_size for _ in range(args.dimensions) ],
+)
+
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_Peano4_installation( args.peanodir, build_mode )
+
+peano4_project = project.generate_Peano4_project(args.verbose)
+peano4_project.generate()
