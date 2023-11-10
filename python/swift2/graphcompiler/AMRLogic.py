@@ -300,7 +300,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                     min_h=current_species_set.particle_model.min_h,
                     max_h=current_species_set.particle_model.max_h,
                 )
-                action_set_AMR_analysis.priority = steps[i].lowest_priority() - 1
+                action_set_AMR_analysis.descend_invocation_order = steps[i].lowest_descend_invocation_order() - 1
                 action_set_AMR_analysis.parallel = True
                 steps[i].add_action_set(action_set_AMR_analysis)
                 if verbose:
@@ -316,8 +316,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                         current_species_set
                     )
                 )
-                action_set_update_particle_grid_association.priority = (
-                    steps[i].lowest_priority() - 1
+                action_set_update_particle_grid_association.descend_invocation_order = (
+                    steps[i].lowest_descend_invocation_order() - 1
                 )
                 action_set_update_particle_grid_association.parallel = True
                 steps[i].add_action_set(action_set_update_particle_grid_association)
@@ -334,8 +334,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                         particle_set=current_species_set,
                     )
                 )
-                action_set_update_parallel_state.priority = (
-                    steps[i].lowest_priority() - 1
+                action_set_update_parallel_state.descend_invocation_order = (
+                    steps[i].lowest_descend_invocation_order() - 1
                 )
                 action_set_update_parallel_state.parallel = True
                 steps[i].add_action_set(action_set_update_parallel_state)
@@ -351,7 +351,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
 
             if global_steps_to_realise_amr[i]:
                 action_set_dynamic_AMR = DynamicMeshRefinementTrigger()
-                action_set_dynamic_AMR.priority = steps[i].highest_priority() + 1
+                action_set_dynamic_AMR.descend_invocation_order = steps[i].highest_descend_invocation_order() + 1
                 action_set_dynamic_AMR.parallel = True
                 steps[i].add_action_set(action_set_dynamic_AMR)
                 if verbose:
@@ -386,6 +386,12 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
     instead of two times.
 
     """
+    if verbose:
+        print(
+            "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: start to augment algorithm steps where the following steps alter the particle position: {}".format(
+                alter_position
+            )
+        )
     if len(steps) != len(alter_position):
         raise Exception(
             "number of steps does not equal number of alter_position flags: {} vs {}".format(
@@ -486,7 +492,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                     min_h=current_species_set.particle_model.min_h,
                     max_h=current_species_set.particle_model.max_h,
                 )
-                action_set_AMR_analysis.priority = steps[i].lowest_priority() - 1
+                action_set_AMR_analysis.descend_invocation_order = steps[i].lowest_descend_invocation_order() - 1
                 action_set_AMR_analysis.parallel = True
                 steps[i].add_action_set(action_set_AMR_analysis)
                 if verbose:
@@ -502,8 +508,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                         current_species_set
                     )
                 )
-                action_set_update_particle_grid_association.priority = (
-                    steps[i].lowest_priority() - 1
+                action_set_update_particle_grid_association.descend_invocation_order = (
+                    steps[i].lowest_descend_invocation_order() - 1
                 )
                 action_set_update_particle_grid_association.parallel = True
                 steps[i].add_action_set(action_set_update_particle_grid_association)
@@ -520,8 +526,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                         particle_set=current_species_set,
                     )
                 )
-                action_set_update_parallel_state.priority = (
-                    steps[i].lowest_priority() - 1
+                action_set_update_parallel_state.descend_invocation_order = (
+                    steps[i].lowest_descend_invocation_order() - 1
                 )
                 action_set_update_parallel_state.parallel = True
                 steps[i].add_action_set(action_set_update_parallel_state)
@@ -537,7 +543,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                             particle_set=current_species_set,
                         )
                     )
-                    action_set_gather.priority = steps[i].lowest_priority() - 1
+                    action_set_gather.descend_invocation_order = steps[i].lowest_descend_invocation_order() - 1
                     action_set_gather.parallel = True
                     steps[i].add_action_set(action_set_gather)
                     steps[(i + 1) % (len(steps))].add_action_set(action_set_gather)
@@ -550,7 +556,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
 
             if global_steps_to_realise_amr[i]:
                 action_set_dynamic_AMR = DynamicMeshRefinementTrigger()
-                action_set_dynamic_AMR.priority = steps[i].highest_priority() + 1
+                action_set_dynamic_AMR.descend_invocation_order = steps[i].highest_descend_invocation_order() + 1
                 action_set_dynamic_AMR.parallel = True
                 steps[i].add_action_set(action_set_dynamic_AMR)
                 if verbose:

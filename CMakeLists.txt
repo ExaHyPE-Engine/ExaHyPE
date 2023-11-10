@@ -305,13 +305,12 @@ endif()
 
 set(WITH_DIMENSIONS "2;3" CACHE STRING "Build with number of (space) dimensions")
 
-# Update Core libraries' build modes and dimensions if it is not set to build all
-# And if the build type of the peano app is different
-if (CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQUAL "${PEANO_APP_BUILD_TYPE}")
+# Update core libraries' build modes and dimensions if it is not set to build all and if the build type of an application is different.
+if(CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQUAL "${PEANO_APP_BUILD_TYPE}")
   set(CMAKE_BUILD_TYPE ${PEANO_APP_BUILD_TYPE} CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
 endif()
 
-if (NOT "${WITH_DIMENSIONS}" STREQUAL "2;3" AND PEANO_APP_DIMENSION AND NOT "${WITH_DIMENSIONS}" STREQUAL "${PEANO_APP_DIMENSION}")
+if(NOT "${WITH_DIMENSIONS}" STREQUAL "2;3" AND PEANO_APP_DIMENSION AND NOT "${WITH_DIMENSIONS}" STREQUAL "${PEANO_APP_DIMENSION}")
   set(WITH_DIMENSIONS ${PEANO_APP_DIMENSION} CACHE STRING "Dimensions 2;3" FORCE)
 endif()
 

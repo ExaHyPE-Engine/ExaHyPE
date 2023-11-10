@@ -17,7 +17,7 @@ foreach(mode IN LISTS BUILD_MODES)
     target_link_libraries(ToolboxBlockStructured${dimension}d_${mode_lower} PRIVATE project_warnings)
 
     if(USE_COMPONENT_DEFINITIONS)
-      set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxBlocstructured)
+      set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxBlockstructured)
     endif()
 
     install(TARGETS ToolboxBlockStructured${dimension}d_${mode_lower}

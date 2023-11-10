@@ -1,0 +1,37 @@
+/**
+
+ @page tests_swift2_hydro_simple_sph_sedov_blast Sedov Blast (Simple SPH)
+
+
+
+
+We have the option to either insert the particles by coordinates and inject the
+energy via a initialisation snippet, or read an hdf5 file which sets all the ICs
+for the problem.
+
+  - The initialisation snippet provide two different ways to inject the energy to
+    the central particles. 1) distribute energy evenly among the central
+    particles, or 2) distribute energy smoothly among the central particles.
+
+The initialisation snippet is very old and hence it requires some updates such
+as:
+
+@TODO the initialisation snippet:
+  - Implement a good way to select how many central particles we want to use to
+    inject the energy. Currently this is hard coded, but should be done, e.g.,
+    based on the inter-particle separation (1/HYDRO_PART_NUMBER).
+
+@TODO try the hdf5
+@TODO if reading hdf5 file, pass the correct number of particles to the exported
+Constants.h file.
+
+ ## Script
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+@htmlinclude run.sh
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ */
+
+

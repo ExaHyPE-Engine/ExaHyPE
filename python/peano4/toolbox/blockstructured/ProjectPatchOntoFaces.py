@@ -31,7 +31,7 @@ class ProjectPatchOntoFaces(ActionSet):
   
   
   def __init__(self,patch,patch_overlap,guard,additional_includes, add_assertions = True):
-    super(ProjectPatchOntoFaces,self).__init__(priority=1,parallel=False)
+    super(ProjectPatchOntoFaces,self).__init__(descend_invocation_order=1,parallel=False)
     self.d = {}
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )

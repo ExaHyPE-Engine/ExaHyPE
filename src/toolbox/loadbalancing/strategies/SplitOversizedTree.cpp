@@ -32,7 +32,8 @@ toolbox::loadbalancing::strategies::SplitOversizedTree::~SplitOversizedTree() {
 std::string toolbox::loadbalancing::strategies::SplitOversizedTree::toString() const {
   std::ostringstream msg;
 
-  msg << "(state=" << ::toString( _state )
+  msg << "(type=split-oversized-tree"
+      << ",state=" << ::toString( _state )
       << ",statistics=" << _statistics.toString()
       << ",cost-metrics=" << _costMetrics->toString()
       << ",round-robin-token=" << _roundRobinToken 
@@ -152,7 +153,7 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::updateLoadBalancing
           and
           weightOfHeaviestSpacetree > getTargetTreeCost()
           and
-          computeNumberOfSplits(heaviestSpacetree)
+          computeNumberOfSplits(heaviestSpacetree)>0
         ) {
           logInfo(
             "updateLoadBalancing()",
@@ -183,13 +184,14 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::updateLoadBalancing
             and
             _costMetrics->getCostOfLocalTree(p) > getTargetTreeCost()
             and
-            computeNumberOfSplits(p)
+            computeNumberOfSplits(p)>0
           ) {
             logInfo(
               "updateLoadBalancing()",
               "local tree " << p << " is too heavy as it has a weight of " <<
               _costMetrics->getCostOfLocalTree(p) << ". Try to split tree " << computeNumberOfSplits(p) << " times on local rank " <<
-              toString()
+              toString() << " (max local trees=" << _configuration->getMaxLocalTreesPerRank(_state) << ", min-tree-size=" <<
+              _configuration->getMinTreeSize(_state) << ")"
             );
             triggerSplit(p, tarch::mpi::Rank::getInstance().getRank(), computeNumberOfSplits(p));
           }
@@ -264,7 +266,13 @@ void toolbox::loadbalancing::strategies::SplitOversizedTree::triggerSplit( int s
 
 
 double toolbox::loadbalancing::strategies::SplitOversizedTree::getTargetTreeCost() const {
-  return _costMetrics->getGlobalCost() / tarch::mpi::Rank::getInstance().getNumberOfRanks() / tarch::multicore::Core::getInstance().getNumberOfThreads();
+  const int TargetNumberOfThreads = std::min({
+    tarch::multicore::Core::getInstance().getNumberOfThreads(),
+    _configuration->getMaxLocalTreesPerRank(_state),
+    static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size())
+  });
+
+  return _costMetrics->getGlobalCost() / tarch::mpi::Rank::getInstance().getNumberOfRanks() / TargetNumberOfThreads;
 }
 
 

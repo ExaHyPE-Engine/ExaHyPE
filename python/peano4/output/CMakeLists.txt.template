@@ -41,7 +41,6 @@ capitalize(${PEANO_APP_MODE})
 set(PEANO_APP_BUILD_TYPE "${value_capitalized}" CACHE STRING "${BUILD_MODES}" FORCE)
 set(PEANO_APP_DIMENSION "${PEANO_APP_DIMENSION}" CACHE STRING "Dimensions 2;3" FORCE)
 
-
 list(APPEND DEPENDS_CORE {% for item in CMAKE_CORE_LIBS -%} {{item+' '}} {%- endfor %})
 list(APPEND DEPENDS_OTHER {% for item in CMAKE_LIBS -%} {{item+' '}} {%- endfor %})
 
