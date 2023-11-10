@@ -77,7 +77,7 @@ namespace exahype2::enumerators {
      *   properties such as the first derivative along the normal. Some
      *   code snippets within ExaHyPE 2 call the haloSize overlap.
      */
-    constexpr KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod
+    constexpr GPUCallableInlineMethod
       FaceAoSLexicographicEnumerator(int faceNumber, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
       _faceNumber(faceNumber),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
@@ -88,7 +88,7 @@ namespace exahype2::enumerators {
     /**
      * Access a dof
      */
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int operator()(const tarch::la::Vector<Dimensions, int>& dofIndex, int unknown) const {
+    GPUCallableInlineMethod int operator()(const tarch::la::Vector<Dimensions, int>& dofIndex, int unknown) const {
       int base   = 1;
       int result = 0;
       for (int d = 0; d < Dimensions; d++) {
@@ -114,7 +114,7 @@ namespace exahype2::enumerators {
     std::string toString() const;
 #endif
 
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int size() const {
+    GPUCallableInlineMethod int size() const {
       if constexpr (Dimensions == 2) {
         return (_numberOfDoFsPerAxisInCell) * (2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables);
       } else {

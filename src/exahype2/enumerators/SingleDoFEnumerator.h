@@ -20,7 +20,7 @@ namespace exahype2::enumerators {
    *
    */
   struct SingleDoFEnumerator {
-    constexpr KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod SingleDoFEnumerator(int unknowns, int numberOfAuxiliaryVariables):
+    constexpr GPUCallableInlineMethod SingleDoFEnumerator(int unknowns, int numberOfAuxiliaryVariables):
       _unknowns(unknowns),
       _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables) {}
 
@@ -31,7 +31,7 @@ namespace exahype2::enumerators {
      * indices if you want.
      *
      */
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int operator()(int, const tarch::la::Vector<Dimensions, int>&, int unknown) const InlineMethod {
+    GPUCallableInlineMethod int operator()(int, const tarch::la::Vector<Dimensions, int>&, int unknown) const InlineMethod {
       return unknown;
     }
 
@@ -39,7 +39,7 @@ namespace exahype2::enumerators {
     std::string toString() const;
 #endif
 
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int size() const { return (_unknowns + _numberOfAuxiliaryVariables); }
+    GPUCallableInlineMethod int size() const { return (_unknowns + _numberOfAuxiliaryVariables); }
 
     const int _unknowns;
     const int _numberOfAuxiliaryVariables;

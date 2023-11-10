@@ -4,14 +4,14 @@
 template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
   const double* __restrict__ QIn,
-  const QInEnumeratorType&                     QInEnumerator,
-  const SourceFunctor&                         sourceFunctor,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt,
+  const QInEnumeratorType&                       QInEnumerator,
+  const SourceFunctor&                           sourceFunctor,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  double                                         t,
+  double                                         dt,
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
@@ -70,10 +70,10 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
   const double* __restrict__ QIn,
   const enumerators::AoSLexicographicEnumerator& QInEnumerator,
   const SourceFunctor&                           sourceFunctor,
-  const tarch::la::Vector<Dimensions, double>&   patchCentre,
-  const tarch::la::Vector<Dimensions, double>&   patchSize,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
   double                                         t,
   double                                         dt,
   double* __restrict__ QOut,
@@ -120,13 +120,13 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
 template <class SolverType, class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
   const double* __restrict__ QIn,
-  const QInEnumeratorType&                     QInEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt,
+  const QInEnumeratorType&                       QInEnumerator,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  double                                         t,
+  double                                         dt,
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
@@ -190,10 +190,10 @@ template <class SolverType>
 void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
   const double* __restrict__ QIn,
   const enumerators::AoSLexicographicEnumerator& QInEnumerator,
-  const tarch::la::Vector<Dimensions, double>&   patchCentre,
-  const tarch::la::Vector<Dimensions, double>&   patchSize,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
   double                                         t,
   double                                         dt,
   double* __restrict__ QOut,
@@ -245,15 +245,15 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
 template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class MaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
   const double* __restrict__ QIn,
-  QInEnumeratorType                            QInEnumerator,
-  const MaxEigenvalueFunctor&                  maxEigenvalueFunctor,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
+  const QInEnumeratorType&                       QInEnumerator,
+  const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
   double* __restrict__ maxEigenvalue,
   const MaxEigenvalueEnumeratorType& maxEigenvalueEnumerator
 ) InlineMethod {
@@ -283,10 +283,10 @@ void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
   const double* __restrict__ QIn,
   const enumerators::AoSLexicographicEnumerator& QInEnumerator,
   const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
-  const tarch::la::Vector<Dimensions, double>&   patchCentre,
-  const tarch::la::Vector<Dimensions, double>&   patchSize,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
   double                                         t,
   double                                         dt,
   int                                            normal,
@@ -307,14 +307,14 @@ void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
 template <class SolverType, class QInEnumeratorType, class MaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
   const double* __restrict__ QIn,
-  const QInEnumeratorType&                     QInEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
+  const QInEnumeratorType&                       QInEnumerator,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
   double* __restrict__ maxEigenvalue,
   const MaxEigenvalueEnumeratorType& maxEigenvalueEnumerator
 ) {
@@ -344,10 +344,10 @@ template <class SolverType, class MaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
   const double* __restrict__ QIn,
   const enumerators::AoSLexicographicEnumerator& QInEnumerator,
-  const tarch::la::Vector<Dimensions, double>&   patchCentre,
-  const tarch::la::Vector<Dimensions, double>&   patchSize,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
   double                                         t,
   double                                         dt,
   int                                            normal,
@@ -369,14 +369,14 @@ void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
 template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QOutEnumeratorType>
 double exahype2::fv::rusanov::loopbodies::reduceMaxEigenvalue(
   const double* __restrict__ QOut,
-  const QOutEnumeratorType&                    QOutEnumerator,
-  const MaxEigenvalueFunctor&                  maxEigenvalueFunctor,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt
+  const QOutEnumeratorType&                      QOutEnumerator,
+  const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  double                                         t,
+  double                                         dt
 ) {
   double QGathered[NumberOfUnknowns + NumberOfAuxiliaryVariables];
 
@@ -415,10 +415,10 @@ double exahype2::fv::rusanov::loopbodies::reduceMaxEigenvalue(
   const double* __restrict__ QOut,
   const enumerators::AoSLexicographicEnumerator& QOutEnumerator,
   const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
-  const tarch::la::Vector<Dimensions, double>&   patchCentre,
-  const tarch::la::Vector<Dimensions, double>&   patchSize,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
   double                                         t,
   double                                         dt
 ) {
@@ -446,13 +446,13 @@ double exahype2::fv::rusanov::loopbodies::reduceMaxEigenvalue(
 template <class SolverType, class QOutEnumeratorType>
 double exahype2::fv::rusanov::loopbodies::reduceMaxEigenvalue(
   const double* __restrict__ QOut,
-  const QOutEnumeratorType&                    QOutEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt
+  const QOutEnumeratorType&                      QOutEnumerator,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  double                                         t,
+  double                                         dt
 ) {
   double QGathered[SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables];
 
@@ -491,10 +491,10 @@ template <class SolverType>
 double exahype2::fv::rusanov::loopbodies::reduceMaxEigenvalue(
   const double* __restrict__ QOut,
   const enumerators::AoSLexicographicEnumerator& QOutEnumerator,
-  const tarch::la::Vector<Dimensions, double>&   patchCentre,
-  const tarch::la::Vector<Dimensions, double>&   patchSize,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
   double                                         t,
   double                                         dt
 ) {
@@ -524,15 +524,15 @@ double exahype2::fv::rusanov::loopbodies::reduceMaxEigenvalue(
 template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class FluxEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::computeFlux(
   const double* __restrict__ QIn,
-  const QInEnumeratorType&                     QInEnumerator,
-  const FluxFunctor&                           fluxFunctor,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
+  const QInEnumeratorType&                       QInEnumerator,
+  const FluxFunctor&                             fluxFunctor,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
   double* __restrict__ flux,
   const FluxEnumeratorType& fluxEnumerator
 ) {
@@ -572,10 +572,10 @@ void exahype2::fv::rusanov::loopbodies::computeFlux(
   const double* __restrict__ QIn,
   const enumerators::AoSLexicographicEnumerator& QInEnumerator,
   const FluxFunctor&                             fluxFunctor,
-  const tarch::la::Vector<Dimensions, double>&   patchCentre,
-  const tarch::la::Vector<Dimensions, double>&   patchSize,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
   double                                         t,
   double                                         dt,
   int                                            normal,
@@ -597,14 +597,14 @@ void exahype2::fv::rusanov::loopbodies::computeFlux(
 template <class SolverType, class QInEnumeratorType, class FluxEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::computeFlux(
   const double* __restrict__ QIn,
-  const QInEnumeratorType&                     QInEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
+  const QInEnumeratorType&                       QInEnumerator,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
   double* __restrict__ flux,
   const FluxEnumeratorType& fluxEnumerator
 ) {
@@ -644,10 +644,10 @@ template <class SolverType, class FluxEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::computeFlux(
   const double* __restrict__ QIn,
   const enumerators::AoSLexicographicEnumerator& QInEnumerator,
-  const tarch::la::Vector<Dimensions, double>&   patchCentre,
-  const tarch::la::Vector<Dimensions, double>&   patchSize,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
   double                                         t,
   double                                         dt,
   int                                            normal,
@@ -681,10 +681,10 @@ template <class SolverType>
 void exahype2::fv::rusanov::loopbodies::computeFlux(
   const double* __restrict__ QIn,
   const enumerators::AoSLexicographicEnumerator& QInEnumerator,
-  const tarch::la::Vector<Dimensions, double>&   patchCentre,
-  const tarch::la::Vector<Dimensions, double>&   patchSize,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
-  const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
   double                                         t,
   double                                         dt,
   int                                            normal,
@@ -709,19 +709,19 @@ void exahype2::fv::rusanov::loopbodies::updateSolutionWithFlux(
   const double* __restrict__ tempFluxX,
   const double* __restrict__ tempFluxY,
   const double* __restrict__ tempFluxZ,
-  const FluxEnumeratorType&                    fluxEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  int                                          unknown,
-  double                                       dt,
+  const FluxEnumeratorType&                      fluxEnumerator,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  int                                            unknown,
+  double                                         dt,
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
   auto updateAlongOneDirection = [=](const double* __restrict__ tempFlux, const int normal) {
-    tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
-    tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
+    ::tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
+    ::tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
     normal == 0 ? (leftVolume(0)--, rightVolume(0)++) : normal == 1 ? (leftVolume(1)--, rightVolume(1)++) : (leftVolume(2)--, rightVolume(2)++);
 
     const double fluxLeft  = 0.5 * tempFlux[fluxEnumerator(patchIndex, leftVolume, unknown)] + 0.5 * tempFlux[fluxEnumerator(patchIndex, volumeIndex, unknown)];
@@ -755,19 +755,19 @@ template <class FluxEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::updateSolutionWithFlux(
   const double* __restrict__ fluxL,
   const double* __restrict__ fluxR,
-  const FluxEnumeratorType&                    fluxEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  int                                          unknown,
-  double                                       dt,
-  int                                          normal,
+  const FluxEnumeratorType&                      fluxEnumerator,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  int                                            unknown,
+  double                                         dt,
+  int                                            normal,
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
-  tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
+  ::tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
+  ::tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
   rightVolume(normal)++;
 
   double flux = 0.5 * (fluxL[fluxEnumerator(patchIndex, leftVolume, unknown)] + fluxR[fluxEnumerator(patchIndex, rightVolume, unknown)]);
@@ -788,19 +788,19 @@ void exahype2::fv::rusanov::loopbodies::updateSolutionWithEigenvalueDamping(
   const double* __restrict__ tempMaxEigenvalueX,
   const double* __restrict__ tempMaxEigenvalueY,
   const double* __restrict__ tempMaxEigenvalueZ,
-  const MaxEigenvalueEnumeratorType&           eigenvalueEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  int                                          unknown,
-  double                                       dt,
+  const MaxEigenvalueEnumeratorType&             eigenvalueEnumerator,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  int                                            unknown,
+  double                                         dt,
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
   auto updateAlongOneDirection = [=](const double* __restrict__ tempMaxEigenvalue, int normal) {
-    tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
-    tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
+    ::tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
+    ::tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
     normal == 0 ? (leftVolume(0)--, rightVolume(0)++) : normal == 1 ? (leftVolume(1)--, rightVolume(1)++) : (leftVolume(2)--, rightVolume(2)++);
 
     double leftVolumeValue   = tempMaxEigenvalue[eigenvalueEnumerator(patchIndex, leftVolume, 0)];
@@ -842,21 +842,21 @@ void exahype2::fv::rusanov::loopbodies::updateSolutionWithEigenvalueDamping(
 template <class QInEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::updateSolutionWithEigenvalueDamping(
   const double* __restrict__ QIn,
-  const QInEnumeratorType&                     QInEnumerator,
-  double                                       maxEigenvalueL,
-  double                                       maxEigenvalueR,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  int                                          unknown,
-  double                                       dt,
-  int                                          normal,
+  const QInEnumeratorType&                       QInEnumerator,
+  double                                         maxEigenvalueL,
+  double                                         maxEigenvalueR,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  int                                            unknown,
+  double                                         dt,
+  int                                            normal,
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
-  tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
+  ::tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
+  ::tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;
   rightVolume(normal)++;
 
   double maxEigenvalue = maxEigenvalueL > maxEigenvalueR ? maxEigenvalueL : maxEigenvalueR;
@@ -874,15 +874,15 @@ void exahype2::fv::rusanov::loopbodies::updateSolutionWithEigenvalueDamping(
 template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class NCPFaceEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::computeNonconservativeFlux(
   const double* __restrict__ QIn,
-  const QInEnumeratorType&                     QInEnumerator,
-  const NonconservativeProductFunctor&         ncpFunctor,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
+  const QInEnumeratorType&                       QInEnumerator,
+  const NonconservativeProductFunctor&           ncpFunctor,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
   double* __restrict__ ncp,
   const NCPFaceEnumeratorType& ncpEnumerator
 ) {
@@ -890,8 +890,8 @@ void exahype2::fv::rusanov::loopbodies::computeNonconservativeFlux(
   double DeltaQ[NumberOfUnknowns + NumberOfAuxiliaryVariables];
   double ncpGathered[NumberOfUnknowns];
 
-  tarch::la::Vector<Dimensions, int> leftAdjacentVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions, int> rightAdjacentVolume = volumeIndex;
+  ::tarch::la::Vector<Dimensions, int> leftAdjacentVolume  = volumeIndex;
+  ::tarch::la::Vector<Dimensions, int> rightAdjacentVolume = volumeIndex;
   rightAdjacentVolume(normal)++;
 
   // gather
@@ -927,14 +927,14 @@ void exahype2::fv::rusanov::loopbodies::computeNonconservativeFlux(
 template <class SolverType, class QInEnumeratorType, class NCPFaceEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::computeNonconservativeFlux(
   const double* __restrict__ QIn,
-  const QInEnumeratorType&                     QInEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  double                                       t,
-  double                                       dt,
-  int                                          normal,
+  const QInEnumeratorType&                       QInEnumerator,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  double                                         t,
+  double                                         dt,
+  int                                            normal,
   double* __restrict__ ncp,
   const NCPFaceEnumeratorType& ncpEnumerator
 ) {
@@ -942,8 +942,8 @@ void exahype2::fv::rusanov::loopbodies::computeNonconservativeFlux(
   double DeltaQ[SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables];
   double ncpGathered[SolverType::NumberOfUnknowns];
 
-  tarch::la::Vector<Dimensions, int> leftAdjacentVolume  = volumeIndex;
-  tarch::la::Vector<Dimensions, int> rightAdjacentVolume = volumeIndex;
+  ::tarch::la::Vector<Dimensions, int> leftAdjacentVolume  = volumeIndex;
+  ::tarch::la::Vector<Dimensions, int> rightAdjacentVolume = volumeIndex;
   rightAdjacentVolume(normal)++;
 
   // gather
@@ -982,19 +982,19 @@ void exahype2::fv::rusanov::loopbodies::updateSolutionWithNonconservativeFlux(
   const double* __restrict__ ncpX,
   const double* __restrict__ ncpY,
   const double* __restrict__ ncpZ,
-  const NCPFaceEnumeratorType&                 ncpEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-  int                                          unknown,
-  double                                       dt,
+  const NCPFaceEnumeratorType&                   ncpEnumerator,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+  int                                            unknown,
+  double                                         dt,
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
   auto updateAlongOneCoordinateDirection = [=](const double* __restrict__ ncp, int normal) {
-    tarch::la::Vector<Dimensions, int> leftFace  = volumeIndex;
-    tarch::la::Vector<Dimensions, int> rightFace = volumeIndex;
+    ::tarch::la::Vector<Dimensions, int> leftFace  = volumeIndex;
+    ::tarch::la::Vector<Dimensions, int> rightFace = volumeIndex;
     leftFace(normal)--;
 
     // The ncp is calculating (Q^+ - Q^-)B_i for the considered face, and B here is defined on the left of the
@@ -1032,19 +1032,19 @@ void exahype2::fv::rusanov::loopbodies::updateSolutionWithNonconservativeFlux(
 template <class NCPFaceEnumeratorType, class QOutEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::updateSolutionWithNonconservativeFlux(
   const double* __restrict__ ncp,
-  const NCPFaceEnumeratorType&                 ncpEnumerator,
-  const tarch::la::Vector<Dimensions, double>& patchCentre,
-  const tarch::la::Vector<Dimensions, double>& patchSize,
-  int                                          patchIndex,
-  const tarch::la::Vector<Dimensions, int>&    faceIndex,
-  int                                          unknown,
-  double                                       dt,
-  int                                          normal,
+  const NCPFaceEnumeratorType&                   ncpEnumerator,
+  const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+  const ::tarch::la::Vector<Dimensions, double>& patchSize,
+  int                                            patchIndex,
+  const ::tarch::la::Vector<Dimensions, int>&    faceIndex,
+  int                                            unknown,
+  double                                         dt,
+  int                                            normal,
   double* __restrict__ QOut,
   const QOutEnumeratorType& QOutEnumerator
 ) {
-  tarch::la::Vector<Dimensions, int> leftVolume  = faceIndex;
-  tarch::la::Vector<Dimensions, int> rightVolume = faceIndex;
+  ::tarch::la::Vector<Dimensions, int> leftVolume  = faceIndex;
+  ::tarch::la::Vector<Dimensions, int> rightVolume = faceIndex;
   rightVolume(normal)++;
 
   if (leftVolume(normal) >= 0) {

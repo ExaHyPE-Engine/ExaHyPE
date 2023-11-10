@@ -36,7 +36,7 @@ namespace exahype2::enumerators {
    * @see enumerators.h for a generic description of attribute semantics.
    */
   struct AoSoALexicographicEnumerator {
-    constexpr KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod
+    constexpr GPUCallableInlineMethod
       AoSoALexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
       _numberOfCells(numberOfCells),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
@@ -51,7 +51,7 @@ namespace exahype2::enumerators {
      * indices if you want.
      *
      */
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const
+    GPUCallableInlineMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const
       InlineMethod {
       if constexpr (Dimensions == 2) {
         return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
@@ -74,7 +74,7 @@ namespace exahype2::enumerators {
     /**
      * Returns the total size.
      */
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int size() const InlineMethod {
+    GPUCallableInlineMethod int size() const InlineMethod {
       if constexpr (Dimensions == 2) {
         return _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables);
       } else {
@@ -83,7 +83,7 @@ namespace exahype2::enumerators {
       }
     }
 
-    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod int numberOfDofsPerCell() const InlineMethod {
+    GPUCallableInlineMethod int numberOfDofsPerCell() const InlineMethod {
       if constexpr (Dimensions == 2) {
         return (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize);
       } else {

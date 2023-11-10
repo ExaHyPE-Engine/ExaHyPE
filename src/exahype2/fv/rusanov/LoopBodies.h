@@ -71,16 +71,16 @@ namespace exahype2::fv::rusanov::loopbodies {
    * @param volumeIndex: Which volume is to be updated within the target
    *   patch. This index refers to the target index.
    */
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod auto copySolution =
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod auto copySolution =
     [](
       const double* __restrict__ QIn,
-      const auto&                               QInEnumerator,
-      int                                       patchIndex,
-      const tarch::la::Vector<Dimensions, int>& volumeIndex,
-      int                                       unknown,
+      const auto&                                 QInEnumerator,
+      int                                         patchIndex,
+      const ::tarch::la::Vector<Dimensions, int>& volumeIndex,
+      int                                         unknown,
       double* __restrict__ QOut,
       const auto& QOutEnumerator
-    ) { QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] = QIn[QInEnumerator(patchIndex, volumeIndex, unknown)]; };
+    ) InlineMethod { QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] = QIn[QInEnumerator(patchIndex, volumeIndex, unknown)]; };
 
 
   /**
@@ -111,14 +111,14 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class QOutEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void copySolutionAndAddSourceTerm(
     const double* __restrict__ QIn,
-    const QInEnumeratorType&                     QInEnumerator,
-    const SourceFunctor&                         sourceFunctor,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    double                                       t,
-    double                                       dt,
+    const QInEnumeratorType&                       QInEnumerator,
+    const SourceFunctor&                           sourceFunctor,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    double                                         t,
+    double                                         dt,
     double* __restrict__ QOut,
     const QOutEnumeratorType& QOutEnumerator
   ) InlineMethod;
@@ -141,10 +141,10 @@ namespace exahype2::fv::rusanov::loopbodies {
     const double* __restrict__ QIn,
     const enumerators::AoSLexicographicEnumerator& QInEnumerator,
     const SourceFunctor&                           sourceFunctor,
-    const tarch::la::Vector<Dimensions, double>&   patchCentre,
-    const tarch::la::Vector<Dimensions, double>&   patchSize,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
-    const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
     double                                         t,
     double                                         dt,
     double* __restrict__ QOut,
@@ -157,15 +157,15 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class QInEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void copySolutionAndAddSourceTerm(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void copySolutionAndAddSourceTerm(
     const double* __restrict__ QIn,
-    const QInEnumeratorType&                     QInEnumerator,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    double                                       t,
-    double                                       dt,
+    const QInEnumeratorType&                       QInEnumerator,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    double                                         t,
+    double                                         dt,
     double* __restrict__ QOut,
     const QOutEnumeratorType& QOutEnumerator
   ) InlineMethod;
@@ -176,13 +176,13 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void copySolutionAndAddSourceTerm(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void copySolutionAndAddSourceTerm(
     const double* __restrict__ QIn,
     const enumerators::AoSLexicographicEnumerator& QInEnumerator,
-    const tarch::la::Vector<Dimensions, double>&   patchCentre,
-    const tarch::la::Vector<Dimensions, double>&   patchSize,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
-    const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
     double                                         t,
     double                                         dt,
     double* __restrict__ QOut,
@@ -210,15 +210,15 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class MaxEigenvalueEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeMaxEigenvalue(
     const double* __restrict__ QIn,
-    const QInEnumeratorType&                     QInEnumerator,
-    const MaxEigenvalueFunctor&                  maxEigenvalueFunctor,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
+    const QInEnumeratorType&                       QInEnumerator,
+    const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    double                                         t,
+    double                                         dt,
+    int                                            normal,
     double* __restrict__ maxEigenvalue,
     const MaxEigenvalueEnumeratorType& maxEigenvalueEnumerator
   ) InlineMethod;
@@ -233,10 +233,10 @@ namespace exahype2::fv::rusanov::loopbodies {
     const double* __restrict__ QIn,
     const enumerators::AoSLexicographicEnumerator& QInEnumerator,
     const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
-    const tarch::la::Vector<Dimensions, double>&   patchCentre,
-    const tarch::la::Vector<Dimensions, double>&   patchSize,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
-    const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
     double                                         t,
     double                                         dt,
     int                                            normal,
@@ -250,16 +250,16 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class QInEnumeratorType, class MaxEigenvalueEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void computeMaxEigenvalue(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeMaxEigenvalue(
     const double* __restrict__ QIn,
-    const QInEnumeratorType&                     QInEnumerator,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
+    const QInEnumeratorType&                       QInEnumerator,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    double                                         t,
+    double                                         dt,
+    int                                            normal,
     double* __restrict__ maxEigenvalue,
     const MaxEigenvalueEnumeratorType& maxEigenvalueEnumerator
   ) InlineMethod;
@@ -270,13 +270,13 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class MaxEigenvalueEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void computeMaxEigenvalue(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeMaxEigenvalue(
     const double* __restrict__ QIn,
     const enumerators::AoSLexicographicEnumerator& QInEnumerator,
-    const tarch::la::Vector<Dimensions, double>&   patchCentre,
-    const tarch::la::Vector<Dimensions, double>&   patchSize,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
-    const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
     double                                         t,
     double                                         dt,
     int                                            normal,
@@ -299,14 +299,14 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QOutEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions double reduceMaxEigenvalue(
     const double* __restrict__ QOut,
-    const QOutEnumeratorType&                    QOutEnumerator,
-    const MaxEigenvalueFunctor&                  maxEigenvalueFunctor,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    double                                       t,
-    double                                       dt
+    const QOutEnumeratorType&                      QOutEnumerator,
+    const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    double                                         t,
+    double                                         dt
   ) InlineMethod;
 
 
@@ -320,10 +320,10 @@ namespace exahype2::fv::rusanov::loopbodies {
     const double* __restrict__ QOut,
     const enumerators::AoSLexicographicEnumerator& QOutEnumerator,
     const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
-    const tarch::la::Vector<Dimensions, double>&   patchCentre,
-    const tarch::la::Vector<Dimensions, double>&   patchSize,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
-    const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
     double                                         t,
     double                                         dt
   ) InlineMethod;
@@ -334,15 +334,15 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod double reduceMaxEigenvalue(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double reduceMaxEigenvalue(
     const double* __restrict__ QOut,
-    const QOutEnumeratorType&                    QOutEnumerator,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    double                                       t,
-    double                                       dt
+    const QOutEnumeratorType&                      QOutEnumerator,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    double                                         t,
+    double                                         dt
   ) InlineMethod;
 
 
@@ -354,13 +354,13 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod double reduceMaxEigenvalue(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double reduceMaxEigenvalue(
     const double* __restrict__ QOut,
     const enumerators::AoSLexicographicEnumerator& QOutEnumerator,
-    const tarch::la::Vector<Dimensions, double>&   patchCentre,
-    const tarch::la::Vector<Dimensions, double>&   patchSize,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
-    const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
     double                                         t,
     double                                         dt
   ) InlineMethod;
@@ -377,15 +377,15 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class FluxEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeFlux(
     const double* __restrict__ QIn,
-    const QInEnumeratorType&                     QInEnumerator,
-    const FluxFunctor&                           fluxFunctor,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
+    const QInEnumeratorType&                       QInEnumerator,
+    const FluxFunctor&                             fluxFunctor,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    double                                         t,
+    double                                         dt,
+    int                                            normal,
     double* __restrict__ flux,
     const FluxEnumeratorType& fluxEnumerator
   ) InlineMethod;
@@ -397,10 +397,10 @@ namespace exahype2::fv::rusanov::loopbodies {
     const double* __restrict__ QIn,
     const enumerators::AoSLexicographicEnumerator& QInEnumerator,
     const FluxFunctor&                             fluxFunctor,
-    const tarch::la::Vector<Dimensions, double>&   patchCentre,
-    const tarch::la::Vector<Dimensions, double>&   patchSize,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
-    const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
     double                                         t,
     double                                         dt,
     int                                            normal,
@@ -414,16 +414,16 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class QInEnumeratorType, class FluxEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void computeFlux(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeFlux(
     const double* __restrict__ QIn,
-    const QInEnumeratorType&                     QInEnumerator,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
+    const QInEnumeratorType&                       QInEnumerator,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    double                                         t,
+    double                                         dt,
+    int                                            normal,
     double* __restrict__ flux,
     const FluxEnumeratorType& fluxEnumerator
   ) InlineMethod;
@@ -431,13 +431,13 @@ namespace exahype2::fv::rusanov::loopbodies {
 
 #pragma omp declare simd
   template <class SolverType, class FluxEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void computeFlux(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeFlux(
     const double* __restrict__ QIn,
     const enumerators::AoSLexicographicEnumerator& QInEnumerator,
-    const tarch::la::Vector<Dimensions, double>&   patchCentre,
-    const tarch::la::Vector<Dimensions, double>&   patchSize,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
-    const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
     double                                         t,
     double                                         dt,
     int                                            normal,
@@ -448,13 +448,13 @@ namespace exahype2::fv::rusanov::loopbodies {
 
 #pragma omp declare simd
   template <class SolverType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void computeFlux(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeFlux(
     const double* __restrict__ QIn,
     const enumerators::AoSLexicographicEnumerator& QInEnumerator,
-    const tarch::la::Vector<Dimensions, double>&   patchCentre,
-    const tarch::la::Vector<Dimensions, double>&   patchSize,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
-    const tarch::la::Vector<Dimensions, int>&      volumeIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
     double                                         t,
     double                                         dt,
     int                                            normal,
@@ -473,17 +473,17 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class FluxEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void updateSolutionWithFlux(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithFlux(
     const double* __restrict__ tempFluxX,
     const double* __restrict__ tempFluxY,
     const double* __restrict__ tempFluxZ,
-    const FluxEnumeratorType&                    fluxEnumerator,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    int                                          unknown,
-    double                                       dt,
+    const FluxEnumeratorType&                      fluxEnumerator,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    int                                            unknown,
+    double                                         dt,
     double* __restrict__ QOut,
     const QOutEnumeratorType& QOutEnumerator
   ) InlineMethod;
@@ -501,17 +501,17 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class FluxEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void updateSolutionWithFlux(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithFlux(
     const double* __restrict__ fluxL,
     const double* __restrict__ fluxR,
-    const FluxEnumeratorType&                    fluxEnumerator,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    int                                          unknown,
-    double                                       dt,
-    int                                          normal,
+    const FluxEnumeratorType&                      fluxEnumerator,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    int                                            unknown,
+    double                                         dt,
+    int                                            normal,
     double* __restrict__ QOut,
     const QOutEnumeratorType& QOutEnumerator
   ) InlineMethod;
@@ -549,19 +549,19 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class QInEnumeratorType, class MaxEigenvalueEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void updateSolutionWithEigenvalueDamping(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithEigenvalueDamping(
     const double* __restrict__ QIn,
     const QInEnumeratorType& QInEnumerator,
     const double* __restrict__ tempMaxEigenvalueX,
     const double* __restrict__ tempMaxEigenvalueY,
     const double* __restrict__ tempMaxEigenvalueZ,
-    const MaxEigenvalueEnumeratorType&           eigenvalueEnumerator,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    int                                          unknown,
-    double                                       dt,
+    const MaxEigenvalueEnumeratorType&             eigenvalueEnumerator,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    int                                            unknown,
+    double                                         dt,
     double* __restrict__ QOut,
     const QOutEnumeratorType& QOutEnumerator
   ) InlineMethod;
@@ -573,18 +573,18 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class QInEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void updateSolutionWithEigenvalueDamping(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithEigenvalueDamping(
     const double* __restrict__ QIn,
-    const QInEnumeratorType&                     QInEnumerator,
-    double                                       maxEigenvalueL,
-    double                                       maxEigenvalueR,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    int                                          unknown,
-    double                                       dt,
-    int                                          normal,
+    const QInEnumeratorType&                       QInEnumerator,
+    double                                         maxEigenvalueL,
+    double                                         maxEigenvalueR,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    int                                            unknown,
+    double                                         dt,
+    int                                            normal,
     double* __restrict__ QOut,
     const QOutEnumeratorType& QOutEnumerator
   ) InlineMethod;
@@ -600,15 +600,15 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables, class QInEnumeratorType, class NCPFaceEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeNonconservativeFlux(
     const double* __restrict__ QIn,
-    const QInEnumeratorType&                     QInEnumerator,
-    const NonconservativeProductFunctor&         ncpFunctor,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
+    const QInEnumeratorType&                       QInEnumerator,
+    const NonconservativeProductFunctor&           ncpFunctor,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    double                                         t,
+    double                                         dt,
+    int                                            normal,
     double* __restrict__ ncp,
     const NCPFaceEnumeratorType& ncpEnumerator
   ) InlineMethod;
@@ -619,16 +619,16 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class SolverType, class QInEnumeratorType, class NCPFaceEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void computeNonconservativeFlux(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeNonconservativeFlux(
     const double* __restrict__ QIn,
-    const QInEnumeratorType&                     QInEnumerator,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
+    const QInEnumeratorType&                       QInEnumerator,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    double                                         t,
+    double                                         dt,
+    int                                            normal,
     double* __restrict__ ncp,
     const NCPFaceEnumeratorType& ncpEnumerator
   ) InlineMethod;
@@ -653,17 +653,17 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class NCPFaceEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void updateSolutionWithNonconservativeFlux(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithNonconservativeFlux(
     const double* __restrict__ ncpX,
     const double* __restrict__ ncpY,
     const double* __restrict__ ncpZ,
-    const NCPFaceEnumeratorType&                 ncpEnumerator,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    volumeIndex,
-    int                                          unknown,
-    double                                       dt,
+    const NCPFaceEnumeratorType&                   ncpEnumerator,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    volumeIndex,
+    int                                            unknown,
+    double                                         dt,
     double* __restrict__ QOut,
     const QOutEnumeratorType& QOutEnumerator
   ) InlineMethod;
@@ -676,16 +676,16 @@ namespace exahype2::fv::rusanov::loopbodies {
    */
 #pragma omp declare simd
   template <class NCPFaceEnumeratorType, class QOutEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableMethod void updateSolutionWithNonconservativeFlux(
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void updateSolutionWithNonconservativeFlux(
     const double* __restrict__ ncp,
-    const NCPFaceEnumeratorType&                 ncpEnumerator,
-    const tarch::la::Vector<Dimensions, double>& patchCentre,
-    const tarch::la::Vector<Dimensions, double>& patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions, int>&    faceIndex,
-    int                                          unknown,
-    double                                       dt,
-    int                                          normal,
+    const NCPFaceEnumeratorType&                   ncpEnumerator,
+    const ::tarch::la::Vector<Dimensions, double>& patchCentre,
+    const ::tarch::la::Vector<Dimensions, double>& patchSize,
+    int                                            patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>&    faceIndex,
+    int                                            unknown,
+    double                                         dt,
+    int                                            normal,
     double* __restrict__ QOut,
     const QOutEnumeratorType& QOutEnumerator
   ) InlineMethod;
