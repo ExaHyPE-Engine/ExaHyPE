@@ -16,7 +16,7 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
   TemplateTouchFaceFirstTime = """
   if (fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Boundary) {
     std::pair<int,int> localFaceIndex = std::make_pair(_spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
-    int globalFaceIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFaceIndex);
+    int globalFaceIndex               = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFaceIndex);
     
     assertion( globalFaceIndex>=0 );
 
@@ -46,12 +46,38 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
       );
       
       for (int unknown = 0; unknown<repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; unknown++) {
+        // row correspoding to solution
         int globalMatrixRow = globalFaceIndex + row + 2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
-        // @todo Alex, your code
-        row++;          
+        
+        logTraceInWith3Arguments("TFFT:unknownLoop", unknown, globalMatrixRow, row);
+
+        // insert identity
+        repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+          globalMatrixRow,
+          globalMatrixRow,
+          1
+        );
+
+        // i only want to do the following for the q^f unknown
+        if ( row < repositories::{{SOLVER_INSTANCE}}.FaceUnknowns )
+        {
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalMatrixRow,
+            globalFaceIndex + row, // q^-
+            marker.getSelectedFaceNumber()%2 ? -1 : 0
+          );
+
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalMatrixRow,
+            globalFaceIndex + row + repositories::{{SOLVER_INSTANCE}}.NodesPerFace, // q^+
+            marker.getSelectedFaceNumber()%2 ? 0 : -1
+          );
+        }
+
+        row++;
+
+        logTraceOut("TFFT:unknownLoop");
       }
-//      int 
-//NodesPerFace
       logTraceOut("TFFT::dfore");
 
     }
