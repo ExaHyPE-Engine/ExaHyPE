@@ -20,9 +20,9 @@ class Solver:
     self.max_h = max_h
     
     # don't know what we will store in the future. so keep all of this
-    self._vertex_data = peano4.datamodel.DaStGen2( name + "MFData")
-    self._face_data   = peano4.datamodel.DaStGen2( name + "MFData")
-    self._cell_data   = peano4.datamodel.DaStGen2( name + "MFData")
+    self._vertex_data = peano4.datamodel.DaStGen2( name )
+    self._face_data   = peano4.datamodel.DaStGen2( name )
+    self._cell_data   = peano4.datamodel.DaStGen2( name )
 
     #skip adding the array of unknown base number
 

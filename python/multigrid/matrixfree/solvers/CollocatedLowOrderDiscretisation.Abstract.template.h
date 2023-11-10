@@ -9,9 +9,9 @@
 #include "peano4/utils/Globals.h"
 
 #include "Constants.h"
-#include "vertexdata/{{SOLVER_NAME}}MFData.h"
-#include "celldata/{{SOLVER_NAME}}MFData.h"
-#include "facedata/{{SOLVER_NAME}}MFData.h"
+#include "vertexdata/{{SOLVER_NAME}}.h"
+#include "celldata/{{SOLVER_NAME}}.h"
+#include "facedata/{{SOLVER_NAME}}.h"
 
 
 {{SOLVER_INCLUDES}}
@@ -49,12 +49,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
     ) = 0;
 
-    virtual vertexdata::{{SOLVER_NAME}}MFData::Type getVertexDoFType(
+    virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     ) final;
 
-    virtual celldata::{{SOLVER_NAME}}MFData::Type getCellDoFType(
+    virtual celldata::{{SOLVER_NAME}}::Type getCellDoFType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );

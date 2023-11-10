@@ -17,26 +17,39 @@ class InitDofs(ActionSet):
     return isOnBoundary;
   };
 
-  vertexdata::{{SOLVER_NAME}}MFData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
 
   switch(dofType)
   {
-    case vertexdata::{{SOLVER_NAME}}MFData::Type::Boundary:
+    case vertexdata::{{SOLVER_NAME}}::Type::Boundary:
     {
       if ( marker.willBeRefined() )
       {
         // Coarse grid vertex. Mark it as such for later
-        fineGridVertex{{SOLVER_NAME}}MFData.setType( vertexdata::{{SOLVER_NAME}}MFData::Type::Coarse );
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Coarse );
       }
       else
       {
         // we have boundary vertex
-        fineGridVertex{{SOLVER_NAME}}MFData.setType( vertexdata::{{SOLVER_NAME}}MFData::Type::Boundary );
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Boundary );
+        // init its value too
+        tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> value;
+        tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> rhs;
+
+        // send these into init
+        repositories::{{SOLVER_INSTANCE}}.initVertex( marker.x(), marker.h(), value, rhs );
+
+        // store 
+        for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+        {
+          fineGridVertex{{SOLVER_NAME}}.setValue(dof, value(dof));
+          fineGridVertex{{SOLVER_NAME}}.setRhs(  dof,   rhs(dof));
+        }
       }
     }
     break;
 
-    case vertexdata::{{SOLVER_NAME}}MFData::Type::Interior:
+    case vertexdata::{{SOLVER_NAME}}::Type::Interior:
     {
       if (isOnBoundary(marker.x())) 
       {
@@ -45,26 +58,40 @@ class InitDofs(ActionSet):
 
       if ( marker.willBeRefined() )
       {
-        fineGridVertex{{SOLVER_NAME}}MFData.setType( vertexdata::{{SOLVER_NAME}}MFData::Type::Coarse );
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Coarse );
       }
 
       else
       {
-        fineGridVertex{{SOLVER_NAME}}MFData.setType( vertexdata::{{SOLVER_NAME}}MFData::Type::Interior );
+        fineGridVertex{{SOLVER_NAME}}.setType( vertexdata::{{SOLVER_NAME}}::Type::Interior );
+
+        // init its value too
+        tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> value;
+        tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> rhs;
+
+        // send these into init
+        repositories::{{SOLVER_INSTANCE}}.initVertex( marker.x(), marker.h(), value, rhs );
+
+        // store 
+        for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+        {
+          fineGridVertex{{SOLVER_NAME}}.setValue(dof, value(dof));
+          fineGridVertex{{SOLVER_NAME}}.setRhs(  dof,   rhs(dof));
+        }
       }
     }
     break;
 
-    case vertexdata::{{SOLVER_NAME}}MFData::Type::Coarse:
+    case vertexdata::{{SOLVER_NAME}}::Type::Coarse:
       assertionMsg(false, "should not be returned by user" );
       break;
 
-    case vertexdata::{{SOLVER_NAME}}MFData::Type::Undefined:
+    case vertexdata::{{SOLVER_NAME}}::Type::Undefined:
       assertionMsg(false, "should not be returned by user" );
       break;
   }
 
-  logTraceInWith3Arguments("InitDofs::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}MFData.toString());
+  logTraceInWith3Arguments("InitDofs::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
   logTraceOut("InitDofs::TVFT");
    """

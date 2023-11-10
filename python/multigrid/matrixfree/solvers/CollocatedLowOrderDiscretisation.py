@@ -40,22 +40,26 @@ class CollocatedLowOrderDiscretisation(Solver):
   
     self._unknowns_per_vertex = unknowns_per_vertex
 
-    self._vertex_pde_data = peano4.datamodel.DaStGen2( name )
-    self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",      str(unknowns_per_vertex) ) )
-    self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",        str(unknowns_per_vertex) ) )
-    self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "fieldDiag", str(unknowns_per_vertex) ) )
-    self._vertex_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "residual",   str(unknowns_per_vertex) ) )
+    # already initialised this in superclass!
+    # self._vertex_pde_data = peano4.datamodel.DaStGen2( name )
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",      str(unknowns_per_vertex) ) )
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",        str(unknowns_per_vertex) ) )
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "fieldDiag", str(unknowns_per_vertex) ) )
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "residual",   str(unknowns_per_vertex) ) )
 
     self._local_assembly_matrix         = local_assembly_matrix
     self._local_assembly_matrix_scaling = local_assembly_matrix_scaling
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( CollocatedLowOrderDiscretisation, self ).add_to_Peano4_datamodel(datamodel,verbose)
-    datamodel.add_vertex(self._vertex_pde_data)
+
+    # handled in super!
+    # datamodel.add_vertex(self._vertex_data)
 
   def add_use_statements(self, observer):
     super( CollocatedLowOrderDiscretisation, self ).add_use_statements(observer)
-    observer.use_vertex( self._vertex_pde_data )
+    # handled in super!
+    # observer.use_vertex( self._vertex_data )
 
   def add_to_plot(self, observer):
     """!
@@ -68,7 +72,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     """
     observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
       filename       = "solution-" + self._name,
-      vertex_unknown = self._vertex_pde_data,
+      vertex_unknown = self._vertex_data,
       getter         = "getValue().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
@@ -77,7 +81,7 @@ class CollocatedLowOrderDiscretisation(Solver):
       ))
     observer.add_action_set( peano4.toolbox.PlotVertexDataInPeanoBlockFormat(
       filename       = "rhs-" + self._name,
-      vertex_unknown = self._vertex_pde_data,
+      vertex_unknown = self._vertex_data,
       getter         = "getRhs().data()",
       description    = "u",
       time_stamp_evaluation        = peano4.toolbox.PlotVertexDataInPeanoBlockFormat.CountTimeSteps, 
