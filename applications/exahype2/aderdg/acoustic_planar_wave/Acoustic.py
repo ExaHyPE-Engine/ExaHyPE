@@ -49,7 +49,7 @@ tracer_particles = project.add_tracer( name="Tracer_acoustic",attribute_count=4 
 init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
     particle_set=tracer_particles, coordinates=[[0.0,0.0,0.0][0:dimensions],[0.25,0.25,0.25][0:dimensions],
                                                 [0.5,0.5,0.5][0:dimensions],[0.75,0.75,0.75][0:dimensions]])
-init_action_set.priority = 0
+init_action_set.descend_invocation_order = 0
 project.add_action_set_to_initialisation( init_action_set )
 
 tracer_action_set=exahype2.tracer.DiscontinuousGalerkinTracing(
@@ -57,7 +57,7 @@ tracer_action_set=exahype2.tracer.DiscontinuousGalerkinTracing(
   theSolver,
   project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
 )
-tracer_action_set.priority = 1
+tracer_action_set.descend_invocation_order = 1
 project.add_action_set_to_timestepping(tracer_action_set)
 project.add_action_set_to_initialisation(tracer_action_set)
 
@@ -72,7 +72,7 @@ dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
   time_delta_between_two_snapsots=0.001
   )
 
-dump_action_set.priority = 3
+dump_action_set.descend_invocation_order = 3
 project.add_action_set_to_timestepping(dump_action_set)
 
 

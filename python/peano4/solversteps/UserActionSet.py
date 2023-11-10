@@ -4,8 +4,8 @@ from .ActionSet import ActionSet
 
 
 class UserActionSet(ActionSet):
-  def __init__(self,name,priority = 0, parallel = True):
-    super(UserActionSet,self).__init__(priority,parallel)
+  def __init__(self,name,descend_invocation_order = 0, parallel = True):
+    super(UserActionSet,self).__init__(descend_invocation_order,parallel)
     self.name = name
     pass
 

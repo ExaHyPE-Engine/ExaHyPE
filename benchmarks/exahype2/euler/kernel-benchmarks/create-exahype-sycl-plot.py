@@ -46,7 +46,7 @@ markers_unfilled = ['+', 'x', '1', '2', '3', '4']
 if args.files:
 	cmap = plt.get_cmap("tab10")
 	input_files = [open(i, "r") for i in args.files]
-	if args.device_name.upper() == "A100":
+	if args.device_name.upper() != "PVC":
 		memory_model.remove("usm")
 	for kernel in kernel_variants:
 		marker_counter = 0
@@ -99,9 +99,15 @@ if args.files:
 		plt.xscale('log', base=2)
 		plt.yscale("log")
 		if args.device_name.upper() == "A100":
-			plt.ylim((5e-9, 1e-5))
+			if int(args.dimension) == 2:
+				plt.ylim((5e-9, 1e-5))
+			elif int(args.dimension) == 3:
+				plt.ylim(3e-9, 5e-6)
 		elif args.device_name.upper() == "PVC":
-			plt.ylim((1e-8, 1e-4))
+			if int(args.dimension) == 2:
+				plt.ylim((3e-9, 4e-5))
+			elif int(args.dimension) == 3:
+				plt.ylim(1e-9, 1e-4)
 		plt.legend(fancybox=True)
 		plt.xlabel(r"Number of patches, $T$")
 		plt.ylabel("Kernel time per unknown / s")
@@ -117,7 +123,7 @@ if args.files:
 			plt.savefig(
 				kernel + "-" + args.dimension + "d-" + args.data_structure + ".pdf",
 				bbox_inches='tight')
-	if args.device_name.upper() == "PVC":
+	if "usm" in memory_model:
 		memory_model.remove("usm")
 	for kernel in kernel_variants:
 		plt.cla()
@@ -147,6 +153,7 @@ if args.files:
 							full_time.append(float(line.split("|")[1]))
 							time = re.search('core compute kernel time: (.*) \(', previous)
 							kernel_time.append(float(time.group(1)))
+							#kernel_time.append(float(line.split("|")[5]))
 					if len(kernel_time) != 0 and len(full_time) != 0:
 						plt.plot(number_of_patches[:len(full_time)], full_time, linewidth=1.5,
 								 marker=str(markers_filled[marker_counter]),
@@ -173,9 +180,15 @@ if args.files:
 		plt.xscale('log', base=2)
 		plt.yscale("log")
 		if args.device_name.upper() == "A100":
-			plt.ylim(3e-5, 1e-1)
+			if int(args.dimension) == 2:
+				plt.ylim(3e-5, 1e-1)
+			elif int(args.dimension) == 3:
+				plt.ylim(4e-5, 2e-1)
 		elif args.device_name.upper() == "PVC":
-			plt.ylim()
+			if int(args.dimension) == 2:
+				plt.ylim(2e-5, 1e-1)
+			elif int(args.dimension) == 3:
+				plt.ylim(3e-5, 1e-1) #TBD
 		plt.legend(fancybox=True)
 		plt.xlabel(r"Number of patches, $T$")
 		plt.ylabel("Time / s")

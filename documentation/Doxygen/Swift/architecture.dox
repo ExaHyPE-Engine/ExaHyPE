@@ -98,7 +98,7 @@ the respective functions. In the case above, this would be touchVertexFirstTime(
 It is important to note that Peano's mesh traversals result from top-down tree
 traversals always. This allows us to realise particle-particle interactions via
 simple definitions of so-called active and local particle sets. Details on this
-can be found in peano4.toolbox.particles.ParticleParticleInteraction_Sets for
+can be found in peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets for
 example.
 
 

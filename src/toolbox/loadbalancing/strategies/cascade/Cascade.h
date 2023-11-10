@@ -138,8 +138,12 @@ class toolbox::loadbalancing::strategies::cascade::Cascade: public toolbox::load
       _hostedLoadBalancing0.enable(value);
       _hostedLoadBalancing1.enable(value);
       AbstractLoadBalancing::enable(value);
-      logInfo( "enable(bool)", "lb0=" << _hostedLoadBalancing0.toString() );
-      logInfo( "enable(bool)", "lb1=" << _hostedLoadBalancing1.toString() );
+      if (_activeLoadBalancing==0) {
+        logInfo( "enable(bool)", "lb0=" << _hostedLoadBalancing0.toString() );
+      }
+      else {
+        logInfo( "enable(bool)", "lb1=" << _hostedLoadBalancing1.toString() );
+      }
     }
 
   private:

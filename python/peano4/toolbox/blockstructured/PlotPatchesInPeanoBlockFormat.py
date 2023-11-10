@@ -53,7 +53,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
         You can make the plotter only plot some of the dofs of interest
            
     """
-    super(PlotPatchesInPeanoBlockFormat,self).__init__(priority=1,parallel=False)
+    super(PlotPatchesInPeanoBlockFormat,self).__init__(descend_invocation_order=1,parallel=False)
 
     valid_datatypes = {"float", "double", "long double", "std::float16_t", "std::bfloat16_t"}
 
@@ -327,6 +327,6 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
   def get_static_initialisations(self,full_qualified_classname):
     return """
-tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore(true);
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + """::_semaphore;
 """
     

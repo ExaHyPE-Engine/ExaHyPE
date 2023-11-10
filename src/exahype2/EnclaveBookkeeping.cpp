@@ -45,7 +45,7 @@ void exahype2::EnclaveBookkeeping::cancelTask(int number) {
   if (_finishedTasks.count(number) > 0) {
     Entry storedData = _finishedTasks.at(number);
     _finishedTasks.erase(number);
-    tarch::freeMemory(storedData.data, tarch::MemoryLocation::Heap);
+    tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     tarch::multicore::releaseTaskNumber(number);
   } else {
     _tasksThatHaveToBeCancelled.insert(number);
@@ -87,7 +87,7 @@ void exahype2::EnclaveBookkeeping::waitForTaskAndDiscardResult(int number) {
   logTraceInWith1Argument("waitForTaskAndDiscardResult(int)", number);
 
   Entry storedData = waitForTaskToTerminateAndReturnResult(number);
-  tarch::freeMemory(storedData.data, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
 
   logTraceOut("waitForTaskAndDiscardResult(int)");
 }
@@ -103,7 +103,7 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(
   std::copy_n(storedData.data, storedData.numberOfResultValues, destination);
   maxEigenvalue = storedData.maxEigenvalue;
 
-  tarch::freeMemory(storedData.data, tarch::MemoryLocation::Heap);
+  tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
   logTraceOutWith2Arguments(
     "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", maxEigenvalue, storedData.toString()
   );

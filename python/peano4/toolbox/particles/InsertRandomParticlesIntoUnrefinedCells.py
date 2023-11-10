@@ -65,7 +65,7 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
 
         """
         super(InsertRandomParticlesIntoUnrefinedCells, self).__init__(
-            priority=1, parallel=False
+            descend_invocation_order=1, parallel=False
         )
 
         self.d = {}
