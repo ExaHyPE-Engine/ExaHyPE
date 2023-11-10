@@ -1087,12 +1087,14 @@ if __name__ == "__main__":
       userinfo.append(("Enable double communication, make sure you are using the Second formulism.", None))
       Additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
                                            add_user_defined_actions=True,
+                                           prepare_patch_access_for_this_solver=my_solver,
+                                           action_type="FD4_first_derivative_calculation"
                                            )
       project.register_new_user_defined_algorithmic_step( Additional_mesh_traversal )
       peano4_project.solversteps.add_step( Additional_mesh_traversal )
 
     peano4_project.generate( throw_away_data_after_generation=False )
-    peano4_project.build( make_clean_first = True )
+    #peano4_project.build( make_clean_first = True )
 
     #Report the application information
     userinfo.append(("the executable file name: "+exe, None))

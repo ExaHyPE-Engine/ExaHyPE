@@ -110,6 +110,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
     }
 
     // STEP 1.5: Calculate and update auxiliary variables
+    /*
     if (Dimensions==2 and second_order_formulation) {
 
       for (int x = 0; x < numberOfGridCellsPerPatchPerAxis; x++)
@@ -188,7 +189,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
         }
 
     }
-
+    */
 
 
     // Step 2: Add source terms

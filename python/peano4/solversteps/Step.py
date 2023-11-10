@@ -40,7 +40,7 @@ class Step:
       This name is used to create the underlying action set later on
     """
 
-    def __init__(self, name, add_user_defined_actions=True):
+    def __init__(self, name, add_user_defined_actions=True, prepare_patch_access_for_this_solver=None, action_type=None):
         """
         By default, the step generates at least one action set for the user.
         However, you can disable this behaviour by passing False to
@@ -51,7 +51,9 @@ class Step:
         self.cell_data = []
         self.face_data = []
         self.vertex_data = []
-        if add_user_defined_actions:
+        if add_user_defined_actions and action_type == "FD4_first_derivative_calculation":
+            self.action_sets = [peano4.solversteps.UserActionSet(name, prepare_patch_access_for_this_solver, action_type)]
+        elif add_user_defined_actions:
             self.action_sets = [peano4.solversteps.UserActionSet(name)]
         else:
             self.action_sets = []
