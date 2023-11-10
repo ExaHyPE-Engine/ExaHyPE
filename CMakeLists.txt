@@ -274,8 +274,8 @@ set(RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
 set(RELEASE_LDFLAGS -g)
 
 #-O2 -fno-omit-frame-pointer
-set(CMAKE_CXX_FLAGS_DEBUG -g -O0)
-set(CMAKE_CUDA_FLAGS_DEBUG -g -O0)
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set(CMAKE_CUDA_FLAGS_DEBUG "-g -O0")
 set(DEBUG_DEFINITIONS -DPeanoDebug=4)
 set(DEBUG_LDFLAGS -g)
 
@@ -289,7 +289,7 @@ set(CMAKE_CUDA_FLAGS_ASSERTS ${CMAKE_CUDA_FLAGS_DEBUG})
 set(ASSERTS_DEFINITIONS -DPeanoDebug=2)
 set(ASSERTS_LDFLAGS -g)
 
-set(CMAKE_CXX_FLAGS_TRACE -g -O2)
+set(CMAKE_CXX_FLAGS_TRACE "-g -O2")
 set(CMAKE_CUDA_FLAGS_TRACE ${CMAKE_CXX_FLAGS_TRACE})
 set(TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
 set(TRACE_LDFLAGS -g)
@@ -379,11 +379,13 @@ if(WITH_NETCDF)
 endif()
 
 if(ENABLE_EXAHYPE)
-  target_compile_definitions(project_options INTERFACE UseExaHyPE)
+  #target_compile_definitions(project_options INTERFACE UseExaHyPE)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseExaHyPE)
 endif()
 
 if(ENABLE_SWIFT)
-  target_compile_definitions(project_options INTERFACE UseSWIFT)
+  #target_compile_definitions(project_options INTERFACE UseSWIFT)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseSWIFT)
 endif()
 
 include(CMakePackageConfigHelpers)
