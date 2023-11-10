@@ -40,15 +40,14 @@ class AssemblePetscMatrix(ActionSet):
         }
       }
       
+      //lhs
+      auto lhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
       // loop over the dofs
       for (int d=0; d<{{VERTEX_CARDINALITY}}; d++)
       {
-        //lhs
         for (int i=0; i<TwoPowerD; i++) {
           for (int j=0; j<TwoPowerD; j++) {
             if (vertexIndices[i] != -1 and vertexIndices[j] != -1) {
-              auto lhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
-      
               repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().increment(
                 vertexIndices[i] + d, //d for dof
                 vertexIndices[j] + d, 
@@ -99,11 +98,14 @@ class AssemblePetscMatrix(ActionSet):
     
     assertion3(globalIndex>=0, globalIndex, marker.toString(), fineGridVertex{{SOLVER_NAME}}PETScData.toString() );
 
-    //get the rhs that was present in the mesh
-    double rhs = fineGridVertex{{SOLVER_NAME}}.getRhs(0);
+    for (int i=0; i<{{VERTEX_CARDINALITY}}; i++)
+    {
+      //get the rhs that was present in the mesh
+      double rhs = fineGridVertex{{SOLVER_NAME}}.getRhs(i);
 
-    //send these to petsc
-    repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(globalIndex, rhs);
+      //send these to petsc
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(globalIndex + i, rhs);
+    }
 
   }
   """
@@ -330,7 +332,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     to the observer.
     
     """
-    observer.add_action_set( EnumerateDoFs(self) )
+    observer.add_action_set( EnumerateDoFs(self, True, False) )
     observer.add_action_set( InitVertexDoFs(self) ) 
     pass
   
@@ -379,6 +381,7 @@ class CollocatedLowOrderDiscretisation(Solver):
         "VERTEX_CARDINALITY": self.number_of_matrix_entries_per_vertex,
         "CELL_LHS_MATRIX_SCALING": self.cell_lhs_matrix_scaling,
         "CELL_RHS_MATRIX_SCALING": self.cell_rhs_matrix_scaling,
+        "SOLVER_NAME":                           self.typename(),
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

@@ -22,6 +22,10 @@
 
 #include "Constants.h"
 
+#include "vertexdata/{{SOLVER_NAME}}PETScData.h"
+#include "facedata/{{SOLVER_NAME}}PETScData.h"
+#include "celldata/{{SOLVER_NAME}}PETScData.h"
+
 
 {{SOLVER_INCLUDES}}
 
@@ -57,6 +61,29 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
       tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
     ) = 0;
+
+    virtual vertexdata::{{SOLVER_NAME}}PETScData::Type getVertexDoFType(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h
+    ) final;
+
+    /*
+    In this experiement, we have data only on vertices, so the following
+    method returns Outside
+    */
+    virtual facedata::{{SOLVER_NAME}}PETScData::Type getFaceDoFType(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h
+    );
+
+    /*
+    We need the cells to be marked Interior. Only cells marked interior
+    are ones that we add elements to PETSc matrix.
+    */
+    virtual celldata::{{SOLVER_NAME}}PETScData::Type getCellDoFType(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h
+    );
 
     /**
      * Called after assembly is complete.
