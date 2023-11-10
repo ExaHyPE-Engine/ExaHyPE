@@ -259,10 +259,10 @@ peano4_project.output.makefile.add_cpp_file("Euler.cpp")
 peano4_project.output.makefile.add_h_file("Poisson.h")
 peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
 
-# peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
-# if args.j==0:
-#   peano4_project.generate()
-# else:
-#   peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+if args.j==0:
+  peano4_project.generate()
+else:
+  peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 
 print("Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")

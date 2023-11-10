@@ -306,15 +306,7 @@ class Project (object):
       result_project = Project(lhs.namespace, project_name, executable)
       result_project._executable_name = executable
 
-      result_project.output.makefile.d["CXX"] = lhs.output.makefile.d["CXX"]
-
-      lhs_list_of_cxxflags = lhs.output.makefile.d["CXXFLAGS"].split(" ")
-      rhs_list_of_cxxflags = rhs.output.makefile.d["CXXFLAGS"].split(" ")
-      result_project.output.makefile.d["CXXFLAGS"] = lhs.output.makefile.d["CXXFLAGS"]
-      for cxxflag in rhs_list_of_cxxflags:
-        if cxxflag in lhs_list_of_cxxflags:
-          result_project.output.makefile.d["CXXFLAGS"] += " " + cxxflag
-
+      # merging attributes of datamodel
       for v in lhs.datamodel.vertex_data:
         result_project.datamodel.add_vertex(v)
       for v in rhs.datamodel.vertex_data:
@@ -335,6 +327,22 @@ class Project (object):
       for g in rhs.datamodel.global_data:
         result_project.datamodel.add_global(g)
 
+      #...
+
+      # merging attributes of solversteps
+
+      for step in lhs.solversteps._steps:
+        result_project.solversteps.append(step)
+
+      result_project.output.makefile.d["CXX"] = lhs.output.makefile.d["CXX"]
+
+      lhs_list_of_cxxflags = lhs.output.makefile.d["CXXFLAGS"].split(" ")
+      rhs_list_of_cxxflags = rhs.output.makefile.d["CXXFLAGS"].split(" ")
+      result_project.output.makefile.d["CXXFLAGS"] = lhs.output.makefile.d["CXXFLAGS"]
+      for cxxflag in rhs_list_of_cxxflags:
+        if cxxflag in lhs_list_of_cxxflags:
+          result_project.output.makefile.d["CXXFLAGS"] += " " + cxxflag
+
       # ...
 
       result_project.constants.d = {**lhs.constants.d, **rhs.constants.d} #_merge(lhs.constants.d, rhs.constants.d)
@@ -342,5 +350,3 @@ class Project (object):
       # @todo Dmitry please befill
       
       return result_project
-
-
