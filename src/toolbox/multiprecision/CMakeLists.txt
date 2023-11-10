@@ -16,6 +16,10 @@ foreach(mode IN LISTS BUILD_MODES)
     target_link_libraries(ToolboxMultiprecision${dimension}d_${mode_lower} PUBLIC project_options Peano4Core${dimension}d_${mode_lower})
     target_link_libraries(ToolboxMultiprecision${dimension}d_${mode_lower} PRIVATE project_warnings)
 
+    if(USE_COMPONENT_DEFINITIONS)
+      set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxMultiprecision)
+    endif()
+
     install(TARGETS ToolboxMultiprecision${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
               COMPONENT           ${PROJECT_NAME}_Runtime

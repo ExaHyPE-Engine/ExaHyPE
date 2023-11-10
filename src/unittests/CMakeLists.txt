@@ -24,6 +24,10 @@ foreach(mode IN LISTS BUILD_MODES)
       target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC SWIFT2Core${dimension}d_${mode_lower})
     endif()
 
+    if(USE_COMPONENT_DEFINITIONS)
+      target_compile_definitions(UnitTests${dimension}d_${mode_lower} PUBLIC ${USE_COMPONENT_DEFINITIONS})
+    endif()
+
     install(TARGETS UnitTests${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
               COMPONENT           ${PROJECT_NAME}_Runtime
