@@ -4,15 +4,14 @@ import argparse
 import subprocess
 
 parser = argparse.ArgumentParser(description='Configuration helper script for GNU Autotools and CMake')
-parser.add_argument('--cmake', help='Use CMake')
-parser.add_argument('-t', '--toolchain', choices=['gcc', 'llvm', 'nvidia', 'amd', 'intel'], help='Select toolchain')
+parser.add_argument('--cmake', help='Use CMake; specify target build folder via --cmake=...')
 parser.add_argument('-cc', '--cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
 parser.add_argument('-cxx', '--cxx', type=str, default=os.environ.get('CXX'), help='C++ compiler to use')
-parser.add_argument('--exahype', action='store_true', help='Enable ExaHyPE')
-parser.add_argument('--swift', action='store_true', help='Enable Swift')
+parser.add_argument('--exahype', action='store_true', help='Enable ExaHyPE2')
+parser.add_argument('--swift', action='store_true', help='Enable Swift2')
 parser.add_argument('--particles', action='store_true', help='Enable particles support')
 parser.add_argument('--loadbalancing', action='store_true', help='Enable load balancing support')
-parser.add_argument('--blockstructured', action='store_true', help='Enable block structured grid support')
+parser.add_argument('--blockstructured', action='store_true', help='Enable block structured support')
 parser.add_argument('--fem', action='store_true', help='Enable finite elements support')
 parser.add_argument('--petsc', action='store_true', help='Enable PETSc support')
 parser.add_argument('--libxsmm', action='store_true', help='Enable libxsmm support')
@@ -20,7 +19,7 @@ parser.add_argument('--multithreading', choices=['omp', 'tbb', 'sycl', 'cpp'], h
 parser.add_argument('--mpi', help='Enable MPI support')
 parser.add_argument('--gpu', choices=['omp', 'cuda', 'sycl', 'cpp', 'hip'], help='Enable GPU support')
 parser.add_argument('--asm', action='store_true', help='Dump generated assembly code')
-parser.add_argument('--cuda-path', type=str, help='Path to CUDA')
+parser.add_argument('--cuda-path', type=str, help='Path to the CUDA toolkit')
 parser.add_argument('--arch', choices=[
   'gfx906', 'gfx908', 'gfx90a', 'gfx1030', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
   'sm_70', 'sm_72', 'sm_75', 'sm_80', 'sm_86', 'sm_90',
@@ -32,56 +31,77 @@ cflags = ''
 cxxflags = '-std=c++20 -w'
 #cxxflags = '-std=c++20 -W -Wall -Wextra'
 nvccflags = ''
+configure_args = []
 
 # Merge in any additional flags needed for the selected multithreading backend
 if args.multithreading == 'omp':
+  cflags += ' -fopenmp'
   cxxflags += ' -fopenmp'
 
 if args.multithreading == 'tbb':
+  cflags += ' -ltbb'
   cxxflags += ' -ltbb'
 
 if args.multithreading == 'sycl':
+  cflags += ' -fsycl'
   cxxflags += ' -fsycl'
 
 # Merge in any additional flags needed for the selected GPU backend
-if args.gpu and not args.gpu == 'cuda' and not args.toolchain:
-  print("Error: You need to specify a toolchain when using GPU support")
-  exit(-1)
-
 if args.gpu and not args.arch:
-  print("Error: You need to specify a GPU architecture when using GPU support")
+  print("Error: You need to specify a GPU architecture when using GPU support.")
   exit(-1)
 
-if args.gpu == 'omp' and args.toolchain == "clang":
+if args.gpu == 'omp' and "clang" in args.cc and "clang++" in args.cxx:
+  cflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=' + args.arch
   cxxflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=' + args.arch
   if args.asm:
+    cflags += ' -save-temps'
     cxxflags += ' -save-temps'
-
-if args.gpu == 'omp' and args.toolchain == "amd":
+elif args.gpu == 'omp' and "amdclang" in args.cc and "amdclang++" in args.cxx:
+  cflags += ' -lstdc++fs --offload-arch=' + args.arch
   cxxflags += ' -lstdc++fs --offload-arch=' + args.arch
-
-if args.gpu == 'omp' or args.gpu == 'cpp' and args.toolchain == "nvidia":
+elif args.gpu == 'omp' and "nvc" in args.cc and "nvc++" in args.cxx:
+  cflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
   cxxflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
   if args.asm:
-   cxxflags += ' -gpu=keep'
-
-if args.gpu == 'omp' and args.toolchain == "gcc":
+    cflags += ' -gpu=keep'
+    cxxflags += ' -gpu=keep'
+elif args.gpu == 'cpp' and "nvc" in args.cc and "nvc++" in args.cxx:
+  cflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
+  cxxflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc") + " -stdpar=gpu"
+  if args.asm:
+    cflags += ' -gpu=keep'
+    cxxflags += ' -gpu=keep'
+elif args.gpu == 'omp' and "gcc" in args.cc and "g++" in args.cxx:
+  cflags += ' -fopenmp -foffload=nvptx-none -march=native'
   cxxflags += ' -fopenmp -foffload=nvptx-none -march=native'
   if args.asm:
+    cflags += ' -save-temps'
     cxxflags += ' -save-temps'
-
-if args.gpu == 'sycl' and args.toolchain == "intel":
+elif args.gpu == 'sycl' and "icx" in args.cc and "icpx" in args.cxx:
   if "gfx" in args.arch:
+    cflags += ' -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch=' + args.arch
     cxxflags += ' -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch=' + args.arch
-  elif "cc" in args.arch:
-    #cxxflags += ' -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
-    cxxflags += ' -fsycl -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
+  if "spir" in args.arch:
+    cflags += ' -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent'
+    cxxflags += ' -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent'
+  else:
+    cflags += ' -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
+    cxxflags += ' -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
+elif args.gpu == 'cuda':
+  nvccflags += f'-arch={args.arch}'
+  if args.cuda_path is not None:
+    if not args.cmake:
+      # CUDA path is only needed with Automake builds
+      # CMake automatically finds it
+      configure_args.append(f'--with-cuda={args.cuda_path}')
+  else:
+    print("Error: You need to specify the path to the CUDA toolkit when compiling with CUDA.")
+    exit(-1)
+else:
+  print("Error: Unsupported compiler and flag combination requested: CC=" + args.cc + " CXX=" + args.cxx)
+  exit(-1)
 
-if args.gpu == 'cuda':
-  nvccflags += f'-arch={args.arch}'  # arch flag is needed independent of toolchain
-
-# Call the ./configure script with the specified arguments
-configure_args = []
 if args.multithreading is not None:
   if args.cmake:
     configure_args.append(f'-DWITH_MULTITHREADING={args.multithreading}')
@@ -94,16 +114,6 @@ if args.gpu is not None:
     configure_args.append(f'-DWITH_GPU_ARCH={args.arch}')
   else:
     configure_args.append(f'--with-gpu={args.gpu}')
-
-# CUDA path is only needed on automake builds
-# CMake automatically finds it
-if args.gpu == "cuda":
-  if args.cuda_path is not None:
-    if not args.cmake:
-      configure_args.append(f'--with-cuda={args.cuda_path}')
-  else:
-    print("Error: You need to specify the CUDA path when compiling with CUDA")
-    exit(-1)
 
 if args.mpi is not None:
   if args.cmake:
@@ -218,6 +228,7 @@ else:
   subprocess.run(['cp', f'{os.getcwd()}/src/config.h.in', os.getcwd()])
   subprocess.run(['automake', '--add-missing'], cwd=os.getcwd())
 
+  # Call the ./configure script with the specified arguments
   args_str = ' '.join(configure_args)
   args_list = shlex.split(args_str)
 
