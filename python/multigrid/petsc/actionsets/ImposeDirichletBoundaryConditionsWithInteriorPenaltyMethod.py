@@ -69,7 +69,7 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
 
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalMatrixRow,
-            globalFaceIndex + row + repositories::{{SOLVER_INSTANCE}}.NodesPerFace, // q^+
+            globalFaceIndex + row + repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns, // q^+
             marker.getSelectedFaceNumber()%2 ? 0 : -1
           );
         }
