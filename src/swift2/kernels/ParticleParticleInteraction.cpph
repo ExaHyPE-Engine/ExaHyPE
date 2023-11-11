@@ -4,6 +4,7 @@
 #include "swift2/legacy/kernel_hydro.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
+#include "tarch/accelerator/accelerator.h"
 
 
 template <typename Particle, typename ParticleContainer>
