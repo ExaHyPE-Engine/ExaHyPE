@@ -55,7 +55,7 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
   }
   for (auto *particle : particles) {
 	if (firstParticle+currentParticle != particle) {
-      std::cerr << "non-continuous memory in element" << currentParticle << std::endl;
+      std::cerr << "non-continuous memory in element " << currentParticle << std::endl;
       exit(1);
 	}
 	currentParticle++;
