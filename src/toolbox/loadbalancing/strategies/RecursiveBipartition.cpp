@@ -20,6 +20,7 @@ toolbox::loadbalancing::strategies::RecursiveBipartition::RecursiveBipartition(C
   AbstractLoadBalancing( configuration, costMetrics ),
   _roundRobinToken(0) {
   assertion( configuration!=nullptr );
+  assertion( costMetrics!=nullptr );
   _state = State::SwitchedOff;
   _statistics.notifyOfStateChange(_state);
 }

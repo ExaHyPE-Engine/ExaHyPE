@@ -5,7 +5,19 @@
 
 
 namespace swift2 {
-  namespace dependencyChecks {
+  /**
+   * @namespace Dependency checks
+   *
+   * A set of routines which do dependency checks, i.e. validate per particle
+   * if the particle has completed its previous algorithmic steps before we
+   * allow it to do the next state transition. Basically, this flag ensures
+   * that we do not leave out particles and forget to update them or jump
+   * the queue.
+   *
+   * The macros are automatically inserted into the code whenever you compile
+   * with assertions. This happens in swift2.particle.Particle.
+   */
+  namespace dependencychecks {
 
     /**
      * @brief This function is meant to be called on a particle on which dependency issues
@@ -21,7 +33,7 @@ namespace swift2 {
      *                         to screen before exiting.
      */
     template <typename Particle>
-    static void dependencyCheckAlgorithmStepDebugOutput(
+    static void checkAlgorithmStepDebugOutput(
       const Particle*                                             particle,
       typename std::remove_pointer<Particle>::type::AlgorithmStep algorithmStepMarkerEnum,
       typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
@@ -44,7 +56,7 @@ namespace swift2 {
      *                         to screen before exiting.
      */
     template <typename Particle>
-    static void dependencyCheckInitStepDebugOutput(
+    static void checkInitStepDebugOutput(
       const Particle*                                          particle,
       typename std::remove_pointer<Particle>::type::InitStep   initStepMarkerEnum,
       typename std::remove_pointer<Particle>::type::SweepStage sweepStageMarkerEnum,
@@ -56,7 +68,10 @@ namespace swift2 {
     /**
      * @brief Mark a localParticle having entered a sweep stage in a main algorithm step.
      *
-     * @param localParticle: the problematic particle
+     * This routine is used both by touchVertexFirstTime and
+     * touchVertexLastTime to keep track of state transitions.
+     *
+     * @param hostedParticles: the particles around a vertex that will be subject to the validation
      * @param marker: a peano4::datamanagement::VertexMarker or peano4::datamanagement::CellMarker
      * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
      * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
@@ -70,8 +85,8 @@ namespace swift2 {
      *                       of the functions defined in src/swift2/kernels/ParticleState.h
      */
     template <typename ParticleContainer, typename Marker>
-    static void dependencyMarkAlgorithmStep(
-      const ParticleContainer&                                                                  localParticles,
+    static void markAlgorithmStep(
+      const ParticleContainer&                                                                  hostedParticles,
       const Marker&                                                                             marker,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    sweepStageMarkerEnum,
@@ -97,7 +112,7 @@ namespace swift2 {
      *                       of the functions defined in src/swift2/kernels/ParticleState.h
      */
     template <typename ParticleContainer, typename Marker>
-    static void dependencyMarkInitStep(
+    static void markInitStep(
       const ParticleContainer&                                                               localParticles,
       const Marker&                                                                          marker,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
@@ -154,6 +169,10 @@ namespace swift2 {
      * main algorithm steps before the current one. If an error is found, debug information is printed to stdout
      * and the program is aborted.
      *
+     * This routine is typically inserted into touchVertexFirstTime() and
+     * ensures that all data piped into an algorithm step are valid and
+     * consistent.
+     *
      * @param localParticles: set of local Particles to perform checks on
      * @param marker: a peano4::datamanagement::VertexMarker or peano4::datamanagement::CellMarker
      * @param algorithmStepMarkerEnum: Enum representing current main algorithm step
@@ -165,7 +184,7 @@ namespace swift2 {
      *                       of the functions defined in src/swift2/kernels/ParticleState.h
      */
     template <typename ParticleContainer, typename Marker>
-    static void dependencyCheckAlgorithmStep(
+    static void checkAlgorithmStep(
       const ParticleContainer&                                                                  localParticles,
       const Marker&                                                                             marker,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
@@ -175,16 +194,30 @@ namespace swift2 {
 
 
     /**
-     * @brief Dependency Check: At the final stage of a sweep (TouchVertexLastTime), check that all
-     * ActiveParticles have completed all their dependencies, i.e. have been localParticles at least
+     * @brief Dependency Check: At the final stage of a sweep, i.e. touchVertexLastTime(), check that all
+     * particles hosted by this vertex have completed all their dependencies, i.e. have been localParticles at least
      * once.
      *
-     * @param activeParticles: set of active Particles to perform checks on
+     * Within the vertex events touchVertexFirstTime() and
+     * touchVertexLastTime(), we have no active and local particles anymore.
+     * There are solely the ones around the vertex on this mesh level. They are
+     * called hostedParticles.
+     *
+     * Throughout the traversal, there are no global active and local
+     * particles: Both sets are views onto the global particle set and they adopt
+     * per cell. These views are not even exclusive, i.e. local particles are
+     * always a subset of active ones. We know that cells update only local
+     * particles. Within a subsequent touchVertexLastTime(), every particles has
+     * have to be updated, i.e. every particle has been local at least once.
+     * Therefore, we write that all particles have to have been local at least
+     * once.
+     *
+     * @param hostedParticles: set of particles hosted by a vertex to perform checks on
      * @param algorithmStepMarkerEnum: Enum representing current main algorithm step
      */
     template <typename ParticleContainer>
-    static void dependencyCheckActiveParticlesAlgorithmStep(
-      const ParticleContainer&                                                                  activeParticles,
+    static void checkParticlesAssignedToVertexInTouchLastTimeAlgorithmStep(
+      const ParticleContainer&                                                                  hostedParticles,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum
     );
 
@@ -205,7 +238,7 @@ namespace swift2 {
      *                       of the functions defined in src/swift2/kernels/ParticleState.h
      */
     template <typename ParticleContainer, typename Marker>
-    static void dependencyCheckInitStep(
+    static void checkInitStep(
       const ParticleContainer&                                                               localParticles,
       const Marker&                                                                          marker,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
@@ -223,7 +256,7 @@ namespace swift2 {
      * @param initStepMarkerEnum: Enum representing current initialisation algorithm step
      */
     template <typename ParticleContainer>
-    static void dependencyCheckActiveParticlesInitStep(
+    static void checkParticlesAssignedToVertexInTouchLastTimeInitStep(
       const ParticleContainer&                                                             activeParticles,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep initStepMarkerEnum
     );
@@ -249,7 +282,7 @@ namespace swift2 {
     static void clearDependencyChecksInitStep(const ParticleContainer& localParticles);
 
 
-  } // namespace dependencyChecks
+  } // namespace checks
 } // namespace swift2
 
-#include "DependencyChecks.cpph"
+#include "../dependencychecks/DependencyChecks.cpph"

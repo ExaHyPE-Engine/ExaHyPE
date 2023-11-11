@@ -33,6 +33,63 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
 
 
 template <typename ParticleContainer>
+void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
+  const ParticleContainer&  particles,
+  int                       numberOfParticles
+) {
+
+  const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
+                                .getMinTimeStepSize();
+
+  const auto newState = std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved;
+
+  typename ParticleContainer::value_type  firstParticle = *particles.begin();
+
+
+  // @todo remove
+  // ============
+  int currentParticle = 0;
+  if ( particles.size()!=numberOfParticles ) {
+    std::cerr << "container sizes do not match: " << particles.size() << " vs " << numberOfParticles << std::endl;
+    exit(1);
+  }
+  for (auto *particle : particles) {
+	if (firstParticle+currentParticle != particle) {
+      std::cerr << "non-continuous memory in element" << currentParticle << std::endl;
+      exit(1);
+	}
+	currentParticle++;
+  }
+
+
+/*
+  auto *minPtr = (typename ParticleContainer::value_type) -1;
+  auto maxPtr = (typename ParticleContainer::value_type) nullptr;
+
+  for (auto *particle : particles) {
+      if (particle < minPtr) minPtr = particle;
+      if (particle > maxPtr) maxPtr = particle;
+  }
+
+  if (minPtr + particles.size() != maxPtr) {
+      printf("Non-continuous memory!\n");
+      exit(1);
+  }
+*/
+  // ============
+
+  for (auto i = 0; i < numberOfParticles; i++) {
+      auto* particle = firstParticle + i;
+
+      auto mask = (double) (swift2::kernels::localParticleCanBeMoved(particle) & !particle->getIsBoundaryParticle());
+
+      particle->setX(particle->getX() + mask * timeStepSize * particle->getV_full());
+      particle->setMoveState(newState);
+  }
+}
+
+
+template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
   const double timeStepSizeKick = 0.5
                                   * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()

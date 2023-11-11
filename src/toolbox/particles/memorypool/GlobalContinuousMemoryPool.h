@@ -187,6 +187,21 @@ private:
      */
     int addPage(int size);
 
+    /**
+     * Free a page
+     *
+     * Set the page pageNumber to unused (boolean flag). After that, study the
+     * last page. If this one is empty - that is, if the current freePage() has
+     * freed the last page - remove it completely. This is done iteratively, as
+     * the last free could have "unlocked" a whole sequence of pages. By
+     * deleting pages at the end, we give Peano the opportunity to create new,
+     * larger or smaller pages.
+     *
+     * Finally, we study if all pages now have been freed. If this is the case,
+     * we have the unique opportunity to grow the total memory using
+     * information about the requests that we haven't been able to serve
+     * before.
+     */
     void freePage(int pageNumber);
   };
 

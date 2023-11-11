@@ -29,12 +29,9 @@ from .ParticleTreeAnalysis import create_cell_marker
 from .ParticleTreeAnalysis import ParticleTreeAnalysis
 
 
-from .UpdateParticleGridAssociation_Reassign import (
-    UpdateParticleGridAssociation_Reassign,
-)
-from .UpdateParticleGridAssociation_LiftDrop import (
-    UpdateParticleGridAssociation_LiftDrop,
-)
+from .UpdateParticleGridAssociation_Reassign   import UpdateParticleGridAssociation_Reassign
+from .UpdateParticleGridAssociation_LiftDrop   import UpdateParticleGridAssociation_LiftDrop
+from .UpdateParticleGridAssociation_BucketSort import UpdateParticleGridAssociation_BucketSort
 
 
 from .UpdateParallelState import UpdateParallelState

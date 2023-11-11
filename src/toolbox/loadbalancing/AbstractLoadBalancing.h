@@ -48,12 +48,29 @@ class toolbox::loadbalancing::AbstractLoadBalancing {
      *
      * afterwards to ensure that the statistics are correct right from the
      * start.
+     *
+     *
+     * ## Rationale
+     *
+     * I originally thought it might be reasonable to add assertions to ensure
+     * that configuration and costMetrics are not nullptr. However, there are
+     * specific hard-coded load balancing schemes which do explicitly use
+     * nullptr arguments. Hardcoded is the prime example. Therefore, I do not
+     * nullptr checks here and I leave it to subclasses to add the
+     * corresponding assertions if they require proper pointers here.
      */
     AbstractLoadBalancing(
       Configuration*  configuration,
       CostMetrics*    costMetrics
     );
 
+    /**
+     * Destructor
+     *
+     * Free the configuration and cost metrics objects. See the discussion in
+     * the constructor for contextual information re the validity of nullptr
+     * arguments here.
+     */
     virtual ~AbstractLoadBalancing();
 
 

@@ -15,7 +15,7 @@ SWIFT2Sources = \
   kernels/ParticleSelfInteraction.cpp \
   kernels/SwiftKernelPlaceholders.cpp \
   kernels/SmoothingLengthComputation.cpp \
-  dependencyChecks/DependencyChecks.cpp
+  dependencychecks/DependencyChecks.cpp
 
 libSWIFT2Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
 libSWIFT2Core2d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_TRACE)  
