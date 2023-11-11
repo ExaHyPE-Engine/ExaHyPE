@@ -45,37 +45,13 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
 
   typename ParticleContainer::value_type  firstParticle = *particles.begin();
 
-
   assertion1( particles.isGathered(), particles.toString() );
+  assertionEquals1( particles.size(), numberOfParticles, particles.toString() );
   int currentParticle = 0;
-  if ( particles.size()!=numberOfParticles ) {
-    std::cerr << "container sizes do not match: " << particles.size() << " vs " << numberOfParticles << std::endl;
-    exit(1);
-  }
   for (auto *particle : particles) {
-	if (firstParticle+currentParticle != particle) {
-      std::cerr << "non-continuous memory in element " << currentParticle << ": " << particles.toString() << std::endl;
-      exit(1);
-	}
-	currentParticle++;
+    assertion1( firstParticle+currentParticle==particle, particles.toString() );
+    currentParticle++;
   }
-
-
-/*
-  auto *minPtr = (typename ParticleContainer::value_type) -1;
-  auto maxPtr = (typename ParticleContainer::value_type) nullptr;
-
-  for (auto *particle : particles) {
-      if (particle < minPtr) minPtr = particle;
-      if (particle > maxPtr) maxPtr = particle;
-  }
-
-  if (minPtr + particles.size() != maxPtr) {
-      printf("Non-continuous memory!\n");
-      exit(1);
-  }
-*/
-  // ============
 
   for (auto i = 0; i < numberOfParticles; i++) {
       auto* particle = firstParticle + i;
