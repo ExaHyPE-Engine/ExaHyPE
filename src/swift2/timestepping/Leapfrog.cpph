@@ -46,8 +46,7 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
   typename ParticleContainer::value_type  firstParticle = *particles.begin();
 
 
-  // @todo remove
-  // ============
+  assertion1( particles.isGathered(), particles.toString() );
   int currentParticle = 0;
   if ( particles.size()!=numberOfParticles ) {
     std::cerr << "container sizes do not match: " << particles.size() << " vs " << numberOfParticles << std::endl;
