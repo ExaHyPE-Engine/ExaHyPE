@@ -104,8 +104,9 @@ elif args.gpu == 'cuda':
     print("Error: You need to specify the path to the CUDA toolkit when compiling with CUDA.")
     exit(-1)
 else:
-  print("Error: Unsupported compiler and flag combination requested: CC=" + args.cc + " CXX=" + args.cxx)
-  exit(-1)
+  if args.gpu is not None:
+    print("Error: Unsupported GPU compiler and flag combination requested: CC=" + args.cc + " CXX=" + args.cxx + " --gpu=" + args.gpu)
+    exit(-1)
 
 if args.multithreading is not None:
   if args.cmake:
