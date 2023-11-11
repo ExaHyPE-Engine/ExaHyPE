@@ -1,403 +1,376 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include <cstdlib>
 
-#include "GPUCellData.h"
-#include "Rusanov.h"
-#include "tarch/accelerator/accelerator.h"
-#include "tarch/accelerator/sycl/GPUMemoryManager.h"
-#include "tarch/compiler/CompilerSpecificSettings.h"
-#include "tarch/timing/Watch.h"
-#include "exahype2/fv/rusanov/LoopBody.h"
-
-
-#if defined(GPUOffloadingSYCL)
 template <
-  typename     Solver,
-  std::size_t  numberOfVolumesPerAxisInPatch,
-  std::size_t  haloSize,
-  std::size_t  unknowns,
-  std::size_t  auxiliaryVariables,
-  typename     TempDataEnumerator
->
-void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls(
-  int                     targetDevice,
-  auto&                   patchData,
-  bool                    evaluateFlux,
-  bool                    evaluateNonconservativeProduct,
-  bool                    evaluateSource,
-  bool                    evaluateMaximumEigenvalueAfterTimeStep
-) {
-  static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
-  logTraceIn("timeStepWithRusanov_batched_static_calls()");
-
+  class SolverType,
+  std::size_t NumberOfVolumesPerAxisInPatch,
+  std::size_t HaloSize,
+  std::size_t NumberOfUnknowns,
+  std::size_t NumberOfAuxiliaryVariables,
+  bool        EvaluateFlux,
+  bool        EvaluateNonconservativeProduct,
+  bool        EvaluateSource,
+  bool        EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless(int targetDevice, auto& patchData) {
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  constexpr int solversHaloSize = 1;
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
-    1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
-  );
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
-    1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
-  );
-  TempDataEnumerator fluxEnumerator(
-    patchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, unknowns, 0
-  );
-  TempDataEnumerator ncpEnumerator(
-    patchData.numberOfCells, numberOfVolumesPerAxisInPatch + 1, solversHaloSize, unknowns, 0
-  );
-  TempDataEnumerator eigenvalueEnumerator(
-    patchData.numberOfCells, numberOfVolumesPerAxisInPatch, solversHaloSize, 1, 0
-  );
-
-
-  double* tempFluxX = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
-  double* tempFluxY = evaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
-  double* tempFluxZ = evaluateFlux and Dimensions == 3
-                        ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue)
-                        : nullptr;
-  double* tempNonconservativeProductX = evaluateNonconservativeProduct
-                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
-                                          : nullptr;
-  double* tempNonconservativeProductY = evaluateNonconservativeProduct
-                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
-                                          : nullptr;
-  double* tempNonconservativeProductZ = evaluateNonconservativeProduct and Dimensions == 3
-                                          ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue)
-                                          : nullptr;
+  double* tempFluxX                   = EvaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempFluxY                   = EvaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempFluxZ                   = EvaluateFlux and Dimensions == 3 ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
+  double* tempNonconservativeProductX = EvaluateNonconservativeProduct ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue) : nullptr;
+  double* tempNonconservativeProductY = EvaluateNonconservativeProduct ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue) : nullptr;
+  double* tempNonconservativeProductZ = EvaluateNonconservativeProduct and Dimensions == 3 ? ::sycl::malloc_device<double>(ncpEnumerator.size(), queue) : nullptr;
   double* tempEigenvalueX             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
   double* tempEigenvalueY             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
   double* tempEigenvalueZ             = ::sycl::malloc_device<double>(eigenvalueEnumerator.size(), queue);
 
   const std::size_t numberOfPatches = patchData.numberOfCells;
-  ::sycl::event     copySolutionEvent;
-  if (Dimensions == 2 and evaluateSource) {
-    copySolutionEvent = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
 
-          ::exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
+  ::sycl::event copySolutionEvent;
+  // ====================================================
+  // Copy solution over and evaluate source (if required)
+  // ====================================================
+  if constexpr (EvaluateSource) {
+#if Dimensions == 2
+    copySolutionEvent = queue.submit([&](::sycl::handler& handle) {
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int y          = i[2];
+        loopbodies::copySolutionAndAddSourceTerm<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex(x, y),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      });
+    });
+#else
+    copySolutionEvent = queue.submit([&](::sycl::handler& handle) {
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int y          = i[2];
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+          loopbodies::copySolutionAndAddSourceTerm<SolverType>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x, y),
+            volumeIndex(x, y, z),
             patchData.t[patchIndex],
             patchData.dt[patchIndex],
             patchData.QOut[patchIndex],
             QOutEnumerator
           );
         }
-      );
+      });
     });
-  } else if (Dimensions == 3 and evaluateSource) {
-    copySolutionEvent = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
-
-          for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-            ::exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x, y, z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex],
-              patchData.QOut[patchIndex],
-              QOutEnumerator
-            );
-          }
-        }
-      );
-    });
-  } else if (Dimensions == 2) {
-    copySolutionEvent = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
-
-          for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-            ::exahype2::fv::rusanov::internal::copySolution_LoopBody(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchIndex,
-              volumeIndex2d(x, y),
-              unknown,
-              patchData.QOut[patchIndex],
-              QOutEnumerator
-            );
-          }
-        }
-      );
-    });
+#endif
   } else {
+#if Dimensions == 2
     copySolutionEvent = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
-
-          for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-            for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-              ::exahype2::fv::rusanov::internal::copySolution_LoopBody(
-                patchData.QIn[patchIndex],
-                QInEnumerator,
-                patchIndex,
-                volumeIndex3d(x, y, z),
-                unknown,
-                patchData.QOut[patchIndex],
-                QOutEnumerator
-              );
-            }
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int y          = i[2];
+        for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+          loopbodies::copySolution(patchData.QIn[patchIndex], QInEnumerator, patchIndex, volumeIndex(x, y), unknown, patchData.QOut[patchIndex], QOutEnumerator);
         }
-      );
+      });
     });
+#else
+    copySolutionEvent = queue.submit([&](::sycl::handler& handle) {
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int y          = i[2];
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++)
+          for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+            loopbodies::copySolution(patchData.QIn[patchIndex], QInEnumerator, patchIndex, volumeIndex(x, y, z), unknown, patchData.QOut[patchIndex], QOutEnumerator);
+          }
+      });
+    });
+#endif
   }
 
+  // ====================================================
+  // Compute damping due to max eigenvalue
+  // ====================================================
   ::sycl::event updateWithEigenvalue;
-  if (Dimensions == 2) {
-    ::sycl::event computeMaxEigenvalueX = queue.submit([&](::sycl::handler& handle) {
-	  handle.depends_on(copySolutionEvent);
-      handle.parallel_for(
-        ::sycl::range<3>{
-          numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch + 2 * solversHaloSize},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int y          = i[1];
-          int x          = i[2] - solversHaloSize;
+#if Dimensions == 2
+  ::sycl::event computeMaxEigenvalueX = queue.submit([&](::sycl::handler& handle) {
+    handle.depends_on(copySolutionEvent);
+    handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch + 2 * HaloSize}, [=](::sycl::item<3> i) {
+      int patchIndex = i[0];
+      int y          = i[1];
+      int x          = i[2] - HaloSize;
+      loopbodies::computeMaxEigenvalue<SolverType>(
+        patchData.QIn[patchIndex],
+        QInEnumerator,
+        patchData.cellCentre[patchIndex],
+        patchData.cellSize[patchIndex],
+        patchIndex,
+        volumeIndex(x, y),
+        patchData.t[patchIndex],
+        patchData.dt[patchIndex],
+        0,
+        tempEigenvalueX,
+        eigenvalueEnumerator
+      );
+    });
+  });
+  ::sycl::event computeMaxEigenvalueY = queue.submit([&](::sycl::handler& handle) {
+    handle.depends_on(computeMaxEigenvalueX);
+    handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch + 2 * HaloSize, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+      int patchIndex = i[0];
+      int y          = i[1] - HaloSize;
+      int x          = i[2];
+      loopbodies::computeMaxEigenvalue<SolverType>(
+        patchData.QIn[patchIndex],
+        QInEnumerator,
+        patchData.cellCentre[patchIndex],
+        patchData.cellSize[patchIndex],
+        patchIndex,
+        volumeIndex(x, y),
+        patchData.t[patchIndex],
+        patchData.dt[patchIndex],
+        1,
+        tempEigenvalueY,
+        eigenvalueEnumerator
+      );
+    });
+  });
 
-          ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
+  updateWithEigenvalue = queue.submit([&](::sycl::handler& handle) {
+    handle.depends_on(copySolutionEvent);
+    handle.depends_on(computeMaxEigenvalueX);
+    handle.depends_on(computeMaxEigenvalueY);
+    handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+      int patchIndex = i[0];
+      int y          = i[1];
+      int x          = i[2];
+      for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+        loopbodies::updateSolutionWithEigenvalueDamping(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          tempEigenvalueX,
+          tempEigenvalueY,
+          tempEigenvalueZ,
+          eigenvalueEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex(x, y),
+          unknown,
+          patchData.dt[patchIndex],
+          patchData.QOut[patchIndex],
+          QOutEnumerator
+        );
+      }
+    });
+  });
+#else
+  ::sycl::event computeMaxEigenvalueX = queue.submit([&](::sycl::handler& handle) {
+    handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+      int patchIndex = i[0];
+      int z          = i[1];
+      int y          = i[2];
+      for (int x = -HaloSize; x < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize); x++) {
+        loopbodies::computeMaxEigenvalue<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex(x, y, z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          0,
+          tempEigenvalueX,
+          eigenvalueEnumerator
+        );
+      }
+    });
+  });
+  ::sycl::event computeMaxEigenvalueY = queue.submit([&](::sycl::handler& handle) {
+    handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+      int patchIndex = i[0];
+      int x          = i[1];
+      int z          = i[2];
+      for (int y = -HaloSize; y < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize); y++) {
+        loopbodies::computeMaxEigenvalue<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex(x, y, z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1,
+          tempEigenvalueY,
+          eigenvalueEnumerator
+        );
+      }
+    });
+  });
+  ::sycl::event computeMaxEigenvalueZ = queue.submit([&](::sycl::handler& handle) {
+    handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+      int patchIndex = i[0];
+      int x          = i[1];
+      int y          = i[2];
+      for (int z = -HaloSize; z < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize); z++) {
+        loopbodies::computeMaxEigenvalue<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex(x, y, z),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          2,
+          tempEigenvalueZ,
+          eigenvalueEnumerator
+        );
+      }
+    });
+  });
+
+  updateWithEigenvalue = queue.submit([&](::sycl::handler& handle) {
+    handle.depends_on(copySolutionEvent);
+    handle.depends_on(computeMaxEigenvalueX);
+    handle.depends_on(computeMaxEigenvalueY);
+    handle.depends_on(computeMaxEigenvalueZ);
+    handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+      int patchIndex = i[0];
+      int x          = i[1];
+      int y          = i[2];
+      for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++)
+        for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+          loopbodies::updateSolutionWithEigenvalueDamping(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x, y),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
-            0,
             tempEigenvalueX,
-            eigenvalueEnumerator
-          );
-        }
-      );
-    });
-
-    ::sycl::event computeMaxEigenvalueY = queue.submit([&](::sycl::handler& handle) {
-	  handle.depends_on(computeMaxEigenvalueX);
-      handle.parallel_for(
-        ::sycl::range<3>{
-          numberOfPatches, numberOfVolumesPerAxisInPatch + 2 * solversHaloSize, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int y          = i[1] - solversHaloSize;
-          int x          = i[2];
-
-          ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
-            patchData.QIn[patchIndex],
-            QInEnumerator,
-            patchData.cellCentre[patchIndex],
-            patchData.cellSize[patchIndex],
-            patchIndex,
-            volumeIndex2d(x, y),
-            patchData.t[patchIndex],
-            patchData.dt[patchIndex],
-            1,
             tempEigenvalueY,
-            eigenvalueEnumerator
+            tempEigenvalueZ,
+            eigenvalueEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex(x, y, z),
+            unknown,
+            patchData.dt[patchIndex],
+            patchData.QOut[patchIndex],
+            QOutEnumerator
           );
         }
-      );
     });
+  });
+#endif
 
-    updateWithEigenvalue = queue.submit([&](::sycl::handler& handle) {
-      handle.depends_on(copySolutionEvent);
-      handle.depends_on(computeMaxEigenvalueX);
-      handle.depends_on(computeMaxEigenvalueY);
-
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int y          = i[1];
-          int x          = i[2];
-
-          for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-            ::exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBody(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              tempEigenvalueX,
-              tempEigenvalueY,
-              tempEigenvalueZ,
-              eigenvalueEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex2d(x, y),
-              unknown,
-              patchData.dt[patchIndex],
-              patchData.QOut[patchIndex],
-              QOutEnumerator
-            );
-          }
-        }
-      );
-    });
-  } else { // 3d of eigenvalue damping
-    ::sycl::event computeMaxEigenvalueX = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int z          = i[1];
-          int y          = i[2];
-
-          for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); x++) {
-            ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x, y, z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex],
-              0,
-              tempEigenvalueX,
-              eigenvalueEnumerator
-            );
-          }
-        }
-      );
-    });
-
-    ::sycl::event computeMaxEigenvalueY = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int z          = i[2];
-
-          for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); y++) {
-            ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x, y, z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex],
-              1,
-              tempEigenvalueY,
-              eigenvalueEnumerator
-            );
-          }
-        }
-      );
-    });
-
-    ::sycl::event computeMaxEigenvalueZ = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
-
-          for (int z = -solversHaloSize; z < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); z++) {
-            ::exahype2::fv::rusanov::internal::computeMaxEigenvalue_LoopBody<Solver>(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x, y, z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex],
-              2,
-              tempEigenvalueZ,
-              eigenvalueEnumerator
-            );
-          }
-        }
-      );
-    });
-
-    updateWithEigenvalue = queue.submit([&](::sycl::handler& handle) {
-      handle.depends_on(copySolutionEvent);
-      handle.depends_on(computeMaxEigenvalueX);
-      handle.depends_on(computeMaxEigenvalueY);
-      handle.depends_on(computeMaxEigenvalueZ);
-
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
-
-          for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-            for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-              ::exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBody(
-                patchData.QIn[patchIndex],
-                QInEnumerator,
-                tempEigenvalueX,
-                tempEigenvalueY,
-                tempEigenvalueZ,
-                eigenvalueEnumerator,
-                patchData.cellCentre[patchIndex],
-                patchData.cellSize[patchIndex],
-                patchIndex,
-                volumeIndex3d(x, y, z),
-                unknown,
-                patchData.dt[patchIndex],
-                patchData.QOut[patchIndex],
-                QOutEnumerator
-              );
-            }
-        }
-      );
-    });
-  }
-
+  // ====================================================
+  // Normal (conservative) flux
+  // ====================================================
   ::sycl::event updateWithFlux;
-  if (evaluateFlux and Dimensions == 2) {
+  if constexpr (EvaluateFlux) {
+#if Dimensions == 2
     ::sycl::event computeFluxX = queue.submit([&](::sycl::handler& handle) {
-	  handle.depends_on(updateWithEigenvalue);
-      handle.parallel_for(
-        ::sycl::range<3>{
-          numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch + 2 * solversHaloSize},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int y          = i[1];
-          int x          = i[2] - solversHaloSize;
+      handle.depends_on(updateWithEigenvalue);
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch + 2 * HaloSize}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int y          = i[1];
+        int x          = i[2] - HaloSize;
+        loopbodies::computeFlux<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex(x, y),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          0, // normal
+          tempFluxX,
+          fluxEnumerator
+        );
+      });
+    });
+    ::sycl::event computeFluxY = queue.submit([&](::sycl::handler& handle) {
+      handle.depends_on(computeFluxX);
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch + 2 * HaloSize}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int y          = i[2] - HaloSize;
+        loopbodies::computeFlux<SolverType>(
+          patchData.QIn[patchIndex],
+          QInEnumerator,
+          patchData.cellCentre[patchIndex],
+          patchData.cellSize[patchIndex],
+          patchIndex,
+          volumeIndex(x, y),
+          patchData.t[patchIndex],
+          patchData.dt[patchIndex],
+          1, // normal
+          tempFluxY,
+          fluxEnumerator
+        );
+      });
+    });
 
-          ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+    updateWithFlux = queue.submit([&](::sycl::handler& handle) {
+      handle.depends_on(computeFluxY);
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int y          = i[2];
+        for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+          loopbodies::updateSolutionWithFlux(
+            tempFluxX,
+            tempFluxY,
+            tempFluxZ,
+            fluxEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex(x, y),
+            unknown,
+            patchData.dt[patchIndex],
+            patchData.QOut[patchIndex],
+            QOutEnumerator
+          );
+        }
+      });
+    });
+#else
+    ::sycl::event computeFluxX = queue.submit([&](::sycl::handler& handle) {
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int z          = i[1];
+        int y          = i[2];
+        for (int x = -HaloSize; x < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize); x++) {
+          loopbodies::computeFlux<SolverType>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x, y),
+            volumeIndex(x, y, z),
             patchData.t[patchIndex],
             patchData.dt[patchIndex],
             0, // normal
@@ -405,26 +378,21 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
             fluxEnumerator
           );
         }
-      );
+      });
     });
-
     ::sycl::event computeFluxY = queue.submit([&](::sycl::handler& handle) {
-	  handle.depends_on(computeFluxX);
-      handle.parallel_for(
-        ::sycl::range<3>{
-          numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch + 2 * solversHaloSize},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2] - solversHaloSize;
-
-          ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int z          = i[2];
+        for (int y = -HaloSize; y < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize); y++) {
+          loopbodies::computeFlux<SolverType>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x, y),
+            volumeIndex(x, y, z),
             patchData.t[patchIndex],
             patchData.dt[patchIndex],
             1, // normal
@@ -432,118 +400,29 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
             fluxEnumerator
           );
         }
-      );
+      });
     });
-
-    updateWithFlux = queue.submit([&](::sycl::handler& handle) {
-      handle.depends_on(computeFluxY);
-
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
-
-          for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-            ::exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
-              tempFluxX,
-              tempFluxY,
-              tempFluxZ,
-              fluxEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex2d(x, y),
-              unknown,
-              patchData.dt[patchIndex],
-              patchData.QOut[patchIndex],
-              QOutEnumerator
-            );
-          }
-        }
-      );
-    });
-  } else if (evaluateFlux and Dimensions == 3) {
-    ::sycl::event computeFluxX = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int z          = i[1];
-          int y          = i[2];
-
-          for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); x++) {
-            ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x, y, z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex],
-              0, // normal
-              tempFluxX,
-              fluxEnumerator
-            );
-          }
-        }
-      );
-    });
-
-    ::sycl::event computeFluxY = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int z          = i[2];
-
-          for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); y++) {
-            ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x, y, z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex],
-              1, // normal
-              tempFluxY,
-              fluxEnumerator
-            );
-          }
-        }
-      );
-    });
-
     ::sycl::event computeFluxZ = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
-
-          for (int z = -solversHaloSize; z < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize); z++) {
-            ::exahype2::fv::rusanov::internal::computeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x, y, z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex],
-              2, // normal
-              tempFluxZ,
-              fluxEnumerator
-            );
-          }
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int y          = i[2];
+        for (int z = -HaloSize; z < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize); z++) {
+          loopbodies::computeFlux<SolverType>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex(x, y, z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            2, // normal
+            tempFluxZ,
+            fluxEnumerator
+          );
         }
-      );
+      });
     });
 
     updateWithFlux = queue.submit([&](::sycl::handler& handle) {
@@ -551,51 +430,47 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
       handle.depends_on(computeFluxX);
       handle.depends_on(computeFluxY);
       handle.depends_on(computeFluxZ);
-
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int z          = i[1];
-          int y          = i[2];
-
-          for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-            for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-              ::exahype2::fv::rusanov::internal::updateSolutionWithFlux_LoopBody(
-                tempFluxX,
-                tempFluxY,
-                tempFluxZ,
-                fluxEnumerator,
-                patchData.cellCentre[patchIndex],
-                patchData.cellSize[patchIndex],
-                patchIndex,
-                volumeIndex3d(x, y, z),
-                unknown,
-                patchData.dt[patchIndex],
-                patchData.QOut[patchIndex],
-                QOutEnumerator
-              );
-            }
-        }
-      );
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int z          = i[1];
+        int y          = i[2];
+        for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++)
+          for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+            loopbodies::updateSolutionWithFlux(
+              tempFluxX,
+              tempFluxY,
+              tempFluxZ,
+              fluxEnumerator,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex(x, y, z),
+              unknown,
+              patchData.dt[patchIndex],
+              patchData.QOut[patchIndex],
+              QOutEnumerator
+            );
+          }
+      });
     });
+#endif
   }
 
   ::sycl::event updateWithNCP;
-  if (evaluateNonconservativeProduct and Dimensions == 2) {
+  if constexpr (EvaluateNonconservativeProduct) {
+#if Dimensions == 2
     ::sycl::event computeNCPX = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(::sycl::range<2>{numberOfPatches, numberOfVolumesPerAxisInPatch}, [=](::sycl::item<2> i) {
+      handle.parallel_for(::sycl::range<2>{numberOfPatches, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<2> i) {
         int patchIndex = i[0];
         int y          = i[1];
-
-        for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize - 1); x++) {
-          ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+        for (int x = -HaloSize; x < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize - 1); x++) {
+          loopbodies::computeNonconservativeFlux<SolverType>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x, y),
+            volumeIndex(x, y),
             patchData.t[patchIndex],
             patchData.dt[patchIndex],
             0, // normal
@@ -605,20 +480,18 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
         }
       });
     });
-
     ::sycl::event computeNCPY = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(::sycl::range<2>{numberOfPatches, numberOfVolumesPerAxisInPatch}, [=](::sycl::item<2> i) {
+      handle.parallel_for(::sycl::range<2>{numberOfPatches, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<2> i) {
         int patchIndex = i[0];
         int x          = i[1];
-
-        for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize - 1); y++) {
-          ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
+        for (int y = -HaloSize; y < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize - 1); y++) {
+          loopbodies::computeNonconservativeFlux<SolverType>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x, y),
+            volumeIndex(x, y),
             patchData.t[patchIndex],
             patchData.dt[patchIndex],
             1, // normal
@@ -634,116 +507,94 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
       handle.depends_on(updateWithFlux);
       handle.depends_on(computeNCPX);
       handle.depends_on(computeNCPY);
-
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
-
-          for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-            ::exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_LoopBody(
-              tempNonconservativeProductX,
-              tempNonconservativeProductY,
-              tempNonconservativeProductZ,
-              ncpEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex2d(x, y),
-              unknown,
-              patchData.dt[patchIndex],
-              patchData.QOut[patchIndex],
-              QOutEnumerator
-            );
-          }
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int y          = i[2];
+        for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+          loopbodies::updateSolutionWithNonconservativeFlux(
+            tempNonconservativeProductX,
+            tempNonconservativeProductY,
+            tempNonconservativeProductZ,
+            ncpEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex(x, y),
+            unknown,
+            patchData.dt[patchIndex],
+            patchData.QOut[patchIndex],
+            QOutEnumerator
+          );
         }
-      );
+      });
     });
-  } else if (evaluateNonconservativeProduct and Dimensions == 3) {
+#else
     ::sycl::event computeNCPX = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int z          = i[1];
-          int y          = i[2];
-
-          for (int x = -solversHaloSize; x < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize - 1);
-               x++) {
-            ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x, y, z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex],
-              0, // normal
-              tempNonconservativeProductX,
-              ncpEnumerator
-            );
-          }
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int z          = i[1];
+        int y          = i[2];
+        for (int x = -HaloSize; x < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize - 1); x++) {
+          loopbodies::computeNonconservativeFlux<SolverType>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex(x, y, z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            0, // normal
+            tempNonconservativeProductX,
+            ncpEnumerator
+          );
         }
-      );
+      });
     });
-
     ::sycl::event computeNCPY = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int z          = i[2];
-
-          for (int y = -solversHaloSize; y < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize - 1);
-               y++) {
-            ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x, y, z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex],
-              1, // normal
-              tempNonconservativeProductY,
-              ncpEnumerator
-            );
-          }
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int z          = i[2];
+        for (int y = -HaloSize; y < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize - 1); y++) {
+          loopbodies::computeNonconservativeFlux<SolverType>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex(x, y, z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            1, // normal
+            tempNonconservativeProductY,
+            ncpEnumerator
+          );
         }
-      );
+      });
     });
-
     ::sycl::event computeNCPZ = queue.submit([&](::sycl::handler& handle) {
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
-
-          for (int z = -solversHaloSize; z < static_cast<int>(numberOfVolumesPerAxisInPatch + solversHaloSize - 1);
-               z++) {
-            ::exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody<Solver, unknowns, auxiliaryVariables>(
-              patchData.QIn[patchIndex],
-              QInEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x, y, z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex],
-              2, // normal
-              tempNonconservativeProductZ,
-              ncpEnumerator
-            );
-          }
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int y          = i[2];
+        for (int z = -HaloSize; z < static_cast<int>(NumberOfVolumesPerAxisInPatch + HaloSize - 1); z++) {
+          loopbodies::computeNonconservativeFlux<SolverType>(
+            patchData.QIn[patchIndex],
+            QInEnumerator,
+            patchData.cellCentre[patchIndex],
+            patchData.cellSize[patchIndex],
+            patchIndex,
+            volumeIndex(x, y, z),
+            patchData.t[patchIndex],
+            patchData.dt[patchIndex],
+            2, // normal
+            tempNonconservativeProductZ,
+            ncpEnumerator
+          );
         }
-      );
+      });
     });
 
     updateWithNCP = queue.submit([&](::sycl::handler& handle) {
@@ -752,80 +603,54 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
       handle.depends_on(computeNCPX);
       handle.depends_on(computeNCPY);
       handle.depends_on(computeNCPZ);
-
-      handle.parallel_for(
-        ::sycl::range<3>{numberOfPatches, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch},
-        [=](::sycl::item<3> i) {
-          int patchIndex = i[0];
-          int x          = i[1];
-          int y          = i[2];
-
-          for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-            for (int unknown = 0; unknown < unknowns + auxiliaryVariables; unknown++) {
-              ::exahype2::fv::rusanov::internal::updateSolutionWithNonconservativeFlux_LoopBody(
-                tempNonconservativeProductX,
-                tempNonconservativeProductY,
-                tempNonconservativeProductZ,
-                ncpEnumerator,
-                patchData.cellCentre[patchIndex],
-                patchData.cellSize[patchIndex],
-                patchIndex,
-                volumeIndex3d(x, y, z),
-                unknown,
-                patchData.dt[patchIndex],
-                patchData.QOut[patchIndex],
-                QOutEnumerator
-              );
-            }
-        }
-      );
+      handle.parallel_for(::sycl::range<3>{numberOfPatches, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
+        int patchIndex = i[0];
+        int x          = i[1];
+        int y          = i[2];
+        for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++)
+          for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
+            loopbodies::updateSolutionWithNonconservativeFlux(
+              tempNonconservativeProductX,
+              tempNonconservativeProductY,
+              tempNonconservativeProductZ,
+              ncpEnumerator,
+              patchData.cellCentre[patchIndex],
+              patchData.cellSize[patchIndex],
+              patchIndex,
+              volumeIndex(x, y, z),
+              unknown,
+              patchData.dt[patchIndex],
+              patchData.QOut[patchIndex],
+              QOutEnumerator
+            );
+          }
+      });
     });
+#endif
   }
 
-  ::sycl::event evalEigen;
-  if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions == 2) {
-    evalEigen = queue.submit([&](::sycl::handler& handle) {
+  ::sycl::event computeMaxEigenvalueAfterTimeStepEvent;
+  if constexpr (EvaluateMaximumEigenvalueAfterTimeStep) {
+#if Dimensions == 2
+    computeMaxEigenvalueAfterTimeStepEvent = queue.submit([&](::sycl::handler& handle) {
       handle.depends_on(updateWithEigenvalue);
       handle.depends_on(updateWithFlux);
       handle.depends_on(updateWithNCP);
-      ::sycl::range<2> totalWorkitem{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch * numberOfPatches};
-      ::sycl::range<2> workgroupSize{numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch};
-
+      ::sycl::range<2> totalWorkitem{NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch * numberOfPatches};
+      ::sycl::range<2> workgroupSize{NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch};
       handle.parallel_for(::sycl::nd_range<2>{totalWorkitem, workgroupSize}, [=](::sycl::nd_item<2> i) {
-        int patchIndex = i.get_group(1);
-        int y          = i.get_local_id(0);
-        int x          = i.get_local_id(1);
-
-        /* This is the slower (serial) version of the reduction
-        double newMaxEigenvalue = 0.0;
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-          newMaxEigenvalue = std::max(
-            newMaxEigenvalue,
-            ::exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              patchData.QOut[patchIndex],
-              QOutEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex2d(x,y),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex]
-            )
-          );
-        }
-        patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
-        */
-
+        int patchIndex                      = i.get_group(1);
+        int y                               = i.get_local_id(0);
+        int x                               = i.get_local_id(1);
         patchData.maxEigenvalue[patchIndex] = ::sycl::reduce_over_group(
           i.get_group(),
-          ::exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody<Solver>(
+          loopbodies::reduceMaxEigenvalue<SolverType>(
             patchData.QOut[patchIndex],
             QOutEnumerator,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
-            volumeIndex2d(x, y),
+            volumeIndex(x, y),
             patchData.t[patchIndex],
             patchData.dt[patchIndex]
           ),
@@ -833,53 +658,27 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
         );
       });
     });
-  } else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    evalEigen = queue.submit([&](::sycl::handler& handle) {
+#else
+    computeMaxEigenvalueAfterTimeStepEvent = queue.submit([&](::sycl::handler& handle) {
       handle.depends_on(updateWithEigenvalue);
       handle.depends_on(updateWithFlux);
       handle.depends_on(updateWithNCP);
-      ::sycl::range<3> totalWorkitem{
-        numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch * numberOfPatches};
-      ::sycl::range<3> workgroupSize{
-        numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch, numberOfVolumesPerAxisInPatch};
-
+      ::sycl::range<3> totalWorkitem{NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch * numberOfPatches};
+      ::sycl::range<3> workgroupSize{NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch};
       handle.parallel_for(::sycl::nd_range<3>{totalWorkitem, workgroupSize}, [=](::sycl::nd_item<3> i) {
-        int patchIndex = i.get_group(2);
-        int z          = i.get_local_id(0);
-        int y          = i.get_local_id(1);
-        int x          = i.get_local_id(2);
-
-        /*
-        double newMaxEigenvalue = 0.0;
-        for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
-        for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-        for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-          newMaxEigenvalue = std::max(
-            newMaxEigenvalue,
-            ::exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody<Solver>(
-              patchData.QOut[patchIndex],
-              QOutEnumerator,
-              patchData.cellCentre[patchIndex],
-              patchData.cellSize[patchIndex],
-              patchIndex,
-              volumeIndex3d(x,y,z),
-              patchData.t[patchIndex],
-              patchData.dt[patchIndex]
-            )
-          );
-        }
-        patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
-        */
-
+        int patchIndex                      = i.get_group(2);
+        int z                               = i.get_local_id(0);
+        int y                               = i.get_local_id(1);
+        int x                               = i.get_local_id(2);
         patchData.maxEigenvalue[patchIndex] = ::sycl::reduce_over_group(
           i.get_group(),
-          ::exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody<Solver>(
+          loopbodies::reduceMaxEigenvalue<SolverType>(
             patchData.QOut[patchIndex],
             QOutEnumerator,
             patchData.cellCentre[patchIndex],
             patchData.cellSize[patchIndex],
             patchIndex,
-            volumeIndex3d(x, y, z),
+            volumeIndex(x, y, z),
             patchData.t[patchIndex],
             patchData.dt[patchIndex]
           ),
@@ -887,381 +686,293 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_c
         );
       });
     });
+#endif
   } else {
     updateWithEigenvalue.wait();
     updateWithFlux.wait();
     updateWithNCP.wait();
   }
 
-  if (tempFluxX != nullptr)
+  if (tempFluxX != nullptr) {
     ::sycl::free(tempFluxX, queue);
-  if (tempFluxY != nullptr)
+  }
+  if (tempFluxY != nullptr) {
     ::sycl::free(tempFluxY, queue);
-  if (tempFluxZ != nullptr)
+  }
+  if (tempFluxZ != nullptr) {
     ::sycl::free(tempFluxZ, queue);
-  if (tempNonconservativeProductX != nullptr)
+  }
+  if (tempNonconservativeProductX != nullptr) {
     ::sycl::free(tempNonconservativeProductX, queue);
-  if (tempNonconservativeProductY != nullptr)
+  }
+  if (tempNonconservativeProductY != nullptr) {
     ::sycl::free(tempNonconservativeProductY, queue);
-  if (tempNonconservativeProductZ != nullptr)
+  }
+  if (tempNonconservativeProductZ != nullptr) {
     ::sycl::free(tempNonconservativeProductZ, queue);
-  if (tempEigenvalueX != nullptr)
+  }
+  if (tempEigenvalueX != nullptr) {
     ::sycl::free(tempEigenvalueX, queue);
-  if (tempEigenvalueY != nullptr)
+  }
+  if (tempEigenvalueY != nullptr) {
     ::sycl::free(tempEigenvalueY, queue);
-  if (tempEigenvalueZ != nullptr)
+  }
+  if (tempEigenvalueZ != nullptr) {
     ::sycl::free(tempEigenvalueZ, queue);
-
-  logTraceOut("timeStepWithRusanov_batched_static_calls()");
-}
-#endif
-
-
-template <
-  typename    Solver,
-  std::size_t numberOfVolumesPerAxisInPatch,
-  std::size_t haloSize,
-  std::size_t unknowns,
-  std::size_t auxiliaryVariables,
-  typename    TempDataEnumerator>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
-  int                   targetDevice,
-  ::exahype2::CellData& patchData,
-  bool                  evaluateFlux,
-  bool                  evaluateNonconservativeProduct,
-  bool                  evaluateSource,
-  bool                  evaluateMaximumEigenvalueAfterTimeStep
-) {
-  #if defined(GPUOffloadingSYCL)
-  static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
-  logTraceIn("timeStepWithRusanov_batched_usm_static_calls()");
-
-  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
-
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
-    1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
-  );
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
-    1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
-  );
-  GPUUSMCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
-
-  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls<
-    Solver,
-    numberOfVolumesPerAxisInPatch,
-    haloSize,
-    unknowns,
-    auxiliaryVariables,
-    TempDataEnumerator
-  >(
-    targetDevice,
-    gpuPatchData,
-    evaluateFlux,
-    evaluateNonconservativeProduct,
-    evaluateSource,
-    evaluateMaximumEigenvalueAfterTimeStep
-  );
-
-  gpuPatchData.destroy(patchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
-  #else
-  assertionMsg(
-    false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
-  );
-  #endif
-
-  logTraceOut("timeStepWithRusanov_batched_usm_static_calls()");
+  }
 }
 
 
 template <
-  typename Solver,
-  std::size_t numberOfVolumesPerAxisInPatch,
-  std::size_t haloSize,
-  std::size_t unknowns,
-  std::size_t auxiliaryVariables,
-  typename    TempDataEnumerator
-  >
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_copy_static_calls(
-  int                   targetDevice,
-  ::exahype2::CellData& patchData,
-  bool                  evaluateFlux,
-  bool                  evaluateNonconservativeProduct,
-  bool                  evaluateSource,
-  bool                  evaluateMaximumEigenvalueAfterTimeStep
-) {
-  #if defined(GPUOffloadingSYCL)
+  class SolverType,
+  std::size_t NumberOfVolumesPerAxisInPatch,
+  std::size_t HaloSize,
+  std::size_t NumberOfUnknowns,
+  std::size_t NumberOfAuxiliaryVariables,
+  bool        EvaluateFlux,
+  bool        EvaluateNonconservativeProduct,
+  bool        EvaluateSource,
+  bool        EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData& patchData) {
+  static_assert(HaloSize == 1);
+
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
-  logTraceIn("timeStepWithRusanov_batched_copy_static_calls()");
+  logTraceIn("timeStepWithRusanovBatchedUSMStateless()");
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
-    1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
-  );
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
-    1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
-  );
-  GPUCopyCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  GPUUSMCellData                                gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
-  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls<
-    Solver,
-    numberOfVolumesPerAxisInPatch,
-    haloSize,
-    unknowns,
-    auxiliaryVariables,
-    TempDataEnumerator
-  >(
-    targetDevice,
-    gpuPatchData,
-    evaluateFlux,
-    evaluateNonconservativeProduct,
-    evaluateSource,
-    evaluateMaximumEigenvalueAfterTimeStep
-  );
+  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(targetDevice, gpuPatchData);
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
-  #else
-  assertionMsg(
-    false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
-  );
-  #endif
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
-  logTraceOut("timeStepWithRusanov_batched_copy_static_calls()");
+  logTraceOut("timeStepWithRusanovBatchedUSMStateless()");
 }
 
 
 template <
-  typename Solver,
-  std::size_t numberOfVolumesPerAxisInPatch,
-  std::size_t haloSize,
-  std::size_t unknowns,
-  std::size_t auxiliaryVariables,
-  typename TempDataEnumerator>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_managed_static_calls(
-  int                   targetDevice,
-  ::exahype2::CellData& patchData,
-  bool                  evaluateFlux,
-  bool                  evaluateNonconservativeProduct,
-  bool                  evaluateSource,
-  bool                  evaluateMaximumEigenvalueAfterTimeStep
-) {
-  #if defined(GPUOffloadingSYCL)
+  class SolverType,
+  std::size_t NumberOfVolumesPerAxisInPatch,
+  std::size_t HaloSize,
+  std::size_t NumberOfUnknowns,
+  std::size_t NumberOfAuxiliaryVariables,
+  bool        EvaluateFlux,
+  bool        EvaluateNonconservativeProduct,
+  bool        EvaluateSource,
+  bool        EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedCopyStateless(int targetDevice, CellData& patchData) {
+  static_assert(HaloSize == 1);
+
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
-  logTraceIn("timeStepWithRusanov_batched_managed_static_calls()");
+  logTraceIn("timeStepWithRusanovBatchedCopyStateless()");
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
-    1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
-  );
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
-    1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
-  );
-  GPUManagedCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  GPUCopyCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
-  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls<
-    Solver,
-    numberOfVolumesPerAxisInPatch,
-    haloSize,
-    unknowns,
-    auxiliaryVariables,
-    TempDataEnumerator
-  >(
-    targetDevice,
-    gpuPatchData,
-    evaluateFlux,
-    evaluateNonconservativeProduct,
-    evaluateSource,
-    evaluateMaximumEigenvalueAfterTimeStep
-  );
+  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(targetDevice, gpuPatchData);
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
-  #else
-  assertionMsg(
-    false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
-  );
-  #endif
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
-  logTraceOut("timeStepWithRusanov_batched_managed_static_calls()");
+  logTraceOut("timeStepWithRusanovBatchedCopyStateless()");
 }
 
 
 template <
-  typename    Solver,
-  std::size_t numberOfVolumesPerAxisInPatch,
-  std::size_t haloSize,
-  std::size_t unknowns,
-  std::size_t auxiliaryVariables,
-  typename    TempDataEnumerator>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_usm_static_calls(
-  int                   targetDevice,
-  ::exahype2::CellData& patchData,
-  bool                  evaluateFlux,
-  bool                  evaluateNonconservativeProduct,
-  bool                  evaluateSource,
-  bool                  evaluateMaximumEigenvalueAfterTimeStep,
-  tarch::timing::Measurement&  measurement
-) {
-  #if defined(GPUOffloadingSYCL)
+  class SolverType,
+  std::size_t NumberOfVolumesPerAxisInPatch,
+  std::size_t HaloSize,
+  std::size_t NumberOfUnknowns,
+  std::size_t NumberOfAuxiliaryVariables,
+  bool        EvaluateFlux,
+  bool        EvaluateNonconservativeProduct,
+  bool        EvaluateSource,
+  bool        EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless(int targetDevice, CellData& patchData) {
+  static_assert(HaloSize == 1);
+
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
-  logTraceIn("timeStepWithRusanov_batched_usm_static_calls()");
+  logTraceIn("timeStepWithRusanovBatchedManagedStateless()");
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
-    1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
-  );
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
-    1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
-  );
-  GPUUSMCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  GPUManagedCellData                            gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
-  tarch::timing::Watch watch( "exahype2::fv::rusanov::sycl", "timeStepWithRusanov_batched_usm_static_calls", false, true );
-  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls<
-    Solver,
-    numberOfVolumesPerAxisInPatch,
-    haloSize,
-    unknowns,
-    auxiliaryVariables,
-    TempDataEnumerator
-  >(
-    targetDevice,
-    gpuPatchData,
-    evaluateFlux,
-    evaluateNonconservativeProduct,
-    evaluateSource,
-    evaluateMaximumEigenvalueAfterTimeStep
-  );
+  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(targetDevice, gpuPatchData);
+
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
+
+  logTraceOut("timeStepWithRusanovBatchedManagedStateless()");
+}
+
+
+template <
+  class SolverType,
+  std::size_t NumberOfVolumesPerAxisInPatch,
+  std::size_t HaloSize,
+  std::size_t NumberOfUnknowns,
+  std::size_t NumberOfAuxiliaryVariables,
+  bool        EvaluateFlux,
+  bool        EvaluateNonconservativeProduct,
+  bool        EvaluateSource,
+  bool        EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData& patchData, ::tarch::timing::Measurement& measurement) {
+  static_assert(HaloSize == 1);
+
+  static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
+  logTraceIn("timeStepWithRusanovBatchedUSMStateless()");
+
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  GPUUSMCellData                                gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+
+  tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovBatchedUSMStateless", false, true);
+  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(targetDevice, gpuPatchData);
   watch.stop();
-  measurement.setValue( watch.getCalendarTime());
+  measurement.setValue(watch.getCalendarTime());
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
-  #else
-  assertionMsg(
-    false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
-  );
-  #endif
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
-  logTraceOut("timeStepWithRusanov_batched_usm_static_calls()");
+  logTraceOut("timeStepWithRusanovBatchedUSMStateless()");
 }
 
 
 template <
-  typename Solver,
-  std::size_t numberOfVolumesPerAxisInPatch,
-  std::size_t haloSize,
-  std::size_t unknowns,
-  std::size_t auxiliaryVariables,
-  typename    TempDataEnumerator
-  >
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_copy_static_calls(
-  int                   targetDevice,
-  ::exahype2::CellData& patchData,
-  bool                  evaluateFlux,
-  bool                  evaluateNonconservativeProduct,
-  bool                  evaluateSource,
-  bool                  evaluateMaximumEigenvalueAfterTimeStep,
-  tarch::timing::Measurement&  measurement
-) {
-  #if defined(GPUOffloadingSYCL)
+  class SolverType,
+  std::size_t NumberOfVolumesPerAxisInPatch,
+  std::size_t HaloSize,
+  std::size_t NumberOfUnknowns,
+  std::size_t NumberOfAuxiliaryVariables,
+  bool        EvaluateFlux,
+  bool        EvaluateNonconservativeProduct,
+  bool        EvaluateSource,
+  bool        EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedCopyStateless(int targetDevice, CellData& patchData, ::tarch::timing::Measurement& measurement) {
+  static_assert(HaloSize == 1);
+
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
-  logTraceIn("timeStepWithRusanov_batched_copy_static_calls()");
+  logTraceIn("timeStepWithRusanovBatchedCopyStateless()");
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
-    1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
-  );
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
-    1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
-  );
-  GPUCopyCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  GPUCopyCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
-  tarch::timing::Watch watch( "exahype2::fv::rusanov::sycl", "timeStepWithRusanov_batched_copy_static_calls", false, true );
-  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls<
-    Solver,
-    numberOfVolumesPerAxisInPatch,
-    haloSize,
-    unknowns,
-    auxiliaryVariables,
-    TempDataEnumerator
-  >(
-    targetDevice,
-    gpuPatchData,
-    evaluateFlux,
-    evaluateNonconservativeProduct,
-    evaluateSource,
-    evaluateMaximumEigenvalueAfterTimeStep
-  );
+  tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovBatchedCopyStateless", false, true);
+  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(targetDevice, gpuPatchData);
   watch.stop();
-  measurement.setValue( watch.getCalendarTime());
+  measurement.setValue(watch.getCalendarTime());
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
-  #else
-  assertionMsg(
-    false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
-  );
-  #endif
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
-  logTraceOut("timeStepWithRusanov_batched_copy_static_calls()");
+  logTraceOut("timeStepWithRusanovBatchedCopyStateless()");
 }
 
 
 template <
-  typename Solver,
-  std::size_t numberOfVolumesPerAxisInPatch,
-  std::size_t haloSize,
-  std::size_t unknowns,
-  std::size_t auxiliaryVariables,
-  typename TempDataEnumerator>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanov_batched_managed_static_calls(
-  int                   targetDevice,
-  ::exahype2::CellData& patchData,
-  bool                  evaluateFlux,
-  bool                  evaluateNonconservativeProduct,
-  bool                  evaluateSource,
-  bool                  evaluateMaximumEigenvalueAfterTimeStep,
-  tarch::timing::Measurement&  measurement
-) {
-  #if defined(GPUOffloadingSYCL)
+  class SolverType,
+  std::size_t NumberOfVolumesPerAxisInPatch,
+  std::size_t HaloSize,
+  std::size_t NumberOfUnknowns,
+  std::size_t NumberOfAuxiliaryVariables,
+  bool        EvaluateFlux,
+  bool        EvaluateNonconservativeProduct,
+  bool        EvaluateSource,
+  bool        EvaluateMaximumEigenvalueAfterTimeStep,
+  class TempDataEnumeratorType>
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless(int targetDevice, CellData& patchData, ::tarch::timing::Measurement& measurement) {
+  static_assert(HaloSize == 1);
+
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
-  logTraceIn("timeStepWithRusanov_batched_managed_static_calls()");
+  logTraceIn("timeStepWithRusanovBatchedManagedStateless()");
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator(
-    1, numberOfVolumesPerAxisInPatch, haloSize, unknowns, auxiliaryVariables
-  );
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(
-    1, numberOfVolumesPerAxisInPatch, 0, unknowns, auxiliaryVariables
-  );
-  GPUManagedCellData    gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
+  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  GPUManagedCellData                            gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
-  tarch::timing::Watch watch( "exahype2::fv::rusanov::sycl", "timeStepWithRusanov_batched_managed_static_calls", false, true );
-  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanov_batched_static_calls<
-    Solver,
-    numberOfVolumesPerAxisInPatch,
-    haloSize,
-    unknowns,
-    auxiliaryVariables,
-    TempDataEnumerator
-  >(
-    targetDevice,
-    gpuPatchData,
-    evaluateFlux,
-    evaluateNonconservativeProduct,
-    evaluateSource,
-    evaluateMaximumEigenvalueAfterTimeStep
-  );
+  tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovBatchedManagedStateless", false, true);
+  exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(targetDevice, gpuPatchData);
   watch.stop();
-  measurement.setValue( watch.getCalendarTime());
+  measurement.setValue(watch.getCalendarTime());
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, evaluateMaximumEigenvalueAfterTimeStep, queue);
-  #else
-  assertionMsg(
-    false, "this routine should only be used in combination with OpenMP offloading, as it has a device parameter"
-  );
-  #endif
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
-  logTraceOut("timeStepWithRusanov_batched_managed_static_calls()");
+  logTraceOut("timeStepWithRusanovBatchedManagedStateless()");
 }

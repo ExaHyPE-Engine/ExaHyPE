@@ -51,6 +51,11 @@ if args.gpu and not args.arch:
   print("Error: You need to specify a GPU architecture when using GPU support.")
   exit(-1)
 
+if args.cc is None or args.cxx is None:
+  print("Error: Invalid C and C++ compilers provided. \
+Specify compatible C and C++ compilers by using -cc and -cxx or the environment flags CC and CXX.")
+  exit(-1)
+
 if args.gpu == 'omp' and "clang" in args.cc and "clang++" in args.cxx:
   cflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=' + args.arch
   cxxflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=' + args.arch

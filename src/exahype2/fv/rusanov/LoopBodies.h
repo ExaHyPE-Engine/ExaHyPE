@@ -17,7 +17,7 @@ namespace exahype2::fv::rusanov::loopbodies {
    *
    * ## Specialisation
    *
-   * Where it makes sense, I provide specialisations of the routines which
+   * Where it makes sense, we provide specialisations of the routines which
    * exploit that input data and output data are available as AoS. All of
    * ExaHyPE's user routines are phrased as AoS, i.e., you are given one or two
    * or a set of structs representing a volume, and then you return a struct
@@ -71,16 +71,17 @@ namespace exahype2::fv::rusanov::loopbodies {
    * @param volumeIndex: Which volume is to be updated within the target
    *   patch. This index refers to the target index.
    */
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod auto copySolution =
-    [](
-      const double* __restrict__ QIn,
-      const auto&                                 QInEnumerator,
-      int                                         patchIndex,
-      const ::tarch::la::Vector<Dimensions, int>& volumeIndex,
-      int                                         unknown,
-      double* __restrict__ QOut,
-      const auto& QOutEnumerator
-    ) InlineMethod { QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] = QIn[QInEnumerator(patchIndex, volumeIndex, unknown)]; };
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void copySolution(
+    const double* __restrict__ QIn,
+    const auto&                                 QInEnumerator,
+    int                                         patchIndex,
+    const ::tarch::la::Vector<Dimensions, int>& volumeIndex,
+    int                                         unknown,
+    double* __restrict__ QOut,
+    const auto& QOutEnumerator
+  ) InlineMethod {
+    QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] = QIn[QInEnumerator(patchIndex, volumeIndex, unknown)];
+  };
 
 
   /**
