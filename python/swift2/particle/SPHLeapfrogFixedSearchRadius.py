@@ -11,7 +11,22 @@ from abc import ABC
 import copy
 
 
+from enum import Enum
+
+
 class SPHLeapfrogFixedSearchRadius(Particle):
+    class ParticleInteractionKernelRealisation(Enum):
+        """! 
+
+        Enum to toggle between the various vectorised/not vectorised
+        kernels.
+    
+        """
+
+        DEFAULT = 0
+        VECTORISE_DISTANCE_CHECKS = 1
+        VECTORISE_ALL = 2
+    
     """!
 
     SPH particle with fixed search radius
@@ -121,6 +136,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
     graph compiler from the Sequential suite. We have not tested it with other
     graph compiler flavours.
 
+    @param particle_interaction_kernel_realisation: ParticleInteractionKernelRealisation
+      Switch through various interaction variants.
 
 
     @see peano4::datamanagement::CellMarker
@@ -139,7 +156,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         particles_per_cell=0,  # makes no sense, and should likely be forbidden
         min_h=0.3,
         max_h=0.3,
-        use_optimised_coalesced_memory_access_kernels=False,
+        particle_interaction_kernel_realisation: ParticleInteractionKernelRealisation = ParticleInteractionKernelRealisation.DEFAULT,
         asserts=False,
     ):
         super(SPHLeapfrogFixedSearchRadius, self).__init__(
@@ -160,9 +177,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self._cfl_factor = cfl_factor
         self._initial_time_step_size = initial_time_step_size
         self._constant_time_step_size = constant_time_step_size
-        self._use_optimised_coalesced_memory_access_kernels = (
-            use_optimised_coalesced_memory_access_kernels
-        )
+        self._particle_interaction_kernel_realisation = particle_interaction_kernel_realisation
 
         # SPH parameters (default values)
         self._hydro_dimensions = dimensions_hydro
@@ -477,69 +492,73 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         )
         self.algorithm_steps_dict["Density"] = densityWithConstantSearchRadius
 
-        if self._use_optimised_coalesced_memory_access_kernels:
-            force = AlgorithmStep(
-                name="ForceLoop",
-                dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
-                effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-                touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareHydroForceCalculation(localParticles);
-                                       """,
-                cell_kernel="""
-                                       ::toolbox::particles::ensureAllParticleListsAreGatheredOrEmpty(
-                                         fineGridVertices"""
-                + self.name
-                + """Set
-                                       );
-                                       ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                                         activeParticles,
-                                         _numberOfActiveParticlesPerVertex
-                                       );
-                                       ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                                         localParticles,
-                                         numberOfParticlesPerLocalVertex
-                                       );
-                                       ::swift2::kernels::computeHydroForce(
-                                         marker,
-                                         localParticles,
-                                         numberOfParticlesPerLocalVertex,
-                                         activeParticles,
-                                         _numberOfActiveParticlesPerVertex
-                                       );
-                                       """,
-                touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endHydroForceCalculation(
-                                           localParticles);
-                                       """,
-                includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/kernels/ParticleParticleInteraction.h"
-                                       #include "swift2/kernels/ParticleSelfInteraction.h"
-                                       #include "toolbox/particles/ParticleListValidation.h"
-                                       """,
-            )
+
+        if self._particle_interaction_kernel_realisation == self.ParticleInteractionKernelRealisation.DEFAULT:
+            cell_kernel_for_force_calculation = "::swift2::kernels::computeHydroForce(marker, localParticles, activeParticles);"
+        elif self._particle_interaction_kernel_realisation == self.ParticleInteractionKernelRealisation.VECTORISE_DISTANCE_CHECKS:
+            cell_kernel_for_force_calculation = """
+                ::toolbox::particles::ensureAllParticleListsAreGatheredOrEmpty(
+                  fineGridVertices"""+ self.name+ """Set
+                );
+                ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+                  activeParticles,
+                  _numberOfActiveParticlesPerVertex
+                );
+                ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+                  localParticles,
+                  numberOfParticlesPerLocalVertex
+                );
+                ::swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
+                  marker,
+                  localParticles,
+                  numberOfParticlesPerLocalVertex,
+                  activeParticles,
+                  _numberOfActiveParticlesPerVertex
+                );
+                """
+            pass
         else:
-            force = AlgorithmStep(
-                name="ForceLoop",
-                dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
-                effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-                touch_vertex_first_time_kernel="""
-                                       ::swift2::kernels::prepareHydroForceCalculation(localParticles);
-                                       """,
-                cell_kernel="""
-                                       ::swift2::kernels::computeHydroForce(marker, localParticles, activeParticles);
-                                       """,
-                touch_vertex_last_time_kernel="""
-                                       ::swift2::kernels::endHydroForceCalculation(
+            cell_kernel_for_force_calculation = """
+                ::toolbox::particles::ensureAllParticleListsAreGatheredOrEmpty(
+                   fineGridVertices"""+ self.name+ """Set
+                );
+                ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+                  activeParticles,
+                  _numberOfActiveParticlesPerVertex
+                );
+                ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
+                  localParticles,
+                  numberOfParticlesPerLocalVertex
+                );
+                ::swift2::kernels::computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking(
+                  marker,
+                  localParticles,
+                  numberOfParticlesPerLocalVertex,
+                  activeParticles,
+                  _numberOfActiveParticlesPerVertex
+                );
+                """
+            pass
+
+        force = AlgorithmStep(
+            name                           = "ForceLoop",
+            dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
+            effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
+            touch_vertex_first_time_kernel = """
+                                   ::swift2::kernels::prepareHydroForceCalculation(localParticles);
+                                   """,
+            cell_kernel                    = cell_kernel_for_force_calculation,
+            touch_vertex_last_time_kernel="""
+                                     ::swift2::kernels::endHydroForceCalculation(
                                            localParticles);
                                        """,
-                includes="""
+            includes="""
                                        #include "Constants.h"
                                        #include "swift2/kernels/ParticleParticleInteraction.h"
                                        #include "swift2/kernels/ParticleSelfInteraction.h"
                                        #include "toolbox/particles/ParticleListValidation.h"
                                        """,
-            )
+        )
         self.algorithm_steps_dict["Force"] = force
 
         kick2 = AlgorithmStep(

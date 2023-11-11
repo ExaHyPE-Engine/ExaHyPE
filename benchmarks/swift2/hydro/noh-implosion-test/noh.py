@@ -18,8 +18,10 @@ Choices = [
     "none",
     "continuous-per-vertex",
     "global-continuous",
-    "continuous-per-vertex-vectorise",
-    "global-continuous-vectorise",
+    "continuous-per-vertex-vectorise-distance-checks",
+    "global-continuous-vectorise-distance-checks",
+    "continuous-per-vertex-vectorise-all",
+    "global-continuous-vectorise-all",
     "tasks",
 ]
 
@@ -188,6 +190,14 @@ print(
     )
 )
 
+
+particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleInteractionKernelRealisation.DEFAULT
+if "vectorise-distance-checks" in args.optimisation:
+  particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleInteractionKernelRealisation.VECTORISE_DISTANCE_CHECKS
+elif "vectorise-all" in args.optimisation:
+  particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleInteractionKernelRealisation.VECTORISE_ALL
+  
+
 particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     name=name,
     dimensions_hydro=hydro_dimensions,
@@ -198,7 +208,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=particles_per_cell,
     min_h=max_cell_size,
     max_h=max_cell_size,
-    use_optimised_coalesced_memory_access_kernels=("-vectorise" in args.optimisation),
+    particle_interaction_kernel_realisation = particle_interaction_kernel_realisation,
     asserts=args.asserts,
 )
 
