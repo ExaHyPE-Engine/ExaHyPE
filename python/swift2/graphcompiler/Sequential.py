@@ -286,7 +286,8 @@ def map_onto_separate_mesh_traversals(
         if optimisation == Optimisation.NONE:
             use_lists_to_construct_active_sets = False
             add_additional_dummy_sweep = False
-        elif optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE or step_type == StepType.INITIALISATION or sequence_of_steps==current_entry_from_total_sequence_of_steps[-1]:
+        elif optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE or step_type == StepType.INITIALISATION:
+##or sequence_of_steps==current_entry_from_total_sequence_of_steps[-1]:
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = (
                 current_step_of_species.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
