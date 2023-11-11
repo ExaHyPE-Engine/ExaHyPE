@@ -31,7 +31,7 @@ namespace tarch {
   #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
     #define GPUCallableInlineMethod __host__ __device__ __forceinline__
   #else
-    #define GPUCallableInlineMethod inline
+    #define GPUCallableInlineMethod //inline
   #endif
 
   /**
