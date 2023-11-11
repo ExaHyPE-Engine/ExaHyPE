@@ -17,14 +17,16 @@ build_modes = {
 build_mode = "Release"
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Finite Volumes Rusanov Kernel Benchmarking Script')
-parser.add_argument("-m",       "--build-mode",         dest="build_mode",        choices=build_modes.keys(),   default="Release",          help="|".join(build_modes.keys()))
+parser.add_argument("-m",       "--build-mode",         dest="build_mode",        choices=build_modes.keys(),   default=build_mode,         help="|".join(build_modes.keys()))
 parser.add_argument("-d",       "--dim",                dest="dim",               type=int,                     required=True,              help="Number of space dimensions")
+parser.add_argument("-t",       "--num-threads",        dest="num_threads",       type=int,                     default=1,                  help="Number of launching threads")
+parser.add_argument("-p",       "--num-patches",        dest="num_patches",       type=int,                     required=True,              help="Number of patches to study")
 parser.add_argument("-ps",      "--patch-size",         dest="patch_size",        type=int,                     required=True,              help="Number of finite volumes per axis (dimension) per patch")
-parser.add_argument("-mp",      "--max-patches",        dest="max_patches",       type=int,                     default=1024+1,             help="Maximal number of patches to study")
-parser.add_argument("-s" ,      "--samples",            dest="samples",           type=int,                     default=16,                 help="Number of samples per measurement")
+parser.add_argument("-s" ,      "--samples",            dest="samples",           type=int,                     default=100,                help="Number of samples per measurement")
 parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=0.0,                help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
 parser.add_argument("-sym",     "--symbolic",           dest="symbolic",          action="store_true",          default=False,              help="Use the symbolic PDE description of the Euler equations.")
-parser.add_argument(            "--no-make",            dest="no_make",           action="store_true",                                      help="Do not compile the code after generation")
+parser.add_argument("-eig",     "--eval-eig",           dest="eval_eig",          action="store_true",                                      help="Evaluate max. eigenvalue")
+parser.add_argument(            "--make",               dest="make",              action="store_true",                                      help="Compile the code after generation")
 parser.add_argument(            "--executable",         dest="executable",        type=str,                     default="kernel-benchmark-fv",  help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
 args = parser.parse_args()
 
@@ -41,7 +43,7 @@ if(args.accuracy < 0):
   import numpy
   accuracy = default=numpy.finfo(float).eps
 
-executable_name = "kernel-benchmarks-fv-rusanov-" + str(args.dim) + "d-patch-size-"+ str(args.patch_size)
+executable_name = "kernel-benchmarks-fv-rusanov-" + str(args.dim) + "d-ps-"+ str(args.patch_size) + "-p-" + str(args.num_patches)
 
 my_project = exahype2.Project(
   namespace     = ["benchmarks", "exahype2", "kernelbenchmarks"],
@@ -116,9 +118,14 @@ my_project.set_Peano4_installation("../../../../", mode=build_modes[args.build_m
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.output.makefile.add_cpp_file("KernelBenchmarksFVRusanov-main.cpp")
 my_project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "double")
-my_project.constants.export_constexpr_with_type("MaxPatches", str(args.max_patches), "int")
 my_project.constants.export_constexpr_with_type("NumberOfSamples", str(args.samples), "int")
-my_project.build(make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True)
+my_project.constants.export_constexpr_with_type("NumberOfPatchesToStudy", str(args.num_patches), "int")
+my_project.constants.export_constexpr_with_type("NumberOfLaunchingThreads", str(args.num_threads), "int")
+my_project.constants.export_boolean("EvaluateFlux", True)
+my_project.constants.export_boolean("EvaluateNonconservativeProduct", False)
+my_project.constants.export_boolean("EvaluateSource", False)
+my_project.constants.export_boolean("EvaluateMaximumEigenvalueAfterTimeStep", True if args.eval_eig else False) # Reduction
+my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
 
 print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")

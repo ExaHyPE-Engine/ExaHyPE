@@ -31,11 +31,11 @@ ExaHyPE2Sources = \
   dg/tests/DGUtilsTest.cpp \
   dg/tests/RiemannTest.cpp \
   dg/tests/TestUtils.cpp \
-  enumerator/AoSLexicographicEnumerator.cpp \
-  enumerator/SoALexicographicEnumerator.cpp \
-  enumerator/SingleDoFEnumerator.cpp \
-  enumerator/AoSoALexicographicEnumerator.cpp \
-  enumerator/FaceAoSLexicographicEnumerator.cpp \
+  enumerators/AoSLexicographicEnumerator.cpp \
+  enumerators/SoALexicographicEnumerator.cpp \
+  enumerators/SingleDoFEnumerator.cpp \
+  enumerators/AoSoALexicographicEnumerator.cpp \
+  enumerators/FaceAoSLexicographicEnumerator.cpp \
   fd/BoundaryConditions.cpp \
   fd/PatchUtils.cpp \
   fd/LoopBody.cpp \
@@ -48,7 +48,7 @@ ExaHyPE2Sources = \
   fd/fd4/LoopBody.cpp \
   fd/fd4/FD4_patchwise_functors.cpp \
   fd/fd4/FD4_patchwise_functors.cpp \
-  fv/rusanov/Rusanov.cpp \
+  fv/rusanov/rusanov.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
   dg/rusanov/tests/RiemannTest.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
