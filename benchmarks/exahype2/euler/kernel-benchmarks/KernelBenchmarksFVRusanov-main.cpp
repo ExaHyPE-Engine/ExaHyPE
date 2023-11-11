@@ -763,7 +763,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     ::tarch::accelerator::Device::HostDevice,
     numberOfPatches
   );
-
+/*
   assessKernel(
     wrapStatelessHostKernel<
       ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseInsituStateless<
@@ -801,7 +801,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     ::tarch::accelerator::Device::HostDevice,
     numberOfPatches
   );
-
+*/
   int device = 0;
 
 #if defined(GPUOffloadingSYCL)

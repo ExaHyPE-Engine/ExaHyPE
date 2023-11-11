@@ -87,7 +87,7 @@ gcc-benchmarks:
   needs:
     - job: gcc-build
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 --no-make'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; make -j'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-patch-size-16
   retry: 0
