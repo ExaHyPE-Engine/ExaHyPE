@@ -249,6 +249,24 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
 
 
 template <typename Particle>
+bool swift2::kernels::forceKernelDistanceCheck(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle) {
+
+  const double h_a = localParticle->getSmoothingLength();
+
+  // Distance between the two particles
+  tarch::la::Vector<Dimensions, double> dx    = localParticle->getX() - activeParticle->getX();
+  const double                          r     = tarch::la::norm2(dx);
+
+  // Get actual interaction radius
+  const double iactR = kernel_gamma * h_a;
+
+  const bool result = tarch::la::smaller(r, iactR);
+
+  return result;
+}
+
+
+template <typename Particle>
 void swift2::kernels::forceKernelVectorised(
   Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle
 ) InlineMethod {
@@ -459,7 +477,7 @@ void swift2::kernels::computeHydroForce(
 
 
 template <typename ParticleContainer>
-void swift2::kernels::computeHydroForce(
+void swift2::kernels::computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking(
   const peano4::datamanagement::CellMarker& marker,
   const ParticleContainer&                  particlesAssociatedWithLocalVertices,
   const std::vector<int>&                   numberOfParticlesPerLocalVertex,
@@ -494,3 +512,62 @@ void swift2::kernels::computeHydroForce(
     }     // for activeParticlesChunkSize
   }       // for localParticlesChunkSize
 }
+
+
+template <typename ParticleContainer>
+void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  particlesAssociatedWithLocalVertices,
+  const std::vector<int>&                   numberOfParticlesPerLocalVertex,
+  const ParticleContainer&                  activeParticles,
+  const std::vector<int>&                   numberOfActiveParticlesPerVertexAdded
+) {
+  typename std::list<typename ParticleContainer::value_type>::const_iterator localParticlesIterator
+    = particlesAssociatedWithLocalVertices.begin();
+
+  for (auto localParticlesChunkSize : numberOfParticlesPerLocalVertex) {
+    typename ParticleContainer::value_type localParticlesChunk = *localParticlesIterator;
+    std::advance(localParticlesIterator, localParticlesChunkSize);
+
+    typename std::list<typename ParticleContainer::value_type>::const_iterator activeParticlesIterator
+      = activeParticles.begin();
+    for (auto activeParticlesChunkSize : numberOfActiveParticlesPerVertexAdded) {
+      typename ParticleContainer::value_type activeParticlesChunk = *activeParticlesIterator;
+      std::advance(activeParticlesIterator, activeParticlesChunkSize);
+
+      for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize; localParticleNumberInThisChunk++) {
+        if (localParticleCanBeWorkedOnCellKernel(&localParticlesChunk[localParticleNumberInThisChunk], marker)) {
+          bool* enabledInteractionPartners = tarch::allocateMemory<bool>(activeParticlesChunkSize, tarch::MemoryLocation::Heap);
+
+          for (
+            int activeParticleNumberInThisChunk = 0;
+            activeParticleNumberInThisChunk < activeParticlesChunkSize;
+            activeParticleNumberInThisChunk++
+          ) {
+            enabledInteractionPartners[activeParticleNumberInThisChunk] =
+              swift2::kernels::forceKernelDistanceCheck(
+                localParticlesChunk + localParticleNumberInThisChunk,
+                activeParticlesChunk + activeParticleNumberInThisChunk
+              );
+          }
+
+          for (
+            int activeParticleNumberInThisChunk = 0;
+            activeParticleNumberInThisChunk < activeParticlesChunkSize;
+            activeParticleNumberInThisChunk++
+          ) {
+            if (enabledInteractionPartners[activeParticleNumberInThisChunk]) {
+              swift2::kernels::forceKernelVectorised(
+                localParticlesChunk + localParticleNumberInThisChunk,
+                activeParticlesChunk + activeParticleNumberInThisChunk
+              );
+            }
+          }
+
+          tarch::freeMemory(enabledInteractionPartners, tarch::MemoryLocation::Heap);
+        } // if
+      }   // for localParticleNumberInThisChunk
+    }     // for activeParticlesChunkSize
+  }       // for localParticlesChunkSize
+}
+

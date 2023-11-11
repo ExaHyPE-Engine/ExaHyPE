@@ -97,6 +97,13 @@ namespace swift2 {
     void forceKernelVectorised(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle);
 
     /**
+     * First part of force kernel routine, where we check if two particles are
+     * close enough to actually interact.
+     */
+    template <typename Particle>
+    bool forceKernelDistanceCheck(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle);
+
+    /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
      * In this, only the local particle is updated (in the symmetric case, both
      * are updated at the same time). This compute kernel is inserted by Peano's
@@ -216,7 +223,32 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeHydroForce(
+    void computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking(
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localVertices,
+      const std::vector<int>&                   numberOfParticlesPerVertex,
+      const ParticleContainer&                  activeParticles,
+      const std::vector<int>&                   numberOfActiveParticlesPerVertex
+    );
+
+
+    /**
+     * Alternative implementation of the hydro force which splits up the
+     * underlying algorithm into two steps:
+     *
+     * 1. Identify all the particles which actually impose an interaction.
+     *    This is a purely geometric distance check and its result is stored in
+     *    a boolean array.
+     * 2. For those interactions which are flagged as interactive, we actually
+     *    evaluate the force.
+     *
+     * In this variant, we "only" vectorise the first step, assuming that this
+     * is where the majority of the runtime is spent. This way, we loose out on
+     * the vectorisation potential of the force, but we do not do a lot of
+     * calculations which eventually are masked out anyway.
+     */
+    template <typename ParticleContainer>
+    void computeHydroForce_vectoriseDistanceChecks(
       const peano4::datamanagement::CellMarker& marker,
       const ParticleContainer&                  localVertices,
       const std::vector<int>&                   numberOfParticlesPerVertex,

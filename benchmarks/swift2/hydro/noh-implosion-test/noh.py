@@ -41,10 +41,14 @@ Choices = [
     Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_OnTheFly,
     Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_InsertSweeps,
     Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_OnTheFly,
-    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_InsertSweeps + "/" + Enable_Vectorisation,
-    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_OnTheFly + "/" + Enable_Vectorisation,
-    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_InsertSweeps + "/" + Enable_Vectorisation,
-    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_OnTheFly + "/" + Enable_Vectorisation,
+    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_InsertSweeps + "/" + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_OnTheFly + "/" + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_InsertSweeps + "/" + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_OnTheFly + "/" + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_InsertSweeps + "/" + Enable_VectorisationOfAllComparisons,
+    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_OnTheFly + "/" + Enable_VectorisationOfAllComparisons,
+    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_InsertSweeps + "/" + Enable_VectorisationOfAllComparisons,
+    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_OnTheFly + "/" + Enable_VectorisationOfAllComparisons,
 #    "continuous-per-vertex-vectorise",
 #    "global-continuous-vectorise",
 #    "tasks",
@@ -271,11 +275,11 @@ print(
 )
 
 
-particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleInteractionKernelRealisation.DEFAULT
-if Enable_VectorisationOfDistanceChecks in args.optimisation:
-  particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleInteractionKernelRealisation.VECTORISE_DISTANCE_CHECKS
-elif Enable_VectorisationOfAllComparisons in args.optimisation:
-  particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleInteractionKernelRealisation.VECTORISE_ALL
+particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.DEFAULT
+if Enable_VectorisationOfDistanceChecks in args.realisation:
+  particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_DISTANCE_CHECKS_AND_UNARY_OPERATIONS
+elif Enable_VectorisationOfAllComparisons in args.realisation:
+  particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
   
 
 particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
