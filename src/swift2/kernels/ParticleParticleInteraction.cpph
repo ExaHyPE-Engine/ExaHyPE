@@ -307,8 +307,10 @@ void swift2::kernels::forceKernelVectorised(
   // Get actual interaction radius
   const double iactR = kernel_gamma * h_a;
 
-  double mask = tarch::la::smaller(r, iactR);
-  mask &= tarch::la::greater(r, 0.0);
+  // @Pawel I don't know if this vectorises anymore, but I think the second check is important
+  //        I also don't know if a strict or non-strict boolean optimisation make a difference.
+  //        If they do, please document it in the SWIFT optimisation pages.
+  double mask = tarch::la::smaller(r, iactR) & tarch::la::greater(r, 0.0) ? 1.0 : 0.0;
 
   // Get actual interaction radius
   double wa, wb;
