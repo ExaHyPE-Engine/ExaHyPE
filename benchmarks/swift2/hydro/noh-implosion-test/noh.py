@@ -28,27 +28,19 @@ Enable_VectorisationOfAllComparisons = "vectorise-all"
 Enable_VectorisationOfDistanceChecks = "vectorise-distance-checks"
 
 Choices = [
-    "none",
-    "continuous-per-vertex",
-    "global-continuous",
-    "continuous-per-vertex-vectorise-distance-checks",
-    "global-continuous-vectorise-distance-checks",
-    "continuous-per-vertex-vectorise-all",
-    "global-continuous-vectorise-all",
-    "tasks",
-    Parallelisation_DomainDecomposition + "/" + Storage_Scattered,
-    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_InsertSweeps,
-    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_OnTheFly,
-    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_InsertSweeps,
-    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_OnTheFly,
-    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_InsertSweeps + "/" + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_OnTheFly + "/" + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_InsertSweeps + "/" + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_OnTheFly + "/" + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_InsertSweeps + "/" + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition + "/" + Storage_ContinuousPerVertex + "/" + Sorting_OnTheFly + "/" + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_InsertSweeps + "/" + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition + "/" + Storage_GlobalContinuous + "/" + Sorting_OnTheFly + "/" + Enable_VectorisationOfAllComparisons,
+    Parallelisation_DomainDecomposition + "." + Storage_Scattered,
+    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_InsertSweeps,
+    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_OnTheFly,
+    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_InsertSweeps,
+    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_OnTheFly,
+    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_InsertSweeps + "." + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_OnTheFly + "." + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_InsertSweeps + "." + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_OnTheFly + "." + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_InsertSweeps + "." + Enable_VectorisationOfAllComparisons,
+    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_OnTheFly + "." + Enable_VectorisationOfAllComparisons,
+    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_InsertSweeps + "." + Enable_VectorisationOfAllComparisons,
+    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_OnTheFly + "." + Enable_VectorisationOfAllComparisons,
 #    "continuous-per-vertex-vectorise",
 #    "global-continuous-vectorise",
 #    "tasks",
@@ -61,7 +53,7 @@ def use_continuous_per_vertex_data_layout(realisation):
     @param realisation: String from Choices
     
     """
-    return realisation.split("/")[1] == Storage_ContinuousPerVertex
+    return realisation.split(".")[1] == Storage_ContinuousPerVertex
 
 
 def use_globally_continuous_data_layout(realisation):
@@ -70,7 +62,7 @@ def use_globally_continuous_data_layout(realisation):
     @param realisation: String from Choices
     
     """
-    return realisation.split("/")[1] == Storage_GlobalContinuous
+    return realisation.split(".")[1] == Storage_GlobalContinuous
 
 
 def use_vectorised_kernels(realisation):
@@ -79,7 +71,7 @@ def use_vectorised_kernels(realisation):
     @param realisation: String from Choices
     
     """
-    return len(realisation.split("/"))>3 and realisation.split("/")[3]==Enable_Vectorisation
+    return len(realisation.split("."))>3 and realisation.split(".")[3]==Enable_Vectorisation
 
 
 def use_on_the_fly_sorting(realisation):
@@ -88,7 +80,7 @@ def use_on_the_fly_sorting(realisation):
     @param realisation: String from Choices
     
     """
-    return len(realisation.split("/"))>2 and realisation.split("/")[2]==Sorting_OnTheFly
+    return len(realisation.split("."))>2 and realisation.split(".")[2]==Sorting_OnTheFly
 
 
 def use_separate_sorting_sweeps(realisation):
@@ -97,7 +89,7 @@ def use_separate_sorting_sweeps(realisation):
     @param realisation: String from Choices
     
     """
-    return len(realisation.split("/"))>2 and realisation.split("/")[2]==Sorting_InsertSweeps
+    return len(realisation.split("."))>2 and realisation.split(".")[2]==Sorting_InsertSweeps
     
 
 parser = argparse.ArgumentParser(description="SPH benchmarking script")
@@ -134,6 +126,13 @@ parser.add_argument(
     type=float,
     default=0.2,
     help="End of simulation",
+)
+parser.add_argument(
+    "-o",
+    "--output",
+    dest="output_file",
+    default="noh2D",
+    help="Executable file name",
 )
 parser.add_argument(
     "-plot",
@@ -216,17 +215,18 @@ args = parser.parse_args()
 
 project_namespace = ["benchmarks", "swift2", "noh"]
 
+                     
 project = swift2.Project(
-    namespace=project_namespace, project_name="Noh", executable="noh2D"
+    namespace=project_namespace, project_name="Noh", executable=args.output_file
 )
 
 
-if ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition 
+if ( args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
      and
-     args.realisation.split("/")[1] == Storage_Scattered
+     args.realisation.split(".")[1] == Storage_Scattered
      ):
     pass
-elif ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition 
+elif ( args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
        and 
        use_separate_sorting_sweeps(args.realisation)
        ):
@@ -236,7 +236,7 @@ elif ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition
     project.initialisation_steps_task_graph_compiler = (
         swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
     )
-elif ( args.realisation.split("/")[0] == Parallelisation_DomainDecomposition 
+elif ( args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
        and 
        use_on_the_fly_sorting(args.realisation)
        ):
