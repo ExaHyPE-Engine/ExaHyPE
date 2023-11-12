@@ -124,7 +124,7 @@ class UpdateParallelState(ActionSet):
 
     See add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption()
     in swift2.graphcompiler.AMRLogic for a realisation of the above rationale.
-    In contrast, map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise()
+    In contrast, map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access()
     uses dummy sweeps.
 
 

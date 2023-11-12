@@ -348,7 +348,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
         """
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  int  numberOfAssignedParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}}.size();
+  int  numberOfAssignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.isGathered() ? fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.size() : 0;
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
@@ -359,7 +359,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(Acti
         """
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
   auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  int  numberOfAssignedParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}}.size();
+  int  numberOfAssignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.isGathered() ? fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.size() : 0;
 
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}
