@@ -11,10 +11,12 @@ foreach(mode IN LISTS BUILD_MODES)
 
     target_sources(Peano4Core${dimension}d_${mode_lower} PRIVATE ${SOURCES})
     target_include_directories(Peano4Core${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    target_compile_definitions(Peano4Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS} Dimensions=${dimension})
-    target_link_options(Peano4Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
+    target_compile_definitions(Peano4Core${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
+    target_link_options(Peano4Core${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
     target_link_libraries(Peano4Core${dimension}d_${mode_lower} PUBLIC project_options Tarch_${mode_lower})
     target_link_libraries(Peano4Core${dimension}d_${mode_lower} PRIVATE project_warnings)
+    target_compile_options(Peano4Core${dimension}d_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
+    target_link_options(Peano4Core${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
 
     install(TARGETS Peano4Core${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}

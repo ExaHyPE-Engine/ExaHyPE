@@ -11,11 +11,12 @@ foreach(mode IN LISTS BUILD_MODES)
 
     target_sources(ToolboxParticles${dimension}d_${mode_lower} PRIVATE ${SOURCES})
     target_include_directories(ToolboxParticles${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    target_compile_definitions(ToolboxParticles${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS} Dimensions=${dimension})
-    target_link_options(ToolboxParticles${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
+    target_compile_definitions(ToolboxParticles${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
+    target_link_options(ToolboxParticles${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
     target_link_libraries(ToolboxParticles${dimension}d_${mode_lower} PUBLIC project_options Peano4Core${dimension}d_${mode_lower})
     target_link_libraries(ToolboxParticles${dimension}d_${mode_lower} PRIVATE project_warnings)
-    
+    target_compile_options(ToolboxParticles${dimension}d_${mode_lower}  PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
+
     if(USE_COMPONENT_DEFINITIONS)
       set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxParticles)
     endif()

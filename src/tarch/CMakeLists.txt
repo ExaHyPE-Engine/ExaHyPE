@@ -10,9 +10,10 @@ foreach(mode IN LISTS BUILD_MODES)
 
   target_sources(Tarch_${mode_lower} PRIVATE ${SOURCES})
   target_include_directories(Tarch_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-  target_compile_definitions(Tarch_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS})
-  target_link_options(Tarch_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
+  target_compile_definitions(Tarch_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
+  target_link_options(Tarch_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
   target_link_libraries(Tarch_${mode_lower} PUBLIC project_options)
+  target_compile_options(Tarch_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
 
   if(NOT "${WITH_GPU}" STREQUAL "cuda")
     target_link_libraries(Tarch_${mode_lower} PRIVATE project_warnings)
