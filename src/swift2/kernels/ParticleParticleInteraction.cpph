@@ -555,7 +555,7 @@ void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
                   activeParticlesChunk + activeParticleNumberInThisChunk
                 );
             }
-            for (int i=0; activeParticlesChunkSize<activeParticlesChunkSize+MaxVectorise-1; i++) {
+            for (int i=activeParticlesChunkSize; i<activeParticlesChunkSize+MaxVectorise-1; i++) {
               enabledInteractionPartners[i] = false;
             }
           }
