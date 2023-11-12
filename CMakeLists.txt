@@ -281,6 +281,12 @@ else()
   list(APPEND BUILD_MODES ${CMAKE_BUILD_TYPE})
 endif()
 
+# Update core libraries' build modes and dimensions if it is not set to build all and if the build type of an application is different.
+if(CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQUAL "${PEANO_APP_BUILD_TYPE}")
+  set(CMAKE_BUILD_TYPE ${PEANO_APP_BUILD_TYPE} CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
+  list(APPEND BUILD_MODES ${PEANO_APP_BUILD_TYPE})
+endif()
+
 # CMAKE_CXX_FLAGS_* are appeneded to the targets (build modes) automatically in most of the cases,
 # CMAKE_CXX_FLAGS_* are eppeneded to every target, regardles of build mode. e.g., Release, Debug
 # But an uncommon name such as _TRACE is not always appeneded (CMAKE_CXX_FLAGS_TRACE)
@@ -329,11 +335,6 @@ set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
 set(PEANO_TRACE_LDFLAGS -g)
 
 set(WITH_DIMENSIONS "2;3" CACHE STRING "Build with number of (space) dimensions")
-
-# Update core libraries' build modes and dimensions if it is not set to build all and if the build type of an application is different.
-if(CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQUAL "${PEANO_APP_BUILD_TYPE}")
-  set(CMAKE_BUILD_TYPE ${PEANO_APP_BUILD_TYPE} CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
-endif()
 
 if(NOT "${WITH_DIMENSIONS}" STREQUAL "2;3" AND PEANO_APP_DIMENSION AND NOT "${WITH_DIMENSIONS}" STREQUAL "${PEANO_APP_DIMENSION}")
   set(WITH_DIMENSIONS ${PEANO_APP_DIMENSION} CACHE STRING "Dimensions 2;3" FORCE)
