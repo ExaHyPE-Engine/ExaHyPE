@@ -4,9 +4,9 @@ import argparse
 import subprocess
 
 parser = argparse.ArgumentParser(description='Configuration helper script for GNU Autotools and CMake')
-parser.add_argument('--cmake', help='Use CMake; specify target build folder via --cmake=...')
 parser.add_argument('-cc', '--cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
 parser.add_argument('-cxx', '--cxx', type=str, default=os.environ.get('CXX'), help='C++ compiler to use')
+parser.add_argument('--cmake', help='Use CMake; specify target build folder via --cmake=...')
 parser.add_argument('--exahype', action='store_true', help='Enable ExaHyPE2')
 parser.add_argument('--swift', action='store_true', help='Enable Swift2')
 parser.add_argument('--particles', action='store_true', help='Enable particles support')
@@ -66,8 +66,8 @@ elif args.gpu == 'omp' and "amdclang" in args.cc and "amdclang++" in args.cxx:
   cflags += ' -lstdc++fs --offload-arch=' + args.arch
   cxxflags += ' -lstdc++fs --offload-arch=' + args.arch
 elif args.gpu == 'omp' and "nvc" in args.cc and "nvc++" in args.cxx:
-  cflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
-  cxxflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
+  cflags += ' -cuda -mp=gpu -gpu=cc' + args.arch
+  cxxflags += ' -cuda -mp=gpu -gpu=cc' + args.arch
   if args.asm:
     cflags += ' -gpu=keep'
     cxxflags += ' -gpu=keep'
