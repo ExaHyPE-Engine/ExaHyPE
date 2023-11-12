@@ -18,18 +18,14 @@ build_modes = {
 build_mode = "Release"
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Finite Volumes Rusanov Kernel Benchmarking Script')
-parser.add_argument("-o",       "--output",             dest="output_path",       type=str,                     default=output_path,        help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
 parser.add_argument("-m",       "--build-mode",         dest="build_mode",        choices=build_modes.keys(),   default=build_mode,         help="|".join(build_modes.keys()))
-parser.add_argument("-sc",      "--scenario",           dest="scenario",          choices=scenarios,            default=scenario,           help="|".join(scenarios))
-parser.add_argument("-maxh",    "--max-cell-size",      dest="max_cell_size",     type=float,                   default=cell_size,          help="Maximum size of a single finite volume cell on each axis.")
-parser.add_argument("-ps",      "--patch-size",         dest="patch_size",        type=int,                     default=patch_size,         help="Number of finite volumes per axis (dimension) per patch")
-parser.add_argument("-mp",      "--max-patches",        dest="max_patches",       type=int,                     default=max_patches,        help="Maximal number of patches to study")
-parser.add_argument("-mt",      "--max-threads",        dest="max_threads",       type=int,                     default=1,                  help="Maximal number of launching threads")
-parser.add_argument("-s" ,      "--samples",            dest="samples",           type=int,                     default=16,                 help="Number of samples per measurement")
+parser.add_argument("-t",       "--num-threads",        dest="num_threads",       type=int,                     default=1,                  help="Number of launching threads")
+parser.add_argument("-p",       "--num-patches",        dest="num_patches",       type=int,                     required=True,              help="Number of patches to study")
+parser.add_argument("-ps",      "--patch-size",         dest="patch_size",        type=int,                     required=True,              help="Number of finite volumes per axis (dimension) per patch")
+parser.add_argument("-s" ,      "--samples",            dest="samples",           type=int,                     default=100,                help="Number of samples per measurement")
 parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=0.0,                help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
-parser.add_argument(            "--make",                                         action="store_true",                                      help="Compile the code after generation")
-parser.add_argument(            "--no-make",            dest="use_make",          action="store_false",                                     help="Do not compile the code after generation")
-parser.set_defaults(use_make=True)
+parser.add_argument("-eig",     "--eval-eig",           dest="eval_eig",          action="store_true",                                      help="Evaluate max. eigenvalue")
+parser.add_argument(            "--make",               dest="make",              action="store_true",                                      help="Compile the code after generation")
 args = parser.parse_args()
 
 if args.build_mode not in build_modes:
@@ -41,11 +37,12 @@ if(args.accuracy < 0):
   import numpy
   accuracy = default=numpy.finfo(float).eps
 
+executable_name = "kernel-benchmarks-fv-rusanov-ps-"+ str(args.patch_size) + "-p-" + str(args.num_patches) + "-" + str(args.build_mode)
 my_project = exahype2.Project(
   namespace     = ["benchmarks", "exahype2", "kernelbenchmarks"],
   project_name  = "KernelBenchmarksFVRusanov",
   directory     = ".",
-  executable    = "kernel-benchmarks-fv-rusanov-3d-patch-size-"+ str(args.patch_size)
+  executable    = executable_name
 )
 
 unknowns = {
@@ -107,7 +104,7 @@ for key, value in double_constants.items():
   my_solver.add_solver_constants("static constexpr double {} = {};".format(key, value))
 
 my_solver.set_implementation(
-  boundary_conditions  = exahype2.solvers.PDETerms.Empty_Implementation,
+  boundary_conditions  = "",
   ncp                  = """
   double deltaQSerialised[NumberOfUnknowns*3];
   for (int i=0; i<NumberOfUnknowns; i++) {
@@ -118,7 +115,7 @@ my_solver.set_implementation(
   }
   ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
-  flux                 = exahype2.solvers.PDETerms.None_Implementation,
+  flux                 = "",
   source_term          = """
   //memset(S, 0.0, NumberOfUnknowns*sizeof(double));
   for (int i = 0; i < NumberOfUnknowns; i++) {
@@ -128,7 +125,7 @@ my_solver.set_implementation(
 """,
   refinement_criterion = exahype2.solvers.PDETerms.Empty_Implementation,
   eigenvalues          = """
-  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
+  return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd);
 """,
   initial_conditions   = """
   printf("Initial conditions should not be called in this benchmark!");
@@ -165,22 +162,22 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 
 my_project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "double")
 my_project.constants.export_constexpr_with_type("NumberOfSamples", str(args.samples), "int")
-my_project.constants.export_constexpr_with_type("MaxNumberOfPatchesToStudy", str(args.max_patches), "int")
-my_project.constants.export_constexpr_with_type("MaxNumberOfLaunchingThreads", str(args.max_threads), "int")
+my_project.constants.export_constexpr_with_type("NumberOfPatchesToStudy", str(args.num_patches), "int")
+my_project.constants.export_constexpr_with_type("NumberOfLaunchingThreads", str(args.num_threads), "int")
 
 my_project.constants.export_boolean("EvaluateFlux", False)
 my_project.constants.export_boolean("EvaluateNonconservativeProduct", True)
 my_project.constants.export_boolean("EvaluateSource", True)
-my_project.constants.export_boolean("EvaluateMaximumEigenvalueAfterTimeStep", True)
+my_project.constants.export_boolean("EvaluateMaximumEigenvalueAfterTimeStep", True if args.eval_eig else False) # Reduction
 
 my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/InitialValues.cpp")
 my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp")
 #my_project.output.makefile.add_header_search_path("../../../../applications/exahype2/ccz4")
 os.system("cp {} KernelBenchmarksFVRusanov-main.cpp".format("../../euler/kernel-benchmarks/KernelBenchmarksFVRusanov-main.cpp"))
 
-my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
+my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
 
-print("Executable is kernel-benchmarks-fv-rusanov-3d-patch-size-"+ str(args.patch_size))
+print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
