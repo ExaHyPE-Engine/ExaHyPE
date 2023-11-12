@@ -1,5 +1,7 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "PostprocessingKernels.h"
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
 #include "peano4/utils/Loop.h"
 
 
@@ -11,7 +13,7 @@ void exahype2::fv::mapInnerNeighbourVoxelAlongBoundayOntoAuxiliaryVariable(
   int    fromIndex,
   int    toIndex
 ) {
-  exahype2::enumerator::AoSLexicographicEnumerator enumerator(
+  exahype2::enumerators::AoSLexicographicEnumerator enumerator(
     1, // only one patch
     numberOfVolumesPerAxisInPatch,
     0, // int haloSize,

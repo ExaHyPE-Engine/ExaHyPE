@@ -2,7 +2,7 @@
 #include "TestUtils.h"
 #include "../Riemann.h"
 #include "../DGUtils.h"
-#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/FaceAoSLexicographicEnumerator.h"
 
 exahype2::dg::tests::RiemannTest::RiemannTest():
   tarch::tests::TestCase( "exahype2::dg::tests::RiemannTest" ) {
@@ -97,7 +97,7 @@ void exahype2::dg::tests::RiemannTest::testProjectVolumetricDataOntoFacesForCons
   validateNumericalEquals( QyL[12],  1.0 );
   validateNumericalEquals( QyL[13], -1.0 );
   #if Dimensions==3
-  exahype2::enumerator::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,3+1,1,1,1);
+  exahype2::enumerators::FaceAoSLexicographicEnumerator bottomTopFaceEnumerator(1,3+1,1,1,1);
 
   validateEquals( bottomTopFaceEnumerator({0,0,0},0), 0 );
   validateEquals( bottomTopFaceEnumerator({0,0,0},1), 1 );

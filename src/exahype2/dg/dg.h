@@ -343,7 +343,7 @@
  * as we work in a Discontinuous Galerkin setup. We hence do not store four weights in the
  * example above, but we do hold eight weights, i.e. both the weights from the left and the
  * right side. These weights are stored lexicographically in line with the Finite Volume
- * solver. See the documentation of the face enumerator exahype2::enumerator::FaceAoSLexicographicEnumerator.
+ * solver. See the documentation of the face enumerator exahype2::enumerators::FaceAoSLexicographicEnumerator.
  * In the vanilla version of ExaHyPE, we do only store the solution left and right. For more
  * sophisticated Riemann solver, you can also store derivatives, e.g., from both sides.
  *

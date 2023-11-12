@@ -5,9 +5,9 @@
 #include "exahype2/fd/Functors.h"
 #include "KernelVariants.h"
 
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-#include "exahype2/enumerator/SoALexicographicEnumerator.h"
-#include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/SoALexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSoALexicographicEnumerator.h"
 
 #include "tarch/multicore/multicore.h"
 
@@ -72,7 +72,7 @@ namespace exahype2 {
         template <>
         void computeDifferentialSourceTerm_LoopBody(
           const double* __restrict__                     QIn,
-          const exahype2::enumerator::AoSLexicographicEnumerator&                       QInEnumerator,
+          const exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
           exahype2::fd::NonconservativeProduct           DifferentialSource,
           const tarch::la::Vector<Dimensions,double>&    patchCentre,
           const tarch::la::Vector<Dimensions,double>&    patchSize,
@@ -82,7 +82,7 @@ namespace exahype2 {
           double                                         dt,
           int                                            normal,
           double* __restrict__                           QDiffSrc,
-          const exahype2::enumerator::AoSLexicographicEnumerator&                      QDiffSrcEnumerator,
+          const exahype2::enumerators::AoSLexicographicEnumerator& QDiffSrcEnumerator,
           DifferentialSourceTermVariant                  variant
         ) InlineMethod;
 */

@@ -7,7 +7,7 @@
 #include "tarch/logging/Log.h"
 
 #include "exahype2/fd/PatchUtils.h"
-#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/FaceAoSLexicographicEnumerator.h"
 #include "exahype2/fd/BoundaryConditions.h"
 
 #include <algorithm>

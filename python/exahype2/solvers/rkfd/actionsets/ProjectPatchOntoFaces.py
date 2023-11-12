@@ -64,8 +64,8 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
     
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+    ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+    ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
 
     // Set the variable
     // double timeStepSize
@@ -231,7 +231,7 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
 #include "peano4/utils/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
 #include "exahype2/fd/BoundaryConditions.h"
-#include "exahype2/enumerator/Enumerator.h"
+#include "exahype2/enumerators/enumerators.h"
 """ + AbstractRKFDActionSet.get_includes(
             self
         )

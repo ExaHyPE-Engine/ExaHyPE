@@ -23,15 +23,10 @@
 #define AlignmentOnHeap 16
 #endif
 
-/**
- * Clang requires us to put a static keyword in front of header file implementations,
- * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't
- * eat stuff. Therefore we do not define the static keyword here.
- */
-#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions inline
+#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
 #define OpenMPTaskGroup
 
-#define PragmaPush
-#define SilenceUnknownAttribute
-#define PragmaPop
+#define PragmaPush _Pragma("clang diagnostic push")
+#define SilenceUnknownAttribute _Pragma("clang diagnostic ignored \"-Wunknown-attributes\"")
+#define PragmaPop _Pragma("clang diagnostic pop")

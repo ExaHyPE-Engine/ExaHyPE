@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Functors.h"
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-#include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
-#include "exahype2/enumerator/SoALexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSoALexicographicEnumerator.h"
+#include "exahype2/enumerators/SoALexicographicEnumerator.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/multicore/multicore.h"
 
@@ -40,7 +40,7 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
          */
         static void computeEigenvalues_LoopBody(
           const double* __restrict__ QIn,
-          exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
+          exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator,
           exahype2::fv::riemann::Eigenvalues               eigenvalues,
           const tarch::la::Vector<Dimensions, double>&     patchCentre,
           const tarch::la::Vector<Dimensions, double>&     patchSize,
@@ -50,7 +50,7 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
           double                                           dt,
           int                                              normal,
           double* __restrict__ QEigenvalues,
-          exahype2::enumerator::AoSLexicographicEnumerator QEigenvaluesEnumerator
+          exahype2::enumerators::AoSLexicographicEnumerator QEigenvaluesEnumerator
         ) InlineMethod;
 
         /**
@@ -60,11 +60,11 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
          */
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__ QOut,
-          exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
+          exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator,
           const double* __restrict__ tempMaxEigenvalueX,
           const double* __restrict__ tempMaxEigenvalueY,
           const double* __restrict__ tempMaxEigenvalueZ,
-          exahype2::enumerator::AoSLexicographicEnumerator maxEigenvalueEnumerator,
+          exahype2::enumerators::AoSLexicographicEnumerator maxEigenvalueEnumerator,
           const tarch::la::Vector<Dimensions, double>&     patchCentre,
           const tarch::la::Vector<Dimensions, double>&     patchSize,
           int                                              patchIndex,
@@ -80,7 +80,7 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
          */
         static void computeFlux_LoopBody(
           const double* __restrict__ QIn,
-          exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
+          exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator,
           exahype2::fv::riemann::Flux                      flux,
           const tarch::la::Vector<Dimensions, double>&     patchCentre,
           const tarch::la::Vector<Dimensions, double>&     patchSize,
@@ -90,7 +90,7 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
           double                                           dt,
           int                                              normal,
           double* __restrict__ QFlux,
-          exahype2::enumerator::AoSLexicographicEnumerator QFluxEnumerator
+          exahype2::enumerators::AoSLexicographicEnumerator QFluxEnumerator
         ) InlineMethod;
 
 #if defined(SharedOMP) \
@@ -124,12 +124,12 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
 
         static void computeRiemannSolution_LoopBody(
           const double* __restrict__ QIn,
-          exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
+          exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator,
           exahype2::fv::riemann::SolveRiemannProblem       solveRiemannProblem,
           const double* __restrict__ QFlux,
-          exahype2::enumerator::AoSLexicographicEnumerator QFluxEnumerator,
+          exahype2::enumerators::AoSLexicographicEnumerator QFluxEnumerator,
           const double* __restrict__ QEigenvalues,
-          exahype2::enumerator::AoSLexicographicEnumerator QEigenvaluesEnumerator,
+          exahype2::enumerators::AoSLexicographicEnumerator QEigenvaluesEnumerator,
           const tarch::la::Vector<Dimensions, double>&     patchCentre,
           const tarch::la::Vector<Dimensions, double>&     patchSize,
           int                                              patchIndex,
@@ -139,9 +139,9 @@ and ((!defined(__INTEL_LLVM_COMPILER) and !defined(__clang__) and !defined(__GNU
           int                                              normal,
           double* __restrict__ APDQ,
           double* __restrict__ AMDQ,
-          exahype2::enumerator::AoSLexicographicEnumerator DQEnumerator,
+          exahype2::enumerators::AoSLexicographicEnumerator DQEnumerator,
           double* __restrict__ QMaxEigenvalue,
-          exahype2::enumerator::AoSLexicographicEnumerator QMaxEigenvalueEnumerator
+          exahype2::enumerators::AoSLexicographicEnumerator QMaxEigenvalueEnumerator
         )  InlineMethod;
       }
     }

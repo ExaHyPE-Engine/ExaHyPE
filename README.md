@@ -18,8 +18,9 @@ load balancing, sophisticated geometry representations, and other features.
 
 # Availability
 All software is available as open source through www.peano-framework.org.
-This page also holds extensive [online documentation](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html) (written, extracted from
-source code and as video tutorials).
+
+This page also holds extensive [online documentation](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html)
+(written, extracted from source code and as video tutorials).
 
 # Supported Platforms
 We test and maintain Peano for Linux only.

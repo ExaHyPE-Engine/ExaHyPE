@@ -38,15 +38,15 @@ def create_compute_kernel_for_FD4(flux_implementation,
   }
   
   EnumeratorTemplateTypes = {
-    KernelVariant.PatchWiseAoSHeap:               "::exahype2::enumerator::AoSLexicographicEnumerator",
-    KernelVariant.PatchWiseAoSoAHeap:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
-    KernelVariant.PatchWiseSoAHeap:               "::exahype2::enumerator::SoALexicographicEnumerator",
-    KernelVariant.BatchedAoSHeap:                 "::exahype2::enumerator::AoSLexicographicEnumerator",
-    KernelVariant.BatchedAoSoAHeap:               "::exahype2::enumerator::AoSoALexicographicEnumerator",
-    KernelVariant.BatchedSoAHeap:                 "::exahype2::enumerator::SoALexicographicEnumerator",
-    KernelVariant.TaskGraphAoSHeap:               "::exahype2::enumerator::AoSLexicographicEnumerator",
-    KernelVariant.TaskGraphAoSoAHeap:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
-    KernelVariant.TaskGraphSoAHeap:               "::exahype2::enumerator::SoALexicographicEnumerator",
+    KernelVariant.PatchWiseAoSHeap:               "::exahype2::enumerators::AoSLexicographicEnumerator",
+    KernelVariant.PatchWiseAoSoAHeap:             "::exahype2::enumerators::AoSoALexicographicEnumerator",
+    KernelVariant.PatchWiseSoAHeap:               "::exahype2::enumerators::SoALexicographicEnumerator",
+    KernelVariant.BatchedAoSHeap:                 "::exahype2::enumerators::AoSLexicographicEnumerator",
+    KernelVariant.BatchedAoSoAHeap:               "::exahype2::enumerators::AoSoALexicographicEnumerator",
+    KernelVariant.BatchedSoAHeap:                 "::exahype2::enumerators::SoALexicographicEnumerator",
+    KernelVariant.TaskGraphAoSHeap:               "::exahype2::enumerators::AoSLexicographicEnumerator",
+    KernelVariant.TaskGraphAoSoAHeap:             "::exahype2::enumerators::AoSoALexicographicEnumerator",
+    KernelVariant.TaskGraphSoAHeap:               "::exahype2::enumerators::SoALexicographicEnumerator",
   }
 
   template  = KernelCalls[kernel_variant]
