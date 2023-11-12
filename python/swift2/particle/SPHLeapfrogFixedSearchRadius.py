@@ -434,7 +434,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
           touch_vertex_last_time_kernel_for_drift = """::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles );"""
         else:
           touch_vertex_last_time_kernel_for_drift = """
-              if (assignedParticles>0) {
+              if (numberOfAssignedParticles>0) {
                 ::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles, numberOfAssignedParticles );
               }
               else {
