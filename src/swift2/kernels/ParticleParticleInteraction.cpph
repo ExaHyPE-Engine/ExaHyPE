@@ -307,7 +307,8 @@ void swift2::kernels::forceKernelVectorised(
   // Get actual interaction radius
   const double iactR = kernel_gamma * h_a;
 
-  const double mask = tarch::la::smaller(r, iactR);
+  double mask = tarch::la::smaller(r, iactR);
+  mask &= tarch::la::greater(r, 0.0);
 
   // Get actual interaction radius
   double wa, wb;
