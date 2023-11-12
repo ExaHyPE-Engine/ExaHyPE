@@ -40,8 +40,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
       {% for PREDICATE_NO in range(0,PREDICATES|length) %}
       if ({{PREDICATES[PREDICATE_NO]}}) {
-        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
-        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+        ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+        ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
     
         dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
           for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
@@ -158,7 +158,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         return (
             """
 #include "exahype2/NonCriticalAssertions.h"
-#include "exahype2/enumerator/Enumerator.h"
+#include "exahype2/enumerators/enumerators.h"
 #include "exahype2/fd/PatchUtils.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "tarch/multicore/Tasks.h"

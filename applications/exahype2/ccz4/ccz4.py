@@ -360,7 +360,7 @@ if __name__ == "__main__":
         
         double constraints[7]={0,0,0,0,0,0,0};
         admconstraints(constraints, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ);
-        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables ( 1, patchSize, 0, 59, n_a_v);
+        ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables ( 1, patchSize, 0, 59, n_a_v);
         for (int i=0;i<7;i++){
           fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+i) ] = constraints[i]; 
         }
@@ -414,7 +414,7 @@ if __name__ == "__main__":
         double currentPosition[3]; 
         for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
         Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
-        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, patchSize, 0, 59, n_a_v);
+        ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, patchSize, 0, 59, n_a_v);
         fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = Psi4[0]; 
         fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = Psi4[1];
       }  
@@ -469,7 +469,7 @@ if __name__ == "__main__":
         
         double terms[""" + str( self._auxiliary_variables ) + """]={0,0,0,0,0,0,0};
         TestingOutput(terms, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ);
-        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables ( 1, patchSize, 0, 59, n_a_v);
+        ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables ( 1, patchSize, 0, 59, n_a_v);
         for (int i=0;i<""" + str( self._auxiliary_variables ) + """;i++){
           fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+i) ] = terms[i]; 
         }
@@ -542,7 +542,7 @@ if __name__ == "__main__":
           raw[i*inter_number+3]=oldQWithHalo[Lindex*(59+n_a_v)+16];
             //std::cout << IndexForInterpolate[i](0) << " " << IndexForInterpolate[i](1) << " " << IndexForInterpolate[i](2) << std::endl;
             //std::cout << raw[i*inter_number+0] << " " << raw[i*inter_number+1] << " " << raw[i*inter_number+2] << " " << raw[i*inter_number+3] << std::endl;
-            //::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables ( 1, patchSize, overlap, 59, n_a_v);
+            //::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables ( 1, patchSize, overlap, 59, n_a_v);
             //std::cout << oldQWithHalo[enumeratorWithAuxiliaryVariables(0,IndexForInterpolate[i],0)] << std::endl;
         }
         double result[inter_number];

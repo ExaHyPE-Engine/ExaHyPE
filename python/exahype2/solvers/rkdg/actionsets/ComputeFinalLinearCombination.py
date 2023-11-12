@@ -56,8 +56,8 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
   if ({{PREDICATE}}) {
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
-    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+    ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+    ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{ORDER}}+1, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
     
     dfor( dof, {{ORDER}}+1 ) {
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
@@ -210,6 +210,6 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
         return (
             super(ComputeFinalLinearCombination, self).get_includes()
             + """
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
 """
         )

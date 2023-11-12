@@ -155,7 +155,8 @@ set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${MULTICORES_BACKENDS})
 if(WITH_MULTITHREADING)
   string(TOUPPER ${WITH_MULTITHREADING} WITH_MULTITHREADING_UPPER)
   target_compile_definitions(project_options INTERFACE Shared${WITH_MULTITHREADING_UPPER})
-endif()
+  target_compile_definitions(project_options INTERFACE SharedMemoryParallelisation)
+  endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
@@ -262,15 +263,20 @@ if(WITH_GPU)
   endif()
 endif()
 
+
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-  #-march=native
-  list(TRANSFORM CMAKE_CXX_FLAGS_RELEASE REPLACE "-O3" "-O4")
-  list(TRANSFORM CMAKE_CUDA_FLAGS_RELEASE REPLACE "-O3" "-O4")
+  set(CMAKE_CXX_FLAGS -O4)
+  set(CMAEK_CUDA_FLAGS -O4)
+else()
+  set(CMAKE_CXX_FLAGS_RELEASE -O3)
+  set(CMAKE_CUDA_FLAGS -O3)
 endif()
 set(RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
 set(RELEASE_LDFLAGS -g)
 
 #-O2 -fno-omit-frame-pointer
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set(CMAKE_CUDA_FLAGS_DEBUG "-g -O0")
 set(DEBUG_DEFINITIONS -DPeanoDebug=4)
 set(DEBUG_LDFLAGS -g)
 
@@ -284,7 +290,7 @@ set(CMAKE_CUDA_FLAGS_ASSERTS ${CMAKE_CUDA_FLAGS_DEBUG})
 set(ASSERTS_DEFINITIONS -DPeanoDebug=2)
 set(ASSERTS_LDFLAGS -g)
 
-set(CMAKE_CXX_FLAGS_TRACE -g -O2)
+set(CMAKE_CXX_FLAGS_TRACE "-g -O2")
 set(CMAKE_CUDA_FLAGS_TRACE ${CMAKE_CXX_FLAGS_TRACE})
 set(TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
 set(TRACE_LDFLAGS -g)
@@ -299,6 +305,16 @@ else()
 endif()
 
 set(WITH_DIMENSIONS "2;3" CACHE STRING "Build with number of (space) dimensions")
+
+# Update core libraries' build modes and dimensions if it is not set to build all and if the build type of an application is different.
+if(CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQUAL "${PEANO_APP_BUILD_TYPE}")
+  set(CMAKE_BUILD_TYPE ${PEANO_APP_BUILD_TYPE} CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
+endif()
+
+if(NOT "${WITH_DIMENSIONS}" STREQUAL "2;3" AND PEANO_APP_DIMENSION AND NOT "${WITH_DIMENSIONS}" STREQUAL "${PEANO_APP_DIMENSION}")
+  set(WITH_DIMENSIONS ${PEANO_APP_DIMENSION} CACHE STRING "Dimensions 2;3" FORCE)
+endif()
+
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
 option(WITH_OTTER "Build with Otter support" OFF)
 option(WITH_PETSC "Build with PETSc support" OFF)
@@ -363,11 +379,13 @@ if(WITH_NETCDF)
 endif()
 
 if(ENABLE_EXAHYPE)
-  target_compile_definitions(project_options INTERFACE UseExaHyPE)
+  #target_compile_definitions(project_options INTERFACE UseExaHyPE)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseExaHyPE)
 endif()
 
 if(ENABLE_SWIFT)
-  target_compile_definitions(project_options INTERFACE UseSWIFT)
+  #target_compile_definitions(project_options INTERFACE UseSWIFT)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseSWIFT)
 endif()
 
 include(CMakePackageConfigHelpers)

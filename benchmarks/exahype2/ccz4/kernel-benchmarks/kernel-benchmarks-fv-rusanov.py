@@ -18,9 +18,13 @@ build_modes = {
 build_mode = "Release"
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Finite Volumes Rusanov Kernel Benchmarking Script')
-parser.add_argument("-m",       "--build-mode",         dest="build_mode",        choices=build_modes.keys(),   default="Release",          help="|".join(build_modes.keys()))
-parser.add_argument("-ps",      "--patch-size",         dest="patch_size",        type=int,                     required=True,              help="Number of finite volumes per axis (dimension) per patch")
-parser.add_argument("-mp",      "--max-patches",        dest="max_patches",       type=int,                     default=1024+1,             help="Maximal number of patches to study")
+parser.add_argument("-o",       "--output",             dest="output_path",       type=str,                     default=output_path,        help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
+parser.add_argument("-m",       "--build-mode",         dest="build_mode",        choices=build_modes.keys(),   default=build_mode,         help="|".join(build_modes.keys()))
+parser.add_argument("-sc",      "--scenario",           dest="scenario",          choices=scenarios,            default=scenario,           help="|".join(scenarios))
+parser.add_argument("-maxh",    "--max-cell-size",      dest="max_cell_size",     type=float,                   default=cell_size,          help="Maximum size of a single finite volume cell on each axis.")
+parser.add_argument("-ps",      "--patch-size",         dest="patch_size",        type=int,                     default=patch_size,         help="Number of finite volumes per axis (dimension) per patch")
+parser.add_argument("-mp",      "--max-patches",        dest="max_patches",       type=int,                     default=max_patches,        help="Maximal number of patches to study")
+parser.add_argument("-mt",      "--max-threads",        dest="max_threads",       type=int,                     default=1,                  help="Maximal number of launching threads")
 parser.add_argument("-s" ,      "--samples",            dest="samples",           type=int,                     default=16,                 help="Number of samples per measurement")
 parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=0.0,                help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
 parser.add_argument(            "--make",                                         action="store_true",                                      help="Compile the code after generation")
@@ -116,7 +120,10 @@ my_solver.set_implementation(
 """,
   flux                 = exahype2.solvers.PDETerms.None_Implementation,
   source_term          = """
-  memset(S, 0.0, NumberOfUnknowns*sizeof(double));
+  //memset(S, 0.0, NumberOfUnknowns*sizeof(double));
+  for (int i = 0; i < NumberOfUnknowns; i++) {
+    S[i] = 0.0;
+  }
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
 """,
   refinement_criterion = exahype2.solvers.PDETerms.Empty_Implementation,
@@ -157,8 +164,14 @@ my_project.set_Peano4_installation("../../../../", mode=build_modes[args.build_m
 my_project = my_project.generate_Peano4_project(verbose=True)
 
 my_project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "double")
-my_project.constants.export_constexpr_with_type("MaxPatches", str(args.max_patches), "int")
 my_project.constants.export_constexpr_with_type("NumberOfSamples", str(args.samples), "int")
+my_project.constants.export_constexpr_with_type("MaxNumberOfPatchesToStudy", str(args.max_patches), "int")
+my_project.constants.export_constexpr_with_type("MaxNumberOfLaunchingThreads", str(args.max_threads), "int")
+
+my_project.constants.export_boolean("EvaluateFlux", False)
+my_project.constants.export_boolean("EvaluateNonconservativeProduct", True)
+my_project.constants.export_boolean("EvaluateSource", True)
+my_project.constants.export_boolean("EvaluateMaximumEigenvalueAfterTimeStep", True)
 
 my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/InitialValues.cpp")
 my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp")

@@ -1404,7 +1404,6 @@ The finest mesh width of """
     @preprocess_reconstructed_patch.setter
     def preprocess_reconstructed_patch(self, kernel):
         """!
-
         Set a new processing kernel
 
         Before the actual update, the numerical solver takes the actual solution
@@ -1439,7 +1438,7 @@ The finest mesh width of """
 
         ## Access
 
-        We recommend that you use the AoS enumerator exahype2::enumerator::AoSLexicographicEnumerator.
+        We recommend that you use the AoS enumerator exahype2::enumerators::AoSLexicographicEnumerator.
         This one has to be given 1 as number of cells/patches, it requires the size
         of the patch, its halo size, you have to pass it the unkowns and the correct
         number of auxiliary parameters. If you want the preprocessing also to alter
@@ -1447,8 +1446,6 @@ The finest mesh width of """
         parameters are the same besides the halo size, which you have to set to 0:
         The input patch has no halo. This halo is only added temporarily in the
         reconstruction step.
-
-
         """
         self._preprocess_reconstructed_patch = kernel
         self.create_data_structures()

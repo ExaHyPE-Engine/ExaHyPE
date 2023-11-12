@@ -1,9 +1,10 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "KernelLaunchTest.h"
 
 #include "tarch/tests/TestMacros.h"
 
 #include "tarch/accelerator/cuda/ErrorCheck.h"
-
 
 __global__ static void testDimensionsKernel(int* d) {
 #if Dimensions == 2
@@ -15,15 +16,12 @@ __global__ static void testDimensionsKernel(int* d) {
 #endif
 }
 
-
 exahype2::tests::KernelLaunchTest::KernelLaunchTest():
   TestCase("exahype2::tests::KernelLaunchTest") {}
-
 
 void exahype2::tests::KernelLaunchTest::run() {
   testMethod(testDimensions);
 }
-
 
 void exahype2::tests::KernelLaunchTest::testDimensions() {
   int value = -1;

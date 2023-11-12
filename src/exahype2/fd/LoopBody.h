@@ -6,9 +6,9 @@
 
 #include "exahype2/CellData.h"
 
-#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-#include "exahype2/enumerator/SoALexicographicEnumerator.h"
-#include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerators/SoALexicographicEnumerator.h"
+#include "exahype2/enumerators/AoSoALexicographicEnumerator.h"
 
 #include "tarch/multicore/multicore.h"
 
@@ -131,7 +131,7 @@ namespace exahype2 {
         template <typename Solver>
         static void addAlgebraicSourceTerm_LoopBody(
           const double* __restrict__                   QIn,
-          const exahype2::enumerator::AoSLexicographicEnumerator&                     QInEnumerator,
+          const exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -139,7 +139,7 @@ namespace exahype2 {
           double                                       t,
           double                                       dt,
           double* __restrict__                         QOut,
-          const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator
+          const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator
         ) InlineMethod;
 
         template <class QOutEnumeratorType>
@@ -161,7 +161,7 @@ namespace exahype2 {
         template <>
         double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
-          const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
+          const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator,
           exahype2::fd::MaxEigenvalue                  maxEigenvalue,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -192,7 +192,7 @@ namespace exahype2 {
         template <typename Solver>
         static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QOut,
-          const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
+          const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
