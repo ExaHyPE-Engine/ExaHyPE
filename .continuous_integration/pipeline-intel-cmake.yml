@@ -88,7 +88,10 @@ intel-benchmarks-cmake:
   needs:
     - job: intel-build-cmake
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; make -j'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} build/benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-p-128
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} build/benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-p-128-Release
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/ccz4/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -ps 4 -p 128 -a -1 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/ccz4/kernel-benchmarks; make -j'
   retry: 0
