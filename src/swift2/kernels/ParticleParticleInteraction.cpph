@@ -310,7 +310,7 @@ void swift2::kernels::forceKernelVectorised(
   // @Pawel I don't know if this vectorises anymore, but I think the second check is important
   //        I also don't know if a strict or non-strict boolean optimisation make a difference.
   //        If they do, please document it in the SWIFT optimisation pages.
-  double mask = tarch::la::smaller(r, iactR) & tarch::la::greater(r, 0.0) ? 1.0 : 0.0;
+  double mask = (tarch::la::smaller(r, iactR) & tarch::la::greater(r, 0.0)) ? 1.0 : 0.0;
 
   // Get actual interaction radius
   double wa, wb;
