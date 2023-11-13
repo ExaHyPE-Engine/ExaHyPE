@@ -15,87 +15,165 @@ import shutil
 ########################################################################################
 
 Parallelisation_DomainDecomposition = "domain-decomposition"
-Parallelisation_Tasks               = "tasks"
+Parallelisation_Tasks = "tasks"
 
-Storage_Scattered           = "scattered"
+Storage_Scattered = "scattered"
 Storage_ContinuousPerVertex = "continuous-per-vertex"
-Storage_GlobalContinuous    = "global-continuous"
- 
-Sorting_InsertSweeps        = "insert-sorts"
-Sorting_OnTheFly            = "sort-on-the-fly"
+Storage_GlobalContinuous = "global-continuous"
+
+Sorting_InsertSweeps = "insert-sorts"
+Sorting_OnTheFly = "sort-on-the-fly"
 
 Enable_VectorisationOfAllComparisons = "vectorise-all"
 Enable_VectorisationOfDistanceChecks = "vectorise-distance-checks"
 
 Choices = [
     Parallelisation_DomainDecomposition + "." + Storage_Scattered,
-    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_InsertSweeps,
-    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_OnTheFly,
-    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_InsertSweeps,
-    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_OnTheFly,
-    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_InsertSweeps + "." + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_OnTheFly + "." + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_InsertSweeps + "." + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_OnTheFly + "." + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_InsertSweeps + "." + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition + "." + Storage_ContinuousPerVertex + "." + Sorting_OnTheFly + "." + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_InsertSweeps + "." + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition + "." + Storage_GlobalContinuous + "." + Sorting_OnTheFly + "." + Enable_VectorisationOfAllComparisons,
-#    "continuous-per-vertex-vectorise",
-#    "global-continuous-vectorise",
-#    "tasks",
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_ContinuousPerVertex
+    + "."
+    + Sorting_InsertSweeps,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_ContinuousPerVertex
+    + "."
+    + Sorting_OnTheFly,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_GlobalContinuous
+    + "."
+    + Sorting_InsertSweeps,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_GlobalContinuous
+    + "."
+    + Sorting_OnTheFly,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_ContinuousPerVertex
+    + "."
+    + Sorting_InsertSweeps
+    + "."
+    + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_ContinuousPerVertex
+    + "."
+    + Sorting_OnTheFly
+    + "."
+    + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_GlobalContinuous
+    + "."
+    + Sorting_InsertSweeps
+    + "."
+    + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_GlobalContinuous
+    + "."
+    + Sorting_OnTheFly
+    + "."
+    + Enable_VectorisationOfDistanceChecks,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_ContinuousPerVertex
+    + "."
+    + Sorting_InsertSweeps
+    + "."
+    + Enable_VectorisationOfAllComparisons,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_ContinuousPerVertex
+    + "."
+    + Sorting_OnTheFly
+    + "."
+    + Enable_VectorisationOfAllComparisons,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_GlobalContinuous
+    + "."
+    + Sorting_InsertSweeps
+    + "."
+    + Enable_VectorisationOfAllComparisons,
+    Parallelisation_DomainDecomposition
+    + "."
+    + Storage_GlobalContinuous
+    + "."
+    + Sorting_OnTheFly
+    + "."
+    + Enable_VectorisationOfAllComparisons,
+    #    "continuous-per-vertex-vectorise",
+    #    "global-continuous-vectorise",
+    #    "tasks",
 ]
 
 
 def use_continuous_per_vertex_data_layout(realisation):
     """!
-    
+
     @param realisation: String from Choices
-    
+
     """
     return realisation.split(".")[1] == Storage_ContinuousPerVertex
 
 
 def use_globally_continuous_data_layout(realisation):
     """!
-    
+
     @param realisation: String from Choices
-    
+
     """
     return realisation.split(".")[1] == Storage_GlobalContinuous
 
 
 def use_vectorised_kernels(realisation):
     """!
-    
+
     @param realisation: String from Choices
-    
+
     """
-    return len(realisation.split("."))>3 and realisation.split(".")[3]==Enable_Vectorisation
+    return (
+        len(realisation.split(".")) > 3
+        and realisation.split(".")[3] == Enable_Vectorisation
+    )
 
 
 def use_on_the_fly_sorting(realisation):
     """!
-    
+
     @param realisation: String from Choices
-    
+
     """
-    return len(realisation.split("."))>2 and realisation.split(".")[2]==Sorting_OnTheFly
+    return (
+        len(realisation.split(".")) > 2
+        and realisation.split(".")[2] == Sorting_OnTheFly
+    )
 
 
 def use_separate_sorting_sweeps(realisation):
     """!
-    
+
     @param realisation: String from Choices
-    
+
     """
-    return len(realisation.split("."))>2 and realisation.split(".")[2]==Sorting_InsertSweeps
-    
+    return (
+        len(realisation.split(".")) > 2
+        and realisation.split(".")[2] == Sorting_InsertSweeps
+    )
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SPH benchmarking script")
     parser.add_argument(
-        "-j", "--parallel-builds", dest="j", type=int, default=-1, help="Parallel builds"
+        "-j",
+        "--parallel-builds",
+        dest="j",
+        type=int,
+        default=-1,
+        help="Parallel builds",
     )
     parser.add_argument(
         "-v",
@@ -208,39 +286,38 @@ if __name__ == "__main__":
         help="SPH kernel function to use.",
     )
     args = parser.parse_args()
-    
-    
+
     ########################################################################################
     # Generate SWIFT project
     ########################################################################################
-    
+
     project_namespace = ["benchmarks", "swift2", "noh"]
-    
-                         
+
     project = swift2.Project(
         namespace=project_namespace, project_name="Noh", executable=args.output_file
     )
-    
-    
-    if ( args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
-         and
-         args.realisation.split(".")[1] == Storage_Scattered
-         ):
+
+    if (
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
+        and args.realisation.split(".")[1] == Storage_Scattered
+    ):
         pass
-    elif ( args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
-           and 
-           use_separate_sorting_sweeps(args.realisation)
-           ):
+    elif args.realisation.split(".")[
+        0
+    ] == Parallelisation_DomainDecomposition and use_separate_sorting_sweeps(
+        args.realisation
+    ):
         project.algorithm_steps_task_graph_compiler = (
             swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access
         )
         project.initialisation_steps_task_graph_compiler = (
             swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
         )
-    elif ( args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
-           and 
-           use_on_the_fly_sorting(args.realisation)
-           ):
+    elif args.realisation.split(".")[
+        0
+    ] == Parallelisation_DomainDecomposition and use_on_the_fly_sorting(
+        args.realisation
+    ):
         project.algorithm_steps_task_graph_compiler = (
             swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_for_coalesced_memory_access
         )
@@ -249,23 +326,22 @@ if __name__ == "__main__":
         )
     else:
         assert False, "realisation " + args.realisation + " not supported"
-    
-    
+
     # Initialise the SPH particle --------------------------------------------------
     # If multiple particle species are present, we can specify the parameters
     # independently for each case.
-    
+
     name = "HydroPart"
-    
+
     dimensions = 2
     hydro_dimensions = 2  # dimensions for the hydro
-    
+
     particles_per_cell = args.particles_per_cell
     total_number_of_particles = args.particle_number**hydro_dimensions
     total_number_of_cells = total_number_of_particles / particles_per_cell
     cells_per_dimension = total_number_of_cells ** (1.0 / hydro_dimensions)
     max_cell_size = 1.0 / cells_per_dimension
-    
+
     print(
         "{} particles in total fit into {} cells, i.e. {} cells per dimension. This gives h={}".format(
             total_number_of_particles,
@@ -274,15 +350,19 @@ if __name__ == "__main__":
             max_cell_size,
         )
     )
-    
-    
-    particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.DEFAULT
+
+    particle_interaction_kernel_realisation = (
+        swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.DEFAULT
+    )
     if Enable_VectorisationOfDistanceChecks in args.realisation:
-      particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_DISTANCE_CHECKS_AND_UNARY_OPERATIONS
+        particle_interaction_kernel_realisation = (
+            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_DISTANCE_CHECKS_AND_UNARY_OPERATIONS
+        )
     elif Enable_VectorisationOfAllComparisons in args.realisation:
-      particle_interaction_kernel_realisation = swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
-      
-    
+        particle_interaction_kernel_realisation = (
+            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
+        )
+
     particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
         name=name,
         dimensions_hydro=hydro_dimensions,
@@ -293,29 +373,27 @@ if __name__ == "__main__":
         particles_per_cell=particles_per_cell,
         min_h=max_cell_size,
         max_h=max_cell_size,
-        particle_interaction_kernel_realisation = particle_interaction_kernel_realisation,
+        particle_interaction_kernel_realisation=particle_interaction_kernel_realisation,
         asserts=args.asserts,
     )
-    
-    
+
     ########################################################################################
     # Set parameters for the SPH simulation
     # If no parameters are passed to the swift2 project, it initializes with
     # default values. The values of the parameters can be modified or retrieved
     # using the set/get methods.
     ########################################################################################
-    
-    
+
     # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
     HYDRO_DIMENSIONS = hydro_dimensions
-    
+
     # Particle number along 1 dimension
     HYDRO_PART_NUMBER = args.particle_number
-    
+
     # Time integration parameters
     GLOBAL_TIME_STEP_SIZE = args.timestep_size
     CFL_CONSTANT = args.cfl_factor
-    
+
     # EoS parameter ---------------------------------------------------------------
     gamma_hydro_list = [str(5 / 3), str(7 / 5), str(4 / 3), str(2 / 1)]
     gamma_hydro_list_symbols = [
@@ -326,24 +404,23 @@ if __name__ == "__main__":
     ]
     GAMMA = gamma_hydro_list[0]
     GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
-    
+
     # SPH kernel -------------------------------------------------------
-    
+
     kernel = args.kernel
     KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
     KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
-    
-    
+
     hydro_h_max = max_cell_size / 2
     particle.h_hydro_max = hydro_h_max
-    
+
     # particle.h_hydro_min = 1e-6
     # particle.h_max_iterations = 10
     # particle.h_tolerance = 1e-4
     # particle.eta_factor = 1.2348
     # particle.beta_av = 3.0
     # particle.alpha_av = 0.8
-    
+
     # IMPORTANT: Reduce the mantissa size for particle attributes -------------------
     # Native size is 53 (double precision)
     if args.mantissa_size > 0:
@@ -371,42 +448,43 @@ if __name__ == "__main__":
         particle.soundSpeed.valid_mantissa_bits = args.mantissa_size
         particle.v_full.valid_mantissa_bits = args.mantissa_size
         particle.u_full.valid_mantissa_bits = args.mantissa_size
-    
+
     particle.data.expose_all_attributes_in_header_file()
-    
+
     # Add particle to the SWIFT project --------------------------------------------
     # Notice that you any change to the particle will not take effect after adding
     # the particle_set to the project
     particle_set = project.add_particle_species(particle)
-    
+
     if use_continuous_per_vertex_data_layout(args.realisation):
         particle_set.generator = (
-            peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
+            peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
+                particle_set
+            )
         )
-        print( "Benchmark: Use continuous per vertex data layout")
+        print("Benchmark: Use continuous per vertex data layout")
     elif use_globally_continuous_data_layout(args.realisation):
         particle_set.generator = (
             peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
         )
-        print( "Benchmark: Use globally continuous data layout")
+        print("Benchmark: Use globally continuous data layout")
     else:
         particle_set.generator = (
             peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList(
                 particle_set
             )
         )
-    
-    
+
     if args.asserts:
         build_mode = peano4.output.CompileMode.Asserts
     else:
         build_mode = peano4.output.CompileMode.Release
-    
+
     # Set Peano4 simulation parameters ---------------------------------------------
     offset = [0, 0, 0]
     domain_size = [1, 1, 1]
     periodic_boundary_conditions = [False, False, False]
-    
+
     project.set_global_simulation_parameters(
         dimensions=dimensions,
         offset=offset,
@@ -418,45 +496,44 @@ if __name__ == "__main__":
         periodic_BC=periodic_boundary_conditions,
         plotter_precision=8,
     )
-    
+
     project.set_Peano4_installation(args.peanodir, build_mode)
-    
+
     project.set_load_balancing(
         "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
         "new toolbox::loadbalancing::DefaultConfiguration()",
     )
-    
-    
+
     ###############################################################################
     # Initialisation snippet for the particle
     ###############################################################################
-    
+
     # Set up the coordinates for the particles
     # We construct a regular (lattice) configuration.
     Npart = args.particle_number
     offset = 1 / Npart
-    
+
     coords = np.zeros((Npart**HYDRO_DIMENSIONS, 3))
-    
+
     x = np.linspace(offset, 1, Npart, endpoint=False)
     y = np.linspace(offset, 1, Npart, endpoint=False)
-    
+
     xp, yp = np.meshgrid(x, y)
     xp = xp.reshape((np.prod(xp.shape),))
     yp = yp.reshape((np.prod(yp.shape),))
-    
+
     coords[:, 0] = xp
     coords[:, 1] = yp
-    
+
     #  Noh problem (2D) snippet  --------------------------------------------------
     #  The particle attributes are set via an initalisation snippet that sets
     #  the initial conditions specific for this problem, i.e. the velocity field
     #  that converges towards the center of the domain and that generates the
     #  collapse.
-    
+
     ICs = swift2.scenario.NohProblemIC(dimensions=HYDRO_DIMENSIONS)
     initialisation_snippet = ICs.initialisation_snippet
-    
+
     # Finally, pass this configuration to the initialisation script
     # project.algorithm_step_initial_conditions.add_action_set( swift2.input.InsertParticlesByCoordinates(
     #  particle_set        = particle_set,
@@ -467,7 +544,7 @@ if __name__ == "__main__":
     # """
     #  )
     # )
-    
+
     project.algorithm_step_initial_conditions.add_action_set(
         swift2.input.InsertParticlesAlongCartesianGrid(
             particle_set=particle_set,
@@ -478,8 +555,7 @@ if __name__ == "__main__":
     """,
         )
     )
-    
-    
+
     ###############################################################################
     # Set up the plotter
     ###############################################################################
@@ -521,8 +597,7 @@ if __name__ == "__main__":
     particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
     particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
     project.algorithm_step_plot.add_action_set(particle_plotter)
-    
-    
+
     ###############################################################################
     # Generate plain Peano 4 project
     ###############################################################################
@@ -534,13 +609,13 @@ if __name__ == "__main__":
     #
     #
     ###############################################################################
-    
+
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)
-    
+
     # Some sanity checks ----------------------------------------------------------
     if GAMMA not in gamma_hydro_list:
         print(f"Please check the value of GAMMA. You have chosen: {GAMMA}")
-    
+
     print("-----------------------------------------------------------------------")
     print("SPH parameters summary:")
     print(f"Effective dimensions of the Simulation: {HYDRO_DIMENSIONS}")
@@ -549,8 +624,7 @@ if __name__ == "__main__":
     print(f"Adiabatic index: {GAMMA}")
     print(f"Smoothing length free factor: {particle.eta_factor}")
     print("-----------------------------------------------------------------------")
-    
-    
+
     # Export Constants.h file ------------------------------------------------------
     peano4_project.constants.export_const_with_type(
         "HYDRO_DIMENSIONS", str(HYDRO_DIMENSIONS), "double"
@@ -562,32 +636,31 @@ if __name__ == "__main__":
         "GLOBAL_TIME_STEP_SIZE", str(GLOBAL_TIME_STEP_SIZE), "double"
     )
     peano4_project.constants.export_const_with_type("GAMMA", GAMMA, "double")
-    
+
     # Export symbols for compilation (e.g. for SPH kernel) -----------------------
     peano4_project.output.makefile.add_CXX_flag(
         "-D" + "HYDRO_DIMENSION=" + str(HYDRO_DIMENSIONS)
     )
     peano4_project.output.makefile.add_CXX_flag("-D" + GAMMA_HYDRO_SYMBOL)
     peano4_project.output.makefile.add_CXX_flag("-D" + KERNEL_SYMBOL)
-    
-    
+
     ###############################################################################
     # Cleanup and compilation
     ###############################################################################
-    
+
     # If we want to start a project from scratch, we may want to remove some of the generated code
     if args.clean_temporary_directories:
         dirs = ["vertexdata/", "repositories/", "globaldata/", "observers/"]
         for dir in dirs:
             shutil.rmtree(dir)
-    
+
     # It is safe (and recommended) to overwrite any existing main file, since this
     # is generated automatically by the Swift2 graph compiler.
     peano4_project.generate(
         overwrite=peano4.output.Overwrite.Always, throw_away_data_after_generation=True
     )
     peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
-    
+
     # remove output files from previous runs
     output_files = [
         f

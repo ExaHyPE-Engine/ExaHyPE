@@ -51,10 +51,7 @@ namespace swift2 {
      * can overload the function.
      */
     template <typename ParticleContainer>
-    void computeLeapfrogDriftWithGlobalTimeStepSize(
-      const ParticleContainer& particles,
-	  int                      numberOfParticles
-	);
+    void computeLeapfrogDriftWithGlobalTimeStepSize(const ParticleContainer& particles, int numberOfParticles);
 
     /**
      *  Kick steps. There are two kick steps in the KDK scheme, in which we

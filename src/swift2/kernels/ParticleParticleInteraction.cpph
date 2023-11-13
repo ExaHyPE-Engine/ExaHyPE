@@ -2,9 +2,9 @@
 #include "swift2/kernels/SmoothingLengthComputation.h"
 #include "swift2/legacy/hydro_dimensions.h"
 #include "swift2/legacy/kernel_hydro.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
-#include "tarch/accelerator/accelerator.h"
 
 
 template <typename Particle, typename ParticleContainer>
@@ -250,13 +250,15 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
 
 
 template <typename Particle>
-bool swift2::kernels::forceKernelDistanceCheck(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle) {
+bool swift2::kernels::forceKernelDistanceCheck(
+  Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle
+) {
 
   const double h_a = localParticle->getSmoothingLength();
 
   // Distance between the two particles
-  tarch::la::Vector<Dimensions, double> dx    = localParticle->getX() - activeParticle->getX();
-  const double                          r     = tarch::la::norm2(dx);
+  tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
+  const double                          r  = tarch::la::norm2(dx);
 
   // Get actual interaction radius
   const double iactR = kernel_gamma * h_a;
@@ -539,26 +541,25 @@ void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
       typename ParticleContainer::value_type activeParticlesChunk = *activeParticlesIterator;
       std::advance(activeParticlesIterator, activeParticlesChunkSize);
 
-      for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize; localParticleNumberInThisChunk++) {
+      for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize;
+           localParticleNumberInThisChunk++) {
         if (localParticleCanBeWorkedOnCellKernel(&localParticlesChunk[localParticleNumberInThisChunk], marker)) {
-          constexpr int MaxVectorise = 8;
-          bool* enabledInteractionPartners = tarch::allocateMemory<bool>(activeParticlesChunkSize+MaxVectorise-1, tarch::MemoryLocation::Heap);
+          constexpr int MaxVectorise               = 8;
+          bool*         enabledInteractionPartners = tarch::allocateMemory<bool>(
+            activeParticlesChunkSize + MaxVectorise - 1, tarch::MemoryLocation::Heap
+          );
 
           // Build up list of close enough particles
           // =======================================
           {
-            for (
-              int activeParticleNumberInThisChunk = 0;
-              activeParticleNumberInThisChunk < activeParticlesChunkSize;
-              activeParticleNumberInThisChunk++
-            ) {
-              enabledInteractionPartners[activeParticleNumberInThisChunk] =
-                swift2::kernels::forceKernelDistanceCheck(
-                  localParticlesChunk + localParticleNumberInThisChunk,
-                  activeParticlesChunk + activeParticleNumberInThisChunk
-                );
+            for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+                 activeParticleNumberInThisChunk++) {
+              enabledInteractionPartners[activeParticleNumberInThisChunk] = swift2::kernels::forceKernelDistanceCheck(
+                localParticlesChunk + localParticleNumberInThisChunk,
+                activeParticlesChunk + activeParticleNumberInThisChunk
+              );
             }
-            for (int i=activeParticlesChunkSize; i<activeParticlesChunkSize+MaxVectorise-1; i++) {
+            for (int i = activeParticlesChunkSize; i < activeParticlesChunkSize + MaxVectorise - 1; i++) {
               enabledInteractionPartners[i] = false;
             }
           }
@@ -568,67 +569,33 @@ void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
           {
             int activeParticleNumberInThisChunk = 0;
             while (activeParticleNumberInThisChunk < activeParticlesChunkSize) {
-              if (
-                enabledInteractionPartners[activeParticleNumberInThisChunk+0]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+1]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+2]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+3]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+4]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+5]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+6]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+7]
-              ) {
-                for (int i=activeParticleNumberInThisChunk; i<activeParticleNumberInThisChunk+8; i++) {
+              if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0] and enabledInteractionPartners[activeParticleNumberInThisChunk + 1] and enabledInteractionPartners[activeParticleNumberInThisChunk + 2] and enabledInteractionPartners[activeParticleNumberInThisChunk + 3] and enabledInteractionPartners[activeParticleNumberInThisChunk + 4] and enabledInteractionPartners[activeParticleNumberInThisChunk + 5] and enabledInteractionPartners[activeParticleNumberInThisChunk + 6] and enabledInteractionPartners[activeParticleNumberInThisChunk + 7]) {
+                for (int i = activeParticleNumberInThisChunk; i < activeParticleNumberInThisChunk + 8; i++) {
                   swift2::kernels::forceKernelVectorised(
-                    localParticlesChunk + localParticleNumberInThisChunk,
-                    activeParticlesChunk + i
+                    localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk + i
                   );
                 }
-                activeParticleNumberInThisChunk+=8;
+                activeParticleNumberInThisChunk += 8;
               }
-              if (
-                enabledInteractionPartners[activeParticleNumberInThisChunk+0]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+1]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+2]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+3]
-              ) {
-                for (int i=activeParticleNumberInThisChunk; i<activeParticleNumberInThisChunk+4; i++) {
+              if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0] and enabledInteractionPartners[activeParticleNumberInThisChunk + 1] and enabledInteractionPartners[activeParticleNumberInThisChunk + 2] and enabledInteractionPartners[activeParticleNumberInThisChunk + 3]) {
+                for (int i = activeParticleNumberInThisChunk; i < activeParticleNumberInThisChunk + 4; i++) {
                   swift2::kernels::forceKernelVectorised(
-                    localParticlesChunk + localParticleNumberInThisChunk,
-                    activeParticlesChunk + i
+                    localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk + i
                   );
                 }
-                activeParticleNumberInThisChunk+=4;
-              }
-              else if (
-                enabledInteractionPartners[activeParticleNumberInThisChunk+0]
-                and
-                enabledInteractionPartners[activeParticleNumberInThisChunk+1]
-              ) {
-                for (int i=activeParticleNumberInThisChunk; i<activeParticleNumberInThisChunk+2; i++) {
+                activeParticleNumberInThisChunk += 4;
+              } else if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0] and enabledInteractionPartners[activeParticleNumberInThisChunk + 1]) {
+                for (int i = activeParticleNumberInThisChunk; i < activeParticleNumberInThisChunk + 2; i++) {
                   swift2::kernels::forceKernelVectorised(
-                    localParticlesChunk + localParticleNumberInThisChunk,
-                    activeParticlesChunk + i
+                    localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk + i
                   );
                 }
-                activeParticleNumberInThisChunk+=2;
-              }
-              else {
+                activeParticleNumberInThisChunk += 2;
+              } else {
                 swift2::kernels::forceKernelVectorised(
-                  localParticlesChunk + localParticleNumberInThisChunk,
-                  activeParticlesChunk
+                  localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk
                 );
-                activeParticleNumberInThisChunk+=1;
+                activeParticleNumberInThisChunk += 1;
               }
             }
           } // end of particle update
@@ -639,4 +606,3 @@ void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
     }     // for activeParticlesChunkSize
   }       // for localParticlesChunkSize
 }
-

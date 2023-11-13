@@ -161,14 +161,13 @@ class testLeapfrogFixedTimeStepSize(Particle):
         self.data.add_or_replace_attribute(initial_time_step_size_attr)
 
         adjust_time_step_size_attr = dastgen2.attributes.Boolean(
-            "adjustTimeStepSize", qualifier=const_static, initval=self._adjustTimeStepSize
+            "adjustTimeStepSize",
+            qualifier=const_static,
+            initval=self._adjustTimeStepSize,
         )
         self.data.add_or_replace_attribute(adjust_time_step_size_attr)
 
         return
-
-
-
 
     def algorithm_steps(self):
         """

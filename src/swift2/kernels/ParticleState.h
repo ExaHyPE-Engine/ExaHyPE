@@ -32,7 +32,7 @@ namespace swift2 {
     template <typename Particle>
     bool localParticleCanBeMoved(const Particle* localParticle) {
       return (
-              (localParticle->getMoveState() == std::remove_pointer<Particle>::type::MoveState::NotMovedYet)
+        (localParticle->getMoveState() == std::remove_pointer<Particle>::type::MoveState::NotMovedYet)
         & localParticleIsLocal(localParticle)
       );
     }

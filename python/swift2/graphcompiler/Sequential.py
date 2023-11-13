@@ -286,20 +286,23 @@ def map_onto_separate_mesh_traversals(
         if optimisation == Optimisation.NONE:
             use_lists_to_construct_active_sets = False
             add_additional_dummy_sweep = False
-        elif optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE or step_type == StepType.INITIALISATION:
-##or sequence_of_steps==current_entry_from_total_sequence_of_steps[-1]:
+        elif (
+            optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE
+            or step_type == StepType.INITIALISATION
+        ):
+            ##or sequence_of_steps==current_entry_from_total_sequence_of_steps[-1]:
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = (
-                current_step_of_species.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
-                or 
-                current_step_of_species.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-                )
+                current_step_of_species.effect
+                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
+                or current_step_of_species.effect
+                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+            )
         elif optimisation == Optimisation.SORT_ON_THE_FLY:
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = False
         else:
             assert False, "option not supported"
-            
 
         translate_one_step_of_species_into_mesh_traversal(
             step=current_step_of_species,
@@ -332,15 +335,15 @@ def map_onto_separate_mesh_traversals(
             alter_particle_position.append(True)
 
     if step_type == StepType.INITIALISATION:
-        # When we insert particles initially, they will be scattered. So it is 
+        # When we insert particles initially, they will be scattered. So it is
         # important that we immediately gather them. We cannot flag step -1 as
-        # one that changes teh particle position, but we can present to the 
+        # one that changes teh particle position, but we can present to the
         # graph compiler that the last step will change the ordering. The graph
         # compiler does not distinguish initialisation from time stepping and
-        # hence thinks that the sweep prior to the first sweep has changed the 
+        # hence thinks that the sweep prior to the first sweep has changed the
         # particle order. Which is exactly what we want. We also flag the first
         # sweep as change, as the initial insertion indeed might be buggy.
-        alter_particle_position[0]  = True
+        alter_particle_position[0] = True
         alter_particle_position[-1] = True
 
     if does_one_species_require_gather(sequence_of_steps):
@@ -348,8 +351,11 @@ def map_onto_separate_mesh_traversals(
             mesh_traversals,
             alter_particle_position,
             get_species_set(sequence_of_steps),
-            sort_with_lifts_and_drops = (optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE or step_type == StepType.INITIALISATION),
-            verbose = verbose,
+            sort_with_lifts_and_drops=(
+                optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE
+                or step_type == StepType.INITIALISATION
+            ),
+            verbose=verbose,
         )
     else:
         add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(

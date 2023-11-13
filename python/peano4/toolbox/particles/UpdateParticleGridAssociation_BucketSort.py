@@ -22,28 +22,28 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 
     The present algorithm is a bucket sort. It consists of very few, simple
     steps:
-    
+
     - If a particle has not moved or has moved but not approached another
       vertex, leave it where it is. We sort incrementally.
     - If a particle has moved and is not associated to its closest vertex
       anymore, add it to a global list.
-    - If a particle has increased its cut-off radius and this cut-off 
+    - If a particle has increased its cut-off radius and this cut-off
       radius does not fit into the present mesh resolution anymore, add it
       to a global list.
     - Exchange the global list between all ranks after each sweep.
     - If a particle from the global list fits into a cell, add it to the
       closest vertex.
-      
-      
+
+
     ## Contextualisation
-    
-    The algorithm describes an incremental bucket sort and naturally 
-    supports tunneling or massive changes of the cut-off. From an 
-    implementation point of view, it is a stripped down version of the 
+
+    The algorithm describes an incremental bucket sort and naturally
+    supports tunneling or massive changes of the cut-off. From an
+    implementation point of view, it is a stripped down version of the
     lift and drop variant without the lifts and the drops. After all,
     each lift becomes directly an additional to the global sieve list,
     and then we are done.
-    
+
     Due to this analogy, the documentation here is scarce. Study the class
     UpdateParticleGridAssociation_LiftDrop. Most remarks therein are valid
     here to.
@@ -55,7 +55,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     list or whenever we actually sieve a particle, i.e. add it to a vertex, we
     alter the respective vertex. However, we never ever alter the vertex lists
     from a coarser vertex. If this action set becomes a preamble to a gather,
-    we hence always maintain continuous memory segments in line with 
+    we hence always maintain continuous memory segments in line with
     @ref toolbox_particles_memorypool "Peano's memory pool discussion".
 
 
@@ -108,9 +108,9 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     def get_body_of_operation(self, operation_name):
         """!
 
-        Core algorithm. See class description. If you compare this function to 
-        UpdateParticleGridAssociation_LiftDrop.get_body_of_operation(), we see 
-        that we use our modified lift routine when particles have moved and in 
+        Core algorithm. See class description. If you compare this function to
+        UpdateParticleGridAssociation_LiftDrop.get_body_of_operation(), we see
+        that we use our modified lift routine when particles have moved and in
         return can omit the dropping.
 
         """
@@ -118,7 +118,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
         if operation_name == ActionSet.OPERATION_BEGIN_TRAVERSAL:
             result = self._Template_BeginTraversal.render(**self.d)
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-            #result = self._Template_Drop.render(**self.d)
+            # result = self._Template_Drop.render(**self.d)
             result = self._Template_Sieve.render(**self.d)
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
             result = self.__Template_LiftParticles.render(**self.d)

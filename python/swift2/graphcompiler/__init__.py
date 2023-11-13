@@ -22,5 +22,5 @@ from .TaskTree import (
     map_particle_steps_onto_task_tree,
     map_particle_steps_onto_task_tree_insert_dummy_sweeps_and_vectorise,
     map_initialisation_steps_onto_task_tree,
-    map_initialisation_steps_onto_task_tree_for_coalesced_memory_access
+    map_initialisation_steps_onto_task_tree_for_coalesced_memory_access,
 )

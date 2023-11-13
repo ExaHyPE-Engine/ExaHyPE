@@ -137,8 +137,9 @@ class UpdateParallelState(ActionSet):
 
     """
 
-    DefaultDescendInvocationOrder = AbstractUpdateParticleGridAssociation.DefaultDescendInvocationOrder + 1
-
+    DefaultDescendInvocationOrder = (
+        AbstractUpdateParticleGridAssociation.DefaultDescendInvocationOrder + 1
+    )
 
     def __init__(
         self,

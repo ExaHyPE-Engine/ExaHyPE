@@ -282,7 +282,7 @@ namespace swift2 {
     static void clearDependencyChecksInitStep(const ParticleContainer& localParticles);
 
 
-  } // namespace checks
+  } // namespace dependencychecks
 } // namespace swift2
 
 #include "../dependencychecks/DependencyChecks.cpph"
