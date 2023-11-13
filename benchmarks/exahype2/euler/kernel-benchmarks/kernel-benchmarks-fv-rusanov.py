@@ -105,7 +105,8 @@ my_project.constants.export_boolean("EvaluateNonconservativeProduct", False)
 my_project.constants.export_boolean("EvaluateSource", False)
 my_project.constants.export_boolean("EvaluateMaximumEigenvalueAfterTimeStep", True if args.eval_eig else False) # Reduction
 
-my_project.constants.define_value("GAMMA", str(1))
+my_project.constants.define_value("GAMMA", str(1.0))
+
 my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
 
 print("Executable is ", executable_name)

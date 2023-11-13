@@ -173,6 +173,7 @@ my_project.constants.export_boolean("EvaluateMaximumEigenvalueAfterTimeStep", Tr
 my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/InitialValues.cpp")
 my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp")
 #my_project.output.makefile.add_header_search_path("../../../../applications/exahype2/ccz4")
+
 os.system("cp {} KernelBenchmarksFVRusanov-main.cpp".format("../../euler/kernel-benchmarks/KernelBenchmarksFVRusanov-main.cpp"))
 
 my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
