@@ -539,6 +539,20 @@ class ADERDG(object):
     def get_user_solver_includes(self):
         return self.user_solver_includes
 
+    def add_user_action_set_includes(self, value):
+        """
+        Add further includes to this property, if your action sets require some additional
+        routines from other header files.
+        """
+        self.user_action_set_includes += value
+
+    def add_user_solver_includes(self, value):
+        """
+        Add further includes to this property, if your solver requires some additional
+        routines from other header files.
+        """
+        self.user_solver_includes += value
+
     def _store_cell_data_default_guard(self):
         return (
             "not marker.willBeRefined() "
