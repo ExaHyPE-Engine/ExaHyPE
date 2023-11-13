@@ -258,8 +258,8 @@ if args.use_gpu:
 my_solver.set_implementation(
     initial_conditions    = exahype2.solvers.PDETerms.User_Defined_Implementation,
     boundary_conditions   = exahype2.solvers.PDETerms.User_Defined_Implementation,
-    flux                  = "applications::exahype2::euler::flux(Q, normal, F);",
-    eigenvalues           = "return applications::exahype2::euler::maxEigenvalue(Q, normal);",
+    flux                  = "::applications::exahype2::euler::flux(Q, normal, F);",
+    eigenvalues           = "return ::applications::exahype2::euler::maxEigenvalue(Q, normal);",
     refinement_criterion  = exahype2.solvers.PDETerms.User_Defined_Implementation,
     source_term           = exahype2.solvers.PDETerms.None_Implementation,
     ncp                   = exahype2.solvers.PDETerms.None_Implementation,

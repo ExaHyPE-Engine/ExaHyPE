@@ -56,7 +56,7 @@ def create_abstract_solver_declarations(
     );
 {% endif %}
 
-{% if NCP_IMPLEMENTATION!="<user-defined>" %}
+{% if NCP_IMPLEMENTATION=="<user-defined>" %}
     virtual void nonconservativeProduct(
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
@@ -65,11 +65,11 @@ def create_abstract_solver_declarations(
     double t,
     double dt,
     int normal,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ);
+    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ) = 0;
 {% endif %}
 
-{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
-    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
+{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) = 0;
 {% endif %}
 
 {% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}

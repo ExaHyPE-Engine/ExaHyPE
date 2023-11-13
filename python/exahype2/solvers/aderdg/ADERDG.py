@@ -93,7 +93,7 @@ class ADERDG(object):
         in which the user specifies the multiplicity of the variable (the velocity has one component
         per dimension for example.)
         If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
-        allows the user to specifiy a variable by name and automatically maps this to the right position
+        allows the user to specify a variable by name and automatically maps this to the right position
         in an array for better legibility. Otherwise they must manually remember the position of each
         variable manually.
 

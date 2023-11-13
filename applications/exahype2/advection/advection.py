@@ -41,7 +41,7 @@ solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
 solvers.update(aderdg_rusanov_solvers)
-solver = "FVRusanovGlobalAdaptive"
+solver = "ADERDGRusanovGlobalAdaptive"
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -243,8 +243,8 @@ if args.use_gpu:
 my_solver.set_implementation(
     initial_conditions    = exahype2.solvers.PDETerms.User_Defined_Implementation,
     boundary_conditions   = exahype2.solvers.PDETerms.User_Defined_Implementation,
-    flux                  = "applications::exahype2::advection::flux(Q, normal, F);",
-    eigenvalues           = "return applications::exahype2::advection::maxEigenvalue();",
+    flux                  = "::applications::exahype2::advection::flux(Q, normal, F);",
+    eigenvalues           = "return ::applications::exahype2::advection::maxEigenvalue();",
     refinement_criterion  = exahype2.solvers.PDETerms.User_Defined_Implementation,
     source_term           = exahype2.solvers.PDETerms.None_Implementation,
     ncp                   = exahype2.solvers.PDETerms.None_Implementation,
