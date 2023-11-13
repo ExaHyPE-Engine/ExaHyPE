@@ -153,11 +153,13 @@ class GaussLobatto(MatrixGenerator):
 
     """Return the cel-to-face matrix A_p^qf
     """
+    # SCALING: scaled by h
     A_CF_q_left   = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
     A_CF_q_bottom = self.block_matrix._A_CF[(0,2)]["bottom"][(1,0)]
     A_CF_q_right  = self.block_matrix._A_CF[(0,2)]["right"][(0,1)]
     A_CF_q_top    = self.block_matrix._A_CF[(0,2)]["top"][(1,0)]
 
+    # SCALING:
     # !!! A_{C<-F} has penalty components of different scaling!  
     # For now, we just sum them up into one matrix with scaling (0,0)
     # Need to work out how to separate them in the solver.
@@ -174,6 +176,14 @@ class GaussLobatto(MatrixGenerator):
     A_CF_result = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
     
     return A_CF_result
+  
+    # SCALING: Consider our case with 4x16 matrix:
+    #
+    #    by h        by h        by 1        by 1        by h        by h        by 1        by 1        by h        by h        by 1        by 1        by h        by h        by 1        by 1      
+    # [[ 0.33333333  0.16666667  0.33333333  0.16666667 -0.33333333 -0.16666667  0.33333333  0.16666667  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.33333333 -0.16666667]
+    #  [ 0.          0.         -0.33333333 -0.16666667 -0.16666667 -0.33333333  0.16666667  0.33333333 -0.33333333 -0.16666667  0.33333333  0.16666667  0.          0.         -0.16666667 -0.33333333]
+    #  [ 0.16666667  0.33333333  0.16666667  0.33333333  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.16666667 -0.33333333  0.33333333  0.16666667  0.33333333  0.16666667]
+    #  [ 0.          0.         -0.16666667 -0.33333333  0.          0.         -0.16666667 -0.33333333 -0.16666667 -0.33333333  0.16666667  0.33333333  0.16666667  0.33333333  0.16666667  0.33333333]]
   
     #faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces
     #cellDim = self.cell_nodes * self.unknowns_per_cell_node
