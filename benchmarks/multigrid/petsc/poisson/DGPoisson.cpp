@@ -22,8 +22,6 @@ void benchmarks::multigrid::petsc::poisson::DGPoisson::initNode(
   logTraceInWith4Arguments("initNode", x, h, value, rhs);
   rhs = Dimensions * tarch::la::PI * tarch::la::PI;
   for (int i = 0; i < Dimensions; i++){
-
-    //we add scaling by cell width here
     rhs *= std::sin( tarch::la::PI * x[i] );
   }
   value = 0.0;
