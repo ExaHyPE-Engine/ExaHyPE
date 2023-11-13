@@ -5,7 +5,22 @@ import jinja2
 
 
 class Solve(ActionSet):
-  templateTVFT = """ """
+  templateTVFT = """ 
+  if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
+  {
+    // set residual to rhs
+    // we can pass the whole vector around, but intent is clearer this way
+    for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+      fineGridVertex{{SOLVER_NAME}}.setResidual( dof, 
+                   fineGridVertex{{SOLVER_NAME}}.getRhs( dof ) );
+    
+    // set diag to 0
+    for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+      fineGridVertex{{SOLVER_NAME}}.setFieldDiag(dof, 0.0);
+  }
+  """
+
+  templateTVLT = """ """
   templateTCFT = """ """
   
   def __init__(self,
