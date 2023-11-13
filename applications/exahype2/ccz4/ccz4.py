@@ -1094,7 +1094,7 @@ if __name__ == "__main__":
       peano4_project.solversteps.add_step( Additional_mesh_traversal )
 
     peano4_project.generate( throw_away_data_after_generation=False )
-    #peano4_project.build( make_clean_first = True )
+    peano4_project.build( make_clean_first = True )
 
     #Report the application information
     userinfo.append(("the executable file name: "+exe, None))
