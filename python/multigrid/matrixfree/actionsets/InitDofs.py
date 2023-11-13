@@ -17,6 +17,8 @@ class InitDofs(ActionSet):
     return isOnBoundary;
   };
 
+  logTraceInWith3Arguments("InitDofs::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
+
   vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
 
   switch(dofType)
@@ -91,11 +93,47 @@ class InitDofs(ActionSet):
       break;
   }
 
-  logTraceInWith3Arguments("InitDofs::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
-  logTraceOut("InitDofs::TVFT");
+  logTraceOutWith3Arguments("InitDofs::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
    """
-  templateTCFT = """ """
+
+  templateTCFT = """
+  logTraceInWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+
+  celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+
+  switch(dofType)
+  {
+    case celldata::{{SOLVER_NAME}}::Type::Outside:
+    {
+      if ( marker.willBeRefined() ) // make it coarse
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Outside );
+      }
+    }
+    break;
+
+    case celldata::{{SOLVER_NAME}}::Type::Interior:
+    {
+      if ( marker.willBeRefined() )
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else 
+      {
+        fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
+      }
+    }
+    break;
+
+  }
+  
+  logTraceOutWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+   """
   
   def __init__(self,
                solver):

@@ -8,42 +8,90 @@ class Solve(ActionSet):
   templateTVFT = """ 
   if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
   {
-    logTraceInWith1Argument("TouchVertexFirstTime", marker.toString());
+    logTraceInWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
-    // set residual to rhs
-    // we can pass the whole vector around, but intent is clearer this way
     for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+    {
+      // set residual to rhs
+      // we can pass the whole vector around, but intent is clearer this way
       fineGridVertex{{SOLVER_NAME}}.setResidual( dof, 
                    fineGridVertex{{SOLVER_NAME}}.getRhs( dof ) );
+
+      // set diag to 0
+      for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+        fineGridVertex{{SOLVER_NAME}}.setFieldDiag(dof, 0.0);
+    }
     
-    // set diag to 0
-    for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
-      fineGridVertex{{SOLVER_NAME}}.setFieldDiag(dof, 0.0);
-    
-    logTraceOutWith1Argument("TouchVertexFirstTime", marker.toString());
+    logTraceOutWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
   """
 
   templateTVLT = """
   if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
   {
-    logTraceInWith1Argument("TouchVertexLastTime", marker.toString());
+    logTraceInWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
     for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
     {
+      logTraceInWith1Argument("checkFieldDiag", fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof));
       assertion( repositories::{{SOLVER_NAME}}.getFieldDiag(dof) > 0 );
       double val = fineGridVertex{{SOLVER_NAME}}.getValue(dof) 
-                  + repositories::{{SOLVER_INSTANCE}}::Omega 
+                  + repositories::{{SOLVER_INSTANCE}}.Omega 
                     * ( 1.0 / fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof) )
                     * fineGridVertex{{SOLVER_NAME}}.getResidual(dof);
 
-      repositories::{{SOLVER_NAME}}.setValue(dof, val);
+      fineGridVertex{{SOLVER_NAME}}.setValue(dof, val);
+      logTraceOut("checkFieldDiag");
     }
-    logTraceOutWith1Argument("TouchVertexLastTime", marker.toString());
+    logTraceOutWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
   """
 
-  templateTCFT = """ """
+  templateTCFT = """ 
+  if ( fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior )
+  {
+    logTraceInWith2Arguments("Solve::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+    for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+    {
+      // collect all of the vertex values into one vector
+      tarch::la::Vector<TwoPowerD, double> vertexValues;
+      tarch::la::Vector<TwoPowerD, double> rhsValues;
+      for (int i=0; i<TwoPowerD; i++)
+      {
+        vertexValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getValue(dof);
+        rhsValues(i)    = fineGridVertices{{SOLVER_NAME}}(i).getRhs(dof);
+      }
+
+      // apply local assembly matrix
+      auto A = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h());
+      vertexValues = A * vertexValues;
+
+      // decrement rhs values
+      rhsValues -= vertexValues;
+
+      for (int i=0; i<TwoPowerD; i++)
+      {
+        logTraceInWith1Argument("puttingValuesBack", fineGridVertices{{SOLVER_NAME}}(i).toString());
+        // put vertexValues back
+        fineGridVertices{{SOLVER_NAME}}(i).setValue(dof, vertexValues(i));
+
+        // put rhs back
+        fineGridVertices{{SOLVER_NAME}}(i).setRhs(dof, rhsValues(i));
+
+        // increment fieldDiag
+        // get current val
+        double diagVal = fineGridVertices{{SOLVER_NAME}}(i).getFieldDiag(dof);
+        // increment it
+        diagVal += A(i,i);
+        fineGridVertices{{SOLVER_NAME}}(i).setFieldDiag(dof, diagVal);
+        
+        logTraceOutWith1Argument("puttingValuesBack", fineGridVertices{{SOLVER_NAME}}(i).toString());
+      }
+
+    }
+    logTraceOutWith2Arguments("Solve::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  }
+  """
   
   def __init__(self,
                solver):
@@ -60,6 +108,9 @@ class Solve(ActionSet):
       pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTCFT).render(**self.d)
+      pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
+      result = jinja2.Template(self.templateTVLT).render(**self.d)
       pass
     return result
 
