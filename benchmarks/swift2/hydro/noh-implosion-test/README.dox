@@ -137,6 +137,7 @@
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
  module load likwid
+ salloc -p multi
  #export OMP_NUM_THREADS=8
  for REALISATION in domain-decomposition.scattered \
                     domain-decomposition.continuous-per-vertex.insert-sorts \
@@ -155,7 +156,7 @@
    EXEC_FILE=noh2D-np-2400.$REALISATION
    python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea $REALISATION --output $EXEC_FILE
    echo Run ./$EXEC_FILE
-   likwid-pin -c 0-7 ./$EXEC_FILE > $EXEC_FILE.out
+   srun likwid-pin -c 0-7 ./$EXEC_FILE > $EXEC_FILE.out
  done
  tar -czvf Hamilton8-2400.tar.gz noh2D*.out 
  
