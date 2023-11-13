@@ -8,6 +8,8 @@ class Solve(ActionSet):
   templateTVFT = """ 
   if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
   {
+    logTraceInWith1Argument("TouchVertexFirstTime", marker.toString());
+
     // set residual to rhs
     // we can pass the whole vector around, but intent is clearer this way
     for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
@@ -17,10 +19,30 @@ class Solve(ActionSet):
     // set diag to 0
     for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
       fineGridVertex{{SOLVER_NAME}}.setFieldDiag(dof, 0.0);
+    
+    logTraceOutWith1Argument("TouchVertexFirstTime", marker.toString());
   }
   """
 
-  templateTVLT = """ """
+  templateTVLT = """
+  if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
+  {
+    logTraceInWith1Argument("TouchVertexLastTime", marker.toString());
+
+    for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+    {
+      assertion( repositories::{{SOLVER_NAME}}.getFieldDiag(dof) > 0 );
+      double val = fineGridVertex{{SOLVER_NAME}}.getValue(dof) 
+                  + repositories::{{SOLVER_INSTANCE}}::Omega 
+                    * ( 1.0 / fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof) )
+                    * fineGridVertex{{SOLVER_NAME}}.getResidual(dof);
+
+      repositories::{{SOLVER_NAME}}.setValue(dof, val);
+    }
+    logTraceOutWith1Argument("TouchVertexLastTime", marker.toString());
+  }
+  """
+
   templateTCFT = """ """
   
   def __init__(self,
