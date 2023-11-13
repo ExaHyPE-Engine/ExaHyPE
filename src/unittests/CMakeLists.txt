@@ -16,7 +16,7 @@ foreach(mode IN LISTS BUILD_MODES)
     target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC project_options Peano4Core${dimension}d_${mode_lower} Tarch_${mode_lower})
     target_link_libraries(UnitTests${dimension}d_${mode_lower} PRIVATE project_warnings)
     target_compile_options(UnitTests${dimension}d_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
-    target_link_options(UnitTests${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFGALS})
+    target_link_options(UnitTests${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
 
     if(ENABLE_EXAHYPE)
       target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC ExaHyPE2Core${dimension}d_${mode_lower})

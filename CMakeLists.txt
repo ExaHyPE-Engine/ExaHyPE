@@ -297,10 +297,11 @@ endif()
 # for Peano regardless of the default configuration, unless user provides flags.
 # Release and Debug are also used by Peano, MinSizeRel and RelWithDebInfo are not used by Peano
 # It needs to be done similarly for definitions and LDFLAGS
-foreach(${CMAKE_BUILD_TYPE} IN_LIST CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE} "")
-  set(${CMAKE_BUILD_TYPE}_DEFINITIONS "")
-  set(${CMAKE_BUILD_TYPE}_LDFLAGS "")
+foreach(BUILD_TYPE IN_LIST CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_CXX_FLAGS_${BUILD_TYPE} "")
+  set(${BUILD_TYPE}_DEFINITIONS "")
+  set(${BUILD_TYPE}_LDFLAGS "")
+  set(CMAKE_CUDA_FLAGS_${BUILD_TYPE})
 endforeach()
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
