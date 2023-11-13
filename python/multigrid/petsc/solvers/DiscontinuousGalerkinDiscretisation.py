@@ -59,7 +59,7 @@ class AssemblePetscMatrix(ActionSet):
         rhs += rhsCellMatrix(row,col) * fineGridCell{{SOLVER_NAME}}.getRhs(col);
       }
       repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-        row, rhs
+        globalCellIndex+row, rhs
       );
     }
     
