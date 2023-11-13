@@ -28,6 +28,7 @@ trace  benchmarks::multigrid::petsc::poisson::observers::Assemble -1     white a
 trace benchmarks::multigrid::petsc::poisson::observers::Assemble2multigrid_petsc_solvers_DiscontinuousGalerkinDiscretisation0 -1     white always-on
 trace benchmarks::multigrid::petsc::poisson::observers::Assemble2multigrid_petsc_solvers_CollocatedLowOrderDiscretisation0    -1     white always-on
 trace benchmarks::multigrid::petsc::poisson::AbstractDGPoisson    -1     white always-on
+trace benchmarks::multigrid::petsc::poisson::DGPoisson    -1     white always-on
 trace  exahype2                            -1     black always-on
 trace  toolbox                             -1     black always-on
 trace  petsc                               -1     white always-on
