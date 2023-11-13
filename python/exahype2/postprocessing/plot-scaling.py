@@ -138,7 +138,7 @@ A generic script to create speedup plots.
 
       tar = None
       try:
-        tar = tarfile.open( file, "r:gz" )
+        tar = tarfile.open( file, open_mode )
         data_files = tar.getnames()
 
         # Sort input data

@@ -136,42 +136,39 @@
  can be enabled via the opt argument: 
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ module load likwid
+ #export OMP_NUM_THREADS=8
  for REALISATION in domain-decomposition.scattered \
                     domain-decomposition.continuous-per-vertex.insert-sorts \
                     domain-decomposition.continuous-per-vertex.sort-on-the-fly \
-                    domain-decomposition.global-continuous.insert-sorts \ 
-                    domain-decomposition.global-continuous.sort-on-the-fly \ 
+                    domain-decomposition.global-continuous.insert-sorts \
+                    domain-decomposition.global-continuous.sort-on-the-fly \
                     domain-decomposition.continuous-per-vertex.insert-sorts.vectorise-all \
                     domain-decomposition.continuous-per-vertex.sort-on-the-fly.vectorise-all \
-                    domain-decomposition.global-continuous.insert-sorts.vectorise-all \ 
-                    domain-decomposition.global-continuous.sort-on-the-fly.vectorise-all \ 
+                    domain-decomposition.global-continuous.insert-sorts.vectorise-all \
+                    domain-decomposition.global-continuous.sort-on-the-fly.vectorise-all \
                     domain-decomposition.continuous-per-vertex.insert-sorts.vectorise-distance-checks \
                     domain-decomposition.continuous-per-vertex.sort-on-the-fly.vectorise-distance-checks \
-                    domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks \ 
+                    domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks \
                     domain-decomposition.global-continuous.sort-on-the-fly.vectorise-distance-checks 
  do
    EXEC_FILE=noh2D-np-2400.$REALISATION
    python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea $REALISATION --output $EXEC_FILE
    echo Run ./$EXEC_FILE
-   ./$EXEC_FILE > $EXEC_FILE.out
+   likwid-pin -c 0-7 ./$EXEC_FILE > $EXEC_FILE.out
  done
+ tar -czvf Hamilton8-2400.tar.gz noh2D*.out 
+ 
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
- 
- 
- 
- 
- So on my local laptop with eight cores, these setups complete in approximately
- the following times:
- 
-| Name | Time (laptop) |
-|------|---------------|
-| domain-decomposition/scattered | 731 |
-| domain-decomposition/continuous-per-vertex/insert-sorts | 867
-| domain-decomposition/continuous-per-vertex/sort-on-the-fly | 723
-| domain-decomposition/global-continuous/insert-sorts | 870
-| domain-decomposition/global-continuous/sort-on-the-fly | 744
 
+  
+ The zipped outcome can be visualised by a call similar to
  
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 plots_compare_implemetation_variants.py Hamilton8-2400.tar.gz
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ @image html Hamilton8-2400.tar.gz.png 
   
  
  # Old docu
