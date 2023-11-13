@@ -71,7 +71,7 @@ namespace swift2 {
      * This routine is used both by touchVertexFirstTime and
      * touchVertexLastTime to keep track of state transitions.
      *
-     * @param hostedParticles: the particles around a vertex that will be subject to the validation
+     * @param assignedParticles: the particles around a vertex that will be subject to the validation
      * @param marker: a peano4::datamanagement::VertexMarker or peano4::datamanagement::CellMarker
      * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
      * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
@@ -86,7 +86,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer, typename Marker>
     static void markAlgorithmStep(
-      const ParticleContainer&                                                                  hostedParticles,
+      const ParticleContainer&                                                                  assignedParticles,
       const Marker&                                                                             marker,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    sweepStageMarkerEnum,
@@ -201,7 +201,7 @@ namespace swift2 {
      * Within the vertex events touchVertexFirstTime() and
      * touchVertexLastTime(), we have no active and local particles anymore.
      * There are solely the ones around the vertex on this mesh level. They are
-     * called hostedParticles.
+     * called assignedParticles.
      *
      * Throughout the traversal, there are no global active and local
      * particles: Both sets are views onto the global particle set and they adopt
@@ -212,12 +212,12 @@ namespace swift2 {
      * Therefore, we write that all particles have to have been local at least
      * once.
      *
-     * @param hostedParticles: set of particles hosted by a vertex to perform checks on
+     * @param assignedParticles: set of particles hosted by a vertex to perform checks on
      * @param algorithmStepMarkerEnum: Enum representing current main algorithm step
      */
     template <typename ParticleContainer>
     static void checkParticlesAssignedToVertexInTouchLastTimeAlgorithmStep(
-      const ParticleContainer&                                                                  hostedParticles,
+      const ParticleContainer&                                                                  assignedParticles,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStepMarkerEnum
     );
 

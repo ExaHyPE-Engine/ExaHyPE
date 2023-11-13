@@ -108,17 +108,26 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     def get_body_of_operation(self, operation_name):
         """!
 
-        Core algorithm. See class description. If you compare this function to
+        Core actions triggered when we run through the mesh
+        
+        See class description. If you compare this function to
         UpdateParticleGridAssociation_LiftDrop.get_body_of_operation(), we see
         that we use our modified lift routine when particles have moved and in
-        return can omit the dropping.
+        return can omit the dropping. That is, the cousin's realisation is 
+            
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~    
+        if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+            result =  self._Template_Drop.render(**self.d)
+            result += self._Template_Sieve.render(**self.d)
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~    
+        
+        while we only do the sieve here. 
 
         """
         result = "\n"
         if operation_name == ActionSet.OPERATION_BEGIN_TRAVERSAL:
             result = self._Template_BeginTraversal.render(**self.d)
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-            # result = self._Template_Drop.render(**self.d)
             result = self._Template_Sieve.render(**self.d)
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
             result = self.__Template_LiftParticles.render(**self.d)

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-export PYTHONPATH=../../../../python
+export PYTHONPATH=$PYTHONPATH:../../../../python
 
 # Script to run experiment (Noh 2D)
 
