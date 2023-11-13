@@ -3,6 +3,7 @@
 import os
 import sys
 import argparse
+import subprocess
 
 sys.path.insert(0, os.path.abspath('../../../python'))
 import peano4
@@ -93,7 +94,9 @@ parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     ty
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   default=rk_order,           help="Order of time discretisation for Runge-Kutta scheme.")
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   default=dg_order,           help="Order of space discretisation for Discontinuous Galerkin.")
 
-parser.add_argument("--trees",                         dest="trees",          type=int,                   default=0,                  help="Number of trees (subpartitions) per rank.")
+parser.add_argument(            "--trees",             dest="trees",          type=int,                   default=0,                  help="Number of trees (subpartitions) per rank.")
+parser.add_argument(            "--threads",           dest="threads",        type=int,                   default=0,                  help="Number of threads per rank.")
+parser.add_argument(            "--timeout",           dest="timeout",        type=int,                   default=3600,               help="MPI timeout in seconds.")
 
 parser.add_argument(            "--make",              dest="make",                                       action="store_true",        help="Compile the code after generation")
 parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by given parameters.")
@@ -129,9 +132,10 @@ if args.use_gpu:
 if args.executable:
   executable_name = args.executable
 else:
-  executable_name = "euler-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type) + "-" + str(args.build_mode)
+  executable_name = "euler-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
   if args.use_gpu:
     executable_name += "-GPU"
+  executable_name += "-" + str(args.build_mode)
 
 my_project = exahype2.Project(
   namespace=["applications", "exahype2", "euler"],
@@ -288,13 +292,13 @@ my_project.set_global_simulation_parameters(
     periodic_BC=periodic_BC,
 )
 
-solution_dir = str(args.output_path) + "-EulerSolver-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
+solution_dir = str(args.output_path) + "-" + str(executable_name)
 my_project.set_output_path(solution_dir)
 if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
 
 if args.visualise:
-  output_patch_file = solution_dir + "/solution-EulerSolver.peano-patch-file"
+  output_patch_file = solution_dir + "/solution-Euler.peano-patch-file"
   if os.path.isfile(output_patch_file):
       subprocess.call([
           "python3", "../../../python/peano4/visualisation/render.py",
@@ -306,6 +310,12 @@ if args.trees > 0:
   my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + ")")
 else:
   my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
+if args.threads > 0:
+  my_project.set_number_of_threads(args.threads)
+else:
+  my_project.set_number_of_threads("tarch::multicore::Core::UseDefaultNumberOfThreads")
+
+my_project.set_timeout(args.timeout)
 
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)

@@ -3,13 +3,14 @@
 #pragma once
 
 #include "Constants.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::euler {
   static inline double maxEigenvalue(const double* __restrict__ Q, int normal) InlineMethod {
     const double rho = Q[0];
-    const double u = Q[1];
-    const double v = Q[2];
+    const double u   = Q[1];
+    const double v   = Q[2];
 #if Dimensions == 3
     const double w = Q[3];
     const double e = Q[4];
@@ -48,8 +49,8 @@ namespace applications::exahype2::euler {
 
   static inline void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
     const double rho = Q[0];
-    const double u = Q[1];
-    const double v = Q[2];
+    const double u   = Q[1];
+    const double v   = Q[2];
 #if Dimensions == 3
     const double w = Q[3];
     const double e = Q[4];
@@ -76,9 +77,9 @@ namespace applications::exahype2::euler {
 #endif
 
     const double coeff = irho * Q[normal + 1];
-    F[0]             = coeff * rho;
-    F[1]             = coeff * u;
-    F[2]             = coeff * v;
+    F[0]               = coeff * rho;
+    F[1]               = coeff * u;
+    F[2]               = coeff * v;
 #if Dimensions == 3
     F[3] = coeff * w;
     F[4] = coeff * e + coeff * p;
