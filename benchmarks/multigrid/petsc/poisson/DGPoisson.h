@@ -61,24 +61,20 @@ class benchmarks::multigrid::petsc::poisson::DGPoisson: public benchmarks::multi
     Please ensure we passed "None" to CELL_TO_FACE_MATRIX_SCALING
 
     */
-    tarch::la::Matrix< benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::NodesPerFace*benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::FaceUnknowns*benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::FacesPerCell, benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::DoFsPerCell, double > getProjectionOfCellDataOntoFace(
+    tarch::la::Matrix< 
+      benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::NodesPerFace*benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::FaceUnknowns*benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::FacesPerCell,
+      benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::DoFsPerCell,
+      double > getProjectionOfCellDataOntoFace(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     );
-
-
     
+    tarch::la::Matrix< benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::DoFsPerCell, 
+      benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::NodesPerFace*benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::FaceUnknowns*benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::FacesPerCell,
+      double > getProjectionOfRiemannSolutionOntoCell(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+      );
 
-
-    
-
-
-    
-
-
-    
-
-
-    
 };
 

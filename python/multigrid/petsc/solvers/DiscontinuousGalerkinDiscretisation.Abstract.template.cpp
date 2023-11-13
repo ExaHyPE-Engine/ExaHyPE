@@ -128,15 +128,22 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAM
       {% endfor %}
   };
   double scaling = 1.0;
-  {% if FACE_TO_CELL_MATRIX_SCALING >= 0 %}
+  {% if FACE_TO_CELL_MATRIX_SCALING is none %}
+  // supplied "none" to the scaling for cell to face matrix. putting in custom behaviour
+  // in dervied class. reuse this method to grab the matrix itself
+  return result;
+
+  {% elif FACE_TO_CELL_MATRIX_SCALING >= 0 %}
   for (int i=0; i<{{FACE_TO_CELL_MATRIX_SCALING}}; i++) {
     scaling *= cellSize(0);
-  {% else %}
-  for (int i=0; i<(-1)*{{FACE_TO_CELL_MATRIX_SCALING}}; i++) {
-    scaling /= cellSize(0);
-  {% endif %}
   }
   return scaling * result;
+  {% elif FACE_TO_CELL_MATRIX_SCALING <  0 %}
+  for (int i=0; i<(-1)*{{FACE_TO_CELL_MATRIX_SCALING}}; i++) {
+    scaling /= cellSize(0);
+  }
+  return scaling * result;
+  {% endif %}
 }
 {% endif %}
 

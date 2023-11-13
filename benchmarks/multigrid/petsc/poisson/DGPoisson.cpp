@@ -58,15 +58,28 @@ tarch::la::Matrix< benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::Nod
 }
 
 
+tarch::la::Matrix< benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::DoFsPerCell, 
+  benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::NodesPerFace*benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::FaceUnknowns*benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::FacesPerCell,
+  double>
+  benchmarks::multigrid::petsc::poisson::DGPoisson::getProjectionOfRiemannSolutionOntoCell(
+    const tarch::la::Vector<Dimensions, double>&  cellCentre,
+    const tarch::la::Vector<Dimensions, double>&  cellSize
+  )
+  {
+  auto result = AbstractDGPoisson::getProjectionOfRiemannSolutionOntoCell(cellCentre, cellSize);
+  logTraceInWith3Arguments("getProjectionOfRiemannSolutionOntoCell", cellCentre, cellSize, result);
 
+  // just do it the stupid way
+  int rows = result.rows();
+  int cols = result.cols();
 
-
-
-
-
-
-
-
-
-
+  // same pattern as above but this time for rows instead of columns.
+  for (int j=0; j<14; j+=4)  
+  for (int i=0; i<rows; i++)
+  {
+    result(i,j)   *= cellSize(0);
+    result(i,j+1) *= cellSize(0);
+  }
+  logTraceOutWith1Argument("getProjectionOfRiemannSolutionOntoCell", result);
+}
 
