@@ -325,7 +325,23 @@ The way how to add steps is relatively mechanical:
    
    We do not want to manually interact with the step, i.e. inset C++ code
    manually once the code is generated, and therefore pass in a False here.
-   You might want to change this.
+   Passing in True in the second arguement provides a template of action set 
+   where you can write your own manipulation during the extra mesh sweeps. The
+   code currently provide a pre-written action set used to reconstruct first
+   derivative for the finite difference solver, to use this, provide the step class
+   two more arguement:
+
+   ~~~~~~~~~~~~~~~~~~~~~~~
+   additional_step = peano4.solversteps.Step( name = "AdditionalStep",
+                                              add_user_defined_actions=True,
+                                              prepare_patch_access_for_this_solver=my_solver,
+                                              action_type="FD4_first_derivative_calculation"
+                                              )
+   peano4_project.solversteps.add_step( additional_step )
+   ~~~~~~~~~~~~~~~~~~~~~~~
+
+   where you need to pass the finite difference solver to the class for parameters
+   of patch.
 
 3. Make all of ExaHyPE's data structures known to your new step. For this, you
    have to invoke use_cell(), use_vertex() and use_face() commands for each and
