@@ -23,14 +23,14 @@ struct {{NAMESPACE | join("::")}}::VariableMetrics {
 };
 
 /**
- * Positions of fields in the vector of unkonwns.
+ * Positions of fields in the vector of unknowns.
  *
  * With these constants, you can write Q[g11], Q[K22] and Q[B33] instead of
  * Q[0], Q[9] and Q[34]. Your code is meaningful in terms of physics while
  * you still access on a C-array level.
  *
  * You might want to use a typedef to shorten the notation.
- **/
+ */
 class {{NAMESPACE | join("::")}}::VariableShortcuts : public {{NAMESPACE | join("::")}}::VariableMetrics {
 public:
   // Positions of fields inside the unknown vector (solution vector) Q
