@@ -194,6 +194,7 @@ class GaussLobatto(MatrixGenerator):
     M_qm_qm_right = self.block_matrix._A_FF[(1,1)]["right"][(0,1)]   #
     M_qm_qm_top  = self.block_matrix._A_FF[(1,1)]["top"][(1,0)]      #
 
+    # SCALING: All P_q matrices are scaled with power -1 (i.e. 1/h)
     P_qp_u_left = -np.dot(np.linalg.inv(M_qp_qp_left), A_qp_u_left)
     P_qp_u_bottom = -np.dot(np.linalg.inv(M_qp_qp_bottom), A_qp_u_bottom)
     P_qm_u_right = -np.dot(np.linalg.inv(M_qm_qm_right), A_qm_u_right)
@@ -210,18 +211,39 @@ class GaussLobatto(MatrixGenerator):
     M_um_um_right = self.block_matrix._A_FF[(4,4)]["right"][(0,1)]   #
     M_um_um_top  = self.block_matrix._A_FF[(4,4)]["top"][(1,0)]      #
 
+    # SCALING: All P_u matrices are scaled with power 0
     P_up_u_left = -np.dot(np.linalg.inv(M_up_up_left), A_up_u_left)
     P_up_u_bottom = -np.dot(np.linalg.inv(M_up_up_bottom), A_up_u_bottom)
     P_um_u_right = -np.dot(np.linalg.inv(M_um_um_right), A_um_u_right)
     P_um_u_top = -np.dot(np.linalg.inv(M_um_um_top), A_um_u_top)
 
     # Components of the resulting matrix  
+    # SCALING: Resulting matrix is made by concatenating P_q matrices and P_u matrices in the following order
     P_left = np.concatenate((P_qp_u_left, P_up_u_left), axis=0)
     P_bottom = np.concatenate((P_qp_u_bottom, P_up_u_bottom), axis=0)
     P_right = np.concatenate((P_qm_u_right, P_um_u_right), axis=0)
     P_top = np.concatenate((P_qm_u_top, P_um_u_top), axis=0)
 
+    # SCALING: As a result, in the output matrix first two rows should be scaled by 1/h, following 2 rows -- by 1, following two rows -- by 1/h, etc. 
     return np.concatenate((P_left, P_bottom, P_right, P_top), axis=0)
+  
+    # SCALING: Consider our case with 16x4 matrix:
+    # [[ 1. -1. -0. -0.]  -- scale by 1/h
+    #  [-0. -0.  1. -1.]  -- scale by 1/h
+    #  [-1. -0. -0. -0.]  -- scale by 1
+    #  [-0. -0. -1. -0.]  -- scale by 1
+    #  [ 1. -0. -1. -0.]  -- scale by 1/h
+    #  [-0.  1. -0. -1.]  -- scale by 1/h
+    #  [-1. -0. -0. -0.]  -- scale by 1
+    #  [-0. -1. -0. -0.]  -- scale by 1
+    #  [-1.  1. -0. -0.]  -- scale by 1/h
+    #  [-0. -0. -1.  1.]  -- scale by 1/h
+    #  [-0.  1. -0. -0.]  -- scale by 1
+    #  [-0. -0. -0.  1.]  -- scale by 1
+    #  [-1. -0.  1. -0.]  -- scale by 1/h
+    #  [-0. -1. -0.  1.]  -- scale by 1/h
+    #  [-0. -0.  1. -0.]  -- scale by 1
+    #  [-0. -0. -0.  1.]] -- scale by 1
 
 
   def get_averaging_riemann_solver(self):
