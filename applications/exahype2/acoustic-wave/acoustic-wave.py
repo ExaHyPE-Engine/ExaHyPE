@@ -231,7 +231,7 @@ elif solver_type in aderdg_rusanov_solvers and "Fixed" in solver_type:
     time_step_size=admissible_time_step_size,
   )
   my_solver.add_kernel_optimizations(
-    polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Legendre,
+    is_linear=True,
     use_kernel_generator=True,
     architecture="noarch"
   )
@@ -246,7 +246,7 @@ elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
     time_step_relaxation      = 0.5
   )
   my_solver.add_kernel_optimizations(
-    polynomials=exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Legendre,
+    is_linear=True,
     use_kernel_generator=True,
     architecture="noarch"
   )
