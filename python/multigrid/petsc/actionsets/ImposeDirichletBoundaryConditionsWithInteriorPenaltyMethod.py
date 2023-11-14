@@ -22,10 +22,6 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
 
     logTraceInWith2Arguments("TFFT::Boundary", globalFaceIndex, marker.toString());
     
-    // we want to place -1 on the diagonal for each "interior-side" projection.
-    // That is, for face 0 and 2, we write to the "+" projection
-    //          for face 1 and 3, we write to the "-" projection
-
     /*
     we want to place -1 on the diagonal for each "interior-side" projection.
     That is, for face 0 and 2, we write to the "+" projection
@@ -75,7 +71,7 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
         // row correspoding to solution
         int globalMatrixRow = globalFaceIndex + row + 2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
         
-        logTraceInWith3Arguments("TFFT:unknownLoop", unknown, globalMatrixRow, row);
+        logTraceInWith4Arguments("TFFT:unknownLoop", unknown, globalMatrixRow, row, marker.toString());
 
         // insert identity into row corresponding to solution at this node / for this unknown
         repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
@@ -84,6 +80,12 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
           1
         );
         
+        static_assert(Dimensions==2, "the bodge on the line below this requires Dimensions == 2. see comment in code");
+
+        /*
+        in 2d, faces 0 and 1 have the + projections inside the cell. 2 and 3 have negative projections inside the cell
+        */
+        bool writeToNegativeProjection = (marker.getSelectedFaceNumber() % Dimensions);
 
         // i only want to do the following for the q^f unknown
         if ( row < repositories::{{SOLVER_INSTANCE}}.FaceUnknowns )
@@ -91,13 +93,13 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalMatrixRow,
             globalFaceIndex + row, // q^-
-            marker.getSelectedFaceNumber()%2 ? -1 : 0
+            writeToNegativeProjection ? -1 : 0
           );
 
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalMatrixRow,
             globalFaceIndex + row + repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns, // q^+
-            marker.getSelectedFaceNumber()%2 ? 0 : -1
+            writeToNegativeProjection ? 0 : -1
           );
         }
 

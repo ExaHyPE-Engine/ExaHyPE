@@ -65,8 +65,6 @@ class AssemblePetscMatrix(ActionSet):
     
     auto projectionCellToFaceMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfCellDataOntoFace(marker.x(),marker.h());
     auto projectionFaceToCellMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfRiemannSolutionOntoCell(marker.x(),marker.h());
-    logTraceInWith2Arguments("checkingprojectionMatrices", projectionCellToFaceMatrix, projectionFaceToCellMatrix);
-    logTraceOut("checkingprojectionMatrices");
     int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
     
     for (int d=0; d<Dimensions; d++) {
