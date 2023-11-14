@@ -102,20 +102,18 @@ if __name__ == "__main__":
     print("no rhs.xml available")
     pass
 
-  try:
-    numCells = 27 * 27
-    solDim = 4 * numCells
-    # sol = populateRHS("solution.xml", solDim)
-    sol = populateRHS("solution.xml")
-  except:
-    print("didn't read in solution")
-    pass
+  # try:
+  #   numCells = 27 * 27
+  #   solDim = 4 * numCells
+  #   # sol = populateRHS("solution.xml", solDim)
+  #   sol = populateRHS("solution.xml")
+  # except:
+  #   print("didn't read in solution")
+  #   pass
+
 
   print(f'shape of this matrix is {mat.shape}')
 
-  # print("getting rank of this matrix...")
-  # print(f"rank of this matrix is {getRankOfMatrix(mat)}")
 
-  # print("getting eigenvalues and vectors")
-  # eigs, vecs = np.linalg.eig(mat)
-  # print(f'smallest eigenvalue is {eigs[np.argmin(np.abs(eigs))]}')
+  # clip the rounding errors
+  mat=np.where( np.abs(mat) < 1E-10, 0, mat )
