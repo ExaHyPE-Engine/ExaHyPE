@@ -14,7 +14,7 @@ import shutil
 # Parse user input
 ########################################################################################
 
-parser = argparse.ArgumentParser(description="SPH benchmarking script")
+parser = argparse.ArgumentParser(description="SPH test script")
 parser.add_argument(
     "-j", "--parallel-builds", dest="j", type=int, default=-1, help="Parallel builds"
 )
@@ -112,7 +112,7 @@ args = parser.parse_args()
 # Generate SWIFT project
 ########################################################################################
 
-project_namespace = ["benchmarks", "swift2", "sod"]
+project_namespace = ["tests", "swift2", "sod"]
 
 project = swift2.Project(
     namespace=project_namespace, project_name="Sod1D", executable="sod1D"

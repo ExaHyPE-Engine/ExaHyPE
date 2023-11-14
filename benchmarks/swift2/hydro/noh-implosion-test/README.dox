@@ -118,9 +118,9 @@
  
 
 
- # Impact of memory layouts
+ # Impact of memory layouts and sorting
  
- The impact of the various memory layouts has to be assessed using a 
+ The impact of the various memory layouts and the sorting variations have to be assessed using a 
  representative and reasonably large setup. Furthermore, it might make sense
  to restrict the studies to one NUMA node only on a production-level chip. The
  rationale here is that most codes would deploy one MPI rank per NUMA domain
@@ -136,16 +136,40 @@
  can be enabled via the opt argument: 
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
- python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -opt none
- python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -opt continuous-per-vertex
- python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -opt global-continuous
+ module load likwid
+ salloc -p multi
+ #export OMP_NUM_THREADS=8
+ for REALISATION in domain-decomposition.scattered \
+                    domain-decomposition.continuous-per-vertex.insert-sorts \
+                    domain-decomposition.continuous-per-vertex.sort-on-the-fly \
+                    domain-decomposition.global-continuous.insert-sorts \
+                    domain-decomposition.global-continuous.sort-on-the-fly \
+                    domain-decomposition.continuous-per-vertex.insert-sorts.vectorise-all \
+                    domain-decomposition.continuous-per-vertex.sort-on-the-fly.vectorise-all \
+                    domain-decomposition.global-continuous.insert-sorts.vectorise-all \
+                    domain-decomposition.global-continuous.sort-on-the-fly.vectorise-all \
+                    domain-decomposition.continuous-per-vertex.insert-sorts.vectorise-distance-checks \
+                    domain-decomposition.continuous-per-vertex.sort-on-the-fly.vectorise-distance-checks \
+                    domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks \
+                    domain-decomposition.global-continuous.sort-on-the-fly.vectorise-distance-checks 
+ do
+   EXEC_FILE=noh2D-np-2400.$REALISATION
+   python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea $REALISATION --output $EXEC_FILE
+   echo Run ./$EXEC_FILE
+   srun likwid-pin -c 0-7 ./$EXEC_FILE > $EXEC_FILE.out
+ done
+ tar -czvf Hamilton8-2400.tar.gz noh2D*.out 
+ 
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  
+ The zipped outcome can be visualised by a call similar to
  
- So on my local laptop with eight cores, the first setup needs 777s. 
- With the continuous per vertex option, we need 829s.
- With the globally continuous memory, I get 878s.
- 
- 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 plots_compare_implemetation_variants.py Hamilton8-2400.tar.gz
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ @image html Hamilton8-2400.tar.gz.png 
   
  
  # Old docu

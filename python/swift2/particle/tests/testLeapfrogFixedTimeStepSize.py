@@ -161,14 +161,13 @@ class testLeapfrogFixedTimeStepSize(Particle):
         self.data.add_or_replace_attribute(initial_time_step_size_attr)
 
         adjust_time_step_size_attr = dastgen2.attributes.Boolean(
-            "adjustTimeStepSize", qualifier=const_static, initval=self._adjustTimeStepSize
+            "adjustTimeStepSize",
+            qualifier=const_static,
+            initval=self._adjustTimeStepSize,
         )
         self.data.add_or_replace_attribute(adjust_time_step_size_attr)
 
         return
-
-
-
 
     def algorithm_steps(self):
         """
@@ -211,9 +210,9 @@ class testLeapfrogFixedTimeStepSize(Particle):
                 name="Kick1",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
                 touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-                        localParticles);""",
+                        assignedParticles);""",
                 prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
                     self.name,
                 ),
@@ -231,8 +230,8 @@ class testLeapfrogFixedTimeStepSize(Particle):
                 name="Drift",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN,
-                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-                touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( localParticles );""",
+                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
+                touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles );""",
                 includes="""
                                          #include "Constants.h"
                                          #include "swift2/timestepping/Leapfrog.h"
@@ -270,9 +269,9 @@ class testLeapfrogFixedTimeStepSize(Particle):
                 name="Kick2",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
                 touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-                        localParticles);""",
+                        assignedParticles);""",
                 includes="""
                                          #include "Constants.h"
                                          #include "swift2/timestepping/Leapfrog.h"
