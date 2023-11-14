@@ -22,7 +22,7 @@ export I_MPI_CXX=icpx
 export PYTHONPATH=../../../../python
 
 
-export OMP_NUM_THREADS=$SLURM_ARRAY_JOB_ID
+export OMP_NUM_THREADS=$SLURM_ARRAY_TASK_ID
 for REALISATION in domain-decomposition.scattered \
                    domain-decomposition.continuous-per-vertex.insert-sorts \
                    domain-decomposition.continuous-per-vertex.sort-on-the-fly \
