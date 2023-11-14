@@ -166,12 +166,13 @@ namespace swift2 {
 
     /**
      * @brief Dependency Check: Verify that particles have completed all the algorithm steps and stages of the
-     * main algorithm steps before the current one. If an error is found, debug information is printed to stdout
+     * main algorithm steps before the current one. Also ensure none of the steps nor stages after the current
+     * one have been performed yet. If an error is found, debug information is printed to stdout
      * and the program is aborted.
      *
-     * This routine is typically inserted into touchVertexFirstTime() and
-     * ensures that all data piped into an algorithm step are valid and
-     * consistent.
+     * This routine is typically inserted after each sweep stage (touchVertexFirstTime, CellKernel,
+     * touchVertesLastTime) of any AlgorithmStep. It ensures that all data piped into an algorithm step are valid
+     * and consistent.
      *
      * @param localParticles: set of local Particles to perform checks on
      * @param marker: a peano4::datamanagement::VertexMarker or peano4::datamanagement::CellMarker
@@ -224,8 +225,13 @@ namespace swift2 {
 
     /**
      * @brief Dependency Check: Verify that particles have completed all the algorithm steps and stages of the
-     * initialisation algorithm steps before the current one. If an error is found, debug information is printed to
-     * stdout and the program is aborted.
+     * initialisation algorithm steps before the current one. Also ensure none of the steps nor stages after the current
+     * one have been performed yet. If an error is found, debug information is printed to stdout
+     * and the program is aborted.
+     *
+     * This routine is typically inserted after each sweep stage (touchVertexFirstTime, CellKernel,
+     * touchVertesLastTime) of any AlgorithmStep during the initialisation. It ensures that all data
+     * piped into an algorithm step are valid and consistent.
      *
      * @param localParticles: set of local Particles to perform checks on
      * @param marker: a peano4::datamanagement::VertexMarker or peano4::datamanagement::CellMarker
