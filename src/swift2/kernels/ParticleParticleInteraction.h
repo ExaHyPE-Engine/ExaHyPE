@@ -5,6 +5,9 @@
 #include <list>
 #include <unordered_set>
 
+#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/VertexMarker.h"
+
 namespace swift2 {
   namespace kernels {
     /**
@@ -92,6 +95,19 @@ namespace swift2 {
      */
     template <typename Particle>
     void forceKernelVectorised(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle);
+
+    /**
+     * Check distance between two particles
+     *
+     * First part of force kernel routine, where we check if two particles are
+     * close enough to actually interact. This routine also returns true if
+     * localParticle and activeParticle are the same. That is, it does not
+     * check for equality. Therefore, the routine has to be used with
+     * forceKernelVectorised() which in turn checks the distance interally but
+     * masks out zero distances.
+     */
+    template <typename Particle>
+    bool forceKernelDistanceCheck(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle);
 
     /**
      * @brief Non-symmetric density calculation (as per Swift terminology).
@@ -213,7 +229,45 @@ namespace swift2 {
      *
      */
     template <typename ParticleContainer>
-    void computeHydroForce(
+    void computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking(
+      const peano4::datamanagement::CellMarker& marker,
+      const ParticleContainer&                  localVertices,
+      const std::vector<int>&                   numberOfParticlesPerVertex,
+      const ParticleContainer&                  activeParticles,
+      const std::vector<int>&                   numberOfActiveParticlesPerVertex
+    );
+
+
+    /**
+     * Alternative implementation of the hydro force which splits up the
+     * underlying algorithm into two steps:
+     *
+     * 1. Identify all the particles which actually impose an interaction.
+     *    This is a purely geometric distance check and its result is stored in
+     *    a boolean array.
+     * 2. For those interactions which are flagged as interactive, we actually
+     *    evaluate the force.
+     *
+     * In this variant, we primarily vectorise the first step, assuming that
+     * this is where the majority of the runtime is spent. This way, we might
+     * loose out on the vectorisation potential of the force, but we do not do
+     * a lot of calculations which eventually are masked out anyway.
+     *
+     * After step 1 has completed we have a list of markers. Now we stil try
+     * to vectorise over the markers with a 1: We run trough the particle set
+     * once again with a while loop. Whenever we find a particle which acts on
+     * the current particle, we look @f$ K \in \{2^1-1,2^2-1,2^3-1\} @f$ steps
+     * ahead. If several particle in a row are to be handled, i.e. are flagged,
+     * we us a vectorised for loop.
+     *
+     * To make this lookahead simpler, we extend the boolean field by default
+     * by MaxVectorise-1, i.e. @f$ 2^k-1 @f$, elements. Unfortunately, I had to
+     * manually unroll the lookahead function to make the compiler inline and
+     * vectorise properly. On the long term, this should be done automatically
+     * via a for loop.
+     */
+    template <typename ParticleContainer>
+    void computeHydroForce_vectoriseDistanceChecks(
       const peano4::datamanagement::CellMarker& marker,
       const ParticleContainer&                  localVertices,
       const std::vector<int>&                   numberOfParticlesPerVertex,
