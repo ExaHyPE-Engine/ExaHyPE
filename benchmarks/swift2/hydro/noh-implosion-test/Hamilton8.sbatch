@@ -37,12 +37,12 @@ for REALISATION in domain-decomposition.scattered \
                    domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks \
                    domain-decomposition.global-continuous.sort-on-the-fly.vectorise-distance-checks
 do
-   EXEC_FILE=noh2D-np-2400.$REALISATION
+   EXEC_FILE=noh2D-np-2400-$OMP_NUM_THREADS-threads.$REALISATION
    python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea $REALISATION --output $EXEC_FILE
    echo Run ./$EXEC_FILE
    srun likwid-pin -c 0-7 ./$EXEC_FILE > $EXEC_FILE.out
 done
-tar -czvf Hamilton8-2400.tar.gz noh2D*.out
+tar -czvf Hamilton8-2400-$OMP_NUM_THREADS-threads.tar.gz noh2D-np-2400-$OMP_NUM_THREADS-threads.*.out
 
 
 
