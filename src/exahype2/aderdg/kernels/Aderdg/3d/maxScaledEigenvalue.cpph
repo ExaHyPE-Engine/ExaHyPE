@@ -30,33 +30,30 @@ double kernels::aderdg::generic::c::maxScaledEigenvalue(
   const double                                 t,
   const double                                 dt
 ) {
-  constexpr int numberOfVariables  = SolverType::NumberOfVariables;
-  constexpr int numberOfParameters = SolverType::NumberOfParameters;
-  constexpr int numberOfData       = numberOfVariables + numberOfParameters;
-  constexpr int order              = SolverType::Order;
-  constexpr int basisSize          = order + 1;
-  constexpr int basisSize2         = basisSize * basisSize;
+  constexpr int NumberOfData       = SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables;
+  constexpr int BasisSize          = SolverType::Order + 1;
+  constexpr int BasisSize2         = BasisSize * BasisSize;
 
   const double invDx[3] = {1.0 / dx[0], 1.0 / dx[1], 1.0 / dx[2]};
 
   double maxEigenvalue = 0.0;
-  for (int i = 0; i < basisSize; i++) {
-    for (int j = 0; j < basisSize; j++) {
-      for (int k = 0; k < basisSize; k++) {
+  for (int i = 0; i < BasisSize; i++) {
+    for (int j = 0; j < BasisSize; j++) {
+      for (int k = 0; k < BasisSize; k++) {
 
-        int                                      linearisedIndex = i + basisSize * j + basisSize2 * k;
+        int                                      linearisedIndex = i + BasisSize * j + BasisSize2 * k;
         const tarch::la::Vector<Dimensions, int> index           = {i, j, k};
 
         double denominator = 0.0;
         for (int d = 0; d < Dimensions; d++) {
           denominator
             += solver.maxEigenvalue(
-                 &luh[linearisedIndex * numberOfData],
+                 &luh[linearisedIndex * NumberOfData],
                  ::exahype2::dg::getQuadraturePoint(
                    cellCentre,
                    dx,
                    index, // index
-                   order,
+                   SolverType::Order,
                    solver.QuadraturePoints1d
                  ), // faceCentre
                  dx,
