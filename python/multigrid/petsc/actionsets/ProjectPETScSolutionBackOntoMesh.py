@@ -25,7 +25,7 @@ corresponding entry in the solution vector reads like.
     logTraceIn( "touchCellFirstTime(...)" );
     
     std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber() );
-    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
+    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex, ::petsc::LocalToGlobalMap::Type::Cell);
 
     for (int i=0; i<{{CELL_CARDINALITY}}; i++){
       // place values into mesh
@@ -153,7 +153,7 @@ corresponding entry in the solution vector reads like.
   TemplateTouchVertexFirstTime = """
   if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
     std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
-    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
+    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex, ::petsc::LocalToGlobalMap::Type::Vertex);
 
     for (int i=0; i<{{VERTEX_CARDINALITY}}; i++){
       fineGridVertex{{SOLVER_NAME}}.setValue(

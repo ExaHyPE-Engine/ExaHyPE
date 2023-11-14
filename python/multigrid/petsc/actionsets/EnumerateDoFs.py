@@ -182,9 +182,9 @@ class EnumerateDoFs(ActionSet):
     ", cell dofs=" << _localCellMap.getTotalNumberOfIndices()
   );
     
-  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localVertexMap );
-  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localFaceMap );
-  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localCellMap );
+  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localVertexMap, ::petsc::LocalToGlobalMap::Type::Vertex );
+  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localFaceMap,   ::petsc::LocalToGlobalMap::Type::Face );
+  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localCellMap,   ::petsc::LocalToGlobalMap::Type::Cell );
 """
 
 
