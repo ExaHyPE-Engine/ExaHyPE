@@ -22,7 +22,9 @@ class Particle(peano4.toolbox.particles.Particle):
     toolbox. In line with the docu there, you can use this particle and add
     further attributes via
 
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         my_particle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 
@@ -181,26 +183,25 @@ Particle properties:
         )
 
     def _dependency_checks_modify_steps(self, steplist, step_type_name):
-        """
+        """!
+
+        Add dependency checks to algorithm steps
+
         This function actually modifies the AlgorithmSteps to contain the
         debug dependency checks. Is called by self.add_dependency_checks()
+        and uses the validation routines from swift2::dependencychecks.
 
-        Parameters
-        ----------
 
-        Steplist:       list
+        @param Steplist:       list
             list of AlgorithmStep objects to work on
 
-        step_type_name: str
+        @param step_type_name: str
             name of type of steps we're dealing with. Either AlgorithmStep
             or InitStep.
 
-
-        Returns
-        -------
-
-        steps: list
+        @return steps: list
             the modified list of AlgorithmSteps, now including dependency checks
+
         """
 
         # Keep this here so you can modify it in a single place when playing with debugging
@@ -229,36 +230,74 @@ Particle properties:
         self.data.add_attribute(step_progression)
 
         # String template for dependency check call
-        check_template = """\n  ::swift2::dependencyChecks::dependencyCheck{StepType}(localParticles,
+        check_template_cell_operation = """\n  ::swift2::dependencychecks::check{StepType}(localParticles,
                   marker,
                   globaldata::{NAME}::{StepType}::{0},
                   globaldata::{NAME}::SweepStage::{1},
                   &{2}
                   );\n"""
-        check_template = check_template.replace("{NAME}", self.name)
-        check_template = check_template.replace("{StepType}", step_type_name)
+        check_template_cell_operation = check_template_cell_operation.replace(
+            "{NAME}", self.name
+        )
+        check_template_cell_operation = check_template_cell_operation.replace(
+            "{StepType}", step_type_name
+        )
+
+        check_template_vertex_operation = """\n  ::swift2::dependencychecks::check{StepType}(assignedParticles,
+                  marker,
+                  globaldata::{NAME}::{StepType}::{0},
+                  globaldata::{NAME}::SweepStage::{1},
+                  &{2}
+                  );\n"""
+        check_template_vertex_operation = check_template_vertex_operation.replace(
+            "{NAME}", self.name
+        )
+        check_template_vertex_operation = check_template_vertex_operation.replace(
+            "{StepType}", step_type_name
+        )
 
         # String template for marking a step/stage call
-        mark_template = """\n  ::swift2::dependencyChecks::dependencyMark{StepType}(localParticles,
+        mark_template_cell_operation = """\n  ::swift2::dependencychecks::mark{StepType}(localParticles,
                   marker,
                   globaldata::{NAME}::{StepType}::{0},
                   globaldata::{NAME}::SweepStage::{1},
                   {2},
                   &{3}
                   );\n"""
-        mark_template = mark_template.replace("{NAME}", self.name)
-        mark_template = mark_template.replace("{StepType}", step_type_name)
-
-        # String template for dependency check call with loop over active particles
-        check_template_active_particles = """
-          ::swift2::dependencyChecks::dependencyCheckActiveParticles{StepType}(activeParticles,
-                                                                     globaldata::{NAME}::{StepType}::{0}
-                                                                    );\n"""
-        check_template_active_particles = check_template_active_particles.replace(
+        mark_template_cell_operation = mark_template_cell_operation.replace(
             "{NAME}", self.name
         )
-        check_template_active_particles = check_template_active_particles.replace(
+        mark_template_cell_operation = mark_template_cell_operation.replace(
             "{StepType}", step_type_name
+        )
+
+        mark_template_vertex_operation = """\n  ::swift2::dependencychecks::mark{StepType}(assignedParticles,
+                  marker,
+                  globaldata::{NAME}::{StepType}::{0},
+                  globaldata::{NAME}::SweepStage::{1},
+                  {2},
+                  &{3}
+                  );\n"""
+        mark_template_vertex_operation = mark_template_vertex_operation.replace(
+            "{NAME}", self.name
+        )
+        mark_template_vertex_operation = mark_template_vertex_operation.replace(
+            "{StepType}", step_type_name
+        )
+
+        check_template_vertex_operation_local_particles_after_sweep = """
+          ::swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTime{StepType}(assignedParticles,
+                                                                     globaldata::{NAME}::{StepType}::{0}
+                                                                    );\n"""
+        check_template_vertex_operation_local_particles_after_sweep = (
+            check_template_vertex_operation_local_particles_after_sweep.replace(
+                "{NAME}", self.name
+            )
+        )
+        check_template_vertex_operation_local_particles_after_sweep = (
+            check_template_vertex_operation_local_particles_after_sweep.replace(
+                "{StepType}", step_type_name
+            )
         )
 
         # Keep track of steps that move particles. They will corrupt the list of
@@ -321,10 +360,10 @@ Particle properties:
                 # Only exception is first AlgorithmStep: There, first re-set
                 # all counters
                 step.touch_vertex_first_time_kernel = (
-                    "\n  ::swift2::dependencyChecks::clearDependencyChecks"
+                    "\n  ::swift2::dependencychecks::clearDependencyChecks"
                     + step_type_name
-                    + "(localParticles);\n"
-                    + mark_template.format(
+                    + "(assignedParticles);\n"
+                    + mark_template_vertex_operation.format(
                         step.name,
                         stage,
                         step_moved_particle_string,
@@ -334,7 +373,7 @@ Particle properties:
                 )
             else:
                 step.touch_vertex_first_time_kernel = (
-                    mark_template.format(
+                    mark_template_vertex_operation.format(
                         step.name,
                         stage,
                         step_moved_particle_string,
@@ -344,8 +383,10 @@ Particle properties:
                 )
 
             # Finally, add the dependency check *after* the actual function call
-            step.touch_vertex_first_time_kernel += check_template.format(
-                step.name, stage, check_function_full_name
+            step.touch_vertex_first_time_kernel += (
+                check_template_vertex_operation.format(
+                    step.name, stage, check_function_full_name
+                )
             )
 
             # CELL_KERNEL
@@ -360,7 +401,7 @@ Particle properties:
 
             # mark the step and stage we're doing before any actual content is called
             step.cell_kernel = (
-                mark_template.format(
+                mark_template_cell_operation.format(
                     step.name,
                     stage,
                     step_moved_particle_string,
@@ -370,7 +411,7 @@ Particle properties:
             )
 
             # Now add the dependency check *after* the actual function call
-            step.cell_kernel += check_template.format(
+            step.cell_kernel += check_template_cell_operation.format(
                 step.name, stage, check_function_full_name
             )
 
@@ -386,7 +427,7 @@ Particle properties:
 
             # mark the step and stage we're doing before any actual content is called
             step.touch_vertex_last_time_kernel = (
-                mark_template.format(
+                mark_template_vertex_operation.format(
                     step.name,
                     stage,
                     step_moved_particle_string,
@@ -396,21 +437,25 @@ Particle properties:
             )
 
             # Now add the dependency check *after* the actual function call
-            step.touch_vertex_last_time_kernel += check_template.format(
-                step.name, stage, check_function_full_name
+            step.touch_vertex_last_time_kernel += (
+                check_template_vertex_operation.format(
+                    step.name, stage, check_function_full_name
+                )
             )
 
             # touch vertex last time is special: Add additional dependency check
             # which makes sure all activeParticles have been local at some point
             # during this algorithm step
             step.touch_vertex_last_time_kernel += (
-                check_template_active_particles.format(step.name)
+                check_template_vertex_operation_local_particles_after_sweep.format(
+                    step.name
+                )
             )
 
             if step.includes is None:
                 step.includes = ""
             step.includes += (
-                """\n#include "swift2/dependencyChecks/DependencyChecks.h"\n"""
+                """\n#include "swift2/dependencychecks/DependencyChecks.h"\n"""
             )
 
         return steps
