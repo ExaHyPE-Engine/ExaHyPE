@@ -36,7 +36,7 @@ tarch::la::Matrix< benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::Nod
   // use base class method first
   auto result = AbstractDGPoisson::getProjectionOfCellDataOntoFace(cellCentre, cellSize);
 
-  logTraceInWith3Arguments("getCellToFaceProjection", cellCentre, cellSize, result);
+  logTraceInWith3Arguments("getProjectionOfCellDataOntoFace", cellCentre, cellSize, result);
 
   // just do it the stupid way
   int rows = result.rows();
@@ -52,7 +52,7 @@ tarch::la::Matrix< benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::Nod
     result(i+1,j) *= 1.0/cellSize(0);
   }
 
-  logTraceInWith1Argument("getCellToFaceProjection", result);
+  logTraceInWith1Argument("getProjectionOfCellDataOntoFace", result);
   
   return result;
 }
@@ -81,5 +81,11 @@ tarch::la::Matrix< benchmarks::multigrid::petsc::poisson::AbstractDGPoisson::DoF
     result(i,j+1) *= cellSize(0);
   }
   logTraceOutWith1Argument("getProjectionOfRiemannSolutionOntoCell", result);
+
+  /*
+  Warning (please investigate later) - not having return statement here
+  doesn't throw an error and caller will be in possesion of junk data!
+  */
+  return result;
 }
 

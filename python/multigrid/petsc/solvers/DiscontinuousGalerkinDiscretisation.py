@@ -65,6 +65,8 @@ class AssemblePetscMatrix(ActionSet):
     
     auto projectionCellToFaceMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfCellDataOntoFace(marker.x(),marker.h());
     auto projectionFaceToCellMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfRiemannSolutionOntoCell(marker.x(),marker.h());
+    logTraceInWith2Arguments("checkingprojectionMatrices", projectionCellToFaceMatrix, projectionFaceToCellMatrix);
+    logTraceOut("checkingprojectionMatrices");
     int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
     
     for (int d=0; d<Dimensions; d++) {
@@ -80,7 +82,7 @@ class AssemblePetscMatrix(ActionSet):
         int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace, ::petsc::LocalToGlobalMap::Type::Face);
       
         assertion1(globalFirstDoFIndexOfLeftFace>=0,  marker.toString());
-        logTraceInWith4Arguments( "TCFT::LeftProjection", globalFirstDoFIndexOfLeftFace, globalCellIndex , projectionCellToFaceMatrix, projectionFaceToCellMatrix );
+        logTraceInWith5Arguments( "TCFT::LeftProjection", globalFirstDoFIndexOfLeftFace, globalCellIndex , projectionCellToFaceMatrix, projectionFaceToCellMatrix, marker.toString() );
 
         for (int row=0; row<dofsPerFace; row++ ) {
           for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
@@ -92,7 +94,7 @@ class AssemblePetscMatrix(ActionSet):
             );
             logTraceOut("CellToFace");
 
-            logTraceIn("FaceToCell");
+            logTraceInWith1Argument("FaceToCellInsertion", projectionFaceToCellMatrix(col, d * dofsPerFace + row));
             repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
               globalCellIndex+col,
               globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
