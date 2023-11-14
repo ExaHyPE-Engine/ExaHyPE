@@ -22,6 +22,23 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
 
     logTraceInWith2Arguments("TFFT::Boundary", globalFaceIndex, marker.toString());
     
+    // we want to place -1 on the diagonal for each "interior-side" projection.
+    // That is, for face 0 and 2, we write to the "+" projection
+    //          for face 1 and 3, we write to the "-" projection
+    for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; i++)
+    {
+      // if we are on an odd face, then no offset
+      // if we are on an even face, jump past the negative projections
+      static_assert(Dimensions==2, "the bodge below only works for 2d. the intention is to target the projection (+/-) which is on the inside of the cell");
+      int offset = marker.getSelectedFaceNumber() >= Dimensions ? 0 : repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns ;
+
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        globalFaceIndex + i + offset,
+        globalFaceIndex + i + offset,
+        -1
+      );
+    }
+
     int faceNormalAxis = marker.getSelectedFaceNumber()%Dimensions;
     int row = 0;        
     dfore(faceNode, repositories::{{SOLVER_INSTANCE}}.Order+1, faceNormalAxis, 0) {
@@ -51,12 +68,13 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
         
         logTraceInWith3Arguments("TFFT:unknownLoop", unknown, globalMatrixRow, row);
 
-        // insert identity
+        // insert identity into row corresponding to solution at this node / for this unknown
         repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
           globalMatrixRow,
           globalMatrixRow,
           1
         );
+        
 
         // i only want to do the following for the q^f unknown
         if ( row < repositories::{{SOLVER_INSTANCE}}.FaceUnknowns )
