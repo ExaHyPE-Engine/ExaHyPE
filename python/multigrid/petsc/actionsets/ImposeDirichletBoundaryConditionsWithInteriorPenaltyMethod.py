@@ -25,16 +25,25 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
     // we want to place -1 on the diagonal for each "interior-side" projection.
     // That is, for face 0 and 2, we write to the "+" projection
     //          for face 1 and 3, we write to the "-" projection
-    for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; i++)
-    {
-      // if we are on an odd face, then no offset
-      // if we are on an even face, jump past the negative projections
-      static_assert(Dimensions==2, "the bodge below only works for 2d. the intention is to target the projection (+/-) which is on the inside of the cell");
-      int offset = marker.getSelectedFaceNumber() >= Dimensions ? 0 : repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns ;
 
+    /*
+    we want to place -1 on the diagonal for each "interior-side" projection.
+    That is, for face 0 and 2, we write to the "+" projection
+             for face 1 and 3, we write to the "-" projection
+
+    We also write -1 to all of the "exterior-side" projections. The actual
+    value we use here is immaterial, so long as it is not zero.
+    This makes the matrix full-rank. We use -1 to make this loop easier
+    to write.
+
+    we go up to 2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns
+    since this is total number of q^-, q^+, u^-, u^+.
+    */
+    for (int i=0; i<2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; i++)
+    {
       repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-        globalFaceIndex + i + offset,
-        globalFaceIndex + i + offset,
+        globalFaceIndex + i,
+        globalFaceIndex + i,
         -1
       );
     }
