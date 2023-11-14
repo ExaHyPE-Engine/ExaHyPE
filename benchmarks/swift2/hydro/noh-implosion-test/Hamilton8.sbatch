@@ -15,6 +15,7 @@ module load oneapi/2023.2
 export FLAVOUR_NOCONFLICT=1
 module load gcc/13.2
 module load intelmpi
+module load likwid
  
 export I_MPI_CXX=icpx
  
