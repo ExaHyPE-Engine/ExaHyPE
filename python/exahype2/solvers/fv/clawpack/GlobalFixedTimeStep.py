@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
+from exahype2.solvers.PDETerms    import PDETerms
 from exahype2.solvers.fv.SingleSweep import SingleSweep
-from exahype2.solvers.fv.PDETerms    import PDETerms
 
 import jinja2
 import peano4

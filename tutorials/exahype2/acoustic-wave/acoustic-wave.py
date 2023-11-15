@@ -1,5 +1,9 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import sys
+import sympy
+import subprocess
 
 #
 # We use our code Python generator to generate additional glue code.
@@ -21,7 +25,7 @@ import exahype2
 # We specify the space dimensions here.
 # We support either 2- or 3-dimensional problems.
 #
-dimensions = 3
+dimensions = 2
 
 #
 # The number of finite volumes per axis in one patch.
@@ -41,17 +45,18 @@ end_time = 1
 #
 # Choose domain size and offset.
 #
-if dimensions == 2:
-    size = [10.0, 10.0]
-    offset = [0.0, 0.0]
-else:
-    size = [10.0, 10.0, 10.0]
-    offset = [0.0, 0.0, 0.0]
+size = [10.0, 10.0, 10.0]
+offset = [0.0, 0.0, 0.0]
 
 #
 # If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
 #
-use_make = True
+use_make = False
+
+#
+# Set to true, to visualise/convert the output data using a postprocessor.
+#
+visualise = False
 
 #
 # Choose how often a snapshot is written.
@@ -95,18 +100,59 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 #
 # We want to define our PDE symbolically.
 # For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
-# For reusability in other applications we implement the PDE model in the Python script pde.py.
 #
-from pde import PDE
-my_pde = PDE(unknowns=dimensions + 1, auxiliary_variables=0, dimensions=dimensions)
+my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(unknowns=dimensions+1, auxiliary_variables=0, dimensions=dimensions)
+p = my_pde.name_Q_entry(0, "p")
+v = my_pde.name_Q_entries(1, dimensions, "v")
+
+rho = sympy.symbols("rho")
+c = sympy.symbols("c")
+K0 = rho * c * c
 
 #
-# Since 'my_pde' only holds the PDE for the acoustic wave equation without initial- or boundary conditions,
+# Define the equation system
+#
+# Flux [unknowns, dimensions]
+if dimensions == 2:
+  my_pde.F[0, 0] = K0 * v[0]
+  my_pde.F[1, 0] = 1.0 / rho * p
+  my_pde.F[2, 0] = 0
+
+  my_pde.F[0, 1] = K0 * v[1]
+  my_pde.F[1, 1] = 0
+  my_pde.F[2, 1] = 1.0 / rho * p
+else:
+  my_pde.F[0, 0] = K0 * v[0]
+  my_pde.F[1, 0] = 1.0 / rho * p
+  my_pde.F[2, 0] = 0
+  my_pde.F[3, 0] = 0
+
+  my_pde.F[0, 1] = K0 * v[1]
+  my_pde.F[1, 1] = 0
+  my_pde.F[2, 1] = 1.0 / rho * p
+  my_pde.F[3, 1] = 0
+
+  my_pde.F[0, 2] = K0 * v[2]
+  my_pde.F[1, 2] = 0
+  my_pde.F[2, 2] = 0
+  my_pde.F[3, 2] = 1.0 / rho * p
+
+# Eigenvalues [unknowns, dimensions]
+if dimensions == 2:
+  my_pde.eigenvalues[0] = -c
+  my_pde.eigenvalues[1] = 0
+  my_pde.eigenvalues[2] = c
+else:
+  my_pde.eigenvalues[0] = -c
+  my_pde.eigenvalues[1] = 0
+  my_pde.eigenvalues[2] = 0
+  my_pde.eigenvalues[3] = c
+
+#
+# Since 'my_pde' only holds the PDE for the advection equation without initial- or boundary conditions,
 # we still need to properly define initial- and boundary conditions.
 # This gives us then a complete description of a 'scenario'.
 #
-import sympy
-
 #
 # Initial conditions
 #
@@ -148,8 +194,8 @@ my_pde.sources[2] = 0
 if dimensions == 3:
     my_pde.sources[3] = 0
 
-my_pde.substitute_expression(my_pde.rho, 2.7)
-my_pde.substitute_expression(my_pde.c, 6.0)
+my_pde.substitute_expression(rho, 2.7)
+my_pde.substitute_expression(c, 6.0)
 my_pde.substitute_expression(sigma, 0.1149)
 my_pde.substitute_expression(t0, 0.7)
 my_pde.substitute_expression(M0, 1000.0)
@@ -183,8 +229,8 @@ my_project.add_solver(my_solver)
 #
 my_project.set_global_simulation_parameters(
     dimensions=dimensions,
-    size=size,
-    offset=offset,
+    size=size[0:dimensions],
+    offset=offset[0:dimensions],
     min_end_time=end_time,
     max_end_time=end_time,
     first_plot_time_stamp=0.0,
@@ -199,6 +245,15 @@ my_project.set_global_simulation_parameters(
 my_project.set_output_path("solution")
 if not os.path.exists("solution"):
     os.makedirs("solution")
+
+if visualise:
+  output_patch_file = "solution/solution-AcousticWaveSolver.peano-patch-file"
+  if os.path.isfile(output_patch_file):
+    subprocess.call([
+        "python3", "../../../python/peano4/visualisation/render.py",
+        str(output_patch_file),
+    ])
+  sys.exit(0)
 
 #
 # If you only target a sequential execution, you can omit the load balancing.
@@ -239,24 +294,6 @@ my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 #
 my_project.build(make=use_make, make_clean_first=True, throw_away_data_after_build=True)
 
-#
-# Create a postprocessing script which converts the output patch files of the simulation
-# to VTU files which can be read by ParaView e.g.
-#
-with open("postprocess.py", "w") as file:
-    file.write('''
-import os
-import sys
-import subprocess
-
-output_patch_file = "solution/solution-AcousticWaveSolver.peano-patch-file"
-if os.path.isfile(output_patch_file):
-    subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file),
-    ])
-''')
-
 print("\nPDE is: ")
 print(my_pde.__str__())
 print("Executable is acoustic-wave-" + str(dimensions) + "d")
@@ -264,4 +301,3 @@ print("Clean object files via 'make clean'")
 print("(Re)compile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
 print("Regenerate all code by running 'python3 acoustic-wave.py' again")
-print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")

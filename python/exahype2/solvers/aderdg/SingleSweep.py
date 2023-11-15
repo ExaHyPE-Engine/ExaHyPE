@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .ADERDG import ADERDG, PrecisionType
 
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import jinja2
 
@@ -202,7 +202,7 @@ class SingleSweep(ADERDG):
         to incorporate the kernel into their generated stuff
 
         """
-        self._preprocess_reconstructed_patch = kernel
+        self._preprocess_reconstructed_patch += kernel
         self.create_data_structures()
         self.create_action_sets()
 

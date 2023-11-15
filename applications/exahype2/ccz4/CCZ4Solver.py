@@ -52,9 +52,9 @@ class AbstractCCZ4Solver(object):
     you might want to pass in
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                 refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                 boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    my_solver.set_implementation(initial_conditions   = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                 refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                 boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation
                                  )
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -314,11 +314,11 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
         self._add_standard_includes()
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp=construct_FV_ncp(),
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term=construct_FV_source_term(),
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues=construct_FV_eigenvalues(),
         )
 
@@ -433,11 +433,11 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
             )
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp=construct_FV_ncp(),
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term=construct_FV_source_term(),
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues=construct_FV_eigenvalues(),
         )
 
@@ -797,11 +797,11 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             )
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp=construct_FD4_ncp(),
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term=construct_FD4_source_term(),
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues=construct_FD4_eigenvalues(),
         )
 
@@ -891,11 +891,11 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
         self._add_standard_includes()
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp=construct_FD4_ncp(),
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term=construct_FD4_source_term(),
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues=construct_FD4_eigenvalues(),
         )
 
@@ -1039,7 +1039,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             self.switch_to_heap_storage(Storage.SmartPointers, Storage.SmartPointers)
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp="""
   double deltaQSerialised[NumberOfUnknowns*3];
   for (int i=0; i<NumberOfUnknowns; i++) {
@@ -1051,12 +1051,12 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
   }
   ::applications::exahype2::ccz4::ncpSecondOrderFormulation(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term="""
   memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::sourceSecondOrderFormulation(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
 """,
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues="""
           // do we only set Q
   return ::applications::exahype2::ccz4::maxEigenvalueSecondOrderFormulation(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
@@ -1266,7 +1266,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
             )
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.rkdg.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp="""
   double dQdxSerialised[NumberOfUnknowns*3];
   for (int i=0; i<NumberOfUnknowns; i++) {
@@ -1278,12 +1278,12 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
   }
   ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
-            flux=exahype2.solvers.rkdg.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term="""
   memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
 """,
-            refinement_criterion=exahype2.solvers.rkdg.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues="""
   return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """,

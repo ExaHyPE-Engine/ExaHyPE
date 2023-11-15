@@ -1,28 +1,32 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import sys
 import argparse
+import subprocess
 
 sys.path.insert(0, os.path.abspath('../../../python'))
 import peano4
 import exahype2
 
+# Some reasonable default values
 dimensions                = 2
 cell_size                 = 0.1
-amr_levels                = 3
+amr_levels                = 2
 patch_size                = 4
 rk_order                  = 2
 dg_order                  = 1
 end_time                  = 3.0
 plot_interval             = end_time/100
 #plot_interval             = 0
-use_gpu                   = False
-use_make                  = True
-use_symbolic_description  = False
-output_path               = "solution"
+rho                       = 2.7
+wave_speed                = 6.0
+sigma                     = 0.1149
+t0                        = 0.7
+M0                        = 1000.0
 
 scenarios = [
   "PointExplosion",
-  "PointExplosionWithDynamicAMR",
 ]
 scenario = "PointExplosion"
 
@@ -39,10 +43,16 @@ rkdg_rusanov_solvers = {
   "RKDGRusanovGlobalAdaptiveEnclave": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 }
 
+aderdg_rusanov_solvers = {
+  "ADERDGRusanovGlobalFixed": exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep,
+  "ADERDGRusanovGlobalAdaptive": exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep
+}
+
 solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
-solver = "RKDGRusanovGlobalFixed"
+solvers.update(aderdg_rusanov_solvers)
+solver = "FVRusanovGlobalAdaptive"
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -63,7 +73,7 @@ storage_type = "CallStack"
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Acoustic Wave Application Script')
 
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default=solver,             help="|".join(solvers.keys()))
-parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default=output_path,        help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
+parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default="solution",         help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default=build_mode,         help="|".join(build_modes.keys()))
 parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
 
@@ -73,8 +83,9 @@ parser.add_argument("-et",      "--end-time",          dest="end_time",       ty
 parser.add_argument("-pi",      "--plot-interval",     dest="plot_interval",  type=float,                 default=plot_interval,      help="Time between plots and also between database entries when probes are used.")
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. size of a finite volume cell.")
-parser.add_argument("-sym",     "--symbolic",          dest="symbolic",       action="store_true",        default=use_symbolic_description, help="Use the symbolic PDE description of the acoustic wave equation.")
-parser.add_argument("-gpu",     "--gpu",               dest="use_gpu",        action="store_true",        default=use_gpu,            help="Use GPU offloading (requires a GPU enabled Peano build).")
+parser.add_argument("-dynamic", "--dynamic-amr",       dest="dynamic_amr",    action="store_true",        default=False,              help="Use dynamic AMR.")
+parser.add_argument("-gpu",     "--gpu",               dest="use_gpu",        action="store_true",        default=False,              help="Use GPU offloading (requires a GPU enabled Peano build).")
+parser.add_argument("-vis",     "--visualise",         dest="visualise",      action="store_true",        default=False,              help="Visualise the output data using the postprocessor.")
 
 parser.add_argument("-pbc",     "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true",        help="Use periodic boundary conditions" )
 
@@ -84,12 +95,12 @@ parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     ty
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   default=rk_order,           help="Order of time discretisation for Runge-Kutta scheme.")
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   default=dg_order,           help="Order of space discretisation for Discontinuous Galerkin.")
 
-parser.add_argument("--trees",                         dest="trees",          type=int,                   default=0,                  help="Number of trees (subpartitions) per rank.")
+parser.add_argument(            "--trees",             dest="trees",          type=int,                   default=0,                  help="Number of trees (subpartitions) per rank.")
+parser.add_argument(            "--threads",           dest="threads",        type=int,                   default=0,                  help="Number of threads per rank.")
+parser.add_argument(            "--timeout",           dest="timeout",        type=int,                   default=3600,               help="MPI timeout in seconds.")
 
-parser.add_argument(            "--make",                                     action="store_true",                                    help="Compile the code after generation")
-parser.add_argument(            "--no-make",           dest="use_make",       action="store_false",                                   help="Do not compile the code after generation")
-parser.set_defaults(use_make=use_make)
-parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
+parser.add_argument(            "--make",              dest="make",                                       action="store_true",        help="Compile the code after generation")
+parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by given parameters.")
 args = parser.parse_args()
 
 if args.dim not in [2, 3]:
@@ -112,10 +123,21 @@ if args.scenario not in scenarios:
     print("Error, scenario must be {} or {}, you supplied {}".format(", ".join(scenarios[:-1]), scenarios[-1], args.scenario))
     sys.exit(1)
 
+solver_type = args.solver
+if args.use_gpu:
+  if not "Enclave" in solver_type:
+    solver_type += "Enclave"
+    if solver_type not in solvers:
+      raise ValueError("The requested solver {} is not available for enclave tasking!".format(solver_type))
+
 if args.executable:
   executable_name = args.executable
 else:
-  executable_name = "acoustic-wave-" + str(args.dim) + "d-" + str(args.scenario)
+  executable_name = "acoustic-wave-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
+  if args.use_gpu:
+    executable_name += "-GPU"
+  executable_name += "-" + str(args.build_mode)
+
 my_project = exahype2.Project(
   namespace=["applications", "exahype2", "acousticwave"],
   project_name="AcousticWave" + args.scenario,
@@ -123,22 +145,15 @@ my_project = exahype2.Project(
   executable=executable_name
 )
 
-solver_type = args.solver
-if args.use_gpu:
-  if not "Enclave" in solver_type:
-    solver_type += "Enclave"
-    if solver_type not in solvers:
-      raise ValueError("The requested solver {} is not available for enclave tasking!".format(solver_type))
-solver_name = "AcousticWaveSolver" + str(args.scenario) + str(solver_type)
-if args.use_gpu:
-  solver_name += "GPU"
+solver_name = "AcousticWave"
+unknowns  = {"p":1, "v":args.dim}
 
 my_solver = None
 if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
   my_solver = solvers[solver_type](
     name=solver_name,
     patch_size=args.patch_size,
-    unknowns=args.dim + 1, # [p, u, v, (w)]
+    unknowns=unknowns,
     auxiliary_variables=0,
     max_volume_h=args.max_cell_size,
     min_volume_h=args.max_cell_size * 3.0**(-args.amr_levels),
@@ -165,7 +180,7 @@ elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
   my_solver = solvers[solver_type](
     name=solver_name,
     patch_size=args.patch_size,
-    unknowns=args.dim + 1, # [p, u, v, (w)]
+    unknowns=unknowns,
     auxiliary_variables=0,
     max_volume_h=args.max_cell_size,
     min_volume_h=min_h,
@@ -177,8 +192,8 @@ elif solver_type in rkdg_rusanov_solvers and "Adaptive" in solver_type:
     name                      = solver_name,
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
-    face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
-    unknowns                  = args.dim + 1, # [p, u, v, (w)]
+    face_projections          = FaceProjections.Solution,
+    unknowns=unknowns,
     auxiliary_variables       = 0,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = args.max_cell_size * 3.0**(-args.amr_levels),
@@ -192,41 +207,71 @@ elif solver_type in rkdg_rusanov_solvers and "Fixed" in solver_type:
     name                      = solver_name,
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
-    face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
-    unknowns                  = args.dim + 1, # [p, u, v, (w)]
+    face_projections          = FaceProjections.Solution,
+    unknowns=unknowns,
     auxiliary_variables       = 0,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = min_h,
     time_step_size            = admissible_time_step_size,
   )
+elif solver_type in aderdg_rusanov_solvers and "Fixed" in solver_type:
+  # stability condition: CFL for Ader-DG
+  # dt <= c*dx / (lambda_max*(2N+1)
+  # cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
+  # here lambda_max = 1
+  # dt <= 0.1 * 0.03 / 7 \approx  0.0004
+  # dt <= 0.1 * 0.03 / 11 \approx  0.00025
+  min_h = args.max_cell_size * 3.0**(-args.amr_levels)
+  admissible_time_step_size = 0.001
+  my_solver = solvers[solver_type](
+    name=solver_name,
+    order=args.dg_order,
+    unknowns=unknowns,
+    auxiliary_variables=0,
+    max_cell_h=args.max_cell_size,
+    min_cell_h=min_h,
+    time_step_size=admissible_time_step_size,
+  )
+  my_solver.add_kernel_optimizations(
+    is_linear=True,
+    use_kernel_generator=True,
+    architecture="noarch"
+  )
+elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
+  my_solver = solvers[solver_type](
+    name=solver_name,
+    order                     = args.dg_order,
+    unknowns=unknowns,
+    auxiliary_variables       = 0,
+    max_cell_h                = args.max_cell_size,
+    min_cell_h                = args.max_cell_size * 3.0**(-args.amr_levels),
+    time_step_relaxation      = 0.5
+  )
+  my_solver.add_kernel_optimizations(
+    is_linear=True,
+    use_kernel_generator=True,
+    architecture="noarch"
+  )
 
 if args.use_gpu:
   my_solver.set_pde_terms_without_state(True)
 
-if args.scenario == "PointExplosion":
-  from point_explosion import PointExplosion
-  my_scenario = PointExplosion(unknowns=args.dim + 1, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
-elif args.scenario == "PointExplosionWithDynamicAMR":
-  from point_explosion_with_dynamic_amr import PointExplosionWithDynamicAMR
-  my_scenario = PointExplosionWithDynamicAMR(unknowns=args.dim + 1, auxiliary_variables=0, dimensions=args.dim, use_symbolic_description=args.symbolic)
-
 my_solver.set_implementation(
-    initial_conditions    = my_scenario.implementation_of_initial_conditions(),
-    boundary_conditions   = my_scenario.implementation_of_boundary_conditions(),
-    flux                  = my_scenario.implementation_of_flux(),
-    eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
-    refinement_criterion  = my_scenario.implementation_of_refinement_criterion(),
-    source_term           = my_scenario.implementation_of_sources(),
+    initial_conditions    = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    boundary_conditions   = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    flux                  = "::applications::exahype2::acousticwave::flux(Q, normal, F);",
+    eigenvalues           = "return ::applications::exahype2::acousticwave::maxEigenvalue();",
+    refinement_criterion  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term           = "::applications::exahype2::acousticwave::sourceTerm(Q, volumeCentre, t, S);",
+    ncp                   = exahype2.solvers.PDETerms.None_Implementation,
 )
 
-if args.symbolic:
-  my_solver.plot_description = my_scenario.pde.unknown_identifier_for_plotter()
+if args.dim == 2:
+  my_solver.plot_description = "p, u, v"
 else:
-  if args.dim == 2:
-    my_solver.plot_description = "p, u, v"
-  else:
-    my_solver.plot_description = "p, u, v, w"
-  my_solver.add_user_solver_includes("""
+  my_solver.plot_description = "p, u, v, w"
+
+my_solver.add_user_solver_includes("""
 #include "AcousticWaveKernels.h"
 """)
 
@@ -237,17 +282,10 @@ if args.periodic_boundary_conditions:
 else:
   periodic_BC = [False, False, False]
 
-if args.dim == 2:
-  size                    = [10.0, 10.0]
-  offset                  = [0.0, 0.0]
-else:
-  size                    = [10.0, 10.0, 10.0]
-  offset                  = [0.0, 0.0, 0.0]
-
 my_project.set_global_simulation_parameters(
     dimensions=args.dim,
-    size=size,
-    offset=offset,
+    size=[10.0, 10.0, 10.0][0:args.dim],
+    offset=[0.0, 0.0, 0.0][0:args.dim],
     min_end_time=args.end_time,
     max_end_time=args.end_time,
     first_plot_time_stamp=0.0,
@@ -255,45 +293,50 @@ my_project.set_global_simulation_parameters(
     periodic_BC=periodic_BC,
 )
 
-solution_dir = str(args.output_path) + "-" + str(solver_name) + "-" + str(args.dim) + "d"
+solution_dir = str(args.output_path) + "-" + str(executable_name)
 my_project.set_output_path(solution_dir)
 if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
 
-#my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut", "new ::exahype2::LoadBalancingConfiguration(0.98)")
+if args.visualise:
+  output_patch_file = solution_dir + "/solution-AcousticWave.peano-patch-file"
+  if os.path.isfile(output_patch_file):
+      subprocess.call([
+          "python3", "../../../python/peano4/visualisation/render.py",
+          str(output_patch_file),
+      ])
+  sys.exit(0)
+
 if args.trees > 0:
   my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98, 100, " + str(args.trees) + ")")
 else:
   my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
-#my_project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration(0.98, 0, 16)")
-#my_project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree", "new ::exahype2::LoadBalancingConfiguration(0.98, 1000, 16)")
-#my_project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
+if args.threads > 0:
+  my_project.set_number_of_threads(args.threads)
+else:
+  my_project.set_number_of_threads("tarch::multicore::Core::UseDefaultNumberOfThreads")
+
+my_project.set_timeout(args.timeout)
+
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
 
-with open("postprocess.py", "w") as file:
-    file.write('''
-import os
-import sys
-import subprocess
+my_project.constants.define_value("RHO", str(rho))
+my_project.constants.define_value("WAVE_SPEED", str(wave_speed))
+my_project.constants.define_value("SIGMA", str(sigma))
+my_project.constants.define_value("t0", str(t0))
+my_project.constants.define_value("M0", str(M0))
+my_project.constants.define_value("SCENARIO", str(args.scenario))
+my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
 
-output_patch_file = "''' + str(solution_dir) + '''/solution-''' + str(solver_name) + '''.peano-patch-file"
-if os.path.isfile(output_patch_file):
-    subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file),
-    ])
-''')
+my_project.output.makefile.add_cpp_file("AcousticWave.cpp")
 
-if args.symbolic:
-  print("\nPDE is: ")
-  print(my_scenario.pde.__str__())
+my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
 
 print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")
 print("Recompile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 acoustic-wave.py' again")
-print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")
+print("Regenerate all code by running 'python3 euler.py' again")
+print("Generate (and convert) any postprocessing data by calling 'python3 acoustic-wave.py --visualise'")
