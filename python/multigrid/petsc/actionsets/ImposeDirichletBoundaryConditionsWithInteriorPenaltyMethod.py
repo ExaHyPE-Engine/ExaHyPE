@@ -68,7 +68,7 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
       );
       
       for (int unknown = 0; unknown<repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; unknown++) {
-        // row correspoding to solution
+        // row corresponding to solution
         int globalMatrixRow = globalFaceIndex + row + 2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
         
         logTraceInWith4Arguments("TFFT:unknownLoop", unknown, globalMatrixRow, row, marker.toString());
@@ -80,14 +80,30 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
           1
         );
         
-        static_assert(Dimensions==2, "the bodge on the line below this requires Dimensions == 2. see comment in code");
+        static_assert(Dimensions==2, "the bodge on the line below is untested for Dimensions != 2. see comment in code");
 
         /*
-        in 2d, faces 0 and 1 have the + projections inside the cell. 2 and 3 have negative projections inside the cell
-        */
-        bool writeToNegativeProjection = (marker.getSelectedFaceNumber() % Dimensions);
+        The faces are enumerated as follows:
+          negative x axis
+          negative y axis
+          negative z axis
+          positive x axis
+          positive y axis
+          positive z axis
+        if we are on negative side of coordinate axis, then we wanna write to the positive projection, 
+        since this is the one that is on interior side of cell.
 
-        // i only want to do the following for the q^f unknown
+        So, if the face number is >= than Dimensions, we wanna write to negative side projection.
+        */
+        bool writeToNegativeProjection = (marker.getSelectedFaceNumber() >= Dimensions);
+
+        /*
+        This part is to round off the equation. If q^- projection is on the inside of the cell,
+        then we want the equation to read q^f - q^- = 0. Hence we write 1 onto the row, col 
+        corresponding to q^f and then -1 in col for q^-. rhs will be zero to round this off.
+        */
+
+        // makes sure we only do this for q unknown
         if ( row < repositories::{{SOLVER_INSTANCE}}.FaceUnknowns )
         {
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
