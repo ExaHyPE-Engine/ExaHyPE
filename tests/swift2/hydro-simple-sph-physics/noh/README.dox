@@ -1,0 +1,48 @@
+/**
+
+ @page tests_swift2_hydro_simple_sph_noh_2d Noh implosion test in 2D
+
+ Simple Noh implosion test benchmark with @f$ N ^d @f$ particles. You specify
+ the @f$ N @f$ on the command line, as well as some other arguments. The setup
+ will yield snapshots similar to the ones below.
+
+  @image html noh_0.png
+  @image html noh_150.png
+  @image html noh_300.png
+
+ As with all Swift 2 experiments, you have to ensure that you translate with --enable-particles --enable-swift.
+
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ export PYTHONPATH=~/git/Peano/python
+ python3 noh.py -np 400
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ ## Experimental setup
+
+ We allow the user to specify the number of particles per axis via the Python
+ argument --particle-number (or -np). We aim for roughly 20 particles per cell,
+ which is physically unreasonable, but we can do so for this test, which means
+ that it is reasonable to start with a mesh size of roughly @f$ \frac{1}{np} \cdot 20 \sqrt[-1]{d} @f$.
+
+
+ Below is a rough guideline (overview) of particle per axis and outcome for 2d
+ experiments:
+
+ np | initial mesh cells | mesh cells after insertion |
+----|--------------------|----------------------------|
+ 10 |            9 (3x3) |                   81 (9x9) |
+ 20 |            9 (3x3) |                   81 (9x9) |
+ 40 |            9 (3x3) |                   81 (9x9) |
+ 80 |           81 (9x9) |                729 (27x27) |
+160 |        729 (27x27) |              6,561 (81x81) |
+320 |        729 (27x27) |              6,561 (81x81) |
+640 |      6,561 (81x81) |             59,049 |
+
+
+As always, the important detail is to study all artifacts that our Python API
+produces. Per executable, you will obtain a README-my-exec.md file which
+details your settings, provides.
+
+
+ */

@@ -35,6 +35,9 @@ from .UpdateParticleGridAssociation_Reassign import (
 from .UpdateParticleGridAssociation_LiftDrop import (
     UpdateParticleGridAssociation_LiftDrop,
 )
+from .UpdateParticleGridAssociation_BucketSort import (
+    UpdateParticleGridAssociation_BucketSort,
+)
 
 
 from .UpdateParallelState import UpdateParallelState
