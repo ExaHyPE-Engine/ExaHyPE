@@ -287,14 +287,14 @@ if(CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQ
   list(APPEND BUILD_MODES ${PEANO_APP_BUILD_TYPE})
 endif()
 
-# CMAKE_CXX_FLAGS_* are appeneded to the targets (build modes) automatically in most of the cases,
-# CMAKE_CXX_FLAGS_* are eppeneded to every target, regardles of build mode. e.g., Release, Debug
-# But an uncommon name such as _TRACE is not always appeneded (CMAKE_CXX_FLAGS_TRACE)
+# CMAKE_CXX_FLAGS_* are appended to the targets (build modes) automatically in most of the cases,
+# CMAKE_CXX_FLAGS_* are appended to every target, regardless of build mode. e.g., Release, Debug
+# But an uncommon name such as _TRACE is not always appended (CMAKE_CXX_FLAGS_TRACE)
 # Therefore we will use PEANO_CXX_FLAGS_* variables instead and set CMAKE_CXX_FLAG_* to ""
-# Furthermore, CMAKE_CXX_FLAGS is the variable when user defined flags to be used in the environment 
+# Furthermore, CMAKE_CXX_FLAGS is the environment variable when user-defined flags to be used in the environment 
 # variable CXXFLAGS="..." and added to every target, which we should not touch here,
 # This allows for the CMake build system to use exactly the same flags as the Automake build system 
-# for Peano regardless of the default configuration, unless user provides flags.
+# for Peano regardless of the default configuration, unless the user provides flags.
 # Release and Debug are also used by Peano, MinSizeRel and RelWithDebInfo are not used by Peano
 # It needs to be done similarly for definitions and LDFLAGS
 foreach(BUILD_TYPE IN_LIST CMAKE_CONFIGURATION_TYPES)
