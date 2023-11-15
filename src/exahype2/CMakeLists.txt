@@ -16,7 +16,8 @@ foreach(mode IN LISTS BUILD_MODES)
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC project_options Peano4Core${dimension}d_${mode_lower})
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxLoadBalancing${dimension}d_${mode_lower})
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxBlockStructured${dimension}d_${mode_lower})
-    target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
+    target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+    target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${mode_upper}}>)
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE project_warnings)
 
     install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}

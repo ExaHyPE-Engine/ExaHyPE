@@ -49,6 +49,16 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
+# This has to be done before the project is created and before any languages are added
+# Adding a subdirectory does not help here and needs to be explicitly given with the path( cmake/...),
+# Because this file is needed by CMake itself and not by the project. 
+# We need to override specific compiler flags initialized by CMake, to
+# match them exactly with the flags defined in Peano Automake build system. More details can be found in
+# PeanoCustomInitFlags file
+# For example Peano release flags are -O3 and -O4 for NVHHPC compilers (and -DNDEBUG in definitions),
+# but NVHPC defaults are -fast and -O3 in some systems, we override these with this
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/PeanoCustomInitFlags.cmake")
+
 set(LANGUAGES C CXX)
 project(
   ${META_PROJECT_NAME}
@@ -287,26 +297,9 @@ if(CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQ
   list(APPEND BUILD_MODES ${PEANO_APP_BUILD_TYPE})
 endif()
 
-# CMAKE_CXX_FLAGS_* are appended to the targets (build modes) automatically in most of the cases,
-# CMAKE_CXX_FLAGS_* are appended to every target, regardless of build mode. e.g., Release, Debug
-# But an uncommon name such as _TRACE is not always appended (CMAKE_CXX_FLAGS_TRACE)
-# Therefore we will use PEANO_CXX_FLAGS_* variables instead and set CMAKE_CXX_FLAG_* to ""
-# Furthermore, CMAKE_CXX_FLAGS is the environment variable when user-defined flags to be used in the environment 
-# variable CXXFLAGS="..." and added to every target, which we should not touch here,
-# This allows for the CMake build system to use exactly the same flags as the Automake build system 
-# for Peano regardless of the default configuration, unless the user provides flags.
-# Release and Debug are also used by Peano, MinSizeRel and RelWithDebInfo are not used by Peano
-# It needs to be done similarly for definitions and LDFLAGS
-foreach(BUILD_TYPE IN_LIST CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_CXX_FLAGS_${BUILD_TYPE} "")
-  set(${BUILD_TYPE}_DEFINITIONS "")
-  set(${BUILD_TYPE}_LDFLAGS "")
-  set(CMAKE_CUDA_FLAGS_${BUILD_TYPE})
-endforeach()
-
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
   set(PEANO_CXX_FLAGS_RELEASE -O4)
-  set(CMAEK_CUDA_FLAGS_RELEASE -O4)
+  set(PEANO_CUDA_FLAGS_RELEASE -O3) #NVCC does not have -O4, if give it will be forwarded only to host compiler
 else()
   set(PEANO_CXX_FLAGS_RELEASE -O3)
   set(PEANO_CUDA_FLAGS_RELEASE -O3)
@@ -520,7 +513,6 @@ display_variable(CMAKE_CXX_COMPILER)
 display_variable(CMAKE_CXX_STANDARD)
 display_variable(CMAKE_BUILD_TYPE)
 display_variable(CMAKE_CONFIGURATION_TYPES)
-display_variable(CMAKE_CXX_FLAGS)
 display_variable(PEANO_CXX_FLAGS_RELEASE)
 display_variable(PEANO_RELEASE_DEFINITIONS)
 display_variable(PEANO_RELEASE_LDFLAGS)
@@ -536,8 +528,6 @@ display_variable(PEANO_ASSERTS_LDFLAGS)
 display_variable(PEANO_CXX_FLAGS_TRACE)
 display_variable(PEANO_TRACE_DEFINITIONS)
 display_variable(PEANO_TRACE_LDFLAGS)
-display_variable(CMAKE_CXX_FLAGS_MINSIZEREL)
-display_variable(CMAKE_CXX_FLAGS_RELWITHDEBINFO)
 display_variable(CMAKE_VERBOSE_MAKEFILE)
 display_variable(BUILD_SHARED_LIBS)
 display_variable(CMAKE_CXX_FLAGS_INIT)
@@ -549,12 +539,8 @@ if(WITH_GPU STREQUAL "cuda")
   display_variable(PEANO_CUDA_FLAGS_STATS)
   display_variable(PEANO_CUDA_FLAGS_ASSERTS)
   display_variable(PEANO_CUDA_FLAGS_TRACE)
-  display_variable(PEANO_CUDA_FLAGS_MINSIZEREL)
-  display_variable(PEANO_CUDA_FLAGS_RELWITHDEBINFO)
   display_variable(CMAKE_CUDA_HOST_COMPILER)
   display_variable(CMAKE_CUDA_ARCHITECTURES)
-  display_variable(CUDA_NVCC_FLAGS)
-  display_variable(CUDA_NVCC_FLAGS_RELEASE)
   display_variable(CUDA_SEPARABLE_COMPILATION)
   display_variable(CUDA_RESOLVE_DEVICE_SYMBOLS)
 endif()
