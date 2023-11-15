@@ -45,9 +45,10 @@ tarch::timing::Measurement solveMeasurement;
 tarch::timing::Measurement plotMeasurement;
 
 
-
 bool selectNextAlgorithmicStep() {
   static bool gridCreated = false;
+  
+  static int solverSteps;
 
   bool continueToSolve = true;
 
@@ -73,9 +74,16 @@ bool selectNextAlgorithmicStep() {
         break;
       case repositories::StepRepository::Steps::Solve:
         {
-          peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
-          );
+          if ( solverSteps++ >= 5 )
+          {
+            peano4::parallel::Node::getInstance().setNextProgramStep(
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+            );
+          }
+          else
+          {
+            logInfo("selectNextAlgorithmicStep", "Continuining to solve...");
+          }
         }
         break;
       case repositories::StepRepository::Steps::Plot:
