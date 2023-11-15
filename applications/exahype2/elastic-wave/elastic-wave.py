@@ -319,9 +319,9 @@ my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
-my_project.constants.export_constexpr_with_type("RHO", str(rho), "double")
-my_project.constants.export_constexpr_with_type("P_WAVE_SPEED", str(p_wave_speed), "double")
-my_project.constants.export_constexpr_with_type("S_WAVE_SPEED", str(s_wave_speed), "double")
+my_project.constants.define_value("RHO", str(rho))
+my_project.constants.define_value("P_WAVE_SPEED", str(p_wave_speed))
+my_project.constants.define_value("S_WAVE_SPEED", str(s_wave_speed))
 my_project.constants.define_value("t0", str(t0))
 my_project.constants.define_value("M0", str(M0))
 my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)

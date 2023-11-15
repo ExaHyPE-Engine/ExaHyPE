@@ -101,9 +101,9 @@ my_project.constants.export_boolean("EvaluateNonconservativeProduct", False)
 my_project.constants.export_boolean("EvaluateSource", False) # TODO: Should be set to True once the correctness has been validated.
 my_project.constants.export_boolean("EvaluateMaximumEigenvalueAfterTimeStep", True if args.eval_eig else False) # Reduction
 
-my_project.constants.export_constexpr_with_type("RHO", str(1.0), "double")
-my_project.constants.export_constexpr_with_type("P_WAVE_SPEED", str(1.0), "double")
-my_project.constants.export_constexpr_with_type("S_WAVE_SPEED", str(1.0), "double")
+my_project.constants.define_value("RHO", str(1.0))
+my_project.constants.define_value("P_WAVE_SPEED", str(1.0))
+my_project.constants.define_value("S_WAVE_SPEED", str(1.0))
 my_project.constants.define_value("t0", str(1.0))
 my_project.constants.define_value("M0", str(1.0))
 
