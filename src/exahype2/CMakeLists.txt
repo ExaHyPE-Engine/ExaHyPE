@@ -17,10 +17,7 @@ foreach(mode IN LISTS BUILD_MODES)
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxLoadBalancing${dimension}d_${mode_lower})
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxBlockStructured${dimension}d_${mode_lower})
     target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
-
-    if(NOT "${WITH_GPU}" STREQUAL "cuda")
-      target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE project_warnings)
-    endif()
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE project_warnings)
 
     install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}

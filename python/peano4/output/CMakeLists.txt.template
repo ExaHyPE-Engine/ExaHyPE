@@ -98,11 +98,7 @@ target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${PEANO_APP_DIMENSI
 target_link_libraries(${TARGET_NAME} PRIVATE project_options)
 target_compile_options(${TARGET_NAME} PRIVATE ${PEANO_CXX_FLAGS_${PEANO_APP_MODE}})
 target_link_options(${TARGET_NAME} PRIVATE ${PEANO_${PEANO_APP_MODE}_LDFLAGS})
-
-# This is due to a bug in project_options library, project_warnings fail with NVHPC compilers as host compilers
-if(NOT "${WITH_GPU}" STREQUAL "cuda")
-  target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
-endif()
+target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
 
 # Link every toolbox, if they are enabled
 if (ENABLE_PARTICLES)
