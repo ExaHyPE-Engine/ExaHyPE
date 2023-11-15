@@ -1,3 +1,5 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import sys
 import argparse
@@ -10,7 +12,7 @@ import exahype2
 # Some reasonable default values
 dimensions                = 2
 cell_size                 = 0.1
-amr_levels                = 3
+amr_levels                = 2
 patch_size                = 4
 rk_order                  = 2
 dg_order                  = 1
@@ -18,8 +20,10 @@ end_time                  = 3.0
 plot_interval             = end_time/100
 #plot_interval             = 0
 rho                       = 2.7
-cp                        = 6.0
-cs                        = 3.464
+p_wave_speed              = 6.0
+s_wave_speed              = 3.464
+t0                        = 0.1
+M0                        = 1000.0
 
 scenarios = [
   "PointExplosion",
@@ -142,7 +146,7 @@ my_project = exahype2.Project(
 )
 
 solver_name = "ElasticWave"
-unknowns  = {"v":args.dim, "s":3}
+unknowns  = {"v":args.dim, "sigma":3}
 
 my_solver = None
 if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
@@ -255,10 +259,10 @@ if args.use_gpu:
 my_solver.set_implementation(
     initial_conditions    = exahype2.solvers.PDETerms.User_Defined_Implementation,
     boundary_conditions   = exahype2.solvers.PDETerms.User_Defined_Implementation,
-    flux                  = "::applications::exahype2::euler::flux(Q, normal, F);",
-    eigenvalues           = "return ::applications::exahype2::euler::maxEigenvalue(Q, normal);",
+    flux                  = "::applications::exahype2::elasticwave::flux(Q, normal, F);",
+    eigenvalues           = "return ::applications::exahype2::elasticwave::maxEigenvalue();",
     refinement_criterion  = exahype2.solvers.PDETerms.User_Defined_Implementation,
-    source_term           = exahype2.solvers.PDETerms.None_Implementation,
+    source_term           = "::applications::exahype2::elasticwave::sourceTerm(Q, volumeCentre, t, S);",
     ncp                   = exahype2.solvers.PDETerms.None_Implementation,
 )
 
@@ -316,8 +320,10 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 my_project.constants.export_constexpr_with_type("RHO", str(rho), "double")
-my_project.constants.export_constexpr_with_type("cp", str(cp), "double")
-my_project.constants.export_constexpr_with_type("cs", str(cs), "double")
+my_project.constants.export_constexpr_with_type("P_WAVE_SPEED", str(p_wave_speed), "double")
+my_project.constants.export_constexpr_with_type("S_WAVE_SPEED", str(s_wave_speed), "double")
+my_project.constants.define_value("t0", str(t0))
+my_project.constants.define_value("M0", str(M0))
 my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
 
 my_project.output.makefile.add_cpp_file("ElasticWave.cpp")
