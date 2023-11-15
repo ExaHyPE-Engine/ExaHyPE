@@ -35,7 +35,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
 
         # Penalty method parameters
         self._theta = 1.0
-        self._gamma_F = 0.0
+        self._gamma_F = 1.0
 
         # All pairs of function spaces that couple
         self._coupling_CC = [(0, 0)] # _u_u
@@ -257,8 +257,12 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
                         A_penalty_2[i, j] += self._gamma_F * factor * w * func_k(i, q) * func_ell(j, q)
 
             # Assemble local matrix A^(k,ell)
-            # ! Now both components hve the same scaling (0,0)
+            # !!! Now both components hve the same scaling (0,0)
+            # !!! It should ultimately be two different dictionary entries with different scaling:
+            # !!! {gamma1: A_penalty_1, gamma2: A_penalty_2}
             A_k_ell = A_penalty_1 + A_penalty_2
+            print(A_penalty_2)
+            pass
 
         else:
             A_k_ell = np.zeros((ndof_k, ndof_ell))
