@@ -34,7 +34,7 @@ for REALISATION in domain-decomposition.scattered \
                    domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks \
                    domain-decomposition.global-continuous.sort-on-the-fly.vectorise-distance-checks
 do
-   EXEC_FILE=noh2D-np-2400-$OMP_NUM_THREADS-threads.$REALISATION
+   EXEC_FILE=noh2D-np-2400.$REALISATION
    python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea $REALISATION --output $EXEC_FILE
 done
 
@@ -56,7 +56,7 @@ do
                      domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks \
                      domain-decomposition.global-continuous.sort-on-the-fly.vectorise-distance-checks
   do
-   EXEC_FILE=noh2D-np-2400-$OMP_NUM_THREADS-threads.$REALISATION
+   EXEC_FILE=noh2D-np-2400.$REALISATION
    echo Run ./$EXEC_FILE
    srun likwid-pin -c 0-$CORES ./$EXEC_FILE > $EXEC_FILE.out
   done
