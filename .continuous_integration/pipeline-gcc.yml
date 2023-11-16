@@ -12,6 +12,7 @@ gcc-build:
     - echo $CI_COMMIT_SHA
     - echo $CI_COMMIT_BRANCH
     - echo "Running CI with $(nproc) cores"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} python3 -m compileall -f ./
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} python3 configure.py -cc=gcc -cxx=g++ --exahype --swift --multithreading=omp
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} make -j $(nproc --all)
   artifacts:
@@ -53,6 +54,9 @@ gcc-tutorials:
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/advection; python3 advection.py'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/advection; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/swe; python3 swe.py'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/swe; make -j'
   retry: 0
 
 gcc-applications:
@@ -63,19 +67,45 @@ gcc-applications:
   needs:
     - job: gcc-build
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; python3 euler.py --no-make --executable=euler'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; python3 euler.py -s FVRusanovGlobalAdaptive -d 2 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; python3 euler.py -s FVRusanovGlobalAdaptive -d 2 -m Debug'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; python3 euler.py -s FVRusanovGlobalAdaptive -d 3 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; python3 euler.py -s FVRusanovGlobalAdaptive -d 3 -m Debug'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; make -j'
 
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; python3 acoustic-wave.py --no-make --executable=acoustic-wave'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; python3 acoustic-wave.py -s FVRusanovGlobalAdaptive -d 2 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; python3 acoustic-wave.py -s FVRusanovGlobalAdaptive -d 2 -m Debug'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; python3 acoustic-wave.py -s FVRusanovGlobalAdaptive -d 3 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; python3 acoustic-wave.py -s FVRusanovGlobalAdaptive -d 3 -m Debug'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; make -j'
 
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; python3 elastic-wave.py --no-make --executable=elastic-wave'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; python3 elastic-wave.py -s FVRusanovGlobalAdaptive -d 2 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; python3 elastic-wave.py -s FVRusanovGlobalAdaptive -d 2 -m Debug'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; python3 elastic-wave.py -s FVRusanovGlobalAdaptive -d 3 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; python3 elastic-wave.py -s FVRusanovGlobalAdaptive -d 3 -m Debug'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; make -j'
 
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; python3 advection.py --no-make --executable=advection'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; python3 advection.py -s ADERDGRusanovGlobalAdaptive -d 2 -m Release'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; python3 advection.py -s ADERDGRusanovGlobalAdaptive -d 2 -m Debug'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; python3 advection.py -s ADERDGRusanovGlobalAdaptive -d 3 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; python3 advection.py -s ADERDGRusanovGlobalAdaptive -d 3 -m Debug'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection make -j'
 
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/saint-venant; python3 saint-venant.py --no-make --executable=saint-venant'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/saint-venant; python3 saint-venant.py -s FVRusanovGlobalAdaptive -d 2 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/saint-venant; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/saint-venant; python3 saint-venant.py -s FVRusanovGlobalAdaptive -d 2 -m Debug'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd applications/exahype2/saint-venant; make -j'
   retry: 0
 
@@ -87,7 +117,22 @@ gcc-benchmarks:
   needs:
     - job: gcc-build
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/euler/kernel-benchmarks; make -j'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-p-128
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-p-128-Release
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/advection/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/advection/kernel-benchmarks; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} benchmarks/exahype2/advection/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-p-128-Release
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/acoustic-wave/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/acoustic-wave/kernel-benchmarks; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} benchmarks/exahype2/acoustic-wave/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-p-128-Release
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/elastic-wave/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/elastic-wave/kernel-benchmarks; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} benchmarks/exahype2/elastic-wave/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-p-128-Release
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/ccz4/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -ps 4 -p 128 -a -1 -m Release'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/ccz4/kernel-benchmarks; make -j'
   retry: 0

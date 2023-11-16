@@ -2,70 +2,47 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/NonCriticalAssertions.h"
+#include "Constants.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 
-namespace exahype2::acousticwave {
-  static double maxEigenvalue(
-    const double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& faceCentre,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double                                       c
-  ) InlineMethod {
-    return c;
-  }
+namespace applications::exahype2::acousticwave {
+  static double maxEigenvalue() InlineMethod { return WAVE_SPEED; }
 
-  static double maxEigenvalue(
-    const double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double                                       c
-  ) InlineMethod {
-    return maxEigenvalue(Q, faceCentre, t, dt, normal, c);
-  }
-
-  static void flux(
-    const double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& faceCentre,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double                                       rho,
-    double                                       c,
-    double* __restrict__ F
-  ) InlineMethod {
+  static void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
 #ifdef GPUOffloadingOff
-    assertion3(normal >= 0, faceCentre, t, normal);
-    assertion3(normal < Dimensions, faceCentre, t, normal);
+    assertion(normal >= 0);
+    assertion(normal < Dimensions);
 #endif
 
-    const double K0 = rho * c * c;
+    static constexpr double K0 = RHO * WAVE_SPEED * WAVE_SPEED;
 
-    F[0]          = K0 * Q[normal + 1];
-    F[1]          = 0.0;
-    F[2]          = 0.0;
+    F[0] = K0 * Q[normal + 1];
+    F[1] = 0.0;
+    F[2] = 0.0;
 #if Dimensions == 3
-    F[3]          = 0.0;
+    F[3] = 0.0;
 #endif
-    F[normal + 1] = (1.0 / rho) * Q[0];
+    F[normal + 1] = (1.0 / RHO) * Q[0];
   }
 
-  static void flux(
-    const double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double                                       rho,
-    double                                       c,
-    double* __restrict__ F
-  ) InlineMethod {
-    flux(Q, faceCentre, t, dt, normal, rho, c, F);
+  static void sourceTerm(const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, double t, double* __restrict__ S) InlineMethod {
+    S[0] = 0.0;
+    S[1] = 0.0;
+    S[2] = 0.0;
+#if Dimensions == 3
+    S[3] = 0.0;
+#endif
+
+#if Dimensions == 2
+    const bool pointSource = tarch::la::norm2(x - tarch::la::Vector<Dimensions, double>({5, 5})) <= 1.0;
+#else
+    const bool pointSource = tarch::la::norm2(x - tarch::la::Vector<Dimensions, double>({5, 5, 5})) <= 1.0;
+#endif
+
+    if (pointSource) {
+      const double force = M0 * std::exp(-((t - t0) * (t - t0)) / (2.0 * SIGMA * SIGMA));
+      S[0]               = force;
+    }
   }
-} // namespace exahype2::acousticwave
+} // namespace applications::exahype2::acousticwave

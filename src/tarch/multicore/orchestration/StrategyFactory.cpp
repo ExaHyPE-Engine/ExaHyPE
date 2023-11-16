@@ -57,5 +57,5 @@ std::string tarch::multicore::orchestration::getListOfRealisations() {
 tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::createDefaultStrategy() {
   //return new BackfillAndDeployRoundRobin(1024);
   //return Hardcoded::createNative();
-  return Hardcoded::createFuseAll(1024, true, false, 0);
+  return Hardcoded::createFuseAll(8192, true, false, 0);
 }

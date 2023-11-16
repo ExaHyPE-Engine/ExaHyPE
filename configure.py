@@ -4,9 +4,9 @@ import argparse
 import subprocess
 
 parser = argparse.ArgumentParser(description='Configuration helper script for GNU Autotools and CMake')
-parser.add_argument('--cmake', help='Use CMake; specify target build folder via --cmake=...')
 parser.add_argument('-cc', '--cc', type=str, default=os.environ.get('CC'), help='C compiler to use')
 parser.add_argument('-cxx', '--cxx', type=str, default=os.environ.get('CXX'), help='C++ compiler to use')
+parser.add_argument('--cmake', help='Use CMake; specify target build folder via --cmake=...')
 parser.add_argument('--exahype', action='store_true', help='Enable ExaHyPE2')
 parser.add_argument('--swift', action='store_true', help='Enable Swift2')
 parser.add_argument('--particles', action='store_true', help='Enable particles support')
@@ -21,9 +21,9 @@ parser.add_argument('--gpu', choices=['omp', 'cuda', 'sycl', 'cpp', 'hip'], help
 parser.add_argument('--asm', action='store_true', help='Dump generated assembly code')
 parser.add_argument('--cuda-path', type=str, help='Path to the CUDA toolkit')
 parser.add_argument('--arch', choices=[
-  'gfx906', 'gfx908', 'gfx90a', 'gfx1030', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
-  'sm_70', 'sm_72', 'sm_75', 'sm_80', 'sm_86', 'sm_90',
-  'spir64',],
+  'gfx906', 'gfx908', 'gfx90a', # gfx906=MI50, gfx908=MI100, gfx90a=MI200
+  '70', '72', '75', '80', '86', '89', '90',
+  'spir64'],
   help='Select GPU compute capability')
 args = parser.parse_args()
 
@@ -57,8 +57,8 @@ Specify compatible C and C++ compilers by using -cc and -cxx or the environment 
   exit(-1)
 
 if args.gpu == 'omp' and "clang" in args.cc and "clang++" in args.cxx:
-  cflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=' + args.arch
-  cxxflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=' + args.arch
+  cflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_' + args.arch
+  cxxflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_' + args.arch
   if args.asm:
     cflags += ' -save-temps'
     cxxflags += ' -save-temps'
@@ -66,14 +66,14 @@ elif args.gpu == 'omp' and "amdclang" in args.cc and "amdclang++" in args.cxx:
   cflags += ' -lstdc++fs --offload-arch=' + args.arch
   cxxflags += ' -lstdc++fs --offload-arch=' + args.arch
 elif args.gpu == 'omp' and "nvc" in args.cc and "nvc++" in args.cxx:
-  cflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
-  cxxflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
+  cflags += ' -cuda -mp=gpu -gpu=cc' + args.arch
+  cxxflags += ' -cuda -mp=gpu -gpu=cc' + args.arch
   if args.asm:
     cflags += ' -gpu=keep'
     cxxflags += ' -gpu=keep'
 elif args.gpu == 'cpp' and "nvc" in args.cc and "nvc++" in args.cxx:
-  cflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc")
-  cxxflags += ' -cuda -mp=gpu -gpu=' + args.arch.replace("sm_", "cc") + " -stdpar=gpu"
+  cflags += ' -cuda -mp=gpu -gpu=cc' + args.arch
+  cxxflags += ' -cuda -mp=gpu -gpu=cc' + args.arch + " -stdpar=gpu"
   if args.asm:
     cflags += ' -gpu=keep'
     cxxflags += ' -gpu=keep'
@@ -91,10 +91,10 @@ elif args.gpu == 'sycl' and "icx" in args.cc and "icpx" in args.cxx:
     cflags += ' -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent'
     cxxflags += ' -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent'
   else:
-    cflags += ' -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
-    cxxflags += ' -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=' + args.arch
+    cflags += ' -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_' + args.arch
+    cxxflags += ' -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_' + args.arch
 elif args.gpu == 'cuda':
-  nvccflags += f'-arch={args.arch}'
+  nvccflags += f'-arch=sm_{args.arch}'
   if args.cuda_path is not None:
     if not args.cmake:
       # CUDA path is only needed with Automake builds

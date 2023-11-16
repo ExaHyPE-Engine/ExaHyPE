@@ -2,88 +2,57 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/NonCriticalAssertions.h"
+#include "Constants.h"
+#include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 
-namespace exahype2::elasticwave {
-  static double maxEigenvalue(
-    const double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& faceCentre,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double                                       c
-  ) InlineMethod {
-    return c;
-  }
+namespace applications::exahype2::elasticwave {
+  static inline double maxEigenvalue() InlineMethod { return std::max(std::abs(P_WAVE_SPEED), std::abs(S_WAVE_SPEED)); }
 
-  static double maxEigenvalue(
-    const double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double                                       c
-  ) InlineMethod {
-    return maxEigenvalue(Q, faceCentre, t, dt, normal, c);
-  }
-
-  static void flux(
-    const double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& faceCentre,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double                                       rho,
-    double                                       cp,
-    double                                       cs,
-    double* __restrict__ F
-  ) InlineMethod {
+  static inline void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
 #ifdef GPUOffloadingOff
-    assertion3(normal >= 0, faceCentre, t, normal);
-    assertion3(normal < Dimensions, faceCentre, t, normal);
+    assertion(normal >= 0);
+    assertion(normal < Dimensions);
 #endif
 
-    const double mu  = rho*cs*cs;
-    const double lambda = rho*cp*cp-2.0*mu;
+    static constexpr double Mu     = RHO * S_WAVE_SPEED * S_WAVE_SPEED;
+    static constexpr double Lambda = RHO * P_WAVE_SPEED * P_WAVE_SPEED - 2.0 * Mu;
 
-    const double u = Q[0];
-    const double v = Q[1];
+    const double u   = Q[0];
+    const double v   = Q[1];
     const double sxx = Q[2];
     const double syy = Q[3];
     const double sxy = Q[4];
 
-    switch(normal) {
+    switch (normal) {
     case 0:
-      F[0] = -1.0/rho*sxx;
-      F[1] = -1.0/rho*sxy;
-      F[2] = -(2.0*mu+lambda)*u;
-      F[3] = -lambda * u;
-      F[4] = -mu*v;
+      F[0] = -1.0 / RHO * sxx;
+      F[1] = -1.0 / RHO * sxy;
+      F[2] = -(2.0 * Mu + Lambda) * u;
+      F[3] = -Lambda * u;
+      F[4] = -Mu * v;
       break;
     case 1:
-      F[0] = -1.0/rho*sxy;
-      F[1] = -1.0/rho*syy;
-      F[2] = -lambda * v;
-      F[3] = -(2.0*mu+lambda)*v;
-      F[4] = -mu*u;
+      F[0] = -1.0 / RHO * sxy;
+      F[1] = -1.0 / RHO * syy;
+      F[2] = -Lambda * v;
+      F[3] = -(2.0 * Mu + Lambda) * v;
+      F[4] = -Mu * u;
       break;
     }
   }
 
-  static void flux(
-    const double* __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& faceCentre,
-    const tarch::la::Vector<Dimensions, double>& volumeH,
-    double                                       t,
-    double                                       dt,
-    int                                          normal,
-    double                                       rho,
-    double                                       cp,
-    double                                       cs,
-    double* __restrict__ F
-  ) InlineMethod {
-    flux(Q, faceCentre, t, dt, normal, rho, cp, cs, F);
+  static void sourceTerm(const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, double t, double* __restrict__ S) InlineMethod {
+    S[0] = 0.0;
+    S[1] = 0.0;
+    S[2] = 0.0;
+    S[3] = 0.0;
+    S[4] = 0.0;
+
+    const bool pointSource = tarch::la::norm2(x - tarch::la::Vector<Dimensions, double>({10, 10})) <= 1.0;
+    if (pointSource) {
+      const double force = M0 * t / (t0 * t0) * std::exp(-t / t0);
+      S[4]               = force;
+    }
   }
-} // namespace exahype2::elasticwave
+} // namespace applications::exahype2::elasticwave

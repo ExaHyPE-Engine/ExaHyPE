@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .RungeKuttaDG import RungeKuttaDG
 from .SeparateSweeps import SeparateSweeps
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import peano4
 import exahype2
