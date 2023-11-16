@@ -225,14 +225,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 ) {
   assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
 
-  sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle);
+  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle);
   return _container.erase(particle);
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
   for (auto p: _container) {
-    sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p);
+    _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p);
   }
   _container.clear();
 }

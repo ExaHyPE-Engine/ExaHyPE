@@ -3,7 +3,7 @@
 
 
 template <typename T>
-toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::sieveParticles;
+toolbox::particles::SieveParticles<T>  toolbox::particles::ParticleSet<T>::_sieveParticles;
 
 template <typename T>
 tarch::logging::Log toolbox::particles::ParticleSet<T>::_log("toolbox::particles::ParticleSet");
@@ -356,20 +356,20 @@ void toolbox::particles::ParticleSet<T>::shutdownDatatype() {
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::finishedTraversal() {
-  sieveParticles.exchangeSieveListsGlobally();
+  _sieveParticles[GlobalSort].exchangeSieveListsGlobally();
 }
 
 
 template <typename T>
 typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::ParticleSet<
-  T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker) {
-  return sieveParticles.getParticlesToBeSievedIntoVertex(marker);
+  T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int tree) {
+  return _sieveParticles[tree].getParticlesToBeSievedIntoVertex(marker, tree);
 }
 
 
 template <typename T>
-bool toolbox::particles::ParticleSet<T>::hasParticlesToBeSievedIntoVertices() {
-  return sieveParticles.hasParticlesToBeSievedIntoVertices();
+bool toolbox::particles::ParticleSet<T>::hasParticlesToBeSievedIntoVertices(int tree) {
+  return _sieveParticles[tree].hasParticlesToBeSievedIntoVertices();
 }
 
 

@@ -228,14 +228,21 @@ public:
   static void finishedTraversal();
 
   /**
+   * Make routine from SieveParticles public
+   * 
    * Delegate through. This way, we don't have to expose the actual
    * sieve object.
    */
-  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
+  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree = SieveParticles<T>::GlobalSort);
 
-  static bool hasParticlesToBeSievedIntoVertices();
+  /**
+   * Make routine from SieveParticles public
+   * 
+   * Delegate through. This way, we don't have to expose the actual
+   * sieve object.
+   */
+  static bool hasParticlesToBeSievedIntoVertices(int originatingTree = SieveParticles<T>::GlobalSort);
 
-  //    static ParticleList getSievedParticlesForNextGridTraversal();
 private:
   static tarch::logging::Log _log;
 
@@ -337,7 +344,10 @@ protected:
   static int _numberOfVirtualEliminatedSpatialDuplicates;
   static int _numberOfLocalEliminatedSpatialDuplicates;
 
-  static SieveParticles<T> sieveParticles;
+  /**
+   * Map of persistent particles that have to be sieved
+   */
+  static SieveParticles<T>  _sieveParticles;
 
 #if PeanoDebug >= 1
   tarch::la::Vector<Dimensions, double> _debugX;

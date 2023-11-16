@@ -39,14 +39,13 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 
     The algorithm describes an incremental bucket sort and naturally
     supports tunneling or massive changes of the cut-off. From an
-    implementation point of view, it is a stripped down version of the
+    conceptional point of view, it is a stripped down version of the
     lift and drop variant without the lifts and the drops. After all,
     each lift becomes directly an additional to the global sieve list,
     and then we are done.
 
-    Due to this analogy, the documentation here is scarce. Study the class
-    UpdateParticleGridAssociation_LiftDrop. Most remarks therein are valid
-    here to.
+    So, in theory, we could basically take UpdateParticleGridAssociation_LiftDrop
+    and remove the lifts and drops. However, this is slow. 
 
 
     ## Impact on particle storage

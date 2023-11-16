@@ -24,18 +24,6 @@ template <typename T>
 tarch::multicore::BooleanSemaphore toolbox::particles::SieveParticles<T>::_particlesToBeSievedSemaphore;
 
 
-/*
-template <typename T>
-typename toolbox::particles::SieveParticles<T>::ParticleList
-toolbox::particles::SieveParticles<T>::getSievedParticlesForNextGridTraversal() const { ParticleList result; for (auto
-*p: _particlesThatHaveToBeSieved) { T* copyOfParticle = new T(*p); copyOfParticle->setParallelState(
-T::ParallelState::Virtual ); result.push_back( copyOfParticle );
-  }
-  return result;
-}
-
-*/
-
 template <typename T>
 void toolbox::particles::SieveParticles<T>::deleteParticles(ParticleList& list) {
   for (auto* p : list) {
@@ -48,10 +36,13 @@ void toolbox::particles::SieveParticles<T>::deleteParticles(ParticleList& list) 
 template <typename T>
 void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
   logDebug("finishedTraversal()", "#particles left over from previous sweep=" << _particlesThatHaveToBeSieved.size());
-  deleteParticles(_particlesThatHaveToBeSieved);
+
+  for (auto& p: _particlesThatHaveToBeSieved) {
+    deleteParticles(p.second);
+  }
 
 #ifdef Parallel
-  const int numberOfParticlesToSend = _particlesThatCanNotBeLiftedWithinTheirTree.size();
+  const int numberOfParticlesToSend = _particlesThatCanNotBeLiftedWithinTheirTree[GlobalSort].size();
   logDebug(
     "finishedTraversal()",
     "inform all other ranks that I host "
@@ -70,7 +61,7 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
   std::vector<T> sendBuffer; // no pointers here
   sendBuffer.resize(numberOfParticlesToSend);
   int i = 0;
-  for (auto& p : _particlesThatCanNotBeLiftedWithinTheirTree) {
+  for (auto& p : _particlesThatCanNotBeLiftedWithinTheirTree[GlobalSort]) {
     sendBuffer[i] = *p;
     i++;
   }
@@ -141,7 +132,7 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
 
       logDebug("finishedTraversal()", "append " << receiveBuffer.size() << " messages to local sieve particle list");
       for (int i = 0; i < numberOfReceivedMessages.getValue(); i++) {
-        _particlesThatHaveToBeSieved.push_back(new T(receiveBuffer[i]));
+        _particlesThatHaveToBeSieved[GlobalSort].push_back(new T(receiveBuffer[i]));
       }
 
       if (sendRequest != nullptr)
@@ -152,15 +143,16 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
   }
 #endif
 
-  _particlesThatHaveToBeSieved.insert(
-    _particlesThatHaveToBeSieved.end(),
-    _particlesThatCanNotBeLiftedWithinTheirTree.begin(),
-    _particlesThatCanNotBeLiftedWithinTheirTree.end()
-  );
-  logDebug(
-    "finishedTraversal()",
-    "rolled over local list and now have " << _particlesThatHaveToBeSieved.size() << " sieve particles to sieve"
-  );
+  for (auto& p: _particlesThatHaveToBeSieved) {
+    _particlesThatHaveToBeSieved[p.first].insert(
+      _particlesThatHaveToBeSieved[p.first].end(),
+      _particlesThatCanNotBeLiftedWithinTheirTree[p.first].begin(),
+      _particlesThatCanNotBeLiftedWithinTheirTree[p.first].end()
+    );
+    logDebug(
+      "finishedTraversal()",
+      "rolled over local list and now have " << _particlesThatHaveToBeSieved[p.first].size() << " sieve particles to sieve for tree " << p.first
+    );
 
   // I originally had a function here to eliminate spatial redundancies, but
   // this knowledge is now encapsulated in the owning class, so I can't do
@@ -177,31 +169,32 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
 
 
   // shallow clear, as the pointers have already been rolled over into _particlesThatHaveToBeSieved
-  _particlesThatCanNotBeLiftedWithinTheirTree.clear();
+    _particlesThatCanNotBeLiftedWithinTheirTree[p.first].clear();
+  }
 }
 
 
 template <typename T>
-void toolbox::particles::SieveParticles<T>::addParticleThatCanNotBeLiftedWithinItsTree(T* p) {
-  tarch::multicore::Lock lock(_particlesThatCanNotBeLiftedWithinTheirTreeSemaphore);
-  _particlesThatCanNotBeLiftedWithinTheirTree.push_back(p);
+void toolbox::particles::SieveParticles<T>::addParticleThatCanNotBeLiftedWithinItsTree(T* p, int tree) {
+  tarch::multicore::Lock lock(_particlesThatCanNotBeLiftedWithinTheirTreeSemaphore, tree==GlobalSort);
+  _particlesThatCanNotBeLiftedWithinTheirTree[tree].push_back(p);
 }
 
 
 template <typename T>
-bool toolbox::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices() const {
-  return not _particlesThatHaveToBeSieved.empty();
+bool toolbox::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices(int tree) const {
+  return not _particlesThatHaveToBeSieved[tree].empty();
 }
 
 
 template <typename T>
 typename toolbox::particles::SieveParticles<T>::ParticleList toolbox::particles::SieveParticles<
-  T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker) {
-  tarch::multicore::Lock lock(_particlesToBeSievedSemaphore);
+  T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker&  marker, int tree) {
+  tarch::multicore::Lock lock(_particlesToBeSievedSemaphore, tree==GlobalSort);
 
   ParticleList                    result;
-  typename ParticleList::iterator p = _particlesThatHaveToBeSieved.begin();
-  while (p != _particlesThatHaveToBeSieved.end()) {
+  typename ParticleList::iterator p = _particlesThatHaveToBeSieved[tree].begin();
+  while (p != _particlesThatHaveToBeSieved[tree].end()) {
     if (::toolbox::particles::sieveParticle(**p, marker)) {
       logDebug(
         "getParticlesToBeSievedIntoVertex(...)",
@@ -209,7 +202,7 @@ typename toolbox::particles::SieveParticles<T>::ParticleList toolbox::particles:
       );
       (*p)->setParallelState(T::ParallelState::Virtual);
       result.push_back(*p);
-      p = _particlesThatHaveToBeSieved.erase(p);
+      p = _particlesThatHaveToBeSieved[tree].erase(p);
     } else {
       p++;
     }
