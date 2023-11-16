@@ -12,6 +12,7 @@ nvidia-build-cmake:
     - echo $CI_COMMIT_SHA
     - echo $CI_COMMIT_BRANCH
     - echo "Running CI with $(nproc) cores"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} python3 -m compileall -f ./
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} python3 configure.py -cc=nvc -cxx=nvc++ --exahype --swift --multithreading=omp --cmake=build
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< ' cd build; make -j $(nproc --all)'
   artifacts:
@@ -28,8 +29,7 @@ nvidia-test-cmake:
   needs:
     - job: nvidia-build-cmake
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} python3 -m compileall -f ./
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< ' cd build; --no-compress-output --output-on-failure'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< ' cd build; ctest --no-compress-output --output-on-failure'
   retry: 0
 
 nvidia-tutorials-cmake:

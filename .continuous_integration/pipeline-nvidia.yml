@@ -12,6 +12,7 @@ nvidia-build:
     - echo $CI_COMMIT_SHA
     - echo $CI_COMMIT_BRANCH
     - echo "Running CI with $(nproc) cores"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} python3 -m compileall -f ./
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} python3 configure.py -cc=nvc -cxx=nvc++ --exahype --swift --multithreading=omp
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} make -j $(nproc --all)
   artifacts:
@@ -31,7 +32,6 @@ nvidia-test:
   needs:
     - job: nvidia-build
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} python3 -m compileall -f ./
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} make check
   retry: 0
 
