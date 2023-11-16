@@ -41,19 +41,19 @@ nvidia-tutorials-cmake:
     - job: nvidia-build-cmake
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/euler; python3 euler.py'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/euler; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/euler; make -j; make clean'
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/acoustic-wave; python3 acoustic-wave.py'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/acoustic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/acoustic-wave; make -j; make clean'
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/elastic-wave; python3 elastic-wave.py'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/elastic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/elastic-wave; make -j; make clean'
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/advection; python3 advection.py'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/advection; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/advection; make -j; make clean'
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/swe; python3 swe.py'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/swe; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/tutorials/exahype2/swe; make -j; make clean'
   retry: 0
 
 nvidia-applications-cmake:
@@ -65,45 +65,45 @@ nvidia-applications-cmake:
     - job: nvidia-build-cmake
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; python3 euler.py -s FVRusanovGlobalAdaptive -d 2 -m Release'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; python3 euler.py -s FVRusanovGlobalAdaptive -d 2 -m Debug'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; python3 euler.py -s FVRusanovGlobalAdaptive -d 3 -m Release'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; python3 euler.py -s FVRusanovGlobalAdaptive -d 3 -m Debug'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/euler; make -j; make clean'
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; python3 acoustic-wave.py -s FVRusanovGlobalAdaptive -d 2 -m Release'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; python3 acoustic-wave.py -s FVRusanovGlobalAdaptive -d 2 -m Debug'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; python3 acoustic-wave.py -s FVRusanovGlobalAdaptive -d 3 -m Release'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; python3 acoustic-wave.py -s FVRusanovGlobalAdaptive -d 3 -m Debug'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/acoustic-wave; make -j; make clean'
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; python3 elastic-wave.py -s FVRusanovGlobalAdaptive -d 2 -m Release'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; python3 elastic-wave.py -s FVRusanovGlobalAdaptive -d 2 -m Debug'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; python3 elastic-wave.py -s FVRusanovGlobalAdaptive -d 3 -m Release'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; python3 elastic-wave.py -s FVRusanovGlobalAdaptive -d 3 -m Debug'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/elastic-wave; make -j; make clean'
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; python3 advection.py -s ADERDGRusanovGlobalAdaptive -d 2 -m Release'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; python3 advection.py -s ADERDGRusanovGlobalAdaptive -d 2 -m Debug'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; python3 advection.py -s ADERDGRusanovGlobalAdaptive -d 3 -m Release'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; python3 advection.py -s ADERDGRusanovGlobalAdaptive -d 3 -m Debug'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; make -j; make clean'
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/saint-venant; python3 saint-venant.py -s FVRusanovGlobalAdaptive -d 2 -m Release'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/saint-venant; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/saint-venant; make -j; make clean'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/saint-venant; python3 saint-venant.py -s FVRusanovGlobalAdaptive -d 2 -m Debug'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/saint-venant; make -j'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/saint-venant; make -j; make clean'
   retry: 0
 
 nvidia-benchmarks-cmake:
