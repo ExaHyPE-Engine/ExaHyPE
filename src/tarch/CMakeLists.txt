@@ -6,7 +6,7 @@ foreach(mode IN LISTS BUILD_MODES)
   string(TOUPPER ${mode} mode_upper)
 
   add_library(Tarch_${mode_lower} STATIC)
-  #display_header("Creating Makefile of Tarch_${mode_lower}")
+  display_header("Creating Makefile of Tarch_${mode_lower}")
 
   target_sources(Tarch_${mode_lower} PRIVATE ${SOURCES})
   target_include_directories(Tarch_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)

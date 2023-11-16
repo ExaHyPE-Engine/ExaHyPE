@@ -6,14 +6,14 @@ foreach(mode IN LISTS BUILD_MODES)
   string(TOUPPER ${mode} mode_upper)
 
   add_library(PETSc_${mode_lower} STATIC)
-  #display_header("Creating Makefile of PETSc_${mode_lower}")
+  display_header("Creating Makefile of PETSc_${mode_lower}")
 
   target_sources(PETSc_${mode_lower} PRIVATE ${SOURCES})
   target_include_directories(PETSc_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
   target_compile_definitions(PETSc_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
   target_link_options(PETSc_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
   target_link_libraries(PETSc_${mode_lower} PRIVATE project_warnings)
-  target_compile_options(PETSc_${mode_lower}  PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
+  target_compile_options(PETSc_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
 
   install(TARGETS PETSc_${mode_lower}
     RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}

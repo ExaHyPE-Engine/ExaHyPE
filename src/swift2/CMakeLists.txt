@@ -7,7 +7,7 @@ foreach(mode IN LISTS BUILD_MODES)
 
   foreach(dimension IN LISTS WITH_DIMENSIONS)
     add_library(SWIFT2Core${dimension}d_${mode_lower} STATIC)
-    #display_header("Creating Makefile of SWIFT2Core${dimension}d_${mode_lower}")
+    display_header("Creating Makefile of SWIFT2Core${dimension}d_${mode_lower}")
 
     target_sources(SWIFT2Core${dimension}d_${mode_lower} PRIVATE ${SOURCES})
     target_include_directories(SWIFT2Core${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -15,7 +15,7 @@ foreach(mode IN LISTS BUILD_MODES)
     target_link_options(SWIFT2Core${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
     target_link_libraries(SWIFT2Core${dimension}d_${mode_lower} PUBLIC project_options Peano4Core${dimension}d_${mode_lower})
     target_link_libraries(SWIFT2Core${dimension}d_${mode_lower} PRIVATE project_warnings)
-    target_compile_options(SWIFT2Core${dimension}d_${mode_lower}PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
+    target_compile_options(SWIFT2Core${dimension}d_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
 
     install(TARGETS SWIFT2Core${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
