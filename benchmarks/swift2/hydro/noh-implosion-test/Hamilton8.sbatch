@@ -41,6 +41,7 @@ done
 
 for CORES in 8 16 32 64
 do
+  echo Start experiments for $CORES cores
   export OMP_NUM_THREADS=$CORES
   for REALISATION in domain-decomposition.scattered \
                      domain-decomposition.continuous-per-vertex.insert-sorts \
@@ -60,7 +61,9 @@ do
    echo Run ./$EXEC_FILE
    srun likwid-pin -c 0-$CORES ./$EXEC_FILE > $EXEC_FILE.out
   done
-  tar -czvf Hamilton8-2400-$OMP_NUM_THREADS-threads.tar.gz noh2D-np-2400-$OMP_NUM_THREADS-threads.*.out
+  echo Create tar archive for $OMP_NUM_THREADS threads
+  tar -czvf Hamilton8-2400-$OMP_NUM_THREADS-threads.tar.gz noh2D-np-2400.*.out
+  rm noh2D-np-2400.*.out
 done
 
 
