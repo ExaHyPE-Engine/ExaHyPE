@@ -278,10 +278,10 @@ class GaussLobatto(MatrixGenerator):
     # modified averaging matrix. set a = b = 0 for original matrix
     a = 1/2
     b = 1/16
-    return np.array([0.5,  0,   b,  0,  0.5,  0,       -b,    0,
-                        0,    0.5,  0,    b,    0,    0.5,  0, -b,
-                       a,    0,    0.5,  0,  -a,    0,    0.5,  0,
-                        0,  a,    0,    0.5,  0,    -a,    0,    0.5]).reshape(4,8)
+    return np.array([0.5,  0,  b,  0,0.5,  0, -b,  0,
+                       0,0.5,  0,  b,  0,0.5,  0, -b,
+                       a,  0,0.5,  0, -a,  0,0.5,  0,
+                       0,  a,  0,0.5,  0, -a,  0,0.5]).reshape(4,8)
   
     # def get_face_to_face_matrix(self):
   #   """ Face-face coupling block.
