@@ -31,6 +31,13 @@ class AssemblePetscMatrix(ActionSet):
     std::pair<int,int> localCellIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalCellIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localCellIndex, ::petsc::LocalToGlobalMap::Type::Cell);
 
+    /*
+    This trace is in place just so that we can generate a map of the facets with their
+    global indices. It is not necessary long term and can be deleted soon...
+    */
+    logTraceInWith2Arguments("tcft_experimenter", marker.toString(), globalCellIndex);
+    logTraceOut("tcft_experimenter");
+
     // ================================
     // Left-hand side A_cc contribution
     // ================================
@@ -146,6 +153,13 @@ class AssemblePetscMatrix(ActionSet):
     int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex, ::petsc::LocalToGlobalMap::Type::Face);
 
     assertion( globalFirstDoFIndex>=0 );
+
+    /*
+    This trace is in place just so that we can generate a map of the facets with their
+    global indices. It is not necessary long term and can be deleted soon...
+    */
+    logTraceInWith2Arguments("tfft_experimenter", marker.toString(), globalFirstDoFIndex);
+    logTraceOut("tfft_experimenter");
 
     logTraceInWith2Arguments("TFFT", globalFirstDoFIndex, RiemannSolverMatrix);
     for (int row=0; row<dofsPerFace; row++)

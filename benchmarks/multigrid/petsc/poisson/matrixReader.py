@@ -80,9 +80,15 @@ def populateRHS(fName, solDim=None):
       l=f.readline()
   return vec
 
+def clip(array):
+  return np.where( np.abs(array) < 1E-10, 0, array )
 
 def getRankOfMatrix(mat):
   return np.linalg.matrix_rank(mat)
+
+def get_null_vector(mat):
+  _,_, vh = np.linalg.svd(mat)
+  return clip(vh[-1])
 
 if __name__ == "__main__":
   print("this file is here for development. please remove from git once satisfied with matrix")
@@ -102,18 +108,16 @@ if __name__ == "__main__":
     print("no rhs.xml available")
     pass
 
-  # try:
-  #   numCells = 27 * 27
-  #   solDim = 4 * numCells
-  #   # sol = populateRHS("solution.xml", solDim)
-  #   sol = populateRHS("solution.xml")
-  # except:
-  #   print("didn't read in solution")
-  #   pass
-
 
   print(f'shape of this matrix is {mat.shape}')
 
 
   # clip the rounding errors
-  mat=np.where( np.abs(mat) < 1E-10, 0, mat )
+  mat=clip(mat)
+
+  print(f"rank of this matrix is {getRankOfMatrix(mat)}")
+
+  nv = get_null_vector(mat)
+  print("printing null vector....\n")
+  for i in range(nv.shape[0]): print(nv[i])
+  
