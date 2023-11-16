@@ -60,11 +60,15 @@ def read(file_name):
         face_dof, face_centre = parse_face_line(line)
         face_output[face_dof] = face_centre
       line = f.readline()
+  print("printing face output....\n")
   print(face_output)
-  print(len(face_output))
+  print("\nprinting cell output....\n")
   print(cell_output)
-  print(len(cell_output))
 
 if __name__ == "__main__":
   assert len(sys.argv) > 1, "run this script with: python3 mapTheDofs.py file_to_be_parsed.txt"
-  read(sys.argv[1])
+  try:
+    read(sys.argv[1])
+  except Exception as e: 
+    print(f"Got exception {e}.")
+    print("Did you pass the right file?")
