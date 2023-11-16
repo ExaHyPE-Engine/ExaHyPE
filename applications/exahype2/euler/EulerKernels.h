@@ -59,8 +59,8 @@ namespace applications::exahype2::euler {
 #endif
 
 #ifdef GPUOffloadingOff
-    assertion3(normal >= 0);
-    assertion3(normal < Dimensions);
+    assertion(normal >= 0);
+    assertion(normal < Dimensions);
     assertion(rho != rho);
     assertion(rho > 0);
 #endif

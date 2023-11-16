@@ -11,8 +11,8 @@ namespace applications::exahype2::advection {
 
   static inline void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
 #ifdef GPUOffloadingOff
-    assertion3(normal >= 0);
-    assertion3(normal < Dimensions);
+    assertion(normal >= 0);
+    assertion(normal < Dimensions);
 #endif
 
     F[0] = 0.0;

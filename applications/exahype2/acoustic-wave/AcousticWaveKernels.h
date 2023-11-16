@@ -11,8 +11,8 @@ namespace applications::exahype2::acousticwave {
 
   static void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
 #ifdef GPUOffloadingOff
-    assertion3(normal >= 0);
-    assertion3(normal < Dimensions);
+    assertion(normal >= 0);
+    assertion(normal < Dimensions);
 #endif
 
     static constexpr double K0 = RHO * WAVE_SPEED * WAVE_SPEED;
