@@ -117,7 +117,7 @@ if args.multithreading is not None:
 if args.gpu is not None:
   if args.cmake:
     configure_args.append(f'-DWITH_GPU={args.gpu}')
-    configure_args.append(f'-DWITH_GPU_ARCH={args.arch}')
+    configure_args.append(f'-DWITH_GPU_ARCH=sm_{args.arch}')
   else:
     configure_args.append(f'--with-gpu={args.gpu}')
 

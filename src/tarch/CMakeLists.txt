@@ -10,13 +10,12 @@ foreach(mode IN LISTS BUILD_MODES)
 
   target_sources(Tarch_${mode_lower} PRIVATE ${SOURCES})
   target_include_directories(Tarch_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-  target_compile_definitions(Tarch_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS})
-  target_link_options(Tarch_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
+  target_compile_definitions(Tarch_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS})
+  target_link_options(Tarch_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
   target_link_libraries(Tarch_${mode_lower} PUBLIC project_options)
-
-  if(NOT "${WITH_GPU}" STREQUAL "cuda")
-    target_link_libraries(Tarch_${mode_lower} PRIVATE project_warnings)
-  endif()
+  target_compile_options(Tarch_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+  target_compile_options(Tarch_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: ${PEANO_CUDA_FLAGS_${mode_upper}}>)
+  target_link_libraries(Tarch_${mode_lower} PRIVATE project_warnings)
 
   if("${CMAKE_CXX_COMPILER_ID}" MATCHES "IntelLLVM" AND ("${WITH_GPU}" STREQUAL "sycl" OR "${WITH_MULTITHREADING}" STREQUAL "sycl"))
     add_sycl_to_target(TARGET Tarch_${mode_lower})
