@@ -286,6 +286,14 @@ class Project (object):
           lhs.output.makefile.d["CXX"] == lhs.output.makefile.d["CXX"]
       ), "CXX compilers of the projects being merged don't match"
 
+      assert (
+          lhs.output.makefile.d["FC"] == lhs.output.makefile.d["FC"]
+      ), "FC compilers of the projects being merged don't match"
+
+      assert (
+          lhs.output.makefile.d["DIM"] == lhs.output.makefile.d["DIM"]
+      ), "dimensions of the projects being merged don't match"
+
       # assert (
       #   lhs._domain_offset == rhs._domain_offset and
       #   lhs._domain_size == rhs._domain_size and
@@ -303,50 +311,61 @@ class Project (object):
       #         dict_merged[key] = value
       #   return dict_merged
 
-      result_project = Project(lhs.namespace, project_name, executable)
-      result_project._executable_name = executable
+      result_project = Project(lhs.namespace, project_name, lhs.directory)
+      result_project.output.makefile.set_executable_name(executable)
 
-      # merging attributes of datamodel
-      for v in lhs.datamodel.vertex_data:
-        result_project.datamodel.add_vertex(v)
-      for v in rhs.datamodel.vertex_data:
-        result_project.datamodel.add_vertex(v)
-
-      for f in lhs.datamodel.face_data:
-        result_project.datamodel.add_face(f)
-      for f in rhs.datamodel.face_data:
-        result_project.datamodel.add_face(f)
-
-      for c in lhs.datamodel.cell_data:
-        result_project.datamodel.add_cell(c)
-      for c in rhs.datamodel.cell_data:
-        result_project.datamodel.add_cell(c)
-
-      for g in lhs.datamodel.global_data:
-        result_project.datamodel.add_global(g)
-      for g in rhs.datamodel.global_data:
-        result_project.datamodel.add_global(g)
+      # merging all DaStGen2 and ParticleSet attributes of datamodel
+      for data in lhs.datamodel.cell_data + rhs.datamodel.cell_data:
+        result_project.datamodel.add_cell(data)
+      for data in lhs.datamodel.face_data + rhs.datamodel.face_data:
+        result_project.datamodel.add_face(data)
+      for particle in lhs.datamodel.vertex_data + rhs.datamodel.vertex_data:
+        result_project.datamodel.add_vertex(particle)
+      for particle in lhs.datamodel.global_data + rhs.datamodel.global_data:
+        result_project.datamodel.add_global(particle)
 
       #...
 
-      # merging attributes of solversteps
-
-      for step in lhs.solversteps._steps:
+      # merge all steps of solversteps
+      for step in lhs.solversteps._steps + rhs.solversteps._steps:
         result_project.solversteps.append(step)
+
+      # merge all keys of makefile dictionary
+      result_project.output.makefile.d["CMAKE_CORE_LIBS"] = lhs.output.makefile.d["CMAKE_CORE_LIBS"]
+      for name in rhs.output.makefile.d["CMAKE_CORE_LIBS"]:
+        result_project.output.makefile.add_cmake_core_library(name)
 
       result_project.output.makefile.d["CXX"] = lhs.output.makefile.d["CXX"]
 
-      lhs_list_of_cxxflags = lhs.output.makefile.d["CXXFLAGS"].split(" ")
-      rhs_list_of_cxxflags = rhs.output.makefile.d["CXXFLAGS"].split(" ")
       result_project.output.makefile.d["CXXFLAGS"] = lhs.output.makefile.d["CXXFLAGS"]
-      for cxxflag in rhs_list_of_cxxflags:
-        if cxxflag in lhs_list_of_cxxflags:
-          result_project.output.makefile.d["CXXFLAGS"] += " " + cxxflag
+      for cxxflag in rhs.output.makefile.d["CXXFLAGS"].split(" "):
+        result_project.output.makefile.add_CXX_flag(cxxflag)
+
+      result_project.output.makefile.d["FCFLAGS"] = lhs.output.makefile.d["FCFLAGS"]
+      for fcflag in rhs.output.makefile.d["FCFLAGS"].split(" "):
+        result_project.output.makefile.add_Fortran_flag(fcflag)
+
+      result_project.output.makefile.d["LDFLAGS"] = lhs.output.makefile.d["LDFLAGS"]
+      for ldflag in rhs.output.makefile.d["LDFLAGS"].split(" "):
+        result_project.output.makefile.add_linker_flag(ldflag)
+
+      # result_project.output.makefile.add_gpu_object()
+      # result_project.output.makefile.d["CMAKE_LIBS"]
+
+      result_project.output.makefile.d["LIBS"] = lhs.output.makefile.d["LIBS"] + rhs.output.makefile.d["LIBS"]
+
+      result_project.output.makefile.d["FORTRAN_MODULES"] = lhs.output.makefile.d["FORTRAN_MODULES"]
+      for module in rhs.output.makefile.d["FORTRAN_MODULES"]:
+        result_project.output.makefile.add_Fortran_module(module)
+
+      result_project.output.makefile.set_executable_name(executable)
+      
+      result_project.output.makefile.d["GENERATED_INCLUDE_DIRS"] = lhs.output.makefile.d["GENERATED_INCLUDE_DIRS"] | rhs.output.makefile.d["GENERATED_INCLUDE_DIRS"]
 
       # ...
 
       result_project.constants.d = {**lhs.constants.d, **rhs.constants.d} #_merge(lhs.constants.d, rhs.constants.d)
       
       # @todo Dmitry please befill
-      
+
       return result_project

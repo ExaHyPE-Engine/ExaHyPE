@@ -160,7 +160,8 @@ the SISC paper
         self.clear_files()
 
     def add_cmake_core_library(self, name):
-        self.d["CMAKE_CORE_LIBS"].append(name)
+        if name not in self.d["CMAKE_CORE_LIBS"]:
+            self.d["CMAKE_CORE_LIBS"].append(name)
 
     def set_executable_name(self, fname):
         self.d["EXECUTABLENAME"] = fname
