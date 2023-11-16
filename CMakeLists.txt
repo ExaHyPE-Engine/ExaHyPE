@@ -49,14 +49,14 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
-# This has to be done before the project is created and before any languages are added
+# This has to be done before the project is created and before any languages are added.
 # Adding a subdirectory does not help here and needs to be explicitly given with the path( cmake/...),
-# Because this file is needed by CMake itself and not by the project. 
+# Because this file is needed by CMake itself and not by the project.
 # We need to override specific compiler flags initialized by CMake, to
-# match them exactly with the flags defined in Peano Automake build system. More details can be found in
-# PeanoCustomInitFlags file
-# For example Peano release flags are -O3 and -O4 for NVHHPC compilers (and -DNDEBUG in definitions),
-# but NVHPC defaults are -fast and -O3 in some systems, we override these with this
+# match them exactly with the flags defined in Peano Automake build system.
+# More details can be found in the cmake/PeanoCustomInitFlags.cmake file.
+# For example, the Peano release flags are -O3 and -O4 for NVHPC compilers (and -DNDEBUG in definitions);
+# but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/PeanoCustomInitFlags.cmake")
 
 set(LANGUAGES C CXX)
@@ -182,7 +182,7 @@ if(WITH_MULTITHREADING STREQUAL "omp")
   check_include_files(omp.h HAVE_OMP_H)
 
   # Workaround for Intel oneAPI. TODO: Fix this:
-  # "PLEASE append the compiler options "-save-temps -v", rebuild the application to to get the full command which is failing"
+  # "PLEASE append the compiler options "-save-temps -v", rebuild the application to get the full command which is failing"
   if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     target_compile_options(project_options INTERFACE -fopenmp)
     target_link_libraries(project_options INTERFACE -fopenmp)
@@ -300,7 +300,7 @@ endif()
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
   set(PEANO_CXX_FLAGS_RELEASE -O4)
-  set(PEANO_CUDA_FLAGS_RELEASE -O3) #NVCC does not have -O4, if give it will be forwarded only to host compiler
+  set(PEANO_CUDA_FLAGS_RELEASE -O3) # NVCC does not have -O4, if given, it will be forwarded only to host compiler.
 else()
   set(PEANO_CXX_FLAGS_RELEASE -O3)
   set(PEANO_CUDA_FLAGS_RELEASE -O3)
@@ -444,7 +444,7 @@ endif(DOXYGEN_FOUND)
 
 add_subdirectory(src)
 
-#file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS "*/UnitTests/*")
+#file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS "*/tests/*")
 #foreach(SOURCE_FILE ${UNIT_TEST_SOURCES})
 #    get_filename_component(TEST_NAME ${SOURCE_FILE} NAME_WE)
 #    add_executable(${TEST_NAME} ${SOURCE_FILE})
