@@ -577,24 +577,29 @@ void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
                 }
                 activeParticleNumberInThisChunk += 8;
               }
-              if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0] and enabledInteractionPartners[activeParticleNumberInThisChunk + 1] and enabledInteractionPartners[activeParticleNumberInThisChunk + 2] and enabledInteractionPartners[activeParticleNumberInThisChunk + 3]) {
+              else if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0] and enabledInteractionPartners[activeParticleNumberInThisChunk + 1] and enabledInteractionPartners[activeParticleNumberInThisChunk + 2] and enabledInteractionPartners[activeParticleNumberInThisChunk + 3]) {
                 for (int i = activeParticleNumberInThisChunk; i < activeParticleNumberInThisChunk + 4; i++) {
                   swift2::kernels::forceKernelVectorised(
                     localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk + i
                   );
                 }
                 activeParticleNumberInThisChunk += 4;
-              } else if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0] and enabledInteractionPartners[activeParticleNumberInThisChunk + 1]) {
+              } 
+              else if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0] and enabledInteractionPartners[activeParticleNumberInThisChunk + 1]) {
                 for (int i = activeParticleNumberInThisChunk; i < activeParticleNumberInThisChunk + 2; i++) {
                   swift2::kernels::forceKernelVectorised(
                     localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk + i
                   );
                 }
                 activeParticleNumberInThisChunk += 2;
-              } else {
+              } 
+              else if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0]) {
                 swift2::kernels::forceKernelVectorised(
                   localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk
                 );
+                activeParticleNumberInThisChunk += 1;
+              }
+              else {
                 activeParticleNumberInThisChunk += 1;
               }
             }
