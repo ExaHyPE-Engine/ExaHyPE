@@ -26,6 +26,7 @@ trace  peano4                              -1     black always-on
 trace  benchmarks                          -1     black always-on
 trace  benchmarks::multigrid::petsc::poisson::observers::Assemble -1     white always-on
 trace benchmarks::multigrid::petsc::poisson::observers::Assemble2multigrid_petsc_solvers_DiscontinuousGalerkinDiscretisation0 -1     white always-on
+trace benchmarks::multigrid::petsc::poisson::observers::EnumerateAndInitSolution2multigrid_petsc_actionsets_EnumerateDoFs0    -1     white always-on
 trace benchmarks::multigrid::petsc::poisson::observers::Assemble2multigrid_petsc_solvers_CollocatedLowOrderDiscretisation0    -1     white always-on
 trace benchmarks::multigrid::petsc::poisson::AbstractDGPoisson    -1     white always-on
 trace benchmarks::multigrid::petsc::poisson::DGPoisson    -1     white always-on
