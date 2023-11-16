@@ -273,7 +273,8 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
     ###################################
     ### Assemble weak form for A_FC ###
     ###################################
-    def _assemble_A_FC(self, fs_pair, relative_position): # Matrices that form projections being multiplied by inv(M) from _A_FF
+    # Matrices that form projections being multiplied by inv(M) from _A_FF
+    def _assemble_A_FC(self, fs_pair, relative_position):
         """Assemble weak form for A_{CF}^{(k,ell)}
         :arg fs_pair: pair of function space indices that couple
         k = fs_pair[0]: first function space (to-space): a facet function space
@@ -312,7 +313,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
         else:
             raise ValueError("Invalid value of relative_position")
         
-        factor = -1.0 # minus from the def. of projection: M*q^\pm + A*p = 0, so A = -integral(...)
+        factor = -1.0 # minus from the def. of projection: M*q^\pm + A*u = 0, so A = -integral(...)
         gamma = (0, 0) # no scaling as it's compensated by the derivative dp/dx or dp/dy
         
         if fs_pair == (0, 0): # A_q+_u
