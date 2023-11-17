@@ -221,11 +221,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
-  const Container::iterator&   particle
+  const Container::iterator&   particle,
+  int                          targetTree
 ) {
   assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
 
-  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
+  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle, targetTree );
   return _container.erase(particle);
 }
 

@@ -81,6 +81,11 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
         p++;
         break;
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
+        _numberOfLiftsIntoSieveSet++;
+        logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
+        assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );    
+        break;
       case 0:
       case 1:
       case 2:
@@ -92,8 +97,14 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
       case 7:
       #endif
         _numberOfLiftsIntoSieveSet++;
-        logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
+        if (marker.isAdjacentToParallelDomainBoundary()) {
+          logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
+        }
+        else {
+          logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " but exploit knowledge that it will end up in same tree. Previously assigned to " << marker.toString() );
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p,_spacetreeId);
+        }
         assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );    
         break;
       default:
