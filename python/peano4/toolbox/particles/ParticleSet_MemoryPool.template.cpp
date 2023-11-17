@@ -235,7 +235,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 
   assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
 
-  __sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
+  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
   return _memoryPool.container.erase(particle);
 }
 
