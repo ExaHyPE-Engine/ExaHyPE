@@ -235,7 +235,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 
   assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
 
-  __sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort::);
+  __sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
   return _memoryPool.container.erase(particle);
 }
 
@@ -243,7 +243,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
   _memoryPool.scatter();
   for (auto p: _memoryPool.container) {
-    _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort::);
+    _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
   }
   _memoryPool.container.clear();
 }
