@@ -356,20 +356,20 @@ void toolbox::particles::ParticleSet<T>::shutdownDatatype() {
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::finishedTraversal() {
-  _sieveParticles[GlobalSort].exchangeSieveListsGlobally();
+  _sieveParticles.exchangeSieveListsGlobally();
 }
 
 
 template <typename T>
 typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::ParticleSet<
   T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int tree) {
-  return _sieveParticles[tree].getParticlesToBeSievedIntoVertex(marker, tree);
+  return _sieveParticles.getParticlesToBeSievedIntoVertex(marker, tree);
 }
 
 
 template <typename T>
 bool toolbox::particles::ParticleSet<T>::hasParticlesToBeSievedIntoVertices(int tree) {
-  return _sieveParticles[tree].hasParticlesToBeSievedIntoVertices();
+  return _sieveParticles.hasParticlesToBeSievedIntoVertices(tree);
 }
 
 
