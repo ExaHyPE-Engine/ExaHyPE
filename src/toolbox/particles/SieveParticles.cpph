@@ -183,7 +183,7 @@ void toolbox::particles::SieveParticles<T>::addParticleThatCanNotBeLiftedWithinI
 
 template <typename T>
 bool toolbox::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices(int tree) const {
-  return not _particlesThatHaveToBeSieved[tree].empty();
+  return _particlesThatHaveToBeSieved.count(tree)>0 and not _particlesThatHaveToBeSieved.at(tree).empty();
 }
 
 
