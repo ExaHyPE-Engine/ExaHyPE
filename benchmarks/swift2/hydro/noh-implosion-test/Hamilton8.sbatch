@@ -39,7 +39,7 @@ do
 done
 
 
-for CORES in 8 16 32 64
+for CORES in 64 32 16 8 
 do
   echo Start experiments for $CORES cores
   export OMP_NUM_THREADS=$CORES
@@ -60,6 +60,7 @@ do
    EXEC_FILE=noh2D-np-2400.$REALISATION
    echo Run ./$EXEC_FILE
    srun likwid-pin -c 0-$CORES ./$EXEC_FILE > $EXEC_FILE.out
+   tar -czvf Hamilton8-2400-$OMP_NUM_THREADS-threads.tar.gz noh2D-np-2400.*.out
   done
   echo Create tar archive for $OMP_NUM_THREADS threads
   tar -czvf Hamilton8-2400-$OMP_NUM_THREADS-threads.tar.gz noh2D-np-2400.*.out
