@@ -115,6 +115,30 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 """
     )
 
+    
+    _Template_Sieve = jinja2.Template(
+        """
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices(_spacetreeId) ) {
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker, _spacetreeid );
+
+    _numberOfDropsFromSieveSet += sievedParticles.size();
+
+    fineGridVertex{{PARTICLES_CONTAINER}}.addParticles( sievedParticles );
+    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+  }
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker );
+
+    _numberOfDropsFromSieveSet += sievedParticles.size();
+
+    fineGridVertex{{PARTICLES_CONTAINER}}.addParticles( sievedParticles );
+    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates();
+    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+  }
+"""
+    )
+
+    
     def get_body_of_operation(self, operation_name):
         """!
 
