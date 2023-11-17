@@ -817,7 +817,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoS, usm",
+    "device " + std::to_string(device) + ", stateless, batched, AoS, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -834,7 +834,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, SoA, usm",
+    "device " + std::to_string(device) + ", stateless, batched, SoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -851,7 +851,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoSoA, usm",
+    "device " + std::to_string(device) + ", stateless, batched, AoSoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -869,7 +869,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoS, usm",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -886,7 +886,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, SoA, usm",
+    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -903,7 +903,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoSoA, usm",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -921,7 +921,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", task-graph, AoS, usm",
+    "device " + std::to_string(device) + ", stateless, task-graph, AoS, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -938,7 +938,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", task-graph, SoA, usm",
+    "device " + std::to_string(device) + ", stateless, task-graph, SoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -955,7 +955,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", task-graph, AoSoA, usm",
+    "device " + std::to_string(device) + ", stateless, task-graph, AoSoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -973,7 +973,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoS, copy",
+    "device " + std::to_string(device) + ", stateless, batched, AoS, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -990,7 +990,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, SoA, copy",
+    "device " + std::to_string(device) + ", stateless, batched, SoA, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1007,7 +1007,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoSoA, copy",
+    "device " + std::to_string(device) + ", stateless, batched, AoSoA, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1025,7 +1025,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoS, copy",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1042,7 +1042,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, SoA, copy",
+    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1059,7 +1059,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoSoA, copy",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1077,7 +1077,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", task-graph, AoS, copy",
+    "device " + std::to_string(device) + ", stateless, task-graph, AoS, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1094,7 +1094,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", task-graph, SoA, copy",
+    "device " + std::to_string(device) + ", stateless, task-graph, SoA, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1111,7 +1111,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", task-graph, AoSoA, copy",
+    "device " + std::to_string(device) + ", stateless, task-graph, AoSoA, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1129,7 +1129,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoS, managed",
+    "device " + std::to_string(device) + ", stateless, batched, AoS, managed",
     launchingThreads,
     device,
     numberOfPatches
@@ -1146,7 +1146,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, SoA, managed",
+    "device " + std::to_string(device) + ", stateless, batched, SoA, managed",
     launchingThreads,
     device,
     numberOfPatches
@@ -1163,7 +1163,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoSoA, managed",
+    "device " + std::to_string(device) + ", stateless, batched, AoSoA, managed",
     launchingThreads,
     device,
     numberOfPatches
@@ -1181,7 +1181,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoS, managed",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, managed",
     launchingThreads,
     device,
     numberOfPatches
@@ -1198,7 +1198,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, SoA, managed",
+    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, managed",
     launchingThreads,
     device,
     numberOfPatches
@@ -1215,7 +1215,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoSoA, managed",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, managed",
     launchingThreads,
     device,
     numberOfPatches
@@ -1233,7 +1233,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", task-graph, AoS, managed",
+    "device " + std::to_string(device) + ", stateless, task-graph, AoS, managed",
     launchingThreads,
     device,
     numberOfPatches
@@ -1250,7 +1250,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", task-graph, SoA, managed",
+    "device " + std::to_string(device) + ", stateless, task-graph, SoA, managed",
     launchingThreads,
     device,
     numberOfPatches
@@ -1267,7 +1267,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", task-graph, AoSoA, managed",
+    "device " + std::to_string(device) + ", stateless, task-graph, AoSoA, managed",
     launchingThreads,
     device,
     numberOfPatches
@@ -1287,7 +1287,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoS, copy",
+    "device " + std::to_string(device) + ", stateless, batched, AoS, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1304,7 +1304,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, SoA, copy",
+    "device " + std::to_string(device) + ", stateless, batched, SoA, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1321,7 +1321,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoSoA, copy",
+    "device " + std::to_string(device) + ", stateless, batched, AoSoA, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1339,7 +1339,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoS, copy",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1356,7 +1356,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, SoA, copy",
+    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1373,7 +1373,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoSoA, copy",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, copy",
     launchingThreads,
     device,
     numberOfPatches
@@ -1391,7 +1391,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoS, usm",
+    "device " + std::to_string(device) + ", stateless, batched, AoS, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1408,7 +1408,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, SoA, usm",
+    "device " + std::to_string(device) + ", stateless, batched, SoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1425,7 +1425,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoSoA, usm",
+    "device " + std::to_string(device) + ", stateless, batched, AoSoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1443,7 +1443,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoS, usm",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1460,7 +1460,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, SoA, usm",
+    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1477,7 +1477,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoSoA, usm",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1497,7 +1497,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoS, usm",
+    "device " + std::to_string(device) + ", stateless, batched, AoS, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1514,7 +1514,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, SoA, usm",
+    "device " + std::to_string(device) + ", stateless, batched, SoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1531,7 +1531,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", batched, AoSoA, usm",
+    "device " + std::to_string(device) + ", stateless, batched, AoSoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1549,7 +1549,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoS, usm",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1566,7 +1566,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, SoA, usm",
+    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, usm",
     launchingThreads,
     device,
     numberOfPatches
@@ -1583,7 +1583,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerators::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", patch-wise, AoSoA, usm",
+    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, usm",
     launchingThreads,
     device,
     numberOfPatches
