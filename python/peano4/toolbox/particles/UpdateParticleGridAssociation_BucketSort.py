@@ -152,14 +152,12 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 
 
     def get_constructor_body(self):
-        return super( InsertParticlesAlongCartesianMesh ).get_constructor_body() + """
-            _particleNumberOnThisTree = 0;
+        return super( UpdateParticleGridAssociation_BucketSort, self ).get_constructor_body() + """
             _spacetreeId              = treeNumber;
           """
 
 
     def get_attributes(self):
-        return super( InsertParticlesAlongCartesianMesh ).get_attributes() + """
-            int _particleNumberOnThisTree;
+        return super( UpdateParticleGridAssociation_BucketSort, self ).get_attributes() + """
             int _spacetreeId;
           """
