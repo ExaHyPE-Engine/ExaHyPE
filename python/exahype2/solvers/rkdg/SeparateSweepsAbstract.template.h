@@ -8,6 +8,7 @@
 
 #include "exahype2/RefinementControl.h"
 #include "exahype2/Solver.h"
+#include "exahype2/NonCriticalAssertions.h"
 
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
