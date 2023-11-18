@@ -37,7 +37,7 @@ template <typename T>
 void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
   logDebug("finishedTraversal()", "#particles left over from previous sweep=" << _particlesThatHaveToBeSieved.size());
 
-  for (auto& p: _particlesThatHaveToBeSieved) {
+  for (auto& p : _particlesThatHaveToBeSieved) {
     deleteParticles(p.second);
   }
 
@@ -143,7 +143,7 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
   }
 #endif
 
-  for (auto& p: _particlesThatHaveToBeSieved) {
+  for (auto& p : _particlesThatHaveToBeSieved) {
     _particlesThatHaveToBeSieved[p.first].insert(
       _particlesThatHaveToBeSieved[p.first].end(),
       _particlesThatCanNotBeLiftedWithinTheirTree[p.first].begin(),
@@ -151,24 +151,25 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
     );
     logDebug(
       "finishedTraversal()",
-      "rolled over local list and now have " << _particlesThatHaveToBeSieved[p.first].size() << " sieve particles to sieve for tree " << p.first
+      "rolled over local list and now have "
+        << _particlesThatHaveToBeSieved[p.first].size() << " sieve particles to sieve for tree " << p.first
     );
 
-  // I originally had a function here to eliminate spatial redundancies, but
-  // this knowledge is now encapsulated in the owning class, so I can't do
-  // anything here anymore.
-  /*
-    Some other delete Particles call( _particlesThatHaveToBeSieved );
-    logDebug(
-        "finishedTraversal()",
-        "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left to
-    sieve " <<
-        "(local particles that are rolled over=" << _particlesThatCanNotBeLiftedWithinTheirTree.size() << ")"
-    );
-  */
+    // I originally had a function here to eliminate spatial redundancies, but
+    // this knowledge is now encapsulated in the owning class, so I can't do
+    // anything here anymore.
+    /*
+      Some other delete Particles call( _particlesThatHaveToBeSieved );
+      logDebug(
+          "finishedTraversal()",
+          "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left
+      to sieve " <<
+          "(local particles that are rolled over=" << _particlesThatCanNotBeLiftedWithinTheirTree.size() << ")"
+      );
+    */
 
 
-  // shallow clear, as the pointers have already been rolled over into _particlesThatHaveToBeSieved
+    // shallow clear, as the pointers have already been rolled over into _particlesThatHaveToBeSieved
     _particlesThatCanNotBeLiftedWithinTheirTree[p.first].clear();
   }
 }
@@ -176,21 +177,21 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
 
 template <typename T>
 void toolbox::particles::SieveParticles<T>::addParticleThatCanNotBeLiftedWithinItsTree(T* p, int tree) {
-  tarch::multicore::Lock lock(_particlesThatCanNotBeLiftedWithinTheirTreeSemaphore, tree==GlobalSort);
+  tarch::multicore::Lock lock(_particlesThatCanNotBeLiftedWithinTheirTreeSemaphore, tree == GlobalSort);
   _particlesThatCanNotBeLiftedWithinTheirTree[tree].push_back(p);
 }
 
 
 template <typename T>
 bool toolbox::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices(int tree) const {
-  return _particlesThatHaveToBeSieved.count(tree)>0 and not _particlesThatHaveToBeSieved.at(tree).empty();
+  return _particlesThatHaveToBeSieved.count(tree) > 0 and not _particlesThatHaveToBeSieved.at(tree).empty();
 }
 
 
 template <typename T>
 typename toolbox::particles::SieveParticles<T>::ParticleList toolbox::particles::SieveParticles<
-  T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker&  marker, int tree) {
-  tarch::multicore::Lock lock(_particlesToBeSievedSemaphore, tree==GlobalSort);
+  T>::getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int tree) {
+  tarch::multicore::Lock lock(_particlesToBeSievedSemaphore, tree == GlobalSort);
 
   ParticleList                    result;
   typename ParticleList::iterator p = _particlesThatHaveToBeSieved[tree].begin();

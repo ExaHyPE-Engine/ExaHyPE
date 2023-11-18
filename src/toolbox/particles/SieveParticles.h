@@ -154,7 +154,9 @@ public:
    *
    * @param originatingTree Number of tree (positive integer) or GlobalSort.
    */
-  ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree);
+  ParticleList getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker, int originatingTree
+  );
 
   /**
    * Fine out how many particles still to sieve
@@ -192,7 +194,7 @@ private:
   static tarch::multicore::BooleanSemaphore _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
   static tarch::multicore::BooleanSemaphore _particlesToBeSievedSemaphore;
 
-  std::map<int, ParticleList>  _particlesThatCanNotBeLiftedWithinTheirTree;
+  std::map<int, ParticleList> _particlesThatCanNotBeLiftedWithinTheirTree;
 
   /**
    * Particles that should be sieved
@@ -205,7 +207,7 @@ private:
    *
    * The list is populated by finishedTraversal().
    */
-  std::map<int, ParticleList>  _particlesThatHaveToBeSieved;
+  std::map<int, ParticleList> _particlesThatHaveToBeSieved;
 };
 
 
