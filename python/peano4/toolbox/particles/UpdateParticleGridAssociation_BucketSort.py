@@ -45,7 +45,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     and then we are done.
 
     So, in theory, we could basically take UpdateParticleGridAssociation_LiftDrop
-    and remove the lifts and drops. However, this is slow. 
+    and remove the lifts and drops. However, this is slow.
 
 
     ## Impact on particle storage
@@ -115,7 +115,6 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 """
     )
 
-    
     _Template_Sieve = jinja2.Template(
         """
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices(_spacetreeId) ) {
@@ -138,24 +137,23 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 """
     )
 
-    
     def get_body_of_operation(self, operation_name):
         """!
 
         Core actions triggered when we run through the mesh
-        
+
         See class description. If you compare this function to
         UpdateParticleGridAssociation_LiftDrop.get_body_of_operation(), we see
         that we use our modified lift routine when particles have moved and in
-        return can omit the dropping. That is, the cousin's realisation is 
-            
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~    
+        return can omit the dropping. That is, the cousin's realisation is
+
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
             result =  self._Template_Drop.render(**self.d)
             result += self._Template_Sieve.render(**self.d)
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~    
-        
-        while we only do the sieve here. 
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        while we only do the sieve here.
 
         """
         result = "\n"
@@ -174,14 +172,18 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
-
     def get_constructor_body(self):
-        return super( UpdateParticleGridAssociation_BucketSort, self ).get_constructor_body() + """
+        return (
+            super(InsertParticlesAlongCartesianMesh).get_constructor_body()
+            + """
             _spacetreeId              = treeNumber;
           """
-
+        )
 
     def get_attributes(self):
-        return super( UpdateParticleGridAssociation_BucketSort, self ).get_attributes() + """
+        return (
+            super(InsertParticlesAlongCartesianMesh).get_attributes()
+            + """
             int _spacetreeId;
           """
+        )

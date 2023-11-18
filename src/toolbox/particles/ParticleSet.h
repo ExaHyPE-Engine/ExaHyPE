@@ -229,15 +229,17 @@ public:
 
   /**
    * Make routine from SieveParticles public
-   * 
+   *
    * Delegate through. This way, we don't have to expose the actual
    * sieve object.
    */
-  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree = SieveParticles<T>::GlobalSort);
+  static ParticleList getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker, int originatingTree = SieveParticles<T>::GlobalSort
+  );
 
   /**
    * Make routine from SieveParticles public
-   * 
+   *
    * Delegate through. This way, we don't have to expose the actual
    * sieve object.
    */
@@ -347,7 +349,7 @@ protected:
   /**
    * Map of persistent particles that have to be sieved
    */
-  static SieveParticles<T>  _sieveParticles;
+  static SieveParticles<T> _sieveParticles;
 
 #if PeanoDebug >= 1
   tarch::la::Vector<Dimensions, double> _debugX;

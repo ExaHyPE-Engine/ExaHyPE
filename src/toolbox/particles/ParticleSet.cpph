@@ -3,7 +3,7 @@
 
 
 template <typename T>
-toolbox::particles::SieveParticles<T>  toolbox::particles::ParticleSet<T>::_sieveParticles;
+toolbox::particles::SieveParticles<T> toolbox::particles::ParticleSet<T>::_sieveParticles;
 
 template <typename T>
 tarch::logging::Log toolbox::particles::ParticleSet<T>::_log("toolbox::particles::ParticleSet");
