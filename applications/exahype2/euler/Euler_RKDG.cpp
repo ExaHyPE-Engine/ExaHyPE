@@ -1,15 +1,15 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "Euler.h"
+#include "Euler_RKDG.h"
 
-tarch::logging::Log applications::exahype2::euler::Euler::_log("applications::exahype2::euler::Euler");
+tarch::logging::Log applications::exahype2::euler::Euler_RKDG::_log("applications::exahype2::euler::Euler_RKDG");
 
-void applications::exahype2::euler::Euler::initialCondition(
+void applications::exahype2::euler::Euler_RKDG::initialCondition(
   double* __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,
-  // const tarch::la::Vector<Dimensions, int>&    index,
-  bool gridIsConstructred
+  const tarch::la::Vector<Dimensions, int>&    index,
+  bool gridIsConstructed
 ) {
   using s = VariableShortcuts;
 
@@ -60,11 +60,10 @@ void applications::exahype2::euler::Euler::initialCondition(
 #endif
 }
 
-void applications::exahype2::euler::Euler::boundaryConditions(
+void applications::exahype2::euler::Euler_RKDG::boundaryConditions(
   const double* __restrict__ Qinside,
   double* __restrict__ Qoutside,
   const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
   double                                       t,
   int                                          normal
 ) {
@@ -89,7 +88,7 @@ void applications::exahype2::euler::Euler::boundaryConditions(
 #endif
 }
 
-::exahype2::RefinementCommand applications::exahype2::euler::Euler::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::euler::Euler_RKDG::refinementCriterion(
   const double* __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,

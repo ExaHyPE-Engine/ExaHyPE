@@ -12,7 +12,7 @@ import exahype2
 # Some reasonable default values
 dimensions                = 2
 cell_size                 = 0.1
-amr_levels                = 3
+amr_levels                = 2
 patch_size                = 4
 rk_order                  = 2
 dg_order                  = 1
@@ -51,7 +51,7 @@ solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
 solvers.update(aderdg_rusanov_solvers)
-solver = "FVRusanovGlobalAdaptive"
+solver = "ADERDGRusanovGlobalAdaptive"
 
 build_modes = {
   "Release":peano4.output.CompileMode.Release,
@@ -144,7 +144,13 @@ my_project = exahype2.Project(
   executable=executable_name
 )
 
-solver_name = "Euler"
+if solver_type in aderdg_rusanov_solvers:
+  solver_name = "Euler_ADERDG"
+elif solver_type in rkdg_rusanov_solvers:
+  solver_name = "Euler_RKDG"
+elif solver_type in fv_rusanov_solvers:
+  solver_name = "Euler_FV"
+
 unknowns  = {"rho":1, "v":args.dim, "e":1}
 
 my_solver = None
@@ -298,7 +304,7 @@ if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
 
 if args.visualise:
-  output_patch_file = solution_dir + "/solution-Euler.peano-patch-file"
+  output_patch_file = solution_dir + "/solution-" + str(solver_name) + ".peano-patch-file"
   if os.path.isfile(output_patch_file):
       subprocess.call([
           "python3", "../../../python/peano4/visualisation/render.py",
@@ -325,7 +331,7 @@ my_project.constants.define_value("GAMMA", str(gamma))
 my_project.constants.define_value("SCENARIO", str(args.scenario))
 my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
 
-my_project.output.makefile.add_cpp_file("Euler.cpp")
+my_project.output.makefile.add_cpp_file(solver_name + ".cpp")
 
 my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
 
