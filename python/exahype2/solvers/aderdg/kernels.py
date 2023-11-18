@@ -34,7 +34,7 @@ def create_abstract_solver_declarations(
       int                                          normal
     ) = 0;
 {% else %}
-    double maxEigenvalue(
+    virtual double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeX,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -44,7 +44,17 @@ def create_abstract_solver_declarations(
     );
 {% endif %}
 
-{% if FLUX_IMPLEMENTATION!="<user-defined>" %}
+{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+    virtual void flux(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
+    ) = 0;
+{% elif FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<empty>" %}
     virtual void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -66,10 +76,22 @@ def create_abstract_solver_declarations(
     double dt,
     int normal,
     {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ) = 0;
+{% elif NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<empty>" %}
+    virtual void nonconservativeProduct(
+    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
+    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
+    const tarch::la::Vector<Dimensions, double> &faceCentre,
+    const tarch::la::Vector<Dimensions, double> &volumeH,
+    double t,
+    double dt,
+    int normal,
+    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ);
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) = 0;
+{% elif SOURCE_TERM_IMPLEMENTATION!="<none>" and SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
+    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
 {% endif %}
 
 {% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}
@@ -171,9 +193,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" and SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>"%}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& volumeCentre, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
   {{SOURCE_TERM_IMPLEMENTATION}}
-}  
+}
 {% endif %}
 
 {% if MATERIAL_PARAM_IMPLEMENTATION!="<empty>" and MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>"%}
@@ -617,7 +639,6 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const T*__restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
