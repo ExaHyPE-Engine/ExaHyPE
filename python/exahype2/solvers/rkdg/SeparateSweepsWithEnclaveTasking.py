@@ -158,7 +158,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
         self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)
         self._action_set_merge_enclave_task_outcome.priority = (
-            self._baseline_action_set_priority + 1
+            self._baseline_action_set_descend_invocation_order + 1
         )
 
     def add_implementation_files_to_project(self, namespace, output, dimensions):
