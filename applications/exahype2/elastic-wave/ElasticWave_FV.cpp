@@ -1,13 +1,14 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "ElasticWave.h"
+#include "ElasticWave_FV.h"
 
-void applications::exahype2::elasticwave::ElasticWave::initialCondition(
+tarch::logging::Log applications::exahype2::elasticwave::ElasticWave_FV::_log("applications::exahype2::elasticwave::ElasticWave_FV");
+
+void applications::exahype2::elasticwave::ElasticWave_FV::initialCondition(
   double* __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,
-  //const tarch::la::Vector<Dimensions, int>&    index,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
   using s = VariableShortcuts;
 
@@ -18,7 +19,7 @@ void applications::exahype2::elasticwave::ElasticWave::initialCondition(
   Q[s::sigma + 2] = 0.0;
 }
 
-void applications::exahype2::elasticwave::ElasticWave::boundaryConditions(
+void applications::exahype2::elasticwave::ElasticWave_FV::boundaryConditions(
   const double* __restrict__ Qinside,
   double* __restrict__ Qoutside,
   const tarch::la::Vector<Dimensions, double>& x,
@@ -35,7 +36,7 @@ void applications::exahype2::elasticwave::ElasticWave::boundaryConditions(
   Qoutside[s::sigma + 2] = 0.0;
 }
 
-::exahype2::RefinementCommand applications::exahype2::elasticwave::ElasticWave::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::elasticwave::ElasticWave_FV::refinementCriterion(
   const double* __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,
@@ -53,15 +54,15 @@ void applications::exahype2::elasticwave::ElasticWave::boundaryConditions(
   }
 
   if constexpr (UseDynamicAMR) {
-  if (tarch::la::greater(t, 0.0)) {
-    const double stress = Q[s::sigma + 2];
-    if (stress >= 5) {
-      result = ::exahype2::RefinementCommand::Refine;
+    if (tarch::la::greater(t, 0.0)) {
+      const double stress = Q[s::sigma + 2];
+      if (stress >= 5) {
+        result = ::exahype2::RefinementCommand::Refine;
+      }
+      if (stress < 5) {
+        result = ::exahype2::RefinementCommand::Erase;
+      }
     }
-    if (stress < 5) {
-      result = ::exahype2::RefinementCommand::Erase;
-    }
-  }
   }
 
   return result;
