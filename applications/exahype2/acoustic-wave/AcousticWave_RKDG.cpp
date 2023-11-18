@@ -1,15 +1,15 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "AcousticWave.h"
+#include "AcousticWave_RKDG.h"
 
-tarch::logging::Log applications::exahype2::acousticwave::AcousticWave::_log("applications::exahype2::acousticwave::AcousticWave");
+tarch::logging::Log applications::exahype2::acousticwave::AcousticWave_RKDG::_log("applications::exahype2::acousticwave::AcousticWave_RKDG");
 
-void applications::exahype2::acousticwave::AcousticWave::initialCondition(
+void applications::exahype2::acousticwave::AcousticWave_RKDG::initialCondition(
   double* __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,
-  // const tarch::la::Vector<Dimensions, int>&    index,
-  bool gridIsConstructred
+  const tarch::la::Vector<Dimensions, int>&    index,
+  bool gridIsConstructed
 ) {
   using s = VariableShortcuts;
 
@@ -21,11 +21,10 @@ void applications::exahype2::acousticwave::AcousticWave::initialCondition(
 #endif
 }
 
-void applications::exahype2::acousticwave::AcousticWave::boundaryConditions(
+void applications::exahype2::acousticwave::AcousticWave_RKDG::boundaryConditions(
   const double* __restrict__ Qinside,
   double* __restrict__ Qoutside,
   const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
   double                                       t,
   int                                          normal
 ) {
@@ -39,7 +38,7 @@ void applications::exahype2::acousticwave::AcousticWave::boundaryConditions(
 #endif
 }
 
-::exahype2::RefinementCommand applications::exahype2::acousticwave::AcousticWave::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::acousticwave::AcousticWave_RKDG::refinementCriterion(
   const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t
 ) {
   using s = VariableShortcuts;
