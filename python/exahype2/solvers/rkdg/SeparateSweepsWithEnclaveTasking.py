@@ -81,23 +81,13 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
 
     ## Task priorities
-<<<<<<< HEAD
-    
-    Use the attributes self.enclave_task_priority to change the priority of the 
-    task. This value can either be a string that C++ can evaluate into a 
-    priority or a plain numerical value. I set it to 
-    
-           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority-1"
-               
-=======
 
     Use the attributes self.enclave_task_priority to change the priority of the
     task. This value can either be a string that C++ can evaluate into a
     priority or a plain numerical value. I set it to
 
-           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority"
+           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority-1"
 
->>>>>>> refs/remotes/origin/applications
     by default.
     """
 
