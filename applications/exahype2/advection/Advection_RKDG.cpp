@@ -1,26 +1,25 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "Advection.h"
+#include "Advection_RKDG.h"
 
-tarch::logging::Log applications::exahype2::advection::Advection::_log("applications::exahype2::advection::Advection");
+tarch::logging::Log applications::exahype2::advection::Advection_RKDG::_log("applications::exahype2::advection::Advection_RKDG");
 
-void applications::exahype2::advection::Advection::initialCondition(
+void applications::exahype2::advection::Advection_RKDG::initialCondition(
   double* __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,
   const tarch::la::Vector<Dimensions, int>&    index,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Q[i] = x[i];
   }
 }
 
-void applications::exahype2::advection::Advection::boundaryConditions(
+void applications::exahype2::advection::Advection_RKDG::boundaryConditions(
   const double* __restrict__ Qinside,
   double* __restrict__ Qoutside,
   const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
   double                                       t,
   int                                          normal
 ) {
@@ -29,7 +28,7 @@ void applications::exahype2::advection::Advection::boundaryConditions(
   }
 }
 
-::exahype2::RefinementCommand applications::exahype2::advection::Advection::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::advection::Advection_RKDG::refinementCriterion(
   const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t
 ) {
   using s = VariableShortcuts;

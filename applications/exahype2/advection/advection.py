@@ -12,7 +12,7 @@ import exahype2
 # Some reasonable default values
 dimensions                = 2
 cell_size                 = 0.1
-amr_levels                = 0
+amr_levels                = 2
 patch_size                = 4
 rk_order                  = 2
 dg_order                  = 3
@@ -131,7 +131,13 @@ my_project = exahype2.Project(
   executable=executable_name
 )
 
-solver_name = "Advection"
+if solver_type in aderdg_rusanov_solvers:
+  solver_name = "Advection_ADERDG"
+elif solver_type in rkdg_rusanov_solvers:
+  solver_name = "Advection_RKDG"
+elif solver_type in fv_rusanov_solvers:
+  solver_name = "Advection_FV"
+
 unknowns  = {"v":args.dim}
 
 my_solver = None
@@ -285,7 +291,7 @@ if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
 
 if args.visualise:
-  output_patch_file = solution_dir + "/solution-Advection.peano-patch-file"
+  output_patch_file = solution_dir + "/solution-" + str(solver_name) + ".peano-patch-file"
   if os.path.isfile(output_patch_file):
       subprocess.call([
           "python3", "../../../python/peano4/visualisation/render.py",
@@ -311,7 +317,7 @@ my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 my_project.constants.define_value("ADVECTION_SPEED", str(advection_speed))
 my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
 
-my_project.output.makefile.add_cpp_file("Advection.cpp")
+my_project.output.makefile.add_cpp_file(solver_name + ".cpp")
 
 my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
 
