@@ -2,7 +2,7 @@
 #SBATCH --job-name=mem-sort
 #SBATCH -p multi
 #SBATCH --nodes=1
-#SBATCH -c 8
+#SBATCH -c 128
 #SBATCH --time=24:00:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
@@ -58,7 +58,7 @@ do
                      domain-decomposition.global-continuous.sort-on-the-fly.vectorise-distance-checks
   do
    EXEC_FILE=noh2D-np-2400.$REALISATION
-   echo Run ./$EXEC_FILE
+   echo Run ./$EXEC_FILE with $CORES
    srun likwid-pin -c 0-$CORES ./$EXEC_FILE > $EXEC_FILE.out
    tar -czvf Hamilton8-2400-$OMP_NUM_THREADS-threads.tar.gz noh2D-np-2400.*.out
   done
