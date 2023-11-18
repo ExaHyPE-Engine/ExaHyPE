@@ -52,8 +52,8 @@ def parse(device, call_semantics, data_flow, parallelisation):
     if "Number of patches per thread/compute kernel launch" in line:
       current_number_of_patches = line.split(":")[-1].strip()
     if device in line and call_semantics in line and data_flow in line and parallelisation in line:
-      current_throughput_kernel = 1.0/float(line.split("|")[2])
-      current_throughput_total  = 1.0/float(line.split("|")[4])
+      current_throughput_kernel = 1.0/float(line.split("|")[4])
+      current_throughput_total  = 1.0/float(line.split("|")[2])
       throughput_kernel.append(current_throughput_kernel)
       throughput_total.append(current_throughput_total)
   return throughput_total, throughput_kernel
@@ -94,5 +94,5 @@ for device in Devices:
 
   plt.xscale('log')
   plt.yscale('log')
-  plt.savefig(output + "-log.png")
-  #plt.savefig(output + "-log.pdf")
+  plt.savefig(output + "-log.png", bbox_inches='tight')
+  #plt.savefig(output + "-log.pdf", bbox_inches='tight')
