@@ -61,7 +61,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       const tarch::la::Vector<Dimensions,int>&     index,
-      bool                                         gridIsConstructred
+      bool                                         gridIsConstructed
     ) override;
     {% endif %}
 

@@ -161,7 +161,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * __restrict__                        Q,
   const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
   const tarch::la::Vector<Dimensions,double>&  meshCellH,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }

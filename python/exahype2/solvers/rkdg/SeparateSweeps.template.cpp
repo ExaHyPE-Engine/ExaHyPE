@@ -35,9 +35,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   const tarch::la::Vector<Dimensions,int>&     point,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
-  logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructred );
+  logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructed );
 
   // @todo Implement your stuff here, but ensure all entries are
   //   initialised incl all auxiliary variables. The snippet below

@@ -60,7 +60,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
       const tarch::la::Vector<Dimensions,double>&  meshCellH,
-      bool                                         gridIsConstructred
+      bool                                         gridIsConstructed
     ) override;
     {% endif %}
 

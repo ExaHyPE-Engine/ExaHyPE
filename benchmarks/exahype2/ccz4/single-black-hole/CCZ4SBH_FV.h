@@ -36,7 +36,7 @@ public:
     double* __restrict__ Q,
     const tarch::la::Vector<Dimensions, double>& volumeCentre,
     const tarch::la::Vector<Dimensions, double>& volumeH,
-    bool                                         gridIsConstructred
+    bool                                         gridIsConstructed
   ) override;
 
   /**

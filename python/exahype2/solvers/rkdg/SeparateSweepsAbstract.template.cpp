@@ -144,7 +144,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   const tarch::la::Vector<Dimensions,int>&     index,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }

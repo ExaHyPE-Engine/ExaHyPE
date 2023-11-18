@@ -140,7 +140,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   [[maybe_unused]] double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-  [[maybe_unused]] bool                                         gridIsConstructred
+  [[maybe_unused]] bool                                         gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }

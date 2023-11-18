@@ -109,7 +109,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *              function is tied to the point. You just have to scale it with h. By
      *              translating the shape function's centre to x, you can reconstruct where
      *              the shape function is placed within the computational domain.
-     * @param gridIsConstructred Boolean holds if grid is completely constructed.
+     * @param gridIsConstructed Boolean holds if grid is completely constructed.
      *              initialCondition() is invoked both by the grid construction and the
      *              initialisation, and you might want to do different things depending on
      *              the context. For most applications, they initialise data if and only if
@@ -122,7 +122,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       const tarch::la::Vector<Dimensions,int>&     index,
-      bool                                         gridIsConstructred
+      bool                                         gridIsConstructed
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<none>" %}

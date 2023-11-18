@@ -64,7 +64,7 @@ class applications::exahype2::ccz4::RKDGCCZ4: public AbstractRKDGCCZ4 {
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
       const tarch::la::Vector<Dimensions,int>&     index,
-      bool                                         gridIsConstructred
+      bool                                         gridIsConstructed
     ) override;
     
 
