@@ -15,7 +15,7 @@ import shutil
 ########################################################################################
 
 Parallelisation_DomainDecomposition = "domain-decomposition"
-Parallelisation_Tasks = "tasks"
+Parallelisation_ForkJoinTasks = "fork-join-tasks-per-sweep"
 
 Storage_Scattered = "scattered"
 Storage_ContinuousPerVertex = "continuous-per-vertex"
@@ -27,6 +27,7 @@ Sorting_OnTheFly = "sort-on-the-fly"
 Enable_VectorisationOfAllComparisons = "vectorise-all"
 Enable_VectorisationOfDistanceChecks = "vectorise-distance-checks"
 
+   
 Choices = [
     Parallelisation_DomainDecomposition + "." + Storage_Scattered,
     Parallelisation_DomainDecomposition
@@ -105,9 +106,7 @@ Choices = [
     + Sorting_OnTheFly
     + "."
     + Enable_VectorisationOfAllComparisons,
-    #    "continuous-per-vertex-vectorise",
-    #    "global-continuous-vectorise",
-    #    "tasks",
+    Parallelisation_ForkJoinTasks + "." + Storage_Scattered,
 ]
 
 
@@ -322,6 +321,16 @@ if __name__ == "__main__":
             swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_for_coalesced_memory_access
         )
         project.initialisation_steps_task_graph_compiler = (
+            swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
+        )
+    elif (
+        args.realisation.split(".")[0] == Parallelisation_ForkJoinTasks
+        and args.realisation.split(".")[1] == Storage_Scattered
+    ):
+        project.algorithm_steps_task_graph_compiler = (
+            swift2.graphcompiler.map_initialisation_steps_onto_task_tree
+        )
+        project.map_particle_steps_onto_task_tree = (
             swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
         )
     else:
