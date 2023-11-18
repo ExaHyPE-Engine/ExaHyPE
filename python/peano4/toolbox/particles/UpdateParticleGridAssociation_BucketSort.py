@@ -173,27 +173,17 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
         return __name__.replace(".py", "").replace(".", "_")
 
     def get_constructor_body(self):
-<<<<<<< HEAD
         return (
             super(InsertParticlesAlongCartesianMesh).get_constructor_body()
             + """
-            _particleNumberOnThisTree = 0;
-=======
-        return super( UpdateParticleGridAssociation_BucketSort, self ).get_constructor_body() + """
->>>>>>> branch 'particles-sieve-tuning' of https://gitlab.lrz.de/hpcsoftware/Peano.git
             _spacetreeId              = treeNumber;
           """
         )
 
     def get_attributes(self):
-<<<<<<< HEAD
         return (
             super(InsertParticlesAlongCartesianMesh).get_attributes()
             + """
-            int _particleNumberOnThisTree;
-=======
-        return super( UpdateParticleGridAssociation_BucketSort, self ).get_attributes() + """
->>>>>>> branch 'particles-sieve-tuning' of https://gitlab.lrz.de/hpcsoftware/Peano.git
             int _spacetreeId;
           """
         )
