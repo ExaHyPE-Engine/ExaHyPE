@@ -106,7 +106,7 @@ namespace tarch::accelerator::omp {
         }
 
         start = omp_get_wtime();
-#pragma omp target teams distribute parallel for simd device(deviceId) schedule(static, 1)
+#pragma omp target teams distribute parallel for simd device(deviceId)
         for (size_t j = 0; j < N; j++) {
           b[j] = a[j];
         }
