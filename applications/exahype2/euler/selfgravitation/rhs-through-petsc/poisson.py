@@ -127,6 +127,10 @@ poisson_solver = petsc.solvers.CollocatedLowOrderDiscretisation(
     1,
   )
 
+assert (
+    poisson_solver.name != euler_solver.name
+), "names the solvers should not be the same"
+
 euler_solver.set_implementation(refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation)
 
 euler_project.add_solver(euler_solver)

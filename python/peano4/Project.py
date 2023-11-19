@@ -294,6 +294,10 @@ class Project (object):
           lhs.output.makefile.d["DIM"] == lhs.output.makefile.d["DIM"]
       ), "dimensions of the projects being merged don't match"
 
+      assert (
+          lhs.output.makefile.d["MODE"] == lhs.output.makefile.d["MODE"]
+      ), "compile modes of the projects being merged don't match"
+
       # assert (
       #   lhs._domain_offset == rhs._domain_offset and
       #   lhs._domain_size == rhs._domain_size and
@@ -313,6 +317,7 @@ class Project (object):
 
       result_project = Project(lhs.namespace, project_name, lhs.directory)
       result_project.output.makefile.set_executable_name(executable)
+      result_project.output.readme.set_executable_name(executable)
 
       # merging all DaStGen2 and ParticleSet attributes of datamodel
       for data in lhs.datamodel.cell_data + rhs.datamodel.cell_data:
@@ -330,31 +335,36 @@ class Project (object):
       for step in lhs.solversteps._steps + rhs.solversteps._steps:
         result_project.solversteps.append(step)
 
-      # merge all keys of makefile dictionary
-      result_project.output.makefile.d["CMAKE_CORE_LIBS"] = lhs.output.makefile.d["CMAKE_CORE_LIBS"]
-      for name in rhs.output.makefile.d["CMAKE_CORE_LIBS"]:
-        result_project.output.makefile.add_cmake_core_library(name)
-
+      # set compilers
       result_project.output.makefile.d["CXX"] = lhs.output.makefile.d["CXX"]
+      result_project.output.makefile.d["FC"] = lhs.output.makefile.d["FC"]
 
-      result_project.output.makefile.d["CXXFLAGS"] = lhs.output.makefile.d["CXXFLAGS"]
-      for cxxflag in rhs.output.makefile.d["CXXFLAGS"].split(" "):
-        result_project.output.makefile.add_CXX_flag(cxxflag)
+      # merge all keys of makefile dictionary
+      for library in rhs.output.makefile.d["CMAKE_CORE_LIBS"] + rhs.output.makefile.d["CMAKE_CORE_LIBS"]:
+        result_project.output.makefile.add_cmake_core_library(library)
 
-      result_project.output.makefile.d["FCFLAGS"] = lhs.output.makefile.d["FCFLAGS"]
-      for fcflag in rhs.output.makefile.d["FCFLAGS"].split(" "):
-        result_project.output.makefile.add_Fortran_flag(fcflag)
+      for flag in lhs.output.makefile.d["CXXFLAGS"].split():
+        result_project.output.makefile.add_CXX_flag(flag)
+      for flag in rhs.output.makefile.d["CXXFLAGS"].split():
+        result_project.output.makefile.add_CXX_flag(flag)
 
-      result_project.output.makefile.d["LDFLAGS"] = lhs.output.makefile.d["LDFLAGS"]
-      for ldflag in rhs.output.makefile.d["LDFLAGS"].split(" "):
-        result_project.output.makefile.add_linker_flag(ldflag)
+      for flag in lhs.output.makefile.d["FCFLAGS"].split():
+        result_project.output.makefile.add_Fortran_flag(flag)
+      for flag in rhs.output.makefile.d["FCFLAGS"].split():
+        result_project.output.makefile.add_Fortran_flag(flag)
+
+      for flag in lhs.output.makefile.d["LDFLAGS"].split():
+        result_project.output.makefile.add_linker_flag(flag)
+      for flag in rhs.output.makefile.d["LDFLAGS"].split():
+        result_project.output.makefile.add_linker_flag(flag)
 
       # result_project.output.makefile.add_gpu_object()
       # result_project.output.makefile.d["CMAKE_LIBS"]
 
       result_project.output.makefile.d["LIBS"] = lhs.output.makefile.d["LIBS"] + rhs.output.makefile.d["LIBS"]
 
-      result_project.output.makefile.d["FORTRAN_MODULES"] = lhs.output.makefile.d["FORTRAN_MODULES"]
+      for module in lhs.output.makefile.d["FORTRAN_MODULES"]:
+        result_project.output.makefile.add_Fortran_module(module)
       for module in rhs.output.makefile.d["FORTRAN_MODULES"]:
         result_project.output.makefile.add_Fortran_module(module)
 
@@ -362,10 +372,57 @@ class Project (object):
       
       result_project.output.makefile.d["GENERATED_INCLUDE_DIRS"] = lhs.output.makefile.d["GENERATED_INCLUDE_DIRS"] | rhs.output.makefile.d["GENERATED_INCLUDE_DIRS"]
 
-      # ...
+      for filename in lhs.output.makefile.hfiles:
+        result_project.output.makefile.add_h_file(filename, False)
+      for filename in rhs.output.makefile.hfiles:
+        result_project.output.makefile.add_h_file(filename, False)
+      for filename in lhs.output.makefile.cppfiles:
+        result_project.output.makefile.add_cpp_file(filename, False)
+      for filename in rhs.output.makefile.cppfiles:
+        result_project.output.makefile.add_cpp_file(filename, False)
+      for filename in lhs.output.makefile.cufiles:
+        result_project.output.makefile.add_cu_file(filename, False)
+      for filename in rhs.output.makefile.cufiles:
+        result_project.output.makefile.add_cu_file(filename, False)
+      for filename in lhs.output.makefile.fortranfiles:
+        result_project.output.makefile.add_Fortran_file(filename, False)
+      for filename in rhs.output.makefile.fortranfiles:
+        result_project.output.makefile.add_Fortran_file(filename, False)
+
+      for filename in lhs.output.makefile.generated_hfiles:
+        result_project.output.makefile.add_h_file(filename, True)
+      for filename in rhs.output.makefile.generated_hfiles:
+        result_project.output.makefile.add_h_file(filename, True)
+      for filename in lhs.output.makefile.generated_cppfiles:
+        result_project.output.makefile.add_cpp_file(filename, True)
+      for filename in rhs.output.makefile.generated_cppfiles:
+        result_project.output.makefile.add_cpp_file(filename, True)
+      for filename in lhs.output.makefile.generated_cufiles:
+        result_project.output.makefile.add_cu_file(filename, True)
+      for filename in rhs.output.makefile.generated_cufiles:
+        result_project.output.makefile.add_cu_file(filename, True)
+      for filename in lhs.output.makefile.generated_fortranfiles:
+        result_project.output.makefile.add_Fortran_file(filename, True)
+      for filename in rhs.output.makefile.generated_fortranfiles:
+        result_project.output.makefile.add_Fortran_file(filename, True)
+
+      for i in lhs.output.readme._entries:
+        result_project.output.readme.add_entry(i)
+      for i in rhs.output.readme._entries:
+        result_project.output.readme.add_entry(i)
+
+      for i in lhs.output.readme._package_descriptions:
+        result_project.output.readme.add_package_description(i)
+      for i in rhs.output.readme._package_descriptions:
+        result_project.output.readme.add_package_description(i)
+
+      result_project.output.readme._package_descriptions = lhs.output.makefile.d["GENERATED_INCLUDE_DIRS"] | rhs.output.makefile.d["GENERATED_INCLUDE_DIRS"]
+
+      for artefact in result_project.output.artefacts:
+        result_project.output.add(artefact)
 
       result_project.constants.d = {**lhs.constants.d, **rhs.constants.d} #_merge(lhs.constants.d, rhs.constants.d)
-      
+
       # @todo Dmitry please befill
 
       return result_project
