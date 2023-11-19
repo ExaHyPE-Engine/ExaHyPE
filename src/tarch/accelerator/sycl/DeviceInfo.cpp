@@ -16,11 +16,12 @@
 #pragma pop_macro("Dimensions")
 #pragma pop_macro("assertion")
 
+
 namespace tarch::accelerator::sycl {
   void queryDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix) {
     constexpr unsigned int      kb      = 1024;
     constexpr unsigned int      mb      = kb * kb;
-    std::vector<::sycl::device> devices = ::sycl::device::get_devices();
+    std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
 
     unsigned int                          propertyCount = tarch::accelerator::properties.size();
     std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(devices.size(), "X"));
@@ -57,15 +58,10 @@ namespace tarch::accelerator::sycl {
       std::string work_item = ss.str();
       ss.str("");
 
-      propertyMatrix[tarch::accelerator::getPropertyOffset("Device Name")][devId] = dev.get_info<
-        ::sycl::info::device::name>();
-      propertyMatrix[tarch::accelerator::getPropertyOffset("Global Memory")][devId]
-        = std::to_string(dev.get_info<::sycl::info::device::global_mem_size>() / mb) + " mb";
-      propertyMatrix[tarch::accelerator::getPropertyOffset("Clock Frequency")][devId]
-        = std::to_string(dev.get_info<::sycl::info::device::max_clock_frequency>()) + " mHz";
-      propertyMatrix[tarch::accelerator::getPropertyOffset("Compute Units")][devId] = std::to_string(
-        dev.get_info<::sycl::info::device::max_compute_units>()
-      );
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Device Name")][devId]     = dev.get_info<::sycl::info::device::name>();
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Global Memory")][devId]   = std::to_string(dev.get_info<::sycl::info::device::global_mem_size>() / mb) + " mb";
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Clock Frequency")][devId] = std::to_string(dev.get_info<::sycl::info::device::max_clock_frequency>()) + " mHz";
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Compute Units")][devId]   = std::to_string(dev.get_info<::sycl::info::device::max_compute_units>());
 
       devId += 1;
     }
@@ -84,29 +80,29 @@ namespace tarch::accelerator::sycl {
   }
 
   std::vector<bool> testKernelLaunch() {
-    logInfo("runBenchmarks()", "Running benchmarks with Sycl backend");
+    logInfo("runBenchmarks()", "Running benchmarks with::sycl backend");
 
     std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
     std::vector<bool>           offloadResults(devices.size(), false);
     bool                        a = false;
 
     for (unsigned int i = 0; i < devices.size(); i++) {
-      ::sycl::device&         device = devices[i];
-      ::sycl::queue           queue(device);
+      ::sycl::device& device = devices[i];
+      ::sycl::queue   queue(device);
       std::cout << device.get_info<::sycl::info::device::name>() << std::endl;
-	  {
-      ::sycl::buffer<bool, 1> a_sycl(&a, ::sycl::range<1>(1));
+      {
+        ::sycl::buffer<bool, 1> a_sycl(&a, ::sycl::range<1>(1));
 
-      queue.submit([&](::sycl::handler& cgh) {
-        ::sycl::stream   out(1024, 256, cgh);
-        ::sycl::accessor a_acc = a_sycl.get_access<::sycl::access::mode::read_write>(cgh);
-        // same as ::sycl::accessor a_acc{a_sycl, cgh, ::sycl::read_write};
+        queue.submit([&](::sycl::handler& cgh) {
+          ::sycl::stream   out(1024, 256, cgh);
+          ::sycl::accessor a_acc = a_sycl.get_access<::sycl::access::mode::read_write>(cgh);
+          // same as::sycl::accessor a_acc{a_sycl, cgh,::sycl::read_write};
 
-        cgh.parallel_for(1, [=](::sycl::id<1> idx) { a_acc[0] = true; });
-      });
+          cgh.parallel_for(1, [=](::sycl::id<1> idx) { a_acc[0] = true; });
+        });
 
-      queue.wait();
-	  }
+        queue.wait();
+      }
 
       offloadResults[i] = a;
       a                 = false;
@@ -117,9 +113,71 @@ namespace tarch::accelerator::sycl {
 
   std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks() {
     int numberOfDevices = ::sycl::device::get_devices(::sycl::info::device_type::gpu).size();
-    return std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds>(
-      numberOfDevices, tarch::accelerator::BenchmarkResultInNanoSeconds()
-    );
+
+    constexpr uint64_t repeats = tarch::accelerator::repeats;
+    constexpr size_t   N       = tarch::accelerator::N;
+
+    std::vector<float>          a(N, 0.125f);
+    std::vector<float>          b(N, 42.0f);
+    std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
+    if (numberOfDevices != devices.size()) {
+      logWarning(
+        "DeviceInfo()",
+        "The number of devices returned by Tarch is not the same as the number of SYCL GPU targets. Tarch: " << numberOfDevices << ", selector device_type::gpu: " << devices.size()
+      );
+    }
+
+    ::sycl::property_list propList{::sycl::property::queue::enable_profiling()};
+    // Enabling Profiling is not slower than using C++ chrono according to my tests
+
+    std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
+    for (int deviceId = 0; deviceId < numberOfDevices; deviceId++) {
+      tarch::accelerator::BenchmarkResultInNanoSeconds& benchmarkResult = benchmarkResults[deviceId];
+      benchmarkResult.repeats                                           = repeats;
+      benchmarkResult.allocatedDataSize                                 = 2 * N * sizeof(float);
+      ::sycl::device dev                                                = devices[deviceId];
+      ::sycl::queue  queue                                              = ::sycl::queue(dev, propList);
+
+      // Create buffers for vectors a and b
+      ::sycl::buffer<float, 1> d_a(a.data(), N);
+      ::sycl::buffer<float, 1> d_b(b.data(), N);
+
+      try {
+        for (uint i = 0; i < repeats + 1; i++) {
+          //  Create an event to measure the execution time of the second kernel
+          ::sycl::event kernelEvent;
+
+          // Submit a command group for the second kernel to access vectors aCopy and bCopy
+          kernelEvent = queue.submit([&](::sycl::handler& cgh) {
+            auto ka = d_a.template get_access<::sycl::access::mode::read>(cgh);
+            auto kb = d_b.template get_access<::sycl::access::mode::write>(cgh);
+
+            cgh.parallel_for<class copy_kernel>(::sycl::range<1>{N}, [=](::sycl::id<1> idx) { kb[idx] = ka[idx]; });
+          });
+
+          // Wait for the second kernel to complete
+          kernelEvent.wait();
+          // Get the execution time
+          auto kernelStartTime     = kernelEvent.get_profiling_info<::sycl::info::event_profiling::command_start>();
+          auto kernelEndTime       = kernelEvent.get_profiling_info<::sycl::info::event_profiling::command_end>();
+          auto kernelExecutionTime = (kernelEndTime - kernelStartTime); // Convert nanoseconds to seconds
+
+          if (i > 0) {
+            // std::cout << kernelExecutionTime << std::endl;
+            benchmarkResult.GPUtoGPUCopy += static_cast<uint64_t>(kernelExecutionTime);
+          }
+
+          queue.wait();
+        }
+      } catch (const ::sycl::exception& e) {
+        std::cerr
+          << "DeviceInfo()"
+          << "Error in Vector copy benchmark" << e.what() << std::endl;
+      }
+    }
+
+
+    return benchmarkResults;
   }
 } // namespace tarch::accelerator::sycl
 
