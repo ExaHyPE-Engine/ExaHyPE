@@ -23,7 +23,7 @@
 #define AlignmentOnHeap 16
 #endif
 
-#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
+#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static //inline
 
 #undef OpenMPTaskGroup
 
