@@ -95,16 +95,16 @@ srcdir_full_path=`cd $srcdir && pwd`
 # Define all the compiler and linker variables of Peano
 # ===============================================================
 #
-CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0 -O3"
-CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics -O3"
-CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g -O2"
-CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g -O2"
+CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0 "
+CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics "
+CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 "
+CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 "
 CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g -O0"
 
-CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0 -O3"
-CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics -O3"
-CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g -O2"
-CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g -O2"
+CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0 "
+CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics "
+CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 "
+CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 "
 CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0"
 
 # Note: the flag "-g" is essentially a flag for the compiler driver
@@ -328,10 +328,10 @@ if test "$gpu" == cuda; then
 
   NVCC_FLAGS="-forward-unknown-to-host-compiler -I$srcdir_full_path/src -ccbin=$CXX"
 
-  NVCC_FLAGS_RELEASE="$NVCC_FLAGS -O3"
-  NVCC_FLAGS_STATS="$NVCC_FLAGS -g -O2"
-  NVCC_FLAGS_ASSERTS="$NVCC_FLAGS -g -O2"
-  NVCC_FLAGS_TRACE="$NVCC_FLAGS -g -O2"
+  NVCC_FLAGS_RELEASE="$NVCC_FLAGS"
+  NVCC_FLAGS_STATS="$NVCC_FLAGS"
+  NVCC_FLAGS_ASSERTS="$NVCC_FLAGS"
+  NVCC_FLAGS_TRACE="$NVCC_FLAGS"
   NVCC_FLAGS_DEBUG="$NVCC_FLAGS -g -O0"
 fi
 
