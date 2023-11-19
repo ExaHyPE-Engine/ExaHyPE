@@ -26,7 +26,7 @@ Colours = [ "#ff0000",
 
 
 Devices         = ["host", "device"]
-CallSemantics   = ["functors", "stateless"]
+CallSemantics   = ["heap-functors", "stateless"]
 DataFlow        = ["patch-wise", "batched", "task-graph", "insitu"]
 Parallelisation = ["sequential", "parallel-for", "subtasks", "managed", "usm", "copy"]
 

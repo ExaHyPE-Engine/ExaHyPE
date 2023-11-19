@@ -4,52 +4,41 @@
 
 A suite of benchmark runs which assess the throughput of the Euler Finite Volume kernels.
 
-ExaHyPE 2's implementation of the Euler equations is shipped
-with a benchmark to assess the speed of the compute kernels.
-The benchmark solely computes the throughput on the node or one GPU, respectively, and thus
-provides key information how efficient these core kernels perform on your system.
-It neglects other effects such as multithreading orchestration overhead or MPI data exchange, grid
-management, time stepping behaviour, halo data exchange, and so forth.
-While this might be of limited
-relevance for large-scale runs, where scalability, IO overheads and other
-factors play a dominant role, it tells us what the core compute routines could,
-in theory, deliver. 
+ExaHyPE 2's implementation of the Euler equations is shipped with a benchmark to assess the speed of the compute kernels.
+The benchmark solely computes the throughput and thus provides key information how efficient these core kernels perform on your system.
+It neglects other effects such as multithreading orchestration overhead or MPI data exchange, grid management, time stepping behaviour, halo data exchange, and so forth.
+While this might be of limited relevance for large-scale runs, where scalability, IO overheads and other
+factors play a dominant role, it tells us what the core compute routines could, in theory, deliver.
 
-
-To run the benchmark, change into the benchmark's directory. The directory 
+To run the benchmark, change into the benchmark's directory. The directory
 hosts a set of benchmarks which assess the sole performance of the individual
-kernels on the CPU and GPUs. These benchmarks are shipped through Python 
-scripts which should run out-of-the-box. Besides the benchmarking scripts 
-themselves, there are also some postprocessing scripts which help you to 
-produce fancy graphs.
-
-
+kernels on the CPU and GPUs. These benchmarks are shipped through Python
+scripts which should run out-of-the-box. Besides the benchmarking scripts
+themselves, there is also a plotting script which help you to produce fancy graphs.
 
 # Build and run benchmarks
-
 There are different benchmarks for the different solver types (e.g., Finite
 Volumes (FV) and Discontinuous Galerkin (DG)) and you have to build different executables
 for different patch sizes, orders or dimensions.
 
-
 ## Finite Volumes Rusanov
-
 To build the executables you can run following commands:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
     export PYTHONPATH=../../../python
 
-    python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 4
-    python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 6
-    python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 8
+    python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 4 --num-patches 512
+    python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 6 --num-patches 512
+    python3 kernel-benchmarks-fv-rusanov.py --dim 2 --patch-size 8 --num-patches 512
 
-    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 4
-    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 6
-    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 8
+    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 4 --num-patches 512
+    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 6 --num-patches 512
+    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 8 --num-patches 512
+
+    make -j
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Cleanup
-
 You can throw away all of the glue code after a successful build.
 This is triggered by:
 
@@ -60,14 +49,12 @@ This is triggered by:
 
 If you want to keep the executable, you will need to rename it.
 
-
 ## Run benchmarks
-
 All the benchmarks run out of the box without any user interaction once built.
-For most runs, you don't have to specify anything. 
+For most runs, you don't have to specify anything.
 
-However, OpenMP, SYCL and other back-ends might want you to configure your 
-environment in specific ways. You might have to set some environment 
+However, OpenMP, SYCL and other back-ends might want you to configure your
+environment in specific ways. You might have to set some environment
 variables specifying the GPUs to use or core counts accordingly.
 The exact usage obviously depends strongly @ref page_compiler_specific_settings "on your software stack".
 
@@ -75,123 +62,104 @@ The JIT compiler crashes due to the FPGA emulation device on our cluster (NCC). 
 your machine, try putting SYCL_DEVICE_FILTER=gpu before the command to run the benchmark.
 
 # Outputs
-
 All of them produce outputs in a similar way, so it is easier to interpret the
-outcomes. All outcome is piped onto the terminal. It looks similar to 
+outcomes. All outcome is piped onto the terminal. It looks similar to
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 ===============================================================
-  Number of threads launching compute kernels: 2
-  Number of patches per thread/compute kernel launch: 2048
+Dimensions: 3
+Number of threads launching compute kernels: 1
+Number of patches per thread/compute kernel launch: 512
+Number of compute threads: 4
+Number of GPU devices: 0
+Number of finite volumes per axis per patch: 8
+Number of samples per measurement: 100
+Evaluate max. eigenvalue (reduction step): 0
 ===============================================================
-host, functors, patch-wise, no parallelism   | 0.200563      | 2.39089e-08   | 0.215852      | 1.28658e-08   | (avg=0.200563,#measurements=64,max=0.311483(value #13),min=0.190125(value #0),+55.3047%,-5.20435%,std-deviation=0.018537)     | (avg=0.215852,#measurements=64,max=0.319357(value #13),min=0.194862(value #0),+47.9522%,-9.72387%,std-deviation=0.0255064)
-host, functors, patch-wise, parallel for     | 0.200806      | 2.39379e-08   | 0.214535      | 1.27873e-08   | (avg=0.200806,#measurements=64,max=0.301395(value #36),min=0.192642(value #29),+50.0928%,-4.06561%,std-deviation=0.0146281)   | (avg=0.214535,#measurements=64,max=0.309672(value #36),min=0.201895(value #6),+44.3458%,-5.89195%,std-deviation=0.0180166)
-host, functors, patch-wise, subtasks         | 0.203034      | 2.42035e-08   | 0.216473      | 1.29028e-08   | (avg=0.203034,#measurements=64,max=0.318839(value #57),min=0.192776(value #36),+57.0378%,-5.05221%,std-deviation=0.023569)    | (avg=0.216473,#measurements=64,max=0.326912(value #57),min=0.2012(value #12),+51.0175%,-7.05526%,std-deviation=0.0269477)
-host, functors, batched, no parallelism      | 0.161613      | 1.92658e-08   | 0.17797       | 1.06078e-08   | (avg=0.161613,#measurements=64,max=0.286777(value #21),min=0.143154(value #11),+77.447%,-11.4219%,std-deviation=0.0230327)    | (avg=0.17797,#measurements=64,max=0.295708(value #21),min=0.15598(value #38),+66.1557%,-12.3563%,std-deviation=0.0264367)
-host, functors, batched, parallel for        | 0.157581      | 1.87852e-08   | 0.172964      | 1.03095e-08   | (avg=0.157581,#measurements=64,max=0.187071(value #54),min=0.144328(value #21),+18.714%,-8.41074%,std-deviation=0.00987685)   | (avg=0.172964,#measurements=64,max=0.248647(value #7),min=0.155253(value #27),+43.7564%,-10.2399%,std-deviation=0.0168561)
-host, functors, batched, subtasks            | 0.158552      | 1.89009e-08   | 0.172973      | 1.031e-08     | (avg=0.158552,#measurements=64,max=0.191554(value #36),min=0.145505(value #13),+20.8147%,-8.22878%,std-deviation=0.0102063)   | (avg=0.172973,#measurements=64,max=0.232613(value #44),min=0.156185(value #14),+34.4793%,-9.70569%,std-deviation=0.0154954)
-host, static, patch-wise, AoS, no parallelism        | 0.198548      | 2.36688e-08   | 0.211532      | 1.26083e-08   | (avg=0.198548,#measurements=64,max=0.255968(value #55),min=0.19398(value #35),+28.9196%,-2.30081%,std-deviation=0.00807871)          | (avg=0.211532,#measurements=64,max=0.330698(value #45),min=0.202723(value #17),+56.3351%,-4.16439%,std-deviation=0.0185749)
-host, static, patch-wise, AoS, parallel for          | 0.201388      | 2.40073e-08   | 0.211959      | 1.26338e-08   | (avg=0.201388,#measurements=64,max=0.252526(value #19),min=0.194176(value #18),+25.3926%,-3.58137%,std-deviation=0.0105479)          | (avg=0.211959,#measurements=64,max=0.260897(value #19),min=0.203012(value #18),+23.0883%,-4.22125%,std-deviation=0.0115763)
-host, static, patch-wise, AoS, subtasks              | 0.188723      | 2.24976e-08   | 0.230406      | 1.37333e-08   | (avg=0.188723,#measurements=64,max=0.245364(value #25),min=0.125243(value #40),+30.0125%,-33.6365%,std-deviation=0.0418451)          | (avg=0.230406,#measurements=64,max=0.254138(value #25),min=0.219803(value #63),+10.3002%,-4.60191%,std-deviation=0.00704119)
-host, static, patch-wise, SoA, no parallelism        | 0.200957      | 2.39559e-08   | 0.214007      | 1.27558e-08   | (avg=0.200957,#measurements=64,max=0.330422(value #6),min=0.19601(value #30),+64.4245%,-2.46173%,std-deviation=0.0166154)            | (avg=0.214007,#measurements=64,max=0.339868(value #6),min=0.204642(value #54),+58.8119%,-4.37606%,std-deviation=0.0228694)
-host, static, patch-wise, SoA, parallel for          | 0.202134      | 2.40962e-08   | 0.219515      | 1.30841e-08   | (avg=0.202134,#measurements=64,max=0.245362(value #7),min=0.195662(value #26),+21.386%,-3.20153%,std-deviation=0.00875163)           | (avg=0.219515,#measurements=64,max=0.3627(value #15),min=0.205485(value #27),+65.2281%,-6.3914%,std-deviation=0.0262641)
-host, static, patch-wise, SoA, subtasks              | 0.195796      | 2.33407e-08   | 0.23713       | 1.41341e-08   | (avg=0.195796,#measurements=64,max=0.263654(value #59),min=0.125698(value #54),+34.6573%,-35.8016%,std-deviation=0.0432795)          | (avg=0.23713,#measurements=64,max=0.271936(value #59),min=0.223204(value #15),+14.6781%,-5.87283%,std-deviation=0.0104714)
-device 0, patch-wise, AoS, copy, no reduction| 0.00330875     | 2.52438e-08   | 0.00369093    | 2.81595e-08       | 0.000443006   | 2.76879e-05   | (avg=0.00330875,#measurements=16,max=0.00547678(value #0),min=0.00309123(value #7),+65.524%,-6.57417%,std-deviation=0.000561352)      | (avg=0.00369093,#measurements=16,max=0.00587166(value #0),min=0.00347145(value #7),+59.0837%,-5.94636%,std-deviation=0.000564649) | (avg=0.000443006,#measurements=32,max=0.00257013(value #16),min=0.00029872(value #23),+480.156%,-32.5698%,std-deviation=0.000516137)
+host, heap-functors, patch-wise, AoS, sequential	| 0.499174	| 1.9042e-08	| 0.498219	| 1.90055e-08	| (avg=0.499174,#measurements=100,max=0.699321(value #96),min=0.466406(value #61),+40.0957%,-6.56438%,std-deviation=0.0403558)	| (avg=0.498219,#measurements=100,max=0.697953(value #96),min=0.465531(value #61),+40.0896%,-6.56101%,std-deviation=0.04028)
+host, heap-functors, patch-wise, AoS, parallel-for	| 0.51259	| 1.95538e-08	| 0.511567	| 1.95147e-08	| (avg=0.51259,#measurements=100,max=0.678048(value #74),min=0.467333(value #85),+32.2788%,-8.82902%,std-deviation=0.0507158)	| (avg=0.511567,#measurements=100,max=0.676992(value #74),min=0.466379(value #85),+32.3369%,-8.83328%,std-deviation=0.0506367)
+host, heap-functors, patch-wise, AoS, subtasks	| 0.228404	| 8.71294e-09	| 0.227527	| 8.67946e-09	| (avg=0.228404,#measurements=100,max=0.349804(value #42),min=0.184262(value #0),+53.1513%,-19.3265%,std-deviation=0.0313193)	| (avg=0.227527,#measurements=100,max=0.348893(value #42),min=0.18394(value #0),+53.3413%,-19.1568%,std-deviation=0.0312326)
+host, heap-functors, batched, AoS, sequential	| 1.02804	| 3.92166e-08	| 1.02766	| 3.9202e-08	| (avg=1.02804,#measurements=100,max=1.24919(value #69),min=0.943048(value #48),+21.5114%,-8.2674%,std-deviation=0.0553706)	| (avg=1.02766,#measurements=100,max=1.24823(value #69),min=0.943033(value #48),+21.4634%,-8.23468%,std-deviation=0.0551969)
+host, heap-functors, batched, AoS, parallel-for	| 1.05002	| 4.00549e-08	| 1.04904	| 4.00179e-08	| (avg=1.05002,#measurements=100,max=1.52619(value #81),min=0.94289(value #10),+45.3494%,-10.2023%,std-deviation=0.0893625)	| (avg=1.04904,#measurements=100,max=1.52524(value #81),min=0.942874(value #10),+45.3936%,-10.1207%,std-deviation=0.0892842)
+host, heap-functors, batched, AoS, subtasks	| 0.555365	| 2.11855e-08	| 0.554406	| 2.11489e-08	| (avg=0.555365,#measurements=100,max=0.822003(value #72),min=0.489496(value #48),+48.0114%,-11.8605%,std-deviation=0.066474)	| (avg=0.554406,#measurements=100,max=0.820852(value #72),min=0.488736(value #48),+48.0598%,-11.8451%,std-deviation=0.0664058)
+host, stateless, patch-wise, AoS, sequential	| 0.377756	| 1.44102e-08	| 0.377067	| 1.4384e-08	| (avg=0.377756,#measurements=100,max=0.686265(value #21),min=0.352375(value #71),+81.6691%,-6.71876%,std-deviation=0.0465607)	| (avg=0.377067,#measurements=100,max=0.685384(value #21),min=0.351705(value #71),+81.7669%,-6.72619%,std-deviation=0.0465163)
+host, stateless, patch-wise, AoS, parallel-for	| 0.382949	| 1.46083e-08	| 0.382237	| 1.45812e-08	| (avg=0.382949,#measurements=100,max=0.965984(value #4),min=0.349518(value #99),+152.249%,-8.72973%,std-deviation=0.0750526)	| (avg=0.382237,#measurements=100,max=0.963783(value #4),min=0.349509(value #99),+152.143%,-8.56222%,std-deviation=0.0749075)
+host, stateless, patch-wise, AoS, subtasks	| 0.178877	| 6.82361e-09	| 0.177954	| 6.78842e-09	| (avg=0.178877,#measurements=100,max=0.367741(value #24),min=0.116095(value #0),+105.583%,-35.0978%,std-deviation=0.041574)	| (avg=0.177954,#measurements=100,max=0.366769(value #24),min=0.116086(value #0),+106.103%,-34.7666%,std-deviation=0.041504)
+host, stateless, patch-wise, SoA, sequential	| 0.367048	| 1.40018e-08	| 0.367037	| 1.40013e-08	| (avg=0.367048,#measurements=100,max=0.435152(value #0),min=0.360202(value #80),+18.5547%,-1.86518%,std-deviation=0.0136257)	| (avg=0.367037,#measurements=100,max=0.434996(value #0),min=0.360192(value #80),+18.5158%,-1.86476%,std-deviation=0.0136182)
+host, stateless, patch-wise, SoA, parallel-for	| 0.37829	| 1.44306e-08	| 0.377747	| 1.44099e-08	| (avg=0.37829,#measurements=100,max=0.492023(value #95),min=0.35683(value #67),+30.0648%,-5.67288%,std-deviation=0.0243691)	| (avg=0.377747,#measurements=100,max=0.492011(value #95),min=0.35592(value #67),+30.2488%,-5.7783%,std-deviation=0.0243303)
+host, stateless, patch-wise, SoA, subtasks	| 0.175837	| 6.70767e-09	| 0.174979	| 6.67494e-09	| (avg=0.175837,#measurements=100,max=0.251069(value #84),min=0.149901(value #15),+42.7849%,-14.7503%,std-deviation=0.0172343)	| (avg=0.174979,#measurements=100,max=0.250075(value #84),min=0.149149(value #15),+42.9167%,-14.762%,std-deviation=0.0171523)
+host, stateless, patch-wise, AoSoA, sequential	| 0.402363	| 1.53489e-08	| 0.401547	| 1.53178e-08	| (avg=0.402363,#measurements=100,max=0.710674(value #7),min=0.363412(value #68),+76.6251%,-9.6806%,std-deviation=0.0584967)	| (avg=0.401547,#measurements=100,max=0.708847(value #7),min=0.36273(value #68),+76.5291%,-9.66693%,std-deviation=0.0583552)
+host, stateless, patch-wise, AoSoA, parallel-for	| 0.372088	| 1.4194e-08	| 0.372078	| 1.41936e-08	| (avg=0.372088,#measurements=100,max=0.581977(value #25),min=0.355723(value #99),+56.4085%,-4.3981%,std-deviation=0.0340525)	| (avg=0.372078,#measurements=100,max=0.581965(value #25),min=0.355713(value #99),+56.4097%,-4.3981%,std-deviation=0.0340521)
+host, stateless, patch-wise, AoSoA, subtasks	| 0.174593	| 6.6602e-09	| 0.173674	| 6.62513e-09	| (avg=0.174593,#measurements=100,max=0.320066(value #39),min=0.115204(value #0),+83.3211%,-34.0159%,std-deviation=0.0271375)	| (avg=0.173674,#measurements=100,max=0.31815(value #39),min=0.115195(value #0),+83.1881%,-33.6719%,std-deviation=0.0270368)
+host, stateless, batched, AoS, sequential	| 0.857535	| 3.27124e-08	| 0.856768	| 3.26831e-08	| (avg=0.857535,#measurements=100,max=1.13305(value #5),min=0.792273(value #50),+32.1289%,-7.6105%,std-deviation=0.0638785)	| (avg=0.856768,#measurements=100,max=1.1321(value #5),min=0.791618(value #50),+32.1358%,-7.60417%,std-deviation=0.0637932)
+host, stateless, batched, AoS, parallel-for	| 0.844744	| 3.22244e-08	| 0.844725	| 3.22237e-08	| (avg=0.844744,#measurements=100,max=1.31467(value #92),min=0.787983(value #74),+55.6292%,-6.71933%,std-deviation=0.0802135)	| (avg=0.844725,#measurements=100,max=1.31465(value #92),min=0.787973(value #74),+55.6304%,-6.71847%,std-deviation=0.0801855)
+host, stateless, batched, AoS, subtasks	| 0.530092	| 2.02214e-08	| 0.529135	| 2.01849e-08	| (avg=0.530092,#measurements=100,max=1.10735(value #41),min=0.250938(value #0),+108.898%,-52.6614%,std-deviation=0.163193)	| (avg=0.529135,#measurements=100,max=1.10621(value #41),min=0.250929(value #0),+109.06%,-52.5776%,std-deviation=0.162999)
+host, stateless, batched, SoA, sequential	| 0.835541	| 3.18734e-08	| 0.835515	| 3.18724e-08	| (avg=0.835541,#measurements=100,max=1.3136(value #0),min=0.813458(value #67),+57.2159%,-2.64295%,std-deviation=0.0510323)	| (avg=0.835515,#measurements=100,max=1.31202(value #0),min=0.813448(value #67),+57.0318%,-2.6411%,std-deviation=0.0508854)
+host, stateless, batched, SoA, parallel-for	| 0.864126	| 3.29638e-08	| 0.863836	| 3.29527e-08	| (avg=0.864126,#measurements=100,max=1.37011(value #36),min=0.815511(value #18),+58.5544%,-5.62584%,std-deviation=0.0820601)	| (avg=0.863836,#measurements=100,max=1.368(value #36),min=0.815501(value #18),+58.3632%,-5.5954%,std-deviation=0.0817952)
+host, stateless, batched, SoA, subtasks	| 0.52171	| 1.99017e-08	| 0.520363	| 1.98503e-08	| (avg=0.52171,#measurements=100,max=1.23215(value #81),min=0.262348(value #0),+136.175%,-49.7138%,std-deviation=0.121863)	| (avg=0.520363,#measurements=100,max=1.23124(value #81),min=0.262338(value #0),+136.612%,-49.5856%,std-deviation=0.121584)
+host, stateless, batched, AoSoA, sequential	| 0.989293	| 3.77385e-08	| 0.988602	| 3.77122e-08	| (avg=0.989293,#measurements=100,max=1.66027(value #57),min=0.836738(value #91),+67.8236%,-15.4206%,std-deviation=0.171536)	| (avg=0.988602,#measurements=100,max=1.65169(value #57),min=0.836728(value #91),+67.0731%,-15.3624%,std-deviation=0.170948)
+host, stateless, batched, AoSoA, parallel-for	| 0.96983	| 3.69961e-08	| 0.969045	| 3.69661e-08	| (avg=0.96983,#measurements=100,max=2.45481(value #62),min=0.837466(value #21),+153.117%,-13.6481%,std-deviation=0.262531)	| (avg=0.969045,#measurements=100,max=2.45364(value #62),min=0.837456(value #21),+153.202%,-13.5793%,std-deviation=0.261982)
+host, stateless, batched, AoSoA, subtasks	| 0.629408	| 2.401e-08	| 0.628268	| 2.39665e-08	| (avg=0.629408,#measurements=100,max=1.24972(value #99),min=0.463759(value #57),+98.5549%,-26.3183%,std-deviation=0.139895)	| (avg=0.628268,#measurements=100,max=1.24839(value #99),min=0.46286(value #57),+98.7027%,-26.3276%,std-deviation=0.139784)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 We get sets of experiments for different combinations of number of threads that
 launch compute tasks and number of patches handled by launch. In the simple
-one-thread case, we make thread 0 of a multithreading environment submit 
+one-thread case, we make thread 0 of a multithreading environment submit
 different kernels realisations for a certain number of patches. Some of these
-kernels are parallelised internally, others are not. Once these tests are 
-complete, we allow two threads to issue the same type of kernel in parallel.
+kernels are parallelised internally, others are not.
+
+If configured, two threads issue the same type of kernel in parallel.
 This way, we can stress test the system.
 
-Per realisation, we get nine measurements:
+Per realisation, we get six measurements:
 
-1. The first one is the total time of a single kernel execution.
-2. The second entry is the update per degree of freedom within a single kernel.
-3. The third entry measures the total runtime of the parallel launching. This
-   time includes the setup and freeing of any temporal data structures. It also
-   measures until all threads have finished their work. Therefore, this value
-   should be always be bigger than the first one. However,
-4. the fourth entry gives us the time per degree of freedom update if we launch
-   multiple kernels in parallel.
-5. the fifth entry gives the time spent solely within the compute kernels.
-6. the sixth entry gives the compute kernel time per degree of freedom.
-7. The seventh, eighth and nineth entry provide the raw data, so we can see the standard
+1. The first entry is the total time of a single kernel execution including overhead such as temporal memory allocation/freeing.
+2. The second entry is the update time per degree of freedom within a single kernel.
+3. The third entry gives the time spent solely within the compute kernels.
+4. The fourth entry gives the compute kernel time per degree of freedom.
+5. The fith and sixth entry provide the raw data, so we can see the standard
    deviation of the measurements. We also see that we usually sample each value
    multiple times to eliminate noise.
-   
+
 If a single kernel invocation (for multiple patches) from one thread is able to
-exploit all cores already, then multiple launches of a kernel should either 
-deliver the same throughput or a worse one, as there's some overhead. If a 
+exploit all cores already, then multiple launches of a kernel should either
+deliver the same throughput or a worse one, as there's some overhead. If a
 single kernel launch (for multiple patches) is not able to exploit all threads,
 launching multiple kernels in parallel should improve the throughput.
 
+# Plotting
+The directory hosts a script called plot.py which solely takes the
+output piped into a file as input.
 
-# Visualisation
+We provide example plots of outputs obtained from Leonardo.
 
+The benchmarks
+were run with a 3D Euler setup using 1024 patches per kernel launch,
+32 compute threads, 1 launching thread and 8 finite volumes per axis.
+The maximal eigenvalue has been evaluated and we took 100 measurements samples.
 
-The directory hosts a script called visualisation.py which solely takes the 
-output piped into a file as input. It delivers plots similar to the two 
-below:
+The following Python command was used:
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+    python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 8 --num-patches 1024 -e
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@image html example-vis.png
-@image html example-vis-log.png
+We show the best case throughputs.
 
-These scatter plots report the throughput for particular combinations of 
+## Host
+@image html plot_Euler_Leonardo_host.png
+
+## Device (using OpenMP GPU offloading)
+@image html plot_Euler_Leonardo_device_omp.png
+
+These scatter plots report the throughput for particular combinations of
 threads which launch kernels simultaenously and patches per kernel launch.
-We distinguish the time per kernel (y-axis) and the total time for all
-kernels (x-axis) and label one best-case configurations combining these
-two metrics (so something that's good in both metrics). 
+We distinguish the throughput for one single kernel (considering the fourth entry) (y-axis)
+and the total throughput (considering the second entry) (x-axis).
 
-Plots like the one above highlight that some kernel realisations deliver 
+Plots like the one above highlight that some kernel realisations deliver
 outcomes for their patches particularly quickly. They exhibit a small
-algorithmic latency. Other realisations are not that fast for their 
-patches, but are fairer and hence allow Peano to pipe more kernels 
+algorithmic latency. Other realisations are not that fast for their
+patches, but are fairer and hence allow Peano to pipe more kernels
 simultatenously through the system.
-
-
-
-# Example for complete test pipeline
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Clonning the repo
-git clone -b gpus-sycl-siam https://gitlab.lrz.de/hpcsoftware/Peano
-
-
-# Autotools command
-cd Peano libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .
-
-automake --add-missing
-
-
-# To use with Intel LLVM
-./configure CC=clang CXX=clang++ CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" LIBS="-ltbb" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80"  --with-multithreading=tbb --enable-exahype --enable-loadbalancing --enable-blockstructured --with-gpu=sycl 
-
-
-# To use with Intel proprietary compiler
-./configure CC=icx CXX=icpx LIBS=-ltbb LDFLAGS="-fsycl -g -tbb" CXXFLAGS="-tbb -O3 -fsycl" -with-multithreading=tbb -enable-exahype -enable-blockstructured -enable-loadbalancing -with-gpu=sycl 
-
-
-# Build the benchmark (with d=3 and p=8)
-cd benchmarks/exahype2/euler/kernel-benchmarks
-
-export PYTHONPATH=../../../../python
-
-python3 kernel-benchmarks-fv-rusanov.py --dim 3 --patch-size 8
-
-
-#Run and plot the timings for AoS batched kernel kernel (select your device with --gpus, see available devices by entering sycl-ls to the terminal)
-for i in 8; do
-	./kernel-benchmarks-fv-rusanov-3d-patch-size-$i --threads 1 --gpus 2 > sycl-3d-ps$i.txt
-done
-
-python3 create-exahype-sycl-plot.py -f sycl-3d-ps8.txt -kv batched -t 50 -ds AoS -ps 8 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
 
 */
