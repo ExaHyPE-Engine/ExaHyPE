@@ -46,8 +46,8 @@ llvm-tutorials:
     matrix:
     - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/$tutorial; python3 $tutorial.py'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd tutorials/exahype2/$tutorial; make -j $(nproc --all)'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd tutorials/exahype2/$tutorial; python3 $tutorial.py"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd tutorials/exahype2/$tutorial; make -j $(nproc --all)"
   retry: 0
 
 llvm-applications:
@@ -64,8 +64,8 @@ llvm-applications:
       application: [euler, acoustic-wave, elastic-wave, advection, saint-venant]
       solver_type: [FVRusanovGlobalAdaptive, FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptive, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/$application; python3 $application.py -s $solver_type -d $dimensions -m $build_type'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd applications/exahype2/$application; make -j $(nproc --all)'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd applications/exahype2/$application; python3 $application.py -s $solver_type -d $dimensions -m $build_type"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd applications/exahype2/$application; make -j $(nproc --all)"
   retry: 0
 
 llvm-benchmarks:
@@ -79,7 +79,7 @@ llvm-benchmarks:
     matrix:
     - benchmark: [euler, acoustic-wave, elastic-wave, advection]
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/$benchmark/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< 'cd benchmarks/exahype2/$benchmark/kernel-benchmarks; make -j $(nproc --all)'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; make -j $(nproc --all)"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} benchmarks/exahype2/$benchmark/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-p-128-Release
   retry: 0
