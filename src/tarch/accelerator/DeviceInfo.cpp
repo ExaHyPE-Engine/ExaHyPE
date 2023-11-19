@@ -240,22 +240,14 @@ namespace tarch::accelerator {
     std::vector<std::vector<std::string>>&     benchmarkResultsStringRepresentations
   ) {
 
-    // A * 1e-9 / (B * 1e-9) = A / B
-    // Therefore Byte / NanoSecond = GB / Second
+    // A * 1e-9 / (B * 1e-9) = A / B but, MB -> B 1024*1024 and for time it is 1e9.
     for (uint i = 0; i < benchmarkResults.size(); i++) {
       // Parse the results, bring nanoseconds to something humans would like more and add the units
       std::stringstream ss;
       auto&             benchmarkResult = benchmarkResults[i];
-      double            cpuToGpu        = benchmarkResult.allocatedDataSize * benchmarkResult.repeats
-                        * (1.0 / static_cast<double>(benchmarkResult.CPUtoGPUCopy));
-      double gpuToCpu = benchmarkResult.allocatedDataSize * benchmarkResult.repeats
-                        * (1.0 / static_cast<double>(benchmarkResult.GPUtoCPUCopy));
-      double averageStream = (cpuToGpu + gpuToCpu) / 2.0;
-      ss << averageStream << " Gb/s";
-      benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("Streaming Bandwidth")][i] = ss.str();
-      ss.str(std::string());
-      ss << benchmarkResult.allocatedDataSize * benchmarkResult.repeats
-              * (1.0 / static_cast<double>(benchmarkResult.GPUtoGPUCopy))
+      constexpr double  byteToGB        = (1.0/(1000.0*1000.0*1000.0));
+      ss << (static_cast<double>(benchmarkResult.allocatedDataSize) * static_cast<double>(benchmarkResult.repeats) * byteToGB)
+              * (1.0 / (static_cast<double>(benchmarkResult.GPUtoGPUCopy) * 1e-9)) 
          << " Gb/s";
       benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("GPU-GPU Copy")][i] = ss.str();
       ss.str(std::string());
