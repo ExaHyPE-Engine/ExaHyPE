@@ -297,6 +297,9 @@ if(CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQ
   list(APPEND BUILD_MODES ${PEANO_APP_BUILD_TYPE})
 endif()
 
+# LDFLAGS are currently empty but might be required in the future
+# Note linkers (ld, lld) ignore the flag -g when passed
+# Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
   set(PEANO_CXX_FLAGS_RELEASE -O4)
   set(PEANO_CUDA_FLAGS_RELEASE -O3) # NVCC does not have -O4, if given, it will be forwarded only to host compiler.
@@ -305,28 +308,28 @@ else()
   set(PEANO_CUDA_FLAGS_RELEASE -O3)
 endif()
 set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
-set(PEANO_RELEASE_LDFLAGS -g)
+set(PEANO_RELEASE_LDFLAGS )
 
 #-O2 -fno-omit-frame-pointer
 set(PEANO_CXX_FLAGS_DEBUG -g -O0)
 set(PEANO_CUDA_FLAGS_DEBUG -g -O0)
 set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4)
-set(PEANO_DEBUG_LDFLAGS -g)
+set(PEANO_DEBUG_LDFLAGS )
 
 set(PEANO_CXX_FLAGS_STATS ${PEANO_CXX_FLAGS_RELEASE})
 set(PEANO_CUDA_FLAGS_STATS ${PEANO_CUDA_FLAGS_RELEASE})
 set(PEANO_STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics)
-set(PEANO_STATS_LDFLAGS -g)
+set(PEANO_STATS_LDFLAGS )
 
 set(PEANO_CXX_FLAGS_ASSERTS ${PEANO_CXX_FLAGS_DEBUG})
 set(PEANO_CUDA_FLAGS_ASSERTS ${PEANO_CUDA_FLAGS_DEBUG})
 set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2)
-set(PEANO_ASSERTS_LDFLAGS -g)
+set(PEANO_ASSERTS_LDFLAGS )
 
 set(PEANO_CXX_FLAGS_TRACE -g -O2)
 set(PEANO_CUDA_FLAGS_TRACE ${PEANO_CXX_FLAGS_TRACE})
 set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
-set(PEANO_TRACE_LDFLAGS -g)
+set(PEANO_TRACE_LDFLAGS )
 
 set(WITH_DIMENSIONS "2;3" CACHE STRING "Build with number of (space) dimensions")
 
