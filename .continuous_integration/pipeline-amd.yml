@@ -61,22 +61,11 @@ amd-applications:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
+      application: [euler, acoustic-wave, elastic-wave, advection, saint-venant]
       solver_type: [FVRusanovGlobalAdaptive, FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptive, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; python3 euler.py -s $solver_type -d $dimensions -m $build_type'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/euler; make -j $(nproc --all)'
-
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; python3 acoustic-wave.py -s $solver_type -d $dimensions -m $build_type'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/acoustic-wave; make -j $(nproc --all)'
-
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; python3 elastic-wave.py -s $solver_type -d $dimensions -m $build_type'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/elastic-wave; make -j $(nproc --all)'
-
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; python3 advection.py -s $solver_type -d $dimensions -m $build_type'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/advection; make -j $(nproc --all)'
-
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/saint-venant; python3 saint-venant.py -s $solver_type -m $build_type'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/saint-venant; make -j $(nproc --all)'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/$application; python3 $application.py -s $solver_type -d $dimensions -m $build_type'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< 'cd applications/exahype2/$application; make -j $(nproc --all)'
   retry: 0
 
 amd-benchmarks:
