@@ -122,7 +122,7 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 }
 
 
-void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
+void  tarch::multicore::native::spawnTask(Task* job, const TaskNumber&  in, const TaskNumber&  out) {
   tarch::multicore::native::spawnTask(job);
 }
 

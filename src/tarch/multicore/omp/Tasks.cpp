@@ -75,31 +75,7 @@ namespace {
  * I have a second variant of the code which I call "high-throughput waiting".
  * This version runs risk to
  */
-#if !defined(OpenMPHighThroughputWaiting)
-void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
-  assertion(not tasks.empty());
-
-  #if defined(OpenMPTaskGroup)
-  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
-  #endif
-  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-  #if !defined(OpenMPTaskGroup)
-  #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
-  #endif
-    {
-      while (tasks[i]->run()) {
-        tarch::multicore::Core::getInstance().yield();
-      }
-      delete tasks[i];
-    }
-  }
-
-  #pragma omp taskwait // wait for all elements from tasks to complete
-                       // do not wait for the children of tasks
-                       // but do children if you have time (this does not
-                       // happen however)
-}
-#else
+#if defined(OpenMPHighThroughputWaiting)
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
   assertion(not tasks.empty());
 
@@ -149,6 +125,30 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
                        // happen however)
 
   assertionEquals(numberOfLoopTasks,0);
+}
+#else
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
+  assertion(not tasks.empty());
+
+  #if defined(OpenMPTaskGroup)
+  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
+  #endif
+  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
+  #if !defined(OpenMPTaskGroup)
+  #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
+  #endif
+    {
+      while (tasks[i]->run()) {
+        tarch::multicore::Core::getInstance().yield();
+      }
+      delete tasks[i];
+    }
+  }
+
+  #pragma omp taskwait // wait for all elements from tasks to complete
+                       // do not wait for the children of tasks
+                       // but do children if you have time (this does not
+                       // happen however)
 }
 #endif
 

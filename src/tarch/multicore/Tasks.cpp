@@ -21,12 +21,6 @@
 
 namespace {
   /**
-   * Used to administer task numbers
-   */
-  tarch::multicore::BooleanSemaphore activeTasksSemaphore;
-  std::set<int>                      activeTaskNumbers;
-
-  /**
    * Task queue of tasks which we hold back
    */
   struct NonblockingTasks {
@@ -192,30 +186,8 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::swapOrchestration(
   return result;
 }
 
-int tarch::multicore::getNumberOfReservedTaskNumbers() { return activeTaskNumbers.size(); }
-
-void tarch::multicore::releaseTaskNumber(int number) {
-  if (number!=NoDependency) {
-    tarch::multicore::Lock activeTasksLock(activeTasksSemaphore);
-    assertionEquals(activeTaskNumbers.count(number), 1);
-    activeTaskNumbers.erase(number);
-  }
-}
-
-int tarch::multicore::reserveTaskNumber() {
-  tarch::multicore::Lock lock(activeTasksSemaphore);
-  int                    result = activeTaskNumbers.size();
-  constexpr int Prime = 23;
-  constexpr int Max   = std::numeric_limits<int>::max()-2*Prime;
-
-  assertion2( Prime % Max!=0, Prime, Max );
-
-  while (activeTaskNumbers.count(result) > 0) {
-    result = result % Max;
-    result += Prime;
-  }
-  activeTaskNumbers.insert(result);
-  return result;
+void tarch::multicore::registerTask( const TaskNumber&  number ) {
+  native::registerTask(number);
 }
 
 bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs) {
@@ -459,24 +431,24 @@ void tarch::multicore::internal::copyInternalTaskQueueOverIntoGlobalQueue(int th
 
 int tarch::multicore::internal::getNumberOfWithholdPendingTasks() { return globalNonblockingTasks.tasks.size(); }
 
-void tarch::multicore::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
+void tarch::multicore::spawnTaskWithDependencies(Task* job, const TaskNumber&  inDependency, const TaskNumber&  taskNumber) {
   assertion( inDependency!=NoDependency or taskNumber!=NoDependency );
   tarch::multicore::native::spawnTaskWithDependencies(job, inDependency, taskNumber);
 }
 
 
-void tarch::multicore::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+void tarch::multicore::spawnTaskWithDependencies(Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
   assertion( not inDependencies.empty() or taskNumber!=NoDependency );
   tarch::multicore::native::spawnTaskWithDependencies(job, inDependencies, taskNumber);
 }
 
 
-void tarch::multicore::waitForTasks( const std::vector<int>& inDependencies ) {
+void tarch::multicore::waitForTasks( const std::vector<TaskNumber>& inDependencies ) {
   tarch::multicore::native::waitForTasks( inDependencies );
 }
 
 
-void tarch::multicore::waitForTask( int taskNumber ) {
+void tarch::multicore::waitForTask( const TaskNumber&  taskNumber ) {
   tarch::multicore::native::waitForTask( taskNumber );
 }
 
