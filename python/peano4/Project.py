@@ -316,10 +316,13 @@ class Project (object):
       #   return dict_merged
 
       result_project = Project(lhs.namespace, project_name, lhs.directory)
+      
       result_project.output.makefile.set_executable_name(executable)
       result_project.output.readme.set_executable_name(executable)
 
-      # merging all DaStGen2 and ParticleSet attributes of datamodel
+      #
+      # merge all DaStGen2 and ParticleSet attributes of datamodel
+      #
       for data in lhs.datamodel.cell_data + rhs.datamodel.cell_data:
         result_project.datamodel.add_cell(data)
       for data in lhs.datamodel.face_data + rhs.datamodel.face_data:
@@ -329,17 +332,23 @@ class Project (object):
       for particle in lhs.datamodel.global_data + rhs.datamodel.global_data:
         result_project.datamodel.add_global(particle)
 
-      #...
+      # ...
 
+      #
       # merge all steps of solversteps
+      #
       for step in lhs.solversteps._steps + rhs.solversteps._steps:
         result_project.solversteps.append(step)
 
-      # set compilers
+      #
+      # merge all keys and strings of output.makefile
+      #
+
+      # ... for compilers
       result_project.output.makefile.d["CXX"] = lhs.output.makefile.d["CXX"]
       result_project.output.makefile.d["FC"] = lhs.output.makefile.d["FC"]
 
-      # merge all keys of makefile dictionary
+      # ... for makefile dictionary
       for library in rhs.output.makefile.d["CMAKE_CORE_LIBS"] + rhs.output.makefile.d["CMAKE_CORE_LIBS"]:
         result_project.output.makefile.add_cmake_core_library(library)
 
@@ -372,6 +381,7 @@ class Project (object):
       
       result_project.output.makefile.d["GENERATED_INCLUDE_DIRS"] = lhs.output.makefile.d["GENERATED_INCLUDE_DIRS"] | rhs.output.makefile.d["GENERATED_INCLUDE_DIRS"]
 
+      # ... for filepaths
       for filename in lhs.output.makefile.hfiles:
         result_project.output.makefile.add_h_file(filename, False)
       for filename in rhs.output.makefile.hfiles:
@@ -406,6 +416,9 @@ class Project (object):
       for filename in rhs.output.makefile.generated_fortranfiles:
         result_project.output.makefile.add_Fortran_file(filename, True)
 
+      #
+      # merge all strings and artefacts of readme
+      #
       for i in lhs.output.readme._entries:
         result_project.output.readme.add_entry(i)
       for i in rhs.output.readme._entries:
@@ -420,9 +433,12 @@ class Project (object):
 
       for artefact in result_project.output.artefacts:
         result_project.output.add(artefact)
+      
+      result_project.main.d["MAIN_NAME"] = result_project.project_name
 
-      result_project.constants.d = {**lhs.constants.d, **rhs.constants.d} #_merge(lhs.constants.d, rhs.constants.d)
-
-      # @todo Dmitry please befill
+      #
+      # merge all constants
+      #
+      result_project.constants.d = {**lhs.constants.d, **rhs.constants.d}
 
       return result_project
