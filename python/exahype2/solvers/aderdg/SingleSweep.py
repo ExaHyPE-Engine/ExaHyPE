@@ -111,6 +111,9 @@ class SingleSweep(ADERDG):
             + "::SolverState::Correction"
         )
 
+        self._preprocess_reconstructed_patch = ""
+        self._postprocess_updated_patch = ""
+
 
     #    self._riemann_estimates.generator.send_condition                        = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
     #    self._riemann_estimates.generator.receive_and_merge_condition           = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
@@ -163,12 +166,14 @@ class SingleSweep(ADERDG):
 """
         )
 
+
     def _store_boundary_data_default_guard(self):
         return super(
             SingleSweep, self
         )._store_boundary_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
             self.get_name_of_global_instance(), self._name
         )
+
 
     def _clear_face_data_default_guard(self):
         return super(
@@ -178,12 +183,13 @@ class SingleSweep(ADERDG):
         ) + " and fineGridFace" + self._name + "FaceLabel.getAboveHanging()"
 
 
-    def _restrict_face_data_default_guard(self):    
+    def _restrict_face_data_default_guard(self):
         return super(
             SingleSweep, self
         )._restrict_face_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells".format(
             self.get_name_of_global_instance(), self._name
         )
+
 
     def _interpolate_face_data_default_guard(self):
         return super(
@@ -197,14 +203,13 @@ class SingleSweep(ADERDG):
 
     def set_preprocess_reconstructed_patch_kernel(self, kernel):
         """
-
         Most subclasses will redefine/overwrite this operation as they have
         to incorporate the kernel into their generated stuff
-
         """
         self._preprocess_reconstructed_patch += kernel
         self.create_data_structures()
         self.create_action_sets()
+
 
     def set_postprocess_updated_patch_kernel(self, kernel):
         self._postprocess_updated_patch += kernel
