@@ -1,12 +1,13 @@
 exahype-tutorials:
+  extends: .images
   stage: tutorials
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
     - job: build
+      parallel: !reference [.images, parallel]
   parallel:
-    - !reference [.images, parallel]
     - matrix:
       - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
   script:

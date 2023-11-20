@@ -1,9 +1,9 @@
 build-cmake:
+  extends: .images
   stage: build
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
-  parallel: !reference [.images, parallel]
   script:
     - pwd
     - ls

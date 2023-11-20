@@ -1,11 +1,12 @@
 test:
+  extends: .images
   stage: test
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
     - job: build
-  parallel: !reference [.images, parallel]
+      parallel: !reference [.images, parallel]
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$IMAGE_TAG make check
   retry: 0

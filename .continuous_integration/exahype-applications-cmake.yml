@@ -1,12 +1,13 @@
 exahype-applications-cmake:
+  extends: .images
   stage: applications
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
     - job: build-cmake
+      parallel: !reference [.images, parallel]
   parallel:
-    - !reference [.images, parallel]
     - matrix:
       - dimensions: [2, 3]
         build_type: [Debug, Release]
