@@ -134,4 +134,13 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
      * Return _taskNumber.
      */
     int getTaskId() const;
+
+    static int getNumberOfActiveTasks();
+
+    static void releaseTaskNumber(int number);
+  private:
+    static tarch::multicore::BooleanSemaphore _taskNumberSemaphore;
+    static std::set<int>                      _activeTaskNumbers;
+
+    static int reserveTaskNumber();
 };
