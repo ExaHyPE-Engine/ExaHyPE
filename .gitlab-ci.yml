@@ -1,12 +1,5 @@
 variables:
   RUNNER_TAG: "peano-dine-runner"
-  BASE_IMAGE_TAG: "base_latest.sif"
-  LATEX_IMAGE_TAG: "latex_latest.sif"
-  AMD_IMAGE_TAG: "amd_latest.sif"
-  GCC_IMAGE_TAG: "gcc_latest.sif"
-  INTEL_IMAGE_TAG: "intel_latest.sif"
-  LLVM_IMAGE_TAG: "llvm_latest.sif"
-  NVIDIA_IMAGE_TAG: "nvidia_latest.sif"
 
 workflow:
   rules:
@@ -30,17 +23,20 @@ stages:
   - deploy
 
 include:
-  #- .continuous_integration/pipeline-amd.yml
-  - .continuous_integration/pipeline-gcc.yml
-  - .continuous_integration/pipeline-intel.yml
-  - .continuous_integration/pipeline-llvm.yml
-  - .continuous_integration/pipeline-nvidia.yml
+  - .continuous_integration/build.yml
+  - .continuous_integration/build-cmake.yml
 
-  #- .continuous_integration/pipeline-amd-cmake.yml
-  - .continuous_integration/pipeline-gcc-cmake.yml
-  - .continuous_integration/pipeline-intel-cmake.yml
-  - .continuous_integration/pipeline-llvm-cmake.yml
-  - .continuous_integration/pipeline-nvidia-cmake.yml
+  - .continuous_integration/test.yml
+  - .continuous_integration/test-cmake.yml
 
-  - .continuous_integration/pipeline-formatting.yml
-  - .continuous_integration/pipeline-documentation.yml
+  - .continuous_integration/exahype-tutorials.yml
+  - .continuous_integration/exahype-tutorials-cmake.yml
+
+  - .continuous_integration/exahype-applications.yml
+  - .continuous_integration/exahype-applications-cmake.yml
+
+  - .continuous_integration/exahype-benchmarks.yml
+  - .continuous_integration/exahype-benchmarks-cmake.yml
+
+  - .continuous_integration/formatting.yml
+  - .continuous_integration/documentation.yml

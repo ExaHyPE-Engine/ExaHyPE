@@ -1,0 +1,15 @@
+exahype-tutorials-cmake:
+  stage: tutorials
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  needs:
+    - job: build-cmake
+  parallel:
+    matrix:
+    - image_tag: [gcc_latest.sif, intel_latest.sif, llvm_latest.sif, nvidia_latest.sif]
+      tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
+  script:
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag bash <<< "cd build/tutorials/exahype2/$tutorial; python3 $tutorial.py"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag bash <<< "cd build/tutorials/exahype2/$tutorial; make -j $(nproc --all)"
+  retry: 0

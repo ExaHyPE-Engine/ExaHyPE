@@ -1,0 +1,13 @@
+test:
+  stage: test
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  needs:
+    - job: build
+  parallel:
+    matrix:
+    - image_tag: [gcc_latest.sif, intel_latest.sif, llvm_latest.sif, nvidia_latest.sif]
+  script:
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag make check
+  retry: 0

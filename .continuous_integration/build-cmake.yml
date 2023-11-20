@@ -1,0 +1,29 @@
+build-cmake:
+  stage: build
+  allow_failure: false
+  tags:
+    - ${RUNNER_TAG}
+  parallel:
+    matrix:
+    - image_tag: [gcc_latest.sif, intel_latest.sif, llvm_latest.sif, nvidia_latest.sif]
+  script:
+    - pwd
+    - ls
+    - whoami
+    - hostname
+    - echo $SINGULARITY_CACHEDIR
+    - echo $CI_COMMIT_SHA
+    - echo $CI_COMMIT_BRANCH
+    - echo "Running CI with $(nproc) cores"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag python3 -m compileall -f ./
+    - if [ "$image_tag" = amd_latest.sif ]; then singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag python3 configure.py -cc=amdclang -cxx=amdclang++ --exahype --swift --multithreading=omp --cmake=build; fi;
+    - if [ "$image_tag" = gcc_latest.sif ]; then singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag python3 configure.py -cc=gcc -cxx=g++ --exahype --swift --multithreading=omp --cmake=build; fi;
+    - if [ "$image_tag" = intel_latest.sif ]; then singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag python3 configure.py -cc=icx -cxx=icpx --exahype --swift --multithreading=omp --cmake=build; fi;
+    - if [ "$image_tag" = llvm_latest.sif ]; then singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag python3 configure.py -cc=clang -cxx=clang++ --exahype --swift --multithreading=omp --cmake=build; fi;
+    - if [ "$image_tag" = nvidia_latest.sif ]; then singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag python3 configure.py -cc=nvc -cxx=nvc++ --exahype --swift --multithreading=omp --cmake=build; fi;
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag bash <<< "cd build; make -j $(nproc --all)"
+  artifacts:
+    paths:
+      - ./build/*
+    expire_in: 2 hours
+  retry: 0
