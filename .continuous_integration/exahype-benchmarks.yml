@@ -5,9 +5,10 @@ exahype-benchmarks:
     - ${RUNNER_TAG}
   needs:
     - job: build
-  parallel: !reference [.images, parallel]
-    matrix:
-    - benchmark: [euler, acoustic-wave, elastic-wave, advection]
+  parallel:
+    - !reference [.images, parallel]
+    - matrix:
+      - benchmark: [euler, acoustic-wave, elastic-wave, advection]
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$IMAGE_TAG bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$IMAGE_TAG bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; make -j $(nproc --all)"

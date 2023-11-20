@@ -5,12 +5,13 @@ exahype-applications-cmake:
     - ${RUNNER_TAG}
   needs:
     - job: build-cmake
-  parallel: !reference [.images, parallel]
-    matrix:
-    - dimensions: [2, 3]
-      build_type: [Debug, Release]
-      application: [euler, elastic-wave, saint-venant]
-      solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
+  parallel:
+    - !reference [.images, parallel]
+    - matrix:
+      - dimensions: [2, 3]
+        build_type: [Debug, Release]
+        application: [euler, elastic-wave, saint-venant]
+        solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$IMAGE_TAG bash <<< "cd build/applications/exahype2/$application; python3 $application.py -s $solver_type -d $dimensions -m $build_type"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$IMAGE_TAG bash <<< "cd build/applications/exahype2/$application; make -j $(nproc --all)"
