@@ -5,12 +5,11 @@ exahype-benchmarks:
     - ${RUNNER_TAG}
   needs:
     - job: build
-  parallel:
+  parallel: !reference [.images, parallel]
     matrix:
-    - image_tag: [gcc_latest.sif, intel_latest.sif, llvm_latest.sif, nvidia_latest.sif]
-      benchmark: [euler, acoustic-wave, elastic-wave, advection]
+    - benchmark: [euler, acoustic-wave, elastic-wave, advection]
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release"
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; make -j $(nproc --all)"
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag benchmarks/exahype2/$benchmark/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-p-128-Release
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$IMAGE_TAG bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$IMAGE_TAG bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; make -j $(nproc --all)"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$IMAGE_TAG benchmarks/exahype2/$benchmark/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-p-128-Release
   retry: 0

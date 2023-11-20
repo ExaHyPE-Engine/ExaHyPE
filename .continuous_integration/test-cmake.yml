@@ -5,9 +5,7 @@ test-cmake:
     - ${RUNNER_TAG}
   needs:
     - job: build-cmake
-  parallel:
-    matrix:
-    - image_tag: [gcc_latest.sif, intel_latest.sif, llvm_latest.sif, nvidia_latest.sif]
+  parallel: !reference [.images, parallel]
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$image_tag bash <<< "cd build; ctest --no-compress-output --output-on-failure"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/$IMAGE_TAG bash <<< "cd build; ctest --no-compress-output --output-on-failure"
   retry: 0

@@ -22,6 +22,11 @@ stages:
   - publish
   - deploy
 
+.images:
+  parallel:
+    matrix:
+    - IMAGE_TAG: [gcc_latest.sif, intel_latest.sif, llvm_latest.sif, nvidia_latest.sif]
+
 include:
   - .continuous_integration/build.yml
   - .continuous_integration/build-cmake.yml
