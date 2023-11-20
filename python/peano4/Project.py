@@ -338,7 +338,7 @@ class Project (object):
       # merge all steps of solversteps
       #
       for step in lhs.solversteps._steps + rhs.solversteps._steps:
-        result_project.solversteps.append(step)
+        result_project.solversteps.add_step(step)
 
       #
       # merge all keys and strings of output.makefile
