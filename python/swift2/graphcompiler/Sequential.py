@@ -333,7 +333,7 @@ def map_onto_separate_mesh_traversals(
             mesh_traversals.append(new_step)
             alter_particle_position.append(True)
 
-    if step_type == StepType.INITIALISATION:
+    if step_type == StepType.INITIALISATION and len(alter_particle_position) > 0:
         # When we insert particles initially, they will be scattered. So it is
         # important that we immediately gather them. We cannot flag step -1 as
         # one that changes teh particle position, but we can present to the
