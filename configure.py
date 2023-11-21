@@ -1,4 +1,5 @@
 import os
+import re
 import shlex
 import argparse
 import subprocess
@@ -27,10 +28,10 @@ parser.add_argument('--arch', choices=[
   help='Select GPU compute capability')
 args = parser.parse_args()
 
-cflags = ''
-cxxflags = '-std=c++20 -w'
-#cxxflags = '-std=c++20 -W -Wall -Wextra'
-nvccflags = ''
+cflags = '-O3'
+cxxflags = '-std=c++20 -w -O3'
+#cxxflags = '-std=c++20 -W -Wall -Wextra -O3'
+nvccflags = '-O3'
 configure_args = []
 
 # Merge in any additional flags needed for the selected multithreading backend
@@ -55,6 +56,10 @@ if args.cc is None or args.cxx is None:
   print("Error: Invalid C and C++ compilers provided. \
 Specify compatible C and C++ compilers by using -cc and -cxx or the environment flags CC and CXX.")
   exit(-1)
+
+if "nvc" in args.cc and "nvc++" in args.cxx:
+  cflags = re.sub(r'-O3', '-O4', cflags)
+  cxxflags = re.sub(r'-O3', '-O4', cxxflags)
 
 if args.gpu == 'omp' and "clang" in args.cc and "clang++" in args.cxx:
   cflags += ' -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_' + args.arch
