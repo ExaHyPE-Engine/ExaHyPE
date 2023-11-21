@@ -27,7 +27,7 @@ Sorting_OnTheFly = "sort-on-the-fly"
 Enable_VectorisationOfAllComparisons = "vectorise-all"
 Enable_VectorisationOfDistanceChecks = "vectorise-distance-checks"
 
-   
+
 Choices = [
     Parallelisation_DomainDecomposition + "." + Storage_Scattered,
     Parallelisation_DomainDecomposition

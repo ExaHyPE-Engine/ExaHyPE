@@ -1,21 +1,13 @@
 
 template <typename ParticleSet>
-swift2::VertexTask<ParticleSet>::VertexTask(
-  const ParticleSet& assignedParticles,
-  Functor            functor
-):
-  tarch::multicore::Task(
-    tarch::multicore::Task::DontFuse,
-    tarch::multicore::Task::DefaultPriority
-  ),
+swift2::VertexTask<ParticleSet>::VertexTask(const ParticleSet& assignedParticles, Functor functor):
+  tarch::multicore::Task(tarch::multicore::Task::DontFuse, tarch::multicore::Task::DefaultPriority),
   _assignedParticles(assignedParticles),
-  _functor(functor) {
-}
+  _functor(functor) {}
 
 
 template <typename ParticleSet>
 bool swift2::VertexTask<ParticleSet>::run() {
-  _functor( _assignedParticles );
+  _functor(_assignedParticles);
   return false;
 }
-
