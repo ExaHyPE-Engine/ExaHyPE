@@ -38,10 +38,10 @@ AC_CONFIG_MACRO_DIR([m4])
 # If the flags are empty at this stage (user has not given flags), then we set the floags to none 
 # (empty string), so that "-g -O2" is not appended to every target
 # See Automake documentation and the stackoverflow post: https://stackoverflow.com/questions/3116645/default-compiler-flags-with-autotools
-if test -z $CXXFLAGS; then
+if test -z "$CXXFLAGS"; then
   CXXFLAGS=''
 fi
-if test -z $CFLAGS; then
+if test -z "$CFLAGS"; then
   CFLAGS=''
 fi
 
