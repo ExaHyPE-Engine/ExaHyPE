@@ -489,8 +489,16 @@ namespace tarch {
       void waitForTasks( const std::vector<TaskNumber>& inDependencies );
       void waitForTask( const TaskNumber&  taskNumber );
 
+      /**
+       * Register task
+       *
+       * Inform system that there will be task with number that will finish
+       * later. By the time we inform the system about the existence of this
+       * task outcome, the task itself might not yet exist. But it will do
+       * so later.
+       */
       void registerTask( const TaskNumber&  number );
-
+      void finishedTask( const TaskNumber&  number );
     } // namespace native
 
     namespace internal {

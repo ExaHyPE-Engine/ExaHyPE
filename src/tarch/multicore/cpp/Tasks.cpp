@@ -23,6 +23,10 @@
 #include <future>
 
 
+namespace {
+  std::map< tarch::multicore::TaskNumber, std::future<void>* >  pendingTasksWithDependencies;
+}
+
 //#define OpenMPHighThroughputWaiting
 
 

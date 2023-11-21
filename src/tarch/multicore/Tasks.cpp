@@ -456,16 +456,6 @@ void tarch::multicore::waitForTask( const TaskNumber&  taskNumber ) {
 
 #include <thread>
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
-  tarch::multicore::native::spawnTask(job);
-}
-
-
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
-  tarch::multicore::native::spawnTask(job);
-}
-
-
 void tarch::multicore::native::spawnTask(Task* job) {
   bool reschedule = job->run();
   if (reschedule) {
@@ -496,9 +486,21 @@ void tarch::multicore::native::processFusedTask(
 
 void tarch::multicore::native::drainTaskQueues() {}
 
-void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
 
-void tarch::multicore::native::waitForTask( int taskNumber ){}
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
+void tarch::multicore::native::waitForTasks( const std::vector<TaskNumber>& inDependencies ) {}
+
+void tarch::multicore::native::waitForTask( const TaskNumber& taskNumber ){}
+
+void tarch::multicore::native::registerTask( const TaskNumber&  number ) {}
 
 
 #endif
