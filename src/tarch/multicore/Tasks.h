@@ -31,24 +31,40 @@ namespace tarch {
     tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
     /**
-     * Utility function for unique task numbers
+     * Register task
      *
-     * This routine has to return a number which is currently not in use. From
-     * OpenMP's point of view, e.g., it is weird that we explicitly make our
-     * technical architecture request a task number. We could just simply work
-     * with a depends clause. However, we have some code fragments where the
-     * task graph is created with anti-dependencies. This does not go down well,
+     * Inform system that there will be task with number that will finish
+     * later. By the time we inform the system about the existence of this
+     * task outcome, the task itself might not yet exist. However, by calling
+     * this function, the user notifies the system that the task will
+     * eventually be submitted.
      *
-     * ## Implementation
+     * This routine is key to work with tasks with anti-dependencies: Most
+     * runtime systems either require a static task graph assembly where the
+     * whole graph is built up and then submitted en bloc or work with dynamic
+     * task graphs, where each task graph is immediately handed over to the
+     * runtime. In the latter case, any incoming dependency of a submitted
+     * task has to be known, i.e. if task A is submitted and depends on task
+     * B, task B has to be submitted before.
      *
-     * There is no need for delivered task numbers to be
-     * consecutive. Therefore, I use the size of the existing task set as
-     * a guideline for a task number to search for. If this initial guess
-     * is already handed out, I increase the counter by a prime number and
-     * try the new number again - until I've finally found a task which is
-     * not yet processed.
+     * In Peano, we offer a hybrid between dynamic and static analysis. In
+     * principle, all is dynamic. However, there are cases in which the task
+     * B from the example above is not yet constructed. This is something we
+     * do allow in Peano. However, we then require the user to tell the tarch
+     * API that the task B will eventually be there by calling registerTask().
+     * If a task is directly submitted without registerTask(), no
+     * anti-dependencies are allowed.
      *
-     * @see Task
+     * This routine delegates directly to tarch::multicore::native::registerTask().
+     * The counterpart deregisterTask() is not exposed via the main namespace.
+     * It is automatically invoked by spawnTask() whenever the spawnTask()
+     * finally resolves an anti-dependency.
+     *
+     * @param number Unique task number, which is not yet used by another task,
+     *   unless the user can guarantee that this task has finished already. If
+     *   in doubt, it might be reasonable to work with a task id factory and to
+     *   code a task on the user side, which automatically notifies the task
+     *   system when the task has terminated.
      */
     void registerTask( const TaskNumber&  number );
 
@@ -490,15 +506,14 @@ namespace tarch {
       void waitForTask( const TaskNumber&  taskNumber );
 
       /**
-       * Register task
-       *
-       * Inform system that there will be task with number that will finish
-       * later. By the time we inform the system about the existence of this
-       * task outcome, the task itself might not yet exist. But it will do
-       * so later.
+       * Native implementation of tarch::multicore::registerTask().
        */
       void registerTask( const TaskNumber&  number );
-      void finishedTask( const TaskNumber&  number );
+
+      /**
+       * Native implementation of tarch::multicore::finishedTask().
+       */
+      void deregisterTask( const TaskNumber&  number );
     } // namespace native
 
     namespace internal {

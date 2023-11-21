@@ -484,6 +484,13 @@ void tarch::multicore::native::processFusedTask(
   }
 }
 
+namespace {
+  /**
+   * Registered tasks which are not yet s.
+   */
+  std::map< tarch::multicore::TaskNumber, tarch::multicore::Task* >  _tasksWithAntidependencies;
+}
+
 void tarch::multicore::native::drainTaskQueues() {}
 
 void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber) {
@@ -500,7 +507,9 @@ void tarch::multicore::native::waitForTasks( const std::vector<TaskNumber>& inDe
 
 void tarch::multicore::native::waitForTask( const TaskNumber& taskNumber ){}
 
-void tarch::multicore::native::registerTask( const TaskNumber&  number ) {}
+void tarch::multicore::native::registerTask( const TaskNumber&  number ) {
+  assertion( _tasksWithAntidependencies.count(number)==0 );
+}
 
 
 #endif
