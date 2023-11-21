@@ -149,7 +149,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
 {% if nDim == 3 %}
                                     * solver.basisFunction[{{nDof-1}}][z]((x_ps[2] - volumeCentre[2]) * invDx + 0.5)
 {% endif %}
-                                    * DGMatrices<pCompType>::iweights3[(z*{{nDof3D}}+y)*{{nDof}}+x] * ivolume ; //division by weights product and volume
+                                    * Quadrature<pCompType>::iweights3[(z*{{nDof3D}}+y)*{{nDof}}+x] * ivolume ; //division by weights product and volume
 
               #pragma omp simd aligned(PSi,forceVectorSource:{{alignmentSize}})
               for (int n = 0; n < {{nVarPad}}; n++) { //evaluate
