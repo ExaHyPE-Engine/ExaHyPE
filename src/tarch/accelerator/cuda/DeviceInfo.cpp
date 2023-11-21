@@ -12,7 +12,7 @@
 
 #if defined(GPUOffloadingCUDA)
 std::vector<bool> testKernelLauncher();
-void              copyKernelLauncher(const float* a, float* b, size_t N, int gridSize, int blockSize);
+void              copyKernelLauncher(const double* a, double* b, size_t N, int gridSize, int blockSize);
 void              maxPotentialBlockSize(int* minGridSize, int* blockSize);
 
 #define CHECK_CUDA_ERROR() \
@@ -135,8 +135,8 @@ namespace tarch::accelerator::cuda {
         float executionTimeGPUMalloc;
 
         // Malloc memory in CPU
-        float* a = new float[N];
-        float* b = new float[N];
+        double* a = new double[N];
+        double* b = new double[N];
         std::fill(a, a + N, 0.0f);
         std::fill(b, b + N, 0.0f);
         assert(alloc_size == N * sizeof(float));
@@ -144,8 +144,8 @@ namespace tarch::accelerator::cuda {
 
         // Malloc memory in GPU
         cudaEventRecord(startGPUMalloc, 0);
-        float* a_dev;
-        float* b_dev;
+        double* a_dev;
+        double* b_dev;
         cudaMalloc((void**)&a_dev, alloc_size);
         cudaMalloc((void**)&b_dev, alloc_size);
         CHECK_CUDA_ERROR();

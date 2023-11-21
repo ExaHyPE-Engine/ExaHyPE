@@ -48,8 +48,8 @@ namespace tarch::accelerator::cpp {
     benchmarkResult.allocatedDataSize                                             = alloc_size * 2;
 
     for (uint i = 0; i < repeats + 1; i++) {
-      float* a = new float[N];
-      float* b = new float[N];
+      double* a = new double[N];
+      double* b = new double[N];
       std::fill(a, a + N, 0.0f);
       std::fill(b, b + N, 0.0f);
 

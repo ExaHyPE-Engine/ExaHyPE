@@ -59,8 +59,8 @@ namespace tarch::accelerator {
    * Num of repeats of streaming benchmarks and the number of elements N per vector
    */
   constexpr uint64_t repeats    = 10;
-  constexpr size_t   alloc_size = 1024*1024*1024; // 1GB  Ensure the number divides the block size 256 perfectly
-  constexpr size_t   N          = alloc_size / sizeof(float);
+  constexpr size_t   alloc_size = 1024*1024*256;
+  constexpr size_t   N          = alloc_size / sizeof(double); // 1GB  Ensure the number divides the block size 256 perfectly
 
   static tarch::logging::Log _log("tarch::accelerator");
 
