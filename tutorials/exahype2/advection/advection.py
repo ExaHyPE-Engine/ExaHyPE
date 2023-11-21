@@ -66,13 +66,13 @@ visualise = False
 #
 # Choose how often a snapshot is written.
 #
-time_in_between_two_snapshots = end_time/100
-#time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
+time_in_between_two_snapshots = end_time / 100
+# time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
 
 #
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-compile_mode=peano4.output.CompileMode.Release
+compile_mode = peano4.output.CompileMode.Release
 
 #
 # We first create a new ExaHyPE 2 project.
@@ -80,10 +80,10 @@ compile_mode=peano4.output.CompileMode.Release
 # We amend the executable name by the space dimensions.
 #
 my_project = exahype2.Project(
-  namespace     = ["tutorials", "exahype2", "advection"],
-  project_name  = "AdvectionTutorial",
-  directory     = ".",
-  executable    = "advection-" + str(dimensions) + "d"
+    namespace=["tutorials", "exahype2", "advection"],
+    project_name="AdvectionTutorial",
+    directory=".",
+    executable="advection-" + str(dimensions) + "d",
 )
 
 #
@@ -106,7 +106,9 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 # We want to define our PDE symbolically.
 # For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
 #
-my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(unknowns=dimensions, auxiliary_variables=0, dimensions=dimensions)
+my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(
+    unknowns=dimensions, auxiliary_variables=0, dimensions=dimensions
+)
 v = my_pde.name_Q_entries(0, dimensions, "v")
 c = sympy.symbols("c")
 
@@ -115,32 +117,32 @@ c = sympy.symbols("c")
 #
 # Flux [unknowns, dimensions]
 if dimensions == 2:
-  my_pde.F[0, 0] = v[0]
-  my_pde.F[1, 0] = 0
+    my_pde.F[0, 0] = v[0]
+    my_pde.F[1, 0] = 0
 
-  my_pde.F[0, 1] = 0
-  my_pde.F[1, 1] = v[1]
+    my_pde.F[0, 1] = 0
+    my_pde.F[1, 1] = v[1]
 else:
-  my_pde.F[0, 0] = v[0]
-  my_pde.F[1, 0] = 0
-  my_pde.F[2, 0] = 0
+    my_pde.F[0, 0] = v[0]
+    my_pde.F[1, 0] = 0
+    my_pde.F[2, 0] = 0
 
-  my_pde.F[0, 1] = 0
-  my_pde.F[1, 1] = v[1]
-  my_pde.F[2, 1] = 0
+    my_pde.F[0, 1] = 0
+    my_pde.F[1, 1] = v[1]
+    my_pde.F[2, 1] = 0
 
-  my_pde.F[0, 2] = 0
-  my_pde.F[1, 2] = 0
-  my_pde.F[2, 2] = v[2]
+    my_pde.F[0, 2] = 0
+    my_pde.F[1, 2] = 0
+    my_pde.F[2, 2] = v[2]
 
 # Eigenvalues [unknowns, dimensions]
 if dimensions == 2:
-  my_pde.eigenvalues[0] = c
-  my_pde.eigenvalues[1] = c
+    my_pde.eigenvalues[0] = c
+    my_pde.eigenvalues[1] = c
 else:
-  my_pde.eigenvalues[0] = c
-  my_pde.eigenvalues[1] = c
-  my_pde.eigenvalues[2] = c
+    my_pde.eigenvalues[0] = c
+    my_pde.eigenvalues[1] = c
+    my_pde.eigenvalues[2] = c
 
 my_pde.substitute_expression(c, advection_speed)
 
@@ -203,13 +205,16 @@ if not os.path.exists("solution"):
     os.makedirs("solution")
 
 if visualise:
-  output_patch_file = "solution/solution-AdvectionSolver.peano-patch-file"
-  if os.path.isfile(output_patch_file):
-    subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file),
-    ])
-  sys.exit(0)
+    output_patch_file = "solution/solution-AdvectionSolver.peano-patch-file"
+    if os.path.isfile(output_patch_file):
+        subprocess.call(
+            [
+                "python3",
+                "../../../python/peano4/visualisation/render.py",
+                str(output_patch_file),
+            ]
+        )
+    sys.exit(0)
 
 #
 # If you only target a sequential execution, you can omit the load balancing.

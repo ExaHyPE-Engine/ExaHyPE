@@ -5,10 +5,7 @@
 tarch::logging::Log applications::exahype2::acousticwave::AcousticWave_FV::_log("applications::exahype2::acousticwave::AcousticWave_FV");
 
 void applications::exahype2::acousticwave::AcousticWave_FV::initialCondition(
-  double* __restrict__ Q,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  bool gridIsConstructed
+  double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, bool gridIsConstructed
 ) {
   using s = VariableShortcuts;
 

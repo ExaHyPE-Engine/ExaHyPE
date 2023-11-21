@@ -9,7 +9,7 @@ void applications::exahype2::acousticwave::AcousticWave_RKDG::initialCondition(
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,
   const tarch::la::Vector<Dimensions, int>&    index,
-  bool gridIsConstructed
+  bool                                         gridIsConstructed
 ) {
   using s = VariableShortcuts;
 
@@ -22,11 +22,7 @@ void applications::exahype2::acousticwave::AcousticWave_RKDG::initialCondition(
 }
 
 void applications::exahype2::acousticwave::AcousticWave_RKDG::boundaryConditions(
-  const double* __restrict__ Qinside,
-  double* __restrict__ Qoutside,
-  const tarch::la::Vector<Dimensions, double>& x,
-  double                                       t,
-  int                                          normal
+  const double* __restrict__ Qinside, double* __restrict__ Qoutside, const tarch::la::Vector<Dimensions, double>& x, double t, int normal
 ) {
   using s = VariableShortcuts;
 

@@ -31,9 +31,7 @@ namespace exahype2::enumerators {
      * indices if you want.
      *
      */
-    GPUCallableInlineMethod int operator()(int, const tarch::la::Vector<Dimensions, int>&, int unknown) const InlineMethod {
-      return unknown;
-    }
+    GPUCallableInlineMethod int operator()(int, const tarch::la::Vector<Dimensions, int>&, int unknown) const InlineMethod { return unknown; }
 
 #if defined(GPUOffloadingOff)
     std::string toString() const;

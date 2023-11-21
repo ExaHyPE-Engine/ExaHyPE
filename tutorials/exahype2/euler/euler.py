@@ -61,13 +61,13 @@ visualise = False
 #
 # Choose how often a snapshot is written.
 #
-time_in_between_two_snapshots = end_time/100
-#time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
+time_in_between_two_snapshots = end_time / 100
+# time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
 
 #
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-compile_mode=peano4.output.CompileMode.Release
+compile_mode = peano4.output.CompileMode.Release
 
 #
 # We first create a new ExaHyPE 2 project.
@@ -90,8 +90,8 @@ my_project = exahype2.Project(
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     name="EulerSolver",
     patch_size=patch_size,
-    unknowns=dimensions + 2, # [rho, u, v, (w), e]
-    auxiliary_variables=0, # This could be something alike material parameters. Not required for Euler.
+    unknowns=dimensions + 2,  # [rho, u, v, (w), e]
+    auxiliary_variables=0,  # This could be something alike material parameters. Not required for Euler.
     min_volume_h=volume_size,
     max_volume_h=volume_size,
     time_step_relaxation=0.5,
@@ -101,7 +101,9 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 # We want to define our PDE symbolically.
 # For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
 #
-my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(unknowns=dimensions+2, auxiliary_variables=0, dimensions=dimensions)
+my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(
+    unknowns=dimensions + 2, auxiliary_variables=0, dimensions=dimensions
+)
 
 #
 # Give entries in input vector symbolic names. We first declare the constant
@@ -109,37 +111,39 @@ my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(unknowns=dimensio
 #
 gamma = sympy.symbols("gamma")
 # First scalar is density
-rho   = my_pde.name_Q_entry(0, "rho")
+rho = my_pde.name_Q_entry(0, "rho")
 # Momentum: Entries 1-dimensions (C counting style) holds j vector
 # (Note: To get the velocities we need to divide with the density)
-j     = my_pde.name_Q_entries(1, dimensions, "j")
+j = my_pde.name_Q_entries(1, dimensions, "j")
 # Energy
-E     = my_pde.name_Q_entry(dimensions + 1, "E")
+E = my_pde.name_Q_entry(dimensions + 1, "E")
 # Pressure
-p = (gamma - 1) * (E-1/2 * exahype2.symhype.dot(j, j) / rho)
+p = (gamma - 1) * (E - 1 / 2 * exahype2.symhype.dot(j, j) / rho)
 
 #
 # Define the equation system
 #
 # Flux [unknowns, dimensions]
 my_pde.F[0, :] = j
-my_pde.F[1:dimensions + 1, :] = 1 / rho * exahype2.symhype.outer(j, j) + p * sympy.eye(dimensions)
-my_pde.F[dimensions + 1, :]   = 1 / rho * j * (E + p)
+my_pde.F[1 : dimensions + 1, :] = 1 / rho * exahype2.symhype.outer(
+    j, j
+) + p * sympy.eye(dimensions)
+my_pde.F[dimensions + 1, :] = 1 / rho * j * (E + p)
 
 # Eigenvalues [unknowns, dimensions]
 c = sympy.sqrt(gamma * p / rho)
-u = j / rho # Velocities
+u = j / rho  # Velocities
 if dimensions == 3:
-  my_pde.eigenvalues[0] = [u[0] - c, u[1] - c, u[2] - c]
-  my_pde.eigenvalues[1] = [u[0],     u[1],     u[2]]
-  my_pde.eigenvalues[2] = [u[0],     u[1],     u[2]]
-  my_pde.eigenvalues[3] = [u[0],     u[1],     u[2]]
-  my_pde.eigenvalues[4] = [u[0] + c, u[1] + c, u[2] + c]
+    my_pde.eigenvalues[0] = [u[0] - c, u[1] - c, u[2] - c]
+    my_pde.eigenvalues[1] = [u[0], u[1], u[2]]
+    my_pde.eigenvalues[2] = [u[0], u[1], u[2]]
+    my_pde.eigenvalues[3] = [u[0], u[1], u[2]]
+    my_pde.eigenvalues[4] = [u[0] + c, u[1] + c, u[2] + c]
 else:
-  my_pde.eigenvalues[0] = [u[0] - c, u[1] - c]
-  my_pde.eigenvalues[1] = [u[0],     u[1]]
-  my_pde.eigenvalues[2] = [u[0],     u[1]]
-  my_pde.eigenvalues[3] = [u[0] + c, u[1] + c]
+    my_pde.eigenvalues[0] = [u[0] - c, u[1] - c]
+    my_pde.eigenvalues[1] = [u[0], u[1]]
+    my_pde.eigenvalues[2] = [u[0], u[1]]
+    my_pde.eigenvalues[3] = [u[0] + c, u[1] + c]
 
 my_pde.substitute_expression(gamma, 1.4)
 
@@ -151,17 +155,23 @@ my_pde.substitute_expression(gamma, 1.4)
 #
 # Initial conditions as specified in the README.md.
 #
-my_pde.initial_values[0] = 1 # rho
-my_pde.initial_values[1] = 0 # u
-my_pde.initial_values[2] = 0 # v
+my_pde.initial_values[0] = 1  # rho
+my_pde.initial_values[1] = 0  # u
+my_pde.initial_values[2] = 0  # v
 
 if dimensions == 2:
-  volume_centre = sympy.sqrt((0.5 - my_pde.x[0])**2 + (0.5 - my_pde.x[1])**2)
-  my_pde.initial_values[3] = sympy.Piecewise((1.0, volume_centre < 0.2), (1.01, True)) # e
+    volume_centre = sympy.sqrt((0.5 - my_pde.x[0]) ** 2 + (0.5 - my_pde.x[1]) ** 2)
+    my_pde.initial_values[3] = sympy.Piecewise(
+        (1.0, volume_centre < 0.2), (1.01, True)
+    )  # e
 else:
-  volume_centre = sympy.sqrt((0.5 - my_pde.x[0])**2 + (0.5 - my_pde.x[1])**2 + (0.5 - my_pde.x[2])**2)
-  my_pde.initial_values[3] = 0 # w
-  my_pde.initial_values[4] = sympy.Piecewise((1.0, volume_centre < 0.2), (1.01, True)) # e
+    volume_centre = sympy.sqrt(
+        (0.5 - my_pde.x[0]) ** 2 + (0.5 - my_pde.x[1]) ** 2 + (0.5 - my_pde.x[2]) ** 2
+    )
+    my_pde.initial_values[3] = 0  # w
+    my_pde.initial_values[4] = sympy.Piecewise(
+        (1.0, volume_centre < 0.2), (1.01, True)
+    )  # e
 
 #
 # Specify which implementation our solvers uses.
@@ -209,13 +219,16 @@ if not os.path.exists("solution"):
     os.makedirs("solution")
 
 if visualise:
-  output_patch_file = "solution/solution-EulerSolver.peano-patch-file"
-  if os.path.isfile(output_patch_file):
-    subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file),
-    ])
-  sys.exit(0)
+    output_patch_file = "solution/solution-EulerSolver.peano-patch-file"
+    if os.path.isfile(output_patch_file):
+        subprocess.call(
+            [
+                "python3",
+                "../../../python/peano4/visualisation/render.py",
+                str(output_patch_file),
+            ]
+        )
+    sys.exit(0)
 
 #
 # If you only target a sequential execution, you can omit the load balancing.

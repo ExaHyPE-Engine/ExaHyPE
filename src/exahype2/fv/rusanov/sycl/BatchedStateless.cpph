@@ -425,7 +425,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless(
       });
     });
 
-    updateWithFlux = queue.submit([&](::sycl::handler& handle) {
+    updateWithFlux            = queue.submit([&](::sycl::handler& handle) {
       handle.depends_on(updateWithEigenvalue);
       handle.depends_on(computeFluxX);
       handle.depends_on(computeFluxY);
@@ -597,7 +597,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovBatchedStateless(
       });
     });
 
-    updateWithNCP = queue.submit([&](::sycl::handler& handle) {
+    updateWithNCP                          = queue.submit([&](::sycl::handler& handle) {
       handle.depends_on(updateWithEigenvalue);
       handle.depends_on(updateWithFlux);
       handle.depends_on(computeNCPX);

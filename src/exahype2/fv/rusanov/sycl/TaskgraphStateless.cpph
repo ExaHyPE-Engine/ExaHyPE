@@ -523,7 +523,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovTaskgraphStateles
         });
       });
 #else
-      computeNCPXEvent[patchIndex] = queue.submit([&](::sycl::handler& handle) {
+      computeNCPXEvent[patchIndex]    = queue.submit([&](::sycl::handler& handle) {
         handle.parallel_for(::sycl::range<3>{NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch + 2 * HaloSize}, [=](::sycl::item<3> i) {
           int z = i[0];
           int y = i[1];
@@ -543,7 +543,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovTaskgraphStateles
           );
         });
       });
-      computeNCPYEvent[patchIndex] = queue.submit([&](::sycl::handler& handle) {
+      computeNCPYEvent[patchIndex]    = queue.submit([&](::sycl::handler& handle) {
         handle.parallel_for(::sycl::range<3>{NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch + 2 * HaloSize, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
           int z = i[0];
           int y = i[1];
@@ -563,7 +563,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovTaskgraphStateles
           );
         });
       });
-      computeNCPZEvent[patchIndex] = queue.submit([&](::sycl::handler& handle) {
+      computeNCPZEvent[patchIndex]    = queue.submit([&](::sycl::handler& handle) {
         handle.parallel_for(::sycl::range<3>{NumberOfVolumesPerAxisInPatch + 2 * HaloSize, NumberOfVolumesPerAxisInPatch, NumberOfVolumesPerAxisInPatch}, [=](::sycl::item<3> i) {
           int z = i[0] - HaloSize;
           int y = i[1];

@@ -23,4 +23,4 @@ namespace applications::exahype2::advection {
 
     F[normal] = Q[normal];
   }
-} // namespace applications::exahype2::euler
+} // namespace applications::exahype2::advection

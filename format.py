@@ -419,7 +419,9 @@ def is_cppfile(filename):
             if filename.endswith(".template" + suf):
                 if verbose:
                     print(
-                        "File '{}' looks like a jinja template file. Skipping.".format(filename)
+                        "File '{}' looks like a jinja template file. Skipping.".format(
+                            filename
+                        )
                     )
                 return False
             else:
@@ -527,7 +529,9 @@ if __name__ == "__main__":
         clang_format_file = args.style
         if not os.path.exists(clang_format_file):
             raise FileNotFoundError(
-                "Provided clang-format file '{}' doesn't exist.".format(clang_format_file)
+                "Provided clang-format file '{}' doesn't exist.".format(
+                    clang_format_file
+                )
             )
 
     verbose = args.verbose
@@ -571,7 +575,9 @@ if __name__ == "__main__":
                     if not (is_pythonfile(f) or is_cppfile(f)):
                         if verbose:
                             print(
-                                "File '{}' doesn't look like a Python nor C/C++ file to me, skipping it.".format(f)
+                                "File '{}' doesn't look like a Python nor C/C++ file to me, skipping it.".format(
+                                    f
+                                )
                             )
                         continue
                     filelist.append(f)
@@ -587,7 +593,9 @@ if __name__ == "__main__":
                 if not (is_pythonfile(f) or is_cppfile(f)):
                     if verbose:
                         print(
-                            "File '{}' doesn't look like a Python nor C/C++ file to me, skipping it.".format(f)
+                            "File '{}' doesn't look like a Python nor C/C++ file to me, skipping it.".format(
+                                f
+                            )
                         )
                     continue
                 filelist.append(f)
@@ -631,13 +639,17 @@ if __name__ == "__main__":
             if not os.path.exists(fullpathf):
                 if verbose:
                     print(
-                        "File '{}' doesn't exist. Did you remove it in this branch? Skipping it.".format(fullpathf)
+                        "File '{}' doesn't exist. Did you remove it in this branch? Skipping it.".format(
+                            fullpathf
+                        )
                     )
                 continue
             if not (is_pythonfile(fullpathf) or is_cppfile(fullpathf)):
                 if verbose:
                     print(
-                        "File '{}' doesn't look like a Python nor C/C++ file to me, skipping it.".format(fullpathf)
+                        "File '{}' doesn't look like a Python nor C/C++ file to me, skipping it.".format(
+                            fullpathf
+                        )
                     )
                 continue
             filelist.append(fullpathf)

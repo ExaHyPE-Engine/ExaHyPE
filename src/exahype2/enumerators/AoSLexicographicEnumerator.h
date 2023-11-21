@@ -42,8 +42,7 @@ namespace exahype2::enumerators {
    *   active information, i.e., data you write to.
    */
   struct AoSLexicographicEnumerator {
-    constexpr GPUCallableInlineMethod
-      AoSLexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+    constexpr GPUCallableInlineMethod AoSLexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
       _numberOfCells(numberOfCells),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),
@@ -57,8 +56,7 @@ namespace exahype2::enumerators {
      * indices if you want.
      *
      */
-    GPUCallableInlineMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const
-      InlineMethod {
+    GPUCallableInlineMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const InlineMethod {
       if constexpr (Dimensions == 2) {
         return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
                  * (_unknowns + _numberOfAuxiliaryVariables)

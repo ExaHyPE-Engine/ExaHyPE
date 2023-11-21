@@ -9,7 +9,7 @@ void applications::exahype2::euler::Euler_ADERDG::initialCondition(
   const tarch::la::Vector<Dimensions, double>& x,
   const tarch::la::Vector<Dimensions, double>& h,
   const tarch::la::Vector<Dimensions, int>&    index,
-  bool gridIsConstructed
+  bool                                         gridIsConstructed
 ) {
   using s = VariableShortcuts;
 
@@ -20,9 +20,8 @@ void applications::exahype2::euler::Euler_ADERDG::initialCondition(
 #if Dimensions == 2
   Q[s::e] = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2)) < 0.2) ? (1.0) : (1.01));
 #else
-  Q[s::v + 2] = 0;
-  Q[s::e]
-    = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2) + std::pow(0.5 - x(2), 2)) < 0.2) ? (1.0) : (1.01));
+  Q[s::v + 2]                                        = 0;
+  Q[s::e]                                            = ((std::sqrt(std::pow(0.5 - x(0), 2) + std::pow(0.5 - x(1), 2) + std::pow(0.5 - x(2), 2)) < 0.2) ? (1.0) : (1.01));
 #endif
 #elif SCENARIO == GaussianExplosion
   // Manual offset to make the wave originate slightly to the left of the center --- helps
@@ -37,22 +36,22 @@ void applications::exahype2::euler::Euler_ADERDG::initialCondition(
   double       distance      = tarch::la::norm2(x - circleCentre);
   double       exponent      = -(distance * distance) / 2.0 / peakDeviation / peakDeviation;
 
-  Q[s::rho]   = 0.1; // rho
-  Q[s::v + 0] = 0;   // u
-  Q[s::v + 1] = 0;   // v
+  Q[s::rho]   = 0.1;                // rho
+  Q[s::v + 0] = 0;                  // u
+  Q[s::v + 1] = 0;                  // v
 
 #if Dimensions == 2
-  Q[s::e] = std::exp(exponent); // e
-#else
-  Q[s::v + 2] = 0;                  // w
   Q[s::e]     = std::exp(exponent); // e
+#else
+  Q[s::v + 2]                                              = 0;                  // w
+  Q[s::e]                                                  = std::exp(exponent); // e
 #endif
 #elif SCENARIO == BreakingDam
   Q[s::rho]   = 0.1;
   Q[s::v + 0] = 0;
   Q[s::v + 1] = 0;
 #if Dimensions == 2
-  Q[s::e] = ((x(0) < 0.5) ? (1.0) : (0));
+  Q[s::e]     = ((x(0) < 0.5) ? (1.0) : (0));
 #else
   Q[s::v + 2] = 0;
   Q[s::e]     = ((x(0) < 0.5) ? (1.0) : (0));
@@ -90,10 +89,7 @@ void applications::exahype2::euler::Euler_ADERDG::boundaryConditions(
 }
 
 ::exahype2::RefinementCommand applications::exahype2::euler::Euler_ADERDG::refinementCriterion(
-  const double* __restrict__ Q,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  double                                       t
+  const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t
 ) {
   using s = VariableShortcuts;
 
@@ -134,7 +130,7 @@ void applications::exahype2::euler::Euler_ADERDG::boundaryConditions(
 #if Dimensions == 3
   tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5, 0.5};
 #else
-  tarch::la::Vector<Dimensions, double> circleCentre = {0.5, 0.5};
+  tarch::la::Vector<Dimensions, double> circleCentre       = {0.5, 0.5};
 #endif
 
   if (tarch::la::equals(t, 0.0)) {

@@ -61,13 +61,13 @@ visualise = False
 #
 # Choose how often a snapshot is written.
 #
-time_in_between_two_snapshots = end_time/100
-#time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
+time_in_between_two_snapshots = end_time / 100
+# time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
 
 #
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-compile_mode=peano4.output.CompileMode.Release
+compile_mode = peano4.output.CompileMode.Release
 
 #
 # We first create a new ExaHyPE 2 project.
@@ -75,10 +75,10 @@ compile_mode=peano4.output.CompileMode.Release
 # We amend the executable name by the space dimensions.
 #
 my_project = exahype2.Project(
-  namespace     = ["tutorials", "exahype2", "elasticwave"],
-  project_name  = "ElasticWaveTutorial",
-  directory     = ".",
-  executable    = "elastic-wave-" + str(dimensions) + "d"
+    namespace=["tutorials", "exahype2", "elasticwave"],
+    project_name="ElasticWaveTutorial",
+    directory=".",
+    executable="elastic-wave-" + str(dimensions) + "d",
 )
 
 #
@@ -90,7 +90,7 @@ my_project = exahype2.Project(
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     name="ElasticWaveSolver",
     patch_size=patch_size,
-    unknowns=dimensions + 3, # [u, v, sxx, syy, sxy]
+    unknowns=dimensions + 3,  # [u, v, sxx, syy, sxy]
     auxiliary_variables=0,
     min_volume_h=volume_size,
     max_volume_h=volume_size,
@@ -101,7 +101,9 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 # We want to define our PDE symbolically.
 # For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
 #
-my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(unknowns=dimensions+3, auxiliary_variables=0, dimensions=dimensions)
+my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(
+    unknowns=dimensions + 3, auxiliary_variables=0, dimensions=dimensions
+)
 v = my_pde.name_Q_entries(0, dimensions, "v")
 sigma = my_pde.name_Q_entries(dimensions, 3, "sigma")
 
@@ -168,7 +170,7 @@ t = sympy.symbols("t")
 force = M0 * t / (t0 * t0) * (sympy.exp(-t / t0))
 
 max_h = sympy.symbols("MaxAdmissibleVolumeH")
-point_source = sympy.sqrt((10 - my_pde.x[0])**2 + (10 - my_pde.x[1])**2)
+point_source = sympy.sqrt((10 - my_pde.x[0]) ** 2 + (10 - my_pde.x[1]) ** 2)
 
 my_pde.sources[0] = 0
 my_pde.sources[1] = 0
@@ -229,13 +231,16 @@ if not os.path.exists("solution"):
     os.makedirs("solution")
 
 if visualise:
-  output_patch_file = "solution/solution-ElasticWaveSolver.peano-patch-file"
-  if os.path.isfile(output_patch_file):
-    subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file),
-    ])
-  sys.exit(0)
+    output_patch_file = "solution/solution-ElasticWaveSolver.peano-patch-file"
+    if os.path.isfile(output_patch_file):
+        subprocess.call(
+            [
+                "python3",
+                "../../../python/peano4/visualisation/render.py",
+                str(output_patch_file),
+            ]
+        )
+    sys.exit(0)
 
 #
 # If you only target a sequential execution, you can omit the load balancing.

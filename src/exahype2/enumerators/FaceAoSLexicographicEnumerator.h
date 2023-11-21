@@ -77,8 +77,7 @@ namespace exahype2::enumerators {
      *   properties such as the first derivative along the normal. Some
      *   code snippets within ExaHyPE 2 call the haloSize overlap.
      */
-    constexpr GPUCallableInlineMethod
-      FaceAoSLexicographicEnumerator(int faceNumber, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+    constexpr GPUCallableInlineMethod FaceAoSLexicographicEnumerator(int faceNumber, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
       _faceNumber(faceNumber),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),

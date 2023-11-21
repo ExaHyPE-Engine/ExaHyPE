@@ -17,11 +17,7 @@ void applications::exahype2::advection::Advection_RKDG::initialCondition(
 }
 
 void applications::exahype2::advection::Advection_RKDG::boundaryConditions(
-  const double* __restrict__ Qinside,
-  double* __restrict__ Qoutside,
-  const tarch::la::Vector<Dimensions, double>& x,
-  double                                       t,
-  int                                          normal
+  const double* __restrict__ Qinside, double* __restrict__ Qoutside, const tarch::la::Vector<Dimensions, double>& x, double t, int normal
 ) {
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
     Qoutside[i] = Qinside[i];

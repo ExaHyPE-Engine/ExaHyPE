@@ -39,8 +39,8 @@ end_time = 1
 #
 # Choose domain size and offset.
 #
-size=[2.0, 2.0]
-offset=[0.0, 0.0]
+size = [2.0, 2.0]
+offset = [0.0, 0.0]
 
 #
 # If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
@@ -55,13 +55,13 @@ visualise = False
 #
 # Choose how often a snapshot is written.
 #
-time_in_between_two_snapshots = end_time/100
-#time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
+time_in_between_two_snapshots = end_time / 100
+# time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
 
 #
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-compile_mode=peano4.output.CompileMode.Release
+compile_mode = peano4.output.CompileMode.Release
 
 #
 # We first create a new ExaHyPE 2 project.
@@ -83,8 +83,8 @@ my_project = exahype2.Project(
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     name="SWESolver",
     patch_size=patch_size,
-    unknowns=2 + 1, # [h, hu, hv]
-    auxiliary_variables=1, # bathymetry
+    unknowns=2 + 1,  # [h, hu, hv]
+    auxiliary_variables=1,  # bathymetry
     min_volume_h=volume_size,
     max_volume_h=volume_size,
     time_step_relaxation=0.5,
@@ -94,14 +94,16 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 # We want to define our PDE symbolically.
 # For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
 #
-my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(unknowns=2+1, auxiliary_variables=1, dimensions=2)
+my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(
+    unknowns=2 + 1, auxiliary_variables=1, dimensions=2
+)
 h = my_pde.name_Q_entry(0, "h")
 hu = my_pde.name_Q_entry(1, "hu")
 hv = my_pde.name_Q_entry(2, "hv")
 b = my_pde.name_auxiliary_variable(0, "b")
 
 # Gravitational constant
-g = sympy.symbols('g')
+g = sympy.symbols("g")
 
 # Speed in x-direction
 u = sympy.Piecewise((hu / h, h > 0.0), (0.0, True))
@@ -119,17 +121,25 @@ my_pde.F[2, 0] = sympy.Piecewise((h * u * v, h > 0.0), (0.0, True))
 
 my_pde.F[0, 1] = sympy.Piecewise((hv, h > 0.0), (0.0, True))
 my_pde.F[1, 1] = sympy.Piecewise((h * u * v, h > 0.0), (0.0, True))
-my_pde.F[2, 1] = sympy.Piecewise((hv * v + (g * h**2)/2, h > 0.0), (0.0, True))
+my_pde.F[2, 1] = sympy.Piecewise((hv * v + (g * h**2) / 2, h > 0.0), (0.0, True))
 
 # Eigenvalues [unknowns, dimensions]
 my_pde.eigenvalues[0, 0] = u
 my_pde.eigenvalues[0, 1] = v
 
-my_pde.eigenvalues[1, 0] = sympy.Piecewise((u + sympy.sqrt(g * h), h > 0.0), (0.0, True))
-my_pde.eigenvalues[1, 1] = sympy.Piecewise((v + sympy.sqrt(g * h), h > 0.0), (0.0, True))
+my_pde.eigenvalues[1, 0] = sympy.Piecewise(
+    (u + sympy.sqrt(g * h), h > 0.0), (0.0, True)
+)
+my_pde.eigenvalues[1, 1] = sympy.Piecewise(
+    (v + sympy.sqrt(g * h), h > 0.0), (0.0, True)
+)
 
-my_pde.eigenvalues[2, 0] = sympy.Piecewise((u - sympy.sqrt(g * h), h > 0.0), (0.0, True))
-my_pde.eigenvalues[2, 1] = sympy.Piecewise((v - sympy.sqrt(g * h), h > 0.0), (0.0, True))
+my_pde.eigenvalues[2, 0] = sympy.Piecewise(
+    (u - sympy.sqrt(g * h), h > 0.0), (0.0, True)
+)
+my_pde.eigenvalues[2, 1] = sympy.Piecewise(
+    (v - sympy.sqrt(g * h), h > 0.0), (0.0, True)
+)
 
 # NCP [unknowns, dimensions]
 grad_b = my_pde.grad(b)
@@ -150,12 +160,14 @@ my_pde.ncp[2, 1] = sympy.Piecewise((g * h * grad_b, h > 0.0), (0.0, True))
 #
 # Initial conditions as specified in the README.md.
 #
-my_pde.initial_values[0] = 1 # Water height (h)
-my_pde.initial_values[1] = 0 # x-momentum (hu)
-my_pde.initial_values[2] = 0 # y-momentum (hv)
+my_pde.initial_values[0] = 1  # Water height (h)
+my_pde.initial_values[1] = 0  # x-momentum (hu)
+my_pde.initial_values[2] = 0  # y-momentum (hv)
 
-volume_centre = sympy.sqrt((1.0 - my_pde.x[0])**2 + (1.0 - my_pde.x[1])**2)
-my_pde.initial_values[3] = sympy.Piecewise((0.0, volume_centre < 0.4), (0.1, True)) # Bathymetry (b)
+volume_centre = sympy.sqrt((1.0 - my_pde.x[0]) ** 2 + (1.0 - my_pde.x[1]) ** 2)
+my_pde.initial_values[3] = sympy.Piecewise(
+    (0.0, volume_centre < 0.4), (0.1, True)
+)  # Bathymetry (b)
 
 my_pde.boundary_values[0] = h
 my_pde.boundary_values[1] = -hu
@@ -174,7 +186,7 @@ my_solver.set_implementation(
     boundary_conditions=my_pde.implementation_of_boundary_conditions(),
     flux=my_pde.implementation_of_flux(),
     eigenvalues=my_pde.implementation_of_max_eigenvalue(),
-    ncp = my_pde.implementation_of_ncp()
+    ncp=my_pde.implementation_of_ncp(),
 )
 
 #
@@ -192,7 +204,7 @@ my_project.add_solver(my_solver)
 # Configure some global parameters
 #
 my_project.set_global_simulation_parameters(
-    dimensions=2, # The dimensionality is fixed for SWE
+    dimensions=2,  # The dimensionality is fixed for SWE
     size=size,
     offset=offset,
     min_end_time=end_time,
@@ -211,13 +223,16 @@ if not os.path.exists("solution"):
     os.makedirs("solution")
 
 if visualise:
-  output_patch_file = "solution/solution-SWESolver.peano-patch-file"
-  if os.path.isfile(output_patch_file):
-    subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file),
-    ])
-  sys.exit(0)
+    output_patch_file = "solution/solution-SWESolver.peano-patch-file"
+    if os.path.isfile(output_patch_file):
+        subprocess.call(
+            [
+                "python3",
+                "../../../python/peano4/visualisation/render.py",
+                str(output_patch_file),
+            ]
+        )
+    sys.exit(0)
 
 #
 # If you only target a sequential execution, you can omit the load balancing.

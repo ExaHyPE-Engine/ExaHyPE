@@ -13,8 +13,8 @@ void applications::exahype2::elasticwave::ElasticWave_ADERDG::initialCondition(
 ) {
   using s = VariableShortcuts;
 
-  Q[s::v + 0] = 0.0;
-  Q[s::v + 1] = 0.0;
+  Q[s::v + 0]     = 0.0;
+  Q[s::v + 1]     = 0.0;
   Q[s::sigma + 0] = 0.0;
   Q[s::sigma + 1] = 0.0;
   Q[s::sigma + 2] = 0.0;
@@ -30,18 +30,15 @@ void applications::exahype2::elasticwave::ElasticWave_ADERDG::boundaryConditions
 ) {
   using s = VariableShortcuts;
 
-  Qoutside[s::v + 0] = 0.0;
-  Qoutside[s::v + 1] = 0.0;
+  Qoutside[s::v + 0]     = 0.0;
+  Qoutside[s::v + 1]     = 0.0;
   Qoutside[s::sigma + 0] = 0.0;
   Qoutside[s::sigma + 1] = 0.0;
   Qoutside[s::sigma + 2] = 0.0;
 }
 
 ::exahype2::RefinementCommand applications::exahype2::elasticwave::ElasticWave_ADERDG::refinementCriterion(
-  const double* __restrict__ Q,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  double                                       t
+  const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t
 ) {
   using s = VariableShortcuts;
 

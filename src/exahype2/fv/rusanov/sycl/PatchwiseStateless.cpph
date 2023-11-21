@@ -158,7 +158,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovPatchwiseStateles
           }
         }
 #else
-        x = i.get_local_id(2) - HaloSize;
+        x              = i.get_local_id(2) - HaloSize;
         loopbodies::computeMaxEigenvalue<SolverType>(
           patchData.QIn[patchIndex],
           QInEnumerator,

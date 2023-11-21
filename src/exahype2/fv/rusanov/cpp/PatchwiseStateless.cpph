@@ -602,7 +602,7 @@ namespace exahype2::fv::rusanov::cpp::internal {
     delete[] range1d_solvhalosize_m;
     delete[] range2d_solvhalosize_m;
   }
-} // namespace exahype2::fv::rusanov::omp::internal
+} // namespace exahype2::fv::rusanov::cpp::internal
 
 
 template <
