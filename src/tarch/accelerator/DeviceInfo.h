@@ -60,7 +60,7 @@ namespace tarch::accelerator {
    */
   constexpr uint64_t repeats    = 10;
   constexpr size_t   alloc_size = 1024*1024*256;
-  constexpr size_t   N          = alloc_size / sizeof(double); // 1GB  Ensure the number divides the block size 256 perfectly
+  constexpr size_t   N          = alloc_size / sizeof(double); // 0.25GB, Ensure the number divides the block size 256 without remainder for CUDA backend
 
   static tarch::logging::Log _log("tarch::accelerator");
 
