@@ -511,13 +511,10 @@ void tarch::multicore::native::waitForTasks(const std::vector<TaskNumber>& inDep
 
 void tarch::multicore::native::waitForTask(const TaskNumber& taskNumber) {}
 
-<<<<<<< HEAD
 void tarch::multicore::native::registerTask( const TaskNumber&  number ) {
   assertion( _tasksWithAntidependencies.count(number)==0 );
 }
-=======
-void tarch::multicore::native::registerTask(const TaskNumber& number) {}
->>>>>>> refs/remotes/origin/particles
+
 
 
 #endif

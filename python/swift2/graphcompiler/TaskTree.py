@@ -41,7 +41,7 @@ def construct_touch_vertex_first_time_call(
         return (
             """
       const int taskNumberToBeUsed = fineGridVertex"""
-            + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(
+            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
                 current_species_set.name
             )
             + """.getTouchFirstNumber();
@@ -79,7 +79,7 @@ def construct_touch_cell_first_time_call(
         return (
             """
       const int taskNumberToBeUsed = fineGridCell"""
-            + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(
+            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
                 current_species_set.name
             )
             + """.getTouchLastNumber();
@@ -87,7 +87,7 @@ def construct_touch_cell_first_time_call(
       std::vector<int> adjacentVertexTask(TwoPowerD);
       for (int i=0; i<TwoPowerD; i++) {
         adjacentVertexTask[i] = fineGridVertices"""
-            + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(
+            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
                 current_species_set.name
             )
             + """(i).getTouchFirstNumber();
@@ -124,7 +124,7 @@ def construct_touch_vertex_last_time_call(
     tarch::multicore::waitForTasks( 
       tarch::la::toSTLVector(
         fineGridVertex"""
-        + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(
+        + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
             current_species_set.name
         )
         + """.getAdjacentCellsTouchLastNumber() 
@@ -257,7 +257,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                     current_species_set.particle_model.name,
                 )
             )
-        action_set_erase_task_markers = peano4.toolbox.ClearTaskNumbersOnMesh(
+        action_set_erase_task_markers = peano4.toolbox.api.ClearNumbersOnMesh(
             current_species_set.name
         )
         action_set_erase_task_markers.descend_invocation_order = (
@@ -433,10 +433,8 @@ def translate_one_step_of_species_into_mesh_traversal(
                 )
             )
         alter_particle_position.append(False)
-        action_set_erase_task_markers = peano4.toolbox.AssignTaskNumbersToMesh(
+        action_set_erase_task_markers = peano4.toolbox.api.AssignNumbersToMesh(
             current_species_set.name,
-            touch_cell_first_time_assignment_predicate="false",
-            touch_vertex_last_time_assignment_predicate="not marker.isAdjacentToParallelDomainBoundary()",
         )
         action_set_erase_task_markers.descend_invocation_order = (
             new_step.lowest_descend_invocation_order() - 1

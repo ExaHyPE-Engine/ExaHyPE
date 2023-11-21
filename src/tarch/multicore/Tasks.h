@@ -513,17 +513,12 @@ namespace tarch {
       /**
        * Native implementation of tarch::multicore::registerTask().
        */
-<<<<<<< HEAD
       void registerTask( const TaskNumber&  number );
 
       /**
        * Native implementation of tarch::multicore::finishedTask().
        */
       void deregisterTask( const TaskNumber&  number );
-=======
-      void registerTask(const TaskNumber& number);
-      void finishedTask(const TaskNumber& number);
->>>>>>> refs/remotes/origin/particles
     } // namespace native
 
     namespace internal {

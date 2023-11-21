@@ -15,99 +15,28 @@ import shutil
 ########################################################################################
 
 Parallelisation_DomainDecomposition = "domain-decomposition"
-Parallelisation_ForkJoinTasks = "fork-join-tasks-per-sweep"
+Parallelisation_SpawnTasksPerSweep = "spawn-tasks-per-sweep"
+ParallelisationVariants = [Parallelisation_DomainDecomposition, Parallelisation_SpawnTasksPerSweep]
 
 Storage_Scattered = "scattered"
 Storage_ContinuousPerVertex = "continuous-per-vertex"
 Storage_GlobalContinuous = "global-continuous"
+StorageVariants = [Storage_ContinuousPerVertex, Storage_GlobalContinuous]
 
 Sorting_InsertSweeps = "insert-sorts"
 Sorting_OnTheFly = "sort-on-the-fly"
+SortingVariants = [Sorting_InsertSweeps, Sorting_OnTheFly]
 
 Enable_VectorisationOfAllComparisons = "vectorise-all"
 Enable_VectorisationOfDistanceChecks = "vectorise-distance-checks"
+VectorisationVariants = [Enable_VectorisationOfAllComparisons, Enable_VectorisationOfDistanceChecks]
 
 
-Choices = [
-    Parallelisation_DomainDecomposition + "." + Storage_Scattered,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_InsertSweeps,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_OnTheFly,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_InsertSweeps,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_OnTheFly,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_InsertSweeps
-    + "."
-    + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_OnTheFly
-    + "."
-    + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_InsertSweeps
-    + "."
-    + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_OnTheFly
-    + "."
-    + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_InsertSweeps
-    + "."
-    + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_OnTheFly
-    + "."
-    + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_InsertSweeps
-    + "."
-    + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_OnTheFly
-    + "."
-    + Enable_VectorisationOfAllComparisons,
-    Parallelisation_ForkJoinTasks + "." + Storage_Scattered,
-]
+Choices = (
+      [ x +"." + Storage_Scattered for x in ParallelisationVariants ]
+    + [ x +"." + y + "." + z for x in ParallelisationVariants for y in StorageVariants for z in SortingVariants ]
+    + [ x +"." + y + "." + z + "." + v for x in ParallelisationVariants for y in StorageVariants for z in SortingVariants for v in VectorisationVariants ]
+)
 
 
 def use_continuous_per_vertex_data_layout(realisation):
@@ -324,7 +253,7 @@ if __name__ == "__main__":
             swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_ForkJoinTasks
+        args.realisation.split(".")[0] == Parallelisation_SpawnTasksPerSweep
         and args.realisation.split(".")[1] == Storage_Scattered
     ):
         project.algorithm_steps_task_graph_compiler = (
