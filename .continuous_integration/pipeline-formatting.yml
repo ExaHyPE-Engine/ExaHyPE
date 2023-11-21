@@ -5,5 +5,5 @@ formatting:
     - ${RUNNER_TAG}
   dependencies: []
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/latex_latest.sif python3 format.py -d -v -f=.
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${BASE_IMAGE_TAG} python3 format.py -d -v -f=.
   retry: 0
