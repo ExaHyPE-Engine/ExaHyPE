@@ -259,8 +259,8 @@ if __name__ == "__main__":
         project.algorithm_steps_task_graph_compiler = (
             swift2.graphcompiler.map_initialisation_steps_onto_task_tree
         )
-        project.map_particle_steps_onto_task_tree = (
-            swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
+        project.initialisation_steps_task_graph_compiler = (
+            swift2.graphcompiler.map_particle_steps_onto_task_tree
         )
     else:
         assert False, "realisation " + args.realisation + " not supported"

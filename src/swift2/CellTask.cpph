@@ -1,26 +1,19 @@
-  template <typename ParticleSet>
-  class VertexTask: public tarch::multicore::Task {
-    public:
-      typedef std::function<void( ParticleSet& localParticles,
-                                  ParticleSet& activeParticles )>  Functor;
+tarch::multicore::CellTask::CellTask(
+  const ParticleSet& localParticles,
+  const ParticleSet& activeParticles,
+  Functor            functor
+):
+  _activeParticles( activeParticles ),
+  _localParticles(localParticles),
+  _functor(functor) {
+}
 
-      /**
-       * Construct a vertex task
-       *
-       * Memorize the three parameters, and grab a new task number from the
-       * multicore component via
-       */
-      VertexTask(
-        const ParticleSet& localParticles,
-        const ParticleSet& activeParticles,
-        Functor            functor
-      );
-      ~VertexTask();
 
-      virtual bool run() override;
+tarch::multicore::CellTask::~CellTask() {
+}
 
-    private:
-      ParticleSet  _localParticles;
-      ParticleSet  _activeParticles;
-      Functor      _functor;
-  };
+
+bool tarch::multicore::CellTask::run() {
+  _functor( _localParticles, _activeParticles );
+  return false;
+}

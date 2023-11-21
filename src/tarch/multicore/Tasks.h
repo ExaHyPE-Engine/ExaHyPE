@@ -15,8 +15,24 @@
 
 namespace tarch {
   namespace multicore {
+    /**
+     * Task Number
+     *
+     * A task number is an integer tuple, and you can, in principle, use it in
+     * whichever way you like. Most people however use it the following way:
+     *
+     * - The first index is the vertex or cell index that we use.
+     * - The second index identifies if this is a cell or a face or vertex.
+     * - The third index is the phase.
+     */
     typedef std::tuple<int, int, int> TaskNumber;
 
+    /**
+     * Defines the max indices for each entry in TaskNumber. So there's no
+     * constraint on the first entry, but the second one is only from 0 to 2,
+     * while the last entry can hold 16 different entries.
+     */
+    constexpr TaskNumber MasTaskNumber{-1, 3, 16};
     constexpr TaskNumber NoDependency{-1, -1, -1};
 
     void setOrchestration(tarch::multicore::orchestration::Strategy* realisation);

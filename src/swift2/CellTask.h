@@ -37,12 +37,12 @@ namespace swift2 {
        * Memorize the three parameters, and grab a new task number from the
        * multicore component via
        */
-      VertexTask(
+      CellTask(
         const ParticleSet& localParticles,
         const ParticleSet& activeParticles,
         Functor            functor
       );
-      ~VertexTask();
+      ~CellTask();
 
       virtual bool run() override;
 

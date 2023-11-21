@@ -13,7 +13,7 @@ def concatenate_steps_of_species(
     So we first have all the steps of the first species, then all the steps of
     the second species, and so forth.
 
-    @return [(Species,Step)]
+    @return [(Species,Step,Integer)]
 
     """
     result = []
@@ -23,7 +23,7 @@ def concatenate_steps_of_species(
         else:
             per_species_set = current_species_set.particle_model.algorithm_steps()
         for step in per_species_set:
-            result.append((current_species_set, step))
+            result.append((current_species_set, step, species_sets.index(current_species_set)))
     return result
 
 
@@ -68,6 +68,7 @@ def interleave_steps_of_species(
                 result.append(
                     current_species,
                     per_species_set[active_step[current_species_set_number]],
+                    current_species_set_number,
                 )
                 active_step[current_species_set_number] += 1
                 added_entry = True
