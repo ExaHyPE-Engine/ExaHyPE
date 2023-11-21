@@ -477,10 +477,10 @@ std::string toString( peano4::utils::LoopParallelism );
   #include "omp/Loop.h"
 #elif defined(SharedTBB)
   #include "tbb/Loop.h"
-#elif defined(SharedCPP)
+#elif defined(SharedCPP) and __cplusplus >= 202101L
   #include "cpp/Loop.h"
-//#elif defined(SharedSYCL)
-//  #include "sycl/Loop.h"
+#elif defined(SharedSYCL)
+  #include "sycl/Loop.h"
 #else
   #define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
     for( int counter = 0; counter < max; counter++ ) {

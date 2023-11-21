@@ -32,7 +32,7 @@ DefaultIncludes = """
 def construct_touch_vertex_first_time_call(
     current_species_set, touch_vertex_first_time_kernel
 ):
-    if touch_vertex_first_time_kernel == None:
+    if touch_vertex_first_time_kernel == None or touch_vertex_first_time_kernel.strip() == "":
         return ""
     else:
         return (
@@ -44,9 +44,8 @@ def construct_touch_vertex_first_time_call(
             + """.getTouchFirstNumber();
       
       if ( taskNumberToBeUsed!=tarch::multicore::NoDependency ) {
-        auto* newTask = new ::swift2::VertexTask< decltype(localParticles) >(
-          localParticles,
-          activeParticles,
+        auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
+          assignedParticles,
           [=](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
             """
             + touch_vertex_first_time_kernel
@@ -68,7 +67,7 @@ def construct_touch_vertex_first_time_call(
 def construct_touch_cell_first_time_call(
     current_species_set, touch_cell_first_time_kernel
 ):
-    if touch_cell_first_time_kernel == None:
+    if touch_cell_first_time_kernel == None or touch_cell_first_time_kernel.strip() == "":
         return ""
     else:
         return (
@@ -89,7 +88,7 @@ def construct_touch_cell_first_time_call(
       }
 
       if ( taskNumberToBeUsed!=tarch::multicore::NoDependency ) {        
-        auto* newTask = new ::swift2::VertexTask< decltype(localParticles) >(
+        auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
           localParticles,
           activeParticles,
           [=](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
@@ -128,7 +127,7 @@ def construct_touch_vertex_last_time_call(
     """
     )
 
-    if touch_vertex_last_time_kernel != None:
+    if touch_vertex_last_time_kernel != None and touch_vertex_last_time_kernel.strip() != "":
         result += (
             touch_vertex_last_time_kernel
             + """
@@ -267,12 +266,17 @@ def translate_one_step_of_species_into_mesh_traversal(
 
     #
     # Pick computational kernel
+    # =========================
+    # This is where the actual computation per step is done. We have two
+    # fundamentally different kernels: one keeps track of (multiscale)
+    # neighbours, while the other just updates the particles within the
+    # octant (cell).
     #
     if step.dependencies == AlgorithmStep.Dependencies.NEIGHBOURS:
         if use_lists_to_construct_active_sets:
             if verbose:
                 print(
-                    "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses the peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles action set and hence optimise aggressively".format(
+                    "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} can use the peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles action set and hence optimise aggressively".format(
                         len(mesh_traversals),
                         step.name,
                         current_species_set.particle_model.name,
@@ -325,14 +329,40 @@ def translate_one_step_of_species_into_mesh_traversal(
         action_set_particle_particle_interaction.parallel = True
         new_step.add_action_set(action_set_particle_particle_interaction)
     elif step.dependencies == AlgorithmStep.Dependencies.SELF:
-        if verbose:
-            print(
-                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction action set".format(
-                    len(mesh_traversals),
-                    step.name,
-                    current_species_set.particle_model.name,
+        if use_lists_to_construct_active_sets:
+            if verbose:
+                print(
+                    "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles action set".format(
+                        len(mesh_traversals),
+                        step.name,
+                        current_species_set.particle_model.name,
+                    )
                 )
+
+            action_set_particle_update = peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles(
+                particle_set=current_species_set,
+                particle_cell_update_kernel=step.cell_kernel,
+                touch_vertex_first_time_compute_particle_update_kernel=step.touch_vertex_first_time_kernel,
+                touch_vertex_last_time_compute_particle_update_kernel=step.touch_vertex_last_time_kernel,
+                prepare_traversal_kernel=step.prepare_traversal_kernel,
+                unprepare_traversal_kernel=step.unprepare_traversal_kernel,
+                additional_includes=step.includes,
+                active_particle_set=step.input_particles,
             )
+            action_set_particle_update.descend_invocation_order = (
+                new_step.highest_descend_invocation_order() + 1
+            )
+            action_set_particle_update.parallel = True
+            new_step.add_action_set(action_set_particle_update)
+        else:
+            if verbose:
+                print(
+                    "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} uses peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction action set".format(
+                        len(mesh_traversals),
+                        step.name,
+                        current_species_set.particle_model.name,
+                    )
+                )
 
         action_set_particle_update = peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction(
             particle_set=current_species_set,
@@ -473,11 +503,10 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
         if optimisation == Optimisation.NONE:
             use_lists_to_construct_active_sets = False
             add_additional_dummy_sweep = False
-        # @todo Wieder rein
-        # elif optimisation==Optimisation.VECTORISE_WHENEVER_POSSIBLE:
-        #              use_lists_to_construct_active_sets = step.effect != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN and step.effect != AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN and len(alter_particle_position)>0 and not alter_particle_position[-1]
-        #              add_additional_dummy_sweep        = False
-        elif optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE:
+        elif (
+            optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE
+            or step_type == StepType.INITIALISATION
+        ):
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = (
                 current_step_of_species.effect
@@ -485,6 +514,9 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
                 or current_step_of_species.effect
                 == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
             )
+        elif optimisation == Optimisation.SORT_ON_THE_FLY:
+            use_lists_to_construct_active_sets = True
+            add_additional_dummy_sweep = False
         else:
             assert False, "option not supported"
 
@@ -519,14 +551,27 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
             alter_particle_position.append(True)
 
     if step_type == StepType.INITIALISATION:
+        # When we insert particles initially, they will be scattered. So it is
+        # important that we immediately gather them. We cannot flag step -1 as
+        # one that changes teh particle position, but we can present to the
+        # graph compiler that the last step will change the ordering. The graph
+        # compiler does not distinguish initialisation from time stepping and
+        # hence thinks that the sweep prior to the first sweep has changed the
+        # particle order. Which is exactly what we want. We also flag the first
+        # sweep as change, as the initial insertion indeed might be buggy.
         alter_particle_position[0] = True
+        alter_particle_position[-1] = True
 
     if does_one_species_require_gather(sequence_of_steps):
         add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers(
             mesh_traversals,
             alter_particle_position,
             get_species_set(sequence_of_steps),
-            verbose,
+            sort_with_lifts_and_drops=(
+                optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE
+                or step_type == StepType.INITIALISATION
+            ),
+            verbose=verbose,
         )
     else:
         add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(

@@ -4,6 +4,7 @@
 
 
 #include <list>
+#include <map>
 
 #include "tarch/multicore/BooleanSemaphore.h"
 
@@ -17,10 +18,12 @@ namespace toolbox {
 
 
 /**
- * Abstract base class for all flavours of particle sets
+ * Utility class for all flavours of particle sets
  *
  * Particle sets differ in the way they actually manage the particles. However,
  * they all share common stats, operations, ... This is covered by this class.
+ * The class is used by toolbox.particles.ParticleSet which usually holds
+ * multiple of these classes for different purposes.
  *
  * There's a problem here however: Most of these fields are static fields and
  * hence cannot be modelled as static. If we have them static, they are tied
@@ -35,6 +38,7 @@ namespace toolbox {
  * actual particles sets holds a static attribute of this class. I think that
  * would be a valid implementation, too.
  *
+ *
  */
 template <typename T>
 class toolbox::particles::SieveParticles {
@@ -43,28 +47,7 @@ public:
 
   typedef std::list<T*> ParticleList;
 
-  /**
-   * Deep copy of particles that have to be sieved
-   *
-   * This routine returns a deep copy of all the particles that are to be
-   * sieved. Use this before you start to traverse your local domain. As
-   * it is a deep copy, you have to invoke deleteParticles() on the result.
-   * The rationale behind the deep copying is as follows: Individual
-   * threads run through their subdomain in parallel and they should not
-   * compete for a global sieve set. At the same time, you want to
-   * eliminate a particle from the sieve set as soon as you have worked it
-   * in: No code should check that particle again, and you definitely don't
-   * want to insert it multiple times. So I make each thread (subtree) work
-   * with a sieve set of its own which it can manipulate as it wants. At
-   * the end of the traversal, it will delete all remaining particles, i.e.
-   * kill all those deep copies that were not relevant to the local
-   * partition.
-   *
-   * @see deleteParticles() to clean up the local copy.
-   * @see _particlesThatHaveToBeSieved which is the container from which we
-   *   create a deep copy.
-   */
-  //    ParticleList getSievedParticlesForNextGridTraversal() const;
+  static constexpr int GlobalSort = -1;
 
   /**
    * Get all the global sieve data consistent
@@ -130,8 +113,10 @@ public:
    *
    * The routine is thread-safe. The object does not keep any kind of
    * statistics. You have to maintain stats on your own if you need them.
+   * However, it only uses the lock, i.e. is thread-safe for
+   * originatingTree==GlobalSort.
    */
-  void addParticleThatCanNotBeLiftedWithinItsTree(T*);
+  void addParticleThatCanNotBeLiftedWithinItsTree(T*, int originatingTree);
 
   /**
    * Get particles that are to be sieved into one vertex
@@ -158,14 +143,20 @@ public:
    * particles which have not been sieved by a local thread. As the list
    * had been a deep copy, we'd otherwise create a memory leak.
    *
+   * The routine is thread-safe, i.e. uses a lock, i.e. if
+   * originatingTree==GlobalSort.
    *
    * @see getSievedParticlesForNextGridTraversal() for the deep copy and the
    *   roll-over of particles that cannot be lifted into particles that have
    *   to be sieved.
    * @see ::toolbox::particles::sieveParticle() for the sieve logic.
    * @see deleteParticles() for the deletion of deep copies.
+   *
+   * @param originatingTree Number of tree (positive integer) or GlobalSort.
    */
-  ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
+  ParticleList getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker, int originatingTree
+  );
 
   /**
    * Fine out how many particles still to sieve
@@ -174,8 +165,13 @@ public:
    * that have not been sieved so far. Therefore, this routine can not be used
    * for any statistics after a grid sweep to find out how many sieves have
    * been done.
+   *
+   * The routine is thread-safe, i.e. uses a lock, i.e. if
+   * originatingTree==GlobalSort.
+   *
+   * @param originatingTree Number of tree (positive integer) or GlobalSort.
    */
-  bool hasParticlesToBeSievedIntoVertices() const;
+  bool hasParticlesToBeSievedIntoVertices(int originatingTree) const;
 
 
 private:
@@ -198,7 +194,7 @@ private:
   static tarch::multicore::BooleanSemaphore _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
   static tarch::multicore::BooleanSemaphore _particlesToBeSievedSemaphore;
 
-  ParticleList _particlesThatCanNotBeLiftedWithinTheirTree;
+  std::map<int, ParticleList> _particlesThatCanNotBeLiftedWithinTheirTree;
 
   /**
    * Particles that should be sieved
@@ -211,7 +207,7 @@ private:
    *
    * The list is populated by finishedTraversal().
    */
-  ParticleList _particlesThatHaveToBeSieved;
+  std::map<int, ParticleList> _particlesThatHaveToBeSieved;
 };
 
 

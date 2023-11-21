@@ -28,8 +28,7 @@ namespace swift2 {
   template <typename ParticleSet>
   class VertexTask: public tarch::multicore::Task {
     public:
-      typedef std::function<void( ParticleSet& localParticles,
-                                  ParticleSet& activeParticles )>  Functor;
+      typedef std::function<void( ParticleSet& assignedParticles )>  Functor;
 
       /**
        * Construct a vertex task
@@ -38,8 +37,7 @@ namespace swift2 {
        * multicore component via
        */
       VertexTask(
-        const ParticleSet& localParticles,
-        const ParticleSet& activeParticles,
+        const ParticleSet& assignedParticles,
         Functor            functor
       );
       ~VertexTask() = default;
@@ -47,8 +45,7 @@ namespace swift2 {
       virtual bool run() override;
 
     private:
-      ParticleSet  _localParticles;
-      ParticleSet  _activeParticles;
+      ParticleSet  _assignedParticles;
       Functor      _functor;
   };
 }

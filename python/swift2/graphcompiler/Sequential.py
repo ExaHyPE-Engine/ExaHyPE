@@ -290,7 +290,6 @@ def map_onto_separate_mesh_traversals(
             optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE
             or step_type == StepType.INITIALISATION
         ):
-            ##or sequence_of_steps==current_entry_from_total_sequence_of_steps[-1]:
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = (
                 current_step_of_species.effect

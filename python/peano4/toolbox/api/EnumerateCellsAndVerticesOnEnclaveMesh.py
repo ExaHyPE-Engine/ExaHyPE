@@ -9,27 +9,31 @@ import peano4
 
 
 TaskMarkerIdentifier = "TaskMarker"
+UndefinedNumber      = -1
 
 
 def construct_marker_name(task_name):
-    return task_name + "TaskNumber"
+    return task_name + "EnclaveMeshEntityNumber"
 
 
 def create_vertex_marker(task_name):
     """!
     
-    Create vertex marker for tasking
+    Create vertex marker 
     
-    This marker can be used for vertices.We need two entries, as any user might
-    plug into touchVertexFirstTime() and touchVertexLastTime().
+    This marker can be used for vertices. The numbers are then typically used 
+    for some kind of task system or external referencing. Similar systems are 
+    also used linear algebra, i.e. where you enumerate mesh entities, but this
+    one is different as a vertex holds information about its adjacent cells'
+    numbers.
     
     If you want to use the action sets from this file, you have to run create
     markers for the vertices and the cells, and you have to add them to the 
     mesh:
     
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    cell_marker_for_tasks   = peano4.toolbox.TaskNumbersOnMesh.create_cell_marker(current_species_set.name)
-    vertex_marker_for_tasks = peano4.toolbox.TaskNumbersOnMesh.create_vertex_marker(current_species_set.name)
+    cell_marker_for_tasks   = peano4.toolbox.EnumerateCellsAndVerticesOnEnclaveMesh.create_cell_marker(current_species_set.name)
+    vertex_marker_for_tasks = peano4.toolbox.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(current_species_set.name)
  
     self._project.datamodel.add_cell(cell_marker_for_tasks)
     self._project.datamodel.add_vertex(vertex_marker_for_tasks)
@@ -39,13 +43,10 @@ def create_vertex_marker(task_name):
     each observer (algorithm step) before you add the action sets to the sets
     in turn.
     
-    By default, AdjacentCellsTouchLastNumber holds the index of touchCellLastTime().
-    
     """
     dastgen_marker = peano4.datamodel.DaStGen2( construct_marker_name(task_name) )
-    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer("TouchFirstNumber"))
-    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer("TouchLastNumber"))
-    dastgen_marker.data.add_attribute(peano4.dastgen2.Peano4IntegerArray(name="AdjacentCellsTouchLastNumber",cardinality="TwoPowerD"))
+    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer("Number"))
+    dastgen_marker.data.add_attribute(peano4.dastgen2.Peano4IntegerArray(name="AdjacentCellNumber",cardinality="TwoPowerD"))
     return dastgen_marker
 
 
@@ -55,41 +56,29 @@ def create_cell_marker(task_name):
     Create cell marker for tasking
     
     This marker can be used for cells.
-    We need two entries, as any user might plug into 
-    touchCellFirstTime() and touchCellLastTime() or the corresponding cell
-    variants.
     
-    If you want to use the action sets from this file, you have to run create
-    markers for the vertices and the cells, and you have to add them to the 
-    mesh:
-    
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    cell_marker_for_tasks   = peano4.toolbox.TaskNumbersOnMesh.create_cell_marker(current_species_set.name)
-    vertex_marker_for_tasks = peano4.toolbox.TaskNumbersOnMesh.create_vertex_marker(current_species_set.name)
- 
-    self._project.datamodel.add_cell(cell_marker_for_tasks)
-    self._project.datamodel.add_vertex(vertex_marker_for_tasks)
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    Furthermore, you have to add the use_vertex and use_cell instructions to 
-    each observer (algorithm step) before you add the action sets to the sets
-    in turn.
+    @see create_vertex_marker() for some usage information.
     
     """
     dastgen_marker = peano4.datamodel.DaStGen2( construct_marker_name(task_name) )
-    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer("TouchFirstNumber"))
-    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer("TouchLastNumber"))
+    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer("Number"))
     return dastgen_marker
 
 
 
-class AssignTaskNumbersToMesh(ActionSet):
+class AssignNumbersToMesh(ActionSet):
+    """!
+    
+    Gives each mesh entity a unique number 
+    
+    Also ensure that a vertex knows about the numbers of the adjacent cells.
+    The numbers are unique per tree, but not unique globally or even per rank.
+    At the moment, we ignore face data here, i.e. we only assign numbers to 
+    cells and vertices.
+    
+    """
     def __init__(self, 
                  task_name,
-                 touch_vertex_first_time_assignment_predicate = "true",
-                 touch_vertex_last_time_assignment_predicate  = "true",
-                 touch_cell_first_time_assignment_predicate   = "true",
-                 touch_cell_last_time_assignment_predicate    = "true",
                  ):
         """!
         
@@ -102,10 +91,6 @@ class AssignTaskNumbersToMesh(ActionSet):
           
         """
         self._task_name = task_name
-        self.touch_vertex_first_time_assignment_predicate = touch_vertex_first_time_assignment_predicate
-        self.touch_vertex_last_time_assignment_predicate  = touch_vertex_last_time_assignment_predicate
-        self.touch_cell_first_time_assignment_predicate   = touch_cell_first_time_assignment_predicate
-        self.touch_cell_last_time_assignment_predicate    = touch_cell_last_time_assignment_predicate
         pass
 
     def get_body_of_operation(self, operation_name):
@@ -116,35 +101,35 @@ class AssignTaskNumbersToMesh(ActionSet):
         """
         if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_VERTEX or operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
             return """
-            fineGridVertex{}.setTouchFirstNumber(tarch::multicore::NoDependency);
-            fineGridVertex{}.setTouchLastNumber(tarch::multicore::NoDependency);
-            for (int i=0; i<TwoPowerD; i++) fineGridVertex{}.setAdjacentCellsTouchLastNumber(i,tarch::multicore::NoDependency);
+            fineGridVertex{}.setNumber(NoNumber);
+            fineGridVertex{}.setNumber(NoNumber);
+            for (int i=0; i<TwoPowerD; i++) fineGridVertex{}.setAdjacentCellNumber(i,NoNumber);
             """.format(construct_marker_name(self._task_name),
                        construct_marker_name(self._task_name),
                        construct_marker_name(self._task_name),
                        )
         if operation_name==ActionSet.OPERATION_DESTROY_PERSISTENT_VERTEX or operation_name==ActionSet.OPERATION_DESTROY_HANGING_VERTEX:
             return """
-            tarch::multicore::releaseTaskNumber( fineGridVertex{}.getTouchFirstNumber() );
-            tarch::multicore::releaseTaskNumber( fineGridVertex{}.getTouchLastNumber() );
+            tarch::multicore::releaseTaskNumber( fineGridVertex{}.getNumber() );
+            tarch::multicore::releaseTaskNumber( fineGridVertex{}.getNumber() );
             """.format(construct_marker_name(self._task_name),
                        construct_marker_name(self._task_name),
                        )
         if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
             return """
             if ( 
-              fineGridVertex{}.getTouchFirstNumber()==tarch::multicore::NoDependency 
+              fineGridVertex{}.getNumber()==NoNumber 
               and
               {}
             ) {{
-              fineGridVertex{}.setTouchFirstNumber( tarch::multicore::reserveTaskNumber() );
+              fineGridVertex{}.setNumber( tarch::multicore::reserveTaskNumber() );
             }}
             if ( 
-              fineGridVertex{}.getTouchLastNumber()==tarch::multicore::NoDependency 
+              fineGridVertex{}.getNumber()==NoNumber 
               and
               {}
             ) {{
-              fineGridVertex{}.setTouchLastNumber( tarch::multicore::reserveTaskNumber() );
+              fineGridVertex{}.setNumber( tarch::multicore::reserveTaskNumber() );
             }}
             """.format(construct_marker_name(self._task_name),
                        self.touch_vertex_first_time_assignment_predicate,
@@ -156,7 +141,7 @@ class AssignTaskNumbersToMesh(ActionSet):
                        )
         if operation_name==ActionSet.OPERATION_CREATE_CELL:
             return """
-            fineGridCell{}.setTouchFirstNumber(tarch::multicore::NoDependency);
+            fineGridCell{}.setNumber(NoNumber);
             """.format(construct_marker_name(self._task_name))
         if operation_name==ActionSet.OPERATION_DESTROY_CELL:
             return """
@@ -165,23 +150,23 @@ class AssignTaskNumbersToMesh(ActionSet):
         if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
             return """
             if ( 
-              fineGridCell{}.getTouchFirstNumber()==tarch::multicore::NoDependency 
+              fineGridCell{}.getNumber()==NoNumber 
               and
               {}
             ) {{
-              fineGridCell{}.setTouchFirstNumber( tarch::multicore::reserveTaskNumber() );
+              fineGridCell{}.setNumber( tarch::multicore::reserveTaskNumber() );
             }}
             if ( 
-              fineGridCell{}.getTouchLastNumber()==tarch::multicore::NoDependency 
+              fineGridCell{}.getNumber()==NoNumber 
               and
               {}
             ) {{
-              fineGridCell{}.setTouchLastNumber( tarch::multicore::reserveTaskNumber() );
+              fineGridCell{}.setNumber( tarch::multicore::reserveTaskNumber() );
             }}
             for (int i=0; i<TwoPowerD; i++) {{
-              fineGridVertices{}(i).setAdjacentCellsTouchLastNumber(
+              fineGridVertices{}(i).setNumber(
                 TwoPowerD-1-i,
-                fineGridCell{}.getTouchLastNumber()
+                fineGridCell{}.getNumber()
               );
             }}
             """.format(construct_marker_name(self._task_name),
@@ -205,13 +190,29 @@ class AssignTaskNumbersToMesh(ActionSet):
     def user_should_modify_template(self):
         return False
 
-    def get_includes(self):
+    def get_attributes(self):
+        """!
+        
+        Propagates the no number through to the generated file.
+        
+        """
         return """
-#include "tarch/multicore/Tasks.h"        
-"""
+static constexpr int NoNumber = {};
+""".format( UndefinedNumber )
+
+#    def get_includes(self):
+#        return """
+##include "tarch/multicore/Tasks.h"        
+#"""
+
+#  /**
+#   * Used to administer task numbers
+#   */
+#  tarch::multicore::BooleanSemaphore activeTasksSemaphore;
+#  std::set<int>                      activeTaskNumbers;
 
 
-class ClearTaskNumbersOnMesh(ActionSet):
+class ClearNumbersOnMesh(ActionSet):
     def __init__(self, task_name):
         self._task_name = task_name
         pass
@@ -224,17 +225,17 @@ class ClearTaskNumbersOnMesh(ActionSet):
         """
         if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
             return """
-            fineGridVertex{}.setTouchFirstNumber(tarch::multicore::NoDependency);
-            fineGridVertex{}.setTouchLastNumber(tarch::multicore::NoDependency);
-            for (int i=0; i<TwoPowerD; i++) fineGridVertex{}.setAdjacentCellsTouchLastNumber(i,tarch::multicore::NoDependency);
+            fineGridVertex{}.setNumber(NoNumber);
+            fineGridVertex{}.setNumber(NoNumber);
+            for (int i=0; i<TwoPowerD; i++) fineGridVertex{}.setNumber(i,NoNumber);
             """.format(construct_marker_name(self._task_name),
                        construct_marker_name(self._task_name),
                        construct_marker_name(self._task_name),
                        )
         if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
             return """
-            fineGridCell{}.setTouchFirstNumber(tarch::multicore::NoDependency);
-            fineGridCell{}.setTouchLastNumber(tarch::multicore::NoDependency);
+            fineGridCell{}.setNumber(NoNumber);
+            fineGridCell{}.setNumber(NoNumber);
             """.format(construct_marker_name(self._task_name),
                        construct_marker_name(self._task_name))
         return ""
@@ -248,7 +249,7 @@ class ClearTaskNumbersOnMesh(ActionSet):
     def user_should_modify_template(self):
         return False
 
-    def get_includes(self):
-        return """
-#include "tarch/multicore/Tasks.h"        
-"""
+#    def get_includes(self):
+#        return """
+##include "tarch/multicore/Tasks.h"        
+#"""

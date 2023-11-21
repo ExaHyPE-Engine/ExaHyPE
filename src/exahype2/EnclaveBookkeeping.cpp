@@ -27,7 +27,7 @@ exahype2::EnclaveBookkeeping& exahype2::EnclaveBookkeeping::getInstance() {
 
 
 void exahype2::EnclaveBookkeeping::dumpStatistics() {
-  logInfo("dumpStatistics()", "active tasks=" << tarch::multicore::getNumberOfReservedTaskNumbers());
+  logInfo("dumpStatistics()", "active tasks=" << exahype2::EnclaveTask::getNumberOfActiveTasks());
 
   std::ostringstream finishedTasksMsg;
   finishedTasksMsg << "(#" << _finishedTasks.size();
@@ -46,7 +46,6 @@ void exahype2::EnclaveBookkeeping::cancelTask(int number) {
     Entry storedData = _finishedTasks.at(number);
     _finishedTasks.erase(number);
     tarch::freeMemory(storedData.data, tarch::MemoryLocation::Heap);
-    tarch::multicore::releaseTaskNumber(number);
   } else {
     _tasksThatHaveToBeCancelled.insert(number);
   }
@@ -77,7 +76,7 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
   _finishedTasks.erase(number);
   finishedTasksLock.free();
 
-  tarch::multicore::releaseTaskNumber(number);
+  exahype2::EnclaveTask::releaseTaskNumber(number);
 
   return storedData;
 }
@@ -121,7 +120,7 @@ void exahype2::EnclaveBookkeeping::finishedTask(
     _tasksThatHaveToBeCancelled.erase(taskNumber);
     delete[] data;
     lockFinishedTasks.free();
-    tarch::multicore::releaseTaskNumber(taskNumber);
+    exahype2::EnclaveTask::releaseTaskNumber(taskNumber);
   } else {
     auto  oldBucketCount = _finishedTasks.bucket_count();
     Entry newEntry(numberOfResultValues, data, maxEigenvalue);

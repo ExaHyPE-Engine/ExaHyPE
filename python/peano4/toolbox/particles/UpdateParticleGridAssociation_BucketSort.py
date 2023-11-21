@@ -39,14 +39,13 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 
     The algorithm describes an incremental bucket sort and naturally
     supports tunneling or massive changes of the cut-off. From an
-    implementation point of view, it is a stripped down version of the
+    conceptional point of view, it is a stripped down version of the
     lift and drop variant without the lifts and the drops. After all,
     each lift becomes directly an additional to the global sieve list,
     and then we are done.
 
-    Due to this analogy, the documentation here is scarce. Study the class
-    UpdateParticleGridAssociation_LiftDrop. Most remarks therein are valid
-    here to.
+    So, in theory, we could basically take UpdateParticleGridAssociation_LiftDrop
+    and remove the lifts and drops. However, this is slow.
 
 
     ## Impact on particle storage
@@ -82,6 +81,11 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
         p++;
         break;
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
+        _numberOfLiftsIntoSieveSet++;
+        logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
+        assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );    
+        break;
       case 0:
       case 1:
       case 2:
@@ -93,8 +97,14 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
       case 7:
       #endif
         _numberOfLiftsIntoSieveSet++;
-        logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
+        if (marker.isAdjacentToParallelDomainBoundary()) {
+          logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
+        }
+        else {
+          logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " but exploit knowledge that it will end up in same tree. Previously assigned to " << marker.toString() );
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p,_spacetreeId);
+        }
         assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );    
         break;
       default:
@@ -105,23 +115,45 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 """
     )
 
+    _Template_Sieve = jinja2.Template(
+        """
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices(_spacetreeId) ) {
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker, _spacetreeId );
+
+    _numberOfDropsFromSieveSet += sievedParticles.size();
+
+    fineGridVertex{{PARTICLES_CONTAINER}}.addParticles( sievedParticles );
+    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+  }
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker );
+
+    _numberOfDropsFromSieveSet += sievedParticles.size();
+
+    fineGridVertex{{PARTICLES_CONTAINER}}.addParticles( sievedParticles );
+    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates();
+    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+  }
+"""
+    )
+
     def get_body_of_operation(self, operation_name):
         """!
 
         Core actions triggered when we run through the mesh
-        
+
         See class description. If you compare this function to
         UpdateParticleGridAssociation_LiftDrop.get_body_of_operation(), we see
         that we use our modified lift routine when particles have moved and in
-        return can omit the dropping. That is, the cousin's realisation is 
-            
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~    
+        return can omit the dropping. That is, the cousin's realisation is
+
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
             result =  self._Template_Drop.render(**self.d)
             result += self._Template_Sieve.render(**self.d)
-        ~~~~~~~~~~~~~~~~~~~~~~~~~~    
-        
-        while we only do the sieve here. 
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        while we only do the sieve here.
 
         """
         result = "\n"
@@ -139,3 +171,19 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
+
+    def get_constructor_body(self):
+        return (
+            super(UpdateParticleGridAssociation_BucketSort,self).get_constructor_body()
+            + """
+            _spacetreeId              = treeNumber;
+          """
+        )
+
+    def get_attributes(self):
+        return (
+            super(UpdateParticleGridAssociation_BucketSort,self).get_attributes()
+            + """
+            int _spacetreeId;
+          """
+        )

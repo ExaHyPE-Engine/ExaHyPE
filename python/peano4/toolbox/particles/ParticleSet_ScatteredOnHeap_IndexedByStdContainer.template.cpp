@@ -221,45 +221,22 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
-  const Container::iterator&   particle
+  const Container::iterator&   particle,
+  int                          targetTree
 ) {
   assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
 
-  sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle);
+  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle, targetTree );
   return _container.erase(particle);
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
   for (auto p: _container) {
-    sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p);
+    _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
   }
   _container.clear();
 }
-
-
-/*
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::ParticleList  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getParticlesToBeDroppedIntoVertex(
-  const peano4::datamanagement::VertexMarker& marker
-) {
-  assertion( not empty() );
-
-  {{NAMESPACE | join("::")}}::{{CLASSNAME}} result;
-  {{CLASSNAME}}::iterator p = begin();
-  while ( p!=end() ) {
-    if ( ::toolbox::particles::sieveParticle( **p, marker ) ) {
-      logDebug( "getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString() );
-      (*p)->setParallelState( globaldata::{{PARTICLE_TYPE}}::ParallelState::Virtual );
-      result.push_back( *p );
-      p = this->erase(p);
-    }
-    else {
-      p++;
-    }
-  }
-  return result;
-}
-*/
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::const_iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::begin() const {
