@@ -64,17 +64,17 @@ namespace tarch::accelerator::omp {
 
       // No way to now the amount of free memory without a look up... lets do something not too big
       // size_t free = 1e9;
-      // size_t alloc_size = ((free / 2) / (1024*sizeof(float))) * (1024*sizeof(float));
+      // size_t alloc_size = ((free / 2) / (1024*sizeof(double))) * (1024*sizeof(double));
       size_t alloc_size                 = tarch::accelerator::alloc_size;
       size_t N                          = tarch::accelerator::N;
       benchmarkResult.readWriteSize     = alloc_size * 2;
       benchmarkResult.allocatedDataSize = alloc_size * 2;
       for (uint i = 0; i < repeats + 1; i++) {
-        float* a = new float[N];
-        float* b = new float[N];
+        double* a = new double[N];
+        double* b = new double[N];
         std::fill(a, a + N, 0.0f);
         std::fill(b, b + N, 0.0f);
-        assert(alloc_size == N * sizeof(float));
+        assert(alloc_size == N * sizeof(double));
 
         double start = 0.0;
         double end   = 0.0;
@@ -84,8 +84,8 @@ namespace tarch::accelerator::omp {
         // It doesnt always return NULL when not enough memory
         // For right now just allocate ~1 GB
         start = omp_get_wtime();
-        void *a_dev = omp_target_alloc(N * sizeof(float), deviceId);
-        void *b_dev = omp_target_alloc(N * sizeof(float), deviceId);
+        void *a_dev = omp_target_alloc(N * sizeof(double), deviceId);
+        void *b_dev = omp_target_alloc(N * sizeof(double), deviceId);
         end = omp_get_wtime();
         diff = end - start;
         if (i > 0)

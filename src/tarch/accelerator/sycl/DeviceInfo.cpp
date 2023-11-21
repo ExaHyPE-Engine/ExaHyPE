@@ -117,8 +117,8 @@ namespace tarch::accelerator::sycl {
     constexpr uint64_t repeats = tarch::accelerator::repeats;
     constexpr size_t   N       = tarch::accelerator::N;
 
-    std::vector<float>          a(N, 0.125f);
-    std::vector<float>          b(N, 42.0f);
+    std::vector<double>          a(N, 0.125f);
+    std::vector<double>          b(N, 42.0f);
     std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
     if (numberOfDevices != devices.size()) {
       logWarning(
@@ -134,13 +134,13 @@ namespace tarch::accelerator::sycl {
     for (int deviceId = 0; deviceId < numberOfDevices; deviceId++) {
       tarch::accelerator::BenchmarkResultInNanoSeconds& benchmarkResult = benchmarkResults[deviceId];
       benchmarkResult.repeats                                           = repeats;
-      benchmarkResult.allocatedDataSize                                 = 2 * N * sizeof(float);
+      benchmarkResult.allocatedDataSize                                 = 2 * N * sizeof(double);
       ::sycl::device dev                                                = devices[deviceId];
       ::sycl::queue  queue                                              = ::sycl::queue(dev, propList);
 
       // Create buffers for vectors a and b
-      ::sycl::buffer<float, 1> d_a(a.data(), N);
-      ::sycl::buffer<float, 1> d_b(b.data(), N);
+      ::sycl::buffer<double, 1> d_a(a.data(), N);
+      ::sycl::buffer<double, 1> d_b(b.data(), N);
 
       try {
         for (uint i = 0; i < repeats + 1; i++) {
