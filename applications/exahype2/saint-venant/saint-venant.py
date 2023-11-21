@@ -39,7 +39,6 @@ rkdg_rusanov_solvers = {
 
 aderdg_rusanov_solvers = {
   "ADERDGRusanovGlobalAdaptive":exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep
-
 }
 
 solvers = {}
@@ -208,8 +207,8 @@ elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
     min_cell_h = min_h,
     max_cell_h = args.max_cell_size,
     time_step_relaxation = 0.5,
-    ncp = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+    ncp = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.PDETerms.User_Defined_Implementation,
   )
 
 if args.use_gpu:
@@ -239,6 +238,18 @@ if args.scenario == "Avalanche":
       eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
       ncp                   = my_scenario.implementation_of_ncp(),
       source_term           = my_scenario.implementation_of_sources(),
+      refinement_criterion  = my_scenario.implementation_of_refinement_criterion()
+    )
+  elif "RKDG" in solver_type:
+    my_solver.add_user_solver_includes(user_includes)
+    my_solver._preprocess_reconstructed_patch = preprocess_reconstructed_patch
+    my_solver.set_implementation(
+      initial_conditions    = my_scenario.implementation_of_initial_conditions(),
+      boundary_conditions   = my_scenario.implementation_of_boundary_conditions(),
+      flux                  = my_scenario.implementation_of_flux(),
+      ncp                   = my_scenario.implementation_of_ncp(),
+      source_term           = my_scenario.implementation_of_sources(),
+      eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
       refinement_criterion  = my_scenario.implementation_of_refinement_criterion()
     )
   elif "ADERDG" in solver_type:
