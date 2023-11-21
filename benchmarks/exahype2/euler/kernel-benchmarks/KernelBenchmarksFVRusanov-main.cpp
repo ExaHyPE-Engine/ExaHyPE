@@ -253,14 +253,14 @@ void wrapBatchedHeapFunctorHostKernels(int device, ::exahype2::CellData& patchDa
       double* __restrict__ BTimesDeltaQ
     ) -> void {
       if constexpr (EvaluateNonconservativeProduct) {
-        // repositories::InstanceOfFVRusanovSolver.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
+        repositories::InstanceOfFVRusanovSolver.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
       }
     },
     [&](
       const double* __restrict__ Q, const ::tarch::la::Vector<Dimensions, double>& x, const ::tarch::la::Vector<Dimensions, double>& h, double t, double dt, double* __restrict__ S
     ) -> void {
       if constexpr (EvaluateSource) {
-        // repositories::InstanceOfFVRusanovSolver.sourceTerm(Q, x, h, t, dt, S);
+        repositories::InstanceOfFVRusanovSolver.sourceTerm(Q, x, h, t, dt, S);
       }
     },
     [&](const double* __restrict__ Q, const ::tarch::la::Vector<Dimensions, double>& x, const ::tarch::la::Vector<Dimensions, double>& h, double t, double dt, int normal)
