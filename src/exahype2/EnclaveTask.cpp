@@ -4,10 +4,45 @@
 #include "EnclaveBookkeeping.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/Lock.h"
 #include "tarch/multicore/otter.h"
 
 
 tarch::logging::Log exahype2::EnclaveTask::_log("exahype2::EnclaveTask");
+
+
+tarch::multicore::BooleanSemaphore exahype2::EnclaveTask::_taskNumberSemaphore;
+std::set<int>                      exahype2::EnclaveTask::_activeTaskNumbers;
+
+
+int exahype2::EnclaveTask::getNumberOfActiveTasks() {
+  return _activeTaskNumbers.size();
+}
+
+
+void exahype2::EnclaveTask::releaseTaskNumber(int number) {
+  assertion( number>=0 );
+  tarch::multicore::Lock taskNumberSemaphore(_taskNumberSemaphore);
+  assertionEquals(_activeTaskNumbers.count(number), 1);
+  _activeTaskNumbers.erase(number);
+}
+
+
+int exahype2::EnclaveTask::reserveTaskNumber() {
+  tarch::multicore::Lock taskNumberSemaphore(_taskNumberSemaphore);
+  int                    result = _activeTaskNumbers.size();
+  constexpr int Prime = 23;
+  constexpr int Max   = std::numeric_limits<int>::max()-2*Prime;
+
+  assertion2( Prime % Max!=0, Prime, Max );
+
+  while (_activeTaskNumbers.count(result) > 0) {
+    result = result % Max;
+    result += Prime;
+  }
+  _activeTaskNumbers.insert(result);
+  return result;
+}
 
 
 exahype2::EnclaveTask::EnclaveTask(
@@ -21,7 +56,7 @@ exahype2::EnclaveTask::EnclaveTask(
   Functor functor
 ):
   tarch::multicore::Task(enclaveTaskTypeId, tarch::multicore::Task::DefaultPriority),
-  _taskNumber(tarch::multicore::reserveTaskNumber()),
+  _taskNumber(reserveTaskNumber()),
   _marker(marker),
   _t(t),
   _dt(dt),

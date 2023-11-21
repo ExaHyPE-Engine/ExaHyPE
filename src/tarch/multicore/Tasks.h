@@ -7,6 +7,7 @@
 #include <list>
 #include <string>
 #include <vector>
+#include <tuple>
 
 #include "multicore.h"
 #include "tarch/multicore/otter.h"
@@ -14,6 +15,10 @@
 
 namespace tarch {
   namespace multicore {
+    typedef std::tuple<int,int,int>  TaskNumber;
+
+    constexpr TaskNumber NoDependency{-1,-1,-1};
+
     void setOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
     /**
@@ -28,7 +33,11 @@ namespace tarch {
     /**
      * Utility function for unique task numbers
      *
-     * This routine has to return a number which is currently not in use.
+     * This routine has to return a number which is currently not in use. From
+     * OpenMP's point of view, e.g., it is weird that we explicitly make our
+     * technical architecture request a task number. We could just simply work
+     * with a depends clause. However, we have some code fragments where the
+     * task graph is created with anti-dependencies. This does not go down well,
      *
      * ## Implementation
      *
@@ -41,27 +50,7 @@ namespace tarch {
      *
      * @see Task
      */
-    int reserveTaskNumber();
-
-    /**
-     * Release a task number
-     *
-     * @param number Either a valid non-negative number (as returned by
-     *   reserveTaskNumber() for example) or NoDependency.
-     */
-    void releaseTaskNumber(int number);
-
-    /**
-     * How many task numbers are currently reserved.
-     *
-     * Should usually be more than pending tasks, as it also includes tasks that have
-     * finished yet have not released their number yet.
-     *
-     * @return Number of tasks that are currently reserved. I assume that these belong
-     *  to tasks that are either running or that have produced outcome that's not yet
-     *  used.
-     */
-    int getNumberOfReservedTaskNumbers();
+    void registerTask( const TaskNumber&  number );
 
     /**
      * Abstract super class for a job.
@@ -286,8 +275,6 @@ namespace tarch {
      */
     void spawnTask(Task* job);
 
-    constexpr int NoDependency = -1;
-
     /**
      * Spawn a task which dependencies
      *
@@ -303,20 +290,20 @@ namespace tarch {
      * fire-and-forget task which is just pushed out there without anybody
      * ever waiting for it later on (at least not via task dependencies).
      */
-    void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
+    void spawnTaskWithDependencies(Task* job, const TaskNumber&  inDependency, const TaskNumber&  taskNumber);
 
     /**
      * Alternative realisation of spawnTaskWithDependencies() with multiple in
      * dependencies.
      */
-    void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
+    void spawnTaskWithDependencies(Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber&  taskNumber);
 
     /**
      * Wait for set of tasks
      *
      * Entries in inDependencies can be NoDependency.
      */
-    void waitForTasks( const std::vector<int>& inDependencies );
+    void waitForTasks( const std::vector<TaskNumber>& inDependencies );
 
     /**
      * Wait for one task
@@ -324,7 +311,7 @@ namespace tarch {
      * taskNumber can be NoDependency. In this case, the operation degenerates
      * to nop.
      */
-    void waitForTask( int taskNumber );
+    void waitForTask( const TaskNumber&  taskNumber );
 
     /**
      * Run a bunch of tasks
@@ -448,7 +435,7 @@ namespace tarch {
       /**
        * @see tarch::multicore::spawnTask()
        */
-      void spawnTask(Task* task, int in, int out);
+      void spawnTask(Task* task, const TaskNumber&  in, const TaskNumber&  out);
 
       /**
        * Map onto native tasking
@@ -497,10 +484,21 @@ namespace tarch {
        */
       int getNumberOfPendingTasks();
 
-      void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
-      void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
-      void waitForTasks( const std::vector<int>& inDependencies );
-      void waitForTask( int taskNumber );
+      void spawnTaskWithDependencies(Task* job, const TaskNumber&  inDependency, const TaskNumber&  taskNumber);
+      void spawnTaskWithDependencies(Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber&  taskNumber);
+      void waitForTasks( const std::vector<TaskNumber>& inDependencies );
+      void waitForTask( const TaskNumber&  taskNumber );
+
+      /**
+       * Register task
+       *
+       * Inform system that there will be task with number that will finish
+       * later. By the time we inform the system about the existence of this
+       * task outcome, the task itself might not yet exist. But it will do
+       * so later.
+       */
+      void registerTask( const TaskNumber&  number );
+      void finishedTask( const TaskNumber&  number );
     } // namespace native
 
     namespace internal {

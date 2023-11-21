@@ -75,31 +75,7 @@ namespace {
  * I have a second variant of the code which I call "high-throughput waiting".
  * This version runs risk to
  */
-#if !defined(OpenMPHighThroughputWaiting)
-void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
-  assertion(not tasks.empty());
-
-  #if defined(OpenMPTaskGroup)
-  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
-  #endif
-  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-  #if !defined(OpenMPTaskGroup)
-  #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
-  #endif
-    {
-      while (tasks[i]->run()) {
-        tarch::multicore::Core::getInstance().yield();
-      }
-      delete tasks[i];
-    }
-  }
-
-  #pragma omp taskwait // wait for all elements from tasks to complete
-                       // do not wait for the children of tasks
-                       // but do children if you have time (this does not
-                       // happen however)
-}
-#else
+#if defined(OpenMPHighThroughputWaiting)
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
   assertion(not tasks.empty());
 
@@ -150,13 +126,37 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 
   assertionEquals(numberOfLoopTasks,0);
 }
+#else
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
+  assertion(not tasks.empty());
+
+  #if defined(OpenMPTaskGroup)
+  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
+  #endif
+  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
+  #if !defined(OpenMPTaskGroup)
+  #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
+  #endif
+    {
+      while (tasks[i]->run()) {
+        tarch::multicore::Core::getInstance().yield();
+      }
+      delete tasks[i];
+    }
+  }
+
+  #pragma omp taskwait // wait for all elements from tasks to complete
+                       // do not wait for the children of tasks
+                       // but do children if you have time (this does not
+                       // happen however)
+}
 #endif
 
 
 int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
 
 
-void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
+void  tarch::multicore::native::spawnTask(Task* job, const TaskNumber&  in, const TaskNumber& out) {
   tarch::multicore::native::spawnTask(job);
 }
 
@@ -227,17 +227,22 @@ void        tarch::multicore::native::drainTaskQueues() {
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber) {
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
+void tarch::multicore::native::waitForTasks( const std::vector<TaskNumber>& inDependencies ) {}
 
-void tarch::multicore::native::waitForTask( int taskNumber ){}
+
+void tarch::multicore::native::waitForTask( const TaskNumber& taskNumber ){}
+
+
+void tarch::multicore::native::registerTask( const TaskNumber&  number ) {}
+
 #endif
