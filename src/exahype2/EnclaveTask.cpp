@@ -15,13 +15,11 @@ tarch::multicore::BooleanSemaphore exahype2::EnclaveTask::_taskNumberSemaphore;
 std::set<int>                      exahype2::EnclaveTask::_activeTaskNumbers;
 
 
-int exahype2::EnclaveTask::getNumberOfActiveTasks() {
-  return _activeTaskNumbers.size();
-}
+int exahype2::EnclaveTask::getNumberOfActiveTasks() { return _activeTaskNumbers.size(); }
 
 
 void exahype2::EnclaveTask::releaseTaskNumber(int number) {
-  assertion( number>=0 );
+  assertion(number >= 0);
   tarch::multicore::Lock taskNumberSemaphore(_taskNumberSemaphore);
   assertionEquals(_activeTaskNumbers.count(number), 1);
   _activeTaskNumbers.erase(number);
@@ -31,10 +29,10 @@ void exahype2::EnclaveTask::releaseTaskNumber(int number) {
 int exahype2::EnclaveTask::reserveTaskNumber() {
   tarch::multicore::Lock taskNumberSemaphore(_taskNumberSemaphore);
   int                    result = _activeTaskNumbers.size();
-  constexpr int Prime = 23;
-  constexpr int Max   = std::numeric_limits<int>::max()-2*Prime;
+  constexpr int          Prime  = 23;
+  constexpr int          Max    = std::numeric_limits<int>::max() - 2 * Prime;
 
-  assertion2( Prime % Max!=0, Prime, Max );
+  assertion2(Prime % Max != 0, Prime, Max);
 
   while (_activeTaskNumbers.count(result) > 0) {
     result = result % Max;

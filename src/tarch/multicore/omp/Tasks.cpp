@@ -17,7 +17,7 @@ namespace {
 } // namespace
 
 
-//#define OpenMPHighThroughputWaiting
+// #define OpenMPHighThroughputWaiting
 
 /**
  * Native mapping of a task loop onto a task loop
@@ -82,13 +82,14 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
   int numberOfLoopTasks = tasks.size(); // bookkeeping of how many loop tasks
                                         // we have in the system
 
-  #if defined(OpenMPTaskGroup)
-  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks) untied
-  #endif
+#if defined(OpenMPTaskGroup)
+#pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority \
+) shared(numberOfLoopTasks) untied
+#endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-  #if !defined(OpenMPTaskGroup)
-  #pragma omp task priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks)
-  #endif
+#if !defined(OpenMPTaskGroup)
+#pragma omp task priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks)
+#endif
     {
       while (tasks[i]->run()) {
         tarch::multicore::Core::getInstance().yield();
@@ -97,16 +98,15 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
     }
 
     int currentNumberOfLoopTasks;                   // reduce the bookkeeping
-    #pragma omp atomic capture                      // counter and create my
+#pragma omp atomic capture                          // counter and create my
     currentNumberOfLoopTasks = --numberOfLoopTasks; // own loop termination
                                                     // criterion
 
-    while (currentNumberOfLoopTasks>0) {
-      if (processPendingTasks(1,false)) { // I use FILO to increase cache hit probability
-        #pragma omp atomic read
+    while (currentNumberOfLoopTasks > 0) {
+      if (processPendingTasks(1, false)) { // I use FILO to increase cache hit probability
+#pragma omp atomic read
         currentNumberOfLoopTasks = numberOfLoopTasks;
-      }
-      else {
+      } else {
         currentNumberOfLoopTasks = 0; // This is not nice. It means that a
                                       // fast task might finish while ready
                                       // tasks literally become a available a
@@ -119,24 +119,24 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
     }
   }
 
-  #pragma omp taskwait // wait for all elements from tasks to complete
-                       // do not wait for the children of tasks
-                       // but do children if you have time (this does not
-                       // happen however)
+#pragma omp taskwait // wait for all elements from tasks to complete
+                     // do not wait for the children of tasks
+                     // but do children if you have time (this does not
+                     // happen however)
 
-  assertionEquals(numberOfLoopTasks,0);
+  assertionEquals(numberOfLoopTasks, 0);
 }
 #else
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
   assertion(not tasks.empty());
 
-  #if defined(OpenMPTaskGroup)
-  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
-  #endif
+#if defined(OpenMPTaskGroup)
+#pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
+#endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-  #if !defined(OpenMPTaskGroup)
-  #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
-  #endif
+#if !defined(OpenMPTaskGroup)
+#pragma omp task priority(tarch::multicore::Task::DefaultPriority)
+#endif
     {
       while (tasks[i]->run()) {
         tarch::multicore::Core::getInstance().yield();
@@ -145,10 +145,10 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
     }
   }
 
-  #pragma omp taskwait // wait for all elements from tasks to complete
-                       // do not wait for the children of tasks
-                       // but do children if you have time (this does not
-                       // happen however)
+#pragma omp taskwait // wait for all elements from tasks to complete
+                     // do not wait for the children of tasks
+                     // but do children if you have time (this does not
+                     // happen however)
 }
 #endif
 
@@ -156,23 +156,23 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
 
 
-void  tarch::multicore::native::spawnTask(Task* job, const TaskNumber&  in, const TaskNumber& out) {
+void tarch::multicore::native::spawnTask(Task* job, const TaskNumber& in, const TaskNumber& out) {
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void  tarch::multicore::native::spawnTask(Task* job) {
-  #pragma omp atomic
+void        tarch::multicore::native::spawnTask(Task* job) {
+#pragma omp atomic
   numberOfSpawnedTasks++;
 
-  #pragma omp task priority(job->getPriority()) untied
+#pragma omp task priority(job->getPriority()) untied
   {
     while (job->run()) {
-      #pragma omp taskyield
+#pragma omp taskyield
     }
     delete job;
 
-    #pragma omp atomic
+#pragma omp atomic
     numberOfSpawnedTasks--;
   }
 }
@@ -227,22 +227,26 @@ void        tarch::multicore::native::drainTaskQueues() {
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber) {
+void tarch::multicore::native::spawnTaskWithDependencies(
+  Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber
+) {
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
+void tarch::multicore::native::spawnTaskWithDependencies(
+  Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+) {
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void tarch::multicore::native::waitForTasks( const std::vector<TaskNumber>& inDependencies ) {}
+void tarch::multicore::native::waitForTasks(const std::vector<TaskNumber>& inDependencies) {}
 
 
-void tarch::multicore::native::waitForTask( const TaskNumber& taskNumber ){}
+void tarch::multicore::native::waitForTask(const TaskNumber& taskNumber) {}
 
 
-void tarch::multicore::native::registerTask( const TaskNumber&  number ) {}
+void tarch::multicore::native::registerTask(const TaskNumber& number) {}
 
 #endif

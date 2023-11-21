@@ -4,12 +4,11 @@
 import peano4.toolbox.api
 
 try:
-  from .CreateRegularGrid                      import CreateRegularGrid
-  from .PlotGridInPeanoBlockFormat             import PlotGridInPeanoBlockFormat
-  from .PlotVertexDataInPeanoBlockFormat       import PlotVertexDataInPeanoBlockFormat
-  from .PlotCellDataInPeanoBlockFormat         import PlotCellDataInPeanoBlockFormat
-  
-except ImportError:
-  print("Numpy/mpmath is not available, not loading rkdg")
-  print("Numpy/mpmath is not available, not loading aderdg")
+    from .CreateRegularGrid import CreateRegularGrid
+    from .PlotGridInPeanoBlockFormat import PlotGridInPeanoBlockFormat
+    from .PlotVertexDataInPeanoBlockFormat import PlotVertexDataInPeanoBlockFormat
+    from .PlotCellDataInPeanoBlockFormat import PlotCellDataInPeanoBlockFormat
 
+except ImportError:
+    print("Numpy/mpmath is not available, not loading rkdg")
+    print("Numpy/mpmath is not available, not loading aderdg")
