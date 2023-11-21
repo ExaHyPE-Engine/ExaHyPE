@@ -18,8 +18,7 @@ void tarch::Enumerator::reset() {
 }
 
 
-int tarch::Enumerator::size() {
-  tarch::multicore::Lock lock( _semaphore );
+int tarch::Enumerator::size() const {
   return _activeNumbers.size();
 }
 
@@ -28,14 +27,14 @@ int tarch::Enumerator::getNumber() {
   tarch::multicore::Lock lock( _semaphore );
 
   int                    result = _activeNumbers.size();
-  constexpr int          Prime  = 23;
-  constexpr int          Max    = std::numeric_limits<int>::max() - 2 * Prime;
+  constexpr int          Increment  = 23;
+  constexpr int          Max    = std::numeric_limits<int>::max() - 2 * Increment;
 
-  assertion2(Prime % Max != 0, Prime, Max);
+  assertion2(Max % Increment != 0, Increment, Max);
 
   while (_activeNumbers.count(result) > 0) {
     result = result % Max;
-    result += Prime;
+    result += Increment;
   }
   _activeNumbers.insert(result);
   return result;
@@ -50,3 +49,6 @@ void tarch::Enumerator::releaseNumber( int number ) {
 }
 
 
+std::string tarch::Enumerator::toString() const {
+  return "(size=" + std::to_string( size() ) + ")";
+}

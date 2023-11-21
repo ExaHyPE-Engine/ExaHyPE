@@ -5,6 +5,7 @@
 
 #include "tarch/multicore/BooleanSemaphore.h"
 #include <set>
+#include <string>
 
 
 namespace tarch {
@@ -24,9 +25,25 @@ class tarch::Enumerator {
 
 	Enumerator();
 	void reset();
+
+	/**
+	 * Returns a unique non-zero number which is not yet used anywhere else on
+	 * this rank.
+	 */
 	int getNumber();
+
+	/**
+	 * Free a number again. number has to be the result of a previous
+	 * getNumber() call.
+	 */
 	void releaseNumber( int value );
-	int size();
+
+	/**
+	 * Number of numbers handed out so far.
+	 */
+	int size() const;
+
+	std::string toString() const;
 
   private:
     tarch::multicore::BooleanSemaphore _semaphore;
