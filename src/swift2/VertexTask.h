@@ -42,6 +42,8 @@ namespace swift2 {
     virtual bool run() override;
 
   private:
+    static int TaskTypeId;
+
     ParticleSet _assignedParticles;
     Functor     _functor;
   };

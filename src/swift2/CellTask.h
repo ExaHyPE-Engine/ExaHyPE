@@ -47,9 +47,13 @@ namespace swift2 {
       virtual bool run() override;
 
     private:
+      static int TaskTypeId;
+
       ParticleSet  _localParticles;
       ParticleSet  _activeParticles;
       Functor      _functor;
   };
 }
 
+
+#include "CellTask.cpph"

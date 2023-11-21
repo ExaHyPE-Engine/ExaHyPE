@@ -93,7 +93,7 @@ public:
    * @param inputValues        Has to be created on heap via tarch::multicore::allocateMemory().
    * @param enclaveTaskTypeId  Please create it through
    * <pre>
-  static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
+  static int enclaveTaskTypeId = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}");
 </pre>
    *
    * @see _inputValues for a discussion of const qualifiers

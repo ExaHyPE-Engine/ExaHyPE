@@ -1,6 +1,13 @@
+#include "peano4/parallel/parallel.h"
+
+
+template <typename ParticleSet>
+int swift2::VertexTask<ParticleSet>::TaskTypeId = peano4::parallel::getTaskType( "swift2::VertexTask<ParticleSet>::" );
+
 
 template <typename ParticleSet>
 swift2::VertexTask<ParticleSet>::VertexTask(const ParticleSet& assignedParticles, Functor functor):
+// Might want to use the task type id to let them fuse
   tarch::multicore::Task(tarch::multicore::Task::DontFuse, tarch::multicore::Task::DefaultPriority),
   _assignedParticles(assignedParticles),
   _functor(functor) {}
