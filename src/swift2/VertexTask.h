@@ -27,28 +27,25 @@ namespace swift2 {
    */
   template <typename ParticleSet>
   class VertexTask: public tarch::multicore::Task {
-    public:
-      typedef std::function<void( ParticleSet& assignedParticles )>  Functor;
+  public:
+    typedef std::function<void(ParticleSet& assignedParticles)> Functor;
 
-      /**
-       * Construct a vertex task
-       *
-       * Memorize the three parameters, and grab a new task number from the
-       * multicore component via
-       */
-      VertexTask(
-        const ParticleSet& assignedParticles,
-        Functor            functor
-      );
-      ~VertexTask() = default;
+    /**
+     * Construct a vertex task
+     *
+     * Memorize the three parameters, and grab a new task number from the
+     * multicore component via
+     */
+    VertexTask(const ParticleSet& assignedParticles, Functor functor);
+    ~VertexTask() = default;
 
-      virtual bool run() override;
+    virtual bool run() override;
 
-    private:
-      ParticleSet  _assignedParticles;
-      Functor      _functor;
+  private:
+    ParticleSet _assignedParticles;
+    Functor     _functor;
   };
-}
+} // namespace swift2
 
 
 #include "VertexTask.cpph"

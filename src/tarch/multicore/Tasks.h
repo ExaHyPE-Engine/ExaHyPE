@@ -6,8 +6,8 @@
 #include <limits>
 #include <list>
 #include <string>
-#include <vector>
 #include <tuple>
+#include <vector>
 
 #include "multicore.h"
 #include "tarch/multicore/otter.h"
@@ -15,9 +15,9 @@
 
 namespace tarch {
   namespace multicore {
-    typedef std::tuple<int,int,int>  TaskNumber;
+    typedef std::tuple<int, int, int> TaskNumber;
 
-    constexpr TaskNumber NoDependency{-1,-1,-1};
+    constexpr TaskNumber NoDependency{-1, -1, -1};
 
     void setOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
@@ -28,7 +28,8 @@ namespace tarch {
      * the current orchestration. It swaps them, so you can use setOrchestration()
      * with the result afterwards and re-obtain the original strategy.
      */
-    tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation);
+    tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation
+    );
 
     /**
      * Utility function for unique task numbers
@@ -50,7 +51,7 @@ namespace tarch {
      *
      * @see Task
      */
-    void registerTask( const TaskNumber&  number );
+    void registerTask(const TaskNumber& number);
 
     /**
      * Abstract super class for a job.
@@ -102,8 +103,8 @@ namespace tarch {
 
       virtual ~Task() {}
 
-      int  getTaskType() const;
-      int  getPriority() const;
+      int getTaskType() const;
+      int getPriority() const;
 
       /**
        * Set priority
@@ -290,20 +291,22 @@ namespace tarch {
      * fire-and-forget task which is just pushed out there without anybody
      * ever waiting for it later on (at least not via task dependencies).
      */
-    void spawnTaskWithDependencies(Task* job, const TaskNumber&  inDependency, const TaskNumber&  taskNumber);
+    void spawnTaskWithDependencies(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber);
 
     /**
      * Alternative realisation of spawnTaskWithDependencies() with multiple in
      * dependencies.
      */
-    void spawnTaskWithDependencies(Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber&  taskNumber);
+    void spawnTaskWithDependencies(
+      Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+    );
 
     /**
      * Wait for set of tasks
      *
      * Entries in inDependencies can be NoDependency.
      */
-    void waitForTasks( const std::vector<TaskNumber>& inDependencies );
+    void waitForTasks(const std::vector<TaskNumber>& inDependencies);
 
     /**
      * Wait for one task
@@ -311,7 +314,7 @@ namespace tarch {
      * taskNumber can be NoDependency. In this case, the operation degenerates
      * to nop.
      */
-    void waitForTask( const TaskNumber&  taskNumber );
+    void waitForTask(const TaskNumber& taskNumber);
 
     /**
      * Run a bunch of tasks
@@ -435,7 +438,7 @@ namespace tarch {
       /**
        * @see tarch::multicore::spawnTask()
        */
-      void spawnTask(Task* task, const TaskNumber&  in, const TaskNumber&  out);
+      void spawnTask(Task* task, const TaskNumber& in, const TaskNumber& out);
 
       /**
        * Map onto native tasking
@@ -484,10 +487,12 @@ namespace tarch {
        */
       int getNumberOfPendingTasks();
 
-      void spawnTaskWithDependencies(Task* job, const TaskNumber&  inDependency, const TaskNumber&  taskNumber);
-      void spawnTaskWithDependencies(Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber&  taskNumber);
-      void waitForTasks( const std::vector<TaskNumber>& inDependencies );
-      void waitForTask( const TaskNumber&  taskNumber );
+      void spawnTaskWithDependencies(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber);
+      void spawnTaskWithDependencies(
+        Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+      );
+      void waitForTasks(const std::vector<TaskNumber>& inDependencies);
+      void waitForTask(const TaskNumber& taskNumber);
 
       /**
        * Register task
@@ -497,8 +502,8 @@ namespace tarch {
        * task outcome, the task itself might not yet exist. But it will do
        * so later.
        */
-      void registerTask( const TaskNumber&  number );
-      void finishedTask( const TaskNumber&  number );
+      void registerTask(const TaskNumber& number);
+      void finishedTask(const TaskNumber& number);
     } // namespace native
 
     namespace internal {

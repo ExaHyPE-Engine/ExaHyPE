@@ -186,9 +186,7 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::swapOrchestration(
   return result;
 }
 
-void tarch::multicore::registerTask( const TaskNumber&  number ) {
-  native::registerTask(number);
-}
+void tarch::multicore::registerTask(const TaskNumber& number) { native::registerTask(number); }
 
 bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs) {
   return lhs.getPriority() < rhs.getPriority();
@@ -201,7 +199,7 @@ bool tarch::multicore::TaskComparison::operator()(Task* lhs, Task* rhs) const { 
 tarch::multicore::Task::Task(int taskType, int priority):
   _taskType(taskType),
   _priority(priority) {
-  assertion2( priority>=0, taskType, priority );
+  assertion2(priority >= 0, taskType, priority);
 }
 
 bool tarch::multicore::Task::canFuse() const { return _taskType != DontFuse; }
@@ -209,7 +207,7 @@ bool tarch::multicore::Task::canFuse() const { return _taskType != DontFuse; }
 int tarch::multicore::Task::getPriority() const { return _priority; }
 
 void tarch::multicore::Task::setPriority(int priority) {
-  assertion3( priority>=0, _taskType, _priority, priority );
+  assertion3(priority >= 0, _taskType, _priority, priority);
   _priority = priority;
 }
 
@@ -431,26 +429,28 @@ void tarch::multicore::internal::copyInternalTaskQueueOverIntoGlobalQueue(int th
 
 int tarch::multicore::internal::getNumberOfWithholdPendingTasks() { return globalNonblockingTasks.tasks.size(); }
 
-void tarch::multicore::spawnTaskWithDependencies(Task* job, const TaskNumber&  inDependency, const TaskNumber&  taskNumber) {
-  assertion( inDependency!=NoDependency or taskNumber!=NoDependency );
+void tarch::multicore::spawnTaskWithDependencies(
+  Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber
+) {
+  assertion(inDependency != NoDependency or taskNumber != NoDependency);
   tarch::multicore::native::spawnTaskWithDependencies(job, inDependency, taskNumber);
 }
 
 
-void tarch::multicore::spawnTaskWithDependencies(Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
-  assertion( not inDependencies.empty() or taskNumber!=NoDependency );
+void tarch::multicore::spawnTaskWithDependencies(
+  Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+) {
+  assertion(not inDependencies.empty() or taskNumber != NoDependency);
   tarch::multicore::native::spawnTaskWithDependencies(job, inDependencies, taskNumber);
 }
 
 
-void tarch::multicore::waitForTasks( const std::vector<TaskNumber>& inDependencies ) {
-  tarch::multicore::native::waitForTasks( inDependencies );
+void tarch::multicore::waitForTasks(const std::vector<TaskNumber>& inDependencies) {
+  tarch::multicore::native::waitForTasks(inDependencies);
 }
 
 
-void tarch::multicore::waitForTask( const TaskNumber&  taskNumber ) {
-  tarch::multicore::native::waitForTask( taskNumber );
-}
+void tarch::multicore::waitForTask(const TaskNumber& taskNumber) { tarch::multicore::native::waitForTask(taskNumber); }
 
 #ifndef SharedMemoryParallelisation
 
@@ -486,21 +486,25 @@ void tarch::multicore::native::processFusedTask(
 
 void tarch::multicore::native::drainTaskQueues() {}
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber) {
+void tarch::multicore::native::spawnTaskWithDependencies(
+  Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber
+) {
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
+void tarch::multicore::native::spawnTaskWithDependencies(
+  Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+) {
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void tarch::multicore::native::waitForTasks( const std::vector<TaskNumber>& inDependencies ) {}
+void tarch::multicore::native::waitForTasks(const std::vector<TaskNumber>& inDependencies) {}
 
-void tarch::multicore::native::waitForTask( const TaskNumber& taskNumber ){}
+void tarch::multicore::native::waitForTask(const TaskNumber& taskNumber) {}
 
-void tarch::multicore::native::registerTask( const TaskNumber&  number ) {}
+void tarch::multicore::native::registerTask(const TaskNumber& number) {}
 
 
 #endif

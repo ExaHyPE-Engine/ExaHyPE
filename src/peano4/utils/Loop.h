@@ -6,17 +6,16 @@
 
 #include <bitset>
 
-#include "peano4/utils/Globals.h"
-#include "tarch/la/Vector.h"
-#include "tarch/accelerator/accelerator.h"
-
 #include "config.h"
+#include "peano4/utils/Globals.h"
+#include "tarch/accelerator/accelerator.h"
+#include "tarch/la/Vector.h"
 
 #if defined(SharedTBB)
-#include <oneapi/tbb/parallel_for.h>
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/blocked_range2d.h>
 #include <oneapi/tbb/blocked_range3d.h>
+#include <oneapi/tbb/parallel_for.h>
 
 #include "tarch/multicore/tbb/blocked_rangexd.h"
 #endif
@@ -37,11 +36,7 @@ namespace peano4 {
     /**
      * Control loop-level parallelism
      */
-    enum class LoopParallelism {
-      None,
-      ParallelFor,
-      Subtasks
-    };
+    enum class LoopParallelism { None, ParallelFor, Subtasks };
 
     /**
      * Is used by the z-loop. See macro dforz.
@@ -250,7 +245,7 @@ namespace peano4 {
 }
 
 
-std::string toString( peano4::utils::LoopParallelism );
+std::string toString(peano4::utils::LoopParallelism);
 
 
 /**
@@ -315,7 +310,9 @@ std::string toString( peano4::utils::LoopParallelism );
  * Vector. The usage for the latter looks similar to
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * parallelDforWithDynamicScheduling(volume, (tarch::la::Vector<2,int>({numberOfVolumesPerAxisInPatch+2*solversHaloSize,numberOfVolumesPerAxisInPatch})), loopParallelism)
+ * parallelDforWithDynamicScheduling(volume,
+ * (tarch::la::Vector<2,int>({numberOfVolumesPerAxisInPatch+2*solversHaloSize,numberOfVolumesPerAxisInPatch})),
+ * loopParallelism)
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * By using a vector, you can have rectangular iteration ranges and not only
@@ -431,7 +428,7 @@ std::string toString( peano4::utils::LoopParallelism );
 #define parallelDfor(counter, max) \
   parallelDforWithDynamicScheduling(counter, max, ::peano4::utils::LoopParallelism::Subtasks)
 
-#if Dimensions==2
+#if Dimensions == 2
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   parallelDforWithDynamicScheduling2d(counter, max, loopParallelism)
 
@@ -449,7 +446,7 @@ std::string toString( peano4::utils::LoopParallelism );
 
 #define simtDPlusTwoForWithDynamicScheduling(counter, max, loopParallelism) \
   simtDforWithDynamicScheduling4d(counter, max, loopParallelism)
-#elif Dimensions==3
+#elif Dimensions == 3
 #define parallelDforWithDynamicScheduling(counter, max, loopParallelism) \
   parallelDforWithDynamicScheduling3d(counter, max, loopParallelism)
 
@@ -470,83 +467,78 @@ std::string toString( peano4::utils::LoopParallelism );
 #endif
 
 
-
-
-
 #if defined(SharedOMP) and defined(OpenMPTaskGroup)
-  #include "omp/Loop.h"
+#include "omp/Loop.h"
 #elif defined(SharedTBB)
-  #include "tbb/Loop.h"
+#include "tbb/Loop.h"
 #elif defined(SharedCPP) and __cplusplus >= 202101L
-  #include "cpp/Loop.h"
+#include "cpp/Loop.h"
 #elif defined(SharedSYCL)
-  #include "sycl/Loop.h"
+#include "sycl/Loop.h"
 #else
-  #define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
-    for( int counter = 0; counter < max; counter++ ) {
+#define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
+  for (int counter = 0; counter < max; counter++) {
 
-  #define parallelDforWithDynamicScheduling2d(counter, max, loopParallelism) \
-    { \
-    tarch::la::Vector<2,int> counter##Max(max); \
-    for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
-    for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) { \
-      tarch::la::Vector<2, int> counter = { counter##0, counter##1 };
+#define parallelDforWithDynamicScheduling2d(counter, max, loopParallelism) \
+  { \
+    tarch::la::Vector<2, int> counter##Max(max); \
+    for (int counter##0 = 0; counter##0 < counter##Max(0); counter##0 ++) \
+      for (int counter##1 = 0; counter##1 < counter##Max(1); counter##1 ++) { \
+        tarch::la::Vector<2, int> counter = {counter##0, counter##1};
 
-  #define parallelDforWithDynamicScheduling3d(counter, max, loopParallelism) \
-    { \
-    tarch::la::Vector<3,int> counter##Max(max); \
-    for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
-    for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
-    for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) { \
-      tarch::la::Vector<3, int> counter = { counter##0, counter##1, counter##2 };
+#define parallelDforWithDynamicScheduling3d(counter, max, loopParallelism) \
+  { \
+    tarch::la::Vector<3, int> counter##Max(max); \
+    for (int counter##0 = 0; counter##0 < counter##Max(0); counter##0 ++) \
+      for (int counter##1 = 0; counter##1 < counter##Max(1); counter##1 ++) \
+        for (int counter##2 = 0; counter##2 < counter##Max(2); counter##2 ++) { \
+          tarch::la::Vector<3, int> counter = {counter##0, counter##1, counter##2};
 
-  #define parallelDforWithDynamicScheduling4d(counter, max, loopParallelism) \
-    { \
-    tarch::la::Vector<4,int> counter##Max(max); \
-    for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
-    for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
-    for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
-    for( int counter##3 = 0; counter##3 < counter##Max(3); counter##3++ ) { \
-      tarch::la::Vector<4, int> counter = { counter##0, counter##1, counter##2, counter##3 };
+#define parallelDforWithDynamicScheduling4d(counter, max, loopParallelism) \
+  { \
+    tarch::la::Vector<4, int> counter##Max(max); \
+    for (int counter##0 = 0; counter##0 < counter##Max(0); counter##0 ++) \
+      for (int counter##1 = 0; counter##1 < counter##Max(1); counter##1 ++) \
+        for (int counter##2 = 0; counter##2 < counter##Max(2); counter##2 ++) \
+          for (int counter##3 = 0; counter##3 < counter##Max(3); counter##3 ++) { \
+            tarch::la::Vector<4, int> counter = {counter##0, counter##1, counter##2, counter##3};
 
-  #define parallelDforWithDynamicScheduling5d(counter, max, loopParallelism) \
-    { \
-    tarch::la::Vector<5,int> counter##Max(max); \
-    for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
-    for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
-    for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
-    for( int counter##3 = 0; counter##3 < counter##Max(3); counter##3++ ) \
-    for( int counter##4 = 0; counter##4 < counter##Max(4); counter##4++ ) { \
-      tarch::la::Vector<5, int> counter = { counter##0, counter##1, counter##2, counter##3, counter##4 };
+#define parallelDforWithDynamicScheduling5d(counter, max, loopParallelism) \
+  { \
+    tarch::la::Vector<5, int> counter##Max(max); \
+    for (int counter##0 = 0; counter##0 < counter##Max(0); counter##0 ++) \
+      for (int counter##1 = 0; counter##1 < counter##Max(1); counter##1 ++) \
+        for (int counter##2 = 0; counter##2 < counter##Max(2); counter##2 ++) \
+          for (int counter##3 = 0; counter##3 < counter##Max(3); counter##3 ++) \
+            for (int counter##4 = 0; counter##4 < counter##Max(4); counter##4 ++) { \
+              tarch::la::Vector<5, int> counter = {counter##0, counter##1, counter##2, counter##3, counter##4};
 
-  #define endParallelFor }
-  #define endParallelDfor }}
+#define endParallelFor }
+#define endParallelDfor \
+  } \
+  }
 
 
-  #define simtForWithDynamicScheduling(counter, max, loopParallelism) \
-    parallelForWithDynamicScheduling(counter, max, loopParallelism)
+#define simtForWithDynamicScheduling(counter, max, loopParallelism) \
+  parallelForWithDynamicScheduling(counter, max, loopParallelism)
 
-  #define endSimtFor \
-    endParallelFor
+#define endSimtFor endParallelFor
 
-  #define simtDforWithDynamicScheduling2d(counter, max, loopParallelism) \
-    parallelDforWithDynamicScheduling2d(counter, max, loopParallelism)
+#define simtDforWithDynamicScheduling2d(counter, max, loopParallelism) \
+  parallelDforWithDynamicScheduling2d(counter, max, loopParallelism)
 
-  #define simtDforWithDynamicScheduling3d(counter, max, loopParallelism) \
-    parallelDforWithDynamicScheduling3d(counter, max, loopParallelism)
+#define simtDforWithDynamicScheduling3d(counter, max, loopParallelism) \
+  parallelDforWithDynamicScheduling3d(counter, max, loopParallelism)
 
-  #define simtDforWithDynamicScheduling4d(counter, max, loopParallelism) \
-    parallelDforWithDynamicScheduling4d(counter, max, loopParallelism)
+#define simtDforWithDynamicScheduling4d(counter, max, loopParallelism) \
+  parallelDforWithDynamicScheduling4d(counter, max, loopParallelism)
 
-  #define simtDforWithDynamicScheduling5d(counter, max, loopParallelism) \
-    parallelDforWithDynamicScheduling5d(counter, max, loopParallelism)
+#define simtDforWithDynamicScheduling5d(counter, max, loopParallelism) \
+  parallelDforWithDynamicScheduling5d(counter, max, loopParallelism)
 
-  #define endSimtDfor \
-    endParallelDfor
+#define endSimtDfor endParallelDfor
 
 #endif
-
-
 
 
 /**
@@ -1030,4 +1022,3 @@ static const int lookupzfor3[8][27][3] = {
 #define endzfor \
   } \
   }
-

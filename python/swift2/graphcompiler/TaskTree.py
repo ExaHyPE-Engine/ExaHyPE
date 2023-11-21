@@ -32,7 +32,10 @@ DefaultIncludes = """
 def construct_touch_vertex_first_time_call(
     current_species_set, touch_vertex_first_time_kernel
 ):
-    if touch_vertex_first_time_kernel == None or touch_vertex_first_time_kernel.strip() == "":
+    if (
+        touch_vertex_first_time_kernel == None
+        or touch_vertex_first_time_kernel.strip() == ""
+    ):
         return ""
     else:
         return (
@@ -67,7 +70,10 @@ def construct_touch_vertex_first_time_call(
 def construct_touch_cell_first_time_call(
     current_species_set, touch_cell_first_time_kernel
 ):
-    if touch_cell_first_time_kernel == None or touch_cell_first_time_kernel.strip() == "":
+    if (
+        touch_cell_first_time_kernel == None
+        or touch_cell_first_time_kernel.strip() == ""
+    ):
         return ""
     else:
         return (
@@ -127,7 +133,10 @@ def construct_touch_vertex_last_time_call(
     """
     )
 
-    if touch_vertex_last_time_kernel != None and touch_vertex_last_time_kernel.strip() != "":
+    if (
+        touch_vertex_last_time_kernel != None
+        and touch_vertex_last_time_kernel.strip() != ""
+    ):
         result += (
             touch_vertex_last_time_kernel
             + """

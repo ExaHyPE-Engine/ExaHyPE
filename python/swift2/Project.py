@@ -497,9 +497,13 @@ levels.
                     current_species_set.name
                 )
             )
-            cell_marker_for_tasks   = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_cell_marker(current_species_set.name)
-            vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(current_species_set.name)
-            
+            cell_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_cell_marker(
+                current_species_set.name
+            )
+            vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(
+                current_species_set.name
+            )
+
             # Enable cell statistics for this species
             self._project.datamodel.add_cell(cell_marker_for_statistics)
             self._project.datamodel.add_cell(cell_marker_for_tasks)
@@ -537,7 +541,9 @@ levels.
 #include "repositories/GlobalState.h"
 """,
         )
-        action_set_plot_grid.descend_invocation_order = self.algorithm_step_plot.highest_descend_invocation_order() + 1
+        action_set_plot_grid.descend_invocation_order = (
+            self.algorithm_step_plot.highest_descend_invocation_order() + 1
+        )
         action_set_plot_grid.parallel = True
         self.algorithm_step_plot.add_action_set(action_set_plot_grid)
 
