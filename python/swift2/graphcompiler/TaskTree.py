@@ -29,6 +29,13 @@ DefaultIncludes = """
 #include "swift2/CellTask.h"                
                 """
 
+from enum import Enum
+
+class TaskSubTypeNumber(str, Enum):
+    TouchVertexFirst = "0"
+    TouchCellFirst   = "1"
+    TouchVertexLast  = "2"
+
 
 def clear_task_numbers_for_all_species(mesh_traversals,
                                        species_set,
@@ -77,14 +84,15 @@ def construct_touch_vertex_first_time_call(
                 current_species_set.name
             )
             + """.getNumber(),
-          0, // 0 identifies vertices here
-          0  // fixed index - we have only one type of 
+          """ + TaskSubTypeNumber.TouchVertexFirst + """,
+          """ + str(current_species_index) + """
         };
       
-      if ( taskNumberToBeUsed!=tarch::multicore::NoDependency ) {
-        logInfo( "touchVertexFirstTime(...)", "create task " << tarch::multicore::toString(taskNumberToBeUsed) << " for " << marker.toString() );
+      assertion( taskNumberToBeUsed!=tarch::multicore::NoDependency );
+
+      logDebug( "touchVertexFirstTime(...)", "create task " << tarch::multicore::toString(taskNumberToBeUsed) << " for " << marker.toString() );
       
-        auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
+      auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
           assignedParticles,
           [=](decltype(assignedParticles)& assignedParticles)->void {
             """
@@ -94,13 +102,7 @@ def construct_touch_vertex_first_time_call(
           false
         );
       
-        tarch::multicore::spawnTask( newTask, tarch::multicore::NoDependency, taskNumberToBeUsed );
-      }
-      else {
-        """
-            + touch_vertex_first_time_kernel
-            + """
-      }
+      tarch::multicore::spawnTask( newTask, tarch::multicore::NoDependency, taskNumberToBeUsed );
     """
         )
 
@@ -110,13 +112,11 @@ def construct_touch_cell_first_time_call(
     touch_cell_first_time_kernel,
     current_species_index
 ):
-    if (
-        touch_cell_first_time_kernel == None
-        or touch_cell_first_time_kernel.strip() == ""
-    ):
-        return ""
-    else:
-        return (
+    if touch_cell_first_time_kernel == None:
+        touch_cell_first_time_kernel = ""
+    
+
+    return (
             """
       const tarch::multicore::TaskNumber taskNumberToBeUsed{
         fineGridCell"""
@@ -124,8 +124,8 @@ def construct_touch_cell_first_time_call(
                 current_species_set.name
             )
             + """.getNumber(),
-        0,
-        0
+          """ + TaskSubTypeNumber.TouchCellFirst + """,
+          """ + str(current_species_index) + """
       };
       
       std::vector<tarch::multicore::TaskNumber> adjacentVertexTask(TwoPowerD);
@@ -136,33 +136,27 @@ def construct_touch_cell_first_time_call(
                 current_species_set.name
             )
             + """(i).getNumber(),
-          0,
-          0
+          """ + TaskSubTypeNumber.TouchVertexFirst + """,
+          """ + str(current_species_index) + """
         };
       }
 
-      if ( taskNumberToBeUsed!=tarch::multicore::NoDependency ) {        
-        auto* newTask = new ::swift2::CellTask< decltype(localParticles) >(
-          localParticles,
-          activeParticles,
+      assertion( taskNumberToBeUsed!=tarch::multicore::NoDependency );
+              
+      auto* newTask = new ::swift2::CellTask< decltype(localParticles) >(
+        localParticles,
+        activeParticles,
           [=](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
             """
             + touch_cell_first_time_kernel
             + """
-          },
-          false
-        );
+        },
+        false
+      );
       
-        tarch::multicore::spawnTask( newTask, adjacentVertexTask, taskNumberToBeUsed );
-      }
-      else {
-        tarch::multicore::waitForTasks( adjacentVertexTask );
-        """
-            + touch_cell_first_time_kernel
-            + """
-      }
+      tarch::multicore::spawnTask( newTask, adjacentVertexTask, taskNumberToBeUsed );
     """
-        )
+    )
 
 
 def construct_touch_vertex_last_time_call(
@@ -180,8 +174,8 @@ def construct_touch_vertex_last_time_call(
             current_species_set.name
         )
         + """.getAdjacentCellNumber(i),
-          0,
-          0
+          """ + TaskSubTypeNumber.TouchCellFirst + """,
+          """ + str(current_species_index) + """
       };
     }
     tarch::multicore::waitForTasks( adjacentTasks );

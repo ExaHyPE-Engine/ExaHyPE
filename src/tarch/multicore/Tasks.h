@@ -29,10 +29,11 @@ namespace tarch {
 
     /**
      * Defines the max indices for each entry in TaskNumber. So there's no
-     * constraint on the first entry, but the second one is only from 0 to 2,
-     * while the last entry can hold 16 different entries.
+     * constraint on the first entry, but the second one is only from 0 to 3
+     * (which reflects create-touch first-touch last-destroy) while the last
+     * entry can hold 16 different entries.
      */
-    constexpr TaskNumber MasTaskNumber{-1, 3, 16};
+    constexpr TaskNumber MasTaskNumber{-1, 4, 16};
     constexpr TaskNumber NoDependency{-1, -1, -1};
 
     std::string toString( const TaskNumber&  number );

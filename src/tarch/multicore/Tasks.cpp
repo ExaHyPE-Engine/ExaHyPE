@@ -520,18 +520,27 @@ void tarch::multicore::native::spawnTask(
 void tarch::multicore::native::spawnTask(
   Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
 ) {
+  logInfo( "spawnTaskWithDependencies", "{... <=#" << inDependencies.size() << " tasks}->" << toString(taskNumber) );
+  assertion1(
+    std::get<0>( taskNumber ) >= 0 and std::get<1>( taskNumber ) >= 0 and std::get<2>( taskNumber ) >= 0,
+    toString( taskNumber )
+  );
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void tarch::multicore::native::waitForTasks(const std::vector<TaskNumber>& inDependencies) {}
+void tarch::multicore::native::waitForTasks(const std::vector<TaskNumber>& inDependencies) {
+  logInfo( "waitForTasks", "wait for <=" <<  inDependencies.size() << " tasks" );
+}
 
-void tarch::multicore::native::waitForTask(const TaskNumber& taskNumber) {}
+void tarch::multicore::native::waitForTask(const TaskNumber& taskNumber) {
+  logInfo( "waitForTasks", "wait for task " << toString(taskNumber) );
+}
 
 void tarch::multicore::native::registerTask( const TaskNumber&  number ) {
   assertion( _tasksWithAntidependencies.count(number)==0 );
+  logInfo( "waitForTasks", "register task " << toString(number) << " (will be defined properly later)" );
 }
-
 
 
 #endif
