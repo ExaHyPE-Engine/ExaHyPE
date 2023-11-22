@@ -100,6 +100,12 @@ namespace {
   }
 } // namespace
 
+
+std::string tarch::multicore::toString( const TaskNumber&  number ) {
+  return "(" + std::to_string( std::get<0>(number) ) + "," + std::to_string( std::get<1>(number) ) + "," + std::to_string( std::get<2>(number) ) + ")";
+}
+
+
 /**
  * @return Number of processed tasks
  */
@@ -429,19 +435,19 @@ void tarch::multicore::internal::copyInternalTaskQueueOverIntoGlobalQueue(int th
 
 int tarch::multicore::internal::getNumberOfWithholdPendingTasks() { return globalNonblockingTasks.tasks.size(); }
 
-void tarch::multicore::spawnTaskWithDependencies(
+void tarch::multicore::spawnTask(
   Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber
 ) {
   assertion(inDependency != NoDependency or taskNumber != NoDependency);
-  tarch::multicore::native::spawnTaskWithDependencies(job, inDependency, taskNumber);
+  tarch::multicore::native::spawnTask(job, inDependency, taskNumber);
 }
 
 
-void tarch::multicore::spawnTaskWithDependencies(
+void tarch::multicore::spawnTask(
   Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
 ) {
   assertion(not inDependencies.empty() or taskNumber != NoDependency);
-  tarch::multicore::native::spawnTaskWithDependencies(job, inDependencies, taskNumber);
+  tarch::multicore::native::spawnTask(job, inDependencies, taskNumber);
 }
 
 
@@ -493,14 +499,25 @@ namespace {
 
 void tarch::multicore::native::drainTaskQueues() {}
 
-void tarch::multicore::native::spawnTaskWithDependencies(
+void tarch::multicore::native::spawnTask(
   Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber
 ) {
+  logInfo( "spawnTaskWithDependencies", toString(inDependency) << "->" << toString(taskNumber) );
+  assertion2(
+    inDependency == tarch::multicore::NoDependency or std::get<0>( inDependency ) >= 0,
+	toString( inDependency ),
+    toString( taskNumber )
+  );
+  assertion2(
+    std::get<0>( taskNumber ) >= 0 and std::get<1>( taskNumber ) >= 0 and std::get<2>( taskNumber ) >= 0,
+	toString( inDependency ),
+    toString( taskNumber )
+  );
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(
+void tarch::multicore::native::spawnTask(
   Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
 ) {
   tarch::multicore::native::spawnTask(job);

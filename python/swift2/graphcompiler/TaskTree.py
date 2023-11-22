@@ -30,6 +30,34 @@ DefaultIncludes = """
                 """
 
 
+def clear_task_numbers_for_all_species(mesh_traversals,
+                                       species_set,
+                                       verbose,
+                                       ):
+    """!
+    
+    Add the action set to the first sweep that clears all the task numbers of 
+    each and every species
+    
+    """
+    for species in species_set:
+        action_set_erase_task_markers = peano4.toolbox.api.ClearNumbersOnMesh(
+           species.name
+        )
+        action_set_erase_task_markers.descend_invocation_order = (
+            mesh_traversals[0].lowest_descend_invocation_order() - 1
+        )
+        action_set_erase_task_markers.parallel = True
+        mesh_traversals[0].add_action_set(action_set_erase_task_markers)
+        if verbose:
+           print(
+               "GRAPH COMPILER DEBUG [clear_task_numbers_for_all_species]: first step clears task markers for particle {} and hence uses the peano4.toolbox.api.ClearNumbersOnMesh action set".format(
+                   species.particle_model.name,
+               )
+           )
+
+
+
 def construct_touch_vertex_first_time_call(
     current_species_set, 
     touch_vertex_first_time_kernel,
@@ -54,16 +82,19 @@ def construct_touch_vertex_first_time_call(
         };
       
       if ( taskNumberToBeUsed!=tarch::multicore::NoDependency ) {
+        logInfo( "touchVertexFirstTime(...)", "create task " << tarch::multicore::toString(taskNumberToBeUsed) << " for " << marker.toString() );
+      
         auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
           assignedParticles,
           [=](decltype(assignedParticles)& assignedParticles)->void {
             """
             + touch_vertex_first_time_kernel
             + """
-          }
+          },
+          false
         );
       
-        tarch::multicore::spawnTaskWithDependencies( newTask, tarch::multicore::NoDependency, taskNumberToBeUsed );
+        tarch::multicore::spawnTask( newTask, tarch::multicore::NoDependency, taskNumberToBeUsed );
       }
       else {
         """
@@ -118,10 +149,11 @@ def construct_touch_cell_first_time_call(
             """
             + touch_cell_first_time_kernel
             + """
-          }
+          },
+          false
         );
       
-        tarch::multicore::spawnTaskWithDependencies( newTask, adjacentVertexTask, taskNumberToBeUsed );
+        tarch::multicore::spawnTask( newTask, adjacentVertexTask, taskNumberToBeUsed );
       }
       else {
         tarch::multicore::waitForTasks( adjacentVertexTask );
@@ -272,27 +304,6 @@ def translate_one_step_of_species_into_mesh_traversal(
         add_user_defined_actions=False,
     )
 
-    #
-    # Erase task markers throughout initialisation
-    #
-    if step_type == StepType.INITIALISATION:
-        if verbose:
-            print(
-                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} is initialisation step and hence uses the peano4.toolbox.ClearTaskNumbersOnMesh action set".format(
-                    len(mesh_traversals),
-                    step.name,
-                    current_species_set.particle_model.name,
-                )
-            )
-        action_set_erase_task_markers = peano4.toolbox.api.ClearNumbersOnMesh(
-            current_species_set.name
-        )
-        action_set_erase_task_markers.descend_invocation_order = (
-            new_step.lowest_descend_invocation_order() - 1
-        )
-        action_set_erase_task_markers.parallel = True
-        new_step.add_action_set(action_set_erase_task_markers)
-
     action_set_update_marker = UpdateParticleMarker(current_species_set)
     action_set_update_marker.descend_invocation_order = (
         new_step.highest_descend_invocation_order() + 1
@@ -442,7 +453,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                 )
             )
         alter_particle_position.append(True)
-        action_set_erase_task_markers = peano4.toolbox.api.ClearNumbersOnMesh(
+        action_set_erase_task_markers = peano4.toolbox.api.AssignNumbersToMesh(
             current_species_set.name
         )
         action_set_erase_task_markers.descend_invocation_order = (
@@ -597,6 +608,12 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
         # sweep as change, as the initial insertion indeed might be buggy.
         alter_particle_position[0] = True
         alter_particle_position[-1] = True
+
+        clear_task_numbers_for_all_species(mesh_traversals,
+                                           get_species_set(sequence_of_steps),
+                                           verbose,
+                                           )
+
 
     if does_one_species_require_gather(sequence_of_steps):
         add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers(

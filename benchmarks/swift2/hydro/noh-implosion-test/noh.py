@@ -257,10 +257,10 @@ if __name__ == "__main__":
         and args.realisation.split(".")[1] == Storage_Scattered
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_initialisation_steps_onto_task_tree
+            swift2.graphcompiler.map_particle_steps_onto_task_tree
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_particle_steps_onto_task_tree
+            swift2.graphcompiler.map_initialisation_steps_onto_task_tree
         )
     else:
         assert False, "realisation " + args.realisation + " not supported"

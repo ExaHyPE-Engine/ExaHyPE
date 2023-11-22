@@ -7,12 +7,15 @@ int swift2::CellTask<ParticleSet>::TaskTypeId = peano4::parallel::getTaskType( "
 
 template <typename ParticleSet>
 swift2::CellTask<ParticleSet>::CellTask(
-  const ParticleSet& localParticles,
-  const ParticleSet& activeParticles,
-  Functor            functor
+  const ParticleSet&  localParticles,
+  const ParticleSet&  activeParticles,
+  Functor             functor,
+  bool                fuseAndPortToGPU
 ):
-// @todo maybe fuse?
-  tarch::multicore::Task(tarch::multicore::Task::DontFuse, tarch::multicore::Task::DefaultPriority),
+  tarch::multicore::Task(
+    fuseAndPortToGPU ? TaskTypeId : tarch::multicore::Task::DontFuse,
+    tarch::multicore::Task::DefaultPriority
+  ),
   _activeParticles( activeParticles ),
   _localParticles(localParticles),
   _functor(functor) {

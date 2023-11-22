@@ -35,6 +35,8 @@ namespace tarch {
     constexpr TaskNumber MasTaskNumber{-1, 3, 16};
     constexpr TaskNumber NoDependency{-1, -1, -1};
 
+    std::string toString( const TaskNumber&  number );
+
     void setOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
     /**
@@ -323,13 +325,13 @@ namespace tarch {
      * fire-and-forget task which is just pushed out there without anybody
      * ever waiting for it later on (at least not via task dependencies).
      */
-    void spawnTaskWithDependencies(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber);
+    void spawnTask(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber);
 
     /**
      * Alternative realisation of spawnTaskWithDependencies() with multiple in
      * dependencies.
      */
-    void spawnTaskWithDependencies(
+    void spawnTask(
       Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
     );
 
@@ -468,11 +470,6 @@ namespace tarch {
       void spawnTask(Task* task);
 
       /**
-       * @see tarch::multicore::spawnTask()
-       */
-      void spawnTask(Task* task, const TaskNumber& in, const TaskNumber& out);
-
-      /**
        * Map onto native tasking
        *
        * Run over the tasks and issue native tasks. If the tasks spawn, in
@@ -519,8 +516,8 @@ namespace tarch {
        */
       int getNumberOfPendingTasks();
 
-      void spawnTaskWithDependencies(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber);
-      void spawnTaskWithDependencies(
+      void spawnTask(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber);
+      void spawnTask(
         Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
       );
       void waitForTasks(const std::vector<TaskNumber>& inDependencies);
