@@ -1,4 +1,4 @@
-intel-build:
+build-intel:
   stage: build
   allow_failure: false
   tags:
@@ -24,24 +24,24 @@ intel-build:
     expire_in: 2 hours
   retry: 0
 
-intel-test:
+test-intel:
   stage: test
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: intel-build
+    - job: build-intel
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} make check
   retry: 0
 
-intel-tutorials:
+exahype2-tutorials-intel:
   stage: tutorials
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: intel-build
+    - job: build-intel
   parallel:
     matrix:
     - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
@@ -50,13 +50,13 @@ intel-tutorials:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd tutorials/exahype2/$tutorial; make -j $(nproc --all)"
   retry: 0
 
-intel-applications:
+exahype2-applications-intel:
   stage: applications
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: intel-build
+    - job: build-intel
   parallel:
     matrix:
     - dimensions: [2, 3]
@@ -68,13 +68,13 @@ intel-applications:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd applications/exahype2/$application; make -j $(nproc --all)"
   retry: 0
 
-intel-benchmarks:
+exahype2-benchmarks-intel:
   stage: benchmarks
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: intel-build
+    - job: build-intel
   parallel:
     matrix:
     - benchmark: [euler, acoustic-wave, elastic-wave, advection]

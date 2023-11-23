@@ -1,4 +1,4 @@
-gcc-build-cmake:
+build-cmake-gcc:
   stage: build
   allow_failure: false
   tags:
@@ -21,24 +21,24 @@ gcc-build-cmake:
     expire_in: 2 hours
   retry: 0
 
-gcc-test-cmake:
+test-cmake-gcc:
   stage: test
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: gcc-build-cmake
+    - job: build-cmake-gcc
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< "cd build; ctest --no-compress-output --output-on-failure"
   retry: 0
 
-gcc-tutorials-cmake:
+exahype2-tutorials-cmake-gcc:
   stage: tutorials
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: gcc-build-cmake
+    - job: build-cmake-gcc
   parallel:
     matrix:
     - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
@@ -47,13 +47,13 @@ gcc-tutorials-cmake:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< "cd build/tutorials/exahype2/$tutorial; make -j $(nproc --all)"
   retry: 0
 
-gcc-applications-cmake:
+exahype2-applications-cmake-gcc:
   stage: applications
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: gcc-build-cmake
+    - job: build-cmake-gcc
   parallel:
     matrix:
     - dimensions: [2, 3]
@@ -65,13 +65,13 @@ gcc-applications-cmake:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< "cd build/applications/exahype2/$application; make -j $(nproc --all)"
   retry: 0
 
-gcc-benchmarks-cmake:
+exahype2-benchmarks-cmake-gcc:
   stage: benchmarks
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: gcc-build-cmake
+    - job: build-cmake-gcc
   parallel:
     matrix:
     - benchmark: [euler, acoustic-wave, elastic-wave, advection]

@@ -1,4 +1,4 @@
-nvidia-build-cmake:
+build-cmake-nvidia:
   stage: build
   allow_failure: false
   tags:
@@ -21,24 +21,24 @@ nvidia-build-cmake:
     expire_in: 2 hours
   retry: 0
 
-nvidia-test-cmake:
+test-cmake-nvidia:
   stage: test
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: nvidia-build-cmake
+    - job: build-cmake-nvidia
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< "cd build; ctest --no-compress-output --output-on-failure"
   retry: 0
 
-nvidia-tutorials-cmake:
+exahype2-tutorials-cmake-nvidia:
   stage: tutorials
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: nvidia-build-cmake
+    - job: build-cmake-nvidia
   parallel:
     matrix:
     - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
@@ -47,13 +47,13 @@ nvidia-tutorials-cmake:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< "cd build/tutorials/exahype2/$tutorial; make -j $(nproc --all)"
   retry: 0
 
-nvidia-applications-cmake:
+exahype2-applications-cmake-nvidia:
   stage: applications
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: nvidia-build-cmake
+    - job: build-cmake-nvidia
   parallel:
     matrix:
     - dimensions: [2, 3]
@@ -65,13 +65,13 @@ nvidia-applications-cmake:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< "cd build/applications/exahype2/$application; make -j $(nproc --all)"
   retry: 0
 
-nvidia-benchmarks-cmake:
+exahype2-benchmarks-cmake-nvidia:
   stage: benchmarks
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: nvidia-build-cmake
+    - job: build-cmake-nvidia
   parallel:
     matrix:
     - benchmark: [euler, acoustic-wave, elastic-wave, advection]

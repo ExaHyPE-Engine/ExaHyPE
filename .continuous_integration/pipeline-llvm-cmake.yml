@@ -1,4 +1,4 @@
-llvm-build-cmake:
+build-cmake-llvm:
   stage: build
   allow_failure: false
   tags:
@@ -21,24 +21,24 @@ llvm-build-cmake:
     expire_in: 2 hours
   retry: 0
 
-llvm-test-cmake:
+test-cmake-llvm:
   stage: test
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: llvm-build-cmake
+    - job: build-cmake-llvm
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd build; ctest --no-compress-output --output-on-failure"
   retry: 0
 
-llvm-tutorials-cmake:
+exahype2-tutorials-cmake-llvm:
   stage: tutorials
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: llvm-build-cmake
+    - job: build-cmake-llvm
   parallel:
     matrix:
     - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
@@ -47,13 +47,13 @@ llvm-tutorials-cmake:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd build/tutorials/exahype2/$tutorial; make -j $(nproc --all)"
   retry: 0
 
-llvm-applications-cmake:
+exahype2-applications-cmake-llvm:
   stage: applications
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: llvm-build-cmake
+    - job: build-cmake-llvm
   parallel:
     matrix:
     - dimensions: [2, 3]
@@ -65,13 +65,13 @@ llvm-applications-cmake:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd build/applications/exahype2/$application; make -j $(nproc --all)"
   retry: 0
 
-llvm-benchmarks-cmake:
+exahype2-benchmarks-cmake-llvm:
   stage: benchmarks
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: llvm-build-cmake
+    - job: build-cmake-llvm
   parallel:
     matrix:
     - benchmark: [euler, acoustic-wave, elastic-wave, advection]

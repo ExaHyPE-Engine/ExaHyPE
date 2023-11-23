@@ -1,4 +1,4 @@
-amd-build-cmake:
+build-cmake-amd:
   stage: build
   allow_failure: false
   tags:
@@ -21,24 +21,24 @@ amd-build-cmake:
     expire_in: 2 hours
   retry: 0
 
-amd-test-cmake:
+test-cmake-amd:
   stage: test
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: amd-build-cmake
+    - job: build-cmake-amd
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< "cd build; ctest --no-compress-output --output-on-failure"
   retry: 0
 
-amd-tutorials-cmake:
+exahype2-tutorials-cmake-amd:
   stage: tutorials
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: amd-build-cmake
+    - job: build-cmake-amd
   parallel:
     matrix:
     - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
@@ -47,13 +47,13 @@ amd-tutorials-cmake:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< "cd build/tutorials/exahype2/$tutorial; make -j $(nproc --all)"
   retry: 0
 
-amd-applications-cmake:
+exahype2-applications-cmake-amd:
   stage: applications
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: amd-build-cmake
+    - job: build-cmake-amd
   parallel:
     matrix:
     - dimensions: [2, 3]
@@ -65,13 +65,13 @@ amd-applications-cmake:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< "cd build/applications/exahype2/$application; make -j $(nproc --all)"
   retry: 0
 
-amd-benchmarks-cmake:
+exahype2-benchmarks-cmake-amd:
   stage: benchmarks
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: amd-build-cmake
+    - job: build-cmake-amd
   parallel:
     matrix:
     - benchmark: [euler, acoustic-wave, elastic-wave, advection]

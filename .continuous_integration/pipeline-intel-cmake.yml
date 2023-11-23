@@ -1,4 +1,4 @@
-intel-build-cmake:
+build-cmake-intel:
   stage: build
   allow_failure: false
   tags:
@@ -21,24 +21,24 @@ intel-build-cmake:
     expire_in: 2 hours
   retry: 0
 
-intel-test-cmake:
+test-cmake-intel:
   stage: test
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: intel-build-cmake
+    - job: build-cmake-intel
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd build; ctest --no-compress-output --output-on-failure"
   retry: 0
 
-intel-tutorials-cmake:
+exahype2-tutorials-cmake-intel:
   stage: tutorials
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: intel-build-cmake
+    - job: build-cmake-intel
   parallel:
     matrix:
     - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
@@ -47,13 +47,13 @@ intel-tutorials-cmake:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd build/tutorials/exahype2/$tutorial; make -j $(nproc --all)"
   retry: 0
 
-intel-applications-cmake:
+exahype2-applications-cmake-intel:
   stage: applications
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: intel-build-cmake
+    - job: build-cmake-intel
   parallel:
     matrix:
     - dimensions: [2, 3]
@@ -65,13 +65,13 @@ intel-applications-cmake:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd build/applications/exahype2/$application; make -j $(nproc --all)"
   retry: 0
 
-intel-benchmarks-cmake:
+exahype2-benchmarks-cmake-intel:
   stage: benchmarks
   allow_failure: false
   tags:
     - ${RUNNER_TAG}
   needs:
-    - job: intel-build-cmake
+    - job: build-cmake-intel
   parallel:
     matrix:
     - benchmark: [euler, acoustic-wave, elastic-wave, advection]
