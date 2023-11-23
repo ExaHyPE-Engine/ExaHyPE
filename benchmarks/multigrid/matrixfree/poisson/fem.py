@@ -27,7 +27,15 @@ project = multigrid.matrixfree.Project( project_name = "CollocatedFEM",
                                         namespace = [ "benchmarks", "multigrid", "matrixfree", "poisson" ]
                                          )
 
-local_assembly_matrix = np.eye( 2**args.dimensions )
+local_assembly_matrix = np.array([
+        0.6666666666666667, -0.16666666666666669, -0.16666666666666663, -0.33333333333333337
+      
+        ,-0.16666666666666669, 0.6666666666666667, -0.33333333333333337, -0.16666666666666669
+      
+        ,-0.16666666666666663, -0.33333333333333337, 0.6666666666666667, -0.16666666666666669
+      
+        ,-0.33333333333333337, -0.16666666666666669, -0.16666666666666669, 0.6666666666666667
+]).reshape((4,4))
 
 solver = multigrid.matrixfree.solvers.CollocatedLowOrderDiscretisation("CollocatedPoisson",
                                                                        args.upv,
