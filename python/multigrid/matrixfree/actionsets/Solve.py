@@ -33,7 +33,7 @@ class Solve(ActionSet):
 
     for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
     {
-      logTraceInWith1Argument("checkFieldDiag", fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof));
+      logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(dof), fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof), fineGridVertex{{SOLVER_NAME}}.getResidual(dof));
       assertion( repositories::{{SOLVER_NAME}}.getFieldDiag(dof) > 0 );
       double val = fineGridVertex{{SOLVER_NAME}}.getValue(dof) 
                   + repositories::{{SOLVER_INSTANCE}}.Omega 
@@ -41,7 +41,7 @@ class Solve(ActionSet):
                     * fineGridVertex{{SOLVER_NAME}}.getResidual(dof);
 
       fineGridVertex{{SOLVER_NAME}}.setValue(dof, val);
-      logTraceOut("checkFieldDiag");
+      logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(dof));
     }
     logTraceOutWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
@@ -72,11 +72,6 @@ class Solve(ActionSet):
       for (int i=0; i<TwoPowerD; i++)
       {
         logTraceInWith1Argument("puttingValuesBack", fineGridVertices{{SOLVER_NAME}}(i).toString());
-        // put vertexValues back
-        fineGridVertices{{SOLVER_NAME}}(i).setValue(dof, vertexValues(i));
-
-        // put residual back -- i think this isn't needed, since we set to 0 later!
-        fineGridVertices{{SOLVER_NAME}}(i).setResidual(dof, residualValues(i));
 
         // increment fieldDiag
         // get current val
