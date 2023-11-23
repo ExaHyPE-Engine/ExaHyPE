@@ -55,19 +55,19 @@ class Solve(ActionSet):
     {
       // collect all of the vertex values into one vector
       tarch::la::Vector<TwoPowerD, double> vertexValues;
-      tarch::la::Vector<TwoPowerD, double> rhsValues;
+      tarch::la::Vector<TwoPowerD, double> residualValues;
       for (int i=0; i<TwoPowerD; i++)
       {
-        vertexValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getValue(dof);
-        rhsValues(i)    = fineGridVertices{{SOLVER_NAME}}(i).getRhs(dof);
+        vertexValues(i)   = fineGridVertices{{SOLVER_NAME}}(i).getValue(dof);
+        residualValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getResidual(dof);
       }
 
       // apply local assembly matrix
       auto A = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h());
       vertexValues = A * vertexValues;
 
-      // decrement rhs values
-      rhsValues -= vertexValues;
+      // decrement residual values
+      residualValues -= vertexValues;
 
       for (int i=0; i<TwoPowerD; i++)
       {
@@ -75,8 +75,8 @@ class Solve(ActionSet):
         // put vertexValues back
         fineGridVertices{{SOLVER_NAME}}(i).setValue(dof, vertexValues(i));
 
-        // put rhs back
-        fineGridVertices{{SOLVER_NAME}}(i).setRhs(dof, rhsValues(i));
+        // put residual back -- i think this isn't needed, since we set to 0 later!
+        fineGridVertices{{SOLVER_NAME}}(i).setResidual(dof, residualValues(i));
 
         // increment fieldDiag
         // get current val
