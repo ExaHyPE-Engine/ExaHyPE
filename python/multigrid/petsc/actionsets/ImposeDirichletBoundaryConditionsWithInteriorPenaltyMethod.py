@@ -126,6 +126,29 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
           );
         }
 
+        /*
+        Custom behaviour for u unknown. We want to:
+          - find the row associated with the u^f solution (already done)
+          - write +1 on diagonal (already done)
+          - write -0.5 in column associated with u^-
+          - write -0.5 in column associated with u^+
+        The effect being we have u^f - 0.5 * u^+ - 0.5 * u^-
+        */
+        if ( row >= repositories::{{SOLVER_INSTANCE}}.FaceUnknowns  )
+        {
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalMatrixRow,
+            globalFaceIndex + row, // u^-
+            -0.5
+          );
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalMatrixRow,
+            globalFaceIndex + row + repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns, // u^+
+            -0.5
+          );
+        }
+
+
         row++;
 
         logTraceOut("TFFT:unknownLoop");

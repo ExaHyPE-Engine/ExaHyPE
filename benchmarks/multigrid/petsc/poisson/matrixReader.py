@@ -118,6 +118,6 @@ if __name__ == "__main__":
   print(f"rank of this matrix is {getRankOfMatrix(mat)}")
 
   nv = get_null_vector(mat)
-  print("printing null vector....\n")
-  for i in range(nv.shape[0]): print(nv[i])
+  # print("printing null vector....\n")
+  # for i in range(nv.shape[0]): print(nv[i])
   
