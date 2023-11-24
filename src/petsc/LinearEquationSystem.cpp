@@ -188,7 +188,7 @@ void petsc::LinearEquationSystem::solve(){
   //set runtime options
   KSPSetFromOptions(ksp);
 
-  PCSetType(pc, PCNONE); //no preconditioner
+  PCSetType(pc, PCLU); //no preconditioner
   KSPSetType(ksp, KSPGMRES);
   KSPSetUp(ksp);
   KSPSetTolerances(ksp, 1.e-7, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
