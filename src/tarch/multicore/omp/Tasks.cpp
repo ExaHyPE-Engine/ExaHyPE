@@ -9,15 +9,15 @@
 #include "tarch/multicore/otter.h"
 #include "tarch/services/ServiceRepository.h"
 
-#ifdef UseSmartMPI
-#include "smartmpi.h"
-#endif
 
 #if defined(SharedOMP)
 
 namespace {
   int numberOfSpawnedTasks = 0;
 } // namespace
+
+
+//#define OpenMPHighThroughputWaiting
 
 /**
  * Native mapping of a task loop onto a task loop
@@ -45,12 +45,42 @@ namespace {
  * set. The empty task set means that the taskloop construct becomes nop. The
  * subsequent taskwait hence synchronises on one logical level above within the
  * task hierarchy, which is not what we want.
+ *
+ *
+ *
+ * ## SmartMPI
+ *
+ * I used to insert the fragment
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * #ifdef UseSmartMPI
+ * tarch::timing::Watch taskWaitTime("spawnAndWaitAsTaskLoop", "taskwait", false);
+ * #endif
+ *
+ * #pragma omp taskwait
+ *
+ * #ifdef UseSmartMPI
+ * taskWaitTime.stop();
+ * smartmpi::reportWaitTime(taskWaitTime.getCPUTime(), tarch::mpi::Rank::getInstance().getRank());
+ * #endif
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * but as we don't use SmartMPI anymore atm, I'm not sure anymore if this is a
+ * good solution, so I removed it for the time being to make the code more
+ * readable.
+ *
+ *
+ * ## High throughput waiting
+ *
+ * I have a second variant of the code which I call "high-throughput waiting".
+ * This version runs risk to
  */
+#if !defined(OpenMPHighThroughputWaiting)
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
   assertion(not tasks.empty());
 
   #if defined(OpenMPTaskGroup)
-  #pragma omp taskloop nogroup shared(tasks) priority(tarch::multicore::Task::DefaultPriority) untied
+  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
   #endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
   #if !defined(OpenMPTaskGroup)
@@ -64,22 +94,72 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
     }
   }
 
-#ifdef UseSmartMPI
-  tarch::timing::Watch taskWaitTime("spawnAndWaitAsTaskLoop", "taskwait", false);
-#endif
-
-#pragma omp taskwait // wait for all elements from tasks to complete
-                     // do not wait for the children of tasks
-                     // but do children if you have time (this does not
-                     // happen however)
-
-#ifdef UseSmartMPI
-  taskWaitTime.stop();
-  smartmpi::reportWaitTime(taskWaitTime.getCPUTime(), tarch::mpi::Rank::getInstance().getRank());
-#endif
+  #pragma omp taskwait // wait for all elements from tasks to complete
+                       // do not wait for the children of tasks
+                       // but do children if you have time (this does not
+                       // happen however)
 }
+#else
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
+  assertion(not tasks.empty());
+
+  int numberOfLoopTasks = tasks.size(); // bookkeeping of how many loop tasks
+                                        // we have in the system
+
+  #if defined(OpenMPTaskGroup)
+  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks) untied
+  #endif
+  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
+  #if !defined(OpenMPTaskGroup)
+  #pragma omp task priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks)
+  #endif
+    {
+      while (tasks[i]->run()) {
+        tarch::multicore::Core::getInstance().yield();
+      }
+      delete tasks[i];
+    }
+
+    int currentNumberOfLoopTasks;                   // reduce the bookkeeping
+    #pragma omp atomic capture                      // counter and create my
+    currentNumberOfLoopTasks = --numberOfLoopTasks; // own loop termination
+                                                    // criterion
+
+    while (currentNumberOfLoopTasks>0) {
+      if (processPendingTasks(1,false)) { // I use FILO to increase cache hit probability
+        #pragma omp atomic read
+        currentNumberOfLoopTasks = numberOfLoopTasks;
+      }
+      else {
+        currentNumberOfLoopTasks = 0; // This is not nice. It means that a
+                                      // fast task might finish while ready
+                                      // tasks literally become a available a
+                                      // second later. However, without his
+                                      // statement, another loop task might
+                                      // never be able to run, as the busy
+                                      // polling keeps the thread idle. We
+                                      // starve.
+      }
+    }
+  }
+
+  #pragma omp taskwait // wait for all elements from tasks to complete
+                       // do not wait for the children of tasks
+                       // but do children if you have time (this does not
+                       // happen however)
+
+  assertionEquals(numberOfLoopTasks,0);
+}
+#endif
+
 
 int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
+
+
+void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
+  tarch::multicore::native::spawnTask(job);
+}
+
 
 void  tarch::multicore::native::spawnTask(Task* job) {
   #pragma omp atomic
@@ -146,4 +226,18 @@ void        tarch::multicore::native::drainTaskQueues() {
 #pragma omp taskyield
 }
 
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
+void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
+
+void tarch::multicore::native::waitForTask( int taskNumber ){}
 #endif

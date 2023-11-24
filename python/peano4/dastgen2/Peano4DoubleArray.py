@@ -25,7 +25,7 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
         super(Peano4DoubleArray, self).__init__(
             name, cardinality, valid_mantissa_bits=valid_mantissa_bits, ifdefs=ifdefs
         )
-        self._cardinality = cardinality
+        self._cardinality = str(cardinality)
 
     def get_methods(self, _full_qualified_class_name, for_declaration=True):
         accessor_name = self._name[:1].title() + self._name[1:]
@@ -49,7 +49,7 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
     def use_default_copy_constructor(self):
         return self._valid_mantissa_bits == None
 
-    def get_plain_C_attributes(self):
+    def get_plain_C_attributes(self, for_constructor=False):
         if self._valid_mantissa_bits != None:
             return [
                 (

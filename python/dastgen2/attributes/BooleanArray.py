@@ -50,8 +50,14 @@ class BooleanArray(Boolean):
             raise NotImplementedError(
                 f"Attribute {name}: This data type can't work with qualifiers (yet)"
             )
-        Boolean.__init__(self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval)
-        self._cardinality = cardinality
+        if initval is not None:
+            raise NotImplementedError(
+                f"Attribute {name}: Can't generate arrays with initial values (yet)."
+            )
+        Boolean.__init__(
+            self, name, ifdefs=ifdefs, qualifier=qualifier, initval=initval
+        )
+        self._cardinality = str(cardinality)
         self.compress = compress
 
     def get_methods(self, _full_qualified_class_name, for_declaration=True):
@@ -74,7 +80,7 @@ class BooleanArray(Boolean):
             ("flip" + accessor_name + "(int index)", "void"),
         ]
 
-    def get_plain_C_attributes(self):
+    def get_plain_C_attributes(self, for_constructor=False):
         if self.compress:
             return [
                 (

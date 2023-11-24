@@ -42,7 +42,7 @@ exahype2::EnclaveTask::EnclaveTask(
 bool exahype2::EnclaveTask::run() {
   logTraceInWith1Argument("run()", getTaskId());
 
-  OTTER_REMOVE_FROM_POOL(enclave_task, otter::label::enclave_with_typeid, getTaskId());
+  OTTER_POOL_DECL_POP(enclave_task, otter::label::enclave_with_typeid, getTaskId());
 
   OTTER_TASK_START(enclave_task);
   computeTask();

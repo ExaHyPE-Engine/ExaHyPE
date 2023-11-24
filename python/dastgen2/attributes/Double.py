@@ -25,36 +25,49 @@ class Double(Attribute):
         @Pawel Can you add some docu?
 
         """
+
+        # Do we need to expose this attribute in the header file?
+        # Only necessary for functions that will be inlined, i.e. constexpr
+        expose = qualifier == Attribute.Qualifier.CONSTEXPR
+
         Attribute.__init__(
             self,
             name,
             ifdefs,
             qualifier=qualifier,
             initval=initval,
+            expose_in_header_file=expose,
         )
         self._valid_mantissa_bits = valid_mantissa_bits
 
+        return
+
     def get_methods(self, _full_qualified_class_name, for_declaration=True):
-        accessor_name = self._name[:1].title() + self._name[1:]
+        accessor_name = self.get_accessor_name()
         methods = []
 
         if self._is_static:
             if for_declaration:
+                # No 'const' here: static member function cannot have 'const' qualifier
                 getter = ("get" + accessor_name + "()", "static double")
             else:
+                # No 'static' here: 'static' can only be specified inside the class definition
                 getter = ("get" + accessor_name + "()", "double")
 
         elif self._is_const_static:
             if for_declaration:
+                # No 'const' here: static member function cannot have 'const' qualifier
                 getter = ("get" + accessor_name + "()", "static double")
             else:
+                # No 'static' here: 'static' can only be specified inside the class definition
+                # No 'const' here either: function definition will then differ from that in declaration
                 getter = ("get" + accessor_name + "()", "double")
 
         elif self._is_const:
-            getter = ("get" + accessor_name + "()", "double")
+            getter = ("get" + accessor_name + "() const", "const double")
 
         elif self._is_constexpr:
-            getter = ("get" + accessor_name + "()", "constexpr double")
+            getter = ("get" + accessor_name + "() const", "constexpr double")
 
         else:
             # default case.
@@ -68,23 +81,37 @@ class Double(Attribute):
 
         return methods
 
-    def get_plain_C_attributes(self):
+    def get_plain_C_attributes(self, for_constructor=False):
         typestring = "double"
         namestring = "_" + self._name
+
         # add const/static qualifiers and initialization values, if needed
         if self._is_static:
             typestring = "inline static double"
             if self._initval is not None:
                 namestring += " = " + str(self._initval)
+
         elif self._is_const_static:
             typestring = "inline const static double"
             namestring += " = " + str(self._initval)
+
         elif self._is_const:
-            raise NotImplementedError
+            typestring = "const double"
+            namestring += " = " + str(self._initval)
+
         elif self._is_constexpr:
             typestring = "constexpr static double"
             namestring += " = " + str(self._initval)
 
+        else:
+            # default case
+            # If an initial value is provided, add it
+            # However, only add it if we need it for a definition,
+            # not as optional argument for constructor method
+            if self._initval is not None and not for_constructor:
+                namestring += " = " + str(self._initval)
+
+        # Set up compression/packaging
         if self._valid_mantissa_bits is None:
             return [(namestring, typestring, "")]
         else:
@@ -96,10 +123,10 @@ class Double(Attribute):
     def get_method_body(self, signature):
         if signature.startswith("get") and self.use_data_store:
             return "  return _dataStore._" + self._name + ";\n"
-        elif signature.startswith("set") and self.use_data_store:
-            return "  _dataStore._" + self._name + " = value;\n"
         elif signature.startswith("get") and not self.use_data_store:
             return "  return _" + self._name + ";\n"
+        elif signature.startswith("set") and self.use_data_store:
+            return "  _dataStore._" + self._name + " = value;\n"
         elif signature.startswith("set") and not self.use_data_store:
             return "  _" + self._name + " = value;\n"
         else:

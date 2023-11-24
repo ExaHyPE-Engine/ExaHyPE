@@ -60,7 +60,7 @@ struct peano4::grid::GridVertex {
     int   getLevel() const;
     void   setLevel(int value);
     GridVertex(const GridVertex& copy);
-    GridVertex& operator = (const GridVertex& assign);
+    GridVertex& operator = (const GridVertex& other);
 
     #ifdef Parallel
     PragmaPush

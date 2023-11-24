@@ -17,36 +17,11 @@ A first one gives kind of a quick-n-dirty roadmap which defines a workflow how
 to search for flaws in your parallelisation.
 The second part of the page runs through various scalability issues on the 
 different machine levels (core, node, cluster, gpus).
+The roadmap is close to trivial - likely everybody would follow these steps - but
+I reiterate it here, as it structures the discussion afterwards.
 
 
 
-## Roadmap
-
-1. Check if your code scales on a single node and if the scalability is 
-   stable, i.e. does not become worse once you add more and more cores. This might be 
-   counter-intuitive if you are interested in large-scale applications - notably
-   as the number of cores on your machine is fixed, so you have limited freedom 
-   there - but it is important to understand this behaviour prior to any 
-   subsequent steps. Node scalability issues propagate through to all further 
-   optimisation steps. You can alter the cores that an ExaHyPE executable uses 
-   by altering the command line argument   
-   ~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-   ./myexecutable --threads XXX
-   ~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-   Peano offers @ref page_peano_runtime_analysis "some Python scripts" that allow 
-   users to visualise the scalability behaviour. If the scalability is poor,
-   consult the section below on Multithreading optimisation.
- 
-2. Check if you use all cores. It is important to know that you stagnate once
-   you add more cores before you check for this property. If your runtime goes 
-   up, it makes no sense to study this item. You first should fix item 1. 
-   If you do not use all cores, study the remarks below on enclave tasking and
-   multicore kernels. Check that you have enough enclave tasks and that these
-   enclave tasks use all cores if you still suffer from underutilisation on a 
-   node.
-     
-3. To be written ...
-   
 
 
 ## Single core optimisation
@@ -103,6 +78,28 @@ for CPUs.
 
 ## Multithreading optimisation
 
+To assess the multithreading efficiency, follow the steps below:
+
+1. Check if your code scales on a single node and if the scalability is 
+   stable, i.e. does not become worse once you add more and more cores. This might be 
+   counter-intuitive if you are interested in large-scale applications - notably
+   as the number of cores on your machine is fixed, so you have limited freedom 
+   there - but it is important to understand this behaviour prior to any 
+   subsequent steps. Node scalability issues propagate through to all further 
+   optimisation steps. 
+   
+   If you use OpenMP, you can alter the number of cores used by ExaHyPE through 
+   the environment variable OMP_NUM_THREADS. For SYCL, TBB and C++ threading, 
+   you need to set the thread count manually. This can happen within the main 
+   of the C++ code, or you use exahype2.Project.set_number_of_threads().
+ 
+2. Check if you use all cores for all setups at the point where your speedup 
+   starts to stagnate. If you do not use all cores beyond the stagnation points
+   (or when the curve starts to flatten out), study the remarks below on enclave tasking and
+   multicore kernels. Check that you have enough enclave tasks and that these
+   enclave tasks use all cores if you still suffer from underutilisation on a 
+   node.
+   
 
 ### The trees aka subpartitions are imbalanced
 
@@ -146,6 +143,40 @@ in @ref page_peano_performance_optimisation "recommendation for Peano":
 If you find out that the number of trees is smaller than the cores, you have 
 to switch to multi-core compute kernels in ExaHyPE. You also should try to 
 use enclave tasking.
+
+
+### Few very expensive enclave tasks introduce phases of limited concurrency
+
+This notably happens with multiphysics codes, where only very few limiter cells
+make up the majority of the runtime. You see them appear in a profile as single
+huge tasks. 
+
+One fix for this flaw is to switch to an implementation for these expensive 
+tasks which in turn can farm out over all cores. However, this is only the 
+last resort, as it ***does not fix the algorithmic latency***. You fix the 
+problem that the tasks arise a posteriori. Notably, this fix does not help if
+you have a low concurrency initially (few trees spawning cheap tasks) and 
+would have threads at this point which happily could process the critical 
+tasks. Before you try to make the tasks themselves faster, I therefore suggest
+to 
+
+1. give the critical tasks a higher priority than the normal tasks. The enclave
+   solvers typically have an attribute enclave_task_priority which you can 
+   reset to
+   
+             self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority+1"
+   
+   for example.
+
+2. recalibrate your load balancing such that the mesh fragments which produce 
+   these massive tasks are very small and basically only do those guys.
+   
+The second strategy is interesting: Basically, I recommend to tailor certain 
+parallel partitions around the expensive tasks. We violate a geometric balancing
+and instead implicitly realise a real cost model. This means that we might even
+make the expensive tasks skeleton tasks (as they become adjacent to MPI boundaries), 
+which is not problematic if a subpartition only constaints few skeleton tasks: 
+It will then just run longer within its fork-join section.
 
 
 ### Very high spin time and not enough trees for the all cores
@@ -226,55 +257,50 @@ There are a few things that you can try:
 
 ### The code does not use all cores
 
-Hereon, we assume that you have doublechecked that the code tries to use one
-subtree (partition) per core and that these partitions are reasonably balanced.
-Details are discussed in \ref peano_performance_optimisation "Peano's generic optimisation discussion".
-Furthermore, we assume that you have already introduced enclave tasking in 
-your solver, and you also have validated that enough enclave tasks are 
-produced (see above). In this case, it might be reasonable to switch the 
-compute kernel.
+For the FD4 scheme and a lot of other compute kernels, we provide compute kernel
+implementations which can spread out over the whole node, i.e. are internally
+parallelised again. 
+A typical solver supporting concurrent (enclave task) kernels hosts several 
+compute kernel calls besides the core routines. Below is a list for a
+Finite Volume solver with enclave tasking:
+
+ - _compute_kernel_call
+ - _fused_compute_kernel_call_cpu
+ - _fused_compute_kernel_call_gpu
+
+These kernels can be reset to alternative implementations. In principle, you 
+can alter them from outside or within a subclass by simple reassigning the 
+underlying function invocation (the kernel is a plain C++ string). Some solvers
+such as the Finite Volume Rusanov solver however provide factory methods to 
+construct kernels which might come in handy.
 
 
-For the FD4 scheme and OpenMP, we provide for example compute kernels which theoretically can spread out over the
-whole node. The kernel is slower than the default version on one core, but
-it can use further cores and thus eventually becomes faster. Usually, you
-have to follow a few steps to enable this alternative kernel:
-
-- Switch to an enclave solver.
-- Instruct the enclave solver that there it can use stateless PDE
-  terms. For this, pass the constructor the argument
-  
-        pde_terms_without_state=True
-        
-        
-- Ensure that the routine patchCanUseStatelessPDETerms() return true most of the time (this is the default).
-- Make the solver use a solver on the CPU which uses the batched taskgraph 
-  realisation. Most ExaHyPE solver have an attribute similar to
-  
-  
-        self._fused_compute_kernel_call_cpu
-        
-  which is initialised with some default kernel call. Browse through your 
-  code and alter it such that it uses
-
-        solver_variant                           = SolverVariant.Multicore,
-        kernel_variant                           = KernelVariant.BatchedAoSHeap,
-
-  and a batched solver variant (patch-wise or similar makes limited
-  sense). Usually, the kernels are constructed in set_implementation(), so 
-  it might make sense to plug into this one (overwrite it, call the 
-  supertype's implementation, and then switch the kernel).
+Note that the fused variants are used if and only if we can be sure that a compute 
+task does not require any synchronisity. They are used for
+enclave tasking codes only, and only if you have switched to stateless kernel 
+updates before (see recommendations above). As a consequence, these guys are 
+fairly save kernels to replace with a parallelised implementation, as you can 
+be sure that no data races arise.
 
 
-This idea corresponds to the last remark in the section 
-"The individual trees are of significantly different sizes" of 
-\ref page_peano_performance_optimisation "Peano's generic optimisation discussion".
+Nothing stops you from picking an alternative implementation for _compute_kernel_call
+as well. Just validate that you do not introduce any data races.
 
-<b>Important:</b> Not all compute kernels/solver variants benefit from the 
-multithreaded kernels. Notably on NUMA machines and lower-order numerical
-schemes, we see that the multicore kernel variants tend to make the performance
-worse.
 
+### Any generic load balancing is disfunctional
+
+If you have extremely heterogeneous load per cell, any generic load balancing 
+of Peano has to fail, as all the generic balancing schemes use a plain cell
+count to determine a good domain decomposition. They use a homogeneous cost
+model.
+
+In principle, nothing stops you from writing your own totally independent load
+balancing. For some experiments, this might be reasonable. If you want to use a
+generic load balancing, you might however also consider to change the load 
+metrics. For this, you have to use a specialisation of toolbox::loadbalancing::metrics::CellCount.
+
+I recommend to consult exahype2.grid.FineGridCellLoadBalancingCostMetric, which 
+discusses step by step how to introduce a tailored load balancing.
 
 
 ## MPI optimisation

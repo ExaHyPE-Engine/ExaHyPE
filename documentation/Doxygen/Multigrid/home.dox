@@ -4,81 +4,13 @@
 \li \subpage multigrid_architecture
 \li \subpage multigrid_petsc
 \li \subpage multigrid_tutorials
+\li \subpage multigrid_benchmarks
 \li \subpage multigrid_enumeration
+\li \subpage page_multigrid_numerics
 
 Peano's multigrid extension provides stand-alone multigrid solers. However, the
 solver ingredients are designed in a way that they can be used by other codes, 
 too.
-
-# Configure PETSc
-
-The first thing that the user needs to do is install PETSc somewhere on their system.
-[The instructions on their website](https://petsc.org/release/install/download/), but 
-we will summarise the steps here.
-
-1. Clone their repo. It's best to do this somewhere away from the Peano directory.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-git clone -b release https://gitlab.com/petsc/petsc.git petsc
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-2. cd into this directory.
-
-The next steps will depend on your setup, but we will give here some general tips.
-
-3. Run the configure script inside the PETSc directory:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-./configure --with-cc=(C-COMPILER) --with-cxx=(C++-COMPILER) --with-fc=0
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In this instance we used the intel C and CC compilers.
-
-4. If this succeeds then you can make:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-make PETSC_DIR=/path/to/petsc PETSC_ARCH=system_architecture all
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-By default, system_architecture is arch-linux-c-debug, but this is something that can be
-changed at the configure stage. 
-
-It's worth adding PETSC_DIR and PETSC_ARCH to bashrc / bash_profile, as these will be used 
-throughout.
-
-## Reconfigure Peano
-
-We will then need to reconfigure Peano. Change directories into the top level of Peano.
-
-In addition to the --with-petsc and --enable-finiteelements flags,
-we will need to make additions to CXXFLAGS and LDFLAGS to ensure that we can compile with PETSc.
-
-In addition to whichever CXXFLAGS were present before, we should include:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-CXXFLAGS="(...) -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include"
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-to ensure that the approprirate libraries are available to the compiler.
-
-Moreover,
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-LDFLAGS="(...) -lpetsc -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib -L$PETSC_DIR/$PETSC_ARCH/lib -L/path/to/gcc/libraries  "
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The first flag here comes from PETSc itself, and requires PETSC_DIR and PETSC_ARCH to be established already.
-The last flag is the path to the gcc runtime libraries. As an example, on a local machine, this libary looks like:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
--L/usr/lib/gcc/x86_64-linux-gnu
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-We can then put these together:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~
-./configure ... --enable-finiteelements --with-petsc CXXFLAGS=$(CXXFLAGS) LDFLAGS=$(LDFLAGS)
-~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 */

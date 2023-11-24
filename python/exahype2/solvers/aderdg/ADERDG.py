@@ -511,24 +511,24 @@ class ADERDG(object):
                 self, self._store_cell_data_default_guard()
             )
 
-        self._action_set_update_face_label.priority = 0
-        self._action_set_update_cell_label.priority = 0
+        self._action_set_update_face_label.descend_invocation_order = 0
+        self._action_set_update_cell_label.descend_invocation_order = 0
 
-        self._action_set_initial_conditions.priority = 1
-        self._action_set_initial_conditions_for_grid_construction.priority = 1
-        self._action_set_handle_boundary.priority = 1
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = (
+        self._action_set_initial_conditions.descend_invocation_order = 1
+        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = 1
+        self._action_set_handle_boundary.descend_invocation_order = 1
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
             1
         )
-        self._action_set_prediction.priority = 1
-        self._action_set_prediction_on_hanging_cells.priority = 1
-        self._action_set_correction.priority = (
+        self._action_set_prediction.descend_invocation_order = 1
+        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 1
+        self._action_set_correction.descend_invocation_order = (
             1  # needs to happen after handle_boundary but this is done on faces anyway
         )
 
-        self._action_set_AMR.priority = 2
-        self._action_set_AMR_commit_without_further_analysis.priority = 2
-        self._action_set_postprocess_solution.priority = 2
+        self._action_set_AMR.descend_invocation_order = 2
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 2
+        self._action_set_postprocess_solution.descend_invocation_order = 2
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
@@ -1268,7 +1268,7 @@ class ADERDG(object):
             exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
         )
         self._action_set_postprocess_solution._compute_kernel += add_final_action_for_error_measurement()
-        self._action_set_postprocess_solution.priority = 3
+        self._action_set_postprocess_solution.descend_invocation_order = 3
 
 
     """

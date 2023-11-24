@@ -23,6 +23,31 @@ Push the Docker image to Dockerhub:
 docker push peanoframework/<toolchain>
 ```
 
+You can find prebuilt Docker images for each compiler toolchain we support at [Dockerhub](https://hub.docker.com/u/peanoframework).
+To run a specific toolchain Docker image you can execute the following command:
+
+```shell
+docker run -it -v ${PWD}:/work --rm --privileged peanoframework/<toolchain> /bin/bash
+```
+
+where `<toolchain>` needs to be replaced by the toolchain you want to use.
+
+If you want to use JupyterLab, you can add port forwarding to the Docker command from above:
+
+```shell
+docker run -it -v ${PWD}:/work -p 53155:53155 --rm --privileged peanoframework/<toolchain> /bin/bash
+```
+
+In case you want to use GPUs, you need to amend the Docker command as follows (you need to have a GPU installed):
+
+```shell
+docker run -it -v ${PWD}:/work -p 53155:53155 --rm --gpus=all --privileged peanoframework/<toolchain> /bin/bash
+```
+
+When you run the Docker container interactively with `--gpus` using the command above,
+you can quickly check whether GPU offloading is supported on your system by executing `XXX_stream`,
+where `XXX` is the programming model.
+
 ## Apptainer (formerly known as Singularity)
 
 Build an Apptainer container:
@@ -31,7 +56,7 @@ Build an Apptainer container:
 apptainer build <toolchain>.sif Apptainer.<toolchain>
 ```
 
-Then copy the resulting .sif to a HPC cluster.
+Then copy the created .sif file to a HPC cluster.
 
 Usage:
 

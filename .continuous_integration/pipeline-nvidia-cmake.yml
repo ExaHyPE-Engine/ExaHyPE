@@ -71,6 +71,9 @@ nvidia-applications-cmake:
 
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; python3 advection.py --no-make --executable=advection'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/advection; make -j'
+
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/saint-venant; python3 saint-venant.py --no-make --executable=saint-venant'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/applications/exahype2/saint-venant; make -j'
   retry: 0
 
 nvidia-benchmarks-cmake:
@@ -81,7 +84,7 @@ nvidia-benchmarks-cmake:
   needs:
     - job: nvidia-build-cmake
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py --no-make --executable=kernel-benchmarks'
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 --no-make'
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} bash <<< 'cd build/benchmarks/exahype2/euler/kernel-benchmarks; make -j'
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} build/benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${NVIDIA_IMAGE_TAG} build/benchmarks/exahype2/euler/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-patch-size-16
   retry: 0

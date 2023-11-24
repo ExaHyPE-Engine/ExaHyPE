@@ -251,7 +251,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridConstructionStep();
@@ -274,7 +274,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridConstructionStep();
@@ -329,7 +329,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridConstructionStep();
@@ -371,7 +371,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishGridInitialisationStep();
@@ -398,7 +398,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     repositories::finishPlottingStep();
@@ -432,7 +432,7 @@ void step() {
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
-    OTTER_POP_LABEL(step_task, otter::label::step);
+    OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
     tpsCalculator.update(watch.getCalendarTime());
@@ -454,13 +454,16 @@ int main(int argc, char** argv) {
   const int ExitCodeInvalidBuild     = 3;
 
   peano4::initParallelEnvironment(&argc, &argv);
+
+  // Do this early, so people can use logInfo properly
+  repositories::initLogFilters();
+
   exahype2::initNonCritialAssertionEnvironment();
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 
   peano4::initSingletons(DomainOffset, DomainSize, PeriodicBC);
 
-  repositories::initLogFilters();
   repositories::initSharedMemoryAndGPUEnvironment();
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {

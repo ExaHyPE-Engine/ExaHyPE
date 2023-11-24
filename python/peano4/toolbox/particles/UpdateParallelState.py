@@ -124,7 +124,7 @@ class UpdateParallelState(ActionSet):
 
     See add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption()
     in swift2.graphcompiler.AMRLogic for a realisation of the above rationale.
-    In contrast, serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise()
+    In contrast, map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access()
     uses dummy sweeps.
 
 
@@ -137,14 +137,16 @@ class UpdateParallelState(ActionSet):
 
     """
 
-    DefaultPriority = AbstractUpdateParticleGridAssociation.DefaultPriority + 1
+    DefaultDescendInvocationOrder = (
+        AbstractUpdateParticleGridAssociation.DefaultDescendInvocationOrder + 1
+    )
 
     def __init__(
         self,
         particle_set,
     ):
         super(UpdateParallelState, self).__init__(
-            priority=self.DefaultPriority, parallel=False
+            descend_invocation_order=self.DefaultDescendInvocationOrder, parallel=False
         )
         self._particle_set = particle_set
         self.d = {}

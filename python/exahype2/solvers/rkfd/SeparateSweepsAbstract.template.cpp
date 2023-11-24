@@ -83,6 +83,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
   return _maxTimeStepSize;
 }
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::suspendSolversForOneGridSweep() {}
+
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double patchSize) {
   tarch::multicore::Lock lock(_semaphore);

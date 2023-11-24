@@ -16,7 +16,8 @@ void exahype2::fv::rusanov::timeStepWithRusanov_patchwise_split_terms_call_stack
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
-  bool                    evaluateMaximumEigenvalueAfterTimeStep
+  bool                    evaluateMaximumEigenvalueAfterTimeStep,
+  peano4::utils::LoopParallelism   loopParallelism
 ) {
   static tarch::logging::Log _log( "exahype2::fv::rusanov" );
 

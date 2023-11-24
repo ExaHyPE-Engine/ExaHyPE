@@ -6,6 +6,11 @@ namespace exahype2 {
   namespace fv {
     namespace rusanov {
       /**
+       * Forward declaration
+       */
+      class GPUCellData;
+
+      /**
        * The name sequential is a little bit irritating in a GPU context.
        * What it means is that the code runs logically through the patches
        * one by one and issues all kernel on one patch before it continues
@@ -203,53 +208,6 @@ namespace exahype2 {
             );
           #endif
         }
-
-        #if defined(GPUOffloadingOMP)
-        /**
-         * On the GPU, we don't need any of exahype2::CellData's fancy routines or
-         * dynamic data management. We simply have to be able to create a struct
-         * on the accelerator, which we then befill with the required pointers
-         * which we copy over from the host.
-         *
-         * Therefore, this class is a mere copy of exahype2::CellData without any
-         * of its routines. The only different to the host variant (from a data
-         * field point of view) is that numberOfCells is not const.
-         */
-        #pragma omp declare target
-        struct GPUCellData {
-          double**   QIn;
-          tarch::la::Vector<Dimensions,double>*   cellCentre;
-          tarch::la::Vector<Dimensions,double>*   cellSize;
-          double*    t;
-          double*    dt;
-          int        numberOfCells;
-          double**   QOut;
-          double*    maxEigenvalue;
-        };
-        #pragma omp end declare target
-
-        #endif
-
-
-        template <
-          typename Solver,
-          int      numberOfVolumesPerAxisInPatch,
-          int      haloSize,
-          int      unknowns,
-          int      auxiliaryVariables,
-          typename TempDataEnumerator
-        >
-        static void timeStepWithRusanov_batched_heap_multicore_static_calls(
-          ::exahype2::CellData&   patchData,
-          bool                    evaluateFlux,
-          bool                    evaluateNonconservativeProduct,
-          bool                    evaluateSource,
-          bool                    evaluateMaximumEigenvalueAfterTimeStep
-        )
-        #if defined(UseManualInlining)
-        __attribute__((always_inline))
-        #endif
-        ;
       }
     }
   }
@@ -259,4 +217,3 @@ namespace exahype2 {
 #include "Rusanov_batched_map_static_calls.cpph"
 #include "Rusanov_patchwise_managed_static_calls.cpph"
 #include "Rusanov_batched_managed_static_calls.cpph"
-#include "Rusanov_batched_heap_multicore_static_calls.cpph"

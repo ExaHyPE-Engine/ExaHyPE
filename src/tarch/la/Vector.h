@@ -32,37 +32,102 @@ std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
 /**
  * Simple vector class
  *
- * Most features concerning vectors are deployed into separate headers. Examples:
+ * Most features concerning vectors are deployed into separate headers:
  *
  * - Access only few elements within vector (subvector): VectorSlice.h
+ * - Functions over the vector such as norms: VectorOperations.h
+ * - Binary operators over vectors: VectorScalarOperations.h and
+ *   VectorVectorOperations.h
  *
- * <h2> GPGPU offloading </h2>
+ * There are multiple ways how to construct a vector:
  *
- * The interesting part to read is Section 4.5.2 (page 117) of the standard:
+ * - You can use the standard constructor which gives a vector with garbage
+ *   entries. You can then set individual entries manually.
+ * - You can use the constructor with a scalar which initialises all entries
+ *   with the same value.
+ * - You can use initialiser lists, i.e. lists in curly brackets { and }, to
+ *   construct a vector from a list.
  *
- * @see https://www.openmp.org/wp-content/uploads/openmp-examples-4.5.0.pdf
+ * To access entries of a vector, the class provides both access via an
+ * array notation, i.e. through [...], and with round brackets. The latter
+ * notation resembles Matlab. No matter which accessor you use, enumeration
+ * always starts with zero.
  *
- * declare target is a declaration thing, i.e., should not be applied to the
- * definition. However, it is not clear whether the compiler expects the
- * function definition to be within the declaration, too.
+ * The class wraps an array of fixed size. Therefore, you can access the raw
+ * data via data(), but this violates ideas of object-oriented programming
+ * and hence should be done with care. Peano for example does this if and
+ * only if it has to hand over raw pointers to MPI, e.g.
  *
- * Unfortunately, the standard does not explain how templates are handled
- * and whether we need the target wrapper around explicit instantiations,
- * too. I interret the standard that the explicit declaration is the actual
- * declaration and thus has to be wrapped. However, I did not manage to do
- * this.
  *
- * It seems that we can completely avoid the declare target pragmas, since
- * everything gets inlined into the GPU code.
+ * ## GPGPU offloading
  *
- * Also, I did never succeed in using the Vector's copy constructors. That is,
+ * ### OpenMP
+ *
+ * To make the vector operations available on the GPU, they have to be labelled
+ * as offloadable according to Section 4.5.2 (page 117) of the standard
+ * (https://www.openmp.org/wp-content/uploads/openmp-examples-4.5.0.pdf).
+ * There, the text highlights that declare target is a declaration thing, i.e.,
+ * should not be applied to the definition.
+ *
+ * However, it is not clear whether the compiler expects the
+ * function definition to be within the declaration, too, and if this makes a
+ * difference here at all: As the vector is a template, it is header-only
+ * anyway. Therefore, the compiler implicitly should have the definition at
+ * hand and should be able to identify that code for the GPU has to be
+ * generated, too. We only have to be sure that no explicit instantiation of
+ * a vector ignores this context, i.e. do not use explicit instantation if you
+ * employ GPUs (through OpenMP).
+ *
+ * With GCC, I struggled using the Vector's copy constructors. That is,
  * my impression is that the GCC compiler struggles to handle templates plus
- * overloading. The best thing I could do is to use the Vector within offloaded
- * code through the standard constructor and avoid all copy constructor
- * invocations explicitly. This implies that GPU routines may never return
+ * overloading if these are implicitly used within a map clause.
+ * Therefore, I often offload code through the standard constructor, deploy
+ * the vector components manually, thus avoid all copy constructor
+ * invocations explicitly, and finally repuzzle the vector together on the
+ * GPU. This implies that GPU routines may never return
  * a Vector instance. See the Rusanov.cpph kernels for examples where this
- * leads to uglier code than necessary. Well, as long as it works ...
+ * leads to uglier code than necessary. But it works.
  *
+ *
+ * ## SYCL
+ * 
+ * Our SYCL kernels seem to be fine without explicit support of the vector,
+ * but this is mainly due to the fact that SYCL offers its own range class, 
+ * and we construct our vectors typically from this range class. The other 
+ * application domain is the double vectors within the cell descriptors, 
+ * but we map those onto specialsed variants before we offload anyway, so 
+ * they are on the GPU prior to the kernel launch. In the future, it might
+ * be appropriate to add explicit copyable traits to to the class such that
+ * they can directly go to the GPU:
+ * 
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * #include "tarch/accelerator/sycl/Device.h"
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<2,double> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<3,double> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<4,double> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<5,double> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<2,int> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<3,int> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<4,int> >: std::true_type {};
+ * 
+ * template<>
+ * struct sycl::is_device_copyable< tarch::la::Vector<5,int> >: std::true_type {};
+ * 
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * 
  */
 template <int Size, typename Scalar>
 struct tarch::la::Vector {
@@ -78,6 +143,8 @@ struct tarch::la::Vector {
     Vector( const Scalar* values ) InlineMethod;
 
     /**
+     * Initialisation via initialisation list.
+     *
      * You can't inline an initialisation list, as the realisation of this
      * routine relies on an iterator and the iterator within the C++ std lib
      * won't be inlined.
@@ -140,8 +207,8 @@ struct tarch::la::Vector {
      */
     inline Scalar & operator[] (int index) InlineMethod {
         #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
-          assertion3 ( index >= 0, index, Size, toString(*this) );
-          assertion3 ( index < Size, index, Size, toString(*this) );
+          assertion3 ( index >= 0, index, Size, ::toString(*this) );
+          assertion3 ( index < Size, index, Size, ::toString(*this) );
         #endif
         return _values[index];
     }
@@ -159,8 +226,8 @@ struct tarch::la::Vector {
      */
     inline const Scalar & operator() (int index) const InlineMethod {
         #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
-          assertion3 ( index >= 0, index, Size, toString(*this) );
-          assertion3 ( index < Size, index, Size, toString(*this) );
+          assertion3 ( index >= 0, index, Size, ::toString(*this) );
+          assertion3 ( index < Size, index, Size, ::toString(*this) );
         #endif
         return _values[index];
     }
@@ -172,8 +239,8 @@ struct tarch::la::Vector {
      */
     inline Scalar & operator() (int index) InlineMethod {
        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
-        assertion3 ( index >= 0, index, Size, toString(*this) );
-        assertion3 ( index < Size, index, Size, toString(*this) );
+        assertion3 ( index >= 0, index, Size, ::toString(*this) );
+        assertion3 ( index < Size, index, Size, ::toString(*this) );
        #endif
        return _values[index];
      }
@@ -197,3 +264,4 @@ struct tarch::la::Vector {
 #include "tarch/la/VectorScalarOperations.h"
 #include "tarch/la/VectorVectorOperations.h"
 #include "tarch/la/VectorSlice.h"
+

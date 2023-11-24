@@ -1,0 +1,22 @@
+/**
+
+ @page tests_swift2_dastgen_test DastGen2 Test
+
+
+A test to generate all possible combinations of variables, ifdefs, and variable
+qualifiers for data model members using DastGen2.
+
+This test basically tests that everything DastGen2 generates compiles and runs as expected.
+The test is successful if it compiles and runs. We don't solve any actual physics here.
+We are also not using regular SPH particles, or anything like that, but the DastgenDummyParticle
+defined in DastgenDummyParticle.py .
+
+(For now?) you'll need to compile Peano as if you're running SWIFT2.
+See @ref section_compile_peano4_for_swift2  "the instructions".
+
+
+Run the program using `run.sh`
+
+ */
+
+

@@ -23,13 +23,29 @@ module load intelmpi
 export I_MPI_CXX=icpx
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Hamilton's oneapi module is built against a GCC version which is too old and lacks
+Hamilton's default oneapi module is built against a GCC version which is too old and lacks
 important features within its standard library.
 Therefore, you have to manuall load the latest gcc.
 This is usually prevented by the system and leads to a conflict (so that you
 can't have multiple GCC versions loaded).
 We therefore have to disable conflict checks a priori.
+Eventually, I end up with 
 
+~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load oneapi/2023.2
+export FLAVOUR_NOCONFLICT=1
+module load gcc/13.xxx
+module load intelmpi
+
+export I_MPI_CXX=icpx
+~~~~~~~~~~~~~~~~~~~~~~
+
+For the vectorisation, we recognise that we always need
+
+~~~~~~~~~~~~~~~~~~~~~~
+ -Ofast -ffast-math
+~~~~~~~~~~~~~~~~~~~~~~
 
 If you use mpiicpc, the MPI wrapper still refers to icpc even though icpc is
 officially deprecated.
@@ -108,25 +124,25 @@ I used this to configure Peano with Intel's TBB enabled
 source /opt/intel/oneapi/setvars.sh
 module load cuda
 
-./configure CC=clang CXX=clang++ LIBS="-ltbb" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" CXXFLAGS="-O3 -fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
+./configure CC=icx CXX=icpx LIBS="-ltbb" LDFLAGS="-fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" CXXFLAGS="-O3 -std=c++20 -fsycl -fsycl-targets=nvptx64-nvidia-cuda,spir64 -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_80" --with-multithreading=tbb --enable-exahype --enable-blockstructured --enable-loadbalancing --with-gpu=sycl
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Codeplay's website has some useful information on compiler flags. Here's
 a short explaination of the above SYCL related flags:
+
 - `-fsycl` tells the compiler to link SYCL libraries and makes it aware of
-SYCL code.
+  SYCL code. It seems that Clang behaves slightly different to icpx, where you
+  need `-lsycl` in the linker flags.
 - `-fsycl-targets=` allows the compiler to generate code for different devices,
-e.g., different vendors, host or device.
+  e.g., different vendors, host or device.
 - `-Xsycl-target-backend=` is required if you want to select a specific device 
-architecture. For example, I put `--cuda-gpu-arch=sm_80` after it to compile for
-A100 with compute capability 8.0.
+  architecture. For example, I put `--cuda-gpu-arch=sm_80` after it to compile for
+  A100 with compute capability 8.0.
 
 It also needs at least 2023.0.0 version of oneAPI with Codeplay's nvidia
-GPU plugin which is not installed on NCC. They encourage the use of 
-Intel's own compiler (`icx` and `icpx`), however, I have issues getting
-them to work when compiling for multiple devices.Additionally, `icpx` 
-seems to use a lower precision by default in favour of performance, use 
-`-fp-model` to change this behaviour.
+GPU plugin which is not installed on NCC. Intel encourages the use of their own
+compiler, `icpx`. However, they use a lower precision by default in favour of 
+performance, use `-fp-model` to change this behaviour.
 
 I had linker errors about undefined referennces when building Peano with
 TBB. Just add the path to any relevant library if you experienced this.
@@ -136,7 +152,7 @@ before the terminal command to explicitly tell SYCL to run the code on GPU.
 In the case of a runtime error, it is also useful to add `SYCL_PI_TRACE=2`
 to check where the error was raised.
 
-### DINE
+## DINE
 
 <img width="20%" src="https://www.dur.ac.uk/images/cosma/cosma_white.png" />
 
@@ -170,6 +186,83 @@ There are a few things to consider whenever you use DINE:
   a quota. DINE mounts the Cosma 5 data directory (/cosma5/data/do009/myaccount)
   which you should use to store data files.
 
+
+## MAD07 (Ice Lake)
+
+<img width="20%" src="https://www.dur.ac.uk/images/cosma/cosma_white.png" />
+
+mad07 is an IceLake server with Barlow Pass memory which is added to Cosma to 
+facilitate benchmarking for the SKA project. 
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module purge
+
+module unload python
+module load python/3.10.12
+
+module load intel_comp/2023.2.0 compiler mpi 
+module load gnu_comp/13.1.0
+
+./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --enable-particles CC=icc CXX=icpx --with-multithreading=omp  CXXFLAGS="-std=c++20 -fopenmp -funroll-loops -Ofast -xHost" LIBS=-ltbb
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Previous modules/installations provided a oneAPI module. As this seems to be
+deprecated by Intel, one now has to load intel_comp and then the corresponding
+compiler and mpi.
+
+The chip is from the Ice Lake-SP family, i.e. the generation released
+summer 2021. Without any further settings, OpenMP delivers a concurrency
+of around 11,170. This is due to two processors each featuring 28 cores
+with hyperthreading. I don't use hyperthreading usually, i.e. set
+
+~~~~~~~~~~~~~~~~~~~~~~~
+export OMP_NUM_THREADS=56
+export OMP_PROC_BIND=true
+~~~~~~~~~~~~~~~~~~~~~~~
+
+
+I thought they have 2x40 cores, but my benchmarks give me an OpenMP concurrency of 11,170, which suggests it has 112 cores in total. 
+Does that mean we have 2x28 and hyperthreading is enabled? 
+
+
+
+## MAD08/MAD09 (Genoa)
+
+<img width="20%" src="https://www.dur.ac.uk/images/cosma/cosma_white.png" />
+
+These two servers feature the Genoa chipset. 
+
+~~~~~~~~~~~~~~~~~~~~~~~
+module purge
+
+module unload python
+module load python/3.10.12
+
+
+module load intel_comp/2023.2.0 compiler mpi 
+module load gnu_comp/13.1.0
+
+./configure --enable-exahype --enable-blockstructured --enable-loadbalancing --enable-particles CC=icc CXX=icpx --with-multithreading=omp  CXXFLAGS="-std=c++20 -fopenmp -funroll-loops -Ofast -xHost" LIBS=-ltbb
+~~~~~~~~~~~~~~~~~~~~~~~
+
+There are a few pitfalls with the AMD servers if you use the Intel toolchain.
+The Intel compiler does not recognise that the chip supports modern instruction
+sets. Notably, it is not aware of its AVX512 capabilities. Therefore, it produces
+machine code which does not use these features. You have to manually force it to 
+produce the bytecode that you wanna have, by adding the compile flags
+
+
+~~~~~~~~~~~~~~~~~~~~~~~
+-O3 -fomit-frame-pointer -fstrict-aliasing -ffast-math -funroll-loops -axCOMMON-AVX512 -march=x86-64-v4 -mavx512vbmi 
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Swift also requires you to pass
+
+~~~~~~~~~~~~~~~~~~~~~~~
+-qopt-zmm-usage=high
+~~~~~~~~~~~~~~~~~~~~~~~
+
+to vectorisesome particular compute-heavy tasks (gravity).
 
  */
  

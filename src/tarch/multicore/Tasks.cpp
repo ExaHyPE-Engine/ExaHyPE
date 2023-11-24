@@ -195,16 +195,24 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::swapOrchestration(
 int tarch::multicore::getNumberOfReservedTaskNumbers() { return activeTaskNumbers.size(); }
 
 void tarch::multicore::releaseTaskNumber(int number) {
-  tarch::multicore::Lock activeTasksLock(activeTasksSemaphore);
-  assertionEquals(activeTaskNumbers.count(number), 1);
-  activeTaskNumbers.erase(number);
+  if (number!=NoDependency) {
+    tarch::multicore::Lock activeTasksLock(activeTasksSemaphore);
+    assertionEquals(activeTaskNumbers.count(number), 1);
+    activeTaskNumbers.erase(number);
+  }
 }
 
 int tarch::multicore::reserveTaskNumber() {
   tarch::multicore::Lock lock(activeTasksSemaphore);
   int                    result = activeTaskNumbers.size();
+  constexpr int Prime = 23;
+  constexpr int Max   = std::numeric_limits<int>::max()-2*Prime;
+
+  assertion2( Prime % Max!=0, Prime, Max );
+
   while (activeTaskNumbers.count(result) > 0) {
-    result += 23;
+    result = result % Max;
+    result += Prime;
   }
   activeTaskNumbers.insert(result);
   return result;
@@ -251,12 +259,12 @@ tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor(
 ):
   Task(taskType, priority),
   _taskFunctor(taskFunctor) {
-  OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
+  OTTER_POOL_DECL_BORROW(step_task, otter::label::step);
   OTTER_DEFINE_TASK(this_task, step_task, otter_add_to_pool, otter::label::TaskWithCopyOfFunctor);
 }
 
 bool tarch::multicore::TaskWithCopyOfFunctor::run() {
-  OTTER_REMOVE_FROM_POOL(this_task, otter::label::TaskWithCopyOfFunctor);
+  OTTER_POOL_DECL_POP(this_task, otter::label::TaskWithCopyOfFunctor);
   OTTER_TASK_START(this_task);
   bool result = _taskFunctor();
   OTTER_TASK_END(this_task);
@@ -268,12 +276,12 @@ tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor(
 ):
   Task(taskType, priority),
   _taskFunctor(taskFunctor) {
-  OTTER_BORROW_FROM_POOL(step_task, otter::label::step);
+  OTTER_POOL_DECL_BORROW(step_task, otter::label::step);
   OTTER_DEFINE_TASK(this_task, step_task, otter_add_to_pool, otter::label::TaskWithoutCopyOfFunctor);
 }
 
 bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
-  OTTER_REMOVE_FROM_POOL(this_task, otter::label::TaskWithoutCopyOfFunctor);
+  OTTER_POOL_DECL_POP(this_task, otter::label::TaskWithoutCopyOfFunctor);
   OTTER_TASK_START(this_task);
   bool result = _taskFunctor();
   OTTER_TASK_END(this_task);
@@ -301,6 +309,7 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
 
   return result;
 }
+
 
 void tarch::multicore::spawnTask(Task* task) {
   assertion(task != nullptr);
@@ -450,9 +459,40 @@ void tarch::multicore::internal::copyInternalTaskQueueOverIntoGlobalQueue(int th
 
 int tarch::multicore::internal::getNumberOfWithholdPendingTasks() { return globalNonblockingTasks.tasks.size(); }
 
+void tarch::multicore::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
+  assertion( inDependency!=NoDependency or taskNumber!=NoDependency );
+  tarch::multicore::native::spawnTaskWithDependencies(job, inDependency, taskNumber);
+}
+
+
+void tarch::multicore::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+  assertion( not inDependencies.empty() or taskNumber!=NoDependency );
+  tarch::multicore::native::spawnTaskWithDependencies(job, inDependencies, taskNumber);
+}
+
+
+void tarch::multicore::waitForTasks( const std::vector<int>& inDependencies ) {
+  tarch::multicore::native::waitForTasks( inDependencies );
+}
+
+
+void tarch::multicore::waitForTask( int taskNumber ) {
+  tarch::multicore::native::waitForTask( taskNumber );
+}
+
 #ifndef SharedMemoryParallelisation
 
 #include <thread>
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
 
 void tarch::multicore::native::spawnTask(Task* job) {
   bool reschedule = job->run();
@@ -483,5 +523,10 @@ void tarch::multicore::native::processFusedTask(
 }
 
 void tarch::multicore::native::drainTaskQueues() {}
+
+void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
+
+void tarch::multicore::native::waitForTask( int taskNumber ){}
+
 
 #endif
