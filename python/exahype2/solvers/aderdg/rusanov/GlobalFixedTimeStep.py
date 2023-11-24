@@ -40,11 +40,12 @@ class GlobalFixedTimeStep(SingleSweep):
         time_step_size,
         flux=PDETerms.User_Defined_Implementation,
         ncp=PDETerms.None_Implementation,
-        point_source=0,
+        eigenvalues=PDETerms.User_Defined_Implementation,
         boundary_conditions=PDETerms.User_Defined_Implementation,
-        refinement_criterion=PDETerms.None_Implementation,
+        refinement_criterion=PDETerms.Empty_Implementation,
         initial_conditions=PDETerms.User_Defined_Implementation,
         source_term=PDETerms.None_Implementation,
+        point_source=0,
         material_parameters=PDETerms.None_Implementation,
         plot_grid_properties=False,
     ):
@@ -61,28 +62,28 @@ class GlobalFixedTimeStep(SingleSweep):
         self._time_step_size = time_step_size
 
         self.set_implementation(
+            flux=flux,
+            ncp=ncp,
+            eigenvalues=eigenvalues,
             boundary_conditions=boundary_conditions,
             refinement_criterion=refinement_criterion,
             initial_conditions=initial_conditions,
-            additional_action_set_includes="",
-            additional_user_includes="",
-            flux=flux,
-            ncp=ncp,
             source_term=source_term,
-            material_parameters=material_parameters,
             point_source=point_source,
+            material_parameters=material_parameters
         )
 
     def set_implementation(
         self,
-        flux=None,
-        ncp=None,
-        boundary_conditions=None,
-        refinement_criterion=None,
-        initial_conditions=None,
-        source_term=None,
-        material_parameters=None,
+        flux=PDETerms.None_Implementation,
+        ncp=PDETerms.None_Implementation,
+        eigenvalues=PDETerms.User_Defined_Implementation,
+        boundary_conditions=PDETerms.User_Defined_Implementation,
+        refinement_criterion=PDETerms.Empty_Implementation,
+        initial_conditions=PDETerms.User_Defined_Implementation,
+        source_term=PDETerms.None_Implementation,
         point_source=0,
+        material_parameters=PDETerms.None_Implementation,
         additional_action_set_includes="",
         additional_user_includes="",
     ):
@@ -94,7 +95,7 @@ class GlobalFixedTimeStep(SingleSweep):
             additional_user_includes="",
             flux=flux,
             ncp=ncp,
-            eigenvalues=PDETerms.User_Defined_Implementation,
+            eigenvalues=eigenvalues,
             source_term=source_term,
             material_parameters=material_parameters,
             point_source=point_source,
@@ -120,6 +121,7 @@ class GlobalFixedTimeStep(SingleSweep):
             computation_precisions,
             False,
         )
+
         self._abstract_solver_user_declarations += (
             create_abstract_solver_user_declarations_for_fixed_time_stepping(
                 self._time_step_size

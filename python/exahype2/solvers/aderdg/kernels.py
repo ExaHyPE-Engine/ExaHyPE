@@ -44,7 +44,7 @@ def create_abstract_solver_declarations(
     );
 {% endif %}
 
-{% if FLUX_IMPLEMENTATION!="<user-defined>" %}
+{% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -53,26 +53,32 @@ def create_abstract_solver_declarations(
       double                                       dt,
       int                                          normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
-    );
+    )  {% if FLUX_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if NCP_IMPLEMENTATION!="<user-defined>" %}
+{% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-    const tarch::la::Vector<Dimensions, double> &faceCentre,
-    const tarch::la::Vector<Dimensions, double> &volumeH,
-    double t,
-    double dt,
-    int normal,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ);
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
+      const tarch::la::Vector<Dimensions, double> &faceCentre,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ
+    ) {% if NCP_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
-    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
+{% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    virtual void algebraicSource(
+      const tarch::la::Vector<Dimensions, double>& x,
+      double t,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S
+      ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}
+{% if MATERIAL_PARAMETER_IMPLEMENTATION!="<none>" %}
     virtual void multiplyMaterialParameterMatrix(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
       const tarch::la::Vector<Dimensions, double> &volumeX,
@@ -81,17 +87,26 @@ def create_abstract_solver_declarations(
       double dt,
       int normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs
-      ) = 0;
+      ) {% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    virtual void pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n) = 0;
+{% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
+    virtual void pointSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+      const double* const x,
+      const double t,
+      const double dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,
+      int n
+    ) {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
 {% endfor %}
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
-    virtual void initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]) = 0;
+    virtual void initPointSourceLocations(
+      double sourceLocation[NumberOfPointSources][Dimensions]
+    ) = 0;
 {% endif %}
 
 
@@ -228,7 +243,7 @@ def create_solver_declarations(
     TemplateSinglePrecisions = jinja2.Template(
         """
 
-  {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
   virtual double maxEigenvalue(
     const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -462,6 +477,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 ){
   logTraceInWith3Arguments( "eigenvalue(...)", volumeCentre, t, normal );
   // @todo implement
+  double maxEigenvalue = 1.0;
+  return maxEigenvalue;
   logTraceOut( "eigenvalue(...)" );
 }
 {% endif %}
