@@ -23,7 +23,6 @@ dimensions = args.dim
 
 project = exahype2.Project(
     ["examples", "exahype2", "elastic"],
-    "elastic",
     ".",
     executable="ELASTIC" + str(dimensions) + "D",
 )
@@ -46,16 +45,15 @@ theSolver = GlobalAdaptiveTimeStep(
     min_cell_h=min_h,
     max_cell_h=max_h,
     time_step_relaxation=0.9,
+    refinement_criterion=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
     flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-    ncp=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+    ncp=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
 )
 
 theSolver.add_kernel_optimizations(
     is_linear=True, use_kernel_generator=True, architecture="noarch"
 )
-theSolver.set_implementation(
-    refinement_criterion=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
-)
+
 
 project.add_solver(theSolver)
 
