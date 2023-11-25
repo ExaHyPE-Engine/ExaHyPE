@@ -194,10 +194,6 @@ void tarch::multicore::native::processFusedTask(
   });
 }
 
-void tarch::multicore::native::drainTaskQueues() {
-  // backgroundTaskGroup.wait();
-}
-
 
 void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
   tarch::multicore::native::spawnTask(job);

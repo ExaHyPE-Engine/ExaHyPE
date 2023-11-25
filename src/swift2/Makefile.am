@@ -10,6 +10,7 @@ endif
 SWIFT2Sources = \
   GridControlEvents.cpp \
   ParticleSpecies.cpp \
+  TaskNumber.cpp \
   UnitTests.cpp \
   UserInterface.cpp \
   kernels/ParticleSelfInteraction.cpp \

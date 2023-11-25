@@ -5,6 +5,7 @@ from swift2.actionsets.UpdateParticleMarker import UpdateParticleMarker
 
 import peano4
 import swift2
+import jinja2
 
 
 from .AMRLogic import (
@@ -27,14 +28,10 @@ DefaultIncludes = """
 #include "tarch/multicore/Tasks.h"                
 #include "swift2/VertexTask.h"                
 #include "swift2/CellTask.h"                
+#include "swift2/TaskNumber.h"                
                 """
 
 from enum import Enum
-
-class TaskSubTypeNumber(str, Enum):
-    TouchVertexFirst = "0"
-    TouchCellFirst   = "1"
-    TouchVertexLast  = "2"
 
 
 def clear_task_numbers_for_all_species(mesh_traversals,
@@ -76,45 +73,36 @@ def construct_touch_vertex_first_time_call(
     ):
         return ""
     else:
-        return (
-            """
-      const tarch::multicore::TaskNumber taskNumberToBeUsed{
-          fineGridVertex"""
-            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+        d = {
+          "MARKER_NAME":  peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
                 current_species_set.name
-            )
-            + """.getNumber(),
-          """ + TaskSubTypeNumber.TouchVertexFirst + """,
-          """ + str(current_species_index) + """
+            ),
+          "SPECIES_INDEX": current_species_index,
+          
+          
+        }
+        return jinja2.Template(
+            """
+      const ::swift2::TaskNumber taskNumberToBeUsed{
+          fineGridVertex{{MARKER_NAME}}.getNumber(),
+          ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
+          {{SPECIES_INDEX}}
         };
         
-      const tarch::multicore::TaskNumber taskNumberOfLastTouch{
-          fineGridVertex"""
-            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
-                current_species_set.name
-            )
-            + """.getNumber(),
-          """ + TaskSubTypeNumber.TouchVertexLast + """,
-          """ + str(current_species_index) + """
+      const ::swift2::TaskNumber taskNumberOfLastTouch{
+          fineGridVertex{{MARKER_NAME}}.getNumber(),
+          ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime,
+          {{SPECIES_INDEX}}
         };
       
-      std::set<int> parentVerticesNumbers = ::swift2::getVertexNumbersOfParentVertices(
+      std::set<::swift2::TaskNumber> parentTaskNumbers = ::swift2::getVertexNumbersOfParentVertices(
         marker,
-        coarseGridVertices""" + current_species_set.name + """EnclaveMeshEntityNumber
+        coarseGridVertices{{MARKER_NAME}},
+        ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
+        {{SPECIES_INDEX}}
       );
-      
-      std::set<tarch::multicore::TaskNumber>  parentTaskNumbers;
-      for (auto& parentVertexNumber: parentVerticesNumbers) {
-        parentTaskNumbers.insert( tarch::multicore::TaskNumber(
-          parentVertexNumber,
-          """ + TaskSubTypeNumber.TouchVertexFirst + """,
-          """ + str(current_species_index) + """
-        ));
-      }
 
-      assertion( taskNumberToBeUsed!=tarch::multicore::TaskNumber::NoDependency );
-
-      logDebug( "touchVertexFirstTime(...)", "create task " << tarch::multicore::toString(taskNumberToBeUsed) << " for " << marker.toString() );
+      logDebug( "touchVertexFirstTime(...)", "create task " << taskNumberToBeUsed.toString() << " for " << marker.toString() );
       
       auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
           assignedParticles,
@@ -126,10 +114,10 @@ def construct_touch_vertex_first_time_call(
           false
         );
       
-      tarch::multicore::spawnTask( newTask, parentTaskNumbers, taskNumberToBeUsed );
-      tarch::multicore::registerTask( taskNumberOfLastTouch );
+      tarch::multicore::spawnTask( newTask, ::swift2::flatten(parentTaskNumbers), ::swift2::flatten(taskNumberToBeUsed) );
+      tarch::multicore::registerTask( taskNumberOfLastTouch.flatten() );
     """
-        )
+        ).render(**d)
 
 
 def construct_touch_cell_first_time_call(
@@ -140,40 +128,35 @@ def construct_touch_cell_first_time_call(
     if touch_cell_first_time_kernel == None:
         touch_cell_first_time_kernel = ""
     
-
-    return (
+    d = {
+        "MARKER_NAME":  peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+           current_species_set.name
+        ),
+        "SPECIES_INDEX": current_species_index,
+    }
+    return jinja2.Template(
             """
-      const tarch::multicore::TaskNumber taskNumberToBeUsed{
-        fineGridCell"""
-            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
-                current_species_set.name
-            )
-            + """.getNumber(),
-          """ + TaskSubTypeNumber.TouchCellFirst + """,
-          """ + str(current_species_index) + """
+      const ::swift2::TaskNumber taskNumberToBeUsed{
+        fineGridCell{{MARKER_NAME}}.getNumber(),
+        ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
+        {{SPECIES_INDEX}}
       };
             
-      tarch::multicore::TaskNumber  parentTaskNumber = tarch::multicore::TaskNumber(
-        coarseGridCell""" + current_species_set.name + """EnclaveMeshEntityNumber.getNumber(),
-        """ + TaskSubTypeNumber.TouchCellFirst + """,
-        """ + str(current_species_index) + """
+      const ::swift2::TaskNumber  parentTaskNumber = ::swift2::TaskNumber(
+        coarseGridCell{{MARKER_NAME}}.getNumber(),
+        ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
+        {{SPECIES_INDEX}}
       );
       
-      std::set<tarch::multicore::TaskNumber> adjacentVertexTask;
+      std::set<::swift2::TaskNumber> adjacentVertexTask;
       for (int i=0; i<TwoPowerD; i++) {
-        adjacentVertexTask.insert( tarch::multicore::TaskNumber{
-          fineGridVertices"""
-            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
-                current_species_set.name
-            )
-            + """(i).getNumber(),
-          """ + TaskSubTypeNumber.TouchVertexFirst + """,
-          """ + str(current_species_index) + """
+        adjacentVertexTask.insert( ::swift2::TaskNumber{
+          fineGridVertices{{MARKER_NAME}}(i).getNumber(),
+          ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
+          {{SPECIES_INDEX}}
         } );
       }
       adjacentVertexTask.insert( parentTaskNumber );
-
-      assertion( taskNumberToBeUsed!=tarch::multicore::TaskNumber::NoDependency );
 
       auto* newTask = new ::swift2::CellTask< decltype(localParticles) >(
         localParticles,
@@ -186,9 +169,9 @@ def construct_touch_cell_first_time_call(
         false
       );
 
-      tarch::multicore::spawnTask( newTask, adjacentVertexTask, taskNumberToBeUsed );
+      tarch::multicore::spawnTask( newTask, ::swift2::flatten( adjacentVertexTask ), ::swift2::flatten( taskNumberToBeUsed ));
     """
-    )
+    ).render(**d)
 
 
 def construct_touch_vertex_last_time_call(
@@ -196,28 +179,26 @@ def construct_touch_vertex_last_time_call(
     touch_vertex_last_time_kernel,
     current_species_index
 ):
-    result = (
+    d = {
+      "MARKER_NAME":  peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+         current_species_set.name
+      ),
+      "SPECIES_INDEX": current_species_index,
+    }
+    return jinja2.Template(
         """
-      const tarch::multicore::TaskNumber taskNumberToBeUsed{
-          fineGridVertex"""
-            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
-                current_species_set.name
-            )
-            + """.getNumber(),
-          """ + TaskSubTypeNumber.TouchVertexLast + """,
-          """ + str(current_species_index) + """
-        };
+      const ::swift2::TaskNumber taskNumberToBeUsed{
+        fineGridVertex{{MARKER_NAME}}.getNumber(),
+        ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime,
+        {{SPECIES_INDEX}}
+      };
                 
-      std::set<tarch::multicore::TaskNumber> adjacentCellTasks;
+      std::set<::swift2::TaskNumber> adjacentCellTasks;
       for (int i=0; i<TwoPowerD; i++) {
-        adjacentCellTasks.insert( tarch::multicore::TaskNumber{
-            fineGridVertex"""
-        + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
-            current_species_set.name
-        )
-        + """.getAdjacentCellNumber(i),
-            """ + TaskSubTypeNumber.TouchCellFirst + """,
-            """ + str(current_species_index) + """
+        adjacentCellTasks.insert( ::swift2::TaskNumber{
+          fineGridVertex{{MARKER_NAME}}.getAdjacentCellNumber(i),
+          ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
+          {{SPECIES_INDEX}}
         } );
       }
       
@@ -231,29 +212,24 @@ def construct_touch_vertex_last_time_call(
           false
         );
       
-      tarch::multicore::spawnTask( newTask, adjacentCellTasks, taskNumberToBeUsed );
+      tarch::multicore::spawnTask( newTask, ::swift2::flatten(adjacentCellTasks), ::swift2::flatten(taskNumberToBeUsed) );
 
-      std::set< tarch::multicore::TaskNumber > outgoingTaskDependencies;
+      std::set< ::swift2::TaskNumber > outgoingTaskDependencies;
       for (int i=0; i<TwoPowerD; i++) {
-        outgoingTaskDependencies.insert( tarch::multicore::TaskNumber{
-          coarseGridVertices"""
-            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
-                current_species_set.name
-            )
-            + """(i).getNumber(),
-          """ + TaskSubTypeNumber.TouchVertexLast + """,
-          """ + str(current_species_index) + """
+        outgoingTaskDependencies.insert( ::swift2::TaskNumber{
+          coarseGridVertices{{MARKER_NAME}}(i).getNumber(),
+          ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime,
+          {{SPECIES_INDEX}}
         } );
       }
-      tarch::multicore::addDependencies( taskNumberToBeUsed, outgoingTaskDependencies );
+      tarch::multicore::addDependencies( ::swift2::flatten(taskNumberToBeUsed), ::swift2::flatten(outgoingTaskDependencies) );
 
       if ( marker.isAdjacentToParallelDomainBoundary () ) {
-        tarch::multicore::waitForTask( taskNumberToBeUsed );
+        tarch::multicore::waitForTask( taskNumberToBeUsed.flatten() );
       }
     """
-    )
+    ).render(**d)
 
-    return result
 
 
 def translate_one_step_of_species_into_mesh_traversal(

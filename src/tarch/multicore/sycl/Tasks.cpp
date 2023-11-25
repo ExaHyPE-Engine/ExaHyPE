@@ -91,7 +91,8 @@ void tarch::multicore::native::processFusedTask(
   }
 }
 
-void tarch::multicore::native::drainTaskQueues() { tarch::multicore::getHostSYCLQueue().wait(); }
+
+//void tarch::multicore::native::drainTaskQueues() { tarch::multicore::getHostSYCLQueue().wait(); }
 
 
 void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {

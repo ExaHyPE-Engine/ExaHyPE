@@ -16,42 +16,9 @@
 
 namespace tarch {
   namespace multicore {
-    /**
-     * Task Number
-     *
-     * A task number is an integer tuple, and you can, in principle, use it in
-     * whichever way you like. Most people however use it the following way:
-     *
-     * - The first index is the vertex or cell index that we use.
-     * - The second index identifies if this is a cell or a face or vertex.
-     * - The third index is the phase.
-     */
-    struct TaskNumber: public std::tuple<int, int, int> {
-      public:
-        /**
-         * Construct new task number
-         *
-         * @param number0 Typically the "real" task counter, i.e. a unique number
-         *   from a very vast range which distinguishes different task types.
-         * @param number1 Typically the type of mesh entity to which the task is
-         *   tied to.
-         * @param number2 Typically some kind of species or task type counter.
-         */
-        TaskNumber(int number0, int number1, int number2);
+    using TaskNumber = int;
 
-        /**
-         * Defines the max indices for each entry in TaskNumber. So there's no
-         * constraint on the first entry, but the second one is only from 0 to 3
-         * (which reflects create-touch first-touch last-destroy) while the last
-         * entry can hold 16 different entries.
-         */
-        static TaskNumber Max;
-        static TaskNumber NoDependency;
-
-        std::string toString() const;
-    };
-
-    std::string toString( const std::set<TaskNumber>&  number );
+    constexpr TaskNumber NoDependencies = -1;
 
     void setOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
@@ -304,7 +271,11 @@ namespace tarch {
      * Ownership goes over to Peano's job namespace, i.e. you don't have
      * to delete the pointer.
      *
-     * The realisation is straightforward:
+     * ## Handling tasks without outgoing dependencies
+     *
+     * If taskNumber equals NoDependency, we know that noone is (directly)
+     * waiting for this task, i.e. we won't add dependencies to the task
+     * graph afterwards. In this case, the realisation is straightforward:
      *
      * 1. If SmartMPI is enabled and the task should be sent away, do so.
      * 2. If the current orchestration strategy (an implementation of
@@ -320,14 +291,7 @@ namespace tarch {
      * spawnTask() will ***never*** commit a task to the global task
      * queue and therefore is inherently thread-safe.
      *
-     * @see tarch::multicore::spawnAndWait()
-     * @see processPendingTasks(int)
-     *
-     */
-    void spawnTask(Task* job);
-
-    /**
-     * Spawn a task which dependencies
+     * ## Tasks with a task number and incoming dependencies
      *
      * Spawn a task that depends on one other task. Alternatively, pass in
      * NoDependency. In this case, the task can kick off immediately. You have
@@ -350,15 +314,15 @@ namespace tarch {
      *
      * @see tarch::multicore and the section "Tasks with dependencies" therein
      *   for further documentation.
-     */
-    void spawnTask(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber);
-
-    /**
-     * Alternative realisation of spawnTaskWithDependencies() with multiple in
-     * dependencies.
+     * @see tarch::multicore::spawnAndWait() for details what happens with
+     *   tasks that have no outgoing dependencies.
+     * @see processPendingTasks(int) describing how we handle pending tasks.
+     *
      */
     void spawnTask(
-      Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+      Task* job,
+      const std::set<TaskNumber>& inDependencies = std::set<TaskNumber>(),
+      const TaskNumber&           taskNumber     = NoDependencies
     );
 
     /**
@@ -400,10 +364,6 @@ namespace tarch {
      * runs only over those tasks with in/out dependencies and ensures that
      * they are either done or are pending.
      *
-     * ## Serial code
-     *
-     * This routine degenerates to nop, as no task can be pending. spawnTask()
-     * always executed the task straightaway.
      */
     void waitForAllTasks();
 
@@ -423,15 +383,12 @@ namespace tarch {
     void waitForTasks(const std::set<TaskNumber>& inDependencies);
 
     /**
-     * Wait for one task
-     *
-     * taskNumber can be NoDependency. In this case, the operation degenerates
-     * to nop.
+     * Wrapper around waitForTasks() with a single-element set.
      */
-    void waitForTask(const TaskNumber& taskNumber);
+    void waitForTask(const int taskNumber);
 
     /**
-     * Run a bunch of tasks
+     * Fork-join task submission pattern
      *
      * The realisation is relatively straightforward:
      *
@@ -540,16 +497,6 @@ namespace tarch {
 
     namespace native {
       /**
-       * Spawn a ready task into the runtime system of choice.
-       *
-       * The responsibility to destroy task is handed over to the runtime of
-       * choice.
-       *
-       * @see tarch::multicore::spawnTask()
-       */
-      void spawnTask(Task* task);
-
-      /**
        * Map onto native tasking
        *
        * Run over the tasks and issue native tasks. If the tasks spawn, in
@@ -587,17 +534,19 @@ namespace tarch {
       void processFusedTask(Task* firstTask, const std::list<tarch::multicore::Task*>& otherTasks, int device);
 
       /**
-       * Drain all task queues
-       */
-      void drainTaskQueues();
-
-      /**
        * These are the non-blocking (ready) tasks submitted via spawnTask()
        */
       int getNumberOfPendingTasks();
 
       /**
-       * Spawn task with incoming dependencies
+       *
+       * ## Serial code
+       *
+       * Just map it onto a spawnTask() without any dependencies. See
+       * documentation is delegated routine. This is exactly the other way
+       * round compared to the C++ implementation, e.g., where we map the
+       * variant with only one integer onto the one accepting a set.
+       *
        *
        * ## Serial code
        *
@@ -611,18 +560,24 @@ namespace tarch {
        * Registered tasks are tasks the system knows about which have not yet
        * been submitted. Now that we submit task taskNumber, we can remove the
        * number from the set of registered tasks.
-       */
-      void spawnTask(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber);
-
-      /**
        *
-       * ## Serial code
+       * ## C++ variant
        *
-       * Just map it onto a spawnTask() without any dependencies. See
-       * documentation is delegated routine.
+       * Map onto the other routine passing over a single-entry set.
+       *
+       * ## C++ variant
+       *
+       * The submission runs through various stages:
+       *
+       * 1. We first check if a task with this number is among the submitted
+       *    tasks. This is possible if a previous algorithm phase has submitted
+       *    a task with this number which was a sink, but noone ever waited for
+       *    it. We now wait for it albeit we write a warning.
        */
       void spawnTask(
-        Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+        Task*                        job,
+        const std::set<TaskNumber>&  inDependencies,
+        const TaskNumber&            taskNumber
       );
 
       /**
@@ -635,10 +590,15 @@ namespace tarch {
        * have to ensure that the task we are waiting for is not(!) registered,
        * i.e. has actually been submitted.
        */
-      void waitForTask(const TaskNumber& inDependency);
+      void waitForTasks(const std::set<TaskNumber>& inDependencies);
 
       /**
        * Slightly different than the umbrella version in the general namespace.
+       *
+       * ## Serial code
+       *
+       * This routine degenerates to nop, as no task can be pending. spawnTask()
+       * always executed the task straightaway.
        */
       void waitForAllTasks();
 
@@ -654,11 +614,6 @@ namespace tarch {
        * registered before.
        */
       void addDependency( const TaskNumber& taskNumber, const TaskNumber& registeredTaskNumber );
-
-      /**
-       * Native implementation of tarch::multicore::finishedTask().
-       */
-      void deregisterTask( const TaskNumber&  number );
     } // namespace native
 
     namespace internal {

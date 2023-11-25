@@ -96,12 +96,27 @@ and
 
  Peano models all of its interna as tasks. Each Peano 4 task is a subclass of
  tarch::multicore::Task. However, these classes might not be mapped 1:1 onto
- native tasks: Users or Peano's core,
- respectively, create Peano 4 tasks and spawn them through tarch::multicore::spawnTask()
- or tarch::multicore::spawnAndWait().
+ native tasks. Indeed we distinguish different task types:
+
+ - Tasks. The most generic type of tasks is submitted via spawnTask(). Each
+   task can be assigned a unique number and incoming dependencies.
+ - Fork-join tasks. These are created via tarch::multicore::spawnAndWait()
+   and form a subset of the generic tasks. Here, we know the dependency
+   structure and waits quite explicitly, so there's no need to work with task
+   numbers.
+ - Free floating tasks (task sinks). Tasks without any outgoing dependencies
+   are free floating in the sense that we never wait for them. That's obviously
+   almost never true - few tasks have no follow-up dependencies at all - but
+   the user might decide to model the out dependencies without task
+   dependencies: Typically, such tasks set some output flag or dump their
+   result into a database, which then in turn unlocks follow-up tasks.
+ - Pending tasks: Pending tasks are ready tasks which Peano's tasking API
+   holds back on purpose. They are not (yet) submitted to the tasking
+   system, as we might want to fuse them into larger task assemblies (and
+   move them to other ranks/devices, e.g.).
 
 
- ### Fork-join parallelism and free tasks
+ ## Vanilla Peano task graph
 
  The two routines allow us to model the typical Peano 4 task graph:
 
@@ -143,7 +158,7 @@ and
  example in Figure 3.
 
 
- ### GPUs and an additional queue
+ ### GPUs and an additional queue (pending tasks)
 
  On some platforms and code generations, it has proven of value to add an
  additional runtime (layer) on top of the native tasking backend. These layers

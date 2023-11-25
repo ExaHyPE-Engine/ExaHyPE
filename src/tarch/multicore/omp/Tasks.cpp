@@ -216,16 +216,6 @@ void tarch::multicore::native::processFusedTask(
   }
 }
 
-/**
- * There is no draining of the CPU queues in OpenMP, but we can invoke a
- * taskyield which issues a scheduling point and hence gives OpenMP the
- * opportunity to disrupt the local execution and instead progress pending
- * tasks.
- */
-void        tarch::multicore::native::drainTaskQueues() {
-#pragma omp taskyield
-}
-
 
 void tarch::multicore::native::spawnTaskWithDependencies(
   Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber

@@ -4,39 +4,10 @@
 
 
 #include <functional>
-#include <vector>
 
-#include "tarch/multicore/Tasks.h"
-#include "peano4/datamanagement/VertexMarker.h"
-#include "peano4/datamanagement/VertexEnumerator.h"
 
 
 namespace swift2 {
-  /**
-   * Get numbers of parent vertices
-   *
-   * We assume that each parent vertex has a routine getNumber(). This routine
-   * returns the set of numbers of all parent cells. A vertex can have up to
-   * @f$ 2^d @f$ parent vertices. If the vertex coincides spatially with a
-   * vertex on the next coarser grid (cmp. peano4::datamanagement::VertexMarker::coincidesWithCoarseGridVertex()),
-   * then the result will only contain one entry. This means that the current
-   * vertex is at the corner of a @f$ 3^d @f$ patch within the spacetree. If
-   * the vertex is placed along the edges of a patch, one or two parents are
-   * returned (unknowns are not stored redundantly).
-   */
-  template <typename Vertex>
-  std::set<int> getVertexNumbersOfParentVertices(
-    const peano4::datamanagement::VertexMarker&       marker,
-    peano4::datamanagement::VertexEnumerator<Vertex>  coarseGridVertices
-  );
-
-  template <typename Vertex>
-  std::set<int> getVertexNumbersOfParentVertices(
-    tarch::la::Vector< Dimensions, int >              position,
-    peano4::datamanagement::VertexEnumerator<Vertex>  coarseGridVertices,
-    int                                               dimension
-  );
-
   /**
    * A task tied logically to a vertex within the mesh
    *
