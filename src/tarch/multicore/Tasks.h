@@ -8,6 +8,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <set>
 
 #include "multicore.h"
 #include "tarch/multicore/otter.h"
@@ -25,18 +26,32 @@ namespace tarch {
      * - The second index identifies if this is a cell or a face or vertex.
      * - The third index is the phase.
      */
-    typedef std::tuple<int, int, int> TaskNumber;
+    struct TaskNumber: public std::tuple<int, int, int> {
+      public:
+        /**
+         * Construct new task number
+         *
+         * @param number0 Typically the "real" task counter, i.e. a unique number
+         *   from a very vast range which distinguishes different task types.
+         * @param number1 Typically the type of mesh entity to which the task is
+         *   tied to.
+         * @param number2 Typically some kind of species or task type counter.
+         */
+        TaskNumber(int number0, int number1, int number2);
 
-    /**
-     * Defines the max indices for each entry in TaskNumber. So there's no
-     * constraint on the first entry, but the second one is only from 0 to 3
-     * (which reflects create-touch first-touch last-destroy) while the last
-     * entry can hold 16 different entries.
-     */
-    constexpr TaskNumber MasTaskNumber{-1, 4, 16};
-    constexpr TaskNumber NoDependency{-1, -1, -1};
+        /**
+         * Defines the max indices for each entry in TaskNumber. So there's no
+         * constraint on the first entry, but the second one is only from 0 to 3
+         * (which reflects create-touch first-touch last-destroy) while the last
+         * entry can hold 16 different entries.
+         */
+        static TaskNumber Max;
+        static TaskNumber NoDependency;
 
-    std::string toString( const TaskNumber&  number );
+        std::string toString() const;
+    };
+
+    std::string toString( const std::set<TaskNumber>&  number );
 
     void setOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
@@ -317,7 +332,7 @@ namespace tarch {
      * Spawn a task that depends on one other task. Alternatively, pass in
      * NoDependency. In this case, the task can kick off immediately. You have
      * to specify a task number. This number allows other, follow-up tasks to
-     * become dependant on this very task. Please note that the tasks have to
+     * become dependent on this very task. Please note that the tasks have to
      * be spawned in order, i.e. if B depends on A, then A has to be spawned
      * before B. Otherwise, you introduce a so-called anti-dependency. This is
      * OpenMP jargon which we adopted ruthlessly.
@@ -325,6 +340,16 @@ namespace tarch {
      * You may pass NoDependency as taskNumber. In this case, you have a
      * fire-and-forget task which is just pushed out there without anybody
      * ever waiting for it later on (at least not via task dependencies).
+     *
+     * The anti-dependency pattern can be circumnavigated by registering a task
+     * explicitly. You can register a task - which means it is not yet
+     * submitted - manually add incoming dependencies to this registered task
+     * which have to be fulfilled, and eventually submit the task. After
+     * this submission, no further tasks can be spawned anymore. But before
+     * that, you can construct your DAG incrementally.
+     *
+     * @see tarch::multicore and the section "Tasks with dependencies" therein
+     *   for further documentation.
      */
     void spawnTask(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber);
 
@@ -333,15 +358,69 @@ namespace tarch {
      * dependencies.
      */
     void spawnTask(
-      Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+      Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
     );
+
+    /**
+     * Add dependency on task which is not yet submitted
+     *
+     * If the target dependency registeredTaskNumber equals
+     * TaskNumber::NoDependency, the function degenerates to nop. This is
+     * explicitly allowed. Yet, taskNumber always has to be a valid identifier.
+     *
+     * ## Serial code
+     *
+     * Degenerates to nop as a direct consequence of the documentation of
+     * registeredTaskNumber: You can only submit dependencies to tasks which
+     * have not been submitted yet. However, once they are submitted, you
+     * immediately execute them. So there's no reason to bookkeep the
+     * dependencies.
+     *
+     *
+     * @param taskNumber Number of task which has already been submitted
+     *
+     * @param registeredTaskNumber Number of task which has been registered,
+     *   i.e. the system knows that this task will eventually be submitted, but
+     *   it has not happened yet. The very moment you actually spawn a task,
+     *   you are not allowed to inject further dependencies.
+     *
+     * @see tarch::multicore and the section "Tasks with dependencies" therein
+     *   for further documentation.
+     */
+    void addDependency( const TaskNumber& taskNumber, const TaskNumber& registeredTaskNumber );
+
+    /**
+     * Wrapper around a sequence of addDependency() calls.
+     */
+    void addDependencies( const TaskNumber& taskNumber, const std::set<TaskNumber>& registeredTaskNumbers );
+
+    /**
+     * Wait for all tasks which have been spawned by spawnTask. This routine
+     * might return and still miss out for a few pending tasks. It basically
+     * runs only over those tasks with in/out dependencies and ensures that
+     * they are either done or are pending.
+     *
+     * ## Serial code
+     *
+     * This routine degenerates to nop, as no task can be pending. spawnTask()
+     * always executed the task straightaway.
+     */
+    void waitForAllTasks();
 
     /**
      * Wait for set of tasks
      *
-     * Entries in inDependencies can be NoDependency.
+     * Entries in inDependencies can be NoDependency. This is a trivial
+     * implementation, as we basically run through each task in
+     * inDependencies and invoke waitForTask() for it. We don't have to rely on
+     * some backend-specific implementation.
+     *
+     * ## Serial code
+     *
+     * This routine degenerates to nop, as no task can be pending. spawnTask()
+     * always executed the task straightaway.
      */
-    void waitForTasks(const std::vector<TaskNumber>& inDependencies);
+    void waitForTasks(const std::set<TaskNumber>& inDependencies);
 
     /**
      * Wait for one task
@@ -517,17 +596,64 @@ namespace tarch {
        */
       int getNumberOfPendingTasks();
 
+      /**
+       * Spawn task with incoming dependencies
+       *
+       * ## Serial code
+       *
+       * This is a trivial case in a serial run: As we have already completed
+       * all incoming tasks (we work serially and all incoming tasks have to
+       * be done by this time), we can simply process the task and return.
+       * In a serial run, the task is executed straight-away. As a direct
+       * implication, all dependencies of future tasks are always fulfilled.
+       * However, we keep track of registered tasks in the serial version
+       * (even though the notion of a registered task makes limited sense).
+       * Registered tasks are tasks the system knows about which have not yet
+       * been submitted. Now that we submit task taskNumber, we can remove the
+       * number from the set of registered tasks.
+       */
       void spawnTask(Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber);
+
+      /**
+       *
+       * ## Serial code
+       *
+       * Just map it onto a spawnTask() without any dependencies. See
+       * documentation is delegated routine.
+       */
       void spawnTask(
-        Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+        Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
       );
-      void waitForTasks(const std::vector<TaskNumber>& inDependencies);
-      void waitForTask(const TaskNumber& taskNumber);
+
+      /**
+       * Wait for other task
+       *
+       *
+       * ## Serial code
+       *
+       * Degenerates to nop here, as all incoming tasks are completed. We just
+       * have to ensure that the task we are waiting for is not(!) registered,
+       * i.e. has actually been submitted.
+       */
+      void waitForTask(const TaskNumber& inDependency);
+
+      /**
+       * Slightly different than the umbrella version in the general namespace.
+       */
+      void waitForAllTasks();
 
       /**
        * Native implementation of tarch::multicore::registerTask().
        */
       void registerTask( const TaskNumber&  number );
+
+      /**
+       * ## Serial code
+       *
+       * Nothing is to be done, but we validate that the task has been
+       * registered before.
+       */
+      void addDependency( const TaskNumber& taskNumber, const TaskNumber& registeredTaskNumber );
 
       /**
        * Native implementation of tarch::multicore::finishedTask().

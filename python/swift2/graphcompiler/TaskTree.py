@@ -87,8 +87,32 @@ def construct_touch_vertex_first_time_call(
           """ + TaskSubTypeNumber.TouchVertexFirst + """,
           """ + str(current_species_index) + """
         };
+        
+      const tarch::multicore::TaskNumber taskNumberOfLastTouch{
+          fineGridVertex"""
+            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+                current_species_set.name
+            )
+            + """.getNumber(),
+          """ + TaskSubTypeNumber.TouchVertexLast + """,
+          """ + str(current_species_index) + """
+        };
       
-      assertion( taskNumberToBeUsed!=tarch::multicore::NoDependency );
+      std::set<int> parentVerticesNumbers = ::swift2::getVertexNumbersOfParentVertices(
+        marker,
+        coarseGridVertices""" + current_species_set.name + """EnclaveMeshEntityNumber
+      );
+      
+      std::set<tarch::multicore::TaskNumber>  parentTaskNumbers;
+      for (auto& parentVertexNumber: parentVerticesNumbers) {
+        parentTaskNumbers.insert( tarch::multicore::TaskNumber(
+          parentVertexNumber,
+          """ + TaskSubTypeNumber.TouchVertexFirst + """,
+          """ + str(current_species_index) + """
+        ));
+      }
+
+      assertion( taskNumberToBeUsed!=tarch::multicore::TaskNumber::NoDependency );
 
       logDebug( "touchVertexFirstTime(...)", "create task " << tarch::multicore::toString(taskNumberToBeUsed) << " for " << marker.toString() );
       
@@ -102,7 +126,8 @@ def construct_touch_vertex_first_time_call(
           false
         );
       
-      tarch::multicore::spawnTask( newTask, tarch::multicore::NoDependency, taskNumberToBeUsed );
+      tarch::multicore::spawnTask( newTask, parentTaskNumbers, taskNumberToBeUsed );
+      tarch::multicore::registerTask( taskNumberOfLastTouch );
     """
         )
 
@@ -127,10 +152,16 @@ def construct_touch_cell_first_time_call(
           """ + TaskSubTypeNumber.TouchCellFirst + """,
           """ + str(current_species_index) + """
       };
+            
+      tarch::multicore::TaskNumber  parentTaskNumber = tarch::multicore::TaskNumber(
+        coarseGridCell""" + current_species_set.name + """EnclaveMeshEntityNumber.getNumber(),
+        """ + TaskSubTypeNumber.TouchCellFirst + """,
+        """ + str(current_species_index) + """
+      );
       
-      std::vector<tarch::multicore::TaskNumber> adjacentVertexTask(TwoPowerD);
+      std::set<tarch::multicore::TaskNumber> adjacentVertexTask;
       for (int i=0; i<TwoPowerD; i++) {
-        adjacentVertexTask[i] = {
+        adjacentVertexTask.insert( tarch::multicore::TaskNumber{
           fineGridVertices"""
             + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
                 current_species_set.name
@@ -138,11 +169,12 @@ def construct_touch_cell_first_time_call(
             + """(i).getNumber(),
           """ + TaskSubTypeNumber.TouchVertexFirst + """,
           """ + str(current_species_index) + """
-        };
+        } );
       }
+      adjacentVertexTask.insert( parentTaskNumber );
 
-      assertion( taskNumberToBeUsed!=tarch::multicore::NoDependency );
-              
+      assertion( taskNumberToBeUsed!=tarch::multicore::TaskNumber::NoDependency );
+
       auto* newTask = new ::swift2::CellTask< decltype(localParticles) >(
         localParticles,
         activeParticles,
@@ -153,7 +185,7 @@ def construct_touch_cell_first_time_call(
         },
         false
       );
-      
+
       tarch::multicore::spawnTask( newTask, adjacentVertexTask, taskNumberToBeUsed );
     """
     )
@@ -166,66 +198,62 @@ def construct_touch_vertex_last_time_call(
 ):
     result = (
         """
-    std::vector<tarch::multicore::TaskNumber> adjacentTasks(TwoPowerD);
-    for (int i=0; i<TwoPowerD; i++) {
-      adjacentTasks[i] = tarch::multicore::TaskNumber{
+      const tarch::multicore::TaskNumber taskNumberToBeUsed{
           fineGridVertex"""
+            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+                current_species_set.name
+            )
+            + """.getNumber(),
+          """ + TaskSubTypeNumber.TouchVertexLast + """,
+          """ + str(current_species_index) + """
+        };
+                
+      std::set<tarch::multicore::TaskNumber> adjacentCellTasks;
+      for (int i=0; i<TwoPowerD; i++) {
+        adjacentCellTasks.insert( tarch::multicore::TaskNumber{
+            fineGridVertex"""
         + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
             current_species_set.name
         )
         + """.getAdjacentCellNumber(i),
-          """ + TaskSubTypeNumber.TouchCellFirst + """,
+            """ + TaskSubTypeNumber.TouchCellFirst + """,
+            """ + str(current_species_index) + """
+        } );
+      }
+      
+      auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
+          assignedParticles,
+          [=](decltype(assignedParticles)& assignedParticles)->void {
+            """
+            + touch_vertex_last_time_kernel
+            + """
+          },
+          false
+        );
+      
+      tarch::multicore::spawnTask( newTask, adjacentCellTasks, taskNumberToBeUsed );
+
+      std::set< tarch::multicore::TaskNumber > outgoingTaskDependencies;
+      for (int i=0; i<TwoPowerD; i++) {
+        outgoingTaskDependencies.insert( tarch::multicore::TaskNumber{
+          coarseGridVertices"""
+            + peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+                current_species_set.name
+            )
+            + """(i).getNumber(),
+          """ + TaskSubTypeNumber.TouchVertexLast + """,
           """ + str(current_species_index) + """
-      };
-    }
-    tarch::multicore::waitForTasks( adjacentTasks );
+        } );
+      }
+      tarch::multicore::addDependencies( taskNumberToBeUsed, outgoingTaskDependencies );
+
+      if ( marker.isAdjacentToParallelDomainBoundary () ) {
+        tarch::multicore::waitForTask( taskNumberToBeUsed );
+      }
     """
     )
 
-    if (
-        touch_vertex_last_time_kernel != None
-        and touch_vertex_last_time_kernel.strip() != ""
-    ):
-        result += (
-            touch_vertex_last_time_kernel
-            + """
-    """
-        )
-
     return result
-
-
-#
-# @todo Here for final SWIFT-like task graph construction, i.e. left on purpose
-#
-# def construct_touch_vertex_last_time_call(current_species_set,
-#                                          touch_vertex_last_time_kernel):
-#    if touch_vertex_last_time_kernel==None:
-#        return ""
-#    else:
-#        return """
-#      const int taskNumberToBeUsed = fineGridVertex""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getTouchLastNumber();
-#
-#      if ( taskNumberToBeUsed!=tarch::multicore::NoDependency ) {
-#        auto* newTask = new ::swift2::VertexTask< decltype(localParticles) >(
-#          localParticles,
-#          activeParticles,
-#          [=](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
-#            """ + touch_vertex_last_time_kernel + """
-#          }
-#        );
-#
-#        tarch::multicore::spawnTaskWithDependencies(
-#          newTask,
-#          fineGridVertex""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getAdjacentCellsTouchLastNumber(),
-#          tarch::multicore::NoDependency
-#        );
-#      }
-#      else {
-#        tarch::multicore::waitForTasks( fineGridVertex""" + peano4.toolbox.TaskNumbersOnMesh.construct_marker_name(current_species_set.name) + """.getAdjacentCellsTouchLastNumber() );
-#        """ + touch_vertex_last_time_kernel + """
-#      }
-#    """
 
 
 def translate_one_step_of_species_into_mesh_traversal(
@@ -335,7 +363,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                     step.touch_vertex_last_time_kernel
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
-                unprepare_traversal_kernel=step.unprepare_traversal_kernel,
+                unprepare_traversal_kernel=step.unprepare_traversal_kernel + "tarch::multicore::waitForAllTasks();",
                 additional_includes=step.includes + DefaultIncludes,
                 active_particle_set=step.input_particles,
             )
@@ -360,7 +388,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                     current_species_set, step.touch_vertex_last_time_kernel, current_species_index
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
-                unprepare_traversal_kernel=step.unprepare_traversal_kernel,
+                unprepare_traversal_kernel=step.unprepare_traversal_kernel + "tarch::multicore::waitForAllTasks();",
                 additional_includes=step.includes + DefaultIncludes,
                 active_particle_set=step.input_particles,
             )
@@ -386,7 +414,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                 touch_vertex_first_time_compute_particle_update_kernel=step.touch_vertex_first_time_kernel,
                 touch_vertex_last_time_compute_particle_update_kernel=step.touch_vertex_last_time_kernel,
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
-                unprepare_traversal_kernel=step.unprepare_traversal_kernel,
+                unprepare_traversal_kernel=step.unprepare_traversal_kernel + "tarch::multicore::waitForAllTasks();",
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
             )
@@ -417,7 +445,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                 current_species_set, step.touch_vertex_last_time_kernel,current_species_index
             ),
             prepare_traversal_kernel=step.prepare_traversal_kernel,
-            unprepare_traversal_kernel=step.unprepare_traversal_kernel,
+            unprepare_traversal_kernel=step.unprepare_traversal_kernel + "tarch::multicore::waitForAllTasks();",
             additional_includes=step.includes + DefaultIncludes,
             active_particle_set=step.input_particles,
         )

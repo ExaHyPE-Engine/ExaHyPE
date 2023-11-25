@@ -21,29 +21,29 @@ namespace tarch {
  */
 class tarch::Enumerator {
   public:
-	static constexpr int NoNumber = -1;
+    static constexpr int NoNumber = -1;
 
-	Enumerator();
-	void reset();
+    Enumerator();
+    void reset();
 
-	/**
-	 * Returns a unique non-zero number which is not yet used anywhere else on
-	 * this rank.
-	 */
-	int getNumber();
+    /**
+     * Returns a unique non-zero number which is not yet used anywhere else on
+     * this rank.
+     */
+    int getNumber();
 
-	/**
-	 * Free a number again. number has to be the result of a previous
-	 * getNumber() call.
-	 */
-	void releaseNumber( int value );
+    /**
+     * Free a number again. number has to be the result of a previous
+     * getNumber() call.
+     */
+    void releaseNumber( int value );
 
-	/**
-	 * Number of numbers handed out so far.
-	 */
-	int size() const;
+    /**
+     * Number of numbers handed out so far.
+     */
+    int size() const;
 
-	std::string toString() const;
+    std::string toString() const;
 
   private:
     tarch::multicore::BooleanSemaphore _semaphore;

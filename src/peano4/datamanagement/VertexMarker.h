@@ -249,8 +249,9 @@ public:
   tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell() const;
   tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell(int i) const;
 
-
   /**
+   * Does vertex spatially coincide with coarser level's vertex
+   *
    * The vertex (0,0,0) coincides with a coarse grid vertex, the (3,0,0) does
    * so too, and so forth.
    *

@@ -101,8 +101,60 @@ namespace {
 } // namespace
 
 
-std::string tarch::multicore::toString( const TaskNumber&  number ) {
-  return "(" + std::to_string( std::get<0>(number) ) + "," + std::to_string( std::get<1>(number) ) + "," + std::to_string( std::get<2>(number) ) + ")";
+
+tarch::multicore::TaskNumber::TaskNumber(int number0, int number1, int number2):
+  std::tuple<int, int, int>{number0,number1,number2} {
+  if (number0<0) {
+    *this = NoDependency;
+  }
+  else {
+    assertion1( std::get<0>(*this)>=0, toString() );
+    assertion1( std::get<1>(*this)>=0, toString() );
+    assertion1( std::get<2>(*this)>=0, toString() );
+    assertion2( std::get<0>(*this)<=std::get<0>(Max), toString(), Max.toString() );
+    assertion2( std::get<1>(*this)<=std::get<1>(Max), toString(), Max.toString() );
+    assertion2( std::get<2>(*this)<=std::get<2>(Max), toString(), Max.toString() );
+  }
+}
+
+
+tarch::multicore::TaskNumber tarch::multicore::TaskNumber::Max{
+    std::numeric_limits<int>::max(),
+    4,
+    16
+  };
+
+
+tarch::multicore::TaskNumber tarch::multicore::TaskNumber::NoDependency{
+    -1,
+    -1,
+    -1
+  };
+
+
+std::string tarch::multicore::TaskNumber::toString() const {
+  return "(" + std::to_string( std::get<0>(*this) )
+       + "," + std::to_string( std::get<1>(*this) )
+       + "," + std::to_string( std::get<2>(*this) )
+       + ")";
+}
+
+
+std::string tarch::multicore::toString( const std::set<TaskNumber>&  numbers ) {
+  std::ostringstream msg;
+  msg << "{";
+  bool first = true;
+  for (auto& p: numbers) {
+    if (first) {
+      first = false;
+    }
+    else {
+      msg << ",";
+    }
+    msg << p.toString();
+  }
+  msg << "}";
+  return msg.str();
 }
 
 
@@ -193,6 +245,19 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::swapOrchestration(
 }
 
 void tarch::multicore::registerTask(const TaskNumber& number) { native::registerTask(number); }
+
+void tarch::multicore::addDependency( const TaskNumber& taskNumber, const TaskNumber& registeredTaskNumber ) {
+  assertion2( taskNumber!=TaskNumber::NoDependency, taskNumber.toString(), registeredTaskNumber.toString() );
+  if (registeredTaskNumber!=TaskNumber::NoDependency) {
+    tarch::multicore::native::addDependency( taskNumber, registeredTaskNumber );
+  }
+}
+
+void tarch::multicore::addDependencies( const TaskNumber& taskNumber, const std::set<TaskNumber>& registeredTaskNumber ) {
+  for (auto& p: registeredTaskNumber) {
+    addDependency(taskNumber,p);
+  }
+}
 
 bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs) {
   return lhs.getPriority() < rhs.getPriority();
@@ -438,21 +503,26 @@ int tarch::multicore::internal::getNumberOfWithholdPendingTasks() { return globa
 void tarch::multicore::spawnTask(
   Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber
 ) {
-  assertion(inDependency != NoDependency or taskNumber != NoDependency);
+  assertion2(taskNumber != TaskNumber::NoDependency, taskNumber.toString(), inDependency.toString());
   tarch::multicore::native::spawnTask(job, inDependency, taskNumber);
 }
 
 
 void tarch::multicore::spawnTask(
-  Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+  Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
 ) {
-  assertion(not inDependencies.empty() or taskNumber != NoDependency);
   tarch::multicore::native::spawnTask(job, inDependencies, taskNumber);
 }
 
 
-void tarch::multicore::waitForTasks(const std::vector<TaskNumber>& inDependencies) {
-  tarch::multicore::native::waitForTasks(inDependencies);
+void tarch::multicore::waitForAllTasks() {
+}
+
+
+void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies) {
+  for (auto& p: inDependencies) {
+    tarch::multicore::native::waitForTask(p);
+  }
 }
 
 
@@ -490,57 +560,75 @@ void tarch::multicore::native::processFusedTask(
   }
 }
 
-namespace {
-  /**
-   * Registered tasks which are not yet s.
-   */
-  std::map< tarch::multicore::TaskNumber, tarch::multicore::Task* >  _tasksWithAntidependencies;
-}
 
 void tarch::multicore::native::drainTaskQueues() {}
+
+/*
+Wenn ein Schritt das Partikel veraendert, dann muss eben doch pro touchVertexLast ein wait rein.
+Ansonsten koenne wir aucy einfach weiter machen
+Brauchen wir ein thin-out, i.e. ein "eliminate empty tasks?"
+*/
+
+
+namespace {
+  /**
+   * We don't need this set, but we can use it to validate the code
+   * correctness.
+   */
+  std::set< tarch::multicore::TaskNumber >  registeredTask;
+}
+
 
 void tarch::multicore::native::spawnTask(
   Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber
 ) {
-  logInfo( "spawnTaskWithDependencies", toString(inDependency) << "->" << toString(taskNumber) );
+  logInfo( "spawnTaskWithDependencies()", inDependency.toString() << " -> " << taskNumber.toString() );
   assertion2(
-    inDependency == tarch::multicore::NoDependency or std::get<0>( inDependency ) >= 0,
-	toString( inDependency ),
-    toString( taskNumber )
+    inDependency == tarch::multicore::TaskNumber::NoDependency or std::get<0>( inDependency ) >= 0,
+    inDependency.toString(),
+    taskNumber.toString()
   );
   assertion2(
     std::get<0>( taskNumber ) >= 0 and std::get<1>( taskNumber ) >= 0 and std::get<2>( taskNumber ) >= 0,
-	toString( inDependency ),
-    toString( taskNumber )
+    inDependency.toString(),
+    taskNumber.toString()
   );
-  tarch::multicore::native::spawnTask(job);
+  while (job->run()) {
+  }
+  delete job;
+  if (registeredTask.count(taskNumber)>0) {
+    registeredTask.erase(taskNumber);
+  }
 }
 
 
 void tarch::multicore::native::spawnTask(
-  Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+  Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
 ) {
-  logInfo( "spawnTaskWithDependencies", "{... <=#" << inDependencies.size() << " tasks}->" << toString(taskNumber) );
-  assertion1(
-    std::get<0>( taskNumber ) >= 0 and std::get<1>( taskNumber ) >= 0 and std::get<2>( taskNumber ) >= 0,
-    toString( taskNumber )
-  );
-  tarch::multicore::native::spawnTask(job);
+  logInfo( "spawnTaskWithDependencies()", toString( inDependencies ) << " -> " << taskNumber.toString() );
+  ::tarch::multicore::native::spawnTask(job, TaskNumber::NoDependency, taskNumber);
 }
 
-
-void tarch::multicore::native::waitForTasks(const std::vector<TaskNumber>& inDependencies) {
-  logInfo( "waitForTasks", "wait for <=" <<  inDependencies.size() << " tasks" );
-}
 
 void tarch::multicore::native::waitForTask(const TaskNumber& taskNumber) {
-  logInfo( "waitForTasks", "wait for task " << toString(taskNumber) );
+  logInfo( "waitForTasks()", "wait for task " << taskNumber.toString() );
+  assertion1( registeredTask.count(taskNumber)==0, taskNumber.toString() );
 }
 
 void tarch::multicore::native::registerTask( const TaskNumber&  number ) {
-  assertion( _tasksWithAntidependencies.count(number)==0 );
-  logInfo( "waitForTasks", "register task " << toString(number) << " (will be defined properly later)" );
+  assertion( registeredTask.count(number)==0 );
+  logInfo( "waitForTasks()", "register task " << number.toString() << " (will be defined properly later)" );
+  registeredTask.insert(number);
 }
 
+void tarch::multicore::native::addDependency( const TaskNumber& taskNumber, const TaskNumber& registeredTaskNumber ) {
+  logInfo( "waitForTasks()", "add dependency to future task: " << taskNumber.toString() << " -> " << registeredTaskNumber.toString() );
+  assertion2( registeredTask.count(taskNumber)==0, taskNumber.toString(), registeredTaskNumber.toString() );
+  assertion2( registeredTask.count(registeredTaskNumber)>0, taskNumber.toString(), registeredTaskNumber.toString() );
+}
+
+void tarch::multicore::native::waitForAllTasks() {
+  logInfo( "waitForAllTasks()", "wait" );
+}
 
 #endif

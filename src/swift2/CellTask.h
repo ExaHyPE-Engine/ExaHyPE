@@ -41,7 +41,7 @@ namespace swift2 {
         const ParticleSet& localParticles,
         const ParticleSet& activeParticles,
         Functor            functor,
-		bool               FuseAndPortToGPU
+        bool               FuseAndPortToGPU
       );
       ~CellTask();
 

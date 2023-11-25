@@ -101,6 +101,8 @@ and
  or tarch::multicore::spawnAndWait().
 
 
+ ### Fork-join parallelism and free tasks
+
  The two routines allow us to model the typical Peano 4 task graph:
 
  @image html multicore_task_flow.png
@@ -166,6 +168,35 @@ and
  might try to spawn their tasks concurrently into this queue. We suffer from
  congestion. Therefore, the implementation in Tasks.cpp employs one global
  queue plus a queue per thread.
+
+
+ ### Tasks with dependencies
+
+ In Peano, task DAGs are built up along the task workflow. That is, each task
+ that is not used within a fork-join region or is totally free is assigned a
+ unique number when we spawn it.
+
+ Whenever we define a task, we can also define in dependencies. This is a sole
+ completion dependency: you tell the task system which task has to be completed
+ before the currently submitted one is allwed to start. A DAG thus can be built
+ up layer by layer. We start with the first task. This task might be
+ immediately executed - we do not care - and then we continue to work our way
+ down through the graph adding node by node.
+
+ Different to OpenMP, outgoing dependencies do not have to be declared. We
+ solely model in dependencies. This however imples that all predecessors of a
+ task have to be submitted before we add this very task. This is not always
+ possible. When you walk top-down through a tree and then bottom-up again,
+ you might have thrown away finer levels when you get back to the original
+ one and thus you are unable to introduce dependencies from fine to coarse
+ unless you introduce very fancy bookkeeping.
+
+ We avoid such bookkeeping (or deploy it into the tasking API), as we allow
+ codes to register a task. registerTask() tells the system "there will be a
+ task eventually, but I haven't yet constructed it". You can also add
+ dependencies from an existing task to such a registered task. Once you
+ finally submit the registered task, you are however not allowed to add any
+ dependencies anymore.
 
 
 

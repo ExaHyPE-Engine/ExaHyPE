@@ -45,7 +45,10 @@ def create_vertex_marker(task_name):
 
     """
     dastgen_marker = peano4.datamodel.DaStGen2(construct_marker_name(task_name))
-    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer("Number"))
+    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer(
+        name="Number",
+        initval=UndefinedNumber,
+        ))
     dastgen_marker.data.add_attribute(
         peano4.dastgen2.Peano4IntegerArray(
             name="AdjacentCellNumber", cardinality="TwoPowerD"
@@ -73,7 +76,10 @@ def create_cell_marker(task_name):
 
     """
     dastgen_marker = peano4.datamodel.DaStGen2(construct_marker_name(task_name))
-    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer("Number"))
+    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer(
+        name="Number",
+        initval=UndefinedNumber,
+        ))
     dastgen_marker.data.add_attribute(
         dastgen2.attributes.UserDefinedType(
             name="Enumerator",
