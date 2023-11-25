@@ -20,36 +20,39 @@ def create_Riemann_solver_call(polynomial_basis,
       [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
         double * __restrict__                        F
       )->void {
         {% if FLUX_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,h,t,dt,normal,F);
         {% endif %}
       }, //flux
       [&](
           const double * __restrict__                  Q,
           const double * __restrict__                  deltaQ,
           const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,
           double                                       dt,
           int                                          normal,
           double * __restrict__                        F
         ) -> void {
           {% if NCP_IMPLEMENTATION!="<none>" %}
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, t, dt, normal, F);
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, F);
           {% endif %}
       }, //ncp
       [&](
           const double * __restrict__                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,
           double                                       dt,
           int                                          normal
         ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q, x, t, dt, normal);
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q, x, h, t, dt, normal);
       }, // maxEigenvalue
       marker.x(),
       marker.h(),
@@ -71,36 +74,39 @@ def create_Riemann_solver_call(polynomial_basis,
       [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
         double * __restrict__                        F
       )->void {
         {% if FLUX_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,h,t,dt,normal,F);
         {% endif %}
       }, //flux
       [&](
           const double * __restrict__                  Q,
           const double * __restrict__                  deltaQ,
           const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,
           double                                       dt,
           int                                          normal,
           double * __restrict__                        F
         ) -> void {
           {% if NCP_IMPLEMENTATION!="<none>" %}
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, t, dt, normal, F);
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, F);
           {% endif %}          
       }, //ncp
       [&](
           const double * __restrict__                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,
           double                                       dt,
           int                                          normal
         ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q, x, t, dt, normal);
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q, x, h, t, dt, normal);
       }, // maxEigenvalue
       marker.x(),
       marker.h(),

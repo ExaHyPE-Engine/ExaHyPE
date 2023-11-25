@@ -13,27 +13,27 @@ def create_compute_Riemann_kernel_for_UserDefinedRiemann(flux_implementation, ri
   {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
   [&](
     const double * __restrict__ Q,
-    const tarch::la::Vector<Dimensions,double>&  faceCentre,
-    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  h,
     double                                       t,
     double                                       dt,
     int                                          normal,
     double * __restrict__ F
   )->void {
     {% if FLUX_IMPLEMENTATION!="<none>" %}
-    repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, dt, normal, F );
+    repositories::{{SOLVER_INSTANCE}}.flux( Q, x, h, t, dt, normal, F );
     {% endif %}
   },
   [&](
     const double * __restrict__ Q,
-    const tarch::la::Vector<Dimensions,double>&  faceCentre,
-    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  h,
     double                                       t,
     double                                       dt,
     int                                          normal,
     double * __restrict__ lambda
   )->void {
-    return repositories::{{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, dt, normal, lambda );
+    return repositories::{{SOLVER_INSTANCE}}.eigenvalues( Q, x, h, t, dt, normal, lambda );
   },
   [&](
     const double * __restrict__                  QR,
@@ -81,8 +81,8 @@ def create_abstract_solver_declarations(flux_implementation, riemann_solver_impl
      */
     virtual void eigenvalues(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -92,8 +92,8 @@ def create_abstract_solver_declarations(flux_implementation, riemann_solver_impl
     {% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -149,8 +149,8 @@ def create_abstract_solver_definitions(flux_implementation, riemann_solver_imple
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -163,8 +163,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
 {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
- const tarch::la::Vector<Dimensions,double>&  faceCentre,
- const tarch::la::Vector<Dimensions,double>&  volumeH,
+ const tarch::la::Vector<Dimensions,double>&  x,
+ const tarch::la::Vector<Dimensions,double>&  h,
  double                                       t,
  double                                       dt,
  int                                          normal,
@@ -216,8 +216,8 @@ def create_solver_declarations(flux_implementation, riemann_solver_implementatio
      */
     virtual void eigenvalues(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -229,8 +229,8 @@ def create_solver_declarations(flux_implementation, riemann_solver_implementatio
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     virtual void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -285,14 +285,14 @@ def create_solver_definitions(flux_implementation, riemann_solver_implementation
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
   double * __restrict__ lambda // lambda[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
+  logTraceInWith4Arguments( "eigenvalues(...)", x, h, t, normal );
   // @todo implement
   logTraceOut( "eigenvalues(...)" );
 }
@@ -302,14 +302,14 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::eigenvalues(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+  logTraceInWith4Arguments( "flux(...)", x, h, t, normal );
   // @todo implement
   logTraceOut( "flux(...)" );
 }

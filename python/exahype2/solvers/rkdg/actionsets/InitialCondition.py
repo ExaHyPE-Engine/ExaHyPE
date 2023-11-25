@@ -23,15 +23,15 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
       );
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
-    
-    // relevant for tracing et al which kicks in if and only if cell has been
-    // updated
+
+    // Relevant for tracing et al which kicks in if and only if cell has been updated
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
 
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
 """
-  
+
+
   def __init__(self,solver,guard,grid_is_constructed):
     super(InitialCondition,self).__init__(solver)
     self.guard               = guard

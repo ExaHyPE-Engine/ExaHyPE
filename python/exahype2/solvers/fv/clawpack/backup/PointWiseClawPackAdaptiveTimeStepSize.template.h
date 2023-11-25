@@ -33,8 +33,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
     ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t
     ) override;
     {% endif %}
@@ -43,8 +43,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     void initialCondition(
       double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions, int>&    index,
       bool                                         gridIsConstructed
     ) override;
     {% endif %}
@@ -53,8 +54,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     void sourceTerm(
       const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       double * __restrict__ S
@@ -67,7 +68,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       const double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double * __restrict__ Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       int                                          normal
     )  override;

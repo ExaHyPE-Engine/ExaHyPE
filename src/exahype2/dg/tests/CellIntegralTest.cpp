@@ -92,6 +92,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -136,6 +137,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder2OnStationarySetup() {
     [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -223,6 +225,7 @@ void exahype2::dg::tests::CellIntegralTest::runEulerOrder4OnStationarySetup() {
     [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,

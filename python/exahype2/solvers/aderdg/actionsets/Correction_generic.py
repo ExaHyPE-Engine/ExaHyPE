@@ -66,8 +66,8 @@ class Correction_generic(AbstractAderDGActionSet):
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsByFace, fluxElementsByFace, FR);
 
-      tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
-      faceCentre[d] -= 0.5*marker.h()[d];
+      tarch::la::Vector<Dimensions,double> x = marker.x();
+      x[d] -= 0.5*marker.h()[d];
       
       {% if IS_LINEAR is sameas True %}
       //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
@@ -83,7 +83,7 @@ class Correction_generic(AbstractAderDGActionSet):
           QR,
           timeStamp,
           timeStepSize,
-          faceCentre,
+          x,
           marker.h(),
           d //direction
           );
@@ -99,7 +99,7 @@ class Correction_generic(AbstractAderDGActionSet):
           QR,
           timeStamp,
           timeStepSize,
-          faceCentre,
+          x,
           marker.h(),
           d //direction
           );
@@ -136,7 +136,7 @@ class Correction_generic(AbstractAderDGActionSet):
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value, fluxElementsByFace, FL);
       std::copy_n(fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsByFace, fluxElementsByFace, FR);
 
-      faceCentre[d] += marker.h()[d];
+      x[d] += marker.h()[d];
 
       {% if IS_LINEAR is sameas True %}
       //template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
@@ -152,7 +152,7 @@ class Correction_generic(AbstractAderDGActionSet):
           QR,
           timeStamp,
           timeStepSize,
-          faceCentre,
+          x,
           marker.h(),
           d //direction
           );
@@ -168,7 +168,7 @@ class Correction_generic(AbstractAderDGActionSet):
           QR,
           timeStamp,
           timeStepSize,
-          faceCentre,
+          x,
           marker.h(),
           d //direction
           );

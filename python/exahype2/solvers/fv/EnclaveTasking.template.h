@@ -28,8 +28,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     /**
      * Refinement criterion
      *
-     * ExaHypE2 is guided by a maximum and minimum mesh (patch) size.
-     * All (dynamic) AMR is constrained by these values, i.e. if your
+     * ExaHypE 2 is guided by a maximum and minimum mesh (patch) size.
+     * All (dynamic) AMR is constrained by these values, i.e., if your
      * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
      * automatically refine. If you try to refine further than the
      * minimum mesh size, ExaHyPE 2 will ignore any refinement.
@@ -43,33 +43,34 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
      *  to a valid value throughout grid construction. That is: If
      *  t equals 0.0, you cannot assume that Q is properly initialised.
      *  Therefore, Q usually is only evaluated by dynamic AMR codes
-     *  which make the solution follow
+     *  which make the solution follow.
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-      [[maybe_unused]] double                                       t
+      const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      double                                       t
     ) override;
     {% endif %}
 
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void initialCondition(
-      [[maybe_unused]] double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-      [[maybe_unused]] bool                                         gridIsConstructed
+      double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      const tarch::la::Vector<Dimensions, int>&    index,
+      bool                                         gridIsConstructed
     ) override;
     {% endif %}
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void boundaryConditions(
-      [[maybe_unused]] const double* __restrict__                   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] double* __restrict__                         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
-      [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
-      [[maybe_unused]] double                                       t,
-      [[maybe_unused]] int                                          normal
+      const double* __restrict__                   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double* __restrict__                         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      double                                       t,
+      int                                          normal
     ) override;
     {% endif %}
 

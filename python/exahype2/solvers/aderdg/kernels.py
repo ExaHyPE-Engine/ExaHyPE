@@ -27,8 +27,8 @@ def create_abstract_solver_declarations(
 {% elif EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     virtual double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -36,8 +36,8 @@ def create_abstract_solver_declarations(
 {% else %}
     virtual double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -47,8 +47,8 @@ def create_abstract_solver_declarations(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     virtual void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -57,8 +57,8 @@ def create_abstract_solver_declarations(
 {% elif FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<empty>" %}
     virtual void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -70,8 +70,8 @@ def create_abstract_solver_declarations(
     virtual void nonconservativeProduct(
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-    const tarch::la::Vector<Dimensions, double> &faceCentre,
-    const tarch::la::Vector<Dimensions, double> &volumeH,
+    const tarch::la::Vector<Dimensions, double> &x,
+    const tarch::la::Vector<Dimensions, double> &h,
     double t,
     double dt,
     int normal,
@@ -80,8 +80,8 @@ def create_abstract_solver_declarations(
     virtual void nonconservativeProduct(
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-    const tarch::la::Vector<Dimensions, double> &faceCentre,
-    const tarch::la::Vector<Dimensions, double> &volumeH,
+    const tarch::la::Vector<Dimensions, double> &x,
+    const tarch::la::Vector<Dimensions, double> &h,
     double t,
     double dt,
     int normal,
@@ -97,8 +97,8 @@ def create_abstract_solver_declarations(
 {% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}
     virtual void multiplyMaterialParameterMatrix(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
-      const tarch::la::Vector<Dimensions, double> &volumeX,
-      const tarch::la::Vector<Dimensions, double> &volumeH,
+      const tarch::la::Vector<Dimensions, double> &x,
+      const tarch::la::Vector<Dimensions, double> &h,
       double t,
       double dt,
       int normal,
@@ -152,8 +152,8 @@ def create_abstract_solver_definitions(
 {% if EIGENVALUES_IMPLEMENTATION!="<empty>" and EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -165,8 +165,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q, // Q[3+0],
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -180,8 +180,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-  const tarch::la::Vector<Dimensions, double> &faceCentre,
-  const tarch::la::Vector<Dimensions, double> &volumeH,
+  const tarch::la::Vector<Dimensions, double> &x,
+  const tarch::la::Vector<Dimensions, double> &h,
   double t,
   double dt,
   int normal,
@@ -193,7 +193,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" and SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>"%}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& volumeCentre, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
   {{SOURCE_TERM_IMPLEMENTATION}}
 }
 {% endif %}
@@ -201,8 +201,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::l
 {% if MATERIAL_PARAM_IMPLEMENTATION!="<empty>" and MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
-  const tarch::la::Vector<Dimensions, double> &volumeX,
-  const tarch::la::Vector<Dimensions, double> &volumeH,
+  const tarch::la::Vector<Dimensions, double> &x,
+  const tarch::la::Vector<Dimensions, double> &h,
   double t,
   double dt,
   int normal,
@@ -253,8 +253,8 @@ def create_solver_declarations(
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
   virtual double maxEigenvalue(
     const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q,
-    const tarch::la::Vector<Dimensions,double>&  volumeX,
-    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  h,
     double                                       t,
     double                                       dt,
     int                                          normal
@@ -263,8 +263,8 @@ def create_solver_declarations(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(
       const {{COMPUTATION_PRECISIONS[0]}} * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -275,8 +275,8 @@ def create_solver_declarations(
     void nonconservativeProduct(
       const {{COMPUTATION_PRECISIONS[0]}}*__restrict__ Q,
       const {{COMPUTATION_PRECISIONS[0]}}*__restrict__ deltaQ,
-      const tarch::la::Vector<Dimensions, double> &faceCentre,
-      const tarch::la::Vector<Dimensions, double> &volumeH,
+      const tarch::la::Vector<Dimensions, double> &x,
+      const tarch::la::Vector<Dimensions, double> &h,
       double t,
       double dt,
       int normal,
@@ -288,8 +288,8 @@ def create_solver_declarations(
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
     void multiplyMaterialParameterMatrix(
       const {{COMPUTATION_PRECISIONS[0]}}* const Q, 
-      const tarch::la::Vector<Dimensions, double> &volumeX,
-      const tarch::la::Vector<Dimensions, double> &volumeH,
+      const tarch::la::Vector<Dimensions, double> &x,
+      const tarch::la::Vector<Dimensions, double> &h,
       double t,
       double dt,
       int normal,
@@ -312,8 +312,8 @@ def create_solver_declarations(
     template<typename T>
     double maxEigenvalue(
       const T* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -323,8 +323,8 @@ def create_solver_declarations(
     template<typename T>
     void flux(
       const T* __restrict__                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -336,8 +336,8 @@ def create_solver_declarations(
     void nonconservativeProduct(
       const T*__restrict__ Q,
       const T*__restrict__ deltaQ,
-      const tarch::la::Vector<Dimensions, double> &volumeX,
-      const tarch::la::Vector<Dimensions, double> &volumeH,
+      const tarch::la::Vector<Dimensions, double> &x,
+      const tarch::la::Vector<Dimensions, double> &h,
       double t,
       double dt,
       int normal,
@@ -352,8 +352,8 @@ def create_solver_declarations(
     template<typename T>
     void multiplyMaterialParameterMatrix(
       const T* const Q, 
-      const tarch::la::Vector<Dimensions, double> &volumeX,
-      const tarch::la::Vector<Dimensions, double> &volumeH,
+      const tarch::la::Vector<Dimensions, double> &x,
+      const tarch::la::Vector<Dimensions, double> &h,
       double t,
       double dt,
       int normal,
@@ -374,41 +374,41 @@ def create_solver_declarations(
 
     double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal
     ){
-      return maxEigenvalue<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal);
+      return maxEigenvalue<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, normal);
     }
 {% endif %}
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
     ){
-      flux<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal, F);
+      flux<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, normal, F);
     }
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     void nonconservativeProduct(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ Q,
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ deltaQ,
-      const tarch::la::Vector<Dimensions, double> &volumeX,
-      const tarch::la::Vector<Dimensions, double> &volumeH,
+      const tarch::la::Vector<Dimensions, double> &x,
+      const tarch::la::Vector<Dimensions, double> &h,
       double t,
       double dt,
       int normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ BgradQ) override 
     {
       
-      nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, volumeX, volumeH, t, dt, normal, BgradQ);
+      nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, x, h, t, dt, normal, BgradQ);
 
     }
 {% endif %}
@@ -420,14 +420,14 @@ def create_solver_declarations(
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
     void multiplyMaterialParameterMatrix(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
-      const tarch::la::Vector<Dimensions, double> &volumeX,
-      const tarch::la::Vector<Dimensions, double> &volumeH,
+      const tarch::la::Vector<Dimensions, double> &x,
+      const tarch::la::Vector<Dimensions, double> &h,
       double t,
       double dt,
       int normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs) override {
       
-      multiplyMaterialParameterMatrix<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal, rhs);
+      multiplyMaterialParameterMatrix<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, normal, rhs);
 
     }
 {% endif %}
@@ -476,13 +476,13 @@ def create_solver_definitions(
 
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal
 ){
-  logTraceInWith3Arguments( "eigenvalue(...)", volumeCentre, t, normal );
+  logTraceInWith3Arguments( "eigenvalue(...)", x, t, normal );
   // @todo implement
   logTraceOut( "eigenvalue(...)" );
 }
@@ -492,8 +492,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -510,14 +510,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ deltaQ, //deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions, double> &volumeX,
-  const tarch::la::Vector<Dimensions, double> &volumeH,
+  const tarch::la::Vector<Dimensions, double> &x,
+  const tarch::la::Vector<Dimensions, double> &h,
   double t,
   double dt,
   int normal,
   {{COMPUTATION_PRECISIONS[0]}} *__restrict__ BgradQ //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ){
-  logTraceInWith3Arguments( "nonconservativeProduct(...)", volumeX, t, normal );
+  logTraceInWith3Arguments( "nonconservativeProduct(...)", x, t, normal );
   // @todo implement
   logTraceOut( "nonconservativeProduct(...)" );
 }
@@ -540,8 +540,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
   const {{COMPUTATION_PRECISIONS[0]}}* const Q,
-  const tarch::la::Vector<Dimensions, double> &volumeX,
-  const tarch::la::Vector<Dimensions, double> &volumeH,
+  const tarch::la::Vector<Dimensions, double> &x,
+  const tarch::la::Vector<Dimensions, double> &h,
   double t,
   double dt,
   int normal,
@@ -584,8 +584,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 template<typename T>
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const T* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -598,8 +598,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeSize,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -612,8 +612,8 @@ template double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const T* __restrict__                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -627,8 +627,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -643,14 +643,14 @@ template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const T*__restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const T*__restrict__ deltaQ, //deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions, double> &volumeX,
-  const tarch::la::Vector<Dimensions, double> &volumeH,
+  const tarch::la::Vector<Dimensions, double> &x,
+  const tarch::la::Vector<Dimensions, double> &h,
   double t,
   double dt,
   int normal,
   T*__restrict__ BgradQ //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ){
-  logTraceInWith3Arguments( "nonconservativeProduct(...)", volumeX, t, normal );
+  logTraceInWith3Arguments( "nonconservativeProduct(...)", x, t, normal );
   // @todo implement
   logTraceOut( "nonconservativeProduct(...)" );
 }
@@ -659,8 +659,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-  const tarch::la::Vector<Dimensions, double> &volumeX,
-  const tarch::la::Vector<Dimensions, double> &volumeH,
+  const tarch::la::Vector<Dimensions, double> &x,
+  const tarch::la::Vector<Dimensions, double> &h,
   double t,
   double dt,
   int normal,
@@ -693,8 +693,8 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
   const T* const Q,
-  const tarch::la::Vector<Dimensions, double> &volumeX,
-  const tarch::la::Vector<Dimensions, double> &volumeH,
+  const tarch::la::Vector<Dimensions, double> &x,
+  const tarch::la::Vector<Dimensions, double> &h,
   double t,
   double dt,
   int normal,
@@ -706,7 +706,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatri
 }
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const tarch::la::Vector<Dimensions, double> &volumeX, const tarch::la::Vector<Dimensions, double> &volumeH, double t, double dt, int normal, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs);
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const tarch::la::Vector<Dimensions, double> &x, const tarch::la::Vector<Dimensions, double> &h, double t, double dt, int normal, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs);
 {% endfor%}
 {% endif %}
 

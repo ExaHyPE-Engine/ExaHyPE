@@ -76,6 +76,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
 
           flux( &cellQin[enumeratorIn(currentCell, contributingNodeIndex, 0)],
                 position,
+                h,
                 t,
                 dt,
                 dim, //normal
@@ -111,6 +112,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
         source(
           &cellQin[enumeratorIn(currentCell, dof, 0)],
           position,
+          h,
           t,
           dt,
           sourceValues
@@ -167,6 +169,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
             &cellQin[enumeratorIn(currentCell, dof, 0)],
             gradientValues,
             position,
+            h,
             t,
             dt,
             dim,
@@ -224,6 +227,7 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
             order,
             QuadratureNodes1d
           ),
+          cellData.cellSize[cellIndex],
           cellData.t[cellIndex],
           cellData.dt[cellIndex],
           direction

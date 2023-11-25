@@ -2,7 +2,6 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include <vector>
 
 #include "tarch/la/la.h"
@@ -18,8 +17,6 @@
 #include "Functors.h"
 
 #include "exahype2/fv/PatchUtils.h"
-
-
 
 namespace exahype2 {
   namespace dg {
@@ -290,6 +287,5 @@ namespace exahype2 {
     );
   }
 }
-
 
 #include "DGUtils.cpph"

@@ -41,7 +41,8 @@ def create_abstract_solver_declarations(
     #endif
     static double maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -61,7 +62,8 @@ def create_abstract_solver_declarations(
      */
     virtual double maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -78,7 +80,8 @@ def create_abstract_solver_declarations(
     #endif
     static void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -93,7 +96,8 @@ def create_abstract_solver_declarations(
     {% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -113,7 +117,8 @@ def create_abstract_solver_declarations(
     static void nonconservativeProduct(
       const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -129,7 +134,8 @@ def create_abstract_solver_declarations(
     virtual void nonconservativeProduct(
       const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__                  deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -148,7 +154,8 @@ def create_abstract_solver_declarations(
     #endif
     static void sourceTerm(
       const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       double * __restrict__ S,
@@ -162,7 +169,8 @@ def create_abstract_solver_declarations(
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
     virtual void sourceTerm(
       const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       double * __restrict__ S
@@ -171,7 +179,7 @@ def create_abstract_solver_declarations(
 
     {% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
-     * Depending on the implementation, this variant might be slow as it 
+     * Depending on the implementation, this variant might be slow as it
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */
@@ -181,6 +189,7 @@ def create_abstract_solver_declarations(
     void pointSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       double * __restrict__ S,
@@ -195,6 +204,7 @@ def create_abstract_solver_declarations(
     virtual void pointSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       double * __restrict__ S
@@ -227,7 +237,8 @@ def create_abstract_solver_definitions(
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -239,7 +250,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -253,7 +265,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * __restrict__                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -266,7 +279,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__                  Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   double * __restrict__                        S
@@ -284,6 +298,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   double * __restrict__                        S
@@ -302,7 +317,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 #endif
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -321,7 +337,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
   double                                       dt,
   int                                          normal,
@@ -346,7 +363,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
       const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
   double                                       dt,
   int                                          normal,
@@ -370,7 +388,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       double * __restrict__ S,
@@ -394,6 +413,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       double * __restrict__ S,
@@ -438,7 +458,8 @@ def create_solver_declarations(
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     virtual void sourceTerm(
       const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       double * __restrict__ S
@@ -450,6 +471,7 @@ def create_solver_declarations(
     virtual void pointSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       double * __restrict__ S
@@ -466,7 +488,8 @@ def create_solver_declarations(
      */
     virtual double maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -476,7 +499,8 @@ def create_solver_declarations(
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     virtual void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -488,7 +512,8 @@ def create_solver_declarations(
     virtual void nonconservativeProduct(
       const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -516,8 +541,8 @@ def create_solver_declarations(
     #endif
      static void sourceTerm(
        const double * __restrict__ Q,
-       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       const tarch::la::Vector<Dimensions,double>&  x,
+       const tarch::la::Vector<Dimensions,double>&  h,
        double                                       t,
        double                                       dt,
        double * __restrict__ S,
@@ -549,8 +574,8 @@ def create_solver_declarations(
     #endif
      static void pointSource(
        const double * __restrict__ Q,
-       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       const tarch::la::Vector<Dimensions,double>&  x,
+       const tarch::la::Vector<Dimensions,double>&  h,
        double                                       t,
        double                                       dt,
        double * __restrict__ S,
@@ -581,7 +606,8 @@ def create_solver_declarations(
     #endif
     static double maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -612,7 +638,8 @@ def create_solver_declarations(
     #endif
     static void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -646,6 +673,7 @@ def create_solver_declarations(
       const double * __restrict__                  Q,       // Q[5+0],
       const double * __restrict__                  deltaQ,    // deltaQ[5+0]
       const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -682,7 +710,8 @@ def create_solver_definitions(
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -696,13 +725,14 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, t, dt, normal );
+  logTraceInWith4Arguments( "flux(...)", x, t, dt, normal );
   // @todo implement
   logTraceOut( "flux(...)" );
 }
@@ -712,13 +742,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * __restrict__                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
   double * __restrict__                        BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, t, dt, normal );
+  logTraceInWith4Arguments( "nonconservativeProduct(...)", x, t, dt, normal );
   // @todo implement
   logTraceOut( "nonconservativeProduct(...)" );
 }
@@ -727,12 +758,13 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  logTraceInWith3Arguments( "sourceTerm(...)", volumeCentre, t, dt );
+  logTraceInWith3Arguments( "sourceTerm(...)", x, t, dt );
 
   // @todo implement and ensure that all entries of S are properly set
   for (int i=0; i<NumberOfUnknowns; i++) {
@@ -749,7 +781,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
     #endif
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -768,7 +801,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -789,7 +823,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * __restrict__                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -809,7 +844,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
     #endif
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   double * __restrict__ S,
@@ -829,7 +865,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #error  point sources not implemented yet
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   double * __restrict__ S,
@@ -950,48 +987,51 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
       [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal,
         double * __restrict__                        F
       )->void {
         {% if FLUX_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,dt,normal,F);
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,h,t,dt,normal,F);
         {% endif %}
       }, //flux
       [&](
           const double * __restrict__                  Q,
           const double * __restrict__                  deltaQ,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          const tarch::la::Vector<Dimensions,double>&  h,
           double                                       t,
           double                                       dt,
           int                                          normal,
           double * __restrict__                        F
         ) -> void {
           {% if NCP_IMPLEMENTATION!="<none>" %}
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, faceCentre, t, dt, normal, F);
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, F);
           {% endif %}
         }, //ncp
       [&](
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         double * __restrict__                        S
       ) -> void {
         {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,dt,S);
+        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,h,t,dt,S);
         {% endif %}
       }, //source
       [&](
         const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  cellCentre,
-        const tarch::la::Vector<Dimensions,double>&  cellH,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt
       ) -> std::vector<::exahype2::dg::PointSource> {
         {% if POINT_SOURCES_IMPLEMENTATION!="<none>" %}
-        return repositories::{{SOLVER_INSTANCE}}.pointSources(Q,cellCentre,cellH,t,dt);
+        return repositories::{{SOLVER_INSTANCE}}.pointSources(Q,x,h,t,dt);
         {% else %}
         return std::vector<::exahype2::dg::PointSource>();
         {% endif %}

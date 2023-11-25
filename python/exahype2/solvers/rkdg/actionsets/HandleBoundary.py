@@ -11,7 +11,6 @@ import jinja2
 
 class HandleBoundary(AbstractRungeKuttaDGActionSet):
     """
-
     The linear combination of the Runge Kutta trials has to be projected onto
     the faces, so we can then solve the Riemann problems. So the projection
     happens in one grid sweep, the corresponding Riemann solve in the next one.
@@ -20,8 +19,6 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
 
     We rely on ProjectLinearCombinationOfEstimatesOntoFaces to project the
     current solution onto the faces.
-
-
     """
 
     TemplateHandleBoundary_Prologue = """
@@ -45,7 +42,6 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
     
     assertion5( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
     assertion5( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution, marker.toString(), fineGridFace{{SOLVER_NAME}}FaceLabel.toString() );
-
 """
 
     TemplateHandleBoundary_KernelCalls = """
@@ -54,17 +50,18 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
         const double * __restrict__                  Qinside,
         double * __restrict__                        Qoutside,
         const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal
       ) -> void {
-        repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, x, t, normal );
-      },  
+        repositories::{{SOLVER_INSTANCE}}.boundaryConditions(Qinside, Qoutside, x, h, t, normal);
+      },
       marker.x(),
       marker.h(),
       timeStamp,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
-      {{ORDER}},                                                   
+      {{ORDER}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       marker.getSelectedFaceNumber(),
@@ -74,7 +71,6 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
 """
 
     TemplateHandleBoundary_Epilogue = """
-
     if (marker.getSelectedFaceNumber()<Dimensions) {
       fineGridFace{{SOLVER_NAME}}FaceLabel.setUpdatedTimeStamp(0, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(1) );
       fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp    (0, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1) );
@@ -91,14 +87,12 @@ class HandleBoundary(AbstractRungeKuttaDGActionSet):
 
     def __init__(self, solver, guard):
         """
-
         guard_project: String (C++ code)
           Predicate which controls if the solution is actually projected
 
         guard_safe_old_time_step: String (C++ code)
           Predicate which controls if the projection should be copied into
           the old solution and the time step should also be moved over
-
         """
         super(HandleBoundary, self).__init__(solver)
         self.guards = []

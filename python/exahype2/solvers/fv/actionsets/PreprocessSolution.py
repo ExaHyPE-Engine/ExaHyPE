@@ -72,8 +72,8 @@ class VolumeWisePreprocessSolution(AbstractFVActionSet):
     variables which are well-defined:
     
     - value: Is a pointer to the current finite volume's data
-    - volumeX: A tarch::la::Vector over doubles
-    - volumeH: A tarch::la::Vector over doubles
+    - x: A tarch::la::Vector over doubles
+    - h: A tarch::la::Vector over doubles
     
     
     operation_per_point: String
@@ -95,8 +95,8 @@ class VolumeWisePreprocessSolution(AbstractFVActionSet):
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       double* value   = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
-      auto    volumeX = ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume);
-      auto    volumeH = ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}});
+      auto    x = ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume);
+      auto    h = ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}});
       
       """ + operation_per_point + """
       

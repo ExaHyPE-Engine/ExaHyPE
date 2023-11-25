@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.ADERDG import PrecisionType
+from exahype2.solvers.aderdg.ADERDG import Polynomials
 from exahype2.solvers.aderdg.SingleSweep import SingleSweep
 
 from exahype2.solvers.aderdg.kernels import create_abstract_solver_declarations
@@ -45,15 +46,28 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         min_cell_h,
         max_cell_h,
         time_step_relaxation,
-        flux=PDETerms.User_Defined_Implementation,
-        ncp=PDETerms.None_Implementation,
-        point_source=0,
-        boundary_conditions=PDETerms.User_Defined_Implementation,
-        refinement_criterion=PDETerms.None_Implementation,
-        initial_conditions=PDETerms.User_Defined_Implementation,
-        source_term=PDETerms.None_Implementation,
-        material_parameters=PDETerms.None_Implementation,
         plot_grid_properties=False,
+        # Kernel optimisations
+        is_linear=False,
+        polynomials=Polynomials.Gauss_Legendre,
+        use_kernel_generator=True,
+        use_libxsmm=False,
+        use_BLIS=False,
+        use_Eigen=False,
+        use_libxsmm_JIT=False,
+        predictor_computation_precisions=["double"],
+        corrector_computation_precision="double",
+        solution_persistent_storage_precision="double",
+        precision_criterion_implementation=PDETerms.None_Implementation,
+        riemann_solver_implementation=PDETerms.None_Implementation,
+        hold_cell_data_on_heap_with_smart_pointer = False,
+        hold_face_data_on_heap_with_smart_pointer = False,
+        use_vectorized_PDE=False,
+        architecture="noarch",
+        use_CERK_guess=False,
+        use_split_CK=False,
+        predictor_recompute=False,
+        initialize_patches=False,
     ):
         super(GlobalAdaptiveTimeStep, self).__init__(
             name,
@@ -63,22 +77,30 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             min_cell_h,
             max_cell_h,
             plot_grid_properties,
+            is_linear,
+            polynomials,
+            use_kernel_generator,
+            use_libxsmm,
+            use_BLIS,
+            use_Eigen,
+            use_libxsmm_JIT,
+            predictor_computation_precisions,
+            corrector_computation_precision,
+            solution_persistent_storage_precision,
+            precision_criterion_implementation,
+            riemann_solver_implementation,
+            hold_cell_data_on_heap_with_smart_pointer,
+            hold_face_data_on_heap_with_smart_pointer,
+            use_vectorized_PDE,
+            architecture,
+            use_CERK_guess,
+            use_split_CK,
+            predictor_recompute,
+            initialize_patches,
         )
 
         self._cflSafetyFactor = time_step_relaxation
 
-        self.set_implementation(
-            boundary_conditions=boundary_conditions,
-            refinement_criterion=refinement_criterion,
-            initial_conditions=initial_conditions,
-            additional_action_set_includes="",
-            additional_user_includes="",
-            flux=flux,
-            ncp=ncp,
-            source_term=source_term,
-            material_parameters=material_parameters,
-            point_source=point_source,
-        )
 
     def set_implementation(
         self,

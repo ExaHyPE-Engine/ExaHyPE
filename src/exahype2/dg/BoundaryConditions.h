@@ -3,12 +3,10 @@
 #pragma once
 
 
-
-#include "tarch/la/Vector.h"
-#include "peano4/utils/Globals.h"
-
-
 #include <functional>
+
+#include "peano4/utils/Globals.h"
+#include "tarch/la/Vector.h"
 
 
 namespace exahype2 {
@@ -37,26 +35,25 @@ namespace exahype2 {
      *
      */
     void applyBoundaryConditions(
-      std::function< void(
-        const double* __restrict__                   Qinside,
-        double * __restrict__                        Qoutside,
-        const tarch::la::Vector<Dimensions,double>&  x,
+      std::function<void(
+        const double* __restrict__ Qinside,
+        double* __restrict__ Qoutside,
+        const tarch::la::Vector<Dimensions, double>& x,
+        const tarch::la::Vector<Dimensions, double>& h,
         double                                       t,
         double                                       dt,
         int                                          normal
-      ) >   boundaryCondition,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  cellSize,
+      )>                                           boundaryCondition,
+      const tarch::la::Vector<Dimensions, double>& faceCentre,
+      const tarch::la::Vector<Dimensions, double>& cellSize,
       double                                       t,
       double                                       dt,
       int                                          order,
       int                                          unknowns,
       int                                          auxiliaryVariables,
       int                                          faceNumber,
-      const double* __restrict__                   quadraturePoints,
-      double* __restrict__                         Q
+      const double* __restrict__ quadraturePoints,
+      double* __restrict__ Q
     );
-  }
-}
-
-
+  } // namespace dg
+} // namespace exahype2

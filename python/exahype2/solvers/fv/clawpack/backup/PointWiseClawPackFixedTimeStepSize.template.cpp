@@ -8,14 +8,14 @@ tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLA
 {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
 ) {
-  logTraceInWith3Arguments( "refinementCriterion(...)", volumeX, volumeH, t );
+  logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
+  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
 
@@ -28,11 +28,12 @@ tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLA
 {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions, int>&    index,
   bool                                         gridIsConstructed
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructed );
+  logTraceInWith3Arguments( "initialCondition(...)", x, h, gridIsConstructed );
 
   // @todo Implement your stuff here
 
@@ -44,13 +45,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   double * __restrict__ S // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
 ) {
-  logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
+  logTraceInWith4Arguments( "sourceTerm(...)", x, h, t, dt );
   // @todo implement
   logTraceOutWith( "sourceTerm(...)" );
 }
@@ -62,11 +63,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   double * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   int                                          normal
 ) {
-  logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
+  logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, h, t, normal );
   // @todo implement
   logTraceOut( "boundaryConditions(...)" );
 }

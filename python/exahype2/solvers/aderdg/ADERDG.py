@@ -73,9 +73,29 @@ class ADERDG(object):
         auxiliary_variables,
         min_cell_h,
         max_cell_h,
-        plot_grid_properties=False,
+        plot_grid_properties,
+        # Kernel optimisations
+        is_linear,
+        polynomials,
+        use_kernel_generator,
+        use_libxsmm,
+        use_BLIS,
+        use_Eigen,
+        use_libxsmm_JIT,
+        predictor_computation_precisions,
+        corrector_computation_precision,
+        solution_persistent_storage_precision,
+        precision_criterion_implementation,
+        riemann_solver_implementation,
+        hold_cell_data_on_heap_with_smart_pointer,
+        hold_face_data_on_heap_with_smart_pointer,
+        use_vectorized_PDE,
+        architecture,
+        use_CERK_guess,
+        use_split_CK,
+        predictor_recompute,
+        initialize_patches,
     ):
-        # name of the solver
         self._name = name
 
         """
@@ -146,37 +166,85 @@ class ADERDG(object):
                 + ")"
             )
 
-        """
-    for kernel optimizations, these all default to the "unoptimized" version but can be set using the function
-    add_kernel_optimizations(). Some of these are currently unused but are left as placeholders because they
-    exist in the kernelgenerator even though they haven't been connected.
-    """
-        self._is_linear = False
-        self._polynomials = Polynomials.Gauss_Legendre
-        self._basis = GaussLegendreBasis(order + 1)
-        self._use_kernel_generator = True
-        self._use_libxsmm = False
-        self._use_BLIS = False
-        self._use_Eigen = False
-        self._use_libxsmm_JIT = False
-        self._use_vectorized_PDE = False
-        self._architecture = "noarch"
-        self._use_CERK_Guess = False
-        self._use_split_CK = False
-        self._predictor_recompute = False
-        self._initialize_patches = False
+        if polynomials is Polynomials.Gauss_Legendre:
+            self._basis = GaussLegendreBasis(self._order + 1)
+        elif polynomials is Polynomials.Gauss_Lobatto:
+            self._basis = GaussLobattoBasis(self._order + 1)
+        else:
+            raise Exception(
+                "No proper basis chosen: {}, valid options are Gauss_Legendre and Gauss_Lobatto nodes".format(
+                    polynomials
+                )
+            )
 
-        self._predictor_computation_precisions = [PrecisionType["double"]]
-        self._corrector_computation_precision = PrecisionType["double"]
-        self._solution_persistent_storage_precision = PrecisionType["double"]
+        self._is_linear = is_linear
+        self._polynomials = polynomials
+
+        self._use_kernel_generator = use_kernel_generator
+        self._use_libxsmm = use_libxsmm
+        self._use_BLIS = use_BLIS
+        self._use_Eigen = use_Eigen
+        self._use_libxsmm_JIT = use_libxsmm_JIT
+
         self._use_half_precision = False
+        precisions = [
+            solution_persistent_storage_precision,
+            corrector_computation_precision,
+        ]
+        precisions.extend(predictor_computation_precisions)
+        for value in precisions:
+            if value not in PrecisionType.keys():
+                raise AssertionError(
+                    "one of the chosen precisions was not a valid choice. valid choices are: "
+                    + ", ".join(PrecisionType.keys())
+                )
+            if PrecisionType[value]=="std::float16_t" or PrecisionType[value]=="std::bfloat16_t":
+              self._use_half_precision = True
 
-        #determines whether to hold respectively the cells and faces on the stack or heap (with smart pointers)
-        self._hold_cell_data_on_heap_with_smart_pointer = False
-        self._hold_face_data_on_heap_with_smart_pointer = False
+        self._predictor_computation_precisions = []
+        for precision in predictor_computation_precisions:
+            if PrecisionType[precision] not in self._predictor_computation_precisions:
+                self._predictor_computation_precisions.append(PrecisionType[precision])
+        self._corrector_computation_precision = PrecisionType[
+            corrector_computation_precision
+        ]
+        self._solution_persistent_storage_precision = PrecisionType[
+            solution_persistent_storage_precision
+        ]
+
+        if precision_criterion_implementation is not PDETerms.None_Implementation:
+            self._precision_criterion_implementation = (
+                precision_criterion_implementation
+            )
+        if (
+            len(self._predictor_computation_precisions) > 1
+            and self._precision_criterion_implementation is PDETerms.None_Implementation
+        ):
+            self._precision_criterion_implementation = (
+                PDETerms.User_Defined_Implementation
+            )
+
+        if riemann_solver_implementation is not PDETerms.None_Implementation:
+            self._riemann_solver_implementation = riemann_solver_implementation
+
+        #move data to heap if requested
+        self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
+        self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
+
+        if use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute:
+            raise Exception(
+                "The option you have chosen has not yet been implemented, it currently only exists in the code as a placeholder for future expansion"
+            )
+
+        self._use_vectorized_PDE = use_vectorized_PDE
+        self._architecture = architecture
+        self._use_CERK_Guess = use_CERK_guess
+        self._use_split_CK = use_split_CK
+        self._predictor_recompute = predictor_recompute
+        self._initialize_patches = initialize_patches
 
         """
-        if this is turned to true, the solver will provide the user with a function to compute the exact solution
+        If this is turned to true, the solver will provide the user with a function to compute the exact solution
         and, using this, it will after the last timestep compute the l1, l2 and linf norms of the total error
         integrated over the entire domain.
         """
@@ -344,7 +412,6 @@ class ADERDG(object):
               self._flux_estimates_projection,
               self._corrector_computation_precision
           )
-
 
         # custom merge implementation takes into account that the faces project such that the left cell projects to the left half of the face and the right cell projects to the right half
         self._rhs_estimates_projection.generator.merge_method_definition = (
@@ -1271,111 +1338,3 @@ class ADERDG(object):
         )
         self._action_set_postprocess_solution._compute_kernel += add_final_action_for_error_measurement()
         self._action_set_postprocess_solution.descend_invocation_order = 3
-
-
-    """
-    Various options that can be specified in order to optimize the generated code for different options.
-    """
-
-    def add_kernel_optimizations(
-        self,
-        is_linear=False,
-        polynomials=Polynomials.Gauss_Legendre,
-        use_kernel_generator=True,
-        use_libxsmm=False,
-        use_BLIS=False,
-        use_Eigen=False,
-        use_libxsmm_JIT=False,
-        predictor_computation_precisions=["double"],
-        corrector_computation_precision="double",
-        solution_persistent_storage_precision="double",
-        precision_criterion_implementation=PDETerms.None_Implementation,
-        riemann_solver_implementation=PDETerms.None_Implementation,
-        hold_cell_data_on_heap_with_smart_pointer = False,
-        hold_face_data_on_heap_with_smart_pointer = False,
-        use_vectorized_PDE=False,
-        architecture="noarch",
-        use_CERK_guess=False,
-        use_split_CK=False,
-        predictor_recompute=False,
-        initialize_patches=False,
-    ):
-        if polynomials is Polynomials.Gauss_Legendre:
-            self._basis = GaussLegendreBasis(self._order + 1)
-        elif polynomials is Polynomials.Gauss_Lobatto:
-            self._basis = GaussLobattoBasis(self._order + 1)
-        else:
-            raise Exception(
-                "No proper basis chosen: {}, valid options are Gauss_Legendre and Gauss_Lobatto nodes".format(
-                    polynomials
-                )
-            )
-
-        self._is_linear = is_linear
-        self._polynomials = polynomials
-
-        self._use_kernel_generator = use_kernel_generator
-        self._use_libxsmm = use_libxsmm
-        self._use_BLIS = use_BLIS
-        self._use_Eigen = use_Eigen
-        self._use_libxsmm_JIT = use_libxsmm_JIT
-
-        precisions = [
-            solution_persistent_storage_precision,
-            corrector_computation_precision,
-        ]
-        precisions.extend(predictor_computation_precisions)
-        for value in precisions:
-            if value not in PrecisionType.keys():
-                raise AssertionError(
-                    "one of the chosen precisions was not a valid choice. valid choices are: "
-                    + ", ".join(PrecisionType.keys())
-                )
-            if PrecisionType[value]=="std::float16_t" or PrecisionType[value]=="std::bfloat16_t":
-              self._use_half_precision = True
-
-        self._predictor_computation_precisions = []
-        for precision in predictor_computation_precisions:
-            if PrecisionType[precision] not in self._predictor_computation_precisions:
-                self._predictor_computation_precisions.append(PrecisionType[precision])
-        self._corrector_computation_precision = PrecisionType[
-            corrector_computation_precision
-        ]
-        self._solution_persistent_storage_precision = PrecisionType[
-            solution_persistent_storage_precision
-        ]
-
-        if precision_criterion_implementation is not PDETerms.None_Implementation:
-            self._precision_criterion_implementation = (
-                precision_criterion_implementation
-            )
-        if (
-            len(self._predictor_computation_precisions) > 1
-            and self._precision_criterion_implementation is PDETerms.None_Implementation
-        ):
-            self._precision_criterion_implementation = (
-                PDETerms.User_Defined_Implementation
-            )
-
-        if riemann_solver_implementation is not PDETerms.None_Implementation:
-            self._riemann_solver_implementation = riemann_solver_implementation
-
-        #move data to heap if requested
-        self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
-        self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
-
-        if use_CERK_guess or use_split_CK or use_vectorized_PDE or predictor_recompute:
-            raise Exception(
-                "The option you have chosen has not yet been implemented, it currently only exists in the code as a placeholder for future expansion"
-            )
-
-        self._use_vectorized_PDE = use_vectorized_PDE
-        self._architecture = architecture
-        self._use_CERK_Guess = use_CERK_guess
-        self._use_split_CK = use_split_CK
-        self._predictor_recompute = predictor_recompute
-
-        self._initialize_patches = initialize_patches
-
-        self.create_data_structures()
-        self.create_action_sets()
