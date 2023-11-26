@@ -26,7 +26,10 @@ ExaHyPE2Sources = \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
   dg/Riemann.cpp \
+  dg/fluxaverage/FluxAverage.cpp \
+  dg/laxfriedrichs/LaxFriedrichs.cpp \
   dg/rusanov/Rusanov.cpp \
+  dg/rusanov/tests/RiemannTest.cpp \
   dg/tests/CellIntegralTest.cpp \
   dg/tests/DGUtilsTest.cpp \
   dg/tests/RiemannTest.cpp \
@@ -49,7 +52,6 @@ ExaHyPE2Sources = \
   fd/fd4/FD4_patchwise_functors.cpp \
   fv/rusanov/rusanov.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
-  dg/rusanov/tests/RiemannTest.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \
   fv/rusanov/tests/ApplySplit1DRiemannToPatchTest.cpp
 
