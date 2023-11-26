@@ -34,7 +34,7 @@ class PDE(object):
     ):
         """
         Return the C code that maps the quantities from Q onto
-        properly labelled quantities
+        properly labelled quantities.
         """
         result = ""
         for i in range(0, self.unknowns + self.auxiliary_variables):
@@ -43,35 +43,55 @@ class PDE(object):
             result += sympy.printing.cxxcode(self.Q[i])
             if is_boundary:
                 result += " = Qinside[" + str(i) + "];\n"
-                result += "nonCriticalAssertion(Qinside[" + str(i) + "] == Qinside[" + str(i) + "]);\n"
+                result += (
+                    "nonCriticalAssertion(Qinside["
+                    + str(i)
+                    + "] == Qinside["
+                    + str(i)
+                    + "]);\n"
+                )
             else:
                 result += " = Q[" + str(i) + "];\n"
-                result += "nonCriticalAssertion(Q[" + str(i) + "] == Q[" + str(i) + "]);\n"
-            result += "assertion(!std::isnan(" + sympy.printing.cxxcode(self.Q[i]) + "));\n"
+                result += (
+                    "nonCriticalAssertion(Q[" + str(i) + "] == Q[" + str(i) + "]);\n"
+                )
+            result += (
+                "assertion(!std::isnan(" + sympy.printing.cxxcode(self.Q[i]) + "));\n"
+            )
 
         if has_delta:
             for i in range(0, self.unknowns + self.auxiliary_variables):
-                result += "nonCriticalAssertion(deltaQ[" + str(i) + "] == deltaQ[" + str(i) + "]);\n"
+                result += (
+                    "nonCriticalAssertion(deltaQ["
+                    + str(i)
+                    + "] == deltaQ["
+                    + str(i)
+                    + "]);\n"
+                )
                 result += "[[maybe_unused]] const "
                 result += "double "
                 result += sympy.printing.cxxcode(self.delta_Q[i])
                 result += " = deltaQ[" + str(i) + "];\n"
-                result += "assertion(!std::isnan(" + sympy.printing.cxxcode(self.delta_Q[i]) + "));\n"
+                result += (
+                    "assertion(!std::isnan("
+                    + sympy.printing.cxxcode(self.delta_Q[i])
+                    + "));\n"
+                )
 
         for i in range(0, self.dimensions):
             result += "const double x_"
             result += str(i)
             result += " = "
-            if is_cell_mapping:
-                result += "volumeCentre"
+            if is_cell_mapping:  #  TODO: Remove is_cell_mapping?
+                result += "x"
             else:
-                result += "faceCentre"
+                result += "x"
             result += "(" + str(i) + ");\n"
         for i in range(0, self.dimensions):
             result += "const double h_"
             result += str(i)
             result += " = "
-            result += "volumeH"
+            result += "h"
             result += "(" + str(i) + ");\n"
 
         return result
@@ -87,7 +107,7 @@ class PDE(object):
         self.Q[offset_in_Q] = sympy.symbols(name)
         return self.Q[offset_in_Q]
 
-    def name_auxiliary_variable(self,number,name):
+    def name_auxiliary_variable(self, number, name):
         self.Q[number + self.unknowns] = sympy.symbols(name)
         return self.Q[number + self.unknowns]
 
@@ -119,9 +139,21 @@ class PDE(object):
         for i in range(0, self.unknowns + self.auxiliary_variables):
             result += "assertion(!std::isnan(Qoutside[" + str(i) + "]));\n"
             result += "assertion(!std::isnan(Qinside[" + str(i) + "]));\n"
-            result += "nonCriticalAssertion(Qinside[" + str(i) + "] == Qinside[" + str(i) + "]);\n"
+            result += (
+                "nonCriticalAssertion(Qinside["
+                + str(i)
+                + "] == Qinside["
+                + str(i)
+                + "]);\n"
+            )
             result += "Qoutside[" + str(i) + "] = Qinside[" + str(i) + "];\n"
-            result += "nonCriticalAssertion(Qoutside[" + str(i) + "] == Qoutside[" + str(i) + "]);\n"
+            result += (
+                "nonCriticalAssertion(Qoutside["
+                + str(i)
+                + "] == Qoutside["
+                + str(i)
+                + "]);\n"
+            )
         return result
 
     def implementation_of_boundary_conditions(self, invoke_evalf_before_output=False):

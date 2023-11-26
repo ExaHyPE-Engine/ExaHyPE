@@ -44,13 +44,15 @@ class FirstOrderConservativePDEFormulation(PDE):
             result += "d_t(" + str(self.Q[i]) + "(x)) + div("
             result += str(self.F[i])
             if isinstance(self.ncp[i], numbers.Number):
-              result += " + "
-              result += str(self.ncp[i])
+                result += " + "
+                result += str(self.ncp[i])
             result += ") = "
-            if isinstance(self.sources[i], numbers.Number) or isinstance(self.sources[i], sympy.Expr):
-              result += str(self.sources[i]) + "\n"
+            if isinstance(self.sources[i], numbers.Number) or isinstance(
+                self.sources[i], sympy.Expr
+            ):
+                result += str(self.sources[i]) + "\n"
             else:
-              result += "0\n"
+                result += "0\n"
         result += "\n"
         for i in range(0, self.unknowns):
             result += "\lambda_{max," + str(i) + "}(x) = "
@@ -67,13 +69,15 @@ class FirstOrderConservativePDEFormulation(PDE):
                     result += ", "
                 result += str(self.F[i][j])
                 if isinstance(self.ncp[i], numbers.Number):
-                  result += " + "
-                  result += str(self.ncp[i][j])
+                    result += " + "
+                    result += str(self.ncp[i][j])
             result += ") & = & "
-            if isinstance(self.sources[i], numbers.Number) or isinstance(self.sources[i], sympy.Expr):
-              result += str(self.sources[i]) + " \\\\"
+            if isinstance(self.sources[i], numbers.Number) or isinstance(
+                self.sources[i], sympy.Expr
+            ):
+                result += str(self.sources[i]) + " \\\\"
             else:
-              result += "0 \\\\"
+                result += "0 \\\\"
         for i in range(0, self.unknowns):
             result += "\\lambda _{max," + str(i) + "}(x) & = & ["
             for j in range(0, len(self.eigenvalues[i])):
@@ -136,7 +140,9 @@ class FirstOrderConservativePDEFormulation(PDE):
                     )
                 result += "\n"
                 result += "assertion(!std::isnan(F[" + str(i) + "]));\n"
-                result += "nonCriticalAssertion(F[" + str(i) + "] == F[" + str(i) + "]);\n"
+                result += (
+                    "nonCriticalAssertion(F[" + str(i) + "] == F[" + str(i) + "]);\n"
+                )
             result += "  break;\n"
         result += "}\n"
         return result
