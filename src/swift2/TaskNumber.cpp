@@ -10,21 +10,25 @@ const swift2::TaskNumber swift2::TaskNumber::Max{
 };
 
 
+const swift2::TaskNumber swift2::TaskNumber::NoDependencies{
+  tarch::multicore::NoDependencies,TaskAssociation::TouchVertexFirstTime,0
+};
+
+
 swift2::TaskNumber::TaskNumber(int number0, TaskAssociation number1, int number2):
   _taskCounter(number0),
   _taskAssociation(number1),
   _taskSpecies(number2) {
-  assertion1( number0>=0 or number0==tarch::multicore::NoDependencies, toString() );
-//  assertion1( number1!=TaskAssociation::NumberOfEntries, toString() );
-  assertion1( number2>=0, toString() );
-  assertion1( number0<=Max._taskCounter, toString() );
-  assertion1( number2<=Max._taskSpecies, toString() );
-}
-
-
-swift2::TaskNumber::TaskNumber(int number):
-  TaskNumber(tarch::multicore::NoDependencies,TaskAssociation::TouchVertexFirstTime,0) {
-  assertionEquals( number, tarch::multicore::NoDependencies );
+  if (_taskCounter==::tarch::multicore::NoDependencies) {
+    *this = NoDependencies;
+  }
+  else if ( number0!=std::numeric_limits<int>::max() ) {
+    assertion1( number0>=0 or number0==tarch::multicore::NoDependencies, toString() );
+    assertion1( number1!=TaskAssociation::NumberOfEntries, toString() );
+    assertion1( number2>=0, toString() );
+    assertion1( number0<=Max._taskCounter, toString() );
+    assertion1( number2<=Max._taskSpecies, toString() );
+  }
 }
 
 
@@ -33,6 +37,13 @@ bool swift2::TaskNumber::operator<(const TaskNumber& rhs) const {
       or _taskCounter == rhs._taskCounter and _taskAssociation==TaskAssociation::TouchVertexFirstTime and rhs._taskAssociation!=TaskAssociation::TouchVertexFirstTime
       or _taskCounter == rhs._taskCounter and _taskAssociation==TaskAssociation::TouchCellFirstTime   and rhs._taskAssociation==TaskAssociation::TouchVertexLastTime
       or _taskCounter == rhs._taskCounter and _taskAssociation==rhs._taskAssociation and _taskSpecies < rhs._taskSpecies;
+}
+
+
+bool swift2::TaskNumber::operator==(const TaskNumber& rhs) const {
+  return _taskCounter == rhs._taskCounter
+     and _taskAssociation == rhs._taskAssociation
+     and _taskSpecies == rhs._taskSpecies;
 }
 
 
@@ -100,7 +111,23 @@ int swift2::flatten( const TaskNumber&  number ) {
 std::set<int> swift2::flatten( const std::set<TaskNumber>&  numbers ) {
   std::set<int> result;
   for (auto& p: numbers) {
-    result.insert( p.flatten() );
+    if (p!=swift2::TaskNumber::NoDependencies) {
+      result.insert( p.flatten() );
+    }
+  }
+  return result;
+}
+
+
+std::set<::swift2::TaskNumber>  swift2::getDependenciesForTask( const ::swift2::TaskNumber&  task, PendingDependencies&  pendingDependencies ) {
+  std::set<::swift2::TaskNumber> result;
+  PendingDependencies::iterator p = pendingDependencies.begin();
+  while (p!=pendingDependencies.end()) {
+    if (p->second==task) {
+      result.insert( p->first );
+      p = pendingDependencies.erase( p );
+    }
+    else p++;
   }
   return result;
 }

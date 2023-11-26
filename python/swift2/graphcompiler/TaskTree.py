@@ -24,12 +24,6 @@ from .Utils import (
 )
 
 
-DefaultIncludes = """
-#include "tarch/multicore/Tasks.h"                
-#include "swift2/VertexTask.h"                
-#include "swift2/CellTask.h"                
-#include "swift2/TaskNumber.h"                
-                """
 
 from enum import Enum
 
@@ -65,7 +59,8 @@ def clear_task_numbers_for_all_species(mesh_traversals,
 def construct_touch_vertex_first_time_call(
     current_species_set, 
     touch_vertex_first_time_kernel,
-    current_species_index
+    current_species_index,
+    use_multilevel_dependencies
 ):
     if (
         touch_vertex_first_time_kernel == None
@@ -78,8 +73,7 @@ def construct_touch_vertex_first_time_call(
                 current_species_set.name
             ),
           "SPECIES_INDEX": current_species_index,
-          
-          
+          "USE_MULTILEVEL_DEPENDENCIES":     use_multilevel_dependencies
         }
         return jinja2.Template(
             """
@@ -88,21 +82,24 @@ def construct_touch_vertex_first_time_call(
           ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
           {{SPECIES_INDEX}}
         };
-        
-      const ::swift2::TaskNumber taskNumberOfLastTouch{
-          fineGridVertex{{MARKER_NAME}}.getNumber(),
-          ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime,
-          {{SPECIES_INDEX}}
-        };
       
+      {% if USE_MULTILEVEL_DEPENDENCIES %}
       std::set<::swift2::TaskNumber> parentTaskNumbers = ::swift2::getVertexNumbersOfParentVertices(
         marker,
         coarseGridVertices{{MARKER_NAME}},
         ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
         {{SPECIES_INDEX}}
       );
+      {% else %}
+      std::set<::swift2::TaskNumber> parentTaskNumbers;
+      {% endif %}
 
-      logDebug( "touchVertexFirstTime(...)", "create task " << taskNumberToBeUsed.toString() << " for " << marker.toString() );
+      logInfo( 
+        "touchVertexFirstTime(...)", 
+        "create task " << taskNumberToBeUsed.toString() << 
+        " for " << marker.toString() <<
+        " depends on " << ::swift2::toString(parentTaskNumbers)
+      );
       
       auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
           assignedParticles,
@@ -115,7 +112,6 @@ def construct_touch_vertex_first_time_call(
         );
       
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(parentTaskNumbers), ::swift2::flatten(taskNumberToBeUsed) );
-      tarch::multicore::registerTask( taskNumberOfLastTouch.flatten() );
     """
         ).render(**d)
 
@@ -123,7 +119,8 @@ def construct_touch_vertex_first_time_call(
 def construct_touch_cell_first_time_call(
     current_species_set, 
     touch_cell_first_time_kernel,
-    current_species_index
+    current_species_index,
+    use_multilevel_dependencies
 ):
     if touch_cell_first_time_kernel == None:
         touch_cell_first_time_kernel = ""
@@ -133,31 +130,41 @@ def construct_touch_cell_first_time_call(
            current_species_set.name
         ),
         "SPECIES_INDEX": current_species_index,
+        "USE_MULTILEVEL_DEPENDENCIES":     use_multilevel_dependencies,
     }
     return jinja2.Template(
             """
       const ::swift2::TaskNumber taskNumberToBeUsed{
         fineGridCell{{MARKER_NAME}}.getNumber(),
-        ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
+        ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime,
         {{SPECIES_INDEX}}
       };
-            
-      const ::swift2::TaskNumber  parentTaskNumber = ::swift2::TaskNumber(
-        coarseGridCell{{MARKER_NAME}}.getNumber(),
-        ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
-        {{SPECIES_INDEX}}
-      );
-      
-      std::set<::swift2::TaskNumber> adjacentVertexTask;
+                  
+      std::set<::swift2::TaskNumber> adjacentVertexAndParentTask;
       for (int i=0; i<TwoPowerD; i++) {
-        adjacentVertexTask.insert( ::swift2::TaskNumber{
+        adjacentVertexAndParentTask.insert( ::swift2::TaskNumber{
           fineGridVertices{{MARKER_NAME}}(i).getNumber(),
           ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
           {{SPECIES_INDEX}}
         } );
       }
-      adjacentVertexTask.insert( parentTaskNumber );
+      
+      {% if USE_MULTILEVEL_DEPENDENCIES %}
+      const ::swift2::TaskNumber  parentTaskNumber = ::swift2::TaskNumber(
+        coarseGridCell{{MARKER_NAME}}.getNumber(),
+        ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
+        {{SPECIES_INDEX}}
+      );
+      adjacentVertexAndParentTask.insert( parentTaskNumber );
+      {% endif %}
 
+      logInfo( 
+        "touchCellFirstTime(...)", 
+        "create task " << taskNumberToBeUsed.toString() << 
+        " for " << marker.toString() <<
+        " depends on " << ::swift2::toString(adjacentVertexAndParentTask)
+      );
+      
       auto* newTask = new ::swift2::CellTask< decltype(localParticles) >(
         localParticles,
         activeParticles,
@@ -169,7 +176,7 @@ def construct_touch_cell_first_time_call(
         false
       );
 
-      tarch::multicore::spawnTask( newTask, ::swift2::flatten( adjacentVertexTask ), ::swift2::flatten( taskNumberToBeUsed ));
+      tarch::multicore::spawnTask( newTask, ::swift2::flatten( adjacentVertexAndParentTask ), ::swift2::flatten( taskNumberToBeUsed ));
     """
     ).render(**d)
 
@@ -177,13 +184,15 @@ def construct_touch_cell_first_time_call(
 def construct_touch_vertex_last_time_call(
     current_species_set, 
     touch_vertex_last_time_kernel,
-    current_species_index
+    current_species_index,
+    use_multilevel_dependencies
 ):
     d = {
       "MARKER_NAME":  peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
          current_species_set.name
       ),
       "SPECIES_INDEX": current_species_index,
+      "USE_MULTILEVEL_DEPENDENCIES":     use_multilevel_dependencies,
     }
     return jinja2.Template(
         """
@@ -197,10 +206,26 @@ def construct_touch_vertex_last_time_call(
       for (int i=0; i<TwoPowerD; i++) {
         adjacentCellTasks.insert( ::swift2::TaskNumber{
           fineGridVertex{{MARKER_NAME}}.getAdjacentCellNumber(i),
-          ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
+          ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime,
           {{SPECIES_INDEX}}
         } );
       }
+      
+      {% if USE_MULTILEVEL_DEPENDENCIES %}
+      std::set<::swift2::TaskNumber>  fineGridDependencies = ::swift2::getDependenciesForTask( 
+        taskNumberToBeUsed, 
+        _pendingDependencies 
+      );
+      adjacentCellTasks.insert( fineGridDependencies.begin(), fineGridDependencies.end() );
+      {% endif %}
+
+      
+      logInfo( 
+        "touchVertexLastTime(...)", 
+        "create task " << taskNumberToBeUsed.toString() << 
+        " for " << marker.toString() <<
+        " depends on " << ::swift2::toString(adjacentCellTasks)
+      );
       
       auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
           assignedParticles,
@@ -214,15 +239,21 @@ def construct_touch_vertex_last_time_call(
       
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(adjacentCellTasks), ::swift2::flatten(taskNumberToBeUsed) );
 
-      std::set< ::swift2::TaskNumber > outgoingTaskDependencies;
+      {% if USE_MULTILEVEL_DEPENDENCIES %}
       for (int i=0; i<TwoPowerD; i++) {
-        outgoingTaskDependencies.insert( ::swift2::TaskNumber{
+        const ::swift2::TaskNumber parentVertex{
           coarseGridVertices{{MARKER_NAME}}(i).getNumber(),
           ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime,
           {{SPECIES_INDEX}}
-        } );
+        };
+        if (parentVertex!=::swift2::TaskNumber::NoDependencies) {
+          logInfo( "touchVertexFirstTime(...)", "memorise task " << taskNumberToBeUsed.toString() << " -> " << parentVertex.toString() );
+          _pendingDependencies.insert( std::pair<::swift2::TaskNumber,::swift2::TaskNumber>(
+            taskNumberToBeUsed, parentVertex
+          ));
+        }
       }
-      tarch::multicore::addDependencies( ::swift2::flatten(taskNumberToBeUsed), ::swift2::flatten(outgoingTaskDependencies) );
+      {% endif %}
 
       if ( marker.isAdjacentToParallelDomainBoundary () ) {
         tarch::multicore::waitForTask( taskNumberToBeUsed.flatten() );
@@ -327,21 +358,22 @@ def translate_one_step_of_species_into_mesh_traversal(
                         current_species_set.particle_model.name,
                     )
                 )
-            action_set_particle_particle_interaction = peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
+            action_set_particle_particle_interaction = swift2.treetraversal.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
                 particle_set=current_species_set,
                 particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
-                    step.cell_kernel
+                    current_species_set, step.cell_kernel, use_multilevel_dependencies=True
                 ),
                 touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
-                    current_species_set, step.touch_vertex_first_time_kernel
+                    current_species_set, step.touch_vertex_first_time_kernel, use_multilevel_dependencies=True
                 ),
                 touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                    step.touch_vertex_last_time_kernel
+                    current_species_set, step.touch_vertex_last_time_kernel, use_multilevel_dependencies=True
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
-                unprepare_traversal_kernel=step.unprepare_traversal_kernel + "tarch::multicore::waitForAllTasks();",
-                additional_includes=step.includes + DefaultIncludes,
+                unprepare_traversal_kernel=step.unprepare_traversal_kernel,
+                additional_includes=step.includes,
                 active_particle_set=step.input_particles,
+                wait_for_all_tasks_to_finish_after_traversal=True,
             )
         else:
             if verbose:
@@ -352,21 +384,22 @@ def translate_one_step_of_species_into_mesh_traversal(
                         current_species_set.particle_model.name,
                     )
                 )
-            action_set_particle_particle_interaction = peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets(
+            action_set_particle_particle_interaction = swift2.treetraversal.UpdateParticle_MultiLevelInteraction_Sets(
                 particle_set=current_species_set,
                 particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
-                    current_species_set, step.cell_kernel, current_species_index
+                    current_species_set, step.cell_kernel, current_species_index, use_multilevel_dependencies=True
                 ),
                 touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
-                    current_species_set, step.touch_vertex_first_time_kernel, current_species_index
+                    current_species_set, step.touch_vertex_first_time_kernel, current_species_index, use_multilevel_dependencies=True
                 ),
                 touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                    current_species_set, step.touch_vertex_last_time_kernel, current_species_index
+                    current_species_set, step.touch_vertex_last_time_kernel, current_species_index, use_multilevel_dependencies=True
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
-                unprepare_traversal_kernel=step.unprepare_traversal_kernel + "tarch::multicore::waitForAllTasks();",
-                additional_includes=step.includes + DefaultIncludes,
+                unprepare_traversal_kernel=step.unprepare_traversal_kernel,
+                additional_includes=step.includes,
                 active_particle_set=step.input_particles,
+                wait_for_all_tasks_to_finish_after_traversal=True,
             )
         action_set_particle_particle_interaction.descend_invocation_order = (
             new_step.highest_descend_invocation_order() + 1
@@ -384,15 +417,22 @@ def translate_one_step_of_species_into_mesh_traversal(
                     )
                 )
 
-            action_set_particle_update = peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles(
+            action_set_particle_update = swift2.treetraversal.UpdateParticle_SingleLevelInteraction_ContiguousParticles(
                 particle_set=current_species_set,
-                particle_cell_update_kernel=step.cell_kernel,
-                touch_vertex_first_time_compute_particle_update_kernel=step.touch_vertex_first_time_kernel,
-                touch_vertex_last_time_compute_particle_update_kernel=step.touch_vertex_last_time_kernel,
+                particle_cell_update_kernel=construct_touch_cell_first_time_call(
+                    current_species_set, step.cell_kernel,current_species_index, use_multilevel_dependencies=False
+                ),
+                touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
+                    current_species_set, step.touch_vertex_first_time_kernel,current_species_index, use_multilevel_dependencies=False
+                ),
+                touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
+                    current_species_set, step.touch_vertex_last_time_kernel,current_species_index, use_multilevel_dependencies=False
+                ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
-                unprepare_traversal_kernel=step.unprepare_traversal_kernel + "tarch::multicore::waitForAllTasks();",
+                unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
+                wait_for_all_tasks_to_finish_after_traversal=True,
             )
             action_set_particle_update.descend_invocation_order = (
                 new_step.highest_descend_invocation_order() + 1
@@ -409,27 +449,28 @@ def translate_one_step_of_species_into_mesh_traversal(
                     )
                 )
 
-        action_set_particle_update = peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction(
-            particle_set=current_species_set,
-            particle_cell_update_kernel=construct_touch_cell_first_time_call(
-                current_species_set, step.cell_kernel,current_species_index
-            ),
-            touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
-                current_species_set, step.touch_vertex_first_time_kernel,current_species_index
-            ),
-            touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                current_species_set, step.touch_vertex_last_time_kernel,current_species_index
-            ),
-            prepare_traversal_kernel=step.prepare_traversal_kernel,
-            unprepare_traversal_kernel=step.unprepare_traversal_kernel + "tarch::multicore::waitForAllTasks();",
-            additional_includes=step.includes + DefaultIncludes,
-            active_particle_set=step.input_particles,
-        )
-        action_set_particle_update.descend_invocation_order = (
-            new_step.highest_descend_invocation_order() + 1
-        )
-        action_set_particle_update.parallel = True
-        new_step.add_action_set(action_set_particle_update)
+            action_set_particle_update = swift2.treetraversal.UpdateParticle_SingleLevelInteraction(
+                particle_set=current_species_set,
+                particle_cell_update_kernel=construct_touch_cell_first_time_call(
+                    current_species_set, step.cell_kernel,current_species_index, use_multilevel_dependencies=False
+                ),
+                touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
+                    current_species_set, step.touch_vertex_first_time_kernel,current_species_index, use_multilevel_dependencies=False
+                ),
+                touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
+                    current_species_set, step.touch_vertex_last_time_kernel,current_species_index, use_multilevel_dependencies=False
+                ),
+                prepare_traversal_kernel=step.prepare_traversal_kernel,
+                unprepare_traversal_kernel=step.unprepare_traversal_kernel,
+                additional_includes=step.includes,
+                active_particle_set=step.input_particles,
+                wait_for_all_tasks_to_finish_after_traversal=True,
+            )
+            action_set_particle_update.descend_invocation_order = (
+                new_step.highest_descend_invocation_order() + 1
+            )
+            action_set_particle_update.parallel = True
+            new_step.add_action_set(action_set_particle_update)
     else:
         assert False, "step {} seems to have no action at all".format(step)
 

@@ -33,44 +33,6 @@ namespace tarch {
     );
 
     /**
-     * Register task
-     *
-     * Inform system that there will be task with number that will finish
-     * later. By the time we inform the system about the existence of this
-     * task outcome, the task itself might not yet exist. However, by calling
-     * this function, the user notifies the system that the task will
-     * eventually be submitted.
-     *
-     * This routine is key to work with tasks with anti-dependencies: Most
-     * runtime systems either require a static task graph assembly where the
-     * whole graph is built up and then submitted en bloc or work with dynamic
-     * task graphs, where each task graph is immediately handed over to the
-     * runtime. In the latter case, any incoming dependency of a submitted
-     * task has to be known, i.e. if task A is submitted and depends on task
-     * B, task B has to be submitted before.
-     *
-     * In Peano, we offer a hybrid between dynamic and static analysis. In
-     * principle, all is dynamic. However, there are cases in which the task
-     * B from the example above is not yet constructed. This is something we
-     * do allow in Peano. However, we then require the user to tell the tarch
-     * API that the task B will eventually be there by calling registerTask().
-     * If a task is directly submitted without registerTask(), no
-     * anti-dependencies are allowed.
-     *
-     * This routine delegates directly to tarch::multicore::native::registerTask().
-     * The counterpart deregisterTask() is not exposed via the main namespace.
-     * It is automatically invoked by spawnTask() whenever the spawnTask()
-     * finally resolves an anti-dependency.
-     *
-     * @param number Unique task number, which is not yet used by another task,
-     *   unless the user can guarantee that this task has finished already. If
-     *   in doubt, it might be reasonable to work with a task id factory and to
-     *   code a task on the user side, which automatically notifies the task
-     *   system when the task has terminated.
-     */
-    void registerTask(const TaskNumber& number);
-
-    /**
      * Abstract super class for a job.
      */
     class Task {
@@ -305,12 +267,6 @@ namespace tarch {
      * fire-and-forget task which is just pushed out there without anybody
      * ever waiting for it later on (at least not via task dependencies).
      *
-     * The anti-dependency pattern can be circumnavigated by registering a task
-     * explicitly. You can register a task - which means it is not yet
-     * submitted - manually add incoming dependencies to this registered task
-     * which have to be fulfilled, and eventually submit the task. After
-     * this submission, no further tasks can be spawned anymore. But before
-     * that, you can construct your DAG incrementally.
      *
      * @see tarch::multicore and the section "Tasks with dependencies" therein
      *   for further documentation.
@@ -324,39 +280,6 @@ namespace tarch {
       const std::set<TaskNumber>& inDependencies = std::set<TaskNumber>(),
       const TaskNumber&           taskNumber     = NoDependencies
     );
-
-    /**
-     * Add dependency on task which is not yet submitted
-     *
-     * If the target dependency registeredTaskNumber equals
-     * TaskNumber::NoDependency, the function degenerates to nop. This is
-     * explicitly allowed. Yet, taskNumber always has to be a valid identifier.
-     *
-     * ## Serial code
-     *
-     * Degenerates to nop as a direct consequence of the documentation of
-     * registeredTaskNumber: You can only submit dependencies to tasks which
-     * have not been submitted yet. However, once they are submitted, you
-     * immediately execute them. So there's no reason to bookkeep the
-     * dependencies.
-     *
-     *
-     * @param taskNumber Number of task which has already been submitted
-     *
-     * @param registeredTaskNumber Number of task which has been registered,
-     *   i.e. the system knows that this task will eventually be submitted, but
-     *   it has not happened yet. The very moment you actually spawn a task,
-     *   you are not allowed to inject further dependencies.
-     *
-     * @see tarch::multicore and the section "Tasks with dependencies" therein
-     *   for further documentation.
-     */
-    void addDependency( const TaskNumber& taskNumber, const TaskNumber& registeredTaskNumber );
-
-    /**
-     * Wrapper around a sequence of addDependency() calls.
-     */
-    void addDependencies( const TaskNumber& taskNumber, const std::set<TaskNumber>& registeredTaskNumbers );
 
     /**
      * Wait for all tasks which have been spawned by spawnTask. This routine
@@ -601,19 +524,6 @@ namespace tarch {
        * always executed the task straightaway.
        */
       void waitForAllTasks();
-
-      /**
-       * Native implementation of tarch::multicore::registerTask().
-       */
-      void registerTask( const TaskNumber&  number );
-
-      /**
-       * ## Serial code
-       *
-       * Nothing is to be done, but we validate that the task has been
-       * registered before.
-       */
-      void addDependency( const TaskNumber& taskNumber, const TaskNumber& registeredTaskNumber );
     } // namespace native
 
     namespace internal {

@@ -195,21 +195,6 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::swapOrchestration(
   return result;
 }
 
-void tarch::multicore::registerTask(const TaskNumber& number) { native::registerTask(number); }
-
-void tarch::multicore::addDependency( const TaskNumber& taskNumber, const TaskNumber& registeredTaskNumber ) {
-  assertion2( taskNumber!=NoDependencies, taskNumber, registeredTaskNumber );
-  if (registeredTaskNumber!=NoDependencies) {
-    tarch::multicore::native::addDependency( taskNumber, registeredTaskNumber );
-  }
-}
-
-void tarch::multicore::addDependencies( const TaskNumber& taskNumber, const std::set<TaskNumber>& registeredTaskNumber ) {
-  for (auto& p: registeredTaskNumber) {
-    addDependency(taskNumber,p);
-  }
-}
-
 bool operator<(const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs) {
   return lhs.getPriority() < rhs.getPriority();
 }
@@ -531,18 +516,6 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
     logDebug( "waitForTasks()", "wait for task " << p );
     assertion1( registeredTask.count(p)==0, p );
   }
-}
-
-void tarch::multicore::native::registerTask( const TaskNumber&  number ) {
-  assertion( registeredTask.count(number)==0 );
-  logDebug( "waitForTasks()", "register task " << number << " (will be defined properly later)" );
-  registeredTask.insert(number);
-}
-
-void tarch::multicore::native::addDependency( const TaskNumber& taskNumber, const TaskNumber& registeredTaskNumber ) {
-  logDebug( "waitForTasks()", "add dependency to future task: " << taskNumber << " -> " << registeredTaskNumber );
-  assertion2( registeredTask.count(taskNumber)==0, taskNumber, registeredTaskNumber );
-  assertion2( registeredTask.count(registeredTaskNumber)>0, taskNumber, registeredTaskNumber );
 }
 
 void tarch::multicore::native::waitForAllTasks() {

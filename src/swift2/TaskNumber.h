@@ -44,18 +44,21 @@ namespace swift2 {
        *
        * @param number0 Typically the "real" task counter, i.e. a unique number
        *   from a very vast range which distinguishes different task types.
+       *   Pass in ::tarch::multicore::NoDependencies if you want to actually
+       *   construct the object NoDependencies. In this case, the other
+       *   arguments are ignored.
        * @param number1 Typically the type of mesh entity to which the task is
        *   tied to.
        * @param number2 Typically some kind of species or task type counter.
        */
       TaskNumber(int number0, TaskAssociation number1, int number2);
-      TaskNumber(int number = tarch::multicore::NoDependencies);
 
       static constexpr int MaxSpecies = 16;
       /**
        * Defines the max indices for each entry in TaskNumber.
        */
       static const TaskNumber Max;
+      static const TaskNumber NoDependencies;
 
       std::string toString() const;
 
@@ -65,6 +68,7 @@ namespace swift2 {
        * Total order on object. Required to store task numbers in sets.
        */
       bool operator<(const TaskNumber& rhs) const;
+      bool operator==(const TaskNumber& rhs) const;
     private:
       int              _taskCounter;
       TaskAssociation  _taskAssociation;
@@ -110,6 +114,23 @@ namespace swift2 {
     int                                               dimension
   );
 
+  /**
+   * Pending dependencies container
+   *
+   * When we run through the tree, we sometimes cannot submit dependencies
+   * directly. When we are on a fine level, we might, for example, have
+   * dependencies from the fine mesh to a touchLastTime event on the next
+   * coarser level. This one is not yet submitted. However, once we will
+   * get there, i.e. back to the coarser level, the fine grid info will not
+   * be at hand anymore. Therefore, we have to memorise these dependencies on
+   * the fine grid, and then use this memorised info later.
+   */
+  using PendingDependencies=std::set< std::pair<::swift2::TaskNumber,::swift2::TaskNumber> >;
+
+  /**
+   * Extract set of dependencies for given task
+   */
+  std::set<::swift2::TaskNumber>  getDependenciesForTask( const ::swift2::TaskNumber&  task, PendingDependencies&  pendingDependencies );
 }
 
 

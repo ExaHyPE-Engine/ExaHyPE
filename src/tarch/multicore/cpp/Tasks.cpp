@@ -5,6 +5,8 @@
 #include "tarch/logging/Statistics.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/services/ServiceRepository.h"
 
@@ -34,6 +36,9 @@ namespace {
    */
   std::map<tarch::multicore::TaskNumber, std::future<void>*>  registeredTasks;
   std::map<tarch::multicore::TaskNumber, std::future<void>*>  spawnedTasks;
+
+  tarch::multicore::BooleanSemaphore  registeredTasksSemaphore;
+  tarch::multicore::BooleanSemaphore  spawnedTasksSemaphore;
 }
 
 
@@ -89,13 +94,54 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 #endif
 
 
-void tarch::multicore::native::spawnTask(Task* job) {
-  std::future<void> dontWait = std::async(std::launch::async, [job]() -> void {
-    while (job->run()) {
-      tarch::multicore::Core::getInstance().yield();
+void tarch::multicore::native::spawnTask(
+  Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+) {
+  if (taskNumber==NoDependencies and inDependencies.empty()) {
+    std::async(std::launch::async, [job]() -> void {
+      while (job->run()) {
+        tarch::multicore::Core::getInstance().yield();
+      }
+      delete job;
+    });
+  }
+  else {
+    tarch::multicore::Lock lock( _spawnedTasksSempahore );
+
+    if ( spawnedTasks.count(taskNumber)>0 and spawnedTasks[taskNumber].second!=nullptr ) {
+      logWarning( "spawnTaskWithDependencies(...)", "task " << taskNumber << " is already among pending tasks, i.e. noone ever waited for it although we now submit new task with this number. Wait before spawning. " );
+      native::waitForTask(taskNumber);
     }
-    delete job;
-  });
+
+    if (spawnedTasks.count(taskNumber)==0) {
+      spawnedTasks.insert( std::pair<TaskNumber, std::future<void>* >(taskNumber,nullptr) );
+    }
+    else {
+      assertion1( spawnedTasks[taskNumber].second==nullptr, taskNumber.toString() );
+    }
+
+  /*
+    keine in dependencies?
+
+    spawnedTasks.insert( std::pair< tarch::multicore::TaskNumber, std::future<void>* >(
+      taskNumber,
+      std::async(std::launch::async, [job, inDependency, taskNumber]() -> void {
+        while (job->run()) {
+          tarch::multicore::Core::getInstance().yield();
+        }
+        delete job;
+      })
+    ));
+
+    if (registeredTasks.count(taskNumber)>0) {
+      registeredTasks.erase(taskNumber);
+    }
+  */
+
+  }
+
+
+    Task* job) {
 }
 
 void tarch::multicore::native::processFusedTask(
@@ -113,58 +159,6 @@ void tarch::multicore::native::processFusedTask(
 }
 
 // @todo Semaphoren fuer Tables
-
-void tarch::multicore::native::spawnTask(
-  Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber
-) {
-  logInfo( "spawnTaskWithDependencies()", inDependency.toString() << " -> " << taskNumber.toString() );
-  std:set<TaskNumber> inDependencies;
-  inDependencies.insert( inDependency );
-  tarch::multicore::native::spawnTask(job, inDependencies, taskNumber );
-}
-
-
-void tarch::multicore::native::spawnTask(
-  Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
-) {
-  logInfo( "spawnTaskWithDependencies()", toString( inDependencies ) << " -> " << taskNumber.toString() );
-
-  assertion1(
-    taskNumber != tarch::multicore::TaskNumber::NoDependency,
-    taskNumber.toString()
-  );
-
-  if ( spawnedTasks.count(taskNumber)>0 and spawnedTasks[taskNumber].second!=nullptr ) {
-    logWarning( "spawnTaskWithDependencies(...)", "task " << taskNumber.toString() << " is already among pending tasks, i.e. noone ever waited for it although we now submit new task with this number. Wait before spawning. " );
-    native::waitForTask(taskNumber);
-  }
-
-  if (spawnedTasks.count(taskNumber)==0) {
-    spawnedTasks.insert( std::pair<TaskNumber, std::future<void>* >(taskNumber,nullptr) );
-  }
-  else {
-    assertion1( spawnedTasks[taskNumber].second==nullptr, taskNumber.toString() );
-  }
-
-/*
-  keine in dependencies?
-
-  spawnedTasks.insert( std::pair< tarch::multicore::TaskNumber, std::future<void>* >(
-    taskNumber,
-    std::async(std::launch::async, [job, inDependency, taskNumber]() -> void {
-      while (job->run()) {
-        tarch::multicore::Core::getInstance().yield();
-      }
-      delete job;
-    })
-  ));
-
-  if (registeredTasks.count(taskNumber)>0) {
-    registeredTasks.erase(taskNumber);
-  }
-*/
-
-}
 
 
 void tarch::multicore::native::waitForTask(const TaskNumber& taskNumber) {
