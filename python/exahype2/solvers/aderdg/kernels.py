@@ -19,7 +19,6 @@ def create_abstract_solver_declarations(
     Template = jinja2.Template(
         """
   public:
-
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 
 {% if EIGENVALUES_IMPLEMENTATION=="<none>" or EIGENVALUES_IMPLEMENTATION=="<empty>" %}
@@ -89,14 +88,28 @@ def create_abstract_solver_declarations(
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) = 0;
+  virtual void algebraicSource(
+    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double t,
+    double dt,
+    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
+  ) = 0;
 {% elif SOURCE_TERM_IMPLEMENTATION!="<none>" and SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
-    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
+  virtual void algebraicSource(
+    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double t,
+    double dt,
+    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
+  );
 {% endif %}
 
 {% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}
     virtual void multiplyMaterialParameterMatrix(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
       const tarch::la::Vector<Dimensions, double> &x,
       const tarch::la::Vector<Dimensions, double> &h,
       double t,
@@ -115,8 +128,6 @@ def create_abstract_solver_declarations(
 {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
     virtual void initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]) = 0;
 {% endif %}
-
-
 """,
         undefined=jinja2.DebugUndefined,
     )
@@ -193,7 +204,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" and SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>"%}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::void algebraicSource(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h,
+  double t,
+  double dt,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
+) {
   {{SOURCE_TERM_IMPLEMENTATION}}
 }
 {% endif %}
@@ -249,7 +267,6 @@ def create_solver_declarations(
 ):
     TemplateSinglePrecisions = jinja2.Template(
         """
-
   {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
   virtual double maxEigenvalue(
     const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q,
@@ -283,11 +300,18 @@ def create_solver_declarations(
       {{COMPUTATION_PRECISIONS[0]}}*__restrict__ BgradQ) override;
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[0]}} *const Q, {{COMPUTATION_PRECISIONS[0]}} *S) override;
+  void algebraicSource(
+    const {{COMPUTATION_PRECISIONS[0]}}* const __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double t,
+    double dt,
+    {{COMPUTATION_PRECISIONS[0]}}* __restrict__ S
+  ) override;
 {% endif %}
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
     void multiplyMaterialParameterMatrix(
-      const {{COMPUTATION_PRECISIONS[0]}}* const Q, 
+      const {{COMPUTATION_PRECISIONS[0]}}* const Q,
       const tarch::la::Vector<Dimensions, double> &x,
       const tarch::la::Vector<Dimensions, double> &h,
       double t,
@@ -345,8 +369,15 @@ def create_solver_declarations(
 
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    template<typename T>
-    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const T *const Q, T *S);
+  template <typename T>
+  void algebraicSource(
+    const T* const __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double t,
+    double dt,
+    T* __restrict__ S
+  );
 {% endif %}
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
@@ -413,9 +444,16 @@ def create_solver_declarations(
     }
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) override {
-      algebraicSource<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(x, t, Q, S);
-    }
+  void algebraicSource(
+    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double t,
+    double dt,
+    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
+  ) override {
+    algebraicSource<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, S);
+  }
 {% endif %}
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
     void multiplyMaterialParameterMatrix(
@@ -508,8 +546,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ deltaQ, //deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions, double> &x,
   const tarch::la::Vector<Dimensions, double> &h,
   double t,
@@ -526,16 +564,19 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
+  const {{COMPUTATION_PRECISIONS[0]}}* const __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h,
   double t,
-  const {{COMPUTATION_PRECISIONS[0]}} *const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  {{COMPUTATION_PRECISIONS[0]}} *S
+  double dt,
+  {{COMPUTATION_PRECISIONS[0]}}* __restrict__ S
 ) {
-  logTraceInWith3Arguments( "algebraicSource(...)", x, t, dt );
+  logTraceInWith3Arguments("algebraicSource(...)", x, t, dt);
   // @todo implement
-  logTraceOut( "algebraicSource(...)" );
+  logTraceOut("algebraicSource(...)");
 }
 {% endif %}
+
 
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
@@ -674,18 +715,26 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduc
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  const tarch::la::Vector<Dimensions, double>& x,
-  double t,
-  const T *const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  T *S
+    const T* const __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double t,
+    double dt,
+    T* __restrict__ S
 ) {
-  logTraceInWith3Arguments( "algebraicSource(...)", x, t, dt );
+  logTraceInWith3Arguments("algebraicSource(...)", x, t, dt);
   // @todo implement
-  logTraceOut( "algebraicSource(...)" );
+  logTraceOut("algebraicSource(...)");
 }
-
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h,
+  double t,
+  double dt,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
+);
 {% endfor%}
 {% endif %}
 

@@ -138,7 +138,7 @@ def create_compute_Riemann_kernel_for_MusclHancock(flux_implementation,
     double * __restrict__ BTimesDeltaQ
   )->void {
     {% if NCP_IMPLEMENTATION!="<none>" %}
-    repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ );
+    repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
     {% endif %}
   },
   [&](
@@ -150,7 +150,7 @@ def create_compute_Riemann_kernel_for_MusclHancock(flux_implementation,
     double * __restrict__ S
   )->void {
     {% if SOURCE_IMPLEMENTATION!="<none>" %}
-    repositories::{{SOLVER_INSTANCE}}.sourceTerm( Q, x, h, t, dt, S );
+    repositories::{{SOLVER_INSTANCE}}.algebraicSource(Q, x, h, t, dt, S);
     {% endif %}
   },
   [&](
@@ -161,7 +161,7 @@ def create_compute_Riemann_kernel_for_MusclHancock(flux_implementation,
     double                                       dt,
     int                                          normal
   )->double {
-    return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, x, h, t, dt, normal);
+    return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q, x, h, t, dt, normal);
   }
 );
   """
@@ -389,7 +389,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod void sourceTerm(
+    static GPUCallableMethod void algebraicSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
@@ -409,7 +409,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% endif %}
     
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    virtual void sourceTerm(
+    virtual void algebraicSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
@@ -479,7 +479,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
 #if !defined(GPUOffloadingSYCL)
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -582,7 +582,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
 #pragma omp declare target
 #endif
 #if !defined(GPUOffloadingSYCL)
-GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
@@ -617,7 +617,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   Template = jinja2.Template( """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    virtual void sourceTerm(
+    virtual void algebraicSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
@@ -679,7 +679,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      * this signature and to copy the implementation into the header. So it would
      * read 
      *
-     * static inline void sourceTerm( ... ) {
+     * static inline void algebraicSource( ... ) {
      *  code here
      * }
      *
@@ -691,7 +691,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-    static GPUCallableMethod void sourceTerm(
+    static GPUCallableMethod void algebraicSource(
        const double * __restrict__ Q,
        const tarch::la::Vector<Dimensions,double>&  x,
        const tarch::la::Vector<Dimensions,double>&  h,
@@ -869,7 +869,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -877,14 +877,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   double                                       dt,
   double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}
 ) {
-  logTraceInWith4Arguments( "sourceTerm(...)", x, h, t, dt );
+  logTraceInWith4Arguments("algebraicSource(...)", x, h, t, dt);
   // @todo implement
-  logTraceOut( "sourceTerm(...)" );
+  logTraceOut("algebraicSource(...)");
 }
 {% endif %}
-
-
-
 
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
@@ -957,7 +954,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
     #if defined(GPUOffloadingOMP)
     #pragma omp declare target
     #endif
-GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,

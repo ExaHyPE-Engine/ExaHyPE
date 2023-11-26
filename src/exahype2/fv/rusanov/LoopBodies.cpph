@@ -141,7 +141,7 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
     QInGathered[unknown] = QIn[QInEnumerator(patchIndex, volumeIndex, unknown)];
   }
 
-  SolverType::sourceTerm(
+  SolverType::algebraicSource(
     QInGathered,
     getVolumeCentre(patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex),
     getVolumeSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell),
@@ -199,7 +199,7 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
   double* __restrict__ QOut,
   const enumerator::AoSLexicographicEnumerator& QOutEnumerator
 ) {
-  SolverType::sourceTerm(
+  SolverType::algebraicSource(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
     getVolumeCentre(patchCentre, patchSize, QInEnumerator._numberOfDoFsPerAxisInCell, volumeIndex),
     getVolumeSize(patchSize, QInEnumerator._numberOfDoFsPerAxisInCell),

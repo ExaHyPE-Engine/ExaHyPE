@@ -491,7 +491,7 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
       #pragma forceinline recursive
 #endif
       // TODO(JMG): Pass correct x here
-      solver.{{solverName}}::algebraicSource(volumeCentre[0],timeStamp,lQi+(i*{{nDof**nDim}}+xyz)*{{nDataPad}}, lSi+(i*{{nDof**nDim}}+xyz)*{{nVarPad}});
+      solver.{{solverName}}::algebraicSource(lQi+(i*{{nDof**nDim}}+xyz)*{{nDataPad}}, volumeCentre[0], dx, timeStamp, dt, lSi+(i*{{nDof**nDim}}+xyz)*{{nVarPad}});
     }
 {% endif %}{# useSource #}
 

@@ -189,7 +189,7 @@ for(int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
     #pragma forceinline recursive
   #endif
   // TODO(JMG): Pass x/t here to enable spatio-temporal source terms.
-  solver.{{solverName}}::algebraicSource({0.0}, 0.0, {{inputQ}}+{{inputQ_iterator}}, {{sourceArray}}{{addShift}});
+  solver.{{solverName}}::algebraicSource({{inputQ}}+{{inputQ_iterator}}, {0.0}, 0.0, 0.0, {{sourceArray}}{{addShift}});
 {% else %}
 std::fill_n(&{{sourceArray}}[0{{addShift}}], {{nVarPad}}, 0.0);
 {% endif %}

@@ -71,7 +71,9 @@ public:
     exit(1);
   }
 
-  virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const double* const Q, double* S) {
+  virtual void algebraicSource(
+    const double* const Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t, double dt, double* S
+  ) {
     // should not be called
     exit(1);
   }

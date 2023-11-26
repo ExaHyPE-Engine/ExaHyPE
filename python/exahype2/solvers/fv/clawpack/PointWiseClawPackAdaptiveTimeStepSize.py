@@ -104,9 +104,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         double                                       dt,
         double * __restrict__                        S
       ) -> void {
-        repositories::{{SOLVER_INSTANCE}}.sourceTerm(
+        repositories::{{SOLVER_INSTANCE}}.algebraicSource(
           Q,
-          x, dx, t, dt, 
+          x, dx, t, dt,
           S
         );
       },

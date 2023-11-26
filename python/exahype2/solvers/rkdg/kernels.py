@@ -152,7 +152,7 @@ def create_abstract_solver_declarations(
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static void sourceTerm(
+    static void algebraicSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
@@ -167,7 +167,7 @@ def create_abstract_solver_declarations(
     {% endif %}
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-    virtual void sourceTerm(
+    virtual void algebraicSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
@@ -277,7 +277,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -386,7 +386,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
@@ -456,7 +456,7 @@ def create_solver_declarations(
         """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    virtual void sourceTerm(
+    virtual void algebraicSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
@@ -527,7 +527,7 @@ def create_solver_declarations(
      * this signature and to copy the implementation into the header. So it would
      * read
      *
-     * static inline void sourceTerm( ... ) {
+     * static inline void algebraicSource( ... ) {
      *  code here
      * }
      *
@@ -539,7 +539,7 @@ def create_solver_declarations(
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-     static void sourceTerm(
+     static void algebraicSource(
        const double * __restrict__ Q,
        const tarch::la::Vector<Dimensions,double>&  x,
        const tarch::la::Vector<Dimensions,double>&  h,
@@ -756,7 +756,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -764,14 +764,14 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   double                                       dt,
   double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}]
 ) {
-  logTraceInWith3Arguments( "sourceTerm(...)", x, t, dt );
+  logTraceInWith3Arguments("algebraicSource(...)", x, t, dt);
 
   // @todo implement and ensure that all entries of S are properly set
   for (int i=0; i<NumberOfUnknowns; i++) {
     S[i] = 0.0;
   }
 
-  logTraceOut( "sourceTerm(...)" );
+  logTraceOut("algebraicSource(...)");
 }
 {% endif %}
 
@@ -842,7 +842,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -863,7 +863,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
     #pragma omp declare target
     #endif
 #error  point sources not implemented yet
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -1020,7 +1020,7 @@ def create_volumetric_solver_call(polynomial_basis, solver_variant):
         double * __restrict__                        S
       ) -> void {
         {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,h,t,dt,S);
+        repositories::{{SOLVER_INSTANCE}}.algebraicSource(Q,x,h,t,dt,S);
         {% endif %}
       }, //source
       [&](

@@ -15,7 +15,7 @@ tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLA
   logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {
+  if (...) {
     result = ::exahype2::RefinementCommand::Refine;
   }
 
@@ -43,7 +43,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::algebraicSource(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -51,9 +51,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   double                                       dt,
   double * __restrict__ S // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
 ) {
-  logTraceInWith4Arguments( "sourceTerm(...)", x, h, t, dt );
+  logTraceInWith4Arguments( "algebraicSource(...)", x, h, t, dt );
   // @todo implement
-  logTraceOutWith( "sourceTerm(...)" );
+  logTraceOutWith( "algebraicSource(...)" );
 }
 {% endif %}
 

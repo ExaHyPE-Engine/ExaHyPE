@@ -64,9 +64,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     static std::string toString(SolverState);
 
     {{CLASSNAME}}();
-    
 
-    virtual void sourceTerm(
+    virtual void algebraicSource(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
@@ -77,5 +76,3 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     {% include "AbstractSolverAdaptiveTimeStepSize.template.h" %}
 };
-
-

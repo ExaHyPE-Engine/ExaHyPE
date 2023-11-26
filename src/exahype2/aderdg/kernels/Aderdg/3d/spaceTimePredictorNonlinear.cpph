@@ -377,7 +377,7 @@ int aderPicardLoopNonlinear(SolverType& solver,
                 const double y = cellCenter[1] + (1./invDx[1]) * (exahype2::solvers::aderdg::ADERDGSolver::nodes[order][k] - 0.5);
                 const double z = cellCenter[2] + (1./invDx[2]) * (exahype2::solvers::aderdg::ADERDGSolver::nodes[order][j] - 0.5);
                 tarch::la::Vector<Dimensions, double> coords = {x, y, z};
-                solver.algebraicSource(coords, ti, lQi+idx_lQi(j, k, l, i, 0), S);
+                solver.algebraicSource(lQi+idx_lQi(j, k, l, i, 0), coords, dx, ti, dt, S);
               } else {
                 std::fill_n(S, numberOfVariables, 0.0);
               }
