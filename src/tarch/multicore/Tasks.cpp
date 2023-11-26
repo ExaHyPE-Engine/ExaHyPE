@@ -490,33 +490,18 @@ void tarch::multicore::native::processFusedTask(
 }
 
 
-namespace {
-  /**
-   * We don't need this set, but we can use it to validate the code
-   * correctness.
-   */
-  std::set< tarch::multicore::TaskNumber >  registeredTask;
-}
-
-
 void tarch::multicore::native::spawnTask(
   Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
 ) {
   while (job->run()) {
   }
   delete job;
-  if (registeredTask.count(taskNumber)>0) {
-    registeredTask.erase(taskNumber);
-  }
 }
 
 
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
-  for (auto& p: inDependencies) {
-    logDebug( "waitForTasks()", "wait for task " << p );
-    assertion1( registeredTask.count(p)==0, p );
-  }
 }
+
 
 void tarch::multicore::native::waitForAllTasks() {
   logDebug( "waitForAllTasks()", "wait" );

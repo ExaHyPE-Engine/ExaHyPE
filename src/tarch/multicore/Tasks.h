@@ -462,40 +462,40 @@ namespace tarch {
       int getNumberOfPendingTasks();
 
       /**
+       * Spawn a new task into the tasking backend
        *
-       * ## Serial code
-       *
-       * Just map it onto a spawnTask() without any dependencies. See
-       * documentation is delegated routine. This is exactly the other way
-       * round compared to the C++ implementation, e.g., where we map the
-       * variant with only one integer onto the one accepting a set.
+       * This routine is invoked by tarch::multicore::spawnTask(). The invoking
+       * method is not a sole forwarding. It takes care of the categorisation
+       * of ready tasks into pending tasks, and it also handles all the fusion
+       * for GPUs. Therefore, if it delegates calls to this class, we really
+       * can directly map the task 1:1 onto the native task system used.
        *
        *
        * ## Serial code
        *
        * This is a trivial case in a serial run: As we have already completed
        * all incoming tasks (we work serially and all incoming tasks have to
-       * be done by this time), we can simply process the task and return.
-       * In a serial run, the task is executed straight-away. As a direct
-       * implication, all dependencies of future tasks are always fulfilled.
-       * However, we keep track of registered tasks in the serial version
-       * (even though the notion of a registered task makes limited sense).
-       * Registered tasks are tasks the system knows about which have not yet
-       * been submitted. Now that we submit task taskNumber, we can remove the
-       * number from the set of registered tasks.
+       * be done by this time), we can simply process the task and return. As a
+       * direct consequence, all dependencies of future tasks are always
+       * fulfilled.
        *
        * ## C++ variant
-       *
-       * Map onto the other routine passing over a single-entry set.
-       *
-       * ## C++ variant
-       *
-       * The submission runs through various stages:
        *
        * 1. We first check if a task with this number is among the submitted
        *    tasks. This is possible if a previous algorithm phase has submitted
        *    a task with this number which was a sink, but noone ever waited for
-       *    it. We now wait for it albeit we write a warning.
+       *    it. This should usually not happen and is a sign of bad code
+       *    design. We issue a warning, free all locks and wait for the
+       *    previous task with the same number to terminate.
+       * 2. Next, we spawn the actual task via a std::async call. The core task
+       *    code consists of three parts:
+       *    - We first run through all the dependencies and ensure they all are
+       *      fulfilled. waitForTasks() realises check.
+       *    - Execute the task object.
+       *    - Free its memory.
+       * 3. We store the shared_future returned by the task. If the task number
+       *    equals NoDependencies, we know that noone will ever be able to wait
+       *    for this task. In this case, we skip the storing.
        */
       void spawnTask(
         Task*                        job,
@@ -512,16 +512,45 @@ namespace tarch {
        * Degenerates to nop here, as all incoming tasks are completed. We just
        * have to ensure that the task we are waiting for is not(!) registered,
        * i.e. has actually been submitted.
+       *
+       * ## C++ code
+       *
+       * waitForTasks() is quite tricky, as we have to avoid any deadlocks
+       * here. We therefore use a quite defensive programming.
+       *
+       * 1. We lock the set of spawned tasks. If a dependency task is in there
+       *    and is valid, we memorise it in a pointer checkFuture and release
+       *    the lock.
+       * 2. Should we have found a dependency, we call the C++ wait. From
+       *    hereon, the core task is complete, but there's still an entry in
+       *    the global lookup table of spawned tasks. At this point, we
+       *    might actually have finished a lot of tasks recursively.
+       * 3. We briefly lock the data structure again and check if the task is
+       *    bookmarked in there and is already complete. In this case, we
+       *    remove the entry. We kind of run an on-the-fly immediate garbage
+       *    collection to slim down our map of spawned tasks.
        */
       void waitForTasks(const std::set<TaskNumber>& inDependencies);
 
       /**
        * Slightly different than the umbrella version in the general namespace.
+       * See comments there. This version only waits for tasks which have been
+       * submitted with a valid task number.
        *
        * ## Serial code
        *
        * This routine degenerates to nop, as no task can be pending. spawnTask()
        * always executed the task straightaway.
+       *
+       * ## C++
+       *
+       * There are different ways how to implement this wait: The most
+       * straight-forward implementation takes all the keys and the invokes
+       * waitForTasks() for all keys. We do not implement this pattern, as it
+       * would mean that we potentially copy quite a lot of keys. Instead, we
+       * iteratively wait for one task after another to finish. This implies
+       * that we give the runtime system a lot of freedom in which order and
+       * how parallel to tidy up all tasks.
        */
       void waitForAllTasks();
     } // namespace native

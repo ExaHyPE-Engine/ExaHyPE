@@ -29,16 +29,13 @@ namespace {
   /**
    * Logging
    */
-  tarch::logging::Log _log("tarch::multicore");
+  tarch::logging::Log _log("tarch::multicore::cpp");
 
   /**
-   * Task outcomes of tasks that are not yet submitted
+   * Keep track of fact if any spawned task has terminated.
    */
-  std::map<tarch::multicore::TaskNumber, std::future<void>*>  registeredTasks;
-  std::map<tarch::multicore::TaskNumber, std::future<void>*>  spawnedTasks;
-
-  tarch::multicore::BooleanSemaphore  registeredTasksSemaphore;
-  tarch::multicore::BooleanSemaphore  spawnedTasksSemaphore;
+  std::map<tarch::multicore::TaskNumber, std::shared_future<void>*>  spawnedTasks;
+  tarch::multicore::BooleanSemaphore                                 spawnedTasksSemaphore;
 }
 
 
@@ -97,52 +94,40 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 void tarch::multicore::native::spawnTask(
   Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
 ) {
-  if (taskNumber==NoDependencies and inDependencies.empty()) {
-    std::async(std::launch::async, [job]() -> void {
+  {
+    tarch::multicore::Lock lock(spawnedTasksSemaphore);
+
+    // is_ready() will enter the standard soon according to change requests
+    //if ( spawnedTasks.count(taskNumber)>0 and not spawnedTasks.at(taskNumber)->is_ready()) {
+    if (
+      spawnedTasks.count(taskNumber)>0
+      and
+      spawnedTasks.at(taskNumber)->wait_until(std::chrono::system_clock::time_point::min())!= std::future_status::ready
+    ) {
+      logWarning( "spawnTaskWithDependencies(...)", "task " << taskNumber << " is already among submitted tasks, i.e. noone ever waited for it although we now submit new task with this number. Wait before spawning. " );
+      lock.free(); // if task recursively locks table
+      waitForTask(taskNumber);
+    }
+  }
+
+  logInfo( "spawnTask(...)", "submit task " << taskNumber );
+  std::shared_future<void>  submittedTask = std::async(std::launch::async, [job,taskNumber,inDependencies]() -> void {
+      logInfo( "spawnTask(...)", "kick off task " << taskNumber );
+      tarch::multicore::native::waitForTasks(inDependencies);
       while (job->run()) {
         tarch::multicore::Core::getInstance().yield();
       }
       delete job;
     });
+
+  if (taskNumber!=NoDependencies) {
+    tarch::multicore::Lock lock(spawnedTasksSemaphore);
+    logInfo( "spawnTask(...)", "store shared future of task " << taskNumber );
+    assertion1( spawnedTasks.count(taskNumber)==0, taskNumber);
+    spawnedTasks[taskNumber] = new std::shared_future<void>(submittedTask);
   }
-  else {
-    tarch::multicore::Lock lock( _spawnedTasksSempahore );
-
-    if ( spawnedTasks.count(taskNumber)>0 and spawnedTasks[taskNumber].second!=nullptr ) {
-      logWarning( "spawnTaskWithDependencies(...)", "task " << taskNumber << " is already among pending tasks, i.e. noone ever waited for it although we now submit new task with this number. Wait before spawning. " );
-      native::waitForTask(taskNumber);
-    }
-
-    if (spawnedTasks.count(taskNumber)==0) {
-      spawnedTasks.insert( std::pair<TaskNumber, std::future<void>* >(taskNumber,nullptr) );
-    }
-    else {
-      assertion1( spawnedTasks[taskNumber].second==nullptr, taskNumber.toString() );
-    }
-
-  /*
-    keine in dependencies?
-
-    spawnedTasks.insert( std::pair< tarch::multicore::TaskNumber, std::future<void>* >(
-      taskNumber,
-      std::async(std::launch::async, [job, inDependency, taskNumber]() -> void {
-        while (job->run()) {
-          tarch::multicore::Core::getInstance().yield();
-        }
-        delete job;
-      })
-    ));
-
-    if (registeredTasks.count(taskNumber)>0) {
-      registeredTasks.erase(taskNumber);
-    }
-  */
-
-  }
-
-
-    Task* job) {
 }
+
 
 void tarch::multicore::native::processFusedTask(
   Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
@@ -151,44 +136,71 @@ void tarch::multicore::native::processFusedTask(
   std::future<void> dontWait = std::async(std::launch::async, [myTask, copyOfTasksOfSameType, device]() -> void {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask);
+      tarch::multicore::native::spawnTask(
+        myTask,
+        std::set<TaskNumber>(),
+        NoDependencies
+      );
     } else {
       delete myTask;
     }
   });
 }
 
-// @todo Semaphoren fuer Tables
 
+void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
+  for (auto& p: inDependencies) {
+    std::shared_future<void>*  checkFuture = nullptr;
 
-void tarch::multicore::native::waitForTask(const TaskNumber& taskNumber) {
-  logInfo( "waitForTasks()", "wait for task " << taskNumber.toString() );
-  assertion1( registeredTasks.count(taskNumber)==0, taskNumber.toString() );
-  assertion1( spawnedTasks.count(taskNumber)>0, taskNumber.toString() );
-  assertion1( spawnedTasks.at(taskNumber).second!=nullptr, taskNumber.toString() );
+    tarch::multicore::Lock lock(spawnedTasksSemaphore);
+    // check if there's something
+    // @todo
+    if (
+      spawnedTasks.count(p)>0
+      and
+      spawnedTasks.at(p)->valid()
+    ) {
+      checkFuture = spawnedTasks.at(p);
+    }
+    lock.free();
 
-  spawnedTasks[taskNumber].second->wait();
-  delete spawnedTasks[taskNumber].second;
-  spawnedTasks[taskNumber].second = nullptr;
+    // check but let someone else later tidy it up
+    // @todo intod ocu
+    if (checkFuture!=nullptr) {
+      logInfo( "waitForTasks(...)", "wait for task " << p );
+      checkFuture->wait();
+    }
+
+    // tidy up. Could happen that it is eliminated by now so better doublecheck
+    lock.lock();
+    if ( spawnedTasks.count(p)>0 ) {
+      delete spawnedTasks.at(p);
+      spawnedTasks.erase(p);
+    }
+    lock.free();
+  }
 }
 
-void tarch::multicore::native::registerTask( const TaskNumber&  number ) {
-  assertion( registeredTasks.count(number)==0 );
-  logInfo( "waitForTasks()", "register task " << number.toString() << " (will be defined properly later)" );
-  registeredTasks.insert(number);
-}
-
-void tarch::multicore::native::addDependency( const TaskNumber& taskNumber, const TaskNumber& registeredTasksNumber ) {
-  logInfo( "waitForTasks()", "add dependency to future task: " << taskNumber.toString() << " -> " << registeredTasksNumber.toString() );
-  assertion2( registeredTasks.count(taskNumber)==0, taskNumber.toString(), registeredTasksNumber.toString() );
-  assertion2( registeredTasks.count(registeredTasksNumber)>0, taskNumber.toString(), registeredTasksNumber.toString() );
-}
 
 void tarch::multicore::native::waitForAllTasks() {
-  logInfo( "waitForAllTasks()", "wait" );
+  logTraceInWith1Argument( "waitForAllTasks()", spawnedTasks.size() );
+  int firstUnfinishedTask = NoDependencies+1;
+  while (firstUnfinishedTask!=NoDependencies) {
+    firstUnfinishedTask = NoDependencies;
+
+    tarch::multicore::Lock lock( spawnedTasksSemaphore );
+    if (not spawnedTasks.empty()) {
+      firstUnfinishedTask = spawnedTasks.begin()->first;
+    }
+    lock.free();
+
+    if (firstUnfinishedTask!=NoDependencies) {
+      logInfo( "waitForAllTasks()", "wait for task " << firstUnfinishedTask );
+      waitForTask(firstUnfinishedTask);
+    }
+  }
+  logTraceOut( "waitForAllTasks()" );
 }
 
-
-// tarch::multicore::TaskNumber, std::future<void>*
 
 #endif
