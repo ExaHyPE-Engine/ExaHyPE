@@ -33,7 +33,7 @@ class UpdateCellLabel(ActionSet):
   
   """
   def __init__(self, solver_name):
-    super(UpdateCellLabel,self).__init__(priority=1,parallel=False)
+    super(UpdateCellLabel,self).__init__(descend_invocation_order=1,parallel=False)
     self._solver_name = solver_name
     pass
 

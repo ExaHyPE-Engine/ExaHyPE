@@ -67,20 +67,18 @@ class Project(object):
         self.algorithm_step_plot = peano4.solversteps.Step("Plot", False)
 
         self.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec
+            swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals
         )
         self.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals
+            swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals
         )
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
         """
-
         load_balancer_name: string
           Should be full-qualified name of the load balancer.
-          By default, I recommend to pass "toolbox::loadbalancing::SpreadOutHierarchically",
-          but you might be well-advices to study different classes within the
-          namespace toolbox::loadbalancing
+          By default, I recommend to pass "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+          but you might be well-advices to study different classes within the namespace toolbox::loadbalancing.
 
         load_balancer_arguments: string
           If your load balancing requires parameters, add them
@@ -88,14 +86,13 @@ class Project(object):
           Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not.
           The only exception is the empty parameter list. Here, you can/should simply
           add the empty string.
-
         """
         self._load_balancer_name = load_balancer_name
         self._load_balancer_arguments = load_balancer_arguments
 
     """
-   The standard extensions that I use for both Peano and ExaHyPE.
-  """
+    The standard extensions that I use for both Peano and ExaHyPE.
+    """
     LibraryDebug = "_debug"
     LibraryRelease = ""
     LibraryTrace = "_trace"
@@ -492,7 +489,7 @@ levels.
             self.algorithm_step_plot.use_vertex(current_species_set)
 
         #
-        # Add the cell statistics everywhere
+        # Add the cell statistics and the task markers everywhere
         #
         for current_species_set in self._particle_species_set:
             cell_marker_for_statistics = (
@@ -500,21 +497,38 @@ levels.
                     current_species_set.name
                 )
             )
+            cell_marker_for_tasks   = peano4.toolbox.TaskNumbersOnMesh.create_cell_marker(current_species_set.name)
+            vertex_marker_for_tasks = peano4.toolbox.TaskNumbersOnMesh.create_vertex_marker(current_species_set.name)
+            
             # Enable cell statistics for this species
             self._project.datamodel.add_cell(cell_marker_for_statistics)
+            self._project.datamodel.add_cell(cell_marker_for_tasks)
+            self._project.datamodel.add_vertex(vertex_marker_for_tasks)
 
             # Add cell statistics to these action steps
             self.algorithm_step_create_grid.use_cell(cell_marker_for_statistics)
             self.algorithm_step_initial_conditions.use_cell(cell_marker_for_statistics)
             self.algorithm_step_plot.use_cell(cell_marker_for_statistics)
 
+            self.algorithm_step_create_grid.use_cell(cell_marker_for_tasks)
+            self.algorithm_step_initial_conditions.use_cell(cell_marker_for_tasks)
+            self.algorithm_step_plot.use_cell(cell_marker_for_tasks)
+
+            self.algorithm_step_create_grid.use_vertex(vertex_marker_for_tasks)
+            self.algorithm_step_initial_conditions.use_vertex(vertex_marker_for_tasks)
+            self.algorithm_step_plot.use_vertex(vertex_marker_for_tasks)
+
             for solverstep in solver_steps:
                 solverstep.use_vertex(current_species_set)
+                solverstep.use_vertex(vertex_marker_for_tasks)
                 solverstep.use_cell(cell_marker_for_statistics)
+                solverstep.use_cell(cell_marker_for_tasks)
 
             for solverstep in initialisation_steps:
                 solverstep.use_vertex(current_species_set)
+                solverstep.use_vertex(vertex_marker_for_tasks)
                 solverstep.use_cell(cell_marker_for_statistics)
+                solverstep.use_cell(cell_marker_for_tasks)
 
         action_set_plot_grid = peano4.toolbox.PlotGridInPeanoBlockFormat(
             filename="grid",
@@ -523,15 +537,15 @@ levels.
 #include "repositories/GlobalState.h"
 """,
         )
-        action_set_plot_grid.priority = self.algorithm_step_plot.highest_priority() + 1
+        action_set_plot_grid.descend_invocation_order = self.algorithm_step_plot.highest_descend_invocation_order() + 1
         action_set_plot_grid.parallel = True
         self.algorithm_step_plot.add_action_set(action_set_plot_grid)
 
         action_set_create_regular_grid = peano4.toolbox.CreateRegularGrid(
             self._global_max_h
         )
-        action_set_create_regular_grid.priority = (
-            self.algorithm_step_create_grid.lowest_priority() - 1
+        action_set_create_regular_grid.descend_invocation_order = (
+            self.algorithm_step_create_grid.lowest_descend_invocation_order() - 1
         )
         action_set_create_regular_grid.parallel = True
         self.algorithm_step_create_grid.add_action_set(action_set_create_regular_grid)

@@ -482,7 +482,7 @@ if __name__ == "__main__":
     probe_point = [-0,-0,-1e-6]
     project.add_plot_filter( probe_point,[40.0,40.0,2e-6],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,0))" )
+    project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,0))" )
 
 ########################################################################################
 #Tracer setting 

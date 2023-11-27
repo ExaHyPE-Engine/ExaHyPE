@@ -3,6 +3,7 @@
 #pragma once
 
 
+#include "tarch/mpi/mpi.h"
 #include "tarch/logging/Log.h"
 #include "tarch/mpi/Rank.h"
 
@@ -40,8 +41,11 @@ class toolbox::loadbalancing::Statistics {
      *
      * - finishSimulation() and
      * - finishStep()
+     *
+     * but we also call it from updateGlobalView() before we issue new
+     * collective MPI calls.
      */
-    void waitForGlobalStatisticsExchange();
+    void waitForGlobalDataExchange();
 
     void updateGlobalView();
 
@@ -50,8 +54,6 @@ class toolbox::loadbalancing::Statistics {
     int getGlobalNumberOfRanksWithEnabledLoadBalancing() const;
     int getGlobalNumberOfTrees() const;
     int getNumberOfStateUpdatesWithoutAnySplit() const;
-    int getLightestRank() const;
-    int getMinimumOfMaximumOfTreesPerRank() const;
     int getMaximumTreesPerRank() const;
 
     void incLocalNumberOfSplits( int delta=1 );
@@ -69,21 +71,12 @@ class toolbox::loadbalancing::Statistics {
     static tarch::logging::Log _log;
 
     /**
-     * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
-     * in some MPI implementations if we use them for integers.
-     */
-    struct ReductionBuffer {
-      double   _unrefinedCells;
-      int      _rank;
-    };
-
-    /**
-     * Status variable required to compute good load balancing.
+     * Required for local stats, but also replicated in cell count metrics
      */
     int _localNumberOfInnerUnrefinedCells;
 
     /**
-     * Status variable required to compute good load balancing
+     * Required for local stats, but also replicated in cell count metrics
      */
     int _globalNumberOfInnerUnrefinedCells;
 
@@ -92,8 +85,6 @@ class toolbox::loadbalancing::Statistics {
     int _globalNumberOfRanksWithEnabledLoadBalancing;
 
     bool _localLoadBalancingEnabled;
-
-    ReductionBuffer  _lightestRank;
 
     /**
      * This is my local accumulator where I keep track of how often I did
@@ -110,29 +101,23 @@ class toolbox::loadbalancing::Statistics {
 
     int _numberOfStateUpdatesWithoutAnySplit;
 
-    int _minimumOfMaximumTreesPerRank;
     int _maximumTreesPerRank;
 
     bool _viewConsistent;
 
     #ifdef Parallel
+    /**
+     * Required for local stats, but also replicated in cell count metrics
+     */
     MPI_Request*    _globalSumRequest;
-    MPI_Request*    _globalLightestRankRequest;
     MPI_Request*    _globalNumberOfSplitsRequest;
     MPI_Request*    _globalNumberOfTreesRequest;
     MPI_Request*    _globalNumberOfRanksWithEnabledLoadBalancingRequest;
-    MPI_Request*    _globalMinimumOfMaximumTreesPerRankRequest;
     MPI_Request*    _globalMaximumTreesPerRankRequest;
     #endif
 
-    /**
-     * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
-     * in some MPI implementations if we use them for integers.
-     */
     int             _globalNumberOfInnerUnrefinedCellsBufferIn;
     int             _globalNumberOfInnerUnrefinedCellsBufferOut;
-    ReductionBuffer _lightestRankIn;
-    ReductionBuffer _lightestRankOut;
     int             _numberOfSplitsIn;
     int             _numberOfSplitsOut;
     int             _numberOfTreesIn;
@@ -140,7 +125,6 @@ class toolbox::loadbalancing::Statistics {
     int             _numberOfRanksWithEnabledLoadBalancingIn;
     int             _numberOfRanksWithEnabledLoadBalancingOut;
     int             _numberOfMaximumTreesOut;
-    int             _minimumOfMaximumTreesIn;
     int             _maximumTreesIn;
 
 };

@@ -78,40 +78,40 @@ class testLeapfrogFixedTimeStepSize(Particle):
             max_h,
         )
 
-        self.cfl_factor = cfl_factor
-        self.initial_time_step_size = initial_time_step_size
+        self._cfl_factor = cfl_factor
+        self._initial_time_step_size = initial_time_step_size
 
         if constant_time_step_size == True:
             adjustTimeStepSize = "true"
         else:
             adjustTimeStepSize = "false"
-        self.adjustTimeStepSize = adjustTimeStepSize
+        self._adjustTimeStepSize = adjustTimeStepSize
 
         # Particle attributes
-        self.velocity = peano4.dastgen2.Peano4DoubleArray("v", "Dimensions")
-        self.accelerator = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions")
-        self.data.add_attribute(self.velocity)
-        self.data.add_attribute(self.accelerator)
+        self._velocity = peano4.dastgen2.Peano4DoubleArray("v", "Dimensions")
+        self._accelerator = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions")
+        self.data.add_attribute(self._velocity)
+        self.data.add_attribute(self._accelerator)
 
         # Dummy SPH arrays for compilation. Not relevant for non-SPH
         # Required by the Kick2 SPH compute kernel
         # Altrnatively, we might want to introduce a separate version of this compute kernel
-        self.v_full = peano4.dastgen2.Peano4DoubleArray("v_full", "Dimensions")
-        self.u_full = dastgen2.attributes.Double("u_full")
-        self.u = dastgen2.attributes.Double("u")
-        self.density = dastgen2.attributes.Double("density")
-        self.pressure = dastgen2.attributes.Double("pressure")
-        self.soundSpeed = dastgen2.attributes.Double("soundSpeed")
-        self.v_sig_AV = dastgen2.attributes.Double("v_sig_AV")
-        self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
-        self.data.add_attribute(self.u)
-        self.data.add_attribute(self.density)
-        self.data.add_attribute(self.pressure)
-        self.data.add_attribute(self.v_full)
-        self.data.add_attribute(self.u_full)
-        self.data.add_attribute(self.soundSpeed)
-        self.data.add_attribute(self.v_sig_AV)
-        self.data.add_attribute(self.is_boundary_part)
+        self._v_full = peano4.dastgen2.Peano4DoubleArray("v_full", "Dimensions")
+        self._u_full = dastgen2.attributes.Double("u_full")
+        self._u = dastgen2.attributes.Double("u")
+        self._density = dastgen2.attributes.Double("density")
+        self._pressure = dastgen2.attributes.Double("pressure")
+        self._soundSpeed = dastgen2.attributes.Double("soundSpeed")
+        self._v_sig_AV = dastgen2.attributes.Double("v_sig_AV")
+        self._is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
+        self.data.add_attribute(self._u)
+        self.data.add_attribute(self._density)
+        self.data.add_attribute(self._pressure)
+        self.data.add_attribute(self._v_full)
+        self.data.add_attribute(self._u_full)
+        self.data.add_attribute(self._soundSpeed)
+        self.data.add_attribute(self._v_sig_AV)
+        self.data.add_attribute(self._is_boundary_part)
 
         self.particle_particle_interaction_over_particle_sets_kernel = (
             particle_particle_interaction_over_particle_sets_kernel
@@ -123,7 +123,51 @@ class testLeapfrogFixedTimeStepSize(Particle):
             touch_particles_of_set_last_time_kernel
         )
 
-        pass
+        # now set global parameters as dastgen attributes
+        self.set_parameters()
+
+        return
+
+    def set_parameters(self):
+        """
+        This function translates "global" particle parameters which are
+        constant throughout the simulation (like CFL factor, minimal time step
+        size, viscosity parameters...) into dastgen attributes of the C++
+        particle class.
+        If you modify any of the attributes manually outside of the particle
+        initialisation, e.g. by invoking
+
+        ```
+        particle = SPHLeapfrogFixedSearchRadius(initial_time_step_size=ABC, ...)
+        particle.initial_time_step_size = XYZ
+        ```
+
+        you need to call this function manually so your changes propagate
+        into the generated C++ files.
+        """
+
+        const_static = dastgen2.attributes.Attribute.Qualifier.CONST_STATIC
+
+        cfl_attr = dastgen2.attributes.Double(
+            "cfl", qualifier=const_static, initval=self._cfl_factor
+        )
+        self.data.add_or_replace_attribute(cfl_attr)
+
+        initial_time_step_size_attr = dastgen2.attributes.Double(
+            "initialTimeStepSize",
+            qualifier=const_static,
+            initval=self._initial_time_step_size,
+        )
+        self.data.add_or_replace_attribute(initial_time_step_size_attr)
+
+        adjust_time_step_size_attr = dastgen2.attributes.Boolean(
+            "adjustTimeStepSize",
+            qualifier=const_static,
+            initval=self._adjustTimeStepSize,
+        )
+        self.data.add_or_replace_attribute(adjust_time_step_size_attr)
+
+        return
 
     def algorithm_steps(self):
         """
@@ -143,6 +187,7 @@ class testLeapfrogFixedTimeStepSize(Particle):
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
                 cell_kernel="""
                                          ::swift2::kernels::genericInteraction<globaldata::{}>(
+                                           marker,
                                            localParticles,
                                            activeParticles,
                                            [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
@@ -165,14 +210,11 @@ class testLeapfrogFixedTimeStepSize(Particle):
                 name="Kick1",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
                 touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-                        localParticles, 1 , false);""",
-                prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>({},{},{});""".format(
+                        assignedParticles);""",
+                prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
                     self.name,
-                    self.cfl_factor,
-                    self.initial_time_step_size,
-                    self.adjustTimeStepSize,
                 ),
                 includes="""
                                          #include "Constants.h"
@@ -187,9 +229,9 @@ class testLeapfrogFixedTimeStepSize(Particle):
             AlgorithmStep(
                 name="Drift",
                 dependencies=AlgorithmStep.Dependencies.SELF,
-                effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
-                touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( localParticles );""",
+                effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN,
+                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
+                touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles );""",
                 includes="""
                                          #include "Constants.h"
                                          #include "swift2/timestepping/Leapfrog.h"
@@ -204,6 +246,7 @@ class testLeapfrogFixedTimeStepSize(Particle):
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
                 cell_kernel="""
                                          ::swift2::kernels::genericInteraction<globaldata::{}>(
+                                           marker,
                                            localParticles,
                                            activeParticles,
                                            [&] (globaldata::{}* localParticle, const globaldata::{} * const globalParticle) -> void {{
@@ -226,9 +269,9 @@ class testLeapfrogFixedTimeStepSize(Particle):
                 name="Kick2",
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(localParticles);""",
+                touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
                 touch_vertex_last_time_kernel="""::swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(
-                        localParticles, 2, false );""",
+                        assignedParticles);""",
                 includes="""
                                          #include "Constants.h"
                                          #include "swift2/timestepping/Leapfrog.h"

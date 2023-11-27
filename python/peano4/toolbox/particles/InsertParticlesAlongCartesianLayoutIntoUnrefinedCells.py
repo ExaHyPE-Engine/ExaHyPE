@@ -63,7 +63,7 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
 
         """
         super(InsertParticlesAlongCartesianLayoutIntoUnrefinedCells, self).__init__(
-            priority=1, parallel=False
+            descend_invocation_order=1, parallel=False
         )
 
         self.d = {}
