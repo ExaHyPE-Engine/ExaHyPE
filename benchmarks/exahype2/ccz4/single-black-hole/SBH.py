@@ -530,6 +530,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
 
     def __init__(self, 
                  name, 
+                 patch_size,
                  min_cell_size, 
                  max_cell_size, 
                  use_heap_storage=False, # See superclass docu

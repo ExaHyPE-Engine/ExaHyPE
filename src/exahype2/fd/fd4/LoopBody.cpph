@@ -247,7 +247,7 @@ void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
   double cellsize = patchSize(normal) / QOutEnumerator._numberOfDoFsPerAxisInCell;
   double gradcoef = 1.0 / (12.0 * cellsize);
 
-  double oldq, newq;
+  int order=4;
   // std::cout<<"called here"<<std::endl;
   //  A[normal] = \partial_{normal}\alpha
   //  alpha is Q[16]
@@ -256,6 +256,7 @@ void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
   // if (normal==3){
   /*QIn[ QInEnumerator(patchIndex,centralVolume,23+normal) ] = -6.0*gradcoef * QIn[ QInEnumerator(patchIndex,
      leftAdjacentVolume1,16) ] + 6.0*gradcoef * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,16) ];   */
+  if (order==4){
   QIn[QInEnumerator(
     patchIndex, centralVolume, 23 + normal
   )] = gradcoef * QIn[QInEnumerator(patchIndex, leftAdjacentVolume2, 16)]
@@ -308,6 +309,46 @@ void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
            - 0.5 * gradcoef * QIn[QInEnumerator(patchIndex, rightAdjacentVolume2, k)];
     }
   }
+  }
+
+  if (order==2){
+  gradcoef = 1.0 / (2.0 * cellsize);
+  QIn[QInEnumerator(
+    patchIndex, centralVolume, 23 + normal
+  )] = - gradcoef * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, 16)]
+       + gradcoef * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, 16)];
+
+  // P[normal] = \partial_{normal}\phi
+  // phi is Q[54]
+  QIn[QInEnumerator(
+    patchIndex, centralVolume, 55 + normal
+  )] = - gradcoef * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, 54)]
+       + gradcoef * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, 54)];
+  //if (normal==1 and QIn[QInEnumerator(patchIndex, centralVolume, 55 + normal)]>1e-12)
+  //  {std::cout<<"left "<< QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, 54)] <<"  right "<< QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, 54)] <<std::endl;}
+
+  // B[normal][i] = \partial_{normal}\beta^i
+  // beta^i is Q[17] - Q[19]
+  for (int i = 0; i < 3; i++) {
+    QIn[QInEnumerator(
+      patchIndex, centralVolume, 26 + 3 * normal + i
+    )] = - gradcoef * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, 17 + i)]
+         + gradcoef * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, 17 + i)];
+  }
+
+  // D[normal][i][j] = 0.5*\partial_{normal}\tilde{\gamma}_{ij} -- note the 1/2 factor
+  // \tilde{\gamma}_{ij} is Q[0] - Q[5]
+  for (int i = 0; i < 3; i++) {
+    for (int j = i; j < 3; j++) {
+      int k = (i == 0 ? j : i + j + 1);
+      QIn[QInEnumerator(
+        patchIndex, centralVolume, 35 + 6 * normal + k
+      )] = - 0.5 * gradcoef * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, k)]
+           + 0.5 * gradcoef * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, k)];
+    }
+  }
+  }
+
 }
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
