@@ -7,6 +7,6 @@ from .Project import Project
 import swift2.input
 import swift2.scenario
 import swift2.particle
-import swift2.treetraversal
+import swift2.actionsets
 
 print( "Swift 2" )

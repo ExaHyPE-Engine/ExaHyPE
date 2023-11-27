@@ -373,7 +373,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                         current_species_set.particle_model.name,
                     )
                 )
-            action_set_particle_particle_interaction = swift2.treetraversal.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
+            action_set_particle_particle_interaction = swift2.actionsets.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
                 particle_set=current_species_set,
                 particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
                     current_species_set, step.cell_kernel, use_multilevel_dependencies=True
@@ -399,7 +399,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                         current_species_set.particle_model.name,
                     )
                 )
-            action_set_particle_particle_interaction = swift2.treetraversal.UpdateParticle_MultiLevelInteraction_Sets(
+            action_set_particle_particle_interaction = swift2.actionsets.UpdateParticle_MultiLevelInteraction_Sets(
                 particle_set=current_species_set,
                 particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
                     current_species_set, step.cell_kernel, current_species_index, use_multilevel_dependencies=True
@@ -432,7 +432,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                     )
                 )
 
-            action_set_particle_update = swift2.treetraversal.UpdateParticle_SingleLevelInteraction_ContiguousParticles(
+            action_set_particle_update = swift2.actionsets.UpdateParticle_SingleLevelInteraction_ContiguousParticles(
                 particle_set=current_species_set,
                 particle_cell_update_kernel=construct_touch_cell_first_time_call(
                     current_species_set, step.cell_kernel,current_species_index, use_multilevel_dependencies=False
@@ -464,7 +464,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                     )
                 )
 
-            action_set_particle_update = swift2.treetraversal.UpdateParticle_SingleLevelInteraction(
+            action_set_particle_update = swift2.actionsets.UpdateParticle_SingleLevelInteraction(
                 particle_set=current_species_set,
                 particle_cell_update_kernel=construct_touch_cell_first_time_call(
                     current_species_set, step.cell_kernel,current_species_index, use_multilevel_dependencies=False
