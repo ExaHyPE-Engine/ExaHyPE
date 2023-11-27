@@ -9,6 +9,8 @@ import dastgen2
 
 from Probe_file_gene import tracer_seeds_generate
 
+from ComputeFirstDerivatives import ComputeFirstDerivatives
+
 from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
 import numpy as np
 #todo no mpmath here so rkdg not working
@@ -1087,13 +1089,13 @@ if __name__ == "__main__":
 
     if args.DC_flag==True:
       userinfo.append(("Enable double communication, make sure you are using the Second formulism.", None))
-      Additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
-                                           add_user_defined_actions=True,
-                                           prepare_patch_access_for_this_solver=my_solver,
-                                           action_type="FD4_first_derivative_calculation"
-                                           )
-      project.register_new_user_defined_algorithmic_step( Additional_mesh_traversal )
-      peano4_project.solversteps.add_step( Additional_mesh_traversal )
+      additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
+                                                           add_user_defined_actions=False,
+                                                           )
+      additional_mesh_traversal.add_action_set( ComputeFirstDerivatives(my_solver) )
+      project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
+      peano4_project.solversteps.add_step( additional_mesh_traversal )
+      ComputeFirstDerivatives
 
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )
