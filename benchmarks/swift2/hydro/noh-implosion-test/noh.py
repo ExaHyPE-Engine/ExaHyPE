@@ -15,8 +15,9 @@ import shutil
 ########################################################################################
 
 Parallelisation_DomainDecomposition = "domain-decomposition"
-Parallelisation_SpawnTasksPerSweep = "spawn-tasks-per-sweep"
-ParallelisationVariants = [Parallelisation_DomainDecomposition, Parallelisation_SpawnTasksPerSweep]
+Parallelisation_SpawnTasksPerSweep = "task-tree"
+Parallelisation_TaskGraph = "task-graph"
+ParallelisationVariants = [Parallelisation_DomainDecomposition, Parallelisation_SpawnTasksPerSweep, Parallelisation_TaskGraph]
 
 Storage_Scattered = "scattered"
 Storage_ContinuousPerVertex = "continuous-per-vertex"
@@ -261,6 +262,16 @@ if __name__ == "__main__":
         )
         project.initialisation_steps_task_graph_compiler = (
             swift2.graphcompiler.map_initialisation_steps_onto_task_tree
+        )
+    elif (
+        args.realisation.split(".")[0] == Parallelisation_TaskGraph
+        and args.realisation.split(".")[1] == Storage_Scattered
+    ):
+        project.algorithm_steps_task_graph_compiler = (
+            swift2.graphcompiler.map_particle_steps_onto_task_graph
+        )
+        project.initialisation_steps_task_graph_compiler = (
+            swift2.graphcompiler.map_initialisation_steps_onto_task_graph
         )
     else:
         assert False, "realisation " + args.realisation + " not supported"

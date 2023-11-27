@@ -24,3 +24,11 @@ from .TaskTree import (
     map_initialisation_steps_onto_task_tree,
     map_initialisation_steps_onto_task_tree_for_coalesced_memory_access,
 )
+
+
+from .TaskGraph import (
+    map_particle_steps_onto_task_graph,
+    map_particle_steps_onto_task_graph_insert_dummy_sweeps_and_vectorise,
+    map_initialisation_steps_onto_task_graph,
+    map_initialisation_steps_onto_task_graph_for_coalesced_memory_access,
+)
