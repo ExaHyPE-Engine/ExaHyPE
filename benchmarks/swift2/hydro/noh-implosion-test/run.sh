@@ -1,16 +1,16 @@
 #!/bin/sh
 
-# Script to run experiment (Noh 2D)
+export PYTHONPATH=$PYTHONPATH:../../../../python
 
-# set number of threads
-export OMP_NUM_THREADS=128
+# Script to run experiment (Noh 2D)
 
 # Parameters
 TIMESTEP_SIZE=0.0001
-END_TIME=0.01
-N_PART=400
-CELL_SIZE=0.1 # this is unused?
+END_TIME=0.0001
+#N_PART=2000
+N_PART=200
 PLOT_DELTA=0
 
 # Run python script to generate the experiment
-python3 noh.py -j $OMP_NUM_THREADS -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA
+python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -opt continuous-per-vertex-vectorise -v
+

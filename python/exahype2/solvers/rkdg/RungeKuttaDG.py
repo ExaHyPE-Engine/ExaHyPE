@@ -175,7 +175,7 @@ class RungeKuttaDG(object):
         min_cell_h,
         max_cell_h,
         plot_grid_properties,
-        baseline_action_set_priority=0,
+        baseline_action_set_descend_invocation_order=0,
     ):
         """
         Constructor of the Runge-Kutta Discontinuous Galerkin solver
@@ -325,7 +325,7 @@ class RungeKuttaDG(object):
         self._cell_data_storage = Storage.CallStack
         self._face_data_storage = Storage.CallStack
 
-        self._baseline_action_set_priority = baseline_action_set_priority
+        self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
         self.create_data_structures()
         self.create_action_sets()
@@ -864,53 +864,53 @@ We use RK("""
         self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel(self._name)
         self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel(self._name)
 
-        self._action_set_update_face_label.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_update_face_label.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_update_cell_label.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_update_cell_label.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_linear_combination_of_estimates.priority = (
-            self._baseline_action_set_priority + 2
+        self._action_set_linear_combination_of_estimates.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = (
-            self._baseline_action_set_priority + 2
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
         )
-        self._action_set_project_linear_combination_onto_faces.priority = (
-            self._baseline_action_set_priority + 3
+        self._action_set_project_linear_combination_onto_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 3
         )  # depends on lienar combination of estimates
-        self._action_set_solve_volume_integral.priority = (
-            self._baseline_action_set_priority + 3
+        self._action_set_solve_volume_integral.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 3
         )  # the two 3s could run in parallel
-        self._action_set_handle_boundary.priority = (
-            self._baseline_action_set_priority + 2
+        self._action_set_handle_boundary.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
         )
-        self._action_set_solve_Riemann_problem.priority = (
-            self._baseline_action_set_priority + 3
+        self._action_set_solve_Riemann_problem.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 3
         )  # boundary has to be known
-        self._action_set_add_volume_and_face_solution.priority = (
-            self._baseline_action_set_priority + 3
+        self._action_set_add_volume_and_face_solution.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 3
         )  # can also run in parallel, as it never occurs at same time
-        self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority = (
-            self._baseline_action_set_priority + 4
+        self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 4
         )  # depends on other guys
-        self._action_set_AMR.priority = self._baseline_action_set_priority + 5
-        self._action_set_AMR_commit_without_further_analysis.priority = (
-            self._baseline_action_set_priority + 5
+        self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 5
         )
 
-        self._action_set_initial_conditions.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_initial_conditions.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_initial_conditions_for_grid_construction.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
 
-        self._action_set_preprocess_solution.priority = (
-            self._baseline_action_set_priority
+        self._action_set_preprocess_solution.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )  # touch cell first time, i.e. enter cell
-        self._action_set_postprocess_solution.priority = (
-            self._baseline_action_set_priority
+        self._action_set_postprocess_solution.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )  # touch cell last time, i.e. leave cell
 
 
@@ -1158,7 +1158,7 @@ We use RK("""
             plot_cell_data=False,
             select_dofs=self.select_dofs_to_print,
         )
-        plot_patches_action_set.priority = self._baseline_action_set_priority
+        plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
         step.add_action_set(plot_patches_action_set)
 
         if self._plot_grid_properties:
@@ -1173,8 +1173,8 @@ We use RK("""
 """,
                 plot_cell_data=False,
             )
-            plot_grid_properties_action_set.priority = (
-                self._baseline_action_set_priority
+            plot_grid_properties_action_set.descend_invocation_order = (
+                self._baseline_action_set_descend_invocation_order
             )
             step.add_action_set(plot_grid_properties_action_set)
 

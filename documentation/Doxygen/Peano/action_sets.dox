@@ -42,6 +42,9 @@ set.
 
 Event  | Semantics | Dependencies
 ------------- | ------------- | -------------
+prepareTraversal | Static routine of an action set which is called before any action set for the particular mesh travesal is created at all. | Precedes the construction of the action sets for the next mesh traversal. Called once per MPI rank only.
+unprepareTraversal   | Inform listeners about end of traversal on this particular subtree after all action sets have termianted and have been destructed. Static binding. | Very last event per rank.
+------------- | ------------- | -------------
 beginTraversal | Inform listeners about start of traversal on this particular subtree. | Called prior to any other event in this grid sweep.
 endTraversal   | Inform listeners about end of traversal on this particular subtree. | Called after all other event in this grid sweep.
 ------------- | ------------- | -------------

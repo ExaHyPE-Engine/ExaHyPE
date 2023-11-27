@@ -31,6 +31,20 @@
 AC_INIT([Peano], [4.0])
 AC_CONFIG_MACRO_DIR([m4])
 
+# Automake sets C++ flags to "-O2 -g" for GNU compilers (and also for other compilers)
+# These flags are appended to every target. (To all 5, Debug, Release, Trace, Asserts, Stats)
+# To override these defaults, they need to be set between AC_INIT and AC_PROG_CXX for C++
+# and AC_PROG_CC for C.
+# If the flags are empty at this stage (user has not given flags), then we set the floags to none 
+# (empty string), so that "-g -O2" is not appended to every target
+# See Automake documentation and the stackoverflow post: https://stackoverflow.com/questions/3116645/default-compiler-flags-with-autotools
+if test -z "$CXXFLAGS"; then
+  CXXFLAGS=''
+fi
+if test -z "$CFLAGS"; then
+  CFLAGS=''
+fi
+
 AM_INIT_AUTOMAKE(foreign -Wall -Werror)
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
@@ -81,23 +95,28 @@ srcdir_full_path=`cd $srcdir && pwd`
 # Define all the compiler and linker variables of Peano
 # ===============================================================
 #
-CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0"
-CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics"
-CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g"
-CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g"
-CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g -O0"
+CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0 "
+CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics "
+CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g "
+CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g "
+CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g -O0 "
 
-CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0"
-CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics"
-CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g"
-CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g"
-CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0"
+CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0 "
+CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics "
+CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g "
+CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g "
+CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0 "
 
+# Note: the flag "-g" is essentially a flag for the compiler driver
+# I given as a linker flag, the linker does not complain but it will be ignored.
+# E.g. taken from GNU ld documentaiton https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
+# -g, Ignored. Provided for compatibility with other tools. 
+# Works similarly in other linkers etc. (Libtool's documentation is worse comapred to ld and lld, and the debug flag -g is not mentioned)
 LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
 LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src "
-LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src -g"
-LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src -g"
-LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src -g"
+LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src "
+LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src "
+LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src "
 
 LDADD_PEANO_2D_RELEASE=" -lPeano4Core2d         -lTarch"
 LDADD_PEANO_2D_STATS="   -lPeano4Core2d_stats   -lTarch_stats"
@@ -309,11 +328,11 @@ if test "$gpu" == cuda; then
 
   NVCC_FLAGS="-forward-unknown-to-host-compiler -I$srcdir_full_path/src -ccbin=$CXX"
 
-  NVCC_FLAGS_RELEASE="$NVCC_FLAGS"
-  NVCC_FLAGS_STATS="$NVCC_FLAGS"
-  NVCC_FLAGS_ASSERTS="$NVCC_FLAGS -G"
-  NVCC_FLAGS_TRACE="$NVCC_FLAGS -g"
-  NVCC_FLAGS_DEBUG="$NVCC_FLAGS -G -O0"
+  NVCC_FLAGS_RELEASE=" $NVCC_FLAGS "
+  NVCC_FLAGS_STATS="   $NVCC_FLAGS "
+  NVCC_FLAGS_ASSERTS=" $NVCC_FLAGS "
+  NVCC_FLAGS_TRACE="   $NVCC_FLAGS "
+  NVCC_FLAGS_DEBUG="   $NVCC_FLAGS -g -O0 "
 fi
 
 

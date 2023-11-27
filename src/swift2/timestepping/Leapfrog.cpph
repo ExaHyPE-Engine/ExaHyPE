@@ -1,3 +1,4 @@
+#include "swift2/kernels/ParticleState.h"
 #include "tarch/la/ScalarOperations.h"
 #include "tarch/la/VectorOperations.h"
 #include "tarch/la/VectorVectorOperations.h"
@@ -9,13 +10,8 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
                                 .getMinTimeStepSize();
 
   for (auto* particle : localParticles) {
-    if (
-      particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
-      and
-      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-      and
-      not particle->getIsBoundaryParticle()
-    ) {
+
+    if (swift2::kernels::localParticleCanBeMoved(particle) and not particle->getIsBoundaryParticle()) {
 
       // Drift the particle (update position for a full time-step). It's important
       // to take the "V_full" here, not the fluid velocity V. V_full doesn't get
@@ -37,17 +33,43 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const Part
 
 
 template <typename ParticleContainer>
+void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
+  const ParticleContainer& particles, int numberOfParticles
+) {
+
+  const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
+                                .getMinTimeStepSize();
+
+  const auto newState = std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved;
+
+  typename ParticleContainer::value_type firstParticle = *particles.begin();
+
+  assertion1(particles.isGathered(), particles.toString());
+  assertionEquals1(particles.size(), numberOfParticles, particles.toString());
+  int currentParticle = 0;
+  for (auto* particle : particles) {
+    assertion1(firstParticle + currentParticle == particle, particles.toString());
+    currentParticle++;
+  }
+
+  for (auto i = 0; i < numberOfParticles; i++) {
+    auto* particle = firstParticle + i;
+
+    auto mask = (double)(swift2::kernels::localParticleCanBeMoved(particle) & !particle->getIsBoundaryParticle());
+
+    particle->setX(particle->getX() + mask * timeStepSize * particle->getV_full());
+    particle->setMoveState(newState);
+  }
+}
+
+
+template <typename ParticleContainer>
 void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
   const double timeStepSizeKick = 0.5
                                   * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                                       .getMinTimeStepSize();
   for (auto* particle : localParticles) {
-    if (
-      particle->getParallelState()
-      == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-      and
-      not particle->getIsBoundaryParticle()
-    ) {
+    if (swift2::kernels::localParticleCanBeWorkedOnVertexKernel(particle) and not particle->getIsBoundaryParticle()) {
 
       // Kick the particle
       particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
@@ -64,7 +86,7 @@ void swift2::timestepping::computeSPHLeapfrogKickWithGlobalTimeStepSize(
                                   * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                                       .getMinTimeStepSize();
   for (auto* particle : localParticles) {
-    if (particle->getParallelState() == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local) {
+    if (swift2::kernels::localParticleCanBeWorkedOnVertexKernel(particle)) {
 
       /* Kick the particle */
       particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
@@ -83,8 +105,7 @@ void swift2::timestepping::computeSPHLeapfrogKickWithGlobalTimeStepSize(
 template <typename ParticleContainer>
 void swift2::timestepping::computePredictHydro(const ParticleContainer& localParticles) {
   for (auto* particle : localParticles) {
-    if (particle->getParallelState() == std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local) {
-
+    if (swift2::kernels::localParticleCanBeWorkedOnVertexKernel(particle)) {
       swift2::kernelPlaceholders::hydro_predict_extra(particle);
     }
   }
@@ -103,13 +124,7 @@ void swift2::timestepping::moveParticleIntoCriticalLine(const ParticleContainer&
   double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                           .getMinTimeStepSize();
   for (auto* particle : localParticles) {
-    if (
-      particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
-      and
-      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-      and
-      not particle->getIsBoundaryParticle()
-    ) {
+    if (swift2::kernels::localParticleCanBeMoved(particle) and not particle->getIsBoundaryParticle()) {
 
       /*
        * Disappearing particle test.
