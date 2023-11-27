@@ -49,7 +49,14 @@ mark these steps as private via a leading underscore.
   
   - _solvers: [Solver]
       List of tuples of typename and names of solvers that this project should use simultaneously.
-  
+  - preconditioner_type: String
+      Preconditioner type to be used. This part of the string should match the final 
+      part of the enum class in src/petsc/LinearEquationSystem.h. The namespaceing is 
+      taken care of downstream.
+  - solver_type: String
+      Solver type to be used. This part of the string should match the final 
+      part of the enum class in src/petsc/LinearEquationSystem.h. The namespaceing is 
+      taken care of downstream.
   
   """
   def __init__(self, 
