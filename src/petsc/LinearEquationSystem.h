@@ -156,9 +156,27 @@ class petsc::LinearEquationSystem{
     }
 
     /**
+    * Enum class to allow us to customise different 
+    * different petsc preconditioner types
+    */
+    enum class PreconditionerType: int 
+    {
+      None, LU
+    };
+
+    /**
+    * Enum class to allow us to customise different 
+    * different petsc solver types
+    */
+    enum class KSPSolverType: int
+    {
+      GMRES, CG
+    };
+
+    /**
     * Method to hand over to petsc and solve.
     */
-    void solve();
+    void solve(PreconditionerType pctype = PreconditionerType::None, KSPSolverType ksptype = KSPSolverType::GMRES);
 
     /**
     * Method to clean up PETSc objects. Call this in some late stage 
@@ -169,6 +187,10 @@ class petsc::LinearEquationSystem{
     * put this stuff here so as not to cause any issues.
     */
     void cleanUpPetscObjects();
+
+
+    PCType  getPreconditionerTypeFromEnum(PreconditionerType type);
+    KSPType getKSPSolverTypeFromEnum(KSPSolverType type);
 
   private:
     static tarch::logging::Log  _log;

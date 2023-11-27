@@ -32,7 +32,11 @@ assert args.dimensions == 2, "not ready for 3d yet"
 
 #! [Create project]
 project = multigrid.petsc.Project(project_name = "DG", 
-                                  namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
+                                  namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ],
+
+                                  # next two arguments let us customise the solver we use in petsc
+                                  preconditioner_type = "LU",
+                                  solver_type         = "GMRES"
                                   ) 
 #! [Create project]
 
