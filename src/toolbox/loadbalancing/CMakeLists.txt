@@ -1,7 +1,7 @@
 file(GLOB_RECURSE SOURCES "*")
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
-foreach(mode IN LISTS BUILD_MODES)
+foreach(mode IN LISTS PEANO_BUILD_TYPES)
   string(TOLOWER ${mode} mode_lower)
   string(TOUPPER ${mode} mode_upper)
 
