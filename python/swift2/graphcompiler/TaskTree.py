@@ -185,7 +185,8 @@ def construct_touch_vertex_last_time_call(
     current_species_set, 
     touch_vertex_last_time_kernel,
     current_species_index,
-    use_multilevel_dependencies
+    use_multilevel_dependencies,
+    alter_particle_position_or_global_state
 ):
     d = {
       "MARKER_NAME":  peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
@@ -193,6 +194,7 @@ def construct_touch_vertex_last_time_call(
       ),
       "SPECIES_INDEX": current_species_index,
       "USE_MULTILEVEL_DEPENDENCIES":     use_multilevel_dependencies,
+      "ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE": alter_particle_position_or_global_state,
     }
     return jinja2.Template(
         """
@@ -254,8 +256,14 @@ def construct_touch_vertex_last_time_call(
         }
       }
       {% endif %}
+      
+      {% if ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE %}
+      constexpr bool alterParticlePositionOrGlobalState = true;
+      {% else %}
+      constexpr bool alterParticlePositionOrGlobalState = false;
+      {% endif %}
 
-      if ( marker.isAdjacentToParallelDomainBoundary () ) {
+      if ( marker.isAdjacentToParallelDomainBoundary() or alterParticlePositionOrGlobalState ) {
         tarch::multicore::waitForTask( taskNumberToBeUsed.flatten() );
       }
     """
@@ -367,7 +375,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                     current_species_set, step.touch_vertex_first_time_kernel, use_multilevel_dependencies=True
                 ),
                 touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                    current_species_set, step.touch_vertex_last_time_kernel, use_multilevel_dependencies=True
+                    current_species_set, step.touch_vertex_last_time_kernel, use_multilevel_dependencies=True,alter_particle_position_or_global_state=step.effect!=AlgorithmStep.Effect.ALTER_LOCAL_STATE
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
@@ -393,7 +401,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                     current_species_set, step.touch_vertex_first_time_kernel, current_species_index, use_multilevel_dependencies=True
                 ),
                 touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                    current_species_set, step.touch_vertex_last_time_kernel, current_species_index, use_multilevel_dependencies=True
+                    current_species_set, step.touch_vertex_last_time_kernel, current_species_index, use_multilevel_dependencies=True,alter_particle_position_or_global_state=step.effect!=AlgorithmStep.Effect.ALTER_LOCAL_STATE
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
@@ -426,7 +434,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                     current_species_set, step.touch_vertex_first_time_kernel,current_species_index, use_multilevel_dependencies=False
                 ),
                 touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                    current_species_set, step.touch_vertex_last_time_kernel,current_species_index, use_multilevel_dependencies=False
+                    current_species_set, step.touch_vertex_last_time_kernel,current_species_index, use_multilevel_dependencies=False,alter_particle_position_or_global_state=step.effect!=AlgorithmStep.Effect.ALTER_LOCAL_STATE
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
@@ -458,7 +466,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                     current_species_set, step.touch_vertex_first_time_kernel,current_species_index, use_multilevel_dependencies=False
                 ),
                 touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                    current_species_set, step.touch_vertex_last_time_kernel,current_species_index, use_multilevel_dependencies=False
+                    current_species_set, step.touch_vertex_last_time_kernel,current_species_index, use_multilevel_dependencies=False,alter_particle_position_or_global_state=step.effect!=AlgorithmStep.Effect.ALTER_LOCAL_STATE
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
