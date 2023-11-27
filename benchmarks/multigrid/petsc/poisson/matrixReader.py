@@ -107,7 +107,10 @@ if __name__ == "__main__":
   except:
     print("no rhs.xml available")
     pass
-
+  try:
+    sol = populateRHS("sol.xml")
+  except:
+    pass
 
   print(f'shape of this matrix is {mat.shape}')
 
