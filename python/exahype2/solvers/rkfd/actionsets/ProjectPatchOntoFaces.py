@@ -13,8 +13,7 @@ from exahype2.solvers.ButcherTableau import ButcherTableau
 class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     """!
 
-    Project patch data onto faces, so the faces hold valid data which
-    can feed into the subsequent Runge-Kutta step
+    Project patch data onto faces, so the faces hold valid data which can feed into the subsequent Runge-Kutta step
 
     This class is based upon peano4.toolbox.blockstructured.ProjectPatchOntoFaces.
     Yet, it differs fundamentally in the way the inner-most loop is realised:
@@ -23,9 +22,11 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     to have here: we have the solution plus a number of estimates, and we want
     to write exactly the type of Runge-Kutta linear combination onto the face
     that we need to set the proper halo data on the adjacent cells in the next
-    grid sweep.
+    grid sweep. Therefore, this class expects the Butcher tableau and first 
+    computes the Runge-Kutta linear combination. The outcome of this is then 
+    projected onto the faces.
 
-    This routine is always called as one of the last things, i.e. we have a
+    The routine is always called as one of the last things, i.e. we have a
     valid estimate in. To some degree, we anticipate what will happening next
     in the Runge-Kutta scheme.
 
@@ -36,6 +37,10 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     cell and write this guy onto the faces. This will be the data required
     for the next time step.
 
+
+
+    ## Realisation
+    
     I did not find a convenient, simple way how to tweak the projection from
     the toolbox according to this scheme. So I ended up with copying the whole
     thing over and change the critical things myself.
@@ -53,7 +58,9 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     It is important to study this action set in combination with DynamicAMR. In the
     documentation of the latter I explain why we need the guard
 
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     not marker.hasBeenRefined()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     if we want to support dynamic coarsening.
     

@@ -9,7 +9,7 @@ import dastgen2
 
 from Probe_file_gene import tracer_seeds_generate
 
-from ComputeFirstDerivatives import ComputeFirstDerivatives
+from ComputeFirstDerivatives import ComputeFirstDerivativesFD4RK
 
 from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
 import numpy as np
@@ -1100,13 +1100,15 @@ if __name__ == "__main__":
       #project_patch_onto_faces.guards  = [ my_solver._store_cell_data_default_guard(), my_solver._store_cell_data_default_guard() ]
       #roll_over_projected_faces.guards = [ my_solver._store_cell_data_default_guard(), my_solver._store_cell_data_default_guard() ]
 
-      additional_mesh_traversal.add_action_set( ComputeFirstDerivatives(my_solver) )
+      additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
+                                                                             is_enclave_solver = False,
+                                                                             ))
       #additional_mesh_traversal.add_action_set( project_patch_onto_faces )
       #additional_mesh_traversal.add_action_set( roll_over_projected_faces )
       
       project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
       peano4_project.solversteps.add_step( additional_mesh_traversal )
-      ComputeFirstDerivatives
+
 
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )

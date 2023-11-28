@@ -229,10 +229,10 @@ Unknowns:               """
 Auxiliary variables:    """
             + str(self._auxiliary_variables)
             + """
-h_volume_min:           """
+h_meshcell_min:           """
             + str(self._min_meshcell_h)
             + """
-h_volume_max:           """
+h_meshcell_max:           """
             + str(self._max_meshcell_h)
             + """
 """
