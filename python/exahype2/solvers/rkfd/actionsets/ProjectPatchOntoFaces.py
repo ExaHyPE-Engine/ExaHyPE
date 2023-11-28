@@ -56,6 +56,10 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     not marker.hasBeenRefined()
 
     if we want to support dynamic coarsening.
+    
+    ## Use action set in additional helper sweeps
+    
+    The action set expects users to specify one predicate per Runge-Kutta step.
 
     """
 
@@ -176,7 +180,7 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
         ):
             raise Exception(
                 "Expect one guard per Runge Kutta step and a projection throughout the initialisation. Have {} steps but got guards {}".format(
-                    solver.number_of_Runge_Kutta_steps(), guards
+                    self._solver.number_of_Runge_Kutta_steps(), new_guards
                 )
             )
         self._guards = new_guards

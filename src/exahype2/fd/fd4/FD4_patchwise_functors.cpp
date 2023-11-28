@@ -626,7 +626,7 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   if (tempKODissipationZ!=nullptr)      tarch::freeMemory(tempKODissipationZ,      tarch::MemoryLocation::Heap);
 }
 
-void exahype2::fd::fd4::AlgorithmStep_patchwise_reconstruct_first_derivatives(
+void exahype2::fd::fd4::reconstruct_first_derivatives(
   ::exahype2::CellData&   patchData,
   int                     numberOfGridCellsPerPatchPerAxis,
   int                     haloSize,

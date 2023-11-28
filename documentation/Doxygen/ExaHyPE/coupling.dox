@@ -526,7 +526,10 @@ An important thing many codes do is a projection of the solution data onto the
 faces. By default, an empty additional step does not project any data onto the
 faces. That is, you might alter the representation within the cell, but this 
 information is not shared with the cell's neighbours. For this, you have to add
-a further action set. 
+a further action set:
+
+~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 There's a further catch here: You have to carefully study when solvers exchange
 face data. The FD4 enclave tasking for example exchanges information after each

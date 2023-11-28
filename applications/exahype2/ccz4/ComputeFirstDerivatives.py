@@ -11,7 +11,14 @@ class ComputeFirstDerivatives(peano4.toolbox.blockstructured.ReconstructPatchAnd
         super( ComputeFirstDerivatives, self ).__init__(patch=solver._patch,
                                                         patch_overlap=solver._patch_overlap_new,
                                                         functor_implementation="""
-::exahype2::fd::fd4::AlgorithmStep_patchwise_reconstruct_first_derivatives(oldQWithHalo,newQ,"""+str(solver._patch.dim[0])+","+str(int(solver._patch_overlap_new.dim[0]/2))+","+str(solver._patch.no_of_unknowns)+""",0);
+::exahype2::CellData  patchData( 
+  oldQWithHalo, 
+  marker.x(), marker.h(), 
+  0.0, // timeStamp, 
+  0.0, // timeStepSize, 
+  newQ 
+);
+::exahype2::fd::fd4::reconstruct_first_derivatives(patchData,"""+str(solver._patch.dim[0])+","+str(int(solver._patch_overlap_new.dim[0]/2))+","+str(solver._patch.no_of_unknowns)+""",0);
 """,
                                                         reconstructed_array_memory_location=solver._reconstructed_array_memory_location,
                                                         guard="not marker.willBeRefined() and not marker.hasBeenRefined()",
