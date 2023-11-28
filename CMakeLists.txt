@@ -282,58 +282,35 @@ if(WITH_GPU)
   endif()
 endif()
 
-# The PEANO_BUILD_TYPES start empty, it can be only appended to the list of build types but removed
-# If there is a new CMAKE_BUILD_TYPE it will be appended depending 
-#set(PEANO_BUILD_TYPES "" CACHE INTERNAL "Internal Build Modes")
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "Asserts" "Trace" "Stats" "Debug\;Release\;Asserts\;Trace\;stats")
+# All type remove (and build only 2d or 3d) - like how cmake usually do: default am anfang is build none
+# As little as helper variables as possible 
+# Remove Peano APP build type and build dimensions try to use CMAKE_BUILD_TYPE and WITH_DIMENSIONS
 
-if(NOT CMAKE_BUILD_TYPE)
-  #set(PEANO_BUILD_TYPES "" CACHE INTERNAL "Internal Build Modes")
-  #set(CMAKE_BUILD_TYPE "${PEANO_BUILD_TYPES}" CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
-else()
-  if(PEANO_BUILD_TYPES)
-    foreach(BUILD_MODE ${CMAKE_BUILD_TYPE})
-      list(FIND PEANO_BUILD_TYPES ${BUILD_MODE} index)
-      message(WARNING ${BUILD_MODE})
-      if(index EQUAL -1)
-        set(PEANO_BUILD_TYPES ${PEANO_BUILD_TYPES} ${BUILD_MODE} CACHE INTERNAL "Internal Build Modes")
-      endif()
-    endforeach()
-  else()
-    set(PEANO_BUILD_TYPES ${CMAKE_BUILD_TYPE} CACHE INTERNAL "Internal Build Modes")
-  endif()
-  #set(CMAKE_BUILD_TYPE "${PEANO_BUILD_TYPES}" CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
-endif()
+# The CMAKE_BUILD_TYPE start empty, it can be only appended to the list of build types but removed
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "Asserts" "Trace" "Stats" "Debug\;Release\;Asserts\;Trace\;Stats")
+# All applications currently support dimensions 2 or 3 right now, but the applications support arbitrary dimensions
+# And therefore WITH_DIMENSIONS should get a property string
+#set_property(CACHE WITH_DIMENSIONS PROPERTY STRINGS "2" "3" "2\;3")
 
 # Update core libraries' build modes and dimensions if it is not set to build all and if the build type of an application is different.
 if(PEANO_APP_BUILD_TYPE)
-  if (PEANO_BUILD_TYPES)  
-    list(FIND PEANO_BUILD_TYPES ${PEANO_APP_BUILD_TYPE} index)
-    if (index EQUAL -1)
-      message(WARNING "The Peano application's build type (${PEANO_APP_BUILD_TYPE}) is not in the CMAKE_BUILD_TYPE list, and therefore the application build type has to be added to ensure compilation of the target application.")
-      set(PEANO_BUILD_TYPES ${PEANO_BUILD_TYPES} ${PEANO_APP_BUILD_TYPE} CACHE INTERNAL "Internal Build Modes")
-    endif()
-  else()
-    set(PEANO_BUILD_TYPES ${PEANO_APP_BUILD_TYPE} CACHE INTERNAL "Internal Build Modes")
-  endif()
   if (CMAKE_BUILD_TYPE)
     list(FIND CMAKE_BUILD_TYPE ${PEANO_APP_BUILD_TYPE} index)
     if (index EQUAL -1)
+    message("The Peano application's build type (${PEANO_APP_BUILD_TYPE}) is not in the CMAKE_BUILD_TYPE list, and therefore the application build type has to be added to ensure compilation of the target application.")
       set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} ${PEANO_APP_BUILD_TYPE} CACHE STRING "List of Build Types" FORCE)
     endif()
   else()
+    message("The Peano application's build type (${PEANO_APP_BUILD_TYPE}) is not in the CMAKE_BUILD_TYPE list, and therefore the application build type has to be added to ensure compilation of the target application.")
     set(CMAKE_BUILD_TYPE ${PEANO_APP_BUILD_TYPE} CACHE STRING "List of Build Types" FORCE)
   endif()
 endif()
-
-set(WITH_DIMENSIONS "" CACHE STRING "Build with number of (space) dimensions")
-set_property(CACHE WITH_DIMENSIONS PROPERTY STRINGS "2" "3" "2\;3")
 
 if(PEANO_APP_DIMENSIONS)
   foreach(DIMENSION IN LISTS PEANO_APP_DIMENSIONS)
     list(FIND WITH_DIMENSIONS "${PEANO_APP_DIMENSIONS}" index)
     if(index EQUAL -1)
-      message( WARNING "The Peano application's dimension (${DIMENSION}) is not preset in WITH_DIMENSIONS list, and therefore the dimensions have to be added to ensure compilation of the target application.")
+      message("The Peano application's dimension (${DIMENSION}) is not preset in WITH_DIMENSIONS list, and therefore the dimensions have to be added to ensure compilation of the target application.")
 
       if (WITH_DIMENSIONS)
         set(WITH_DIMENSIONS "${WITH_DIMENSIONS};${DIMENSION}" CACHE STRING "Internal Build Modes" FORCE)
