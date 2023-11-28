@@ -59,10 +59,10 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-cflags = "-O3"
-cxxflags = "-std=c++20 -w -O3"
-# cxxflags = '-std=c++20 -W -Wall -Wextra -O3'
-nvccflags = "-O3"
+cflags = "-O3 -march=native -mtune=native"
+cxxflags = "-std=c++20 -w -O3 -march=native -mtune=native"
+# cxxflags = '-std=c++20 -W -Wall -Wextra -O3 -march=native -mtune=native'
+nvccflags = "-O3" #-march=native -mtune=native
 configure_args = []
 
 # Merge in any additional flags needed for the selected multithreading backend
