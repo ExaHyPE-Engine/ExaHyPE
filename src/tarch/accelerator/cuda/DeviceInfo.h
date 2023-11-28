@@ -54,7 +54,7 @@ namespace tarch::accelerator::cuda {
  * The benchmarks include memory allocation, data transfers between CPU and GPU, and kernel execution. 
  * The results are collected in a vector of `tarch::accelerator::BenchmarkResultInNanoSeconds` structures.
  * The function is compiled only if GPUOffloadingCUDA is defined. see `testKernelLaunch` too.
- * We allocate roughly 0.25GB of data on the CPU then transfer it to the GPU, and add half of this
+ * We allocate roughly 1GB of data on the CPU then transfer it to the GPU, and add half of this
  * data to the other half and transfer it back. Every step is then measured and saved in the BenchmarkResultsInNanoSeconds
  * struct to be printed as a table.
  *
