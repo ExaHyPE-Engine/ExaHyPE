@@ -1,4 +1,6 @@
-file(GLOB_RECURSE SOURCES "*")
+# This file is part of the SWIFT2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+file(GLOB_RECURSE SOURCES ${FILES_TO_GLOB})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 
 foreach(mode IN LISTS BUILD_MODES)
