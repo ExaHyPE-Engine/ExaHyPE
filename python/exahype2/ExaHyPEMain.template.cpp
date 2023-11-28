@@ -471,7 +471,7 @@ int main(int argc, char** argv) {
     return ExitCodeInvalidBuild;
   }
 
-  //peano4::runTestsAndBenchmarks();
+  peano4::runTestsAndBenchmarks();
 
   repositories::DataRepository::initDatatypes();
 

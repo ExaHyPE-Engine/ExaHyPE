@@ -69,42 +69,25 @@ namespace tarch::accelerator::omp {
       size_t N                          = tarch::accelerator::N;
       benchmarkResult.readWriteSize     = alloc_size * 2;
       benchmarkResult.allocatedDataSize = alloc_size * 2;
-      for (uint i = 0; i < repeats + 1; i++) {
-        double* a = new double[N];
-        double* b = new double[N];
-        std::fill(a, a + N, 0.0f);
-        std::fill(b, b + N, 0.0f);
-        assert(alloc_size == N * sizeof(double));
 
-        double start = 0.0;
-        double end   = 0.0;
-        double diff  = 0.0;
+      double* a = new double[N];
+      double* b = new double[N];
+      std::fill(a, a + N, 0.0f);
+      std::fill(b, b + N, 0.0f);
+      assert(alloc_size == N * sizeof(double));
 
-        /*
-        // It doesnt always return NULL when not enough memory
-        // For right now just allocate ~1 GB
-        start = omp_get_wtime();
-        void *a_dev = omp_target_alloc(N * sizeof(double), deviceId);
-        void *b_dev = omp_target_alloc(N * sizeof(double), deviceId);
-        end = omp_get_wtime();
-        diff = end - start;
-        if (i > 0)
-        {
-          benchmarkResult.GPUMalloc += static_cast<uint64_t>(diff * 1e9);
-        }
-        omp_target_free(a_dev, deviceId);
-        omp_target_free(b_dev, deviceId);
-        */
+      double start = 0.0;
+      double end   = 0.0;
+      double diff  = 0.0;
 
-        start = omp_get_wtime();
+      start = omp_get_wtime();
 #pragma omp target enter data map(to : a[0 : N], b[0 : N]) device(deviceId)
-        {}
-        end  = omp_get_wtime();
-        diff = end - start;
-        if (i > 0) {
-          benchmarkResult.CPUtoGPUCopy += static_cast<uint64_t>(diff * 1e9);
-        }
+      {}
+      end  = omp_get_wtime();
+      diff = end - start;
+      benchmarkResult.CPUtoGPUCopy += static_cast<uint64_t>(diff * 1e9);
 
+      for (uint i = 0; i < repeats + 1; i++) {
         start = omp_get_wtime();
 #pragma omp target teams distribute parallel for simd device(deviceId)
         for (size_t j = 0; j < N; j++) {
@@ -115,26 +98,25 @@ namespace tarch::accelerator::omp {
         if (i > 0) {
           benchmarkResult.GPUtoGPUCopy += static_cast<uint64_t>(diff * 1e9);
         }
+      }
 
-        start = omp_get_wtime();
+
+      start = omp_get_wtime();
 #pragma omp target update from(a[0 : N], b[0 : N]) device(deviceId)
-        {}
-        end  = omp_get_wtime();
-        diff = end - start;
-        if (i > 0) {
-          benchmarkResult.GPUtoCPUCopy += static_cast<uint64_t>(diff * 1e9);
-        }
+      {}
+      end  = omp_get_wtime();
+      diff = end - start;
+      benchmarkResult.GPUtoCPUCopy += static_cast<uint64_t>(diff * 1e9);
 
 #pragma omp target exit data map(release : a[0 : N], b[0 : N]) device(deviceId)
-        {}
+      {}
 
 #pragma omp target exit data map(delete : a[0 : N], b[0 : N]) device(deviceId)
-        {
-        }
-
-        delete[] a;
-        delete[] b;
+      {
       }
+
+      delete[] a;
+      delete[] b;
     }
 
     return benchmarkResults;
