@@ -64,6 +64,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions, double>&  cellSize
     );
 
+    virtual tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > getMassMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    );
+
   protected:
     static tarch::logging::Log  _log;
 

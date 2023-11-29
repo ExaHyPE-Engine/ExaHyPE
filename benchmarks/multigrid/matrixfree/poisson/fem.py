@@ -37,13 +37,17 @@ local_assembly_matrix = np.array([
         ,-0.33333333333333337, -0.16666666666666669, -0.16666666666666669, 0.6666666666666667
 ]).reshape((4,4))
 
+mass_matrix = np.eye( 2**args.dimensions )
+
 solver = multigrid.matrixfree.solvers.CollocatedLowOrderDiscretisation("CollocatedPoisson",
                                                                        args.upv,
                                                                        args.dimensions,
                                                                        args.meshsize,
                                                                        args.meshsize,
                                                                        local_assembly_matrix,
-                                                                       local_assembly_matrix_scaling=0
+                                                                       local_assembly_matrix_scaling=0,
+                                                                       mass_matrix = mass_matrix,
+                                                                       mass_matrix_scaling = 0
                                                                        )
 
 project.add_solver(solver)

@@ -25,6 +25,24 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
 }
 {% endif %}
 
+{% if MASS_MATRIX!=[] %}
+tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMassMatrix(
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize
+) {
+  static tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > result = {
+      {{MASS_MATRIX[0]| join(", ")}}
+      {% for ROW in MASS_MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+  };
+
+  // @todo add in scaling
+
+  return result;
+}
+{% endif %}
+
 
 {{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
   const tarch::la::Vector<Dimensions, double>&  x,

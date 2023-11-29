@@ -26,7 +26,9 @@ class CollocatedLowOrderDiscretisation(Solver):
                min_h,
                max_h,
                local_assembly_matrix,
-               local_assembly_matrix_scaling
+               local_assembly_matrix_scaling,
+               mass_matrix,
+               mass_matrix_scaling
                ):
     """!
    
@@ -49,6 +51,9 @@ class CollocatedLowOrderDiscretisation(Solver):
 
     self._local_assembly_matrix         = local_assembly_matrix
     self._local_assembly_matrix_scaling = local_assembly_matrix_scaling
+
+    self._mass_matrix                   = mass_matrix
+    self._mass_matrix_scaling           = mass_matrix_scaling
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( CollocatedLowOrderDiscretisation, self ).add_to_Peano4_datamodel(datamodel,verbose)
@@ -125,6 +130,8 @@ class CollocatedLowOrderDiscretisation(Solver):
         "MAX_H": self.max_h,
         "LOCAL_ASSEMBLY_MATRIX": self._local_assembly_matrix,
         "LOCAL_ASSEMBLY_MATRIX_SCALING": self._local_assembly_matrix_scaling,
+        "MASS_MATRIX"         : self._mass_matrix,
+        "MASS_MATRIX_SCALING" : self._mass_matrix_scaling,
         "VERTEX_CARDINALITY": self._unknowns_per_vertex,
         "SOLVER_NAME":             self.typename(),
         }
