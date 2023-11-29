@@ -209,6 +209,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
 
         elif fs_pair == (0, 5):
             ### Compute first penalty term \theta * <[[u]], {n*\nabla v}>
+            ### it transforms to \theta * <u^f, n*\nabla v>
             factor = 1.0 
             gamma = (0, 0) # factor 0.5 and saling h compensated by \grad(v)
                            # assuming hx = hy; correct later: should be (\pm 1, \pm 1) in general
