@@ -4,13 +4,8 @@
 
 #include <string>
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/BooleanSemaphore.h"
 
-namespace tarch {
-  namespace multicore {
-    class BooleanSemaphore;
-    class Lock;
-  }
-}
 
 #if defined(SharedCPP)
 #include <mutex>
@@ -21,6 +16,7 @@ class tarch::multicore::BooleanSemaphore {
 
     friend class tarch::multicore::Lock;
     friend class RecursiveSemaphore;
+    friend class tarch::mpi::BooleanSemaphore;
 
     void enterCriticalSection();
     void leaveCriticalSection();

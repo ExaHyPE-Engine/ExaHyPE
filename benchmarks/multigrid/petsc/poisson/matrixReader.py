@@ -107,7 +107,10 @@ if __name__ == "__main__":
   except:
     print("no rhs.xml available")
     pass
-
+  try:
+    sol = populateRHS("sol.xml")
+  except:
+    pass
 
   print(f'shape of this matrix is {mat.shape}')
 
@@ -118,6 +121,6 @@ if __name__ == "__main__":
   print(f"rank of this matrix is {getRankOfMatrix(mat)}")
 
   nv = get_null_vector(mat)
-  print("printing null vector....\n")
-  for i in range(nv.shape[0]): print(nv[i])
+  # print("printing null vector....\n")
+  # for i in range(nv.shape[0]): print(nv[i])
   

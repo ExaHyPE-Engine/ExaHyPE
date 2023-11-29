@@ -74,7 +74,7 @@ class ParticleAMR(ActionSet):
            even refines a cell if there's only one particle in it.
 
         """
-        super(ParticleAMR, self).__init__(priority=1, parallel=False)
+        super(ParticleAMR, self).__init__(descend_invocation_order=1, parallel=False)
         if min_particles_per_cell < 0:
             raise Exception(
                 "invalid min number of particles pre cell (has to be positive): {}".format(

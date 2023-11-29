@@ -43,7 +43,7 @@ struct peano4::grid::AutomatonState {
     );
 
     AutomatonState(const AutomatonState& copy);
-    AutomatonState& operator = (const AutomatonState& assign);
+    AutomatonState& operator = (const AutomatonState& other);
 
     ~AutomatonState() = default;
 

@@ -49,7 +49,14 @@ mark these steps as private via a leading underscore.
   
   - _solvers: [Solver]
       List of tuples of typename and names of solvers that this project should use simultaneously.
-  
+  - preconditioner_type: String
+      Preconditioner type to be used. This part of the string should match the final 
+      part of the enum class in src/petsc/LinearEquationSystem.h. The namespaceing is 
+      taken care of downstream.
+  - solver_type: String
+      Solver type to be used. This part of the string should match the final 
+      part of the enum class in src/petsc/LinearEquationSystem.h. The namespaceing is 
+      taken care of downstream.
   
   """
   def __init__(self, 
@@ -57,6 +64,8 @@ mark these steps as private via a leading underscore.
                project_name, 
                directory  = ".", 
                executable = "peano4petsc",
+               preconditioner_type = "None",
+               solver_type         = "GMRES"
                ):
     self._project = peano4.Project(namespace, project_name, directory)
     self._project.output.makefile.add_cmake_core_library("petsc")
@@ -80,7 +89,9 @@ mark these steps as private via a leading underscore.
     self._algorithm_step_solve                       = peano4.solversteps.Step( "Solve",                     False )
     self.algorithm_step_map_solution_onto_mesh       = peano4.solversteps.Step( "MapSolutionOntoMesh",       False )
     self.algorithm_step_plot                         = peano4.solversteps.Step( "Plot",                      False )
-                
+
+    self.preconditioner_type = preconditioner_type
+    self.solver_type         = solver_type
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
     """
@@ -236,6 +247,8 @@ This yet has to be written.
     """
     dictionary = {}
     dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
+    dictionary[ "PRECONDITIONER_TYPE" ] = "::petsc::LinearEquationSystem::PreconditionerType::" + self.preconditioner_type
+    dictionary[ "SOLVER_TYPE" ]         = "::petsc::LinearEquationSystem::KSPSolverType::" + self.solver_type
     
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"

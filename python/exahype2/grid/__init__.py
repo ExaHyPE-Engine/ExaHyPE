@@ -5,3 +5,5 @@ from .CellLabel      import create_cell_label
 
 from .FaceLabel      import UpdateFaceLabel
 from .CellLabel      import UpdateCellLabel 
+
+from .FineGridCellLoadBalancingCostMetric import FineGridCellLoadBalancingCostMetric

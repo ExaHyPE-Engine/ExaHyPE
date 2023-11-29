@@ -2,22 +2,177 @@
 
  @page benchmarks_swift2_hydro_noh_imposion_test Noh implosion test
  
- Simple Noh implosion test benchmark with @f$ N ^d @f$ particles. You specify 
- the @f$ N @f$ on the command line, as well as some other arguments. The setup
- will yield snapshots similar to the ones below.
+ Simple Noh implosion test benchmark with @f$ N ^d @f$ particles. The setup
+ yields snapshots similar to the ones below.
  
   @image html noh_0.png
   @image html noh_150.png
   @image html noh_300.png
  
  
- As with all Swift 2 experiments, you have to ensure that you translate with --enable-particles --enable-swift.
+ As with all Swift 2 experiments, you have to ensure that you translate with 
+ ```--enable-particles --enable-swift``` before you start working with the
+ scripts. Furthermore, the Python path has to be set properly:
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  export PYTHONPATH=~/git/Peano/python
- python3 noh.py -np 400 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ The benchmark suite is designed to study three different things:
+ 
+ 1. The impact of the mesh concept on the computational cost, i.e. to which 
+    degree does the mesh introduce overhead or manage to reduce the 
+    computational complexity.
+ 2. The impact of different memory layouts on the time to solution.
+ 3. The efficacy and efficiency of the vectorisation over selected kernels.
+ 
+ Obviously, these three properties are tightly interconnected. 
+ 
+ 
+ 
+ # Clean-up data
+ 
+ Once you have created your executables, you might want to get rid of all the
+ generated glue code that sits in your directory.
+ To clean up all generated data, type in 
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ rm *patch-file *.vtu *.pvd
+ rm vertexdata celldata globaldata repositories observers
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
+ # The impact of the mesh on the global runtime
+ 
+ The present setup does work with constant cut-off radii. That is, once the 
+ particles are created, they do not change their interaction range. This is not
+ what you will find in a lot of "realistic" SPH simulations, where the cut-off
+ radius adopts to the particle distribution in space. However, it is reasonable
+ to eliminate this dimension of complexity to assess the algortihmic impact of 
+ the cut-off.
+ 
+ To start a proper discussion of the latter, we first have to understand the 
+ cost relative to the particle count without any mesh. Unfortunately, Peano 
+ cannot work all without a mesh. We can however make the mesh comprise only 
+ 3x3 cells (see snapshots above). The script shipped with the present code does
+ not allow us to set the mesh directly, but we can specify the number of 
+ particles per cell that we want to obain. This is, we can control the mesh 
+ resolution indirectly.
+ 
+ 
+ The beauty of these experiments is the physical accuracy: We may never pick a
+ cut-off that is smaller than the interaction radius that the physics yield. 
+ By essentially removing the cut-off globally, we implicitly always pick a 
+ cut-off that's bigger than the physical interaction radius. It is automatically
+ valid all the time.
+
+
+ ## Create benchmark executables
+ 
+ Here are some classic setups that I use for benchmarking:
+ 
+   np  |  end time |  ppc  |        mesh size       |  
+-------|-----------|-------|------------------------|
+   100 |      1e-1 |   100 |                      * |
+   100 |      1e-1 |   200 |               9x9 (81) |
+   200 |      1e-1 |   200 |            27x27 (729) |
+   200 |      1e-1 |   800 |               9x9 (81) |
+   400 |      1e-2 |   200 |                      * |
+   400 |      1e-2 |   800 |            27x27 (729) |
+   400 |      1e-2 |  2000 |               9x9 (81) |
+   800 |      1e-2 |   200 |        81x81 (6,561) x |
+   800 |      1e-2 |  1200 |            27x27 (729) |
+   800 |      1e-2 |  8000 |               9x9 (81) |
+  1200 |      1e-3 |   800 |          81x81 (6,561) |
+  1200 |      1e-3 | 12000 |            27x27 (729) |
+  1200 |      1e-3 | 24000 |               9x9 (81) |
+  2400 |      5e-4 |   200 |       243x243 (59,049) |
+  2400 |      5e-4 |  1200 |          81x81 (6,561) |
+  2400 |      5e-4 |  8000 |            27x27 (729) |
+  2400 |      5e-4 | 84000 |               9x9 (81) |
+  
+ @todo We have to extend this list
+  
+     
+ These values are just popular ones we use for benchmarking. The setups marked
+ with * use a way too fine mesh and therefore cannot capture the physical 
+ interaction radius. They yield physical nonsense. The ones marked with an x
+ run into this situation too after a few time steps. So you can use them for 
+ benchmarking (to make statements on the algorithmic efficiency), but they 
+ should not be used for proper benchmarks making validity claims on the 
+ outcome.
+ 
+ To find out how the correlation of np and ppc affects the mesh construction, 
+ you can either go down the trial and error route, or you can study the generated 
+ README-noh2D.md file, which enlists exactly which particle properties are set
+ and how they will affect the coarsest mesh size.
+ 
+ 
+ ## MPI
+ 
+ The MPI parallelisation is based upon the mesh, i.e. you cannot exploit more 
+ than 9 ranks if your mesh is only 9 cells large. At the same time, any 
+ imbalance on the MPI level will directly propagate through to the runtime.
+ That is, if you use a 81 cell mesh with 4 ranks, you will have three ranks 
+ hosting 20 cells, but the fourth rank will host 21 and the setup hence will
+ be imbalanced right from the start.
+ 
+
+
+ # Impact of memory layouts and sorting
+ 
+ The impact of the various memory layouts and the sorting variations have to be assessed using a 
+ representative and reasonably large setup. Furthermore, it might make sense
+ to restrict the studies to one NUMA node only on a production-level chip. The
+ rationale here is that most codes would deploy one MPI rank per NUMA domain
+ to avoid NUMA effects/penalties.
+ 
+ On a low-spec machine, I usually use the setup
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ python3 noh.py -np 2400 -plot 0 -et 1e-3 -ppc 1200
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ as a test starting point. From hereon, the three predominant storage schemes 
+ can be enabled via the opt argument: 
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ module load likwid
+ salloc -p multi
+ #export OMP_NUM_THREADS=8
+ for REALISATION in domain-decomposition.scattered \
+                    domain-decomposition.continuous-per-vertex.insert-sorts \
+                    domain-decomposition.continuous-per-vertex.sort-on-the-fly \
+                    domain-decomposition.global-continuous.insert-sorts \
+                    domain-decomposition.global-continuous.sort-on-the-fly \
+                    domain-decomposition.continuous-per-vertex.insert-sorts.vectorise-all \
+                    domain-decomposition.continuous-per-vertex.sort-on-the-fly.vectorise-all \
+                    domain-decomposition.global-continuous.insert-sorts.vectorise-all \
+                    domain-decomposition.global-continuous.sort-on-the-fly.vectorise-all \
+                    domain-decomposition.continuous-per-vertex.insert-sorts.vectorise-distance-checks \
+                    domain-decomposition.continuous-per-vertex.sort-on-the-fly.vectorise-distance-checks \
+                    domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks \
+                    domain-decomposition.global-continuous.sort-on-the-fly.vectorise-distance-checks 
+ do
+   EXEC_FILE=noh2D-np-2400.$REALISATION
+   python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea $REALISATION --output $EXEC_FILE
+   echo Run ./$EXEC_FILE
+   srun likwid-pin -c 0-7 ./$EXEC_FILE > $EXEC_FILE.out
+ done
+ tar -czvf Hamilton8-2400.tar.gz noh2D*.out 
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  
+ The zipped outcome can be visualised by a call similar to
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 plots_compare_implemetation_variants.py Hamilton8-2400.tar.gz
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ @image html Hamilton8-2400.tar.gz.png 
+  
+ 
+ # Old docu
  
  ## Experimental setup
  
@@ -96,7 +251,7 @@ The steps are rather simple:
 1. If the optimisation is enabled, we first need another graph compiler. We use
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if args.optimisation != "none":
-  project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
+  project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    here, which might not be the best compiler but does the job.
 2. Next, we have to switch to a coalesced memory access. This is not required 

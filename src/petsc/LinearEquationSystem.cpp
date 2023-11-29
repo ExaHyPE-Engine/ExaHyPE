@@ -156,7 +156,7 @@ void petsc::LinearEquationSystem::increment(int row, double val){
 }
 
 
-void petsc::LinearEquationSystem::solve(){
+void petsc::LinearEquationSystem::solve(PreconditionerType pctype, KSPSolverType ksptype){
   //assemble matrices
   MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);
@@ -188,8 +188,12 @@ void petsc::LinearEquationSystem::solve(){
   //set runtime options
   KSPSetFromOptions(ksp);
 
-  PCSetType(pc, PCNONE); //no preconditioner
-  KSPSetType(ksp, KSPGMRES);
+  // convert each of the enums into Petsc macros
+  PCType  preconditionerType = getPreconditionerTypeFromEnum(pctype);
+  KSPType kspsolvertype      = getKSPSolverTypeFromEnum(ksptype);
+
+  PCSetType(pc, preconditionerType);
+  KSPSetType(ksp, kspsolvertype);
   KSPSetUp(ksp);
   KSPSetTolerances(ksp, 1.e-7, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
 
@@ -201,12 +205,57 @@ void petsc::LinearEquationSystem::solve(){
 
   PetscInt its;
   KSPGetIterationNumber(ksp, &its);
+  logInfo("petscSolve()", "used preconditioner " << preconditionerType << " and solver " << kspsolvertype);
   logInfo("petscSolve()", "number of iterations was " << (int)its);
   logInfo("petscSolve()", "converged for reason " << KSPConvergedReasons[reason]);
 
   //tidy up temp objects
   KSPDestroy(&ksp);
 
+}
+
+PCType petsc::LinearEquationSystem::getPreconditionerTypeFromEnum(PreconditionerType type)
+{
+  PCType output;
+  switch (type)
+  {
+    case PreconditionerType::None:
+    {
+      output = PCNONE;
+    } break;
+    case PreconditionerType::LU:
+    {
+      output = PCLU;
+    } break;
+    default:
+    {
+      // invalid enum passed to this point
+      assertion(false);
+    }
+  }
+  return output;
+}
+
+KSPType petsc::LinearEquationSystem::getKSPSolverTypeFromEnum(KSPSolverType type)
+{
+  KSPType output;
+  switch (type)
+  {
+    case KSPSolverType::GMRES:
+    {
+      output = KSPGMRES;
+    } break;
+    case KSPSolverType::CG:
+    {
+      output = KSPCG;
+    } break;
+    default:
+    {
+      // invalid enum passed to this point
+      assertion(false);
+    }
+  }
+  return output;
 }
 
 void petsc::LinearEquationSystem::cleanUpPetscObjects(){

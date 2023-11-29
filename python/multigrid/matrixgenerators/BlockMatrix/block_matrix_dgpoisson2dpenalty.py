@@ -35,7 +35,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
 
         # Penalty method parameters
         self._theta = 1.0
-        self._gamma_F = 1.0
+        self._gamma_F = 0.0
 
         # All pairs of function spaces that couple
         self._coupling_CC = [(0, 0)] # _u_u

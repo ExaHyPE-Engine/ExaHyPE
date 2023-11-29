@@ -7,13 +7,13 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
   void* result = nullptr;
   switch (location) {
     case MemoryLocation::Heap:
-      result = aligned_alloc(AlignmentOnHeap, size);
+      result = std::aligned_alloc(AlignmentOnHeap, size);
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       #if defined(__NVCOMPILER_CUDA__)
       CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));
       #else
-      result = aligned_alloc(AlignmentOnHeap, size);
+      result = std::aligned_alloc(AlignmentOnHeap, size);
       #endif
       break;
   }
@@ -23,13 +23,13 @@ void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
 void tarch::freeMemory(void* data, MemoryLocation location) {
   switch (location) {
     case MemoryLocation::Heap:
-      free(data);
+      std::free(data);
       break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       #if defined(__NVCOMPILER_CUDA__)
       CHECK_CUDA_ERROR(cudaFree(data));
       #else
-      free(data);
+      std::free(data);
       #endif
       break;
   }

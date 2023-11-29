@@ -100,7 +100,7 @@ class ParticleTreeAnalysis(ActionSet):
   def __init__(self,
                particle_set,
                cell_marker = None):
-    super(ParticleTreeAnalysis,self).__init__(priority=1,parallel=False)
+    super(ParticleTreeAnalysis,self).__init__(descend_invocation_order=1,parallel=False)
     if cell_marker!=None:
       self.cell_marker     = cell_marker
       self._cell_data_name = cell_marker.name

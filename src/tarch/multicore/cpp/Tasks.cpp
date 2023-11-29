@@ -46,6 +46,12 @@ namespace {
   }
 } // namespace
 
+
+void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
 void tarch::multicore::native::spawnTask(Task* job) {
   nonblockingTasksCounter++;
 
@@ -86,4 +92,18 @@ void tarch::multicore::native::processFusedTask(
   });
 }
 
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
+void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+  tarch::multicore::native::spawnTask(job);
+}
+
+
+void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
+
+void tarch::multicore::native::waitForTask( int taskNumber ){}
 #endif

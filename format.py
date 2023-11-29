@@ -23,6 +23,34 @@ black_checked = False
 clang_checked = False
 
 
+def get_peano_root():
+    """
+    Get the root dir of the repository.
+
+    returns:
+    peano_root: str
+        root of Peano repo
+    """
+
+    cmd = "git rev-parse --show-toplevel"
+
+    if verbose:
+        print("Searching for Peano root dir via git.")
+        print("Running '", cmd, "'")
+
+    gitrevparse = subprocess.run(
+        cmd,
+        shell=True,
+        check=True,
+        capture_output=True,
+    )
+    gitstdout = gitrevparse.stdout
+    if isinstance(gitstdout, bytes):
+        gitstdout = gitstdout.decode("utf8")
+    rootdir = gitstdout.strip()
+    return rootdir
+
+
 def get_default_clang_format(peano_root):
     """
     Try and find the default clang format style file
@@ -42,16 +70,51 @@ def get_venv_path(peano_root):
     return os.path.join(peano_root, python_venv_dir)
 
 
+def git_is_available():
+    """
+    Check whether git is available. Returns True is that is the case.
+    """
+    # Does it run?
+    cmd = "git --version"
+
+    if verbose:
+        print("Checking if git is available")
+        print("Running '", cmd, "'")
+
+    run = subprocess.run(
+        cmd,
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+
+    if run.returncode == 0:
+        return True
+    else:
+        if verbose:
+            print("Didn't find git. Continuing without.")
+        return False
+
+
 def check_black(black_cmd):
     """
     Check that the black executable runs, and is the correct version.
     The subprocess call crashes if there is an error with black.
     """
     global black_checked
+
     if not black_checked:
         # Does it run?
+
+        cmd = black_cmd + " --version"
+
+        if verbose:
+            print("Checking black formatter runs.")
+            print("Running '", cmd, "'")
+
         run = subprocess.run(
-            black_cmd + " --version",
+            cmd,
             shell=True,
             stdout=None,
             check=True,
@@ -133,8 +196,13 @@ def install_black_formatting_tool():
         )
 
     # The actual install
+    cmd = (bfepython + " -m pip install click==8.1.3 black==" + black_version,)
+    if verbose:
+        print("Installing black formatter.")
+        print("Running '", cmd, "'")
+
     run = subprocess.run(
-        bfepython + " -m pip install click==8.1.3 black==" + black_version,
+        cmd,
         shell=True,
         check=True,
     )
@@ -161,8 +229,13 @@ def install_clang_formatting_tool():
         )
 
     # The actual install
+    cmd = clangpython + " -m pip install clang-format==" + clang_version
+    if verbose:
+        print("Installing clang-format.")
+        print("Running '", cmd, "'")
+
     run = subprocess.run(
-        clangpython + " -m pip install clang-format==" + clang_version,
+        cmd,
         shell=True,
         check=True,
     )
@@ -184,7 +257,12 @@ def setup_venv(peano_root):
     if not os.path.exists(venv_path):
         print("Python formatting env not found, installing it")
         os.mkdir(venv_path)
-        run = subprocess.run("python3 -m venv " + venv_path, shell=True, check=True)
+
+        cmd = "python3 -m venv " + venv_path
+
+        if verbose:
+            print("Running '", cmd, "'")
+        run = subprocess.run(cmd, shell=True, check=True)
 
         if not os.path.exists(venv_path):
             raise FileNotFoundError("Something went horribly wrong when creating venv.")
@@ -322,7 +400,7 @@ def setup_parser(peano_root, clangfile):
 
 def is_pythonfile(filename):
     """
-    Does this look like a python file?
+    Does this look like a Python file?
     """
 
     return filename.endswith(".py")
@@ -364,11 +442,11 @@ def run_python_formatter(filename, dry_run, peano_root):
 
     # First run in dry-run mode to accurately count whether we
     # need to/do format through the return code.
+    cmd = black_cmd + " --check "
+
     if verbose:
-        print(f"checking {filename}")
-    run = subprocess.run(
-        black_cmd + " --check " + filename, stdout=subprocess.DEVNULL, shell=True
-    )
+        print(f"checking {filename} using '", cmd, "'")
+    run = subprocess.run(cmd + filename, stdout=subprocess.DEVNULL, shell=True)
 
     returncode = run.returncode
     if returncode != 0:
@@ -379,7 +457,7 @@ def run_python_formatter(filename, dry_run, peano_root):
 
     # If not dry run: Now actually format the file
     if verbose:
-        print(f"running {black_cmd} {filename}")
+        print(f"Running {black_cmd} {filename}")
     run = subprocess.run(
         black_cmd + " " + filename, stdout=subprocess.DEVNULL, shell=True
     )
@@ -401,12 +479,14 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
 
     # First run in dry-run mode to accurately count whether we
     # need to/do format through the return code.
+
+    cmd = clang_cmd + " --dry-run "
     if verbose:
-        print(f"checking {filename}")
+        print(f"Checking {filename} using '", cmd, "'")
     # pipe sterr to /dev/null too here. In dry run mode, every line that needs
     # to be changed will otherwise be printed to stderr.
     run = subprocess.run(
-        clang_cmd + " --dry-run " + filename,
+        cmd + filename,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         shell=True,
@@ -420,7 +500,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
         return returncode
 
     if verbose:
-        print(f"running {clang_cmd} {filename}")
+        print(f"Running {clang_cmd} {filename}")
     # pipe sterr to /dev/null too here. In dry run mode, every line that needs
     # to be changed will otherwise be printed to stderr.
     run = subprocess.run(
@@ -434,7 +514,10 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
 
 
 if __name__ == "__main__":
-    peano_root = peano_repo_rootdir
+    if git_is_available():
+        peano_root = get_peano_root()
+    else:
+        peano_root = peano_repo_rootdir
     clang_format_file = get_default_clang_format(peano_root)
 
     parser = setup_parser(peano_root, clang_format_file)
@@ -445,18 +528,18 @@ if __name__ == "__main__":
         clang_format_file = args.style
         if not os.path.exists(clang_format_file):
             raise FileNotFoundError(
-                "Provided clang format file '" + clang_format_file + "' doesn't exist"
+                "Provided clang format file '" + clang_format_file + "' doesn't exist."
             )
 
     verbose = args.verbose
 
     if verbose:
-        print("using clang format file", clang_format_file)
+        print("Using clang format file", clang_format_file)
 
     # is this dry run?
     dry_run = args.dry_run
     if dry_run and verbose:
-        print("starting a dry run")
+        print("Starting a dry run")
 
     # update target branch?
     if args.branch is not None:
@@ -474,7 +557,7 @@ if __name__ == "__main__":
 
     # Check first if file list was given by user
     if args.files is not None:
-        if args.files[0] == peano_root:
+        if os.path.isdir(args.files[0]):
             if verbose:
                 print("Formatting all files in this directory.")
             for root, dirs, files in os.walk(peano_root):
@@ -489,7 +572,7 @@ if __name__ == "__main__":
                     if not (is_pythonfile(f) or is_cppfile(f)):
                         if verbose:
                             print(
-                                f"File {f} doesn't look like a python nor cpp file to me, skipping it"
+                                f"File {f} doesn't look like a Python nor cpp file to me, skipping it."
                             )
                         continue
                     filelist.append(f)
@@ -505,13 +588,13 @@ if __name__ == "__main__":
                 if not (is_pythonfile(f) or is_cppfile(f)):
                     if verbose:
                         print(
-                            f"File {f} doesn't look like a python nor cpp file to me, skipping it"
+                            f"File {f} doesn't look like a Python nor cpp file to me, skipping it."
                         )
                     continue
                 filelist.append(f)
 
     else:
-        # make sure that the branch exists
+        # Make sure that the branch exists
         try:
             git_check_branch_exists_cmd = f"git rev-parse --verify {target_branch}"
             subprocess.run(
@@ -549,19 +632,19 @@ if __name__ == "__main__":
             if not os.path.exists(fullpathf):
                 if verbose:
                     print(
-                        f"File {fullpathf} doesn't exist. Did you remove it in this branch? Skipping it"
+                        f"File {fullpathf} doesn't exist. Did you remove it in this branch? Skipping it."
                     )
                 continue
             if not (is_pythonfile(fullpathf) or is_cppfile(fullpathf)):
                 if verbose:
                     print(
-                        f"File {fullpathf} doesn't look like a python nor cpp file to me, skipping it"
+                        f"File {fullpathf} doesn't look like a python nor cpp file to me, skipping it."
                     )
                 continue
             filelist.append(fullpathf)
 
     if len(filelist) == 0:
-        print("Found no files to be formatted. Exiting")
+        print("Found no files to be formatted. Exiting.")
         sys.exit(0)
 
     # keep track whether any file was or could be modified.

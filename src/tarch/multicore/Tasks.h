@@ -23,25 +23,37 @@ namespace tarch {
      * the current orchestration. It swaps them, so you can use setOrchestration()
      * with the result afterwards and re-obtain the original strategy.
      */
-    tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation
-    );
+    tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
     /**
-     * Usually called directly by EnclaveTask.
+     * Utility function for unique task numbers
      *
      * This routine has to return a number which is currently not in use.
-     * There is however no need for the delivered task numbers to be
+     *
+     * ## Implementation
+     *
+     * There is no need for delivered task numbers to be
      * consecutive. Therefore, I use the size of the existing task set as
      * a guideline for a task number to search for. If this initial guess
      * is already handed out, I increase the counter by a prime number and
      * try the new number again - until I've finally found a task which is
      * not yet processed.
+     *
+     * @see Task
      */
     int reserveTaskNumber();
 
+    /**
+     * Release a task number
+     *
+     * @param number Either a valid non-negative number (as returned by
+     *   reserveTaskNumber() for example) or NoDependency.
+     */
     void releaseTaskNumber(int number);
 
     /**
+     * How many task numbers are currently reserved.
+     *
      * Should usually be more than pending tasks, as it also includes tasks that have
      * finished yet have not released their number yet.
      *
@@ -65,12 +77,34 @@ namespace tarch {
       static constexpr int DontFuse        = -1;
 
       /**
-       * @param taskType Unique task (type) number for this task. All tasks that do
-       *        the same, i.e. are of the same type, should have the same task type
-       *        integer marker. Peano's tarch can use multiple tasks of the same
-       *        type and fuse/batch them into one task call. However, if you don't
-       *        want Peano to even thing about task fusion, pass in DontFuse as
-       *        argument.
+       * Construct task
+       *
+       * ## Task types and task numbers
+       *
+       * Eachtask in Peano has to have a task type. All tasks that do the same,
+       * i.e. are of the same type, should have the same task type integer
+       * marker. Peano's tarch can use multiple tasks of the same type and
+       * fuse/batch them into one task call. However, if you don't want Peano
+       * to even thing about task fusion, pass in DontFuse as argument for the
+       * type.
+       *
+       * It is totally up to the user to manage the task type numbers. Peano
+       * for example offers a factory mechanism peano4::parallel::getTaskType()
+       * to create task types, which Peano applications should use. However,
+       * the generation of the task types is not baked into the tarch.
+       *
+       * Some codes also have task numbers. They need this, if they have to
+       * identify tasks uniquely. Applications for that are task dependencies
+       * or tasks that are offloaded to other ranks. For the latter tasks, we
+       * have to match data sent back by another rank to the task that would
+       * have produced these results locally. Anyway, task numbers are not
+       * baked into the generic interface, as we don't need them for all tasks
+       * all the time, and I want to avoid that the construction of unique
+       * task numbers becomes too expensive. If you should need unique task
+       * numbers, I recommend you use reserveTaskNumber().
+       *
+       *
+       * @param taskType Unique task (type) number for this task.
        *
        * @param priority Integer value that indicates what priority you want to
        *        assign a task. Value has to be non-negative.
@@ -252,6 +286,46 @@ namespace tarch {
      */
     void spawnTask(Task* job);
 
+    constexpr int NoDependency = -1;
+
+    /**
+     * Spawn a task which dependencies
+     *
+     * Spawn a task that depends on one other task. Alternatively, pass in
+     * NoDependency. In this case, the task can kick off immediately. You have
+     * to specify a task number. This number allows other, follow-up tasks to
+     * become dependant on this very task. Please note that the tasks have to
+     * be spawned in order, i.e. if B depends on A, then A has to be spawned
+     * before B. Otherwise, you introduce a so-called anti-dependency. This is
+     * OpenMP jargon which we adopted ruthlessly.
+     *
+     * You may pass NoDependency as taskNumber. In this case, you have a
+     * fire-and-forget task which is just pushed out there without anybody
+     * ever waiting for it later on (at least not via task dependencies).
+     */
+    void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
+
+    /**
+     * Alternative realisation of spawnTaskWithDependencies() with multiple in
+     * dependencies.
+     */
+    void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
+
+    /**
+     * Wait for set of tasks
+     *
+     * Entries in inDependencies can be NoDependency.
+     */
+    void waitForTasks( const std::vector<int>& inDependencies );
+
+    /**
+     * Wait for one task
+     *
+     * taskNumber can be NoDependency. In this case, the operation degenerates
+     * to nop.
+     */
+    void waitForTask( int taskNumber );
+
     /**
      * Run a bunch of tasks
      *
@@ -366,8 +440,15 @@ namespace tarch {
        *
        * The responsibility to destroy task is handed over to the runtime of
        * choice.
+       *
+       * @see tarch::multicore::spawnTask()
        */
       void spawnTask(Task* task);
+
+      /**
+       * @see tarch::multicore::spawnTask()
+       */
+      void spawnTask(Task* task, int in, int out);
 
       /**
        * Map onto native tasking
@@ -415,6 +496,11 @@ namespace tarch {
        * These are the non-blocking (ready) tasks submitted via spawnTask()
        */
       int getNumberOfPendingTasks();
+
+      void spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber);
+      void spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber);
+      void waitForTasks( const std::vector<int>& inDependencies );
+      void waitForTask( int taskNumber );
     } // namespace native
 
     namespace internal {

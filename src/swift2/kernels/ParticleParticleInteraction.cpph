@@ -1,6 +1,8 @@
-#include "swift2/kernels/equation_of_state.h"
-#include "swift2/kernels/kernel_hydro.h"
+#include "swift2/kernels/ParticleState.h"
 #include "swift2/kernels/SmoothingLengthComputation.h"
+#include "swift2/legacy/hydro_dimensions.h"
+#include "swift2/legacy/kernel_hydro.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
 
@@ -13,7 +15,7 @@ void swift2::kernels::genericInteraction(
   std::function<void(Particle* localParticle, const Particle* const activeParticle)> interaction
 ) {
   for (auto* localParticle : localParticles) {
-    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
+    if (localParticleCanBeWorkedOnCellKernel(localParticle, marker)) {
       for (auto* activeParticle : activeParticles) {
         interaction(localParticle, activeParticle);
       }
@@ -24,6 +26,9 @@ void swift2::kernels::genericInteraction(
 
 template <typename Particle>
 void swift2::kernels::densityKernel(Particle* localParticle, const Particle* activeParticle) {
+
+  // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
+  using namespace swift2::legacy::kernelHydro;
 
   const double hydroDimensions = localParticle->getHydroDimensions();
 
@@ -96,6 +101,10 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
 
 template <typename Particle>
 void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activeParticle) {
+
+  // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
+  using namespace swift2::legacy::kernelHydro;
+
   // Grab static parameters
   const int    hydroDimensions = localParticle->getHydroDimensions();
   const double alphaAV         = localParticle->getAlphaAV();
@@ -130,7 +139,7 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
 
     // Get kernel for ha
     const double h_a_inv     = 1. / h_a;
-    const double h_a_inv_dp1 = tarch::la::pow(h_a_inv, hydroDimensions + 1); // 1/h^{dim + 1}
+    const double h_a_inv_dp1 = swift2::legacy::hydroDimensions::pow_dimension_plus_one(h_a_inv); // 1/h^{dim + 1}
     const double qa          = r * h_a_inv;
     double       wa, dwa_dqa;
     // Evaluate kernel and its derivative for particle a
@@ -141,7 +150,7 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
     // Dimensionless distance to evaluate kernel
     const double h_b         = activeParticle->getSmoothingLength();
     const double h_b_inv     = 1. / h_b;
-    const double h_b_inv_dp1 = tarch::la::pow(h_b_inv, hydroDimensions + 1); // 1/h^{dim + 1}
+    const double h_b_inv_dp1 = swift2::legacy::hydroDimensions::pow_dimension_plus_one(h_b_inv); // 1/h^{dim + 1}
     const double qb          = r * h_b_inv;
     double       wb, dwb_dqb;
     // Evaluate kernel and its derivative for particle b
@@ -241,9 +250,32 @@ void swift2::kernels::forceKernel(Particle* localParticle, const Particle* activ
 
 
 template <typename Particle>
+bool swift2::kernels::forceKernelDistanceCheck(
+  Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle
+) {
+
+  const double h_a = localParticle->getSmoothingLength();
+
+  // Distance between the two particles
+  tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
+  const double                          r  = tarch::la::norm2(dx);
+
+  // Get actual interaction radius
+  const double iactR = kernel_gamma * h_a;
+
+  const bool result = tarch::la::smaller(r, iactR);
+
+  return result;
+}
+
+
+template <typename Particle>
 void swift2::kernels::forceKernelVectorised(
   Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle
 ) InlineMethod {
+
+  // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
+  using namespace swift2::legacy::kernelHydro;
 
   // Grab static parameters
   const int    hydroDimensions = localParticle->getHydroDimensions();
@@ -277,7 +309,10 @@ void swift2::kernels::forceKernelVectorised(
   // Get actual interaction radius
   const double iactR = kernel_gamma * h_a;
 
-  const double mask = tarch::la::smaller(r, iactR);
+  // @Pawel I don't know if this vectorises anymore, but I think the second check is important
+  //        I also don't know if a strict or non-strict boolean optimisation make a difference.
+  //        If they do, please document it in the SWIFT optimisation pages.
+  double mask = (tarch::la::smaller(r, iactR) & tarch::la::greater(r, 0.0)) ? 1.0 : 0.0;
 
   // Get actual interaction radius
   double wa, wb;
@@ -290,8 +325,8 @@ void swift2::kernels::forceKernelVectorised(
   // Evaluate kernel and its derivative for particle b
   kernel_deval(q_b, wb, dw_dqb);
 
-  wa_dr = dw_dqa * tarch::la::pow(h_a_inv, (hydroDimensions + 1));
-  wb_dr = dw_dqb * tarch::la::pow(h_b_inv, (hydroDimensions + 1));
+  wa_dr = dw_dqa * swift2::legacy::hydroDimensions::pow_dimension_plus_one(h_a_inv);
+  wb_dr = dw_dqb * swift2::legacy::hydroDimensions::pow_dimension_plus_one(h_b_inv);
 
   // Variable smoothing length term
 
@@ -413,7 +448,7 @@ void swift2::kernels::computeDensityWithConstantSearchRadius(
   const ParticleContainer&                  activeParticles
 ) {
   for (auto* localParticle : localParticles) {
-    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX()) and not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker)) {
+    if (localParticleCanBeWorkedOnCellKernel(localParticle, marker)) {
       swift2::kernels::findSmoothingLengthWithConstantSearchRadius(localParticle, activeParticles);
     }
   }
@@ -438,7 +473,7 @@ void swift2::kernels::computeHydroForce(
   const ParticleContainer&                  activeParticles
 ) {
   for (auto* localParticle : localParticles) {
-    if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
+    if (localParticleCanBeWorkedOnCellKernel(localParticle, marker)) {
       for (auto* activeParticle : activeParticles) {
         swift2::kernels::forceKernel(localParticle, activeParticle);
       }
@@ -448,7 +483,7 @@ void swift2::kernels::computeHydroForce(
 
 
 template <typename ParticleContainer>
-void swift2::kernels::computeHydroForce(
+void swift2::kernels::computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking(
   const peano4::datamanagement::CellMarker& marker,
   const ParticleContainer&                  particlesAssociatedWithLocalVertices,
   const std::vector<int>&                   numberOfParticlesPerLocalVertex,
@@ -470,13 +505,7 @@ void swift2::kernels::computeHydroForce(
 
       for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize;
            localParticleNumberInThisChunk++) {
-        if (
-          marker.isContained(localParticlesChunk[localParticleNumberInThisChunk].getX())
-          and
-          not localParticlesChunk[localParticleNumberInThisChunk].getCellHasUpdatedParticle()
-          and
-          not toolbox::particles::particleWillBeDroppedFurther( localParticlesChunk[localParticleNumberInThisChunk], marker)
-        ) {
+        if (localParticleCanBeWorkedOnCellKernel(&localParticlesChunk[localParticleNumberInThisChunk], marker)) {
           for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
                activeParticleNumberInThisChunk++) {
             swift2::kernels::forceKernelVectorised(
@@ -484,8 +513,96 @@ void swift2::kernels::computeHydroForce(
               activeParticlesChunk + activeParticleNumberInThisChunk
             );
           }
-        }
-      }
-    }
-  }
+        } // if
+      }   // for localParticleNumberInThisChunk
+    }     // for activeParticlesChunkSize
+  }       // for localParticlesChunkSize
+}
+
+
+template <typename ParticleContainer>
+void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
+  const peano4::datamanagement::CellMarker& marker,
+  const ParticleContainer&                  particlesAssociatedWithLocalVertices,
+  const std::vector<int>&                   numberOfParticlesPerLocalVertex,
+  const ParticleContainer&                  activeParticles,
+  const std::vector<int>&                   numberOfActiveParticlesPerVertexAdded
+) {
+  typename std::list<typename ParticleContainer::value_type>::const_iterator localParticlesIterator
+    = particlesAssociatedWithLocalVertices.begin();
+
+  for (auto localParticlesChunkSize : numberOfParticlesPerLocalVertex) {
+    typename ParticleContainer::value_type localParticlesChunk = *localParticlesIterator;
+    std::advance(localParticlesIterator, localParticlesChunkSize);
+
+    typename std::list<typename ParticleContainer::value_type>::const_iterator activeParticlesIterator
+      = activeParticles.begin();
+    for (auto activeParticlesChunkSize : numberOfActiveParticlesPerVertexAdded) {
+      typename ParticleContainer::value_type activeParticlesChunk = *activeParticlesIterator;
+      std::advance(activeParticlesIterator, activeParticlesChunkSize);
+
+      for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize;
+           localParticleNumberInThisChunk++) {
+        if (localParticleCanBeWorkedOnCellKernel(&localParticlesChunk[localParticleNumberInThisChunk], marker)) {
+          constexpr int MaxVectorise               = 8;
+          bool*         enabledInteractionPartners = tarch::allocateMemory<bool>(
+            activeParticlesChunkSize + MaxVectorise - 1, tarch::MemoryLocation::Heap
+          );
+
+          // Build up list of close enough particles
+          // =======================================
+          {
+            for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+                 activeParticleNumberInThisChunk++) {
+              enabledInteractionPartners[activeParticleNumberInThisChunk] = swift2::kernels::forceKernelDistanceCheck(
+                localParticlesChunk + localParticleNumberInThisChunk,
+                activeParticlesChunk + activeParticleNumberInThisChunk
+              );
+            }
+            for (int i = activeParticlesChunkSize; i < activeParticlesChunkSize + MaxVectorise - 1; i++) {
+              enabledInteractionPartners[i] = false;
+            }
+          }
+
+          // Handle interactions
+          // ===================
+          {
+            int activeParticleNumberInThisChunk = 0;
+            while (activeParticleNumberInThisChunk < activeParticlesChunkSize) {
+              if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0] and enabledInteractionPartners[activeParticleNumberInThisChunk + 1] and enabledInteractionPartners[activeParticleNumberInThisChunk + 2] and enabledInteractionPartners[activeParticleNumberInThisChunk + 3] and enabledInteractionPartners[activeParticleNumberInThisChunk + 4] and enabledInteractionPartners[activeParticleNumberInThisChunk + 5] and enabledInteractionPartners[activeParticleNumberInThisChunk + 6] and enabledInteractionPartners[activeParticleNumberInThisChunk + 7]) {
+                for (int i = activeParticleNumberInThisChunk; i < activeParticleNumberInThisChunk + 8; i++) {
+                  swift2::kernels::forceKernelVectorised(
+                    localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk + i
+                  );
+                }
+                activeParticleNumberInThisChunk += 8;
+              }
+              if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0] and enabledInteractionPartners[activeParticleNumberInThisChunk + 1] and enabledInteractionPartners[activeParticleNumberInThisChunk + 2] and enabledInteractionPartners[activeParticleNumberInThisChunk + 3]) {
+                for (int i = activeParticleNumberInThisChunk; i < activeParticleNumberInThisChunk + 4; i++) {
+                  swift2::kernels::forceKernelVectorised(
+                    localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk + i
+                  );
+                }
+                activeParticleNumberInThisChunk += 4;
+              } else if (enabledInteractionPartners[activeParticleNumberInThisChunk + 0] and enabledInteractionPartners[activeParticleNumberInThisChunk + 1]) {
+                for (int i = activeParticleNumberInThisChunk; i < activeParticleNumberInThisChunk + 2; i++) {
+                  swift2::kernels::forceKernelVectorised(
+                    localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk + i
+                  );
+                }
+                activeParticleNumberInThisChunk += 2;
+              } else {
+                swift2::kernels::forceKernelVectorised(
+                  localParticlesChunk + localParticleNumberInThisChunk, activeParticlesChunk
+                );
+                activeParticleNumberInThisChunk += 1;
+              }
+            }
+          } // end of particle update
+
+          tarch::freeMemory(enabledInteractionPartners, tarch::MemoryLocation::Heap);
+        } // if
+      }   // for localParticleNumberInThisChunk
+    }     // for activeParticlesChunkSize
+  }       // for localParticlesChunkSize
 }

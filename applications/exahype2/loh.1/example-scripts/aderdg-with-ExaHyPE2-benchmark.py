@@ -129,7 +129,7 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.load_balancing_quality) + ")" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveBipartition", "(" + str(args.load_balancing_quality) + ")" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )

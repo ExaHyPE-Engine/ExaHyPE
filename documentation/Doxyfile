@@ -950,6 +950,7 @@ INPUT                  = src \
                          python \
                          tutorials \
                          benchmarks \
+                         tests \
                          applications \
                          documentation/Doxygen \
 
@@ -1049,6 +1050,12 @@ EXCLUDE_PATTERNS       = */benchmarks/*/celldata \
                          */tutorials/*/repositories \
                          */tutorials/*/vertexdata \
                          */tutorials/*/Constants.h
+                         */tests/*/celldata \
+                         */tests/*/globaldata \
+                         */tests/*/observers \
+                         */tests/*/repositories \
+                         */tests/*/vertexdata \
+                         */tests/*/Constants.h 
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
