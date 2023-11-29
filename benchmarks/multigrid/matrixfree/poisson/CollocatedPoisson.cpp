@@ -16,7 +16,7 @@ void benchmarks::multigrid::matrixfree::poisson::CollocatedPoisson::initVertex(
 ) {
   double tempRhs = 2 * tarch::la::PI * tarch::la::PI;
   for (int i = 0; i < Dimensions; i++){
-    tempRhs *= std::sin( tarch::la::PI * x[i] );
+    tempRhs *= std::sin( tarch::la::PI * x[i] ) * h[i];
   }
   // put this into the rhs vector
   for (int i=0; i<rhs.size(); i++)
