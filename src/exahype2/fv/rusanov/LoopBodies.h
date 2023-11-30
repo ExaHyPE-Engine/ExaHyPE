@@ -71,14 +71,15 @@ namespace exahype2::fv::rusanov::loopbodies {
    * @param volumeIndex: Which volume is to be updated within the target
    *   patch. This index refers to the target index.
    */
+  template <class QInEnumeratorType, class QOutEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void copySolution(
     const double* __restrict__ QIn,
-    const auto&                                 QInEnumerator,
+    const QInEnumeratorType&                    QInEnumerator,
     int                                         patchIndex,
     const ::tarch::la::Vector<Dimensions, int>& volumeIndex,
     int                                         unknown,
     double* __restrict__ QOut,
-    const auto& QOutEnumerator
+    const QOutEnumeratorType& QOutEnumerator
   ) InlineMethod {
     QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] = QIn[QInEnumerator(patchIndex, volumeIndex, unknown)];
   };
