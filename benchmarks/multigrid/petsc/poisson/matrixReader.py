@@ -92,6 +92,7 @@ def get_null_vector(mat):
 
 if __name__ == "__main__":
   print("this file is here for development. please remove from git once satisfied with matrix")
+  print("invoke this script with python3 -i matrixReader.py.\nMake sure that mat.xml, rhs.xml and sol.xml are available.")
 
   #hardcoding file names!
 
@@ -101,7 +102,7 @@ if __name__ == "__main__":
     mat = populateMatrix("mat.xml")
   except:
     print("no mat.xml file available")
-    pass
+    exit()
   try:
     rhs = populateRHS("rhs.xml")
   except:
