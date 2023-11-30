@@ -44,13 +44,8 @@ namespace exahype2::fv::rusanov::omp::internal {
     // ====================================================
     if constexpr (EvaluateSource) {
 #if Dimensions == 2
-#pragma omp target teams distribute parallel for simd collapse(3)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
             loopbodies::copySolutionAndAddSourceTerm<SolverType>(
@@ -69,13 +64,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 #else
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -98,13 +88,8 @@ namespace exahype2::fv::rusanov::omp::internal {
 #endif
     } else {
 #if Dimensions == 2
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
             for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
@@ -114,13 +99,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 #else
-#pragma omp target teams distribute parallel for simd collapse(5)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -140,13 +120,8 @@ namespace exahype2::fv::rusanov::omp::internal {
     // Compute damping due to max eigenvalue
     // ====================================================
 #if Dimensions == 2
-#pragma omp target teams distribute parallel for simd collapse(3)
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
         for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; x++) {
           loopbodies::computeMaxEigenvalue<SolverType>(
@@ -166,13 +141,8 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 
-#pragma omp target teams distribute parallel for simd collapse(3)
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
         for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
           loopbodies::computeMaxEigenvalue<SolverType>(
@@ -192,13 +162,8 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
         for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
           for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -223,13 +188,8 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 #else
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; x++) {
@@ -251,13 +211,8 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -279,13 +234,8 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int z = 0; z < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; z++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -307,13 +257,8 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 
-#pragma omp target teams distribute parallel for simd collapse(5)
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) nowait
+    for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -346,13 +291,8 @@ namespace exahype2::fv::rusanov::omp::internal {
     // ====================================================
     if constexpr (EvaluateFlux) {
 #if Dimensions == 2
-#pragma omp target teams distribute parallel for simd collapse(3)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; x++) {
             loopbodies::computeFlux<SolverType>(
@@ -372,13 +312,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(3)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
             loopbodies::computeFlux<SolverType>(
@@ -398,13 +333,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
             for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -427,13 +357,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 #else
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; x++) {
@@ -455,13 +380,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -483,13 +403,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -511,13 +426,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(5)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -546,13 +456,8 @@ namespace exahype2::fv::rusanov::omp::internal {
 
     if constexpr (EvaluateNonconservativeProduct) {
 #if Dimensions == 2
-#pragma omp target teams distribute parallel for simd collapse(3)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; x++) {
             loopbodies::computeNonconservativeFlux<SolverType>(
@@ -572,13 +477,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(3)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
             loopbodies::computeNonconservativeFlux<SolverType>(
@@ -598,13 +498,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
             for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
@@ -627,13 +522,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 #else
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; x++) {
@@ -655,13 +545,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -683,13 +568,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -711,13 +591,8 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(5)
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) nowait
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -746,13 +621,8 @@ namespace exahype2::fv::rusanov::omp::internal {
 
     if constexpr (EvaluateMaximumEigenvalueAfterTimeStep) {
 #if Dimensions == 2
-#pragma omp target teams distribute
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         double newMaxEigenvalue = 0.0;
 #pragma omp parallel for simd collapse(2) reduction(max : newMaxEigenvalue)
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -775,15 +645,10 @@ namespace exahype2::fv::rusanov::omp::internal {
         maxEigenvalue[patchIndex] = newMaxEigenvalue;
       }
 #else
-#pragma omp target teams distribute
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp target teams distribute device(targetDevice)
+      for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         double newMaxEigenvalue = 0.0;
-#pragma omp parallel for simd collapse(3) reduction(max : newMaxEigenvalue)
+#pragma omp parallel for simd       collapse(3) reduction(max : newMaxEigenvalue)
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
             for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -1005,6 +870,10 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int tar
   static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
   logTraceIn("timeStepWithRusanovBatchedCopyStateless()");
 
+#ifdef UseTargetDART
+  targetDevice = TARGETDART_ANY;
+#endif
+
   const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
@@ -1021,82 +890,25 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int tar
   double* tempEigenvalueY             = new double[eigenvalueEnumerator.size()];
   double* tempEigenvalueZ             = new double[eigenvalueEnumerator.size()];
 
-#pragma omp target enter data map(alloc : tempFluxX[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-  device(TARGETDART_ANY)
-#else
-  device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempFluxY[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempFluxZ[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempNonconservativeProductX[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-        device(TARGETDART_ANY)
-#else
-        device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempNonconservativeProductY[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-          device(TARGETDART_ANY)
-#else
-          device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempNonconservativeProductZ[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-            device(TARGETDART_ANY)
-#else
-            device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempEigenvalueX[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-              device(TARGETDART_ANY)
-#else
-              device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempEigenvalueY[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-                device(TARGETDART_ANY)
-#else
-                device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempEigenvalueZ[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-                  device(TARGETDART_ANY)
-#else
-                  device(targetDevice)
-#endif
+#pragma omp target enter data map(alloc : tempFluxX[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempFluxY[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempFluxZ[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductX[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductY[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductZ[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueX[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueY[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueZ[0 : eigenvalueEnumerator.size()]) device(targetDevice)
 
-                    double** mappedPointersToQIn
-    = new double*[patchData.numberOfCells];
+  double** mappedPointersToQIn  = new double*[patchData.numberOfCells];
   double** mappedPointersToQOut = new double*[patchData.numberOfCells];
 
   for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
     const double* currentQIn  = patchData.QIn[patchIndex];
     double*       currentQOut = patchData.QOut[patchIndex];
-#pragma omp target enter data map(to : currentQIn[0 : QInEnumerator.size()])
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : currentQOut[0 : QOutEnumerator.size()])
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        mappedPointersToQIn[patchIndex]
-      = static_cast<double*>(omp_get_mapped_ptr(currentQIn, targetDevice));
+#pragma omp target enter data map(to : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
+    mappedPointersToQIn[patchIndex]  = static_cast<double*>(omp_get_mapped_ptr(currentQIn, targetDevice));
     mappedPointersToQOut[patchIndex] = static_cast<double*>(omp_get_mapped_ptr(currentQOut, targetDevice));
   }
 
@@ -1107,50 +919,15 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int tar
   double*   dt                     = patchData.dt;
   double*   maxEigenvalue          = patchData.maxEigenvalue;
 
-#pragma omp target enter data map(to : rawPointerToCellCentre[0 : numberOfCells * Dimensions])
-#ifdef UseTargetDART
-  device(TARGETDART_ANY)
-#else
-  device(targetDevice)
-#endif
-#pragma omp target enter data map(to : rawPointerToCellSize[0 : numberOfCells * Dimensions])
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-#pragma omp target enter data map(to : mappedPointersToQIn[0 : numberOfCells])
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-#pragma omp target enter data map(to : mappedPointersToQOut[0 : numberOfCells])
-#ifdef UseTargetDART
-        device(TARGETDART_ANY)
-#else
-        device(targetDevice)
-#endif
-#pragma omp target enter data map(to : t[0 : numberOfCells])
-#ifdef UseTargetDART
-          device(TARGETDART_ANY)
-#else
-          device(targetDevice)
-#endif
-#pragma omp target enter data map(to : dt[0 : numberOfCells])
-#ifdef UseTargetDART
-            device(TARGETDART_ANY)
-#else
-            device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : maxEigenvalue[0 : numberOfCells])
-#ifdef UseTargetDART
-              device(TARGETDART_ANY)
-#else
-              device(targetDevice)
-#endif
+#pragma omp target enter data map(to : rawPointerToCellCentre[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target enter data map(to : rawPointerToCellSize[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target enter data map(to : mappedPointersToQIn[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : mappedPointersToQOut[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : t[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : dt[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(alloc : maxEigenvalue[0 : numberOfCells]) device(targetDevice)
 
-                tarch::timing::Watch watch("exahype2::fv::rusanov::omp", "timeStepWithRusanovBatchedCopyStateless", false, true);
+  tarch::timing::Watch watch("exahype2::fv::rusanov::omp", "timeStepWithRusanovBatchedCopyStateless", false, true);
   internal::timeStepWithRusanovBatchedStateless<
     SolverType,
     NumberOfVolumesPerAxisInPatch,
@@ -1184,119 +961,29 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int tar
   watch.stop();
   measurement.setValue(watch.getCalendarTime());
 
-#pragma omp target exit data map(delete : rawPointerToCellCentre[0 : numberOfCells * Dimensions])
-#ifdef UseTargetDART
-  device(TARGETDART_ANY)
-#else
-  device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : rawPointerToCellSize[0 : numberOfCells * Dimensions])
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : mappedPointersToQIn[0 : numberOfCells])
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : mappedPointersToQOut[0 : numberOfCells])
-#ifdef UseTargetDART
-        device(TARGETDART_ANY)
-#else
-        device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : t[0 : numberOfCells])
-#ifdef UseTargetDART
-          device(TARGETDART_ANY)
-#else
-          device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : dt[0 : numberOfCells])
-#ifdef UseTargetDART
-            device(TARGETDART_ANY)
-#else
-            device(targetDevice)
-#endif
-#pragma omp target exit data map(from : maxEigenvalue[0 : numberOfCells])
-#ifdef UseTargetDART
-              device(TARGETDART_ANY)
-#else
-              device(targetDevice)
-#endif
+#pragma omp target exit data map(delete : rawPointerToCellCentre[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target exit data map(delete : rawPointerToCellSize[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target exit data map(delete : mappedPointersToQIn[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : mappedPointersToQOut[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : t[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : dt[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(from : maxEigenvalue[0 : numberOfCells]) device(targetDevice)
 
-#pragma omp target exit data map(delete : tempFluxX[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-                device(TARGETDART_ANY)
-#else
-                device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempFluxY[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-                  device(TARGETDART_ANY)
-#else
-                  device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempFluxZ[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-                    device(TARGETDART_ANY)
-#else
-                    device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempNonconservativeProductX[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-                      device(TARGETDART_ANY)
-#else
-                      device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempNonconservativeProductY[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-                        device(TARGETDART_ANY)
-#else
-                        device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempNonconservativeProductZ[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-                          device(TARGETDART_ANY)
-#else
-                          device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempEigenvalueX[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-                            device(TARGETDART_ANY)
-#else
-                            device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempEigenvalueY[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-                              device(TARGETDART_ANY)
-#else
-                              device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempEigenvalueZ[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-                                device(TARGETDART_ANY)
-#else
-                                device(targetDevice)
-#endif
+#pragma omp target exit data map(delete : tempFluxX[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempFluxY[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempFluxZ[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductX[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductY[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductZ[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueX[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueY[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueZ[0 : eigenvalueEnumerator.size()]) device(targetDevice)
 
-                                  for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+  for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
     const double* currentQIn  = patchData.QIn[patchIndex];
     double*       currentQOut = patchData.QOut[patchIndex];
-#pragma omp target exit data map(delete : currentQIn[0 : QInEnumerator.size()])
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-#pragma omp target exit data map(from : currentQOut[0 : QOutEnumerator.size()])
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
+#pragma omp target exit data map(delete : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(from : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
   }
 
   delete[] mappedPointersToQIn;
@@ -1351,6 +1038,10 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int tar
   static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
   logTraceIn("timeStepWithRusanovBatchedCopyStateless()");
 
+#ifdef UseTargetDART
+  targetDevice = TARGETDART_ANY;
+#endif
+
   const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
@@ -1367,82 +1058,25 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int tar
   double* tempEigenvalueY             = new double[eigenvalueEnumerator.size()];
   double* tempEigenvalueZ             = new double[eigenvalueEnumerator.size()];
 
-#pragma omp target enter data map(alloc : tempFluxX[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-  device(TARGETDART_ANY)
-#else
-  device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempFluxY[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempFluxZ[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempNonconservativeProductX[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-        device(TARGETDART_ANY)
-#else
-        device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempNonconservativeProductY[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-          device(TARGETDART_ANY)
-#else
-          device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempNonconservativeProductZ[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-            device(TARGETDART_ANY)
-#else
-            device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempEigenvalueX[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-              device(TARGETDART_ANY)
-#else
-              device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempEigenvalueY[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-                device(TARGETDART_ANY)
-#else
-                device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : tempEigenvalueZ[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-                  device(TARGETDART_ANY)
-#else
-                  device(targetDevice)
-#endif
+#pragma omp target enter data map(alloc : tempFluxX[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempFluxY[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempFluxZ[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductX[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductY[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempNonconservativeProductZ[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueX[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueY[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : tempEigenvalueZ[0 : eigenvalueEnumerator.size()]) device(targetDevice)
 
-                    double** mappedPointersToQIn
-    = new double*[patchData.numberOfCells];
+  double** mappedPointersToQIn  = new double*[patchData.numberOfCells];
   double** mappedPointersToQOut = new double*[patchData.numberOfCells];
 
   for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
     const double* currentQIn  = patchData.QIn[patchIndex];
     double*       currentQOut = patchData.QOut[patchIndex];
-#pragma omp target enter data map(to : currentQIn[0 : QInEnumerator.size()])
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : currentQOut[0 : QOutEnumerator.size()])
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-        mappedPointersToQIn[patchIndex]
-      = static_cast<double*>(omp_get_mapped_ptr(currentQIn, targetDevice));
+#pragma omp target enter data map(to : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
+    mappedPointersToQIn[patchIndex]  = static_cast<double*>(omp_get_mapped_ptr(currentQIn, targetDevice));
     mappedPointersToQOut[patchIndex] = static_cast<double*>(omp_get_mapped_ptr(currentQOut, targetDevice));
   }
 
@@ -1453,193 +1087,68 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int tar
   double*   dt                     = patchData.dt;
   double*   maxEigenvalue          = patchData.maxEigenvalue;
 
-#pragma omp target enter data map(to : rawPointerToCellCentre[0 : numberOfCells * Dimensions])
-#ifdef UseTargetDART
-  device(TARGETDART_ANY)
-#else
-  device(targetDevice)
-#endif
-#pragma omp target enter data map(to : rawPointerToCellSize[0 : numberOfCells * Dimensions])
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-#pragma omp target enter data map(to : mappedPointersToQIn[0 : numberOfCells])
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-#pragma omp target enter data map(to : mappedPointersToQOut[0 : numberOfCells])
-#ifdef UseTargetDART
-        device(TARGETDART_ANY)
-#else
-        device(targetDevice)
-#endif
-#pragma omp target enter data map(to : t[0 : numberOfCells])
-#ifdef UseTargetDART
-          device(TARGETDART_ANY)
-#else
-          device(targetDevice)
-#endif
-#pragma omp target enter data map(to : dt[0 : numberOfCells])
-#ifdef UseTargetDART
-            device(TARGETDART_ANY)
-#else
-            device(targetDevice)
-#endif
-#pragma omp target enter data map(alloc : maxEigenvalue[0 : numberOfCells])
-#ifdef UseTargetDART
-              device(TARGETDART_ANY)
-#else
-              device(targetDevice)
-#endif
+#pragma omp target enter data map(to : rawPointerToCellCentre[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target enter data map(to : rawPointerToCellSize[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target enter data map(to : mappedPointersToQIn[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : mappedPointersToQOut[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : t[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(to : dt[0 : numberOfCells]) device(targetDevice)
+#pragma omp target enter data map(alloc : maxEigenvalue[0 : numberOfCells]) device(targetDevice)
 
-                internal::timeStepWithRusanovBatchedStateless<
-                  SolverType,
-                  NumberOfVolumesPerAxisInPatch,
-                  HaloSize,
-                  NumberOfUnknowns,
-                  NumberOfAuxiliaryVariables,
-                  EvaluateFlux,
-                  EvaluateNonconservativeProduct,
-                  EvaluateSource,
-                  EvaluateMaximumEigenvalueAfterTimeStep,
-                  TempDataEnumeratorType>(
-                  targetDevice,
-                  numberOfCells,
-                  mappedPointersToQIn,
-                  rawPointerToCellCentre,
-                  rawPointerToCellSize,
-                  t,
-                  dt,
-                  maxEigenvalue,
-                  mappedPointersToQOut,
-                  tempFluxX,
-                  tempFluxY,
-                  tempFluxZ,
-                  tempNonconservativeProductX,
-                  tempNonconservativeProductY,
-                  tempNonconservativeProductZ,
-                  tempEigenvalueX,
-                  tempEigenvalueY,
-                  tempEigenvalueZ
-                );
+  internal::timeStepWithRusanovBatchedStateless<
+    SolverType,
+    NumberOfVolumesPerAxisInPatch,
+    HaloSize,
+    NumberOfUnknowns,
+    NumberOfAuxiliaryVariables,
+    EvaluateFlux,
+    EvaluateNonconservativeProduct,
+    EvaluateSource,
+    EvaluateMaximumEigenvalueAfterTimeStep,
+    TempDataEnumeratorType>(
+    targetDevice,
+    numberOfCells,
+    mappedPointersToQIn,
+    rawPointerToCellCentre,
+    rawPointerToCellSize,
+    t,
+    dt,
+    maxEigenvalue,
+    mappedPointersToQOut,
+    tempFluxX,
+    tempFluxY,
+    tempFluxZ,
+    tempNonconservativeProductX,
+    tempNonconservativeProductY,
+    tempNonconservativeProductZ,
+    tempEigenvalueX,
+    tempEigenvalueY,
+    tempEigenvalueZ
+  );
 
-#pragma omp target exit data map(delete : rawPointerToCellCentre[0 : numberOfCells * Dimensions])
-#ifdef UseTargetDART
-  device(TARGETDART_ANY)
-#else
-  device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : rawPointerToCellSize[0 : numberOfCells * Dimensions])
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : mappedPointersToQIn[0 : numberOfCells])
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : mappedPointersToQOut[0 : numberOfCells])
-#ifdef UseTargetDART
-        device(TARGETDART_ANY)
-#else
-        device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : t[0 : numberOfCells])
-#ifdef UseTargetDART
-          device(TARGETDART_ANY)
-#else
-          device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : dt[0 : numberOfCells])
-#ifdef UseTargetDART
-            device(TARGETDART_ANY)
-#else
-            device(targetDevice)
-#endif
-#pragma omp target exit data map(from : maxEigenvalue[0 : numberOfCells])
-#ifdef UseTargetDART
-              device(TARGETDART_ANY)
-#else
-              device(targetDevice)
-#endif
+#pragma omp target exit data map(delete : rawPointerToCellCentre[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target exit data map(delete : rawPointerToCellSize[0 : numberOfCells * Dimensions]) device(targetDevice)
+#pragma omp target exit data map(delete : mappedPointersToQIn[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : mappedPointersToQOut[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : t[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(delete : dt[0 : numberOfCells]) device(targetDevice)
+#pragma omp target exit data map(from : maxEigenvalue[0 : numberOfCells]) device(targetDevice)
 
-#pragma omp target exit data map(delete : tempFluxX[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-                device(TARGETDART_ANY)
-#else
-                device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempFluxY[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-                  device(TARGETDART_ANY)
-#else
-                  device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempFluxZ[0 : fluxEnumerator.size()])
-#ifdef UseTargetDART
-                    device(TARGETDART_ANY)
-#else
-                    device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempNonconservativeProductX[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-                      device(TARGETDART_ANY)
-#else
-                      device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempNonconservativeProductY[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-                        device(TARGETDART_ANY)
-#else
-                        device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempNonconservativeProductZ[0 : ncpEnumerator.size()])
-#ifdef UseTargetDART
-                          device(TARGETDART_ANY)
-#else
-                          device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempEigenvalueX[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-                            device(TARGETDART_ANY)
-#else
-                            device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempEigenvalueY[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-                              device(TARGETDART_ANY)
-#else
-                              device(targetDevice)
-#endif
-#pragma omp target exit data map(delete : tempEigenvalueZ[0 : eigenvalueEnumerator.size()])
-#ifdef UseTargetDART
-                                device(TARGETDART_ANY)
-#else
-                                device(targetDevice)
-#endif
+#pragma omp target exit data map(delete : tempFluxX[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempFluxY[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempFluxZ[0 : fluxEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductX[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductY[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempNonconservativeProductZ[0 : ncpEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueX[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueY[0 : eigenvalueEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(delete : tempEigenvalueZ[0 : eigenvalueEnumerator.size()]) device(targetDevice)
 
-                                  for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+  for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
     const double* currentQIn  = patchData.QIn[patchIndex];
     double*       currentQOut = patchData.QOut[patchIndex];
-#pragma omp target exit data map(delete : currentQIn[0 : QInEnumerator.size()])
-#ifdef UseTargetDART
-    device(TARGETDART_ANY)
-#else
-    device(targetDevice)
-#endif
-#pragma omp target exit data map(from : currentQOut[0 : QOutEnumerator.size()])
-#ifdef UseTargetDART
-      device(TARGETDART_ANY)
-#else
-      device(targetDevice)
-#endif
+#pragma omp target exit data map(delete : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(from : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
   }
 
   delete[] mappedPointersToQIn;
