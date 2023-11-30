@@ -4,14 +4,6 @@ include(CMakePushCheckState)
 
 cmake_push_check_state()
 
-if(NOT DEFINED WITH_GPU_ARCH OR WITH_GPU_ARCH STREQUAL " ")
-  message(FATAL_ERROR "GPU architechture is not defined")
-endif()
-
-if(NOT WITH_GPU_ARCH IN_LIST ACCELERATOR_ARCHITECTURES)
-  message(FATAL_ERROR "GPU architechture must be one of: ${ACCELERATOR_ARCHITECTURES}")
-endif()
-
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
   if(NVIDIA_GPU)
     find_package(CUDA REQUIRED)
@@ -46,37 +38,15 @@ set(CMAKE_REQUIRED_LIBRARIES "${OpenMP_CXX_LIBRARIES};${OpenMP_Offloading_LINK_L
 set(CMAKE_REQUIRED_LINK_OPTIONS "${OpenMP_CXX_LINK_OPTIONS}")
 message(STATUS "${CMAKE_REQUIRED_FLAGS}")
 
-check_cxx_source_runs("
-  #include <omp.h>
-  #define YES 0
-  #define NO 1
-  int main(int argc, char* argv[]) {
-    int canOffload = NO;
-    #pragma omp target map(tofrom: canOffload)
-    {
-      if (!omp_is_initial_device()) {
-        canOffload = YES;
-      }
-    }
-      return canOffload;
-  }
-  " OPENMP_OFFLOADING_RESULT
-)
+add_library(OpenMP::OpenMPTarget INTERFACE IMPORTED)
+set_property(TARGET OpenMP::OpenMPTarget APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
+  $<$<COMPILE_LANGUAGE:CXX>:${OpenMP_Offloading_CXX_FLAGS}>)
+target_link_libraries(OpenMP::OpenMPTarget
+  INTERFACE
+    ${OpenMP_CXX_LIBRARIES}
+    ${OpenMP_Offloading_CXX_FLAGS}
+    ${OpenMP_Offloading_LINK_LIBRARIES})
 
-if(OPENMP_OFFLOADING_RESULT)
-  add_library(OpenMP::OpenMP_CXX_with_offloading INTERFACE IMPORTED)
-  set_property(TARGET OpenMP::OpenMP_CXX_with_offloading APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
-    $<$<COMPILE_LANGUAGE:CXX>:${OpenMP_Offloading_CXX_FLAGS}>)
-    target_link_libraries(OpenMP::OpenMP_CXX_with_offloading
-      INTERFACE
-        ${OpenMP_CXX_LIBRARIES}
-        ${OpenMP_Offloading_CXX_FLAGS}
-        ${OpenMP_Offloading_LINK_LIBRARIES})
-else()
-  message(FATAL_ERROR "OpenMP GPU offloading was demanded but it was not set."
-    "Check your compiler whether it can perform OpenMP GPU offloading.")
-endif()
-
-find_package_handle_standard_args(OpenMPWithOffloading REQUIRED_VARS OPENMP_OFFLOADING_RESULT)
-mark_as_advanced(OpenMP_Offloading_CXX_FLAGS OpenMP_Offloading_LINK_LIBRARIES OPENMP_OFFLOADING_RESULT)
+find_package_handle_standard_args(OpenMTarget)
+mark_as_advanced(OpenMP_Offloading_CXX_FLAGS OpenMP_Offloading_LINK_LIBRARIES)
 cmake_pop_check_state()
