@@ -1,0 +1,6 @@
+Jinja2==3.1.2
+matplotlib==3.8.1
+mpmath==1.2.1
+numpy==1.26.1
+scipy==1.11.3
+sympy==1.11.1
