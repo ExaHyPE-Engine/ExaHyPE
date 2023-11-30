@@ -448,7 +448,7 @@ In the example above, we tell the new action set that we want to manually add
 new behaviour, as we set the flag
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-add_user_defined_actions=True,
+add_user_defined_actions=True
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 As a consequence, we will obtain a new class within our project's actionset 
@@ -459,7 +459,7 @@ Adding behaviour manually is only one way to inject behaviour. You might as
 well set 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-add_user_defined_actions=True,
+add_user_defined_actions=False
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In this case, no new class in actionsets is generated. You will have to add
@@ -486,7 +486,7 @@ always the same pattern:
     def user_should_modify_template(self):
         return False
    ~~~~~~~~~~~~~~~~~~~~~~~~
-2. Ensure that you main script imports this action set.
+2. Ensure that you main script imports this @ref peano_action_sets "action set".
 3. Add it to your new user-defined step:
    ~~~~~~~~~~~~~~~~~~~~~~~~
       additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
@@ -501,72 +501,35 @@ always the same pattern:
 A classic example for a sophisticated variant of the the last step is the 
 action set implemented within applications/exahype2/ccz4/ComputeFirstDerivatives.py.
 It extends peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor for a Finite
-Difference scheme. So it does not directly inherit from ActionSet, but rather
-uses an intermediate class which already adds functionality.
+Difference scheme. This one in turn inherits from peano4.solversteps.ActionSet. 
+Once defined, we again add this to the step via add_action_set().
    
    
 
 ### Use pre-defined functionality 
 
-Once you have created your additional step, you can add all kinds of  
-@ref peano_action_sets "action sets" to it. Each additional sweep has access
-to all ExaHyPE solver data which is held between any two time steps. So you
-don't have access to intermediate guesses of the Runge-Kutta scheme, but you
-have access to the current solution. Therefore, it is possible to add the 
-existing solvers' action sets to the new mesh sweep. 
- 
+You can write your own @ref peano_action_sets "action sets" to it (see above), 
+and/or you can use existing action sets within your additional mesh sweep. 
+Each additional mesh sweep has access
+to all ExaHyPE solver data. Nothing stops you from using and manipulating these
+data in your additional mesh sweeps.
+
 For this, I recommend that you study your solver objects' interna. Each of 
-them creates a whole suite of action sets which are then added to the 
-individual steps via add_actions_to_perform_time_step(). You can invoke this
-routine for your new, additional time step and hence let the time step do 
-similar things as the original code. 
-Alternatively, you add your own action sets manually.
+them creates a whole suite of solver-specific action sets which are then added to the 
+individual steps via add_actions_to_perform_time_step(). Each solver also 
+creates its own distinct set of data structures and ties them to vertices,
+faces and cells.
 
-An important thing many codes do is a projection of the solution data onto the
-faces. By default, an empty additional step does not project any data onto the
-faces. That is, you might alter the representation within the cell, but this 
-information is not shared with the cell's neighbours. For this, you have to add
-a further action set:
-
-~~~~~~~~~~~~~~~~~~~~~~~~
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-There's a further catch here: You have to carefully study when solvers exchange
-face data. The FD4 enclave tasking for example exchanges information after each
-primary step:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        self._patch_overlap_new.generator.send_condition = (
-            secondary_sweep_or_initialisation_or_plotting_guard
-        )
-        self._patch_overlap_new.generator.receive_and_merge_condition = (
-            primary_sweep_or_plotting
-        )
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you add an additional step prior to the first Runge-Kutta step, this 
-information will be sent out after the secondary sweep and will be 
-received in the primary sweep. This is wrong! The receives and sends do not
-match. You also have to send out the data after the additional step. For
-this, you have to plug into
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-def create_data_structures(self):
-    super( MySuperClass, self ).create_data_structures()
-    [...]
-    self._patch_overlap_new.generator.send_condition = (
-        secondary_sweep_or_initialisation_or_plotting_guard
-        + " or " + 
-        [...]
-    )
-    
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-and extend the guard.
+A good example is the ccz4.py script and the action sets within 
+ComputeFirstDerivatives.py which can be found in applications/exahype2/ccz4.
+Here, we define an additional action set which manipulates the "solution"
+after each time step or Runge-Kutta step, respectively. It manipulates the 
+solver's core data structure, and is used in combination with various 
+pre-defined action sets such as 
+exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces.
 
 
-
-## Further implementation remarks
+## Dynamic adaptivity
 
 Do not coarsen or erase the mesh in the additional grid sweeps. Some ExaHyPE
 solvers are really picky when it comes to when they can refine or not. A 
@@ -575,20 +538,22 @@ helpful. If you need the additional steps to trigger mesh modifications, use
 the exahype2::RefinementControl objects and add them to exahype2::RefinementControlService.
 The service serves as a middle layer in-between ExaHyPE and Peano.
 
-Nothing stops you from creating a subclass of the project if you need the 
-additional steps in multiple projects. In some sense, the tracers could or 
-should have been realised as a subset of the plain project. This likely only
-makes sense for really massive projects.
-
 
 
 
 ## Add new data to the mesh
 
 By the time we have configured the new additional steps, you are working with 
-a plain Peano project. You consequently have quite some freedom. While the 
-routine register_new_user_defined_algorithmic_step() ensures that all 
-algorithmic steps always "know" which data ExaHyPE associates with each 
+a plain Peano project. You consequently have quite some freedom. One of the 
+things you can do is to add arbitrary data to the mesh vertices, face and 
+cell which have nothing to do with the core ExaHyPE solvers in use. You can
+augment the whole setup with your own data.
+
+
+While the 
+routine register_new_user_defined_algorithmic_step() ensures that additional,
+user-defined
+algorithmic steps "know" which data ExaHyPE associates with each 
 grid entity (face, mesh, vertex), this does not hold the other way round:
 
 If you want to add further data to the mesh, you first create this data. 
@@ -599,6 +564,17 @@ data. They also traverse the mesh and if they are not aware of some user
 data attached to it, this might lead to data inconsistencies. For this, you
 have to iterate over all of the steps associated with the Peano project and 
 add the usage information there as well. 
+
+
+Unfortunately, it becomes a little bit nasty here:
+By the time you add the new data, the ExaHyPE project has already lowered its
+data representation into Peano. That is, you cannot work with the ExaHyPE
+data representation anymore (with solvers and their actions), but you have to 
+alter Peano's data representation:
+Basically, you have to iterate over all mesh sweeps within the Peano project,
+and ensure that they know about the additional data that you inject into the 
+system.
+
   
 
  
