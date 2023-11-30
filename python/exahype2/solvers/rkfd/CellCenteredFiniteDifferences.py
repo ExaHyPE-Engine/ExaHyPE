@@ -370,6 +370,15 @@ The finest mesh width of """
         return self._user_solver_includes
 
     def number_of_Runge_Kutta_steps(self):
+        """!
+        
+        Return number of steps required to realise the Runge-Kutta scheme
+        
+        Delegate to ButcherTableau.RungeKutta_steps, which tells us for a given
+        polynomial order _rk_order how many Runge Kutta steps we have to 
+        employ.
+        
+        """
         return RungeKutta_steps(self._rk_order)
 
     def add_user_action_set_includes(self, value):

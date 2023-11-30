@@ -44,6 +44,11 @@ class ComputeFirstDerivativesFV(peano4.toolbox.blockstructured.ReconstructPatchA
     #include "exahype2/CellData.h"
     #include "exahype2/NonCriticalAssertions.h"
     """
+
+
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
+
         
 
 class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor):
@@ -65,6 +70,47 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
     data is consistent. We also can assume that the cell solution holds all 
     Runge-Kutta approximations at this point. So there's no need for ifs or 
     similar.
+    
+    The actual derviative calculation is "outsourced" to the routine
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ::exahype2::CellData  patchData( 
+        oldQWithHalo, 
+        marker.x(), marker.h(), 
+        0.0, // timeStamp => not used here 
+        0.0, // timeStepSize => not used here
+        newQ 
+      );
+      ::exahype2::fd::fd4::reconstruct_first_derivatives(
+        patchData,
+        {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},  // int                     numberOfGridCellsPerPatchPerAxis,
+        {{HALO_SIZE}}, 
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}}
+      );
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    Wrapping up oldQWithHalo and newQ in a CellData object is a slight 
+    overkill (we could have done with only passing the two pointers, as we 
+    don't use the time step size or similar anyway), but we follow the 
+    general ExaHyPE pattern here - and in theory could rely on someone else
+    later to deploy this to GPUs, e.g. 
+    
+    Right after the reconstruction, we have to project the outcome back again 
+    onto the faces. Here, we again have to take into account that we work 
+    with a Runge-Kutta scheme. The cell hosts N blocks of cell data for the
+    N shots of Runge-Kutta. The reconstruction writes into the nth block 
+    according to the current step. Consequently, the projection also has to
+    work with the nth block. exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces
+    provides all the logic for this, so we assume that users add this one to 
+    their script. As the present action set plugs into touchCellFirstTime()
+    and the projection onto the faces plugs into touchCellLastTime(), the 
+    order is always correct no matter how you prioritise between the different
+    action sets.
+    
+    Further to the projection, we also have to roll over details. Again,
+    exahype2.solvers.rkfd.actionsets.ProjectPatchOnto has more documentation 
+    on this.
     
     """
     def __init__(self,
@@ -114,9 +160,11 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
             {% endfor %}
           }      
         }
-      }
         
-      newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
+        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
+      }
+      {% endfor %} 
+        
       
       ::exahype2::CellData  patchData( 
         oldQWithHalo, 
@@ -132,7 +180,6 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}}
       );
-      {% endfor %} 
       """)
     
     
@@ -182,3 +229,8 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
         d["CELL_FUNCTOR_IMPLEMENTATION"] = self.ComputeDerivativesOverCell.render(
             **d
         )
+
+
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
+

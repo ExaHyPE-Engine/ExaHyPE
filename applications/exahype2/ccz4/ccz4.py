@@ -1092,19 +1092,18 @@ if __name__ == "__main__":
       additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
                                                            add_user_defined_actions=False,
                                                            )
-      #project_patch_onto_faces  = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(my_solver)
-      #roll_over_projected_faces = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(my_solver, 
-      #                                                                                 my_solver._store_face_data_default_guard(),
-      #                                                                                 )
+      project_patch_onto_faces  = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(my_solver)
+      project_patch_onto_faces.guards  = [ my_solver._store_cell_data_default_guard() for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
 
-      #project_patch_onto_faces.guards  = [ my_solver._store_cell_data_default_guard(), my_solver._store_cell_data_default_guard() ]
-      #roll_over_projected_faces.guards = [ my_solver._store_cell_data_default_guard(), my_solver._store_cell_data_default_guard() ]
+      roll_over_projected_faces = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(my_solver, 
+                                                                                       my_solver._store_face_data_default_guard(),
+                                                                                       )
 
       additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
                                                                              is_enclave_solver = False,
                                                                              ))
-      #additional_mesh_traversal.add_action_set( project_patch_onto_faces )
-      #additional_mesh_traversal.add_action_set( roll_over_projected_faces )
+      additional_mesh_traversal.add_action_set( project_patch_onto_faces )
+      additional_mesh_traversal.add_action_set( roll_over_projected_faces )
       
       project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
       peano4_project.solversteps.add_step( additional_mesh_traversal )
