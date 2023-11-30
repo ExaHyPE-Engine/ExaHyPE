@@ -112,7 +112,7 @@ if (
         " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
         + args.arch
     )
-    cxxflags = re.sub(r"-std=c++20", "-std=c++17", cxxflags)
+    cxxflags = re.sub(r"-std=c\+\+20", "-std=c++17", cxxflags)
     if args.asm:
         cflags += " -save-temps -Xcuda-ptxas -v"
         cxxflags += " -save-temps -Xcuda-ptxas -v"

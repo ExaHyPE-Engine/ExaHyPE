@@ -47,6 +47,6 @@ target_link_libraries(OpenMP::OpenMPTarget
     ${OpenMP_Offloading_CXX_FLAGS}
     ${OpenMP_Offloading_LINK_LIBRARIES})
 
-find_package_handle_standard_args(OpenMTarget)
+#find_package_handle_standard_args(OpenMTarget)
 mark_as_advanced(OpenMP_Offloading_CXX_FLAGS OpenMP_Offloading_LINK_LIBRARIES)
 cmake_pop_check_state()
