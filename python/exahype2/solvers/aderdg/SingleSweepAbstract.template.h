@@ -24,9 +24,12 @@
 #include "Constants.h"
 
 #include "exahype2/aderdg/kernels/Kernels.h"
-{% if USE_KERNEL_GENERATOR==True %}
+{% if USE_KERNEL_GENERATOR %}
 #include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
+{% if USE_LIMITER %}
+#include "generated/kernels/limiter/fv/Quadrature.h"
+{% endif %}
 {% endif %}
 
 {% if USE_HALF_PRECISION==True %}
@@ -75,6 +78,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
       Prediction,
       PredictionOnHangingCells,
       Correction,
+      LimiterStatusSpreadingToNeighbours,
+      LimiterStatusSpreadingToSecondNeighbours,
+      FVRecomputation,
       Plotting,
       Suspended
     };
@@ -437,6 +443,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     double     _maxTimeStepSizeThisTimeStep;
 
     int        _cellUpdates;
+
+    int        _numberOfTroubledCellsThisTimeStep;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 

@@ -121,7 +121,52 @@ def generate_fv_kernels():
     control.generateCode()
 
 
-def generate_limiter_kernels():
-    raise Exception("Limiter kernel generation not yet implemented")
-    control = Controller()
+def generate_limiter_kernels(
+    solverName,
+    numberOfVariables,
+    numberOfParameters,
+    order,
+    dimensions,
+    limPatchSize=-1,
+    numberOfObservable=None,
+    ghostLayerWidth=1,
+    useGaussLobatto=False,
+    useLibxsmm=False,
+    useBLIS=False,
+    useEigen=False,
+    useLibxsmmJIT=False,
+    architecture="noarch",
+):
+    
+    if numberOfObservable is None:
+        numberOfObservable=numberOfVariables+numberOfParameters
+
+    InputConfig = {
+        "kernelType": "limiter",
+        "pathToOptKernel": ".",
+        "pathToApplication": "generated/kernels/limiter/fv/",
+        "pathToOutputDirectory": "generated/kernels/limiter/fv/",
+        "solverName": solverName,
+        "namespace": "generated::kernels::limiter",
+        "useLibxsmm": useLibxsmm,
+        "useBLIS": useBLIS,
+        "useEigen": useEigen,
+        "useLibxsmmJIT": useLibxsmmJIT,
+        "architecture": architecture,
+    }
+
+    InputConfig.update(
+        {
+          "numberOfVariables": numberOfVariables,
+          "numberOfParameters": numberOfParameters,
+          "order": order,
+          "limPatchSize": limPatchSize,
+          "dimension": dimensions,
+          "numberOfObservable": numberOfObservable,
+          "ghostLayerWidth": ghostLayerWidth,
+          "useGaussLobatto": useGaussLobatto
+        }
+    )
+
+    control = Controller(InputConfig)
     control.generateCode()

@@ -63,44 +63,44 @@ void {{codeNamespace}}::Quadrature<T>::initQuadratureNodesAndWeights() {
 {% endif %}
   
 {% for i in w1_seq %}
-  weights1[{{i}}]  = {{"{:.15e}".format(weights1[i])}};
+  weights1[{{i}}]  = (T) {{"{:.15e}".format(weights1[i])}};
 {% endfor %}
 
 {% for i in w2_seq %}
-  weights2[{{i}}]  = {{"{:.15e}".format(weights2[i])}};
+  weights2[{{i}}]  = (T) {{"{:.15e}".format(weights2[i])}};
 {% endfor %}
 
 {% for i in w3_seq %}
-  weights3[{{i}}]  = {{"{:.15e}".format(weights3[i])}};
+  weights3[{{i}}]  = (T) {{"{:.15e}".format(weights3[i])}};
 {% endfor %}
 
 {% for i in w4_seq %}
-  weights4[{{i}}]  = {{"{:.15e}".format(weights4[i])}};
+  weights4[{{i}}]  = (T) {{"{:.15e}".format(weights4[i])}};
 {% endfor %}
 
 {% for i in w1_seq %}
-  iweights1[{{i}}] = {{"{:.15e}".format(iweights1[i])}};
+  iweights1[{{i}}] = (T) {{"{:.15e}".format(iweights1[i])}};
 {% endfor %}
 
 {% for i in w3_seq %}
-  iweights3[{{i}}] = {{"{:.15e}".format(iweights3[i])}};
+  iweights3[{{i}}] = (T) {{"{:.15e}".format(iweights3[i])}};
 {% endfor %}
 
 {% for i in quadrature_seq %}
-  nodes[{{i}}]     = {{"{:.15e}".format(QuadratureNodes[i])}};
+  nodes[{{i}}]     = (T) {{"{:.15e}".format(QuadratureNodes[i])}};
 {% endfor %}
 
 {% if kernelType=="limiter" %}
 {% for i in uh2lob_seq %}
-  uh2lob[{{i}}]    = {{"{:.15e}".format(uh2lob[i])}};
+  uh2lob[{{i}}]    = (T) {{"{:.15e}".format(uh2lob[i])}};
 {% endfor %}
 
 {% for i in dg2fv_seq %}
-  dg2fv[{{i}}]    = {{"{:.15e}".format(dg2fv[i])}};
+  dg2fv[{{i}}]    = (T) {{"{:.15e}".format(dg2fv[i])}};
 {% endfor %}
 
 {% for i in fv2dg_seq %}
-  fv2dg[{{i}}]    = {{"{:.15e}".format(fv2dg[i])}};
+  fv2dg[{{i}}]    = (T) {{"{:.15e}".format(fv2dg[i])}};
 {% endfor %}
 {% endif %}
 

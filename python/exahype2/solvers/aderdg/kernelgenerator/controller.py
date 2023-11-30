@@ -172,6 +172,7 @@ class Controller:
                     ),
                 }
             )
+            self.config["computePrecisions"] = ["double"]
         elif self.config["kernelType"] == "fv":
             self.config.update(
                 {

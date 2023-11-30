@@ -19,17 +19,20 @@
 #endif
 #include <vector>
 
-//forward declaration of the user solver
-namespace {{solverNamespace}} {
-  class {{solverClass}};
-}
+#include "tarch/la/Vector.h"
 
-//forward declaration of the ADERDGSolver for limiter functions
-namespace exahype {
-namespace solvers {
- class ADERDGSolver;
+//forward declaration of the user solver
+{% for namespaceName in solverNamespaceList %}
+namespace {{namespaceName}} {
+{% endfor %}
+
+  class {{solverClass}};
+  
+{% for namespaceName in solverNamespaceList %}
 }
-}
+{% endfor %}
+
+
 
 
 //Limiter
@@ -38,27 +41,44 @@ namespace solvers {
 {% for namespaceName in codeNamespaceList %}
 namespace {{namespaceName}} {
 {% endfor %}
-  void projectOnFVLimiterSpace(const double* const luh, double* const lim);
 
-  void projectOnDGSpace(const double* const lim, double* const luh);
+  void projectOnFVLimiterSpaceWithHalo(const double* const luh, double* const lim);
+
+  void projectOnFVLimiterSpaceWithoutHalo(const double* const luh, double* const lim);
+
+  void projectOnDGSpaceFromFVWithHalo(const double* const lim, double* const luh);
+
+  void projectOnDGSpaceFromFVWithoutHalo(const double* const lim, double* const luh);
+
+  void projectOnFVSpaceWithHaloFromFVWithoutHalo(const double* const fv_wo, double* const fv_with);
+
+  void projectOnFVSpaceWithoutHaloFromFVWithHalo(double* const fv_wo, const double* const fv_with);
+
+  bool isPhysicallyAdmissible(
+    const double* const luh,
+    {{solverName}}& solver,
+    const tarch::la::Vector<Dimensions,double>& cellCentre,
+    const tarch::la::Vector<Dimensions,double>& cellSize,
+    const double timeStamp
+  );
 
   void findCellLocalMinAndMax(
     const double* const luh,
-    const exahype::solvers::ADERDGSolver* solver,
+    {{solverName}}& solver,
     double* const localMinPerVariables, 
     double* const localMaxPerVariable
   );
 
   void findCellLocalLimiterMinAndMax(
     const double* const lim,
-    const exahype::solvers::ADERDGSolver* solver,
+    {{solverName}}& solver,
     double* const localMinPerObservable, 
     double* const localMaxPerObservable
   );
 
   bool discreteMaximumPrincipleAndMinAndMaxSearch(
     const double* const luh,
-    const exahype::solvers::ADERDGSolver* solver,
+    {{solverName}}& solver,
     const double relaxationParameter,
     const double differenceScaling,
     double* boundaryMinPerVariables, 
@@ -68,7 +88,7 @@ namespace {{namespaceName}} {
   //private
   void compareWithADERDGSolutionAtGaussLobattoNodes(
     const double* const luh,
-    const exahype::solvers::ADERDGSolver* solver,
+    {{solverName}}& solver,
     double* min, 
     double* max
   );
@@ -76,7 +96,7 @@ namespace {{namespaceName}} {
   //private
   void compareWithADERDGSolutionAtFVSubcellCenters(
     const double* const luh,
-    const exahype::solvers::ADERDGSolver* solver,
+    {{solverName}}& solver,
     double* min, 
     double* max
   );

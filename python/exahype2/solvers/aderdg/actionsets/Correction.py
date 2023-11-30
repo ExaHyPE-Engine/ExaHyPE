@@ -2,13 +2,19 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AbstractAderDGActionSet import AbstractAderDGActionSet
-
+from exahype2.solvers.aderdg.PDETerms import PDETerms
 # import peano4
 import peano4.solversteps
 import jinja2
 
+from .kernels import (
+    create_corrector_allocations, create_includes,
+    riemann_solver, face_integral,
+    create_solution_update, check_troubledness
+)
 
-class Correction_kernelgenerator(AbstractAderDGActionSet):
+
+class Correction(AbstractAderDGActionSet):
     """
 
     The linear combination of the Runge Kutta trials has to be projected onto
@@ -27,9 +33,9 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     // needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
     
-    const int Order = {{ORDER}};
-    const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
-    const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    constexpr int Order = {{ORDER}};
+    constexpr int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
+    constexpr int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     
     #if Dimensions==2
     constexpr int spaceFaceSize      = (Order+1);
@@ -37,42 +43,23 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     constexpr int spaceFaceSize      = (Order+1)*(Order+1);
     #endif
 
-    const int basisElementsPerFace  = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
-    const int fluxElementsPerFace   = spaceFaceSize*NumberOfVariables;
+    constexpr int basisElementsPerFace  = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
+    constexpr int fluxElementsPerFace   = spaceFaceSize*NumberOfVariables;
 
     /*
     2d: 0,1,2,3 -> 0,2,1,3
     3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
     */
+    double* FL = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value;
+    double* FR = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace;
+    double* QL = fineGridFace{{SOLVER_NAME}}QEstimates.value;
+    double* QR = fineGridFace{{SOLVER_NAME}}QEstimates.value+basisElementsPerFace;
+    const int direction = marker.getSelectedFaceNumber()%Dimensions;
+    const int faceNumber  = marker.getSelectedFaceNumber();
+    const bool isBoundary = fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary();
+    tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
 
-    {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-    repositories::{{SOLVER_INSTANCE}}.riemannSolver(
-      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value,                        //FL
-      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace,    //FR
-      fineGridFace{{SOLVER_NAME}}QEstimates.value,                          //QL
-      fineGridFace{{SOLVER_NAME}}QEstimates.value+basisElementsPerFace,     //QR
-      timeStamp,
-      timeStepSize,
-      marker.x(),
-      marker.h(),
-      marker.getSelectedFaceNumber()%Dimensions, //direction
-      fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary(),
-      marker.getSelectedFaceNumber()
-    );
-    {% else %}
-    generated::kernels::AderDG::{{LINEARITY}}::riemannSolver<{{CORRECTOR_COMPUTATION_PRECISION}}>(
-      repositories::{{SOLVER_INSTANCE}},
-      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value,                        //FL
-      fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace,    //FR
-      fineGridFace{{SOLVER_NAME}}QEstimates.value,                          //QL
-      fineGridFace{{SOLVER_NAME}}QEstimates.value+basisElementsPerFace,     //QR
-      timeStamp,
-      timeStepSize,
-      marker.x(),
-      marker.h(),
-      marker.getSelectedFaceNumber()%Dimensions //direction
-    );
-    {% endif %}
+    {{RIEMANN_SOLVER}}
 
   }  
 
@@ -87,49 +74,36 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     {{COMPUTE_TIME_STEP_SIZE}}
         
     {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-    {{CORRECTOR_COMPUTATION_PRECISION}} lduh[generated::kernels::AderDG::{{LINEARITY}}::getUpdateSize()]{0.0};
 
-    const int fluxElementsPerFace  = generated::kernels::AderDG::{{LINEARITY}}::getBndFluxSize();
-    
-    /*
-    2d: 0,1,2,3 -> 0,2,1,3
-    3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
-    */
+    {{CORRECTOR_ALLOCATIONS}}
     
     for(int d=0; d<Dimensions; d++){
     
-      const double inverseDxDirection = 1/marker.h()[d];
-      
+      const int direction = d;
+
       //negative face
       if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
-          lduh,
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace,
-          d, //direction
-          0, //orientation
-          inverseDxDirection
-        );
+        double* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace;
+        const int orientation = 0;
+
+        {{FACE_INTEGRAL}}
+
       }
 
-      //positive face      
+      //positive face
       if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()){
-        generated::kernels::AderDG::{{LINEARITY}}::faceIntegral<{{CORRECTOR_COMPUTATION_PRECISION}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
-          lduh,
-          fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value,
-          d, //direction
-          1, //orientation
-          inverseDxDirection
-        );
+        double* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value;
+        const int orientation = 1;
+
+        {{FACE_INTEGRAL}}
+
       }
 
-    }// for d    
+    }// for d
     
-    generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
-      luh,
-      luh, 
-      lduh, 
-      timeStepSize
-    );
+    {{SOLUTION_UPDATE}}
+
+    {{CHECK_TROUBLEDNESS}}
 
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
   
@@ -153,10 +127,18 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
           the old solution and the time step should also be moved over
 
         """
-        super(Correction_kernelgenerator, self).__init__(solver)
+        super(Correction, self).__init__(solver)
+        
         self.guard = guard
         self.riemann_guard  = guard
 
+        self.use_custom_riemann_solver  = solver._riemann_solver_implementation!=PDETerms.None_Implementation
+        self.use_kernelgenerator        = solver._use_kernel_generator
+        self.is_linear                  = solver._is_linear
+        self.use_PAC                    = solver._physical_admissibility_criterion!=PDETerms.None_Implementation
+        self.use_DMP                    = solver._number_of_dmp_observables>0
+        self.useTroubledMarker          = solver._use_troubled_marker
+        self.use_limiting               = solver._use_limiting
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -167,14 +149,19 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME
         ):
-            d[ "PREDICATE" ] = self.riemann_guard
+            d[ "PREDICATE" ]    = self.riemann_guard
+            d["RIEMANN_SOLVER"] = jinja2.Template(riemann_solver(self.use_custom_riemann_solver, self.use_kernelgenerator, self.is_linear)).render(**d)
             result = jinja2.Template(self.Template_TouchFaceFirstTime).render(**d)
             pass
         if (
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
         ):
-            d[ "PREDICATE" ] = self.guard
+            d[ "PREDICATE" ]            = self.guard
+            d["CORRECTOR_ALLOCATIONS"]  = jinja2.Template(create_corrector_allocations(self.use_kernelgenerator)).render(**d)
+            d["SOLUTION_UPDATE"]        = jinja2.Template(create_solution_update(self.use_kernelgenerator)).render(**d)
+            d["FACE_INTEGRAL"]          = jinja2.Template(face_integral(self.use_kernelgenerator, self.is_linear)).render(**d)
+            d["CHECK_TROUBLEDNESS"]     = jinja2.Template(check_troubledness(self.use_PAC, self.use_DMP, self.useTroubledMarker)).render(**d)
             result = jinja2.Template(self.Template_TouchCellFirstTime).render(**d)
             pass
         return result
@@ -185,10 +172,6 @@ class Correction_kernelgenerator(AbstractAderDGActionSet):
     def get_includes(self):
         linearity = "linear" if self._solver._is_linear else "nonlinear"
         return (
-            super(Correction_kernelgenerator, self).get_includes()
-            + """
-#include "../generated/kernels/aderdg/"""
-            + linearity
-            + """/Kernels.h"
-      """
+            super(Correction, self).get_includes()
+            + create_includes(self.use_kernelgenerator, self.use_limiting, self._solver._is_linear)
         )
