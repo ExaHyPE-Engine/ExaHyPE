@@ -372,6 +372,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     reportRuntime(markerName, timingKernelLaunch, patches);
   };
 
+if constexpr (EvaluateHostKernels) {
   assessKernel(
     wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerators::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::None>,
     "host, heap-functors, patch-wise, AoS, sequential",
@@ -802,8 +803,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     numberOfPatches
   );
 */
-  int device = 0;
+}
 
+if constexpr (EvaluateDeviceKernels) {
+  int device = 0;
 #if defined(GPUOffloadingSYCL)
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless<
@@ -1589,6 +1592,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     numberOfPatches
   );
 #endif
+}
 }
 
 int main(int argc, char** argv) {

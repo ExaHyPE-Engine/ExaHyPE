@@ -84,6 +84,20 @@ parser.add_argument(
     help="Evaluate max. eigenvalue",
 )
 parser.add_argument(
+    "-cpu",
+    "--cpu",
+    dest="eval_cpu",
+    action="store_true",
+    help="Evaluate host kernels",
+)
+parser.add_argument(
+    "-gpu",
+    "--gpu",
+    dest="eval_gpu",
+    action="store_true",
+    help="Evaluate device kernels",
+)
+parser.add_argument(
     "--make", dest="make", action="store_true", help="Compile the code after generation"
 )
 args = parser.parse_args()
@@ -187,6 +201,9 @@ my_project.constants.export_boolean(
 my_project.constants.export_boolean(
     "EvaluateMaximumEigenvalueAfterTimeStep", True if args.eval_eig else False
 )  # Reduction
+
+my_project.constants.export_boolean("EvaluateHostKernels", True if args.eval_cpu else False)
+my_project.constants.export_boolean("EvaluateDeviceKernels", True if args.eval_gpu else False)
 
 my_project.constants.define_value("RHO", str(1.0))
 my_project.constants.define_value("WAVE_SPEED", str(1.0))
