@@ -220,6 +220,12 @@ void step() {
         watch.start();
         repositories::solve();
         watch.stop();
+        
+        // warning -- the next 3 lines are for development purposes only - do not let them
+        // get into the main branch!
+        repositories::instanceOfDGPoisson.getLinearEquationSystem().printMatrix("mat.xml");
+        repositories::instanceOfDGPoisson.getLinearEquationSystem().printRhs("rhs.xml");
+        repositories::instanceOfDGPoisson.getLinearEquationSystem().printX("sol.xml");
 
         solveMeasurement.setValue( watch.getCalendarTime() );
       }
