@@ -13,6 +13,7 @@ namespace {
   void computeCentralDifferencesForDifferentialSourceTerm(
     const double* __restrict__ QIn,
     const QInEnumeratorType&                  QInEnumerator,
+    const tarch::la::Vector<Dimensions,double>&    patchSize,
     int                                       patchIndex,
     const tarch::la::Vector<Dimensions, int>& volumeIndex,
     int                                       normal,
@@ -47,6 +48,69 @@ namespace {
                         - (1.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume2, unknown)]
                         + (1.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume2, unknown)];
     }
+
+    //direct so
+    /*double cellsize = patchSize(normal)/QInEnumerator._numberOfDoFsPerAxisInCell;
+    double gradcoef = 1.0/(12.0*cellsize);
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      CentralQ[unknown] = QIn[ QInEnumerator(patchIndex, centralVolume, unknown) ];
+
+      // Q[23+normal] are A_{normal} = \partial_{normal}\alpha
+      if (unknown==23+normal) {
+        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,16) ] +
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,16) ] + 
+                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,16) ] + 
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,16) ] +
+                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,16) ];
+      }
+      // Q[55+normal] are P_{normal} = \partial_{normal}\phi  
+      else if (unknown==55+normal) {
+        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,54) ] +
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,54) ] + 
+                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,54) ] + 
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,54) ] +
+                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,54) ];
+      }
+      // Q[26+normal] is \partial_{normal}B[normal][x] = \partial_{normal}\partial_{normal}\beta^x
+      else if (unknown==26+normal) {
+        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown-normal-9) ] +
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown-normal-9) ] + 
+                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,unknown-normal-9) ] + 
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown-normal-9) ] +
+                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown-normal-9) ];
+      }
+      // Q[29+normal] is \partial_{normal}B[normal][y] = \partial_{normal}\partial_{normal}\beta^y
+      else if (unknown==29+normal) {
+        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown-normal-11) ] +
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown-normal-11) ] + 
+                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,unknown-normal-11) ] + 
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown-normal-11) ] +
+                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown-normal-11) ];
+      }
+      // Q[32+normal] is \partial_{normal}B[normal][z] = \partial_{normal}\partial_{normal}\beta^z
+      else if (unknown==32+normal) {
+        DeltaQ[unknown]   = gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown-normal-13) ] +
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown-normal-13) ] + 
+                            gradcoef*(-30.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,unknown-normal-13) ] + 
+                            gradcoef*( 16.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown-normal-13) ] +
+                            gradcoef*( -1.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown-normal-13) ];
+      }
+      // Q[35+6*normal] to Q[40+6*normal] are \partial_{normal}DD[normal][i][j] = \partial_{normal}\partial_{normal}\frac{1}{2}\tilde{gamma}_{ij}
+      // note that the coefficients are multiplied by 0.5 because of the 1/2 factor
+      else if (unknown>=35+6*normal && unknown<=40+6*normal) {
+        DeltaQ[unknown]   = gradcoef*( -0.5) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown-6*normal-35) ] +
+                            gradcoef*(  8.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown-6*normal-35) ] + 
+                            gradcoef*(-15.0) * QIn[ QInEnumerator(patchIndex,      centralVolume ,unknown-6*normal-35) ] + 
+                            gradcoef*(  8.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown-6*normal-35) ] +
+                            gradcoef*( -0.5) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown-6*normal-35) ];
+      }
+      else {
+        DeltaQ[unknown]   = (8.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume1,unknown) ] -
+                            (8.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume1,unknown) ] - 
+                            (1.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown) ] +
+                            (1.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown) ];
+      }
+    }*/
   }
 
   /**
@@ -247,7 +311,7 @@ void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
   double cellsize = patchSize(normal) / QOutEnumerator._numberOfDoFsPerAxisInCell;
   double gradcoef = 1.0 / (12.0 * cellsize);
 
-  int order=4;
+  int order=2;
   // std::cout<<"called here"<<std::endl;
   //  A[normal] = \partial_{normal}\alpha
   //  alpha is Q[16]
@@ -375,7 +439,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   case DifferentialSourceTermVariant::CentralDifferences:
   case DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection:
     computeCentralDifferencesForDifferentialSourceTerm(
-      QIn, QInEnumerator, patchIndex, volumeIndex, normal, CentralQ, DeltaQ
+      QIn, QInEnumerator, patchSize, patchIndex, volumeIndex, normal, CentralQ, DeltaQ
     );
     break;
   case DifferentialSourceTermVariant::CentralDifferencesWithLimiter:
@@ -442,7 +506,7 @@ void exahype2::fd::fd4::internal::computeDifferentialSourceTerm_LoopBody(
   case DifferentialSourceTermVariant::CentralDifferences:
   case DifferentialSourceTermVariant::CentralDifferencesWithLopsidedAdvection:
     computeCentralDifferencesForDifferentialSourceTerm(
-      QIn, QInEnumerator, patchIndex, volumeIndex, normal, CentralQ, DeltaQ
+      QIn, QInEnumerator, patchSize, patchIndex, volumeIndex, normal, CentralQ, DeltaQ
     );
     break;
   case DifferentialSourceTermVariant::CentralDifferencesWithLimiter:
