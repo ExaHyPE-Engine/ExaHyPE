@@ -34,6 +34,7 @@ parser.add_argument(
     help="Enable multithreading support",
 )
 parser.add_argument("--mpi", help="Enable MPI support")
+parser.add_argument("--td", action="store_true", help="Enable targetDART support")
 parser.add_argument(
     "--gpu", choices=["omp", "cuda", "sycl", "cpp", "hip"], help="Enable GPU support"
 )
@@ -93,16 +94,28 @@ if "nvc" in args.cc and "nvc++" in args.cxx:
     cflags = re.sub(r"-O3", "-O4", cflags)
     cxxflags = re.sub(r"-O3", "-O4", cxxflags)
 
-if args.gpu == "omp" and "clang" in args.cc and "clang++" in args.cxx:
+if (
+    args.gpu == "omp"
+    and ("clang" in args.cc or "clangwrap" in args.cc or "tdclang" in args.cc)
+    and (
+        "clang++" in args.cxx
+        or "clangwrap" in args.cxx
+        or "clangwrap++" in args.cxx
+        or "tdclang++" in args.cxx
+    )
+):
     cflags += (
-        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_" + args.arch
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        + args.arch
     )
     cxxflags += (
-        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_" + args.arch
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        + args.arch
     )
+    cxxflags = re.sub(r"-std=c++20", "-std=c++17", cxxflags)
     if args.asm:
-        cflags += " -save-temps"
-        cxxflags += " -save-temps"
+        cflags += " -save-temps -Xcuda-ptxas -v"
+        cxxflags += " -save-temps -Xcuda-ptxas -v"
 elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
     cflags += " -lstdc++fs --offload-arch=" + args.arch
     cxxflags += " -lstdc++fs --offload-arch=" + args.arch
@@ -189,17 +202,23 @@ if args.mpi is not None:
     else:
         configure_args.append('--with-mpi="{} {}"'.format(args.mpi, cxxflags))
 
+if args.td:
+    if args.cmake:
+        configure_args.append("-DWITH_TARGETDART=ON")
+    else:
+        configure_args.append("--with-targetdart")
+
 if args.exahype:
     if args.cmake:
         configure_args.append("-DENABLE_EXAHYPE=ON")
         configure_args.append("-DENABLE_LOADBALANCING=ON")
         configure_args.append("-DENABLE_BLOCKSTRUCTURED=ON")
-        configure_args.append("-DWITH_LIBXSMM=ON")
+        # configure_args.append("-DWITH_LIBXSMM=ON")
     else:
         configure_args.append("--enable-exahype")
         configure_args.append("--enable-loadbalancing")
         configure_args.append("--enable-blockstructured")
-        configure_args.append("--with-libxsmm")
+        # configure_args.append("--with-libxsmm")
 
 if args.loadbalancing:
     if args.cmake:

@@ -1165,6 +1165,23 @@ fi
 
 
 #
+# targetDART
+#
+AC_ARG_WITH(targetdart,
+  AS_HELP_STRING([--with-targetdart],[build with targetDART [default=no]]),
+  [ AC_MSG_CHECKING(for targetdart)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    targetdart=false ;;
+      *)     AC_MSG_RESULT(yes);   targetdart=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for targetdart); AC_MSG_RESULT(no); targetdart=false ])
+AM_CONDITIONAL([UseTargetDART],[test "x$targetdart" = xtrue])
+if test "$targetdart" == true; then
+  AC_DEFINE([UseTargetDART], [UseTargetDART], [UseTargetDART])
+fi
+
+
+#
 # ===============================================================
 #   Export variables
 # ===============================================================
