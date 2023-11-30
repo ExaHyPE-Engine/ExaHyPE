@@ -9,6 +9,8 @@ import dastgen2
 
 from Probe_file_gene import tracer_seeds_generate
 
+from ComputeFirstDerivatives import ComputeFirstDerivativesFD4RK
+
 from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
 import numpy as np
 #todo no mpmath here so rkdg not working
@@ -1087,13 +1089,25 @@ if __name__ == "__main__":
 
     if args.DC_flag==True:
       userinfo.append(("Enable double communication, make sure you are using the Second formulism.", None))
-      Additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
-                                           add_user_defined_actions=True,
-                                           prepare_patch_access_for_this_solver=my_solver,
-                                           action_type="FD4_first_derivative_calculation"
-                                           )
-      project.register_new_user_defined_algorithmic_step( Additional_mesh_traversal )
-      peano4_project.solversteps.add_step( Additional_mesh_traversal )
+      additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
+                                                           add_user_defined_actions=False,
+                                                           )
+      project_patch_onto_faces  = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(my_solver)
+      project_patch_onto_faces.guards  = [ my_solver._store_cell_data_default_guard() for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
+
+      roll_over_projected_faces = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(my_solver, 
+                                                                                       my_solver._store_face_data_default_guard(),
+                                                                                       )
+
+      additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
+                                                                             is_enclave_solver = False,
+                                                                             ))
+      additional_mesh_traversal.add_action_set( project_patch_onto_faces )
+      additional_mesh_traversal.add_action_set( roll_over_projected_faces )
+      
+      project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
+      peano4_project.solversteps.add_step( additional_mesh_traversal )
+
 
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )

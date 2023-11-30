@@ -13,8 +13,7 @@ from exahype2.solvers.ButcherTableau import ButcherTableau
 class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     """!
 
-    Project patch data onto faces, so the faces hold valid data which
-    can feed into the subsequent Runge-Kutta step
+    Project patch data onto faces, so the faces hold valid data which can feed into the subsequent Runge-Kutta step
 
     This class is based upon peano4.toolbox.blockstructured.ProjectPatchOntoFaces.
     Yet, it differs fundamentally in the way the inner-most loop is realised:
@@ -23,29 +22,64 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     to have here: we have the solution plus a number of estimates, and we want
     to write exactly the type of Runge-Kutta linear combination onto the face
     that we need to set the proper halo data on the adjacent cells in the next
-    grid sweep.
+    grid sweep. Therefore, this class expects the Butcher tableau and first 
+    computes the Runge-Kutta linear combination. The outcome of this is then 
+    projected onto the faces.
 
-    This routine is always called as one of the last things, i.e. we have a
+    The routine is always called as one of the last things, i.e. we have a
     valid estimate in. To some degree, we anticipate what will happening next
     in the Runge-Kutta scheme.
+    
+    Once more: Each cell hosts the p predictions created by Runge-Kutta of the 
+    pth order. These are stored in the field rhs estimates. The projection 
+    combines these predictions using the Butcher tableau and projects the 
+    linear combination onto the face. The action set never ever uses what's 
+    stored in the value array. It always computes this linear combination.
+    
+    ## Auxiliary parameters
 
-    Obviously, the last Runge-Kutta step is slightly different. After the last
+    Auxiliary parameters are not subject to the PDE in ExaHyPE's jargon. They
+    typically carry material parameters or similar. We project them onto the
+    faces, but here we don't do linear combinations due to the Butcher 
+    tableau, as the rhs estimates do not hold any auxiliary parameters at all.
+    
+    ## Last Runge-Kutta step
+
+    The last Runge-Kutta step is slightly different. After the last
     Runge-Kutta estimate, the solver combines all the estimates into a new
     solution. Consult the action set ComputeFinalLinearCombination for details.
-    After this has happened we can take the plain solution stored within the
-    cell and write this guy onto the faces. This will be the data required
-    for the next time step.
+    After this has happened, we could take the plain solution stored within the
+    cell and write this guy onto the faces. 
+    
+    Instead, we ignore the face that the action set ComputeFinalLinearCombination
+    would do all of this. Instead, we compute the final linear combination 
+    from the rhs guesses (redundantly) and project the outcome onto the faces.
+    This means that we have p+1 different linear combinations if our 
+    Runge-Kutta scheme has p steps, but we can always work against the right-hand
+    side estimate from @f$ \partial _t Q = F(Q) @f$ only.
+    
+    ## Write data
+    
+    The data is written onto the faces' QUpdate data field. Faces in the 
+    Runge-Kutta scheme hold three different Q representations:
+    
+    1. The old solution from the previous time step.
+    2. The current solution.
+    3. The update solution, i.e. the one we have just projected.
+    
+    It is the your job to ensure that the updated solution is later on copied
+    over into the new solution, so it is taken into account by the halo/patch
+    reconstruction.
 
+    ## Realisation
+    
     I did not find a convenient, simple way how to tweak the projection from
     the toolbox according to this scheme. So I ended up with copying the whole
     thing over and change the critical things myself.
 
-
-    ## Anticipate Runge-Kutta combinations and the final estimate
-
     ## Boundary flags
 
-    The big difference is that the projection also sets the isUpdated() flag and the
+    Another difference compared to the toolbox projection is that the projection also sets the isUpdated() flag and the
     UpdatedTimeStamp(). As the projection writes to these two updated records, it is
     important that you roll it over afterwards. This is done via the mapping
     RollOverUpdatedFace.
@@ -53,11 +87,51 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     It is important to study this action set in combination with DynamicAMR. In the
     documentation of the latter I explain why we need the guard
 
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     not marker.hasBeenRefined()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     if we want to support dynamic coarsening.
+    
+    ## Use action set in additional helper sweeps
+    
+    The action set expects users to specify one predicate per Runge-Kutta step.
+    This means there is one if that checks which Runge-Kutta step is active. 
+    This one is typically combined with two other checks: Is the solver 
+    currently handling an unrefined cell (we only solve on the finest level) 
+    and are we in the right phase of an enclave solve. The latter is relevant
+    if and only if we work with enclave tasking.
+    
+    If the action set is used by an additional grid sweep outside of the actual
+    time stepping, the checks become simpler: 
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      project_patch_onto_faces  = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(my_solver)
+      project_patch_onto_faces.guards  = [ my_solver._store_cell_data_default_guard() for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    Here, we basically say "for each unrefined cell always for each Runge-Kutta
+    step as well as for the final linear combination". The latter one is 
+    reflected by the +1.
+    
+    Besides this, you also have to roll over the data:
+    
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      roll_over_projected_faces = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(my_solver, 
+                                                                                       my_solver._store_face_data_default_guard(),
+                                                                                       )
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    All solvers at the moment send out their face data in the suspended mode,
+    so you should be fine here.
+
 
     """
+
+#To be written 
+#Und dann fehlt noch der gesamt parallele Datenaustausch
+
 
     __Template_TouchCellLastTime = """
   logTraceIn( "touchCellLastTime(...)---ProjectPatchOntoFaces" );
@@ -176,7 +250,7 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
         ):
             raise Exception(
                 "Expect one guard per Runge Kutta step and a projection throughout the initialisation. Have {} steps but got guards {}".format(
-                    solver.number_of_Runge_Kutta_steps(), guards
+                    self._solver.number_of_Runge_Kutta_steps(), new_guards
                 )
             )
         self._guards = new_guards
