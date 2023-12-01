@@ -21,8 +21,17 @@ namespace swift2 {
 
     /**
      * @brief This function is meant to be called on a particle on which dependency issues
-     * in the main algorithm steps have been detected. It writes the full current state of
-     * a problematic particle to screen and aborts the mission.
+     * in the main algorithm steps have been detected.
+     *
+     *
+     * If the consistency checks fail, this routine should be used to write the
+     * full current state of a problematic particle to screen. After that, the
+     * routine aborts.
+     *
+     * It is important that we use the log functionality of tarch::logging, as
+     * it allows us to distinguish from which rank messages come from. It also
+     * enables us to integrate the messages into mainstream performance
+     * analysis workflows.
      *
      * @param particle: the problematic particle
      * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
@@ -32,36 +41,13 @@ namespace swift2 {
      * @param call_identifier: Additional information on which dependency check failed to be printed
      *                         to screen before exiting.
      */
-    template <typename Particle>
-    static void checkAlgorithmStepDebugOutput(
+    template <typename Particle, typename AlgorithmOrInitStep>
+    static std::string outputParticle(
       const Particle*                                             particle,
-      typename std::remove_pointer<Particle>::type::AlgorithmStep algorithmStepMarkerEnum,
+      AlgorithmOrInitStep                                         algorithmStepMarkerEnum,
       typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
       const int                                                   errors,
       const std::string                                           call_identifier
-    );
-
-
-    /**
-     * @brief This function is meant to be called on a particle on which dependency issues
-     * in the initialisation algorithm steps have been detected. It writes the full current state of
-     * a problematic particle to screen and aborts the mission.
-     *
-     * @param particle: the problematic particle
-     * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
-     * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
-     * @param errors: Number of errors that have been detected. If errors == 0, this function can
-     *                be used to just print out the current state, and won't abort when finished.
-     * @param call_identifier: Additional information on which dependency check failed to be printed
-     *                         to screen before exiting.
-     */
-    template <typename Particle>
-    static void checkInitStepDebugOutput(
-      const Particle*                                          particle,
-      typename std::remove_pointer<Particle>::type::InitStep   initStepMarkerEnum,
-      typename std::remove_pointer<Particle>::type::SweepStage sweepStageMarkerEnum,
-      const int                                                errors,
-      const std::string                                        call_identifier
     );
 
 
