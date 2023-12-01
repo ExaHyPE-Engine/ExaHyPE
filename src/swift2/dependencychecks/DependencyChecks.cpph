@@ -32,7 +32,7 @@ static std::string swift2::dependencychecks::outputParticle(
 
   // Set up "header" of the table
   msg << "Dependency checks:" << std::endl;
-  msg << std::setw(ColumnWidth) << "Algorithm step";
+  msg << std::setw(ColumnWidth) << std::left << "Algorithm step";
   for (int s = 0; s < nstages; s++) {
     // all stage names that we account for
     msg << std::setw(ColumnWidth) << PartType::toString(static_cast<PartType::SweepStage>(s));
