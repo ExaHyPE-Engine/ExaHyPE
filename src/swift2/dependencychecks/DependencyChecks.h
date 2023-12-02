@@ -55,7 +55,15 @@ namespace swift2 {
      * @brief Mark a localParticle having entered a sweep stage in a main algorithm step.
      *
      * This routine is used both by touchVertexFirstTime and
-     * touchVertexLastTime to keep track of state transitions.
+     * touchVertexLastTime to keep track of state transitions. We run over the
+     * particles and check for each one if the routine would update it. If so,
+     * they increment the counter getAlgorithmStepSweepStateProgression(). Any
+     * positive value here counts how often particles are updated. If a
+     * particle is not to be updated, we decrement the counter. Obviously, a
+     * particle should either be ignored all the time, or it should be updated.
+     * There's one exception to this rule: If a routine updates a particle's
+     * position, we might update the particle at one point, alter its position,
+     * then re-assign it to a new particle and there mask it out.
      *
      * @param assignedParticles: the particles around a vertex that will be subject to the validation
      * @param marker: a peano4::datamanagement::VertexMarker or peano4::datamanagement::CellMarker

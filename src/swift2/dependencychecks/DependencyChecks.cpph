@@ -6,6 +6,94 @@
 #include "swift2/kernels/ParticleState.h"
 
 
+
+#if PeanoDebug==0
+
+template <typename Particle, typename AlgorithmOrInitStep>
+static std::string swift2::dependencychecks::outputParticle(
+  const Particle*                                             particle,
+  AlgorithmOrInitStep                                         algorithmStep,
+  typename std::remove_pointer<Particle>::type::SweepStage    action,
+  const int                                                   errors,
+  const std::string                                           call_identifier
+) {}
+
+
+template <typename ParticleContainer, typename Marker>
+static void swift2::dependencychecks::markAlgorithmStep(
+  const ParticleContainer&                                                                  localParticles,
+  const Marker&                                                                             marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStep,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    action,
+  bool                                                                                      stepMovedParticle,
+  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+) {}
+
+
+template <typename ParticleContainer, typename Marker>
+static void swift2::dependencychecks::markInitStep(
+  const ParticleContainer&                                                               localParticles,
+  const Marker&                                                                          marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage action,
+  bool                                                                                   stepMovedParticle,
+  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+) {}
+
+
+static int swift2::dependencychecks::checkPastStages(
+  const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression
+) {}
+
+
+static int swift2::dependencychecks::checkFutureStages(
+  const int currentStep, const int currentStage, const int nsteps, const int nstages, const int* sweepStateProgression
+) {}
+
+
+template <typename ParticleContainer, typename Marker>
+static void swift2::dependencychecks::checkAlgorithmStep(
+  const ParticleContainer&                                                                  localParticles,
+  const Marker&                                                                             marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStep,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage    action,
+  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+) {}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTimeAlgorithmStep(
+  const ParticleContainer&                                                                  activeParticles,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::AlgorithmStep algorithmStep
+) {}
+
+
+template <typename ParticleContainer, typename Marker>
+static void swift2::dependencychecks::checkInitStep(
+  const ParticleContainer&                                                               localParticles,
+  const Marker&                                                                          marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep   initStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::SweepStage action,
+  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+) {}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTimeInitStep(
+  const ParticleContainer&                                                             activeParticles,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::InitStep initStepMarkerEnum
+) {}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencychecks::clearDependencyChecksAlgorithmStep(const ParticleContainer& localParticles) {}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencychecks::clearDependencyChecksInitStep(const ParticleContainer& localParticles) {}
+
+
+#else
 template <typename Particle, typename AlgorithmOrInitStep>
 static std::string swift2::dependencychecks::outputParticle(
   const Particle*                                             particle,
@@ -60,7 +148,7 @@ static std::string swift2::dependencychecks::outputParticle(
     }
   }
 
-  msg << "Particle data:" << particle->toString() << std::endl;
+  msg << std::endl << "Particle data:" << particle->toString() << std::endl;
 
   return msg.str();
 }
@@ -103,7 +191,20 @@ static void swift2::dependencychecks::markAlgorithmStep(
       particle->setAlgorithmStepSweepStateProgression(
         index_this_stage, particle->getAlgorithmStepSweepStateProgression()[index_this_stage] + 1
       );
-    } else if (stepMovedParticle) {
+    }
+    else if (stepMovedParticle) {
+      assertion1(
+        particle->getAlgorithmStepSweepStateProgression()[index_this_stage]>=0,
+        outputParticle(
+          particle,
+          algorithmStep,
+          action,
+          1, // errors,
+          "want to increment marker, as step modifies particle, but particle had been identified as masked out before"
+        )
+      );
+    }
+    else {
       assertion1(
         particle->getAlgorithmStepSweepStateProgression()[index_this_stage]<=0,
         outputParticle(
@@ -468,3 +569,5 @@ static void swift2::dependencychecks::clearDependencyChecksInitStep(const Partic
     }
   }
 }
+
+#endif
