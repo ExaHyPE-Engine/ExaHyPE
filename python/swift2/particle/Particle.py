@@ -182,6 +182,9 @@ Particle properties:
     """
         )
 
+    DependencyChecks_Attribute_Prefix = "dependencyChecks"
+    DependencyChecks_Ifdefs = ["PeanoDebug > 0"]
+
     def _dependency_checks_modify_steps(self, steplist, step_type_name):
         """!
 
@@ -190,7 +193,20 @@ Particle properties:
         This function actually modifies the AlgorithmSteps to contain the
         debug dependency checks. Is called by self.add_dependency_checks()
         and uses the validation routines from swift2::dependencychecks.
+                
+        The routine is used to either add checks for the init phase or the 
+        actual time stepping. Which one is meant is identified through 
+        step_type_name. You can obviously call the routine twice: once for
+        init and once for the time stepping. Later on, you might want to 
+        add further steps. 
+        
+        Besides the name of interest, we also require a list of algorithmic
+        steps through which the code runs through.
 
+        ## Additional attributes
+        
+        First, the particle is added an enum which identifies the current
+        algorithmic step in which the particle resides.
 
         @param Steplist:       list
             list of AlgorithmStep objects to work on
@@ -203,36 +219,35 @@ Particle properties:
             the modified list of AlgorithmSteps, now including dependency checks
 
         """
-
-        # Keep this here so you can modify it in a single place when playing with debugging
-        ifdefs = ["PeanoDebug > 0"]
-
         steps = copy.deepcopy(steplist)
         nsteps = len(steps)
-        nstages = AlgorithmStep.SweepStage.STAGE_COUNT.value
+        nevents = AlgorithmStep.PeanoEventUsedBySwift.STAGE_COUNT.value
 
-        # add enum to particle for each AlgorithmStep
+        # add enum to particle for each AlgorithmStep. This enum tracks in
+        # which algorithmic step a particle currently is. See 
+        # DependencyChecks.h.
         step_name_list = [step.name for step in steps]
         step_name_list.append("count")  # add a count so we can loop over enums
         step_name_enum = dastgen2.attributes.Enumeration(
-            step_type_name,
+            self.DependencyChecks_Attribute_Prefix + step_type_name + "LastUpdated",
             step_name_list,
-            ifdefs=ifdefs,
+            ifdefs=self.DependencyChecks_Ifdefs,
         )
         self.data.add_attribute(step_name_enum)
+
 
         # add (flattened) array for flags
         step_progression = dastgen2.attributes.IntegerArray(
             step_type_name + "SweepStateProgression",
-            nsteps * nstages,
-            ifdefs=ifdefs,
+            nsteps * nevents,
+            ifdefs=self.DependencyChecks_Ifdefs,
         )
         self.data.add_attribute(step_progression)
 
         # String template for dependency check call
         check_template_cell_operation = """\n  ::swift2::dependencychecks::check{StepType}(localParticles,
                   marker,
-                  globaldata::{NAME}::{StepType}::{0},
+                  globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
                   globaldata::{NAME}::SweepStage::{1},
                   &{2}
                   );\n"""
@@ -245,7 +260,7 @@ Particle properties:
 
         check_template_vertex_operation = """\n  ::swift2::dependencychecks::check{StepType}(assignedParticles,
                   marker,
-                  globaldata::{NAME}::{StepType}::{0},
+                  globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
                   globaldata::{NAME}::SweepStage::{1},
                   &{2}
                   );\n"""
@@ -259,7 +274,7 @@ Particle properties:
         # String template for marking a step/stage call
         mark_template_cell_operation = """\n  ::swift2::dependencychecks::mark{StepType}(localParticles,
                   marker,
-                  globaldata::{NAME}::{StepType}::{0},
+                  globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
                   globaldata::{NAME}::SweepStage::{1},
                   {2},
                   &{3}
@@ -273,7 +288,7 @@ Particle properties:
 
         mark_template_vertex_operation = """\n  ::swift2::dependencychecks::mark{StepType}(assignedParticles,
                   marker,
-                  globaldata::{NAME}::{StepType}::{0},
+                  globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
                   globaldata::{NAME}::SweepStage::{1},
                   {2},
                   &{3}
@@ -287,7 +302,7 @@ Particle properties:
 
         check_template_vertex_operation_local_particles_after_sweep = """
           ::swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTime{StepType}(assignedParticles,
-                                                                     globaldata::{NAME}::{StepType}::{0}
+                                                                     globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0}
                                                                     );\n"""
         check_template_vertex_operation_local_particles_after_sweep = (
             check_template_vertex_operation_local_particles_after_sweep.replace(
@@ -347,8 +362,8 @@ Particle properties:
 
             # TOUCH VERTEX FIRST TIME
             # -----------------------
-            stage = AlgorithmStep.get_sweep_stage_name(
-                AlgorithmStep.SweepStage.TOUCH_VERTEX_FIRST_TIME
+            stage = AlgorithmStep.get_event_name(
+                AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_FIRST_TIME
             )
             check_function_full_name = check_function.replace("{STAGE}", "VertexKernel")
 
@@ -391,8 +406,8 @@ Particle properties:
 
             # CELL_KERNEL
             # -----------
-            stage = AlgorithmStep.get_sweep_stage_name(
-                AlgorithmStep.SweepStage.CELL_KERNEL
+            stage = AlgorithmStep.get_event_name(
+                AlgorithmStep.PeanoEventUsedBySwift.CELL_KERNEL
             )
             check_function_full_name = check_function.replace("{STAGE}", "CellKernel")
 
@@ -417,8 +432,8 @@ Particle properties:
 
             # TOUCH VERTEX LAST TIME
             # ----------------------
-            stage = AlgorithmStep.get_sweep_stage_name(
-                AlgorithmStep.SweepStage.TOUCH_VERTEX_LAST_TIME
+            stage = AlgorithmStep.get_event_name(
+                AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_LAST_TIME
             )
             check_function_full_name = check_function.replace("{STAGE}", "VertexKernel")
 
@@ -486,7 +501,7 @@ Particle properties:
         # First add enum to particle class for each sweep stage. These are identical
         # for both algorithm steps and initialisation steps.
         stage_name_list = [
-            AlgorithmStep.get_sweep_stage_name(s) for s in AlgorithmStep.SweepStage
+            AlgorithmStep.get_event_name(s) for s in AlgorithmStep.PeanoEventUsedBySwift
         ]
         stage_name_enum = dastgen2.attributes.Enumeration(
             "SweepStage",
