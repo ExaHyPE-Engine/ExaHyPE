@@ -48,10 +48,19 @@ namespace swift2 {
      * @param call_identifier: Additional information on which dependency check failed to be printed
      *                         to screen before exiting.
      */
-    template <typename Particle, typename AlgorithmOrInitStep>
+    template <typename Particle>
     static std::string outputParticle(
       const Particle*                                             particle,
-      AlgorithmOrInitStep                                         algorithmStepMarkerEnum,
+      typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated    algorithmStep,
+      typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
+      const int                                                   errors,
+      const std::string                                           call_identifier
+    );
+
+    template <typename Particle>
+    static std::string outputParticle(
+      const Particle*                                             particle,
+      typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated    initStep,
       typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
       const int                                                   errors,
       const std::string                                           call_identifier

@@ -237,12 +237,12 @@ Particle properties:
 
 
         # add (flattened) array for flags
-        step_progression = dastgen2.attributes.IntegerArray(
-            step_type_name + "SweepStateProgression",
+        number_of_updates = dastgen2.attributes.IntegerArray(
+            self.DependencyChecks_Attribute_Prefix + step_type_name + "Updates",
             nsteps * nevents,
             ifdefs=self.DependencyChecks_Ifdefs,
         )
-        self.data.add_attribute(step_progression)
+        self.data.add_attribute(number_of_updates)
 
         # String template for dependency check call
         check_template_cell_operation = """\n  ::swift2::dependencychecks::check{StepType}(localParticles,

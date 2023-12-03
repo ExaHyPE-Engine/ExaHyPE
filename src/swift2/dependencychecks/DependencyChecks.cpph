@@ -8,19 +8,18 @@
 
 #if PeanoDebug==0
 #else
-// @todo Beide Phasen
-template <typename Particle, typename AlgorithmOrInitStep>
+template <typename Particle>
 static std::string swift2::dependencychecks::outputParticle(
   const Particle*                                             particle,
-  AlgorithmOrInitStep                                         algorithmStep,
-  typename std::remove_pointer<Particle>::type::SweepStage    action,
+  typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated    algorithmStep,
+  typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
   const int                                                   errors,
   const std::string                                           call_identifier
 ) {
 
   using PartType = std::remove_pointer<Particle>::type;
 
-  const int nsteps  = static_cast<int>(AlgorithmOrInitStep::count);
+  const int nsteps  = static_cast<int>(PartType::DependencyChecksAlgorithmStepLastUpdated::count);
   const int nstages = static_cast<int>(PartType::SweepStage::count);
 
 
@@ -29,7 +28,7 @@ static std::string swift2::dependencychecks::outputParticle(
   msg <<  "-----------------------------------------" << std::endl;
   msg <<  "Main Algorithm Step Dependency check [" << call_identifier << "]" << std::endl;
   msg <<  "Particle " << particle->getPartid() << " - found " << errors << " dependency error(s)" << std::endl;
-  msg <<  "Failed at " << PartType::toString(algorithmStep) << " / " << PartType::toString(action) << std::endl;
+  msg <<  "Failed at " << PartType::toString(algorithmStep) << " / " << PartType::toString(sweepStageMarkerEnum) << std::endl;
 
   constexpr int ColumnWidth = 40;
 
@@ -46,18 +45,78 @@ static std::string swift2::dependencychecks::outputParticle(
   for (int a = 0; a < nsteps; a++) {
     // write out algorithm step name
     msg << std::endl << std::setw(ColumnWidth)
-        << std::setw(ColumnWidth) << std::left << PartType::toString(static_cast<AlgorithmOrInitStep>(a));
+        << std::setw(ColumnWidth) << std::left << PartType::toString(static_cast<PartType::DependencyChecksAlgorithmStepLastUpdated>(a));
 
     // write out counters for sweep stages of that algorithm step
     for (int s = 0; s < nstages; s++) {
-      if (particle->getAlgorithmStepSweepStateProgression(i)<0) {
-        msg << std::setw(ColumnWidth) << "masked out (" + std::to_string(-particle->getAlgorithmStepSweepStateProgression(i)) + "x)";
+      if (particle->getDependencyChecksAlgorithmStepUpdates(i)<0) {
+        msg << std::setw(ColumnWidth) << "masked out (" + std::to_string(-particle->getDependencyChecksAlgorithmStepUpdates(i)) + "x)";
       }
-      else if (particle->getAlgorithmStepSweepStateProgression(i)==0) {
+      else if (particle->getDependencyChecksAlgorithmStepUpdates(i)==0) {
         msg << std::setw(ColumnWidth) << "not considered";
       }
       else {
-        msg << std::setw(ColumnWidth) << "updated (" + std::to_string(particle->getAlgorithmStepSweepStateProgression(i)) + "x)";
+        msg << std::setw(ColumnWidth) << "updated (" + std::to_string(particle->getDependencyChecksAlgorithmStepUpdates(i)) + "x)";
+      }
+      i++;
+    }
+  }
+
+  msg << std::endl << "Particle data:" << particle->toString() << std::endl;
+
+  return msg.str();
+}
+
+
+template <typename Particle>
+static std::string swift2::dependencychecks::outputParticle(
+  const Particle*                                             particle,
+  typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated    algorithmStep,
+  typename std::remove_pointer<Particle>::type::SweepStage    sweepStageMarkerEnum,
+  const int                                                   errors,
+  const std::string                                           call_identifier
+) {
+
+  using PartType = std::remove_pointer<Particle>::type;
+
+  const int nsteps  = static_cast<int>(PartType::DependencyChecksInitStepLastUpdated::count);
+  const int nstages = static_cast<int>(PartType::SweepStage::count);
+
+
+  std::ostringstream msg;
+
+  msg <<  "-----------------------------------------" << std::endl;
+  msg <<  "Main Algorithm Step Dependency check [" << call_identifier << "]" << std::endl;
+  msg <<  "Particle " << particle->getPartid() << " - found " << errors << " dependency error(s)" << std::endl;
+  msg <<  "Failed at " << PartType::toString(algorithmStep) << " / " << PartType::toString(sweepStageMarkerEnum) << std::endl;
+
+  constexpr int ColumnWidth = 40;
+
+  // Set up "header" of the table
+  msg << "Dependency checks:" << std::endl;
+  msg << std::setw(ColumnWidth) << std::left << "Algorithm step";
+  for (int s = 0; s < nstages; s++) {
+    // all stage names that we account for
+    msg << std::setw(ColumnWidth) << PartType::toString(static_cast<PartType::SweepStage>(s));
+  }
+
+  // write out what particle has actually done
+  int i = 0;
+  for (int a = 0; a < nsteps; a++) {
+    // write out algorithm step name
+    msg << std::endl << std::setw(ColumnWidth)
+        << std::setw(ColumnWidth) << std::left << PartType::toString(static_cast<PartType::DependencyChecksInitStepLastUpdated>(a));
+
+    // write out counters for sweep stages of that algorithm step
+    for (int s = 0; s < nstages; s++) {
+      if (particle->getDependencyChecksInitStepUpdates(i)<0) {
+        msg << std::setw(ColumnWidth) << "masked out (" + std::to_string(-particle->getDependencyChecksInitStepUpdates(i)) + "x)";
+      }
+      else if (particle->getDependencyChecksInitStepUpdates(i)==0) {
+        msg << std::setw(ColumnWidth) << "not considered";
+      }
+      else {
+        msg << std::setw(ColumnWidth) << "updated (" + std::to_string(particle->getDependencyChecksInitStepUpdates(i)) + "x)";
       }
       i++;
     }
@@ -94,7 +153,7 @@ static void swift2::dependencychecks::markAlgorithmStep(
     // Mark what we have just completed, but only if the particle was actually touched!
     if (workOnParticle(particle, marker)) {
       assertion1(
-        particle->getAlgorithmStepSweepStateProgression()[index_this_stage]>=0,
+        particle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage]>=0,
         outputParticle(
           particle,
           algorithmStep,
@@ -103,13 +162,13 @@ static void swift2::dependencychecks::markAlgorithmStep(
           "want to increment marker, as step modifies particle, but particle had been identified as masked out before"
         )
       );
-      particle->setAlgorithmStepSweepStateProgression(
-        index_this_stage, particle->getAlgorithmStepSweepStateProgression()[index_this_stage] + 1
+      particle->setDependencyChecksAlgorithmStepUpdates(
+        index_this_stage, particle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage] + 1
       );
     }
     else if (stepMovedParticle) {
       assertion1(
-        particle->getAlgorithmStepSweepStateProgression()[index_this_stage]>=0,
+        particle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage]>=0,
         outputParticle(
           particle,
           algorithmStep,
@@ -121,7 +180,7 @@ static void swift2::dependencychecks::markAlgorithmStep(
     }
     else {
       assertion1(
-        particle->getAlgorithmStepSweepStateProgression()[index_this_stage]<=0,
+        particle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage]<=0,
         outputParticle(
           particle,
           algorithmStep,
@@ -134,8 +193,8 @@ static void swift2::dependencychecks::markAlgorithmStep(
       // See docu in Toolbox/Particles/Mesh Traversal.
       // So if `workOnParticle()` has a check whether the particle is local, it may be skipped.
       // Anticipate this, and mark it by using negative counters.
-      particle->setAlgorithmStepSweepStateProgression(
-        index_this_stage, particle->getAlgorithmStepSweepStateProgression()[index_this_stage] - 1
+      particle->setDependencyChecksAlgorithmStepUpdates(
+        index_this_stage, particle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage] - 1
       );
     }
   }
@@ -167,16 +226,16 @@ static void swift2::dependencychecks::markInitStep(
     // Mark what we have just completed, but only if the particle was actually touched!
     if (workOnParticle(particle, marker)) {
 
-      particle->setInitStepSweepStateProgression(
-        index_this_stage, particle->getInitStepSweepStateProgression()[index_this_stage] + 1
+      particle->setDependencyChecksInitStepUpdates(
+        index_this_stage, particle->getDependencyChecksInitStepUpdates()[index_this_stage] + 1
       );
     } else if (stepMovedParticle) {
       // Freshly moved particles may not be sieved correctly into being local particles yet.
       // See docu in Toolbox/Particles/Mesh Traversal.
       // So if `workOnParticle()` has a check whether the particle is local, it may be skipped.
       // Anticipate this, and mark it by using negative counters.
-      particle->setInitStepSweepStateProgression(
-        index_this_stage, particle->getInitStepSweepStateProgression()[index_this_stage] - 1
+      particle->setDependencyChecksInitStepUpdates(
+        index_this_stage, particle->getDependencyChecksInitStepUpdates()[index_this_stage] - 1
       );
     }
   }
@@ -273,7 +332,7 @@ static void swift2::dependencychecks::checkAlgorithmStep(
   for (auto* particle : localParticles) {
 
     int        errors = 0;
-    const int* arr    = particle->getAlgorithmStepSweepStateProgression();
+    const int* arr    = particle->getDependencyChecksAlgorithmStepUpdates();
 
     errors = checkPastStages(algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
@@ -323,7 +382,7 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
   for (auto* particle : activeParticles) {
 
     int        errors = 0;
-    const int* arr    = particle->getAlgorithmStepSweepStateProgression();
+    const int* arr    = particle->getDependencyChecksAlgorithmStepUpdates();
 
     errors = checkPastStages(algorithmStepMarker, touchVertexLastTime, nsteps, nstages, arr);
 
@@ -378,7 +437,7 @@ static void swift2::dependencychecks::checkInitStep(
   for (auto* particle : localParticles) {
 
     int        errors = 0;
-    const int* arr    = particle->getInitStepSweepStateProgression();
+    const int* arr    = particle->getDependencyChecksInitStepUpdates();
 
     errors = checkPastStages(initStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
@@ -424,7 +483,7 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
   for (auto* particle : activeParticles) {
 
     int        errors = 0;
-    const int* arr    = particle->getInitStepSweepStateProgression();
+    const int* arr    = particle->getDependencyChecksInitStepUpdates();
     errors            = checkPastStages(initStepMarker, touchVertexLastTime, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
@@ -465,7 +524,7 @@ static void swift2::dependencychecks::clearDependencyChecksAlgorithmStep(const P
 
   for (auto* particle : localParticles) {
     for (int i = 0; i < nsteps * nstages; i++) {
-      particle->setAlgorithmStepSweepStateProgression(i, 0);
+      particle->setDependencyChecksAlgorithmStepUpdates(i, 0);
     }
   }
 }
@@ -480,7 +539,7 @@ static void swift2::dependencychecks::clearDependencyChecksInitStep(const Partic
 
   for (auto* particle : localParticles) {
     for (int i = 0; i < nsteps * nstages; i++) {
-      particle->setInitStepSweepStateProgression(i, 0);
+      particle->setDependencyChecksInitStepUpdates(i, 0);
     }
   }
 }
