@@ -444,6 +444,8 @@ add_subdirectory(src)
 #    )
 #endif()
 
+include(Sanitizers)
+
 display_separator("Project Configuration Summary")
 display_variable(AVAILABLE_PROCESSOR_COUNT)
 display_variable(WITH_TOOLCHAIN)
