@@ -30,7 +30,7 @@ static std::string swift2::dependencychecks::outputParticle(
   msg <<  "Particle " << particle->getPartid() << " - found " << errors << " dependency error(s)" << std::endl;
   msg <<  "Failed at " << PartType::toString(algorithmStep) << " / " << PartType::toString(sweepStageMarkerEnum) << std::endl;
 
-  constexpr int ColumnWidth = 40;
+  constexpr int ColumnWidth = 60;
 
   // Set up "header" of the table
   msg << "Dependency checks:" << std::endl;
@@ -49,15 +49,24 @@ static std::string swift2::dependencychecks::outputParticle(
 
     // write out counters for sweep stages of that algorithm step
     for (int s = 0; s < nstages; s++) {
-      if (particle->getDependencyChecksAlgorithmStepUpdates(i)<0) {
-        msg << std::setw(ColumnWidth) << "masked out (" + std::to_string(-particle->getDependencyChecksAlgorithmStepUpdates(i)) + "x)";
-      }
-      else if (particle->getDependencyChecksAlgorithmStepUpdates(i)==0) {
-        msg << std::setw(ColumnWidth) << "not considered";
+      assertion( particle->getDependencyChecksAlgorithmStepUpdates(i) >= 0 );
+      std::string state;
+      if (particle->getDependencyChecksAlgorithmStepUpdates(i)==0) {
+        state  = "no updates";
       }
       else {
-        msg << std::setw(ColumnWidth) << "updated (" + std::to_string(particle->getDependencyChecksAlgorithmStepUpdates(i)) + "x)";
+        state  = "updated (" + std::to_string(particle->getDependencyChecksAlgorithmStepUpdates(i)) + "x)";
       }
+
+      assertion( particle->getDependencyChecksAlgorithmStepMaskOuts(i) >= 0 );
+      if (particle->getDependencyChecksAlgorithmStepMaskOuts(i)==0) {
+        state += ", never masked out";
+      }
+      else {
+        state += ", masked out (" + std::to_string(-particle->getDependencyChecksAlgorithmStepMaskOuts(i)) + "x)";
+      }
+
+      msg << std::setw(ColumnWidth) << state;
       i++;
     }
   }
@@ -90,7 +99,7 @@ static std::string swift2::dependencychecks::outputParticle(
   msg <<  "Particle " << particle->getPartid() << " - found " << errors << " dependency error(s)" << std::endl;
   msg <<  "Failed at " << PartType::toString(algorithmStep) << " / " << PartType::toString(sweepStageMarkerEnum) << std::endl;
 
-  constexpr int ColumnWidth = 40;
+  constexpr int ColumnWidth = 60;
 
   // Set up "header" of the table
   msg << "Dependency checks:" << std::endl;
@@ -109,15 +118,24 @@ static std::string swift2::dependencychecks::outputParticle(
 
     // write out counters for sweep stages of that algorithm step
     for (int s = 0; s < nstages; s++) {
-      if (particle->getDependencyChecksInitStepUpdates(i)<0) {
-        msg << std::setw(ColumnWidth) << "masked out (" + std::to_string(-particle->getDependencyChecksInitStepUpdates(i)) + "x)";
-      }
-      else if (particle->getDependencyChecksInitStepUpdates(i)==0) {
-        msg << std::setw(ColumnWidth) << "not considered";
+      assertion( particle->getDependencyChecksInitStepUpdates(i) >= 0 );
+      std::string state;
+      if (particle->getDependencyChecksInitStepUpdates(i)==0) {
+        state  = "no updates";
       }
       else {
-        msg << std::setw(ColumnWidth) << "updated (" + std::to_string(particle->getDependencyChecksInitStepUpdates(i)) + "x)";
+        state  = "updated (" + std::to_string(particle->getDependencyChecksInitStepUpdates(i)) + "x)";
       }
+
+      assertion( particle->getDependencyChecksInitStepMaskOuts(i) >= 0 );
+      if (particle->getDependencyChecksInitStepMaskOuts(i)==0) {
+        state += ", never masked out";
+      }
+      else {
+        state += ", masked out (" + std::to_string(-particle->getDependencyChecksInitStepMaskOuts(i)) + "x)";
+      }
+
+      msg << std::setw(ColumnWidth) << state;
       i++;
     }
   }

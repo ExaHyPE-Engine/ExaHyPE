@@ -256,75 +256,63 @@ Particle properties:
         self.data.add_attribute(number_of_mask_outs)
 
         # String template for dependency check call
-        check_template_cell_operation = """\n  ::swift2::dependencychecks::check{StepType}(localParticles,
+        check_template_cell_operation = """
+  ::swift2::dependencychecks::check{STEP_TYPE}(localParticles,
                   marker,
-                  globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
+                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{0},
                   globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
                   &{2}
-                  );\n"""
-        check_template_cell_operation = check_template_cell_operation.replace(
-            "{NAME}", self.name
-        )
-        check_template_cell_operation = check_template_cell_operation.replace(
-            "{StepType}", step_type_name
-        )
+  );
+"""
 
-        check_template_vertex_operation = """\n  ::swift2::dependencychecks::check{StepType}(assignedParticles,
+        check_template_vertex_operation = """
+  ::swift2::dependencychecks::check{STEP_TYPE}(assignedParticles,
                   marker,
-                  globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
+                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{0},
                   globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
                   &{2}
-                  );\n"""
-        check_template_vertex_operation = check_template_vertex_operation.replace(
-            "{NAME}", self.name
-        )
-        check_template_vertex_operation = check_template_vertex_operation.replace(
-            "{StepType}", step_type_name
-        )
+  );
+"""
 
         # String template for marking a step/stage call
-        mark_template_cell_operation = """\n  ::swift2::dependencychecks::mark{StepType}(localParticles,
+        mark_template_cell_operation = """
+  ::swift2::dependencychecks::mark{STEP_TYPE}(localParticles,
                   marker,
-                  globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
+                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{0},
                   globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
                   {2},
                   &{3}
-                  );\n"""
-        mark_template_cell_operation = mark_template_cell_operation.replace(
-            "{NAME}", self.name
-        )
-        mark_template_cell_operation = mark_template_cell_operation.replace(
-            "{StepType}", step_type_name
-        )
+  );
+"""
 
-        mark_template_vertex_operation = """\n  ::swift2::dependencychecks::mark{StepType}(assignedParticles,
+        mark_template_vertex_operation = """
+  ::swift2::dependencychecks::mark{STEP_TYPE}(assignedParticles,
                   marker,
-                  globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
+                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{0},
                   globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
                   {2},
                   &{3}
-                  );\n"""
-        mark_template_vertex_operation = mark_template_vertex_operation.replace(
-            "{NAME}", self.name
-        )
-        mark_template_vertex_operation = mark_template_vertex_operation.replace(
-            "{StepType}", step_type_name
-        )
+  );
+"""
 
         check_template_vertex_operation_local_particles_after_sweep = """
-          ::swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTime{StepType}(assignedParticles,
-                                                                     globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0}
-                                                                    );\n"""
-        check_template_vertex_operation_local_particles_after_sweep = (
-            check_template_vertex_operation_local_particles_after_sweep.replace(
-                "{NAME}", self.name
-            )
-        )
-        check_template_vertex_operation_local_particles_after_sweep = (
-            check_template_vertex_operation_local_particles_after_sweep.replace(
-                "{StepType}", step_type_name
-            )
-        )
+  ::swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTime{STEP_TYPE}(
+    assignedParticles,
+    globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME}
+  );
+"""
+                                                                    
+        # @todo Weg machen                                                            
+        #check_template_vertex_operation_local_particles_after_sweep = (
+        #    check_template_vertex_operation_local_particles_after_sweep.replace(
+        #        "{NAME}", self.name
+        #    )
+        #)
+        #check_template_vertex_operation_local_particles_after_sweep = (
+        #    check_template_vertex_operation_local_particles_after_sweep.replace(
+        #        "{STEP_TYPE}", step_type_name
+        #    )
+        #)
 
         # Keep track of steps that move particles. They will corrupt the list of
         # local particles, as the particles will need to be sorted and sieved again.
@@ -336,6 +324,12 @@ Particle properties:
         step_moves_particles = 0
 
         for i, step in enumerate(steps):
+            d = {
+                "NAME":       self.name,
+                "STEP_TYPE":  step_type_name,
+                "STEP_NAME":  step.name
+            }
+            
             # first determine which type of algorithm step we have. Depending on its
             # effects and dependencies, we need to use a different function to check
             # whether a particle should be worked on.
@@ -394,6 +388,7 @@ Particle properties:
                         stage,
                         step_moved_particle_string,
                         check_function_full_name,
+                        **d
                     )
                     + step.touch_vertex_last_time_kernel
                 )
@@ -404,6 +399,7 @@ Particle properties:
                         stage,
                         step_moved_particle_string,
                         check_function_full_name,
+                        **d,
                     )
                     + step.touch_vertex_first_time_kernel
                 )
@@ -411,7 +407,9 @@ Particle properties:
             # Finally, add the dependency check *after* the actual function call
             step.touch_vertex_first_time_kernel += (
                 check_template_vertex_operation.format(
-                    step.name, stage, check_function_full_name
+                    step.name, stage, 
+                    check_function_full_name,
+                    **d,
                 )
             )
 
@@ -432,13 +430,16 @@ Particle properties:
                     stage,
                     step_moved_particle_string,
                     check_function_full_name,
+                    **d,
                 )
                 + step.cell_kernel
             )
 
             # Now add the dependency check *after* the actual function call
             step.cell_kernel += check_template_cell_operation.format(
-                step.name, stage, check_function_full_name
+                step.name, stage, 
+                check_function_full_name,
+                **d,
             )
 
             # TOUCH VERTEX LAST TIME
@@ -458,6 +459,7 @@ Particle properties:
                     stage,
                     step_moved_particle_string,
                     check_function_full_name,
+                    **d,
                 )
                 + step.touch_vertex_last_time_kernel
             )
@@ -465,7 +467,9 @@ Particle properties:
             # Now add the dependency check *after* the actual function call
             step.touch_vertex_last_time_kernel += (
                 check_template_vertex_operation.format(
-                    step.name, stage, check_function_full_name
+                    step.name, stage, 
+                    check_function_full_name,
+                    **d,
                 )
             )
 
@@ -474,7 +478,7 @@ Particle properties:
             # during this algorithm step
             step.touch_vertex_last_time_kernel += (
                 check_template_vertex_operation_local_particles_after_sweep.format(
-                    step.name
+                    **d
                 )
             )
 
