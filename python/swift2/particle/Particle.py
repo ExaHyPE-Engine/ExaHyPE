@@ -185,7 +185,11 @@ Particle properties:
     DependencyChecks_Attribute_Prefix = "dependencyChecks"
     DependencyChecks_Ifdefs = ["PeanoDebug > 0"]
 
-    def _dependency_checks_modify_steps(self, steplist, step_type_name):
+    def _dependency_checks_modify_steps(self, 
+                                        steplist, 
+                                        step_type_name,
+                                        peano4_event_enum,
+                                        ):
         """!
 
         Add dependency checks to algorithm steps
@@ -244,11 +248,18 @@ Particle properties:
         )
         self.data.add_attribute(number_of_updates)
 
+        number_of_mask_outs = dastgen2.attributes.IntegerArray(
+            self.DependencyChecks_Attribute_Prefix + step_type_name + "MaskOuts",
+            nsteps * nevents,
+            ifdefs=self.DependencyChecks_Ifdefs,
+        )
+        self.data.add_attribute(number_of_mask_outs)
+
         # String template for dependency check call
         check_template_cell_operation = """\n  ::swift2::dependencychecks::check{StepType}(localParticles,
                   marker,
                   globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
-                  globaldata::{NAME}::SweepStage::{1},
+                  globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
                   &{2}
                   );\n"""
         check_template_cell_operation = check_template_cell_operation.replace(
@@ -261,7 +272,7 @@ Particle properties:
         check_template_vertex_operation = """\n  ::swift2::dependencychecks::check{StepType}(assignedParticles,
                   marker,
                   globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
-                  globaldata::{NAME}::SweepStage::{1},
+                  globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
                   &{2}
                   );\n"""
         check_template_vertex_operation = check_template_vertex_operation.replace(
@@ -275,7 +286,7 @@ Particle properties:
         mark_template_cell_operation = """\n  ::swift2::dependencychecks::mark{StepType}(localParticles,
                   marker,
                   globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
-                  globaldata::{NAME}::SweepStage::{1},
+                  globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
                   {2},
                   &{3}
                   );\n"""
@@ -289,7 +300,7 @@ Particle properties:
         mark_template_vertex_operation = """\n  ::swift2::dependencychecks::mark{StepType}(assignedParticles,
                   marker,
                   globaldata::{NAME}::DependencyChecks{StepType}LastUpdated::{0},
-                  globaldata::{NAME}::SweepStage::{1},
+                  globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
                   {2},
                   &{3}
                   );\n"""
@@ -503,21 +514,21 @@ Particle properties:
         stage_name_list = [
             AlgorithmStep.get_event_name(s) for s in AlgorithmStep.PeanoEventUsedBySwift
         ]
-        stage_name_enum = dastgen2.attributes.Enumeration(
-            "SweepStage",
+        peano4_event_enum = dastgen2.attributes.Enumeration(
+            self.DependencyChecks_Attribute_Prefix + "PeanoEventUsedBySwift",
             stage_name_list,
             ifdefs=ifdefs,
         )
-        self.data.add_attribute(stage_name_enum)
+        self.data.add_attribute(peano4_event_enum)
 
         # Add debug dependency checks to the actual algorithm steps:
         steplist = self.algorithm_steps()
         step_type_name = "AlgorithmStep"
-        modified_steps = self._dependency_checks_modify_steps(steplist, step_type_name)
+        modified_steps = self._dependency_checks_modify_steps(steplist, step_type_name, peano4_event_enum)
         self._algorithm_steps = modified_steps
 
         # Same but for initialisation steps
         steplist = self.initialisation_steps()
         step_type_name = "InitStep"
-        modified_steps = self._dependency_checks_modify_steps(steplist, step_type_name)
+        modified_steps = self._dependency_checks_modify_steps(steplist, step_type_name, peano4_event_enum)
         self._initialisation_steps = modified_steps
