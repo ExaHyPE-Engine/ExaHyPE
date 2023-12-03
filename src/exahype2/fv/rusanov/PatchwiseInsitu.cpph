@@ -17,9 +17,9 @@ void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseInsituStateless(CellData
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovPatchwiseInsituStateless()");
 
-  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const enumerators::SingleDoFEnumerator        singleVolumeEnumerator(NumberOfUnknowns, 0);
+  const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::SingleDoFEnumerator        singleVolumeEnumerator(NumberOfUnknowns, 0);
 
   for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
     // ====================================================

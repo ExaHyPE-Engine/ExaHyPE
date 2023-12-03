@@ -35,8 +35,8 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
   if ({{PREDICATE}}) {
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
-    ::exahype2::enumerators::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1,            {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
     
     dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
       for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
@@ -142,5 +142,5 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
   def get_includes(self):
     return super(ComputeFinalLinearCombination,self).get_includes() + """
 #include "exahype2/fd/LoopBody.h"
-#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 """

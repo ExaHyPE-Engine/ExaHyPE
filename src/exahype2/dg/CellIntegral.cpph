@@ -1,5 +1,5 @@
 #include "peano4/utils/Loop.h"
-#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 
 
 template <
@@ -15,7 +15,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
   bool                                           evaluateSource,
   bool                                           evaluatePointSources
 ) {
-  exahype2::enumerators::AoSLexicographicEnumerator enumeratorIn(
+  exahype2::enumerator::AoSLexicographicEnumerator enumeratorIn(
     1,           // number of cells in one memory chunk
     order+1,     // numberOfDoFsPerAxisInCell
     0,           // no halo
@@ -23,7 +23,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
     auxiliaryVariables
   );
 
-  exahype2::enumerators::AoSLexicographicEnumerator enumeratorOut(
+  exahype2::enumerator::AoSLexicographicEnumerator enumeratorOut(
     1,           // number of cells in one memory chunk
     order+1,     // numberOfDoFsPerAxisInCell
     0,           // no halo

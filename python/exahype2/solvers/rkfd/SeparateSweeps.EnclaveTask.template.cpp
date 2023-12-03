@@ -16,7 +16,7 @@
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 
-#include "exahype2/enumerators/enumerators.h"
+#include "exahype2/enumerator/enumerator.h"
 
 #include "exahype2/fd/PatchUtils.h"
 

@@ -2,7 +2,7 @@
 
 #include "peano4/utils/Loop.h"
 
-#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 
 void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   ::exahype2::CellData&                          cellData,
@@ -22,7 +22,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
   bool                                           evaluateSource,
   bool                                           evaluatePointSources
 ) {
-  exahype2::enumerators::AoSLexicographicEnumerator enumeratorIn(
+  exahype2::enumerator::AoSLexicographicEnumerator enumeratorIn(
     1,           // number of cells in one memory chunk
     order+1,     // numberOfDoFsPerAxisInCell
     0,           // no halo
@@ -30,7 +30,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre_functors(
     auxiliaryVariables
   );
 
-  exahype2::enumerators::AoSLexicographicEnumerator enumeratorOut(
+  exahype2::enumerator::AoSLexicographicEnumerator enumeratorOut(
     1,           // number of cells in one memory chunk
     order+1,     // numberOfDoFsPerAxisInCell
     0,           // no halo
@@ -202,7 +202,7 @@ void exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
   MaxEigenvalue           maxEigenvalue,
   const double* __restrict__   QuadratureNodes1d
 ) {
-  ::exahype2::enumerators::AoSLexicographicEnumerator  enumerator(
+  ::exahype2::enumerator::AoSLexicographicEnumerator  enumerator(
     1, // number of patches stored per continuous memory segment
     order+1,
     0, // halo
@@ -262,7 +262,7 @@ void exahype2::dg::multiplyWithInvertedMassMatrix_GaussLegendre(
   const int                                      auxiliaryVariables,
   const double* __restrict__                     massMatrixDiagonal1d
 ) {
-  exahype2::enumerators::AoSLexicographicEnumerator enumerator(
+  exahype2::enumerator::AoSLexicographicEnumerator enumerator(
     1,           // number of cells in one memory chunk
     order+1,     // numberOfDoFsPerAxisInCell
     0,           // no halo

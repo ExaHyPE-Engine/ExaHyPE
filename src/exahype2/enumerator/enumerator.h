@@ -8,9 +8,9 @@
 #include "SingleDoFEnumerator.h"
 #include "SoALexicographicEnumerator.h"
 
-namespace exahype2::enumerators {
+namespace exahype2::enumerator {
   /**
-   * @page exahype2_enumerators ExaHyPE 2 enumerators
+   * @page exahype2_enumerator ExaHyPE 2 enumerators
    *
    * ## Finite Volumes
    *
@@ -50,4 +50,4 @@ namespace exahype2::enumerators {
    * of cells.
    *
    */
-} // namespace exahype2::enumerators
+} // namespace exahype2::enumerator

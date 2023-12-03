@@ -68,7 +68,7 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
 template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
 void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
   const double* __restrict__ QIn,
-  const enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const SourceFunctor&                           sourceFunctor,
   const ::tarch::la::Vector<Dimensions, double>& patchCentre,
   const ::tarch::la::Vector<Dimensions, double>& patchSize,
@@ -77,7 +77,7 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
   double                                         t,
   double                                         dt,
   double* __restrict__ QOut,
-  const enumerators::AoSLexicographicEnumerator& QOutEnumerator
+  const enumerator::AoSLexicographicEnumerator& QOutEnumerator
 ) {
   sourceFunctor(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -189,7 +189,7 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
 template <class SolverType>
 void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
   const double* __restrict__ QIn,
-  const enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const ::tarch::la::Vector<Dimensions, double>& patchCentre,
   const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
@@ -197,7 +197,7 @@ void exahype2::fv::rusanov::loopbodies::copySolutionAndAddSourceTerm(
   double                                         t,
   double                                         dt,
   double* __restrict__ QOut,
-  const enumerators::AoSLexicographicEnumerator& QOutEnumerator
+  const enumerator::AoSLexicographicEnumerator& QOutEnumerator
 ) {
   SolverType::sourceTerm(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -281,7 +281,7 @@ void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
 template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
 void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
   const double* __restrict__ QIn,
-  const enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
   const ::tarch::la::Vector<Dimensions, double>& patchCentre,
   const ::tarch::la::Vector<Dimensions, double>& patchSize,
@@ -291,7 +291,7 @@ void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
   double                                         dt,
   int                                            normal,
   double* __restrict__ maxEigenvalue,
-  const enumerators::AoSLexicographicEnumerator& maxEigenvalueEnumerator
+  const enumerator::AoSLexicographicEnumerator& maxEigenvalueEnumerator
 ) {
   maxEigenvalue[maxEigenvalueEnumerator(patchIndex, volumeIndex, 0)] = maxEigenvalueFunctor(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -343,7 +343,7 @@ void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
 template <class SolverType, class MaxEigenvalueEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::computeMaxEigenvalue(
   const double* __restrict__ QIn,
-  const enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const ::tarch::la::Vector<Dimensions, double>& patchCentre,
   const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
@@ -413,7 +413,7 @@ double exahype2::fv::rusanov::loopbodies::reduceMaxEigenvalue(
 template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
 double exahype2::fv::rusanov::loopbodies::reduceMaxEigenvalue(
   const double* __restrict__ QOut,
-  const enumerators::AoSLexicographicEnumerator& QOutEnumerator,
+  const enumerator::AoSLexicographicEnumerator& QOutEnumerator,
   const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
   const ::tarch::la::Vector<Dimensions, double>& patchCentre,
   const ::tarch::la::Vector<Dimensions, double>& patchSize,
@@ -490,7 +490,7 @@ double exahype2::fv::rusanov::loopbodies::reduceMaxEigenvalue(
 template <class SolverType>
 double exahype2::fv::rusanov::loopbodies::reduceMaxEigenvalue(
   const double* __restrict__ QOut,
-  const enumerators::AoSLexicographicEnumerator& QOutEnumerator,
+  const enumerator::AoSLexicographicEnumerator& QOutEnumerator,
   const ::tarch::la::Vector<Dimensions, double>& patchCentre,
   const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
@@ -570,7 +570,7 @@ void exahype2::fv::rusanov::loopbodies::computeFlux(
 template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
 void exahype2::fv::rusanov::loopbodies::computeFlux(
   const double* __restrict__ QIn,
-  const enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const FluxFunctor&                             fluxFunctor,
   const ::tarch::la::Vector<Dimensions, double>& patchCentre,
   const ::tarch::la::Vector<Dimensions, double>& patchSize,
@@ -580,7 +580,7 @@ void exahype2::fv::rusanov::loopbodies::computeFlux(
   double                                         dt,
   int                                            normal,
   double* __restrict__ flux,
-  const enumerators::AoSLexicographicEnumerator& fluxEnumerator
+  const enumerator::AoSLexicographicEnumerator& fluxEnumerator
 ) {
   fluxFunctor(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -643,7 +643,7 @@ void exahype2::fv::rusanov::loopbodies::computeFlux(
 template <class SolverType, class FluxEnumeratorType>
 void exahype2::fv::rusanov::loopbodies::computeFlux(
   const double* __restrict__ QIn,
-  const enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const ::tarch::la::Vector<Dimensions, double>& patchCentre,
   const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
@@ -680,7 +680,7 @@ void exahype2::fv::rusanov::loopbodies::computeFlux(
 template <class SolverType>
 void exahype2::fv::rusanov::loopbodies::computeFlux(
   const double* __restrict__ QIn,
-  const enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const ::tarch::la::Vector<Dimensions, double>& patchCentre,
   const ::tarch::la::Vector<Dimensions, double>& patchSize,
   int                                            patchIndex,
@@ -689,7 +689,7 @@ void exahype2::fv::rusanov::loopbodies::computeFlux(
   double                                         dt,
   int                                            normal,
   double* __restrict__ flux,
-  const enumerators::AoSLexicographicEnumerator& fluxEnumerator
+  const enumerator::AoSLexicographicEnumerator& fluxEnumerator
 ) {
   SolverType::flux(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),

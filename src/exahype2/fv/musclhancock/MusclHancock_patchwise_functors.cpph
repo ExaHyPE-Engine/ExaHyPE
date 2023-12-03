@@ -28,11 +28,11 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
   assertionEquals(haloSize,1);
   assertionEquals(3*unknowns,auxiliaryVariables);
 
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator       (                      1,   numberOfVolumesPerAxisInPatch,          haloSize,unknowns,auxiliaryVariables);
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator      (                      1,   numberOfVolumesPerAxisInPatch,                 0,unknowns,auxiliaryVariables);
-  exahype2::enumerators::AoSLexicographicEnumerator fluxEnumerator      (patchData.numberOfCells,   numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,                 0);
-  exahype2::enumerators::AoSLexicographicEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,   solversHaloSize,unknowns,                 0);
-  exahype2::enumerators::AoSLexicographicEnumerator eigenvalueEnumerator(patchData.numberOfCells,   numberOfVolumesPerAxisInPatch,   solversHaloSize,       1,                 0);
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator       (                      1,   numberOfVolumesPerAxisInPatch,          haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator      (                      1,   numberOfVolumesPerAxisInPatch,                 0,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator fluxEnumerator      (patchData.numberOfCells,   numberOfVolumesPerAxisInPatch,   solversHaloSize,unknowns,                 0);
+  exahype2::enumerator::AoSLexicographicEnumerator ncpEnumerator       (patchData.numberOfCells, numberOfVolumesPerAxisInPatch+1,   solversHaloSize,unknowns,                 0);
+  exahype2::enumerator::AoSLexicographicEnumerator eigenvalueEnumerator(patchData.numberOfCells,   numberOfVolumesPerAxisInPatch,   solversHaloSize,       1,                 0);
 
   double* tempFluxXL                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
   double* tempFluxYL                  = evaluateFlux                     ? tarch::allocateMemory( fluxEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
@@ -47,7 +47,7 @@ void exahype2::fv::musclhancock::timeStepWithMusclHancock_patchwise_heap_functor
   double* tempEigenvalueY             =                                    tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap );
   double* tempEigenvalueZ             = (Dimensions==3)                  ? tarch::allocateMemory( eigenvalueEnumerator.size(),      tarch::MemoryLocation::Heap ) : nullptr;
 
-  exahype2::enumerators::AoSLexicographicEnumerator QInterEnumerator       (                      1,   numberOfVolumesPerAxisInPatch,          haloSize,unknowns,              0);
+  exahype2::enumerator::AoSLexicographicEnumerator QInterEnumerator       (                      1,   numberOfVolumesPerAxisInPatch,          haloSize,unknowns,              0);
   //used to sotre the time derivatives 
   double* timeDerivative             = tarch::allocateMemory( QInterEnumerator.size(),      tarch::MemoryLocation::Heap );
   //face value

@@ -21,8 +21,8 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovTaskgraphStateles
    */
   //::sycl::ext::oneapi::experimental::command_graph g(queue.get_context(), queue.get_device());
 
-  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
   const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
   const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
@@ -737,8 +737,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless(int t
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   GPUUSMCellData                                gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovTaskgraphStateless<
@@ -778,8 +778,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless(int 
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   GPUCopyCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovTaskgraphStateless<
@@ -819,8 +819,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless(i
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   GPUManagedCellData                            gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovTaskgraphStateless<
@@ -860,8 +860,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless(int t
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   GPUUSMCellData                                gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovTaskgraphUSMStateless", false, true);
@@ -904,8 +904,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless(int 
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   GPUCopyCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovTaskgraphCopyStateless", false, true);
@@ -948,8 +948,8 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless(i
 
   ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
-  const enumerators::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const enumerators::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
+  const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   GPUManagedCellData                            gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovTaskgraphManagedStateless", false, true);

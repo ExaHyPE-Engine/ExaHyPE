@@ -7,11 +7,11 @@
 #include <cstring>
 
 #include "exahype2/CellData.h"
-#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "tarch/accelerator/sycl/GPUMemoryManager.h"
 
 exahype2::fv::rusanov::sycl::GPUCopyCellData::GPUCopyCellData(
-  const CellData& hostObject, const enumerators::AoSLexicographicEnumerator& inEnumerator, const enumerators::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+  const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
 ) {
   numberOfCells           = hostObject.numberOfCells;
   cellCentre              = ::sycl::malloc_device<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
@@ -47,7 +47,7 @@ exahype2::fv::rusanov::sycl::GPUCopyCellData::GPUCopyCellData(
 }
 
 void exahype2::fv::rusanov::sycl::GPUCopyCellData::destroy(
-  CellData& hostObject, const enumerators::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
+  CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
 ) {
   double* tmpQOut = new double[numberOfCells * outEnumerator.size()];
 
@@ -75,7 +75,7 @@ void exahype2::fv::rusanov::sycl::GPUCopyCellData::destroy(
 
 
 exahype2::fv::rusanov::sycl::GPUUSMCellData::GPUUSMCellData(
-  const CellData& hostObject, const enumerators::AoSLexicographicEnumerator& inEnumerator, const enumerators::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+  const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
 ) {
   numberOfCells = hostObject.numberOfCells;
 
@@ -100,7 +100,7 @@ exahype2::fv::rusanov::sycl::GPUUSMCellData::GPUUSMCellData(
 }
 
 void exahype2::fv::rusanov::sycl::GPUUSMCellData::destroy(
-  CellData& hostObject, const enumerators::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
+  CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
 ) {
   double*                      tmpQOut = new double[numberOfCells * outEnumerator.size()];
   ::std::vector<::sycl::event> copyEvent(2);
@@ -125,7 +125,7 @@ void exahype2::fv::rusanov::sycl::GPUUSMCellData::destroy(
 
 
 exahype2::fv::rusanov::sycl::GPUManagedCellData::GPUManagedCellData(
-  const CellData& hostObject, const enumerators::AoSLexicographicEnumerator& inEnumerator, const enumerators::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+  const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
 ) {
   numberOfCells           = hostObject.numberOfCells;
   cellCentre              = ::tarch::accelerator::sycl::GPUMemoryManager::getInstance().allocate<::tarch::la::Vector<Dimensions, double>>(numberOfCells, queue);
@@ -161,7 +161,7 @@ exahype2::fv::rusanov::sycl::GPUManagedCellData::GPUManagedCellData(
 }
 
 void exahype2::fv::rusanov::sycl::GPUManagedCellData::destroy(
-  CellData& hostObject, const enumerators::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
+  CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue
 ) {
   double*                      tmpQOut = new double[numberOfCells * outEnumerator.size()];
   ::std::vector<::sycl::event> copyEvent(2);
