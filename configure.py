@@ -28,7 +28,8 @@ parser.add_argument('--arch', choices=[
 args = parser.parse_args()
 
 cflags = ''
-cxxflags = '-std=c++20 -w'
+cxxflags = '-w'
+cxxstandard = '-std=c++20'
 #cxxflags = '-std=c++20 -W -Wall -Wextra'
 nvccflags = ''
 
@@ -163,6 +164,7 @@ if args.cmake:
   env_vars = {
       "CC": "{}".format(args.cc),
       "CXX": "{}".format(args.cxx),
+      "CXXFLAGS": cxxstandard,
   }
 
   # Create a string to display environment variables like in a terminal
