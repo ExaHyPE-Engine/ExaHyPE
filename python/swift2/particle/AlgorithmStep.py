@@ -5,6 +5,8 @@ from enum import Enum, IntEnum
 
 from abc import abstractmethod
 
+import peano4
+
 
 class AlgorithmStep(object):
     """!
@@ -60,34 +62,42 @@ class AlgorithmStep(object):
         CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN = 2
         CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN = 3
 
-    class SweepStage(IntEnum):
-        """
-        Enumeration of different events during a grid traversal, in order of
-        their execution.
-        If this changes, make sure to also update the dict containing the
-        names of the stages in
+    class PeanoEventUsedBySwift(IntEnum):
+        """!
+        
+        Enumeration of different @ref peano_action_sets "Peano events" during a
+        grid traversal into which Swift 2 plugs in. We don't use all events. 
+        Therefore, this is a subset of the operations in 
+        peano4.solversteps.ActionSet. The enumeration is based upon integers, 
+        as we need to know the order of the enumerations. 
+
+        Should we ever pick up more events, make sure to also update the dict 
+        containing the names of the stages in
         """
 
         TOUCH_VERTEX_FIRST_TIME = 0
         CELL_KERNEL = 1
         TOUCH_VERTEX_LAST_TIME = 2
         STAGE_COUNT = 3
+        
+                 
+                
 
     @staticmethod
-    def get_sweep_stage_name(stage: SweepStage):
+    def get_event_name(stage: PeanoEventUsedBySwift):
+        """!
+        
+        Get the name as a string of a sweep stage for a given PeanoEventUsedBySwift enum.
+        
         """
-        Get the name as a string of a sweep stage for a given SweepStage enum.
-        """
-        if stage == AlgorithmStep.SweepStage.TOUCH_VERTEX_FIRST_TIME:
-            return "touchVertexFirstTime"
-        elif stage == AlgorithmStep.SweepStage.CELL_KERNEL:
-            return "cellKernel"
-        elif stage == AlgorithmStep.SweepStage.TOUCH_VERTEX_LAST_TIME:
-            return "touchVertexLastTime"
-        elif stage == AlgorithmStep.SweepStage.STAGE_COUNT:
-            return "count"
-        else:
-            raise ValueError("Unknown algorithm stage", stage)
+        Results = {
+            AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_FIRST_TIME: peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME,
+            AlgorithmStep.PeanoEventUsedBySwift.CELL_KERNEL:             "cellKernel",
+            AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_LAST_TIME:  peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME,
+            AlgorithmStep.PeanoEventUsedBySwift.STAGE_COUNT:             "count",
+            }
+        return Results[stage]
+    
 
     def __init__(
         self,
