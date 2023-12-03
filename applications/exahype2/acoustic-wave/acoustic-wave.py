@@ -22,8 +22,6 @@ plot_interval = end_time / 100
 rho = 2.7
 wave_speed = 6.0
 sigma = 0.1149
-t0 = 0.7
-M0 = 1000.0
 
 scenarios = [
     "PointExplosion",
@@ -518,8 +516,6 @@ my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 my_project.constants.define_value("RHO", str(rho))
 my_project.constants.define_value("WAVE_SPEED", str(wave_speed))
 my_project.constants.define_value("SIGMA", str(sigma))
-my_project.constants.define_value("t0", str(t0))
-my_project.constants.define_value("M0", str(M0))
 my_project.constants.define_value("SCENARIO", str(args.scenario))
 my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
 

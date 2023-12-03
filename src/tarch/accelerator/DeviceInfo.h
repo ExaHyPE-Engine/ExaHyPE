@@ -25,7 +25,7 @@ namespace tarch::accelerator {
     "Free Memory",
     "Clock Frequency",
     "Compute Units",
-    "GPU-GPU Copy"};
+    "Bandwidth"};
 
   /**
    * @brief Struct representing benchmark results in nanoseconds.
@@ -60,7 +60,7 @@ namespace tarch::accelerator {
    */
   constexpr uint64_t repeats    = 10;
   constexpr size_t   alloc_size = 1024*1024*1024;
-  constexpr size_t   N          = alloc_size / sizeof(double); // 1GB, Ensure the number divides the block size 256 without remainder for CUDA backend
+  constexpr size_t   N          = alloc_size / sizeof(double); // 1 GB, Ensure the number divides the block size 256 without remainder for CUDA backend
 
   static tarch::logging::Log _log("tarch::accelerator");
 
@@ -74,8 +74,8 @@ namespace tarch::accelerator {
    * belongs to one device, and one row belongs to one Property).
    *
    * Is the CUDA API is available it will be always prefered as it provides the most information
-   * alongside sycl. As of July 23, ISO C++ and OpenMP GPU Offloading hides almost any information
-   * available from the user
+   * alongside SYCL. As of July 23, C++ and OpenMP GPU Offloading hides almost any information
+   * available from the user.
    *
    * @return The device information as a Matrix (vector<vector>) of strings.
    * @see tarch::accelerator::cpp::queryDeviceInformation
@@ -179,7 +179,6 @@ namespace tarch::accelerator {
    *
    * This function takes a vector of benchmark results (one result struct per GPU)
    * and updates the corresponding string representations in the already initialized propertyMatrixs
-   *
    *
    * @param benchmarkResults The vector of benchmark results to parse.
    * @param benchmarkResultsStringRepresentations The property matrix to update with the string representations.

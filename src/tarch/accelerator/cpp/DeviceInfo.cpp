@@ -17,7 +17,7 @@ namespace tarch::accelerator::cpp {
   }
 
   void printDeviceInformation([[maybe_unused]] std::vector<std::vector<std::string>>& propertyMatrix) {
-    logInfo("printDeviceInformation()", "Iso cpp accelerator back-end has no means to query the number of accelerators' properties");
+    logInfo("printDeviceInformation()", "C++ accelerator backend has no means to query the number of accelerators' properties");
     std::string deviceInfoStr = tarch::accelerator::parseMatrix(propertyMatrix, 1);
     logInfo("printDeviceInformation()", "\n" << deviceInfoStr);
   }
@@ -32,8 +32,8 @@ namespace tarch::accelerator::cpp {
   }
 
   std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks() {
-    logInfo("runBenchmarks()", "Running benchmarks with ISO C++ backend");
-    logInfo("runBenchmarks()", "ISO C++ does not expose devices");
+    logInfo("runBenchmarks()", "Running benchmarks with C++ accelerator backend");
+    logInfo("runBenchmarks()", "C++ does not expose devices");
 
     constexpr uint64_t                                            repeats = tarch::accelerator::repeats;
     std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> benchmarkResults(1, {0});

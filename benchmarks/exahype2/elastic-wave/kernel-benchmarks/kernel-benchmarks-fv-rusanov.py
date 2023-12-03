@@ -191,8 +191,6 @@ my_project.constants.export_boolean(
 my_project.constants.define_value("RHO", str(1.0))
 my_project.constants.define_value("P_WAVE_SPEED", str(1.0))
 my_project.constants.define_value("S_WAVE_SPEED", str(1.0))
-my_project.constants.define_value("t0", str(1.0))
-my_project.constants.define_value("M0", str(1.0))
 
 os.system(
     "cp {} KernelBenchmarksFVRusanov-main.cpp".format(
