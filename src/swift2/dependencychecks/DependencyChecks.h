@@ -53,8 +53,7 @@ namespace swift2 {
       const Particle*                                             particle,
       typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated    algorithmStep,
       typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
-      const int                                                   errors,
-      const std::string                                           call_identifier
+      const int                                                   errors
     );
 
     template <typename Particle>
@@ -62,8 +61,7 @@ namespace swift2 {
       const Particle*                                             particle,
       typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated    initStep,
       typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
-      const int                                                   errors,
-      const std::string                                           call_identifier
+      const int                                                   errors
     );
 
 
@@ -100,7 +98,7 @@ namespace swift2 {
       const Marker&                                                                             marker,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
-      bool                                                                                      stepMovedParticle,
+      Policy                                                                                                               policy,
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
     );
 
@@ -127,7 +125,7 @@ namespace swift2 {
       const Marker&                                                                          marker,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated   initStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift sweepStageMarkerEnum,
-      bool                                                                                   stepMovedParticle,
+      Policy                                                                                                            policy,
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
     );
 

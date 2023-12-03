@@ -239,7 +239,6 @@ Particle properties:
         )
         self.data.add_attribute(step_name_enum)
 
-
         # add (flattened) array for flags
         number_of_updates = dastgen2.attributes.IntegerArray(
             self.DependencyChecks_Attribute_Prefix + step_type_name + "Updates",
@@ -257,41 +256,44 @@ Particle properties:
 
         # String template for dependency check call
         check_template_cell_operation = """
-  ::swift2::dependencychecks::check{STEP_TYPE}(localParticles,
+  ::swift2::dependencychecks::check{STEP_TYPE}(
+                  localParticles,
                   marker,
-                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{0},
-                  globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
-                  &{2}
+                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
+                  globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
+                  &{CHECK_FUNCTION}
   );
 """
 
         check_template_vertex_operation = """
-  ::swift2::dependencychecks::check{STEP_TYPE}(assignedParticles,
+  ::swift2::dependencychecks::check{STEP_TYPE}(
+                  assignedParticles,
                   marker,
-                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{0},
-                  globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
-                  &{2}
+                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
+                  globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
+                  &{CHECK_FUNCTION}
   );
 """
 
-        # String template for marking a step/stage call
         mark_template_cell_operation = """
-  ::swift2::dependencychecks::mark{STEP_TYPE}(localParticles,
+  ::swift2::dependencychecks::mark{STEP_TYPE}(
+                  localParticles,
                   marker,
-                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{0},
-                  globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
-                  {2},
-                  &{3}
+                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
+                  globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
+                  ::swift2::dependencychecks::Policy::TouchAtMostOnce_MaskOutOtherwise,
+                  &{CHECK_FUNCTION}
   );
 """
 
         mark_template_vertex_operation = """
-  ::swift2::dependencychecks::mark{STEP_TYPE}(assignedParticles,
+  ::swift2::dependencychecks::mark{STEP_TYPE}(
+                  assignedParticles,
                   marker,
-                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{0},
-                  globaldata::{NAME}::""" + peano4_event_enum.get_accessor_name() + """::{1},
-                  {2},
-                  &{3}
+                  globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
+                  globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
+                  ::swift2::dependencychecks::Policy::TouchFirstUsage_MaskOutAfterwards,
+                  &{CHECK_FUNCTION}
   );
 """
 
@@ -302,18 +304,6 @@ Particle properties:
   );
 """
                                                                     
-        # @todo Weg machen                                                            
-        #check_template_vertex_operation_local_particles_after_sweep = (
-        #    check_template_vertex_operation_local_particles_after_sweep.replace(
-        #        "{NAME}", self.name
-        #    )
-        #)
-        #check_template_vertex_operation_local_particles_after_sweep = (
-        #    check_template_vertex_operation_local_particles_after_sweep.replace(
-        #        "{STEP_TYPE}", step_type_name
-        #    )
-        #)
-
         # Keep track of steps that move particles. They will corrupt the list of
         # local particles, as the particles will need to be sorted and sieved again.
         # See documentation in Toolbox/Particles/Mesh Traversal for details.
@@ -325,21 +315,22 @@ Particle properties:
 
         for i, step in enumerate(steps):
             d = {
-                "NAME":       self.name,
-                "STEP_TYPE":  step_type_name,
-                "STEP_NAME":  step.name
+                "NAME":                self.name,
+                "STEP_TYPE":           step_type_name,
+                "STEP_NAME":           step.name,
+                "PEANO4_EVENT_TYPE":   peano4_event_enum.get_accessor_name(),
+                "CHECK_FUNCTION":      None,
+                "EVENT":               None,
             }
             
             # first determine which type of algorithm step we have. Depending on its
             # effects and dependencies, we need to use a different function to check
             # whether a particle should be worked on.
-            check_function = None
-
             if (
                 step.effect
                 == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
             ):
-                check_function = "::swift2::kernels::localParticleCanBeMoved"
+                d[ "CHECK_FUNCTION_TEMPLATE" ] = "::swift2::kernels::localParticleCanBeMoved"
                 step_moves_particles = 2
             elif (
                 step.effect
@@ -348,11 +339,11 @@ Particle properties:
                 step_moves_particles = 2
                 raise NotImplementedError
             elif step.effect == AlgorithmStep.Effect.ALTER_LOCAL_STATE:
-                check_function = "::swift2::kernels::localParticleCanBeWorkedOn{STAGE}"
+                d[ "CHECK_FUNCTION_TEMPLATE" ] = "::swift2::kernels::localParticleCanBeWorkedOn{STAGE}"
             elif step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE:
-                check_function = "::swift2::kernels::localParticleNoRestrictions"
+                d[ "CHECK_FUNCTION_TEMPLATE" ] = "::swift2::kernels::localParticleNoRestrictions"
 
-            if check_function is None:
+            if d[ "CHECK_FUNCTION_TEMPLATE" ] is None:
                 raise ValueError(
                     "Got check_function == None for step",
                     step.name,
@@ -360,6 +351,7 @@ Particle properties:
                     step.effect,
                 )
 
+# @todo Think aboutthis
             step_moved_particle_string = "false"
             if step_moves_particles > 0:
                 step_moved_particle_string = "true"
@@ -367,15 +359,17 @@ Particle properties:
 
             # TOUCH VERTEX FIRST TIME
             # -----------------------
-            stage = AlgorithmStep.get_event_name(
+            d[ "EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_FIRST_TIME
             )
-            check_function_full_name = check_function.replace("{STAGE}", "VertexKernel")
+            d[ "CHECK_FUNCTION" ] = d[ "CHECK_FUNCTION_TEMPLATE" ].replace("{STAGE}", "VertexKernel")
 
             if step.touch_vertex_first_time_kernel is None:
                 step.touch_vertex_first_time_kernel = ""
 
-            # mark the step and stage we're doing before any actual content is called
+
+# @todo            
+#                        step_moved_particle_string,
             if i == 0:
                 # Only exception is first AlgorithmStep: There, first re-set
                 # all counters
@@ -383,94 +377,62 @@ Particle properties:
                     "\n  ::swift2::dependencychecks::clearDependencyChecks"
                     + step_type_name
                     + "(assignedParticles);\n"
-                    + mark_template_vertex_operation.format(
-                        step.name,
-                        stage,
-                        step_moved_particle_string,
-                        check_function_full_name,
-                        **d
-                    )
+                    + mark_template_vertex_operation.format(**d)
                     + step.touch_vertex_last_time_kernel
                 )
             else:
                 step.touch_vertex_first_time_kernel = (
-                    mark_template_vertex_operation.format(
-                        step.name,
-                        stage,
-                        step_moved_particle_string,
-                        check_function_full_name,
-                        **d,
-                    )
+                    mark_template_vertex_operation.format(**d)
                     + step.touch_vertex_first_time_kernel
                 )
 
             # Finally, add the dependency check *after* the actual function call
             step.touch_vertex_first_time_kernel += (
-                check_template_vertex_operation.format(
-                    step.name, stage, 
-                    check_function_full_name,
-                    **d,
-                )
+                check_template_vertex_operation.format(**d)
             )
 
             # CELL_KERNEL
             # -----------
-            stage = AlgorithmStep.get_event_name(
+            d[ "EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.CELL_KERNEL
             )
-            check_function_full_name = check_function.replace("{STAGE}", "CellKernel")
+            d[ "CHECK_FUNCTION" ] = d[ "CHECK_FUNCTION_TEMPLATE" ].replace("{STAGE}", "CellKernel")
 
             if step.cell_kernel is None:
                 step.cell_kernel = ""
 
             # mark the step and stage we're doing before any actual content is called
+# @todo            
+#                    step_moved_particle_string,
             step.cell_kernel = (
-                mark_template_cell_operation.format(
-                    step.name,
-                    stage,
-                    step_moved_particle_string,
-                    check_function_full_name,
-                    **d,
-                )
+                mark_template_cell_operation.format(**d)
                 + step.cell_kernel
             )
 
             # Now add the dependency check *after* the actual function call
-            step.cell_kernel += check_template_cell_operation.format(
-                step.name, stage, 
-                check_function_full_name,
-                **d,
-            )
+            step.cell_kernel += check_template_cell_operation.format(**d)
 
             # TOUCH VERTEX LAST TIME
             # ----------------------
-            stage = AlgorithmStep.get_event_name(
+            d[ "EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_LAST_TIME
             )
-            check_function_full_name = check_function.replace("{STAGE}", "VertexKernel")
+            d[ "CHECK_FUNCTION" ] = d[ "CHECK_FUNCTION_TEMPLATE" ].replace("{STAGE}", "VertexKernel")
 
             if step.touch_vertex_last_time_kernel is None:
                 step.touch_vertex_last_time_kernel = ""
 
             # mark the step and stage we're doing before any actual content is called
+# @todo            
+#                    step_moved_particle_string,
             step.touch_vertex_last_time_kernel = (
-                mark_template_vertex_operation.format(
-                    step.name,
-                    stage,
-                    step_moved_particle_string,
-                    check_function_full_name,
-                    **d,
-                )
+                mark_template_vertex_operation.format(**d)
                 + step.touch_vertex_last_time_kernel
             )
 
             # Now add the dependency check *after* the actual function call
             step.touch_vertex_last_time_kernel += (
-                check_template_vertex_operation.format(
-                    step.name, stage, 
-                    check_function_full_name,
-                    **d,
-                )
+                check_template_vertex_operation.format(**d)
             )
 
             # touch vertex last time is special: Add additional dependency check
@@ -515,12 +477,9 @@ Particle properties:
 
         # First add enum to particle class for each sweep stage. These are identical
         # for both algorithm steps and initialisation steps.
-        stage_name_list = [
-            AlgorithmStep.get_event_name(s) for s in AlgorithmStep.PeanoEventUsedBySwift
-        ]
         peano4_event_enum = dastgen2.attributes.Enumeration(
             self.DependencyChecks_Attribute_Prefix + "PeanoEventUsedBySwift",
-            stage_name_list,
+            [ AlgorithmStep.get_event_name(s) for s in AlgorithmStep.PeanoEventUsedBySwift ],
             ifdefs=ifdefs,
         )
         self.data.add_attribute(peano4_event_enum)
