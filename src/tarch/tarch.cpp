@@ -1,4 +1,6 @@
 #include "tarch.h"
+
+#include "config.h"
 #include "tarch/logging/Log.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
