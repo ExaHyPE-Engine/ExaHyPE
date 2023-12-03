@@ -4,16 +4,14 @@
 #include <iostream>
 
 
-
-
-#if PeanoDebug==0
+#if PeanoDebug == 0
 #else
 template <typename Particle>
 static std::string swift2::dependencychecks::outputParticle(
-  const Particle*                                             particle,
-  typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated    algorithmStep,
+  const Particle*                                                                        particle,
+  typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStep,
   typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
-  const int                                                   errors
+  const int                                                                              errors
 ) {
 
   using PartType = std::remove_pointer<Particle>::type;
@@ -24,9 +22,10 @@ static std::string swift2::dependencychecks::outputParticle(
 
   std::ostringstream msg;
 
-  msg <<  "-----------------------------------------" << std::endl;
-  msg <<  "Particle " << particle->getPartid() << " - found " << errors << " dependency error(s)" << std::endl;
-  msg <<  "Failed at " << PartType::toString(algorithmStep) << " / " << PartType::toString(sweepStageMarkerEnum) << std::endl;
+  msg << "-----------------------------------------" << std::endl;
+  msg << "Particle " << particle->getPartid() << " - found " << errors << " dependency error(s)" << std::endl;
+  msg << "Failed at " << PartType::toString(algorithmStep) << " / " << PartType::toString(sweepStageMarkerEnum)
+      << std::endl;
 
   constexpr int ColumnWidth = 60;
 
@@ -35,32 +34,33 @@ static std::string swift2::dependencychecks::outputParticle(
   msg << std::setw(ColumnWidth) << std::left << "Algorithm step";
   for (int s = 0; s < nstages; s++) {
     // all stage names that we account for
-    msg << std::setw(ColumnWidth) << PartType::toString(static_cast<PartType::DependencyChecksPeanoEventUsedBySwift>(s));
+    msg << std::setw(ColumnWidth
+    ) << PartType::toString(static_cast<PartType::DependencyChecksPeanoEventUsedBySwift>(s));
   }
 
   // write out what particle has actually done
   int i = 0;
   for (int a = 0; a < nsteps; a++) {
     // write out algorithm step name
-    msg << std::endl << std::setw(ColumnWidth)
-        << std::setw(ColumnWidth) << std::left << PartType::toString(static_cast<PartType::DependencyChecksAlgorithmStepLastUpdated>(a));
+    msg
+      << std::endl
+      << std::setw(ColumnWidth) << std::setw(ColumnWidth) << std::left
+      << PartType::toString(static_cast<PartType::DependencyChecksAlgorithmStepLastUpdated>(a));
 
     // write out counters for sweep stages of that algorithm step
     for (int s = 0; s < nstages; s++) {
-      assertion( particle->getDependencyChecksAlgorithmStepUpdates(i) >= 0 );
+      assertion(particle->getDependencyChecksAlgorithmStepUpdates(i) >= 0);
       std::string state;
-      if (particle->getDependencyChecksAlgorithmStepUpdates(i)==0) {
-        state  = "no updates";
-      }
-      else {
-        state  = "updated (" + std::to_string(particle->getDependencyChecksAlgorithmStepUpdates(i)) + "x)";
+      if (particle->getDependencyChecksAlgorithmStepUpdates(i) == 0) {
+        state = "no updates";
+      } else {
+        state = "updated (" + std::to_string(particle->getDependencyChecksAlgorithmStepUpdates(i)) + "x)";
       }
 
-      assertion( particle->getDependencyChecksAlgorithmStepMaskOuts(i) >= 0 );
-      if (particle->getDependencyChecksAlgorithmStepMaskOuts(i)==0) {
+      assertion(particle->getDependencyChecksAlgorithmStepMaskOuts(i) >= 0);
+      if (particle->getDependencyChecksAlgorithmStepMaskOuts(i) == 0) {
         state += ", never masked out";
-      }
-      else {
+      } else {
         state += ", masked out (" + std::to_string(particle->getDependencyChecksAlgorithmStepMaskOuts(i)) + "x)";
       }
 
@@ -77,10 +77,10 @@ static std::string swift2::dependencychecks::outputParticle(
 
 template <typename Particle>
 static std::string swift2::dependencychecks::outputParticle(
-  const Particle*                                             particle,
-  typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated    algorithmStep,
-  typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
-  const int                                                   errors
+  const Particle*                                                                     particle,
+  typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated   algorithmStep,
+  typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift sweepStageMarkerEnum,
+  const int                                                                           errors
 ) {
 
   using PartType = std::remove_pointer<Particle>::type;
@@ -91,9 +91,10 @@ static std::string swift2::dependencychecks::outputParticle(
 
   std::ostringstream msg;
 
-  msg <<  "-----------------------------------------" << std::endl;
-  msg <<  "Particle " << particle->getPartid() << " - found " << errors << " dependency error(s)" << std::endl;
-  msg <<  "Failed at " << PartType::toString(algorithmStep) << " / " << PartType::toString(sweepStageMarkerEnum) << std::endl;
+  msg << "-----------------------------------------" << std::endl;
+  msg << "Particle " << particle->getPartid() << " - found " << errors << " dependency error(s)" << std::endl;
+  msg << "Failed at " << PartType::toString(algorithmStep) << " / " << PartType::toString(sweepStageMarkerEnum)
+      << std::endl;
 
   constexpr int ColumnWidth = 60;
 
@@ -102,32 +103,33 @@ static std::string swift2::dependencychecks::outputParticle(
   msg << std::setw(ColumnWidth) << std::left << "Algorithm step";
   for (int s = 0; s < nstages; s++) {
     // all stage names that we account for
-    msg << std::setw(ColumnWidth) << PartType::toString(static_cast<PartType::DependencyChecksPeanoEventUsedBySwift>(s));
+    msg << std::setw(ColumnWidth
+    ) << PartType::toString(static_cast<PartType::DependencyChecksPeanoEventUsedBySwift>(s));
   }
 
   // write out what particle has actually done
   int i = 0;
   for (int a = 0; a < nsteps; a++) {
     // write out algorithm step name
-    msg << std::endl << std::setw(ColumnWidth)
-        << std::setw(ColumnWidth) << std::left << PartType::toString(static_cast<PartType::DependencyChecksInitStepLastUpdated>(a));
+    msg
+      << std::endl
+      << std::setw(ColumnWidth) << std::setw(ColumnWidth) << std::left
+      << PartType::toString(static_cast<PartType::DependencyChecksInitStepLastUpdated>(a));
 
     // write out counters for sweep stages of that algorithm step
     for (int s = 0; s < nstages; s++) {
-      assertion( particle->getDependencyChecksInitStepUpdates(i) >= 0 );
+      assertion(particle->getDependencyChecksInitStepUpdates(i) >= 0);
       std::string state;
-      if (particle->getDependencyChecksInitStepUpdates(i)==0) {
-        state  = "no updates";
-      }
-      else {
-        state  = "updated (" + std::to_string(particle->getDependencyChecksInitStepUpdates(i)) + "x)";
+      if (particle->getDependencyChecksInitStepUpdates(i) == 0) {
+        state = "no updates";
+      } else {
+        state = "updated (" + std::to_string(particle->getDependencyChecksInitStepUpdates(i)) + "x)";
       }
 
-      assertion( particle->getDependencyChecksInitStepMaskOuts(i) >= 0 );
-      if (particle->getDependencyChecksInitStepMaskOuts(i)==0) {
+      assertion(particle->getDependencyChecksInitStepMaskOuts(i) >= 0);
+      if (particle->getDependencyChecksInitStepMaskOuts(i) == 0) {
         state += ", never masked out";
-      }
-      else {
+      } else {
         state += ", masked out (" + std::to_string(particle->getDependencyChecksInitStepMaskOuts(i)) + "x)";
       }
 
@@ -144,11 +146,13 @@ static std::string swift2::dependencychecks::outputParticle(
 
 template <typename ParticleContainer, typename Marker>
 static void swift2::dependencychecks::markAlgorithmStep(
-  const ParticleContainer&                                                                                             localParticles,
-  const Marker&                                                                                                        marker,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStep,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift    action,
-  Policy                                                                                                               policy,
+  const ParticleContainer& localParticles,
+  const Marker&            marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated
+    algorithmStep,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+         action,
+  Policy policy,
   bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
 ) {
 
@@ -169,8 +173,7 @@ static void swift2::dependencychecks::markAlgorithmStep(
       particle->setDependencyChecksAlgorithmStepUpdates(
         index_this_stage, particle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage] + 1
       );
-    }
-    else {
+    } else {
       particle->setDependencyChecksAlgorithmStepMaskOuts(
         index_this_stage, particle->getDependencyChecksAlgorithmStepMaskOuts()[index_this_stage] + 1
       );
@@ -192,8 +195,7 @@ static void swift2::dependencychecks::markAlgorithmStep(
 
     assertion1(
       policy != Policy::TouchAtMostOnce_MaskOutOtherwise
-      or
-      (particle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage]<=1 and particle->getDependencyChecksAlgorithmStepMaskOuts()[index_this_stage]>=0),
+        or (particle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage] <= 1 and particle->getDependencyChecksAlgorithmStepMaskOuts()[index_this_stage] >= 0),
       outputParticle(
         particle,
         algorithmStep,
@@ -207,11 +209,13 @@ static void swift2::dependencychecks::markAlgorithmStep(
 
 template <typename ParticleContainer, typename Marker>
 static void swift2::dependencychecks::markInitStep(
-  const ParticleContainer&                                                                                          localParticles,
-  const Marker&                                                                                                     marker,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated   initStep,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift action,
-  Policy                                                                                                            policy,
+  const ParticleContainer& localParticles,
+  const Marker&            marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+    initStep,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+         action,
+  Policy policy,
   bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
 ) {
 
@@ -232,8 +236,7 @@ static void swift2::dependencychecks::markInitStep(
       particle->setDependencyChecksInitStepUpdates(
         index_this_stage, particle->getDependencyChecksInitStepUpdates()[index_this_stage] + 1
       );
-    }
-    else {
+    } else {
       particle->setDependencyChecksInitStepMaskOuts(
         index_this_stage, particle->getDependencyChecksInitStepMaskOuts()[index_this_stage] + 1
       );
@@ -256,8 +259,7 @@ static void swift2::dependencychecks::markInitStep(
 
     assertion1(
       policy != Policy::TouchAtMostOnce_MaskOutOtherwise
-      or
-      (particle->getDependencyChecksInitStepUpdates()[index_this_stage]<=1 and particle->getDependencyChecksInitStepMaskOuts()[index_this_stage]>=0),
+        or (particle->getDependencyChecksInitStepUpdates()[index_this_stage] <= 1 and particle->getDependencyChecksInitStepMaskOuts()[index_this_stage] >= 0),
       outputParticle(
         particle,
         initStep,
@@ -340,10 +342,12 @@ static int swift2::dependencychecks::checkFutureStages(
 
 template <typename ParticleContainer, typename Marker>
 static void swift2::dependencychecks::checkAlgorithmStep(
-  const ParticleContainer&                                                                  localParticles,
-  const Marker&                                                                             marker,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStep,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift    action,
+  const ParticleContainer& localParticles,
+  const Marker&            marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated
+    algorithmStep,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+    action,
   bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
 ) {
 
@@ -364,42 +368,28 @@ static void swift2::dependencychecks::checkAlgorithmStep(
     errors = checkPastStages(algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals1(
-      errors, 0,
-      outputParticle(
-        particle,
-        algorithmStep,
-        action,
-        errors
-      )
-    );
+    assertionEquals1(errors, 0, outputParticle(particle, algorithmStep, action, errors));
 
     errors = checkFutureStages(algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals1(
-      errors, 0,
-      outputParticle(
-        particle,
-        algorithmStep,
-        action,
-        errors
-      )
-    );
+    assertionEquals1(errors, 0, outputParticle(particle, algorithmStep, action, errors));
   }
 }
 
 
 template <typename ParticleContainer>
 static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTimeAlgorithmStep(
-  const ParticleContainer&                                                                  activeParticles,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStep
+  const ParticleContainer& activeParticles,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated
+    algorithmStep
 ) {
 
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int algorithmStepMarker = static_cast<int>(algorithmStep);
-  const int touchVertexLastTime = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime);
+  const int touchVertexLastTime = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime
+  );
 
   const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
   const int nsteps  = static_cast<int>(PartType::DependencyChecksAlgorithmStepLastUpdated::count);
@@ -413,12 +403,10 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
 
     // If there are any errors, print out a detailed report and exit.
     assertionEquals1(
-      errors, 0,
+      errors,
+      0,
       outputParticle(
-        particle,
-        algorithmStep,
-        PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime,
-        errors
+        particle, algorithmStep, PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime, errors
       )
     );
 
@@ -427,12 +415,10 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
 
     // If there are any errors, print out a detailed report and exit.
     assertionEquals1(
-      errors, 0,
+      errors,
+      0,
       outputParticle(
-        particle,
-        algorithmStep,
-        PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime,
-        errors
+        particle, algorithmStep, PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime, errors
       )
     );
   }
@@ -441,10 +427,12 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
 
 template <typename ParticleContainer, typename Marker>
 static void swift2::dependencychecks::checkInitStep(
-  const ParticleContainer&                                                               localParticles,
-  const Marker&                                                                          marker,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated  initStep,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift action,
+  const ParticleContainer& localParticles,
+  const Marker&            marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+    initStep,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+    action,
   bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
 ) {
 
@@ -465,39 +453,28 @@ static void swift2::dependencychecks::checkInitStep(
     errors = checkPastStages(initStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals1(
-      errors, 0,
-      outputParticle(
-        particle, initStep, action, errors
-      )
-    );
+    assertionEquals1(errors, 0, outputParticle(particle, initStep, action, errors));
 
     errors = checkFutureStages(initStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals1(
-      errors, 0,
-      outputParticle(
-        particle,
-        initStep,
-        action,
-        errors
-      )
-    );
+    assertionEquals1(errors, 0, outputParticle(particle, initStep, action, errors));
   }
 }
 
 
 template <typename ParticleContainer>
 static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTimeInitStep(
-  const ParticleContainer&                                                             activeParticles,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated  initStep
+  const ParticleContainer& activeParticles,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+    initStep
 ) {
 
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int initStepMarker      = static_cast<int>(initStep);
-  const int touchVertexLastTime = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime);
+  const int touchVertexLastTime = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime
+  );
 
   const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
   const int nsteps  = static_cast<int>(PartType::DependencyChecksInitStepLastUpdated::count);
@@ -510,26 +487,18 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
 
     // If there are any errors, print out a detailed report and exit.
     assertionEquals1(
-      errors, 0,
-      outputParticle(
-        particle,
-        initStep,
-        PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime,
-        errors
-      )
+      errors,
+      0,
+      outputParticle(particle, initStep, PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime, errors)
     );
 
     errors = checkFutureStages(initStepMarker, touchVertexLastTime, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
     assertionEquals1(
-      errors, 0,
-      outputParticle(
-        particle,
-        initStep,
-        PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime,
-        errors
-      )
+      errors,
+      0,
+      outputParticle(particle, initStep, PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime, errors)
     );
   }
 }

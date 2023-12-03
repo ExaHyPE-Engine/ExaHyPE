@@ -23,7 +23,9 @@ def concatenate_steps_of_species(
         else:
             per_species_set = current_species_set.particle_model.algorithm_steps()
         for step in per_species_set:
-            result.append((current_species_set, step, species_sets.index(current_species_set)))
+            result.append(
+                (current_species_set, step, species_sets.index(current_species_set))
+            )
     return result
 
 

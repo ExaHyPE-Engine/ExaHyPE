@@ -2,18 +2,15 @@
 
 
 template <typename ParticleSet>
-int swift2::VertexTask<ParticleSet>::TaskTypeId = peano4::parallel::getTaskType( "swift2::VertexTask<ParticleSet>::" );
+int swift2::VertexTask<ParticleSet>::TaskTypeId = peano4::parallel::getTaskType("swift2::VertexTask<ParticleSet>::");
 
 
 template <typename ParticleSet>
 swift2::VertexTask<ParticleSet>::VertexTask(
-  const ParticleSet&  assignedParticles,
-  Functor             functor,
-  bool                fuseAndPortToGPU
+  const ParticleSet& assignedParticles, Functor functor, bool fuseAndPortToGPU
 ):
   tarch::multicore::Task(
-    fuseAndPortToGPU ? TaskTypeId : tarch::multicore::Task::DontFuse,
-    tarch::multicore::Task::DefaultPriority
+    fuseAndPortToGPU ? TaskTypeId : tarch::multicore::Task::DontFuse, tarch::multicore::Task::DefaultPriority
   ),
   _assignedParticles(assignedParticles),
   _functor(functor) {}

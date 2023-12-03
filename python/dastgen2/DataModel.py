@@ -175,7 +175,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         d["ATTRIBUTE_INCLUDES"] = ""
         for attribute in self._attributes:
             d["ATTRIBUTE_INCLUDES"] += attribute.get_includes()
-        
+
         d["UNQUALIFIED_CLASS_NAME"] = dastgen2.get_unqualified_class_name(
             self._full_qualified_name
         )

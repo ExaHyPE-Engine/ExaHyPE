@@ -20,19 +20,19 @@ class UserDefinedType(Attribute):
         initval=None,
         getter_returns_reference=True,
         generate_setter=False,
-        user_type_has_toString_method=True
+        user_type_has_toString_method=True,
     ):
         """!
 
         Create attribute
-    
+
         @param name Name of the attribute
-    
-        @param type Fully qualified type of the attribute as string separated 
+
+        @param type Fully qualified type of the attribute as string separated
           with two colons (::)
-      
-        @param include String which holds the include of the type 
-    
+
+        @param include String which holds the include of the type
+
         For all other attributes see superclass' constructor.
 
         """
@@ -44,11 +44,11 @@ class UserDefinedType(Attribute):
             initval=initval,
             expose_in_header_file=qualifier == Attribute.Qualifier.CONSTEXPR,
         )
-        
-        self._type    = type
+
+        self._type = type
         self._include = include
-        self._getter_returns_reference      = getter_returns_reference
-        self._generate_setter               = generate_setter
+        self._getter_returns_reference = getter_returns_reference
+        self._generate_setter = generate_setter
         self._user_type_has_toString_method = user_type_has_toString_method
         pass
 
@@ -58,23 +58,23 @@ class UserDefinedType(Attribute):
 
         if self._is_static:
             if for_declaration and self._getter_returns_reference:
-                getter = ("get" + accessor_name + "()", "static " + self._type + "&  ") 
+                getter = ("get" + accessor_name + "()", "static " + self._type + "&  ")
             elif for_declaration and not self._getter_returns_reference:
-                getter = ("get" + accessor_name + "()", "static " + self._type ) 
+                getter = ("get" + accessor_name + "()", "static " + self._type)
             elif self._getter_returns_reference:
                 getter = ("get" + accessor_name + "()", self._type + "&  ")
             else:
-                getter = ("get" + accessor_name + "()", self._type )
+                getter = ("get" + accessor_name + "()", self._type)
 
         elif self._is_const_static:
             if for_declaration and self._getter_returns_reference:
                 getter = ("get" + accessor_name + "()", "static " + self._type + "&  ")
             elif for_declaration and not self._getter_returns_reference:
-                getter = ("get" + accessor_name + "()", "static " + self._type )
+                getter = ("get" + accessor_name + "()", "static " + self._type)
             elif self._getter_returns_reference:
                 getter = ("get" + accessor_name + "()", self._type + "&  ")
             else:
-                getter = ("get" + accessor_name + "()", self._type )
+                getter = ("get" + accessor_name + "()", self._type)
 
         elif self._is_const:
             getter = ("get" + accessor_name + "() const", "const " + self._type)
@@ -89,7 +89,10 @@ class UserDefinedType(Attribute):
         methods.append(getter)
 
         # Add a setter method, if it makes sense.
-        if not (self._is_const_static or self._is_const or self._is_constexpr) and self._generate_setter:
+        if (
+            not (self._is_const_static or self._is_const or self._is_constexpr)
+            and self._generate_setter
+        ):
             methods.append(
                 ("set" + accessor_name + "(const " + self._type + "& value)", "void")
             )
@@ -97,25 +100,25 @@ class UserDefinedType(Attribute):
         return methods
 
     def get_plain_C_attributes(self, for_constructor=False):
-        typestring = self._type 
+        typestring = self._type
         namestring = "_" + self._name
 
         # add const/static qualifiers and initialization values, if needed
         if self._is_static:
-            typestring = "inline static " + self._type 
+            typestring = "inline static " + self._type
             if self._initval is not None:
                 namestring += " = " + str(self._initval)
 
         elif self._is_const_static:
-            typestring = "inline const static " + self._type 
+            typestring = "inline const static " + self._type
             namestring += " = " + str(self._initval)
 
         elif self._is_const:
-            typestring = "const " + self._type 
+            typestring = "const " + self._type
             namestring += " = " + str(self._initval)
 
         elif self._is_constexpr:
-            typestring = "constexpr static " + self._type 
+            typestring = "constexpr static " + self._type
             namestring += " = " + str(self._initval)
 
         else:

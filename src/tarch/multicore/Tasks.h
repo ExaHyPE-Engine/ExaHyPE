@@ -5,10 +5,10 @@
 #include <functional>
 #include <limits>
 #include <list>
+#include <set>
 #include <string>
 #include <tuple>
 #include <vector>
-#include <set>
 
 #include "multicore.h"
 #include "tarch/multicore/otter.h"
@@ -276,7 +276,7 @@ namespace tarch {
      *
      */
     void spawnTask(
-      Task* job,
+      Task*                       job,
       const std::set<TaskNumber>& inDependencies = std::set<TaskNumber>(),
       const TaskNumber&           taskNumber     = NoDependencies
     );
@@ -497,11 +497,7 @@ namespace tarch {
        *    equals NoDependencies, we know that noone will ever be able to wait
        *    for this task. In this case, we skip the storing.
        */
-      void spawnTask(
-        Task*                        job,
-        const std::set<TaskNumber>&  inDependencies,
-        const TaskNumber&            taskNumber
-      );
+      void spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber);
 
       /**
        * Wait for other task

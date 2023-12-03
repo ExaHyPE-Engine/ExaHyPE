@@ -9,4 +9,4 @@ import swift2.scenario
 import swift2.particle
 import swift2.actionsets
 
-print( "Swift 2" )
+print("Swift 2")

@@ -17,7 +17,11 @@ import shutil
 Parallelisation_DomainDecomposition = "domain-decomposition"
 Parallelisation_SpawnTasksPerSweep = "task-tree"
 Parallelisation_TaskGraph = "task-graph"
-ParallelisationVariants = [Parallelisation_DomainDecomposition, Parallelisation_SpawnTasksPerSweep, Parallelisation_TaskGraph]
+ParallelisationVariants = [
+    Parallelisation_DomainDecomposition,
+    Parallelisation_SpawnTasksPerSweep,
+    Parallelisation_TaskGraph,
+]
 
 Storage_Scattered = "scattered"
 Storage_ContinuousPerVertex = "continuous-per-vertex"
@@ -30,13 +34,27 @@ SortingVariants = [Sorting_InsertSweeps, Sorting_OnTheFly]
 
 Enable_VectorisationOfAllComparisons = "vectorise-all"
 Enable_VectorisationOfDistanceChecks = "vectorise-distance-checks"
-VectorisationVariants = [Enable_VectorisationOfAllComparisons, Enable_VectorisationOfDistanceChecks]
+VectorisationVariants = [
+    Enable_VectorisationOfAllComparisons,
+    Enable_VectorisationOfDistanceChecks,
+]
 
 
 Choices = (
-      [ x +"." + Storage_Scattered for x in ParallelisationVariants ]
-    + [ x +"." + y + "." + z for x in ParallelisationVariants for y in StorageVariants for z in SortingVariants ]
-    + [ x +"." + y + "." + z + "." + v for x in ParallelisationVariants for y in StorageVariants for z in SortingVariants for v in VectorisationVariants ]
+    [x + "." + Storage_Scattered for x in ParallelisationVariants]
+    + [
+        x + "." + y + "." + z
+        for x in ParallelisationVariants
+        for y in StorageVariants
+        for z in SortingVariants
+    ]
+    + [
+        x + "." + y + "." + z + "." + v
+        for x in ParallelisationVariants
+        for y in StorageVariants
+        for z in SortingVariants
+        for v in VectorisationVariants
+    ]
 )
 
 

@@ -11,9 +11,9 @@ class StepType(Enum):
 
 
 def get_observer_prefix(step_type: StepType):
-    if step_type==StepType.TIME_STEP:
+    if step_type == StepType.TIME_STEP:
         return "Step"
-    elif step_type==StepType.INITIALISATION:
+    elif step_type == StepType.INITIALISATION:
         return "Init"
     else:
         assert False, "not valid switch"

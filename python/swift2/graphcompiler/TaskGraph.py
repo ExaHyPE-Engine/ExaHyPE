@@ -24,23 +24,23 @@ from .Utils import (
 )
 
 
-
 from enum import Enum
 
 
-def clear_task_numbers_for_all_species(mesh_traversals,
-                                       species_set,
-                                       verbose,
-                                       ):
+def clear_task_numbers_for_all_species(
+    mesh_traversals,
+    species_set,
+    verbose,
+):
     """!
-    
-    Add the action set to the first sweep that clears all the task numbers of 
+
+    Add the action set to the first sweep that clears all the task numbers of
     each and every species
-    
+
     """
     for species in species_set:
         action_set_erase_task_markers = peano4.toolbox.api.ClearNumbersOnMesh(
-           species.name
+            species.name
         )
         action_set_erase_task_markers.descend_invocation_order = (
             mesh_traversals[0].lowest_descend_invocation_order() - 1
@@ -48,19 +48,18 @@ def clear_task_numbers_for_all_species(mesh_traversals,
         action_set_erase_task_markers.parallel = True
         mesh_traversals[0].add_action_set(action_set_erase_task_markers)
         if verbose:
-           print(
-               "GRAPH COMPILER DEBUG [clear_task_numbers_for_all_species]: first step clears task markers for particle {} and hence uses the peano4.toolbox.api.ClearNumbersOnMesh action set".format(
-                   species.particle_model.name,
-               )
-           )
-
+            print(
+                "GRAPH COMPILER DEBUG [clear_task_numbers_for_all_species]: first step clears task markers for particle {} and hence uses the peano4.toolbox.api.ClearNumbersOnMesh action set".format(
+                    species.particle_model.name,
+                )
+            )
 
 
 def construct_touch_vertex_first_time_call(
-    current_species_set, 
+    current_species_set,
     touch_vertex_first_time_kernel,
     current_species_index,
-    use_multilevel_dependencies
+    use_multilevel_dependencies,
 ):
     if (
         touch_vertex_first_time_kernel == None
@@ -69,11 +68,11 @@ def construct_touch_vertex_first_time_call(
         return ""
     else:
         d = {
-          "MARKER_NAME":  peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+            "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
                 current_species_set.name
             ),
-          "SPECIES_INDEX": current_species_index,
-          "USE_MULTILEVEL_DEPENDENCIES":     use_multilevel_dependencies
+            "SPECIES_INDEX": current_species_index,
+            "USE_MULTILEVEL_DEPENDENCIES": use_multilevel_dependencies,
         }
         return jinja2.Template(
             """
@@ -124,23 +123,23 @@ def construct_touch_vertex_first_time_call(
 
 
 def construct_touch_cell_first_time_call(
-    current_species_set, 
+    current_species_set,
     touch_cell_first_time_kernel,
     current_species_index,
-    use_multilevel_dependencies
+    use_multilevel_dependencies,
 ):
     if touch_cell_first_time_kernel == None:
         touch_cell_first_time_kernel = ""
-    
+
     d = {
-        "MARKER_NAME":  peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
-           current_species_set.name
+        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+            current_species_set.name
         ),
         "SPECIES_INDEX": current_species_index,
-        "USE_MULTILEVEL_DEPENDENCIES":     use_multilevel_dependencies,
+        "USE_MULTILEVEL_DEPENDENCIES": use_multilevel_dependencies,
     }
     return jinja2.Template(
-            """
+        """
       const ::swift2::TaskNumber taskNumberToBeUsed{
         fineGridCell{{MARKER_NAME}}.getNumber(),
         ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime,
@@ -177,8 +176,8 @@ def construct_touch_cell_first_time_call(
         activeParticles,
           [=](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
             """
-            + touch_cell_first_time_kernel
-            + """
+        + touch_cell_first_time_kernel
+        + """
         },
         false
       );
@@ -189,19 +188,19 @@ def construct_touch_cell_first_time_call(
 
 
 def construct_touch_vertex_last_time_call(
-    current_species_set, 
+    current_species_set,
     touch_vertex_last_time_kernel,
     current_species_index,
     use_multilevel_dependencies,
-    alter_particle_position_or_global_state
+    alter_particle_position_or_global_state,
 ):
     d = {
-      "MARKER_NAME":  peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
-         current_species_set.name
-      ),
-      "SPECIES_INDEX": current_species_index,
-      "USE_MULTILEVEL_DEPENDENCIES":     use_multilevel_dependencies,
-      "ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE": alter_particle_position_or_global_state,
+        "MARKER_NAME": peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.construct_marker_name(
+            current_species_set.name
+        ),
+        "SPECIES_INDEX": current_species_index,
+        "USE_MULTILEVEL_DEPENDENCIES": use_multilevel_dependencies,
+        "ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE": alter_particle_position_or_global_state,
     }
     return jinja2.Template(
         """
@@ -240,8 +239,8 @@ def construct_touch_vertex_last_time_call(
           assignedParticles,
           [=](decltype(assignedParticles)& assignedParticles)->void {
             """
-            + touch_vertex_last_time_kernel
-            + """
+        + touch_vertex_last_time_kernel
+        + """
           },
           false
         );
@@ -275,7 +274,6 @@ def construct_touch_vertex_last_time_call(
       }
     """
     ).render(**d)
-
 
 
 def translate_one_step_of_species_into_mesh_traversal(
@@ -333,7 +331,7 @@ def translate_one_step_of_species_into_mesh_traversal(
 
     @param alter_particle_position: [Bool]
       Inout parameter. We append a new marker to this sequence.
-      
+
     @param current_species_index: Integer
       The number of this species set. So index 0 is the first species type.
 
@@ -376,19 +374,28 @@ def translate_one_step_of_species_into_mesh_traversal(
             action_set_particle_particle_interaction = swift2.actionsets.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
                 particle_set=current_species_set,
                 particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
-                    current_species_set, step.cell_kernel, use_multilevel_dependencies=True
+                    current_species_set,
+                    step.cell_kernel,
+                    use_multilevel_dependencies=True,
                 ),
                 touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
-                    current_species_set, step.touch_vertex_first_time_kernel, use_multilevel_dependencies=True
+                    current_species_set,
+                    step.touch_vertex_first_time_kernel,
+                    use_multilevel_dependencies=True,
                 ),
                 touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                    current_species_set, step.touch_vertex_last_time_kernel, use_multilevel_dependencies=True,alter_particle_position_or_global_state=step.effect!=AlgorithmStep.Effect.ALTER_LOCAL_STATE
+                    current_species_set,
+                    step.touch_vertex_last_time_kernel,
+                    use_multilevel_dependencies=True,
+                    alter_particle_position_or_global_state=step.effect
+                    != AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
-                wait_for_all_tasks_to_finish_after_traversal=step.effect==AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
+                wait_for_all_tasks_to_finish_after_traversal=step.effect
+                == AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
             )
         else:
             if verbose:
@@ -402,19 +409,31 @@ def translate_one_step_of_species_into_mesh_traversal(
             action_set_particle_particle_interaction = swift2.actionsets.UpdateParticle_MultiLevelInteraction_Sets(
                 particle_set=current_species_set,
                 particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
-                    current_species_set, step.cell_kernel, current_species_index, use_multilevel_dependencies=True
+                    current_species_set,
+                    step.cell_kernel,
+                    current_species_index,
+                    use_multilevel_dependencies=True,
                 ),
                 touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
-                    current_species_set, step.touch_vertex_first_time_kernel, current_species_index, use_multilevel_dependencies=True
+                    current_species_set,
+                    step.touch_vertex_first_time_kernel,
+                    current_species_index,
+                    use_multilevel_dependencies=True,
                 ),
                 touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                    current_species_set, step.touch_vertex_last_time_kernel, current_species_index, use_multilevel_dependencies=True,alter_particle_position_or_global_state=step.effect!=AlgorithmStep.Effect.ALTER_LOCAL_STATE
+                    current_species_set,
+                    step.touch_vertex_last_time_kernel,
+                    current_species_index,
+                    use_multilevel_dependencies=True,
+                    alter_particle_position_or_global_state=step.effect
+                    != AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
-                wait_for_all_tasks_to_finish_after_traversal=step.effect==AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
+                wait_for_all_tasks_to_finish_after_traversal=step.effect
+                == AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
             )
         action_set_particle_particle_interaction.descend_invocation_order = (
             new_step.highest_descend_invocation_order() + 1
@@ -435,19 +454,31 @@ def translate_one_step_of_species_into_mesh_traversal(
             action_set_particle_update = swift2.actionsets.UpdateParticle_SingleLevelInteraction_ContiguousParticles(
                 particle_set=current_species_set,
                 particle_cell_update_kernel=construct_touch_cell_first_time_call(
-                    current_species_set, step.cell_kernel,current_species_index, use_multilevel_dependencies=False
+                    current_species_set,
+                    step.cell_kernel,
+                    current_species_index,
+                    use_multilevel_dependencies=False,
                 ),
                 touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
-                    current_species_set, step.touch_vertex_first_time_kernel,current_species_index, use_multilevel_dependencies=False
+                    current_species_set,
+                    step.touch_vertex_first_time_kernel,
+                    current_species_index,
+                    use_multilevel_dependencies=False,
                 ),
                 touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                    current_species_set, step.touch_vertex_last_time_kernel,current_species_index, use_multilevel_dependencies=False,alter_particle_position_or_global_state=step.effect!=AlgorithmStep.Effect.ALTER_LOCAL_STATE
+                    current_species_set,
+                    step.touch_vertex_last_time_kernel,
+                    current_species_index,
+                    use_multilevel_dependencies=False,
+                    alter_particle_position_or_global_state=step.effect
+                    != AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
-                wait_for_all_tasks_to_finish_after_traversal=step.effect==AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
+                wait_for_all_tasks_to_finish_after_traversal=step.effect
+                == AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
             )
             action_set_particle_update.descend_invocation_order = (
                 new_step.highest_descend_invocation_order() + 1
@@ -467,19 +498,31 @@ def translate_one_step_of_species_into_mesh_traversal(
             action_set_particle_update = swift2.actionsets.UpdateParticle_SingleLevelInteraction(
                 particle_set=current_species_set,
                 particle_cell_update_kernel=construct_touch_cell_first_time_call(
-                    current_species_set, step.cell_kernel,current_species_index, use_multilevel_dependencies=False
+                    current_species_set,
+                    step.cell_kernel,
+                    current_species_index,
+                    use_multilevel_dependencies=False,
                 ),
                 touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
-                    current_species_set, step.touch_vertex_first_time_kernel,current_species_index, use_multilevel_dependencies=False
+                    current_species_set,
+                    step.touch_vertex_first_time_kernel,
+                    current_species_index,
+                    use_multilevel_dependencies=False,
                 ),
                 touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                    current_species_set, step.touch_vertex_last_time_kernel,current_species_index, use_multilevel_dependencies=False,alter_particle_position_or_global_state=step.effect!=AlgorithmStep.Effect.ALTER_LOCAL_STATE
+                    current_species_set,
+                    step.touch_vertex_last_time_kernel,
+                    current_species_index,
+                    use_multilevel_dependencies=False,
+                    alter_particle_position_or_global_state=step.effect
+                    != AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 ),
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
-                wait_for_all_tasks_to_finish_after_traversal=step.effect==AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
+                wait_for_all_tasks_to_finish_after_traversal=step.effect
+                == AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
             )
             action_set_particle_update.descend_invocation_order = (
                 new_step.highest_descend_invocation_order() + 1
@@ -590,8 +633,8 @@ def map_onto_separate_mesh_traversals_constructing_task_graph(
         )
 
     for current_entry_from_total_sequence_of_steps in sequence_of_steps:
-        current_species_set           = current_entry_from_total_sequence_of_steps[0]
-        current_step_of_species       = current_entry_from_total_sequence_of_steps[1]
+        current_species_set = current_entry_from_total_sequence_of_steps[0]
+        current_step_of_species = current_entry_from_total_sequence_of_steps[1]
         current_number_of_species_set = current_entry_from_total_sequence_of_steps[2]
 
         assert (
@@ -663,11 +706,11 @@ def map_onto_separate_mesh_traversals_constructing_task_graph(
         alter_particle_position[0] = True
         alter_particle_position[-1] = True
 
-        clear_task_numbers_for_all_species(mesh_traversals,
-                                           get_species_set(sequence_of_steps),
-                                           verbose,
-                                           )
-
+        clear_task_numbers_for_all_species(
+            mesh_traversals,
+            get_species_set(sequence_of_steps),
+            verbose,
+        )
 
     if does_one_species_require_gather(sequence_of_steps):
         add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers(

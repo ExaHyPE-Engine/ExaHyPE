@@ -3,7 +3,6 @@
 #include <string>
 #include <type_traits>
 
-
 #include "swift2/kernels/ParticleState.h"
 
 
@@ -50,18 +49,18 @@ namespace swift2 {
      */
     template <typename Particle>
     static std::string outputParticle(
-      const Particle*                                             particle,
-      typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated    algorithmStep,
+      const Particle*                                                                        particle,
+      typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStep,
       typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
-      const int                                                   errors
+      const int                                                                              errors
     );
 
     template <typename Particle>
     static std::string outputParticle(
-      const Particle*                                             particle,
-      typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated    initStep,
-      typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
-      const int                                                   errors
+      const Particle*                                                                     particle,
+      typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated   initStep,
+      typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift sweepStageMarkerEnum,
+      const int                                                                           errors
     );
 
 
@@ -94,11 +93,13 @@ namespace swift2 {
      */
     template <typename ParticleContainer, typename Marker>
     static void markAlgorithmStep(
-      const ParticleContainer&                                                                  assignedParticles,
-      const Marker&                                                                             marker,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
-      Policy                                                                                                               policy,
+      const ParticleContainer& assignedParticles,
+      const Marker&            marker,
+      typename std::remove_pointer<
+        typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
+      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+             sweepStageMarkerEnum,
+      Policy policy,
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
     );
 
@@ -121,11 +122,13 @@ namespace swift2 {
      */
     template <typename ParticleContainer, typename Marker>
     static void markInitStep(
-      const ParticleContainer&                                                               localParticles,
-      const Marker&                                                                          marker,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated   initStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift sweepStageMarkerEnum,
-      Policy                                                                                                            policy,
+      const ParticleContainer& localParticles,
+      const Marker&            marker,
+      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+        initStepMarkerEnum,
+      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+             sweepStageMarkerEnum,
+      Policy policy,
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
     );
 
@@ -194,10 +197,12 @@ namespace swift2 {
      */
     template <typename ParticleContainer, typename Marker>
     static void checkAlgorithmStep(
-      const ParticleContainer&                                                                  localParticles,
-      const Marker&                                                                             marker,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
+      const ParticleContainer& localParticles,
+      const Marker&            marker,
+      typename std::remove_pointer<
+        typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
+      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+        sweepStageMarkerEnum,
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
     );
 
@@ -226,8 +231,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     static void checkParticlesAssignedToVertexInTouchLastTimeAlgorithmStep(
-      const ParticleContainer&                                                                  assignedParticles,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum
+      const ParticleContainer& assignedParticles,
+      typename std::remove_pointer<
+        typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum
     );
 
 
@@ -253,10 +259,12 @@ namespace swift2 {
      */
     template <typename ParticleContainer, typename Marker>
     static void checkInitStep(
-      const ParticleContainer&                                                               localParticles,
-      const Marker&                                                                          marker,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated   initStepMarkerEnum,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift sweepStageMarkerEnum,
+      const ParticleContainer& localParticles,
+      const Marker&            marker,
+      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+        initStepMarkerEnum,
+      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+        sweepStageMarkerEnum,
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
     );
 
@@ -271,8 +279,9 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     static void checkParticlesAssignedToVertexInTouchLastTimeInitStep(
-      const ParticleContainer&                                                             activeParticles,
-      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated initStepMarkerEnum
+      const ParticleContainer& activeParticles,
+      typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+        initStepMarkerEnum
     );
 
 

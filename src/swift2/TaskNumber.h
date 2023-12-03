@@ -4,15 +4,12 @@
 
 
 #include <functional>
-#include <vector>
-#include <string>
 #include <set>
+#include <string>
 #include <vector>
-#include "tarch/multicore/Tasks.h"
-#include "peano4/datamanagement/VertexMarker.h"
+
 #include "peano4/datamanagement/VertexEnumerator.h"
-
-
+#include "peano4/datamanagement/VertexMarker.h"
 #include "tarch/multicore/Tasks.h"
 
 
@@ -31,59 +28,60 @@ namespace swift2 {
    * Peano tarch::multicore.
    */
   struct TaskNumber {
-    public:
-      enum class TaskAssociation {
-        TouchVertexFirstTime = 0,
-        TouchCellFirstTime   = 1,
-        TouchVertexLastTime  = 2,
-        NumberOfEntries      = 3
-      };
+  public:
+    enum class TaskAssociation {
+      TouchVertexFirstTime = 0,
+      TouchCellFirstTime   = 1,
+      TouchVertexLastTime  = 2,
+      NumberOfEntries      = 3
+    };
 
-      /**
-       * Construct new task number
-       *
-       * @param number0 Typically the "real" task counter, i.e. a unique number
-       *   from a very vast range which distinguishes different task types.
-       *   Pass in ::tarch::multicore::NoDependencies if you want to actually
-       *   construct the object NoDependencies. In this case, the other
-       *   arguments are ignored.
-       * @param number1 Typically the type of mesh entity to which the task is
-       *   tied to.
-       * @param number2 Typically some kind of species or task type counter.
-       */
-      TaskNumber(int number0, TaskAssociation number1, int number2);
+    /**
+     * Construct new task number
+     *
+     * @param number0 Typically the "real" task counter, i.e. a unique number
+     *   from a very vast range which distinguishes different task types.
+     *   Pass in ::tarch::multicore::NoDependencies if you want to actually
+     *   construct the object NoDependencies. In this case, the other
+     *   arguments are ignored.
+     * @param number1 Typically the type of mesh entity to which the task is
+     *   tied to.
+     * @param number2 Typically some kind of species or task type counter.
+     */
+    TaskNumber(int number0, TaskAssociation number1, int number2);
 
-      static constexpr int MaxSpecies = 16;
-      /**
-       * Defines the max indices for each entry in TaskNumber.
-       */
-      static const TaskNumber Max;
-      static const TaskNumber NoDependencies;
+    static constexpr int MaxSpecies = 16;
+    /**
+     * Defines the max indices for each entry in TaskNumber.
+     */
+    static const TaskNumber Max;
+    static const TaskNumber NoDependencies;
 
-      std::string toString() const;
+    std::string toString() const;
 
-      tarch::multicore::TaskNumber flatten() const;
+    tarch::multicore::TaskNumber flatten() const;
 
-      /**
-       * Total order on object. Required to store task numbers in sets.
-       */
-      bool operator<(const TaskNumber& rhs) const;
-      bool operator==(const TaskNumber& rhs) const;
-    private:
-      int              _taskCounter;
-      TaskAssociation  _taskAssociation;
-      int              _taskSpecies;
+    /**
+     * Total order on object. Required to store task numbers in sets.
+     */
+    bool operator<(const TaskNumber& rhs) const;
+    bool operator==(const TaskNumber& rhs) const;
+
+  private:
+    int             _taskCounter;
+    TaskAssociation _taskAssociation;
+    int             _taskSpecies;
   };
 
-  std::string toString( const std::set<TaskNumber>&  numbers );
+  std::string toString(const std::set<TaskNumber>& numbers);
 
   /**
    * Alias around method flatten(). I introduced this one so that both the
    * conversation of a single number and a whole set can be written with the
    * same syntax.
    */
-  int           flatten( const TaskNumber&  numbers );
-  std::set<int> flatten( const std::set<TaskNumber>&  numbers );
+  int           flatten(const TaskNumber& numbers);
+  std::set<int> flatten(const std::set<TaskNumber>& numbers);
 
   /**
    * Get numbers of parent vertices
@@ -99,19 +97,19 @@ namespace swift2 {
    */
   template <typename Vertex>
   std::set<::swift2::TaskNumber> getVertexNumbersOfParentVertices(
-    const peano4::datamanagement::VertexMarker&       marker,
-    peano4::datamanagement::VertexEnumerator<Vertex>  coarseGridVertices,
-    ::swift2::TaskNumber::TaskAssociation             taskAssociation,
-    int                                               species
+    const peano4::datamanagement::VertexMarker&      marker,
+    peano4::datamanagement::VertexEnumerator<Vertex> coarseGridVertices,
+    ::swift2::TaskNumber::TaskAssociation            taskAssociation,
+    int                                              species
   );
 
   template <typename Vertex>
   std::set<::swift2::TaskNumber> getVertexNumbersOfParentVertices(
-    tarch::la::Vector< Dimensions, int >              position,
-    peano4::datamanagement::VertexEnumerator<Vertex>  coarseGridVertices,
-    ::swift2::TaskNumber::TaskAssociation             taskAssociation,
-    int                                               species,
-    int                                               dimension
+    tarch::la::Vector<Dimensions, int>               position,
+    peano4::datamanagement::VertexEnumerator<Vertex> coarseGridVertices,
+    ::swift2::TaskNumber::TaskAssociation            taskAssociation,
+    int                                              species,
+    int                                              dimension
   );
 
   /**
@@ -125,13 +123,15 @@ namespace swift2 {
    * be at hand anymore. Therefore, we have to memorise these dependencies on
    * the fine grid, and then use this memorised info later.
    */
-  using PendingDependencies=std::set< std::pair<::swift2::TaskNumber,::swift2::TaskNumber> >;
+  using PendingDependencies = std::set<std::pair<::swift2::TaskNumber, ::swift2::TaskNumber>>;
 
   /**
    * Extract set of dependencies for given task
    */
-  std::set<::swift2::TaskNumber>  getDependenciesForTask( const ::swift2::TaskNumber&  task, PendingDependencies&  pendingDependencies );
-}
+  std::set<::swift2::TaskNumber> getDependenciesForTask(
+    const ::swift2::TaskNumber& task, PendingDependencies& pendingDependencies
+  );
+} // namespace swift2
 
 
 #include "TaskNumber.cpph"

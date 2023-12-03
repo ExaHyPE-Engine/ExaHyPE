@@ -38,10 +38,7 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 }
 
 
-void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
-  tarch::multicore::native::spawnTask(job);
-}
-
+void tarch::multicore::native::spawnTask(Task* job, int in, int out) { tarch::multicore::native::spawnTask(job); }
 
 
 /**
@@ -92,7 +89,7 @@ void tarch::multicore::native::processFusedTask(
 }
 
 
-//void tarch::multicore::native::drainTaskQueues() { tarch::multicore::getHostSYCLQueue().wait(); }
+// void tarch::multicore::native::drainTaskQueues() { tarch::multicore::getHostSYCLQueue().wait(); }
 
 
 void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
@@ -100,12 +97,14 @@ void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDepend
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+void tarch::multicore::native::spawnTaskWithDependencies(
+  Task* job, const std::vector<int>& inDependencies, int taskNumber
+) {
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
+void tarch::multicore::native::waitForTasks(const std::vector<int>& inDependencies) {}
 
-void tarch::multicore::native::waitForTask( int taskNumber ){}
+void tarch::multicore::native::waitForTask(int taskNumber) {}
 #endif

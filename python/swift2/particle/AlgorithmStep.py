@@ -64,14 +64,14 @@ class AlgorithmStep(object):
 
     class PeanoEventUsedBySwift(IntEnum):
         """!
-        
-        Enumeration of different @ref peano_action_sets "Peano events" during a
-        grid traversal into which Swift 2 plugs in. We don't use all events. 
-        Therefore, this is a subset of the operations in 
-        peano4.solversteps.ActionSet. The enumeration is based upon integers, 
-        as we need to know the order of the enumerations. 
 
-        Should we ever pick up more events, make sure to also update the dict 
+        Enumeration of different @ref peano_action_sets "Peano events" during a
+        grid traversal into which Swift 2 plugs in. We don't use all events.
+        Therefore, this is a subset of the operations in
+        peano4.solversteps.ActionSet. The enumeration is based upon integers,
+        as we need to know the order of the enumerations.
+
+        Should we ever pick up more events, make sure to also update the dict
         containing the names of the stages in
         """
 
@@ -79,25 +79,21 @@ class AlgorithmStep(object):
         CELL_KERNEL = 1
         TOUCH_VERTEX_LAST_TIME = 2
         STAGE_COUNT = 3
-        
-                 
-                
 
     @staticmethod
     def get_event_name(stage: PeanoEventUsedBySwift):
         """!
-        
+
         Get the name as a string of a sweep stage for a given PeanoEventUsedBySwift enum.
-        
+
         """
         Results = {
             AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_FIRST_TIME: peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME,
-            AlgorithmStep.PeanoEventUsedBySwift.CELL_KERNEL:             "cellKernel",
-            AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_LAST_TIME:  peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME,
-            AlgorithmStep.PeanoEventUsedBySwift.STAGE_COUNT:             "count",
-            }
+            AlgorithmStep.PeanoEventUsedBySwift.CELL_KERNEL: "cellKernel",
+            AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_LAST_TIME: peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME,
+            AlgorithmStep.PeanoEventUsedBySwift.STAGE_COUNT: "count",
+        }
         return Results[stage]
-    
 
     def __init__(
         self,
