@@ -2,9 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "config.h"
 #include "tarch/multicore/multicore.h"
 
-#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) and !defined(GPUOffloadingCUDA)
+#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) \
+  and !defined(GPUOffloadingCUDA)
 #define GPUOffloadingOff
 #endif
 
@@ -14,38 +16,38 @@
 #include "tarch/accelerator/sycl/Device.h"
 
 namespace tarch {
-  /**
-   * We need an annotation GPUCallableMethod for some targets like HIP. This
-   * marker is to be used before the return type is written down. This is different
-   * to the InlineMethod marker which is to be used after the argument list.
-   */
-  #if defined(GPUOffloadingHIP)
-    #define GPUCallableMethod __host__ __device__
-  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
-    #define GPUCallableMethod SYCL_EXTERNAL
-  #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
-    #define GPUCallableMethod __host__ __device__
-  #else
-    #define GPUCallableMethod
-  #endif
+/**
+ * We need an annotation GPUCallableMethod for some targets like HIP. This
+ * marker is to be used before the return type is written down. This is different
+ * to the InlineMethod marker which is to be used after the argument list.
+ */
+#if defined(GPUOffloadingHIP)
+#define GPUCallableMethod __host__ __device__
+#elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#define GPUCallableMethod SYCL_EXTERNAL
+#elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
+#define GPUCallableMethod __host__ __device__
+#else
+#define GPUCallableMethod
+#endif
 
-  /**
-   * Delegates to std::abort() if no GPU offloading is active. Otherwise is
-   * degenerates to nop, as there is no abort on an accelerator. The vanilla
-   * implementation can be found in accelerator.cpp. The vendor-specific
-   * implementations are hold within their accelerator.cpp file.
-   */
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
+/**
+ * Delegates to std::abort() if no GPU offloading is active. Otherwise is
+ * degenerates to nop, as there is no abort on an accelerator. The vanilla
+ * implementation can be found in accelerator.cpp. The vendor-specific
+ * implementations are hold within their accelerator.cpp file.
+ */
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
   void gpuAbort();
-  #pragma omp end declare target
-  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#pragma omp end declare target
+#elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
   GPUCallableMethod void gpuAbort();
-  #elif defined(GPUOffloadingCPP)
+#elif defined(GPUOffloadingCPP)
   GPUCallableMethod void gpuAbort();
-  #else
+#else
   void gpuAbort();
-  #endif
+#endif
 
   enum class MemoryLocation {
     /**
@@ -65,16 +67,18 @@ namespace tarch {
     ManagedSharedAcceleratorDeviceMemory
   };
 
-  std::string toString( MemoryLocation value );
+  std::string toString(MemoryLocation value);
 
 
   namespace internal {
     void* allocateRawData(int size, MemoryLocation location);
-  }
+  } // namespace internal
 
-  template <class T=double>
-  T* allocateMemory( int size, MemoryLocation location, [[maybe_unused]] int device = -1 ) {
-     return reinterpret_cast<T*>( internal::allocateRawData(size * static_cast<int>(sizeof(T)), location ) );
+  template <class T = double>
+  T* allocateMemory(int size, MemoryLocation location, [[maybe_unused]] int device = -1) {
+    return reinterpret_cast<T*>(internal::allocateRawData(size * static_cast<int>(sizeof(T)), location));
   }
   void freeMemory(void* data, MemoryLocation location);
-}
+
+  int padSizeToAlignment(int size, int aligment);
+} // namespace tarch
