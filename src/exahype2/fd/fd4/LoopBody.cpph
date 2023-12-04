@@ -311,7 +311,7 @@ void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
   double cellsize = patchSize(normal) / QOutEnumerator._numberOfDoFsPerAxisInCell;
   double gradcoef = 1.0 / (12.0 * cellsize);
 
-  int order=2;
+  int order=4;
   // std::cout<<"called here"<<std::endl;
   //  A[normal] = \partial_{normal}\alpha
   //  alpha is Q[16]

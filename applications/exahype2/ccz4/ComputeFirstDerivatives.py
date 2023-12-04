@@ -143,7 +143,8 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
       // Not required for derivative calculation but required to compute the 
       // Runge-Kutta linear combination
       {{COMPUTE_TIME_STEP_SIZE}}
-
+      
+      /*
       {% for PREDICATE_NO in range(0,PREDICATES|length) %}
       ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
       ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
@@ -164,7 +165,7 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
         newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
       }
       {% endfor %} 
-        
+      */
       
       ::exahype2::CellData  patchData( 
         oldQWithHalo, 
