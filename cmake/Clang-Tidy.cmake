@@ -61,15 +61,15 @@ if(WITH_CLANG_TIDY)
     add_custom_target(
       Tidy
       COMMAND clang-tidy -header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} ${CLANG_TIDY_FIX_OPTIONS} ${CLANG_TIDY_SOURCES} | tee clang-tidy.log
-      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       VERBATIM
       COMMENT "Running clang-tidy: clang-tidy header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} ${CLANG_TIDY_FIX_OPTIONS} <All sources...>")
 
     if(CLANG_HTML)
       add_custom_target(
         VisualizeClangTidy
-        COMMAND ${Python3_EXECUTABLE} -m clang_html clang-tidy.log
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMAND ${Python3_EXECUTABLE} -m clang_html ${CMAKE_BINARY_DIR}/clang-tidy.log
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Visualizing clang-tidy output: ${Python3_EXECUTABLE} -m clang_html clang-tidy.log"
         DEPENDS Tidy)
     endif()
@@ -79,7 +79,7 @@ if(WITH_CLANG_TIDY)
     add_custom_target(
       Tidy-List
       COMMAND ${CLANG_TIDY} -list-checks
-      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       VERBATIM # Protect arguments to commands
       COMMENT "List all enabled clang-tidy checks.")
     set_target_properties(Tidy-List PROPERTIES FOLDER "${META_PROJECT_NAME}/Tools")
@@ -87,7 +87,7 @@ if(WITH_CLANG_TIDY)
     add_custom_target(
       Tidy-Dump
       COMMAND ${CLANG_TIDY} -dump-config
-      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       VERBATIM # Protect arguments to commands
       COMMENT "Dumps clang-tidy configuration file.")
     set_target_properties(Tidy-Dump PROPERTIES FOLDER "${META_PROJECT_NAME}/Tools")
