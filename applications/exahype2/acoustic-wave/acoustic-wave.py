@@ -509,6 +509,8 @@ else:
 
 my_project.set_timeout(args.timeout)
 
+my_project.set_multicore_orchestration("::tarch::multicore::orchestration::Hardcoded::createFuseAll(2048, true, true, ::tarch::mpi::Rank::getInstance().getRank())")
+
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")

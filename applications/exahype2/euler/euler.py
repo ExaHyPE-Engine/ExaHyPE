@@ -12,7 +12,7 @@ import exahype2
 # Some reasonable default values
 dimensions = 2
 cell_size = 0.1
-amr_levels = 2
+amr_levels = 4
 patch_size = 4
 rk_order = 2
 dg_order = 1
@@ -506,6 +506,8 @@ else:
     )
 
 my_project.set_timeout(args.timeout)
+
+my_project.set_multicore_orchestration("::tarch::multicore::orchestration::Hardcoded::createFuseAll(2048, true, true, ::tarch::mpi::Rank::getInstance().getRank())")
 
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
