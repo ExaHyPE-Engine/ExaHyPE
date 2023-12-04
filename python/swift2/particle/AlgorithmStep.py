@@ -107,6 +107,9 @@ class AlgorithmStep(object):
         unprepare_traversal_kernel="",
         input_particles=None,
         includes="",
+        cell_kernel_dependency_policy             = None,
+        touch_vertex_first_time_dependency_policy = None,
+        touch_vertex_last_time_dependency_policy  = None,
     ):
         """!
 
@@ -158,6 +161,11 @@ class AlgorithmStep(object):
           Counterpart of prepare_traversal_kernel. Consult
           @ref peano_action_sets "action sets" for more context.
 
+        self.cell_kernel_dependency_policy: String or None
+          If it is a string, it should identify one of the variants of
+          swift2::dependencychecks::Invariant. If you pick None, Swift 2
+          will add default dependencies. They might be too strict.
+
         """
         self.name = name
         self.dependencies = dependencies
@@ -171,6 +179,10 @@ class AlgorithmStep(object):
 
         self.input_particles = input_particles
         self.includes = includes
+        
+        self.cell_kernel_dependency_policy             = cell_kernel_dependency_policy
+        self.touch_vertex_first_time_dependency_policy = touch_vertex_first_time_dependency_policy
+        self.touch_vertex_last_time_dependency_policy  = touch_vertex_last_time_dependency_policy
 
     def __str__(self):
         return "({},{},{})".format(self.name, self.dependencies, self.effect)

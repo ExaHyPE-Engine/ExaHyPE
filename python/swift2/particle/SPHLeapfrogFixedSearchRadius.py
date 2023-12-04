@@ -479,6 +479,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        #include "swift2/timestepping/GlobalTimeStepping.h"
                                        #include "swift2/timestepping/TimeStepping.h"
                                        """,
+            touch_vertex_first_time_dependency_policy = "TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce"                           
         )
         self.algorithm_steps_dict["PredictHydro"] = predictHydro
 

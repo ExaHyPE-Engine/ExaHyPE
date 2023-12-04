@@ -258,6 +258,7 @@ Particle properties:
         # String template for dependency check call
         check_template_cell_operation = """
   ::swift2::dependencychecks::check{STEP_TYPE}(
+                  ::swift2::dependencychecks::Invariant::{INVARIANT},
                   localParticles,
                   marker,
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
@@ -268,6 +269,7 @@ Particle properties:
 
         check_template_vertex_operation = """
   ::swift2::dependencychecks::check{STEP_TYPE}(
+                  ::swift2::dependencychecks::Invariant::{INVARIANT},
                   assignedParticles,
                   marker,
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
@@ -282,7 +284,7 @@ Particle properties:
                   marker,
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
                   globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
-                  ::swift2::dependencychecks::Policy::TouchAtMostOnce_MaskOutOtherwise,
+                  ::swift2::dependencychecks::Invariant::{INVARIANT},
                   &{CHECK_FUNCTION}
   );
 """
@@ -293,26 +295,18 @@ Particle properties:
                   marker,
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
                   globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
-                  ::swift2::dependencychecks::Policy::TouchFirstUsage_MaskOutAfterwards,
+                  ::swift2::dependencychecks::Invariant::{INVARIANT},
                   &{CHECK_FUNCTION}
   );
 """
 
         check_template_vertex_operation_local_particles_after_sweep = """
   ::swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTime{STEP_TYPE}(
+    ::swift2::dependencychecks::Invariant::{INVARIANT},
     assignedParticles,
     globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME}
   );
 """
-
-        # Keep track of steps that move particles. They will corrupt the list of
-        # local particles, as the particles will need to be sorted and sieved again.
-        # See documentation in Toolbox/Particles/Mesh Traversal for details.
-        # If we encounter an algorithm step that moves particles, set this counter to 2,
-        # and decrease it by 1 for the next step. This way, both the current algorithm
-        # step (the one that actually moves particles) and the subsequent one will
-        # be marked as possibly containing corrupted local particle sets.
-        step_moves_particles = 0
 
         for i, step in enumerate(steps):
             d = {
@@ -322,6 +316,7 @@ Particle properties:
                 "PEANO4_EVENT_TYPE": peano4_event_enum.get_accessor_name(),
                 "CHECK_FUNCTION": None,
                 "EVENT": None,
+                "INVARIANT": None
             }
 
             # first determine which type of algorithm step we have. Depending on its
@@ -334,12 +329,10 @@ Particle properties:
                 d[
                     "CHECK_FUNCTION_TEMPLATE"
                 ] = "::swift2::kernels::localParticleCanBeMoved"
-                step_moves_particles = 2
             elif (
                 step.effect
                 == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
             ):
-                step_moves_particles = 2
                 raise NotImplementedError
             elif step.effect == AlgorithmStep.Effect.ALTER_LOCAL_STATE:
                 d[
@@ -358,11 +351,10 @@ Particle properties:
                     step.effect,
                 )
 
-            # @todo Think aboutthis
-            step_moved_particle_string = "false"
-            if step_moves_particles > 0:
-                step_moved_particle_string = "true"
-            step_moves_particles -= 1
+            if step.touch_vertex_first_time_dependency_policy==None:
+                d["INVARIANT"] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce"
+            else:
+                d["INVARIANT"] = step.touch_vertex_first_time_dependency_policy
 
             # TOUCH VERTEX FIRST TIME
             # -----------------------
@@ -376,8 +368,6 @@ Particle properties:
             if step.touch_vertex_first_time_kernel is None:
                 step.touch_vertex_first_time_kernel = ""
 
-            # @todo
-            #                        step_moved_particle_string,
             if i == 0:
                 # Only exception is first AlgorithmStep: There, first re-set
                 # all counters
@@ -407,13 +397,14 @@ Particle properties:
             d["CHECK_FUNCTION"] = d["CHECK_FUNCTION_TEMPLATE"].replace(
                 "{STAGE}", "CellKernel"
             )
+            if step.cell_kernel_dependency_policy==None:
+                d["INVARIANT"] = "TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce"
+            else:
+                d["INVARIANT"] = step.cell_kernel_dependency_policy
 
             if step.cell_kernel is None:
                 step.cell_kernel = ""
 
-            # mark the step and stage we're doing before any actual content is called
-            # @todo
-            #                    step_moved_particle_string,
             step.cell_kernel = (
                 mark_template_cell_operation.format(**d) + step.cell_kernel
             )
@@ -429,13 +420,15 @@ Particle properties:
             d["CHECK_FUNCTION"] = d["CHECK_FUNCTION_TEMPLATE"].replace(
                 "{STAGE}", "VertexKernel"
             )
+            
+            if step.touch_vertex_last_time_dependency_policy==None:
+                d["INVARIANT"] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce"
+            else:
+                d["INVARIANT"] = step.touch_vertex_last_time_dependency_policy
 
             if step.touch_vertex_last_time_kernel is None:
                 step.touch_vertex_last_time_kernel = ""
 
-            # mark the step and stage we're doing before any actual content is called
-            # @todo
-            #                    step_moved_particle_string,
             step.touch_vertex_last_time_kernel = (
                 mark_template_vertex_operation.format(**d)
                 + step.touch_vertex_last_time_kernel

@@ -12,57 +12,125 @@ namespace swift2 {
    *
    * A set of routines which do dependency checks, i.e. validate per particle
    * if the particle has completed its previous algorithmic steps before we
-   * allow it to do the next state transition. Basically, this flag ensures
+   * allow it to do the next state transition. Basically, the checks ensure
    * that we do not leave out particles and forget to update them or jump
    * the queue.
    *
    * The macros are automatically inserted into the code whenever you compile
    * with assertions. This happens in swift2.particle.Particle.
+   *
+   * Different algorithmic steps might have different access policies. There
+   * are three different flags in swift2.particle.AlgorithmStep. By default,
+   * they are set to None. swift2.particle.Particle._dependency_checks_modify_steps()
+   * will then insert default policies/invariants. But you might want to alter
+   * these.
    */
   namespace dependencychecks {
-    enum class Policy {
-      TouchFirstUsage_MaskOutAfterwards,
-      TouchAtMostOnce_MaskOutOtherwise,
+    /**
+     * Different invariants that have to hold for the code. They are checked by
+     * isValid() which is called by the mark... routines and checkPastStages.
+     */
+    enum class Invariant {
+      TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce,
+      TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce,
+      TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce
     };
 
-    /**
-     * @brief This function is meant to be called on a particle on which dependency issues
-     * in the main algorithm steps have been detected.
-     *
-     *
-     * If the consistency checks fail, this routine should be used to write the
-     * full current state of a problematic particle to screen. After that, the
-     * routine aborts.
-     *
-     * It is important that we use the log functionality of tarch::logging, as
-     * it allows us to distinguish from which rank messages come from. It also
-     * enables us to integrate the messages into mainstream performance
-     * analysis workflows.
-     *
-     * @param particle: the problematic particle
-     * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
-     * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
-     * @param errors: Number of errors that have been detected. If errors == 0, this function can
-     *                be used to just print out the current state, and won't abort when finished.
-     * @param call_identifier: Additional information on which dependency check failed to be printed
-     *                         to screen before exiting.
-     */
-    template <typename Particle>
-    static std::string outputParticle(
-      const Particle*                                                                        particle,
-      typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStep,
-      typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
-      const int                                                                              errors
-    );
+    std::string toString( Invariant policy );
 
-    template <typename Particle>
-    static std::string outputParticle(
-      const Particle*                                                                     particle,
-      typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated   initStep,
-      typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift sweepStageMarkerEnum,
-      const int                                                                           errors
-    );
+    namespace internal {
+      /**
+       * Validate that policy is enforced. Usually used by assertions. This
+       * routine is called by the mark operations after(!) it has altered
+       * the two counters numberOfUpdates and numberOfMaskOuts.
+       */
+      bool isValid( Invariant policy, bool workOnParticle, int numberOfUpdates, int numberOfMaskOuts );
 
+      /**
+       * Do all previous steps have to alter state at least once.
+       */
+      bool previousStepsAllHaveToAccessAtLeastOnce( Invariant policy );
+
+      /**
+       * @brief This function is meant to be called on a particle on which dependency issues
+       * in the main algorithm steps have been detected.
+       *
+       *
+       * If the consistency checks fail, this routine should be used to write the
+       * full current state of a problematic particle to screen. After that, the
+       * routine aborts.
+       *
+       * It is important that we use the log functionality of tarch::logging, as
+       * it allows us to distinguish from which rank messages come from. It also
+       * enables us to integrate the messages into mainstream performance
+       * analysis workflows.
+       *
+       * @param particle: the problematic particle
+       * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
+       * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
+       * @param errors: Number of errors that have been detected. If errors == 0, this function can
+       *                be used to just print out the current state, and won't abort when finished.
+       * @param call_identifier: Additional information on which dependency check failed to be printed
+       *                         to screen before exiting.
+       */
+      template <typename Particle>
+      static std::string outputParticle(
+        const Particle*                                                                        particle,
+        typename std::remove_pointer<Particle>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStep,
+        typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift    sweepStageMarkerEnum,
+        const int                                                                              errors
+      );
+
+      template <typename Particle>
+      static std::string outputParticle(
+        const Particle*                                                                     particle,
+        typename std::remove_pointer<Particle>::type::DependencyChecksInitStepLastUpdated   initStep,
+        typename std::remove_pointer<Particle>::type::DependencyChecksPeanoEventUsedBySwift sweepStageMarkerEnum,
+        const int                                                                           errors
+      );
+
+      /**
+       * @brief Check that all steps and stages before the current one have been completed.
+       *
+       * @param currentStep: integer value of the current algorithm step
+       * @param currentStage: integer value of the current sweep stage
+       * @param nsteps: Total number of algorithm steps
+       * @param nstages: Total number of sweep stages
+       * @param sweepStateProgression: integer array carrying flags/counters of completed sweep
+       *                               stages and algorithm steps of a particle
+       *
+       * @return errors: Number of dependency errors detected
+       */
+      static int checkPastStages(
+        Invariant  policy,
+        const int  currentStep,
+        const int  currentStage,
+        const int  nsteps,
+        const int  nstages,
+        const int* sweepStateProgression
+      );
+
+
+      /**
+       * @brief Check that all steps and stages after the current one have not been done yet.
+       *
+       * @param currentStep: integer value of the current algorithm step
+       * @param currentStage: integer value of the current sweep stage
+       * @param nsteps: Total number of algorithm steps
+       * @param nstages: Total number of sweep stages
+       * @param sweepStateProgression: integer array carrying flags/counters of completed sweep
+       *                               stages and algorithm steps of a particle
+       *
+       * @return errors: Number of dependency errors detected
+       */
+      static int checkFutureStages(
+        const int  currentStep,
+        const int  currentStage,
+        const int  nsteps,
+        const int  nstages,
+        const int* sweepStateProgression
+      );
+    }
 
     /**
      * @brief Mark a localParticle having entered a sweep stage in a main algorithm step.
@@ -99,7 +167,7 @@ namespace swift2 {
         typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
              sweepStageMarkerEnum,
-      Policy policy,
+      Invariant policy,
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
     );
 
@@ -128,50 +196,8 @@ namespace swift2 {
         initStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
              sweepStageMarkerEnum,
-      Policy policy,
+      Invariant policy,
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
-    );
-
-
-    /**
-     * @brief Check that all steps and stages before the current one have been completed.
-     *
-     * @param currentStep: integer value of the current algorithm step
-     * @param currentStage: integer value of the current sweep stage
-     * @param nsteps: Total number of algorithm steps
-     * @param nstages: Total number of sweep stages
-     * @param sweepStateProgression: integer array carrying flags/counters of completed sweep
-     *                               stages and algorithm steps of a particle
-     *
-     * @return errors: Number of dependency errors detected
-     */
-    static int checkPastStages(
-      const int  currentStep,
-      const int  currentStage,
-      const int  nsteps,
-      const int  nstages,
-      const int* sweepStateProgression
-    );
-
-
-    /**
-     * @brief Check that all steps and stages after the current one have not been done yet.
-     *
-     * @param currentStep: integer value of the current algorithm step
-     * @param currentStage: integer value of the current sweep stage
-     * @param nsteps: Total number of algorithm steps
-     * @param nstages: Total number of sweep stages
-     * @param sweepStateProgression: integer array carrying flags/counters of completed sweep
-     *                               stages and algorithm steps of a particle
-     *
-     * @return errors: Number of dependency errors detected
-     */
-    static int checkFutureStages(
-      const int  currentStep,
-      const int  currentStage,
-      const int  nsteps,
-      const int  nstages,
-      const int* sweepStateProgression
     );
 
 
@@ -197,6 +223,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer, typename Marker>
     static void checkAlgorithmStep(
+      Invariant policy,
       const ParticleContainer& localParticles,
       const Marker&            marker,
       typename std::remove_pointer<
@@ -231,6 +258,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     static void checkParticlesAssignedToVertexInTouchLastTimeAlgorithmStep(
+      Invariant policy,
       const ParticleContainer& assignedParticles,
       typename std::remove_pointer<
         typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum
@@ -259,6 +287,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer, typename Marker>
     static void checkInitStep(
+      Invariant policy,
       const ParticleContainer& localParticles,
       const Marker&            marker,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
@@ -279,6 +308,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     static void checkParticlesAssignedToVertexInTouchLastTimeInitStep(
+      Invariant policy,
       const ParticleContainer& activeParticles,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
         initStepMarkerEnum
