@@ -44,15 +44,12 @@ if(WITH_CLANG_TIDY)
       "${CMAKE_BINARY_DIR}/*.h"
       "${CMAKE_BINARY_DIR}/*.cpph")
 
-    # If the user asks for the clang-tidy to fix, then we include -fix and -fix-errors to the options, otherwise empty
+    # If the user asks for the clang-tidy to fix, then we include -fix to the options, otherwise empty
     # The argument as list might be problematic in the command, but the list in the Comment string will have ; inside
-    # Therefore I decided to define 2 different variables that has the same options in it.
     if (WITH_CLANG_TIDY_FIX)
-      set(CLANG_TIDY_FIX_OPTIONS -fix -fix-errors)
-      set(CLANG_TIDY_FIX_OPTIONS_STR "-fix -fix-errors")
+      set(CLANG_TIDY_FIX_OPTIONS -fix)
     else()
       set(CLANG_TIDY_FIX_OPTIONS )
-      set(CLANG_TIDY_FIX_OPTIONS_STR "")
     endif()
 
     # The custom target calls clang-tidy for every source file in the project:
@@ -66,7 +63,7 @@ if(WITH_CLANG_TIDY)
       COMMAND clang-tidy -header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} ${CLANG_TIDY_FIX_OPTIONS} ${CLANG_TIDY_SOURCES} | tee clang-tidy.log
       WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
       VERBATIM
-      COMMENT "Running clang-tidy: clang-tidy header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} ${CLANG_TIDY_FIX_OPTIONS_STR} <All sources...>")
+      COMMENT "Running clang-tidy: clang-tidy header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} ${CLANG_TIDY_FIX_OPTIONS} <All sources...>")
 
     if(CLANG_HTML)
       add_custom_target(
