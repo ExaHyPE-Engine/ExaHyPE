@@ -173,18 +173,20 @@ int {{codeNamespace}}::fusedSpaceTimePredictorVolumeIntegral{{nameSuffix}}(
     std::copy_n(luh+xyz*{{nData}}, {{nData}}, lQi+xyz*{{nDataPad}});
   }
 
-  //2. Add point source (if required) to the zeroth time derivative
+  // 2. Add point source (if required) to the zeroth time derivative
 {% if usePointSources %}
+  typedef Quadrature<pCompType> pQuadrature;
+  auto& weights1 = pQuadrature::weights1;
   for (int xyz = 0; xyz < {{nDof**nDim}}; xyz++) {
     for (int t = 0; t < {{nDof}}; t++) {
-      #pragma omp simd aligned(lQi,Quadrature<pCompType>::weights1:{{alignmentSize}})
+      #pragma omp simd aligned(lQi,weights1:{{alignmentSize}})
       for (int n = 0; n < {{nVar}}; n++) { //skip parameters
-        lQi[xyz*{{nDataPad}}+n] += dt*Quadrature<pCompType>::weights1[t]*PSi[((t+1)*{{nDof**nDim}}+xyz)*{{nVarPad}}+n];
+        lQi[xyz*{{nDataPad}}+n] += dt*weights1[t]*PSi[((t+1)*{{nDof**nDim}}+xyz)*{{nVarPad}}+n];
       }
     }
   }
 
-  // copy the source vector at the quadrature nodes  into the temporary array PSderivatives (remove 0th time derivative)
+  // Copy the source vector at the quadrature nodes into the temporary array PSderivatives (remove 0th time derivative)
   std::copy_n(PSi+{{(nDof**nDim)*nVarPad}}, {{(nDof**nDim)*nDof*nVarPad}}, PSderivatives);
 
   // Add point source to the first time derivative
