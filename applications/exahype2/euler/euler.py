@@ -16,7 +16,7 @@ amr_levels = 2
 patch_size = 4
 rk_order = 2
 dg_order = 1
-end_time = 3.0
+end_time = 3.001
 plot_interval = end_time / 100
 # plot_interval             = 0
 # Based on the assumption that the fluid is an ideal gas, gamma chosen for dry air.

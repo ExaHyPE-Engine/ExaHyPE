@@ -317,6 +317,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     [&](std::function<void(int device, ::exahype2::CellData& patchData)> kernel, const std::string& markerName, int launchingThreads, int device, int patches) -> void {
     timingComputeKernel.erase();
     ::tarch::timing::Measurement timingKernelLaunch;
+    ::tarch::timing::Measurement localTimingKernelLaunch;
 
     for (int j = 0; j < NumberOfSamples; j++) {
       parallelFor(launchingThread, launchingThreads) {
@@ -336,26 +337,56 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         watchKernelLaunch.stop();
         // if (j > 0) { // We skip the first measurement (warmup phase)
         //  TODO: Not very good to do it like this. Should use something like
-        //  timingKernelLaunch.pop_front();
-        timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
+        //  localTimingKernelLaunch.pop_front();
+        localTimingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
         //}
 
+        double       globalTimingKernelValue = 0.0;
+        const double localTimingKernelValue  = localTimingKernelLaunch.getValue();
+#ifdef Parallel
+        ::tarch::mpi::Rank::getInstance()
+          .reduce(&localTimingKernelValue, &globalTimingKernelValue, 1, MPI_DOUBLE, MPI_SUM, ::tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
+            ::tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+          });
+
+        if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
+          timingKernelLaunch.setValue(globalTimingKernelValue);
+        }
+#else
+        timingKernelLaunch.setValue(localTimingKernelValue);
+#endif
+
         if constexpr (Accuracy > 0.0) {
-          int    errors        = 0;
-          double maxDifference = 0.0;
+          int    localErrors        = 0;
+          double localMaxDifference = 0.0;
           for (int i = 0; i < patches; i++) {
-            storeOutcome(patchData.QOut[i], patchData.maxEigenvalue[0]);
+            storeOutcome(patchData.QOut[i], patchData.maxEigenvalue[i]);
             auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome(patchData.QOut[i], i, patchData.maxEigenvalue[i]);
-            errors += errorsPerPatch;
-            maxDifference = std::max(maxDifference, maxDifferencePerPatch);
+            localErrors += errorsPerPatch;
+            localMaxDifference = std::max(localMaxDifference, maxDifferencePerPatch);
           }
 
-          if (errors > 0) {
+          int    globalErrors        = 0;
+          double globalMaxDifference = 0.0;
+
+#ifdef Parallel
+          ::tarch::mpi::Rank::getInstance().reduce(&localErrors, &globalErrors, 1, MPI_INT, MPI_SUM, ::tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
+            ::tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+          });
+          ::tarch::mpi::Rank::getInstance().reduce(&localMaxDifference, &globalMaxDifference, 1, MPI_DOUBLE, MPI_MAX, ::tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
+            ::tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+          });
+#else
+          globalErrors        = localErrors;
+          globalMaxDifference = localMaxDifference;
+#endif
+
+          if (globalErrors > 0) {
             logError(
               "main()",
               "max difference of outcome from "
-                << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")"
-                << " for " << errors << " entries"
+                << markerName << " for all patches is " << globalMaxDifference << " (admissible accuracy=" << Accuracy << ")"
+                << " for " << globalErrors << " entries"
             );
             std::abort();
           }
@@ -369,29 +400,54 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       endParallelFor
     }
 
-    reportRuntime(markerName, timingKernelLaunch, patches);
+    if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
+      reportRuntime(markerName, timingKernelLaunch, patches);
+    }
   };
+
+  const int rank              = ::tarch::mpi::Rank::getInstance().getRank();
+  const int device            = rank;
+  const int numberOfRanks     = ::tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const int patchesPerProcess = numberOfPatches / numberOfRanks;
+  const int remainder         = numberOfPatches % numberOfRanks;
+  const int startPatch        = rank * patchesPerProcess;
+  const int endPatch          = startPatch + patchesPerProcess + (rank == numberOfRanks - 1 ? remainder : 0);
+  const int localPatches      = endPatch - startPatch;
+
+  std::string deviceString;
+#ifdef Parallel
+  std::vector<int> devices(numberOfRanks);
+  MPI_Gather(&device, 1, MPI_INT, devices.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+  for (int i = 0; i < numberOfRanks; i++) {
+    deviceString += std::to_string(devices[i]);
+    if (i < numberOfRanks - 1) {
+      deviceString += ",";
+    }
+  }
+#else
+  deviceString = std::to_string(device);
+#endif
 
   assessKernel(
     wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::None>,
     "host, heap-functors, patch-wise, AoS, sequential",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::ParallelFor>,
     "host, heap-functors, patch-wise, AoS, parallel-for",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::Subtasks>,
     "host, heap-functors, patch-wise, AoS, subtasks",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -399,21 +455,21 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, heap-functors, batched, AoS, sequential",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::ParallelFor>,
     "host, heap-functors, batched, AoS, parallel-for",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::Subtasks>,
     "host, heap-functors, batched, AoS, subtasks",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -433,7 +489,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, patch-wise, AoS, sequential",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -452,7 +508,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, patch-wise, AoS, parallel-for",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -471,7 +527,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, patch-wise, AoS, subtasks",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -491,7 +547,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, patch-wise, SoA, sequential",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -510,7 +566,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, patch-wise, SoA, parallel-for",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -529,7 +585,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, patch-wise, SoA, subtasks",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -549,7 +605,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, patch-wise, AoSoA, sequential",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -568,7 +624,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, patch-wise, AoSoA, parallel-for",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -587,7 +643,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, patch-wise, AoSoA, subtasks",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -607,7 +663,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, batched, AoS, sequential",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -626,7 +682,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, batched, AoS, parallel-for",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -645,7 +701,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, batched, AoS, subtasks",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -665,7 +721,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, batched, SoA, sequential",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -684,7 +740,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, batched, SoA, parallel-for",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -703,7 +759,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, batched, SoA, subtasks",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -723,7 +779,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, batched, AoSoA, sequential",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -742,7 +798,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, batched, AoSoA, parallel-for",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapStatelessHostKernel<
@@ -761,48 +817,47 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     "host, stateless, batched, AoSoA, subtasks",
     launchingThreads,
     ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
+    localPatches
   );
-/*
-  assessKernel(
-    wrapStatelessHostKernel<
-      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseInsituStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep>,
-      ::peano4::utils::LoopParallelism::None>,
-    "host, stateless, patch-wise, insitu, sequential",
-    launchingThreads,
-    ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
-  );
+  /*
+    assessKernel(
+      wrapStatelessHostKernel<
+        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseInsituStateless<
+          FVRusanovSolver,
+          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+          1,
+          FVRusanovSolver::NumberOfUnknowns,
+          FVRusanovSolver::NumberOfAuxiliaryVariables,
+          EvaluateFlux,
+          EvaluateNonconservativeProduct,
+          EvaluateSource,
+          EvaluateMaximumEigenvalueAfterTimeStep>,
+        ::peano4::utils::LoopParallelism::None>,
+      "host, stateless, patch-wise, insitu, sequential",
+      launchingThreads,
+      ::tarch::accelerator::Device::HostDevice,
+      localPatches
+    );
 
-  assessKernel(
-    wrapStatelessHostKernel<
-      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedInsituStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep>,
-      ::peano4::utils::LoopParallelism::None>,
-    "host, stateless, batched, insitu, sequential",
-    launchingThreads,
-    ::tarch::accelerator::Device::HostDevice,
-    numberOfPatches
-  );
-*/
-  int device = 0;
+    assessKernel(
+      wrapStatelessHostKernel<
+        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedInsituStateless<
+          FVRusanovSolver,
+          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+          1,
+          FVRusanovSolver::NumberOfUnknowns,
+          FVRusanovSolver::NumberOfAuxiliaryVariables,
+          EvaluateFlux,
+          EvaluateNonconservativeProduct,
+          EvaluateSource,
+          EvaluateMaximumEigenvalueAfterTimeStep>,
+        ::peano4::utils::LoopParallelism::None>,
+      "host, stateless, batched, insitu, sequential",
+      launchingThreads,
+      ::tarch::accelerator::Device::HostDevice,
+      localPatches
+    );
+  */
 
 #if defined(GPUOffloadingSYCL)
   assessKernel(
@@ -817,10 +872,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoS, usm",
+    "device(s) " + deviceString + ", stateless, batched, AoS, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless<
@@ -834,10 +889,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, SoA, usm",
+    "device(s) " + deviceString + ", stateless, batched, SoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless<
@@ -851,10 +906,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoSoA, usm",
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -869,10 +924,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, usm",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless<
@@ -886,10 +941,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, usm",
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless<
@@ -903,10 +958,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, usm",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -921,10 +976,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, task-graph, AoS, usm",
+    "device(s) " + deviceString + ", stateless, task-graph, AoS, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless<
@@ -938,10 +993,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, task-graph, SoA, usm",
+    "device(s) " + deviceString + ", stateless, task-graph, SoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless<
@@ -955,10 +1010,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, task-graph, AoSoA, usm",
+    "device(s) " + deviceString + ", stateless, task-graph, AoSoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -973,10 +1028,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoS, copy",
+    "device(s) " + deviceString + ", stateless, batched, AoS, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedCopyStateless<
@@ -990,10 +1045,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, SoA, copy",
+    "device(s) " + deviceString + ", stateless, batched, SoA, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedCopyStateless<
@@ -1007,10 +1062,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoSoA, copy",
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -1025,10 +1080,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, copy",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless<
@@ -1042,10 +1097,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, copy",
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless<
@@ -1059,10 +1114,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, copy",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -1077,10 +1132,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, task-graph, AoS, copy",
+    "device(s) " + deviceString + ", stateless, task-graph, AoS, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless<
@@ -1094,10 +1149,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, task-graph, SoA, copy",
+    "device(s) " + deviceString + ", stateless, task-graph, SoA, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless<
@@ -1111,10 +1166,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, task-graph, AoSoA, copy",
+    "device(s) " + deviceString + ", stateless, task-graph, AoSoA, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -1129,10 +1184,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoS, managed",
+    "device(s) " + deviceString + ", stateless, batched, AoS, managed",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless<
@@ -1146,10 +1201,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, SoA, managed",
+    "device(s) " + deviceString + ", stateless, batched, SoA, managed",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless<
@@ -1163,10 +1218,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoSoA, managed",
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, managed",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -1181,10 +1236,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, managed",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, managed",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless<
@@ -1198,10 +1253,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, managed",
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, managed",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless<
@@ -1215,10 +1270,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, managed",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, managed",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -1233,10 +1288,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, task-graph, AoS, managed",
+    "device(s) " + deviceString + ", stateless, task-graph, AoS, managed",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless<
@@ -1250,10 +1305,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, task-graph, SoA, managed",
+    "device(s) " + deviceString + ", stateless, task-graph, SoA, managed",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless<
@@ -1267,10 +1322,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, task-graph, AoSoA, managed",
+    "device(s) " + deviceString + ", stateless, task-graph, AoSoA, managed",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 #endif
 
@@ -1287,10 +1342,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoS, copy",
+    "device(s) " + deviceString + ", stateless, batched, AoS, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
@@ -1304,10 +1359,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, SoA, copy",
+    "device(s) " + deviceString + ", stateless, batched, SoA, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
@@ -1321,10 +1376,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoSoA, copy",
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -1339,10 +1394,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, copy",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
@@ -1356,10 +1411,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, copy",
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
@@ -1373,10 +1428,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, copy",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, copy",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -1391,10 +1446,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoS, usm",
+    "device(s) " + deviceString + ", stateless, batched, AoS, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
@@ -1408,10 +1463,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, SoA, usm",
+    "device(s) " + deviceString + ", stateless, batched, SoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
@@ -1425,10 +1480,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoSoA, usm",
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -1443,10 +1498,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, usm",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
@@ -1460,10 +1515,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, usm",
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
@@ -1477,10 +1532,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, usm",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 #endif
 
@@ -1497,10 +1552,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoS, usm",
+    "device(s) " + deviceString + ", stateless, batched, AoS, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
@@ -1514,10 +1569,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, SoA, usm",
+    "device(s) " + deviceString + ", stateless, batched, SoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
@@ -1531,10 +1586,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, batched, AoSoA, usm",
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 
   assessKernel(
@@ -1549,10 +1604,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoS, usm",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
@@ -1566,10 +1621,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::SoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, SoA, usm",
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
   assessKernel(
     wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
@@ -1583,10 +1638,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       EvaluateSource,
       EvaluateMaximumEigenvalueAfterTimeStep,
       ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-    "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, usm",
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, usm",
     launchingThreads,
     device,
-    numberOfPatches
+    localPatches
   );
 #endif
 }
@@ -1609,31 +1664,34 @@ int main(int argc, char** argv) {
   ::exahype2::initNonCritialAssertionEnvironment();
   ::tarch::multicore::initSmartMPI();
   ::peano4::fillLookupTables();
-  if (::tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and ::tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
-    logError("main()", "MPI runs without multithreading are not supported currently.");
-    return EXIT_FAILURE;
-  }
+  // if (::tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and ::tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
+  //   logError("main()", "MPI runs without multithreading are not supported currently.");
+  //   return EXIT_FAILURE;
+  // }
   ::peano4::runTestsAndBenchmarks();
   OTTER_INITIALISE();
   feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
-  logInfo("main()", "===============================================================");
-  logInfo("main()", "Dimensions: " << Dimensions);
-  logInfo("main()", "Number of threads launching compute kernels: " << NumberOfLaunchingThreads);
-  logInfo("main()", "Number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy);
-  logInfo("main()", "Number of compute threads: " << ::tarch::multicore::Core::getInstance().getNumberOfThreads());
-  logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
-  logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
-  logInfo("main()", "Number of samples per measurement: " << NumberOfSamples);
-  logInfo("main()", "Evaluate max. eigenvalue (reduction step): " << EvaluateMaximumEigenvalueAfterTimeStep);
-  if constexpr (Accuracy > 0.0) {
-    logInfo("main()", "Performing accuracy checks with precision: " << Accuracy);
-  }
+  if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
+    logInfo("main()", "===============================================================");
+    logInfo("main()", "Dimensions: " << Dimensions);
+    logInfo("main()", "Number of threads launching compute kernels: " << NumberOfLaunchingThreads);
+    logInfo("main()", "Number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy);
+    logInfo("main()", "Number of compute threads: " << ::tarch::multicore::Core::getInstance().getNumberOfThreads());
+    logInfo("main()", "Number of MPI ranks: " << ::tarch::mpi::Rank::getInstance().getNumberOfRanks());
+    logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
+    logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
+    logInfo("main()", "Number of samples per measurement: " << NumberOfSamples);
+    logInfo("main()", "Evaluate max. eigenvalue (reduction step): " << EvaluateMaximumEigenvalueAfterTimeStep);
+    if constexpr (Accuracy > 0.0) {
+      logInfo("main()", "Performing accuracy checks with precision: " << Accuracy);
+    }
 #if defined(GPUOffloadingSYCL)
-  logInfo("main()", "Set SYCL_DEVICE_FILTER=gpu when using SYCL on the device");
-  logInfo("main()", "Set SYCL_PI_TRACE=2 in case of runtime errors");
+    logInfo("main()", "Set SYCL_DEVICE_FILTER=gpu when using SYCL on the device");
+    logInfo("main()", "Set SYCL_PI_TRACE=2 in case of runtime errors");
 #endif
-  logInfo("main()", "===============================================================");
+    logInfo("main()", "===============================================================");
+  }
 
 #if defined(SharedOMP)
 #pragma omp parallel
