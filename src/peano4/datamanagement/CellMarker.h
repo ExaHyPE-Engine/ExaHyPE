@@ -65,19 +65,35 @@ public:
   CellMarker(const peano4::grid::GridTraversalEvent& event);
 
   /**
-   * Has the cell been refined when we kicked off this mesh traversal?
-   * This implies that the cell is refined in this sweep, as cells do
-   * not change their state throughout the traversal.
+   * Has the cell been refined when we kicked off this mesh traversal
+   *
+   * If the attribute holds, this implies that the cell is refined in this
+   * sweep, as cells do not change their state throughout the traversal. It
+   * does not mean that the cell will be refined in the next mesh traversal
+   * however. To find this out, you have to study willBeRefined().
    *
    * @see willBeRefined()
    */
   bool hasBeenRefined() const;
 
   /**
-   * Will the cell be refined in the subsequent iteration? If hasBeenRefined()
+   * Will the cell be refined in the subsequent iteration
+   *
+   *
+   * If hasBeenRefined()
    * returns false but willBeRefined() holds, we have a cell which Peano 4
-   * will refine between the current and the next grid sweep. If it is the
-   * other way round, Peano 4 coarsens.
+   * will refine in the current mesh sweep. It might however
+   * not yet be refined. This analysis makes sense once we take into account that
+   * refinement in Peano first have to be triggered. In the subsequent mesh
+   * traversal, the affected vertices then switch to refining and the new
+   * mesh elements are actually added.
+   *
+   * The function which ultimately defines if this flag is set or not is
+   * peano4::grid::willVerticesBeRefined().
+   *
+   * If willBeRefined() is false but hasBeenRefined() is true, the current
+   * cell is refined, but it will be coarsened in the very mesh traversal in
+   * which we run through the mesh.
    */
   bool willBeRefined() const;
 
