@@ -60,7 +60,7 @@ if(WITH_CLANG_TIDY)
     # It needs to a compile command database, which is exported by CMake (EXPORT_COMPILE_COMMANDS=ON)
     # It appends the fix options, if the user requests
     # It goes through every cpp, h or templated header (cpph) files both in src and build directory
-    set(CLANG_TIDY_CHECKS -*,cppcoreguidelines-*,mpi-*,openmp-*,performance-*,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-pro-bounds-array-to-pointer-decay)
+    set(CLANG_TIDY_CHECKS -*,cppcoreguidelines-*,mpi-*,openmp-*,performance-*,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,cppcoreguidelines-pro-bounds-pointer-arithmetic)
     add_custom_target(
       Tidy
       COMMAND clang-tidy -header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} ${CLANG_TIDY_FIX_OPTIONS} ${CLANG_TIDY_SOURCES} | tee clang-tidy.log
