@@ -51,6 +51,8 @@ namespace applications::exahype2::elasticwave {
 
     const bool pointSource = tarch::la::norm2(x - tarch::la::Vector<Dimensions, double>({10, 10})) <= 1.0;
     if (pointSource) {
+      static constexpr double t0 = 0.1;
+      static constexpr double M0 = 1000.0;
       const double force = M0 * t / (t0 * t0) * std::exp(-t / t0);
       S[4]               = force;
     }

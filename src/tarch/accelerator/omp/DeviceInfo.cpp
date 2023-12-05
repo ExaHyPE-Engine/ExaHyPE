@@ -21,7 +21,7 @@ namespace tarch::accelerator::omp {
   void printDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix) {
     int         numberOfDevices   = tarch::accelerator::Device::getInstance().getNumberOfDevices();
     std::string ompBackendWarning = "OpenMP accelerator back-end has no means to query the accelerators' properties. "
-                                    "For best results enable the CUDA or Sycl Backend/API.";
+                                    "For best results enable the CUDA or SYCL Backend/API.";
     std::string deviceInfoStr     = "No offloading capable GPUs were found";
     logInfo("printDeviceInformation()", " " << ompBackendWarning);
     if (numberOfDevices == 0) {

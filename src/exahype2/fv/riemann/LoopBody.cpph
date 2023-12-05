@@ -22,7 +22,7 @@ void exahype2::fv::riemann::internal::copySolution_LoopBody(
 #endif
 void exahype2::fv::riemann::internal::computeEigenvalues_LoopBody(
           const double* __restrict__ QIn,
-          exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator,
+          exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
           exahype2::fv::riemann::Eigenvalues               eigenvalues,
           const tarch::la::Vector<Dimensions, double>&     patchCentre,
           const tarch::la::Vector<Dimensions, double>&     patchSize,
@@ -32,7 +32,7 @@ void exahype2::fv::riemann::internal::computeEigenvalues_LoopBody(
           double                                           dt,
           int                                              normal,
           double* __restrict__ QEigenvalues,
-          exahype2::enumerators::AoSLexicographicEnumerator QEigenvaluesEnumerator
+          exahype2::enumerator::AoSLexicographicEnumerator QEigenvaluesEnumerator
         )  {
           eigenvalues(
             QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -48,11 +48,11 @@ void exahype2::fv::riemann::internal::computeEigenvalues_LoopBody(
 
 double exahype2::fv::riemann::internal::reduceMaxEigenvalue_LoopBody(
   const double* __restrict__ QOut,
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator,
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator,
   const double* __restrict__ tempMaxEigenvalueX,
   const double* __restrict__ tempMaxEigenvalueY,
   const double* __restrict__ tempMaxEigenvalueZ,
-  exahype2::enumerators::AoSLexicographicEnumerator maxEigenvalueEnumerator,
+  exahype2::enumerator::AoSLexicographicEnumerator maxEigenvalueEnumerator,
   const tarch::la::Vector<Dimensions, double>&     patchCentre,
   const tarch::la::Vector<Dimensions, double>&     patchSize,
   int                                              patchIndex,
@@ -72,7 +72,7 @@ double exahype2::fv::riemann::internal::reduceMaxEigenvalue_LoopBody(
 
 void exahype2::fv::riemann::internal::computeFlux_LoopBody(
   const double* __restrict__ QIn,
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator,
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
   exahype2::fv::riemann::Flux                      flux,
   const tarch::la::Vector<Dimensions, double>&     patchCentre,
   const tarch::la::Vector<Dimensions, double>&     patchSize,
@@ -82,7 +82,7 @@ void exahype2::fv::riemann::internal::computeFlux_LoopBody(
   double                                           dt,
   int                                              normal,
   double* __restrict__ QFlux,
-  exahype2::enumerators::AoSLexicographicEnumerator QFluxEnumerator
+  exahype2::enumerator::AoSLexicographicEnumerator QFluxEnumerator
 ) {
   flux(
     QIn + QInEnumerator(patchIndex, volumeIndex, 0),
@@ -97,12 +97,12 @@ void exahype2::fv::riemann::internal::computeFlux_LoopBody(
 
 void exahype2::fv::riemann::internal::computeRiemannSolution_LoopBody(
   const double* __restrict__ QIn,
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator,
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator,
   exahype2::fv::riemann::SolveRiemannProblem       solveRiemannProblem,
   const double* __restrict__ QFlux,
-  exahype2::enumerators::AoSLexicographicEnumerator QFluxEnumerator,
+  exahype2::enumerator::AoSLexicographicEnumerator QFluxEnumerator,
   const double* __restrict__ QEigenvalues,
-  exahype2::enumerators::AoSLexicographicEnumerator QEigenvaluesEnumerator,
+  exahype2::enumerator::AoSLexicographicEnumerator QEigenvaluesEnumerator,
   const tarch::la::Vector<Dimensions, double>&     patchCentre,
   const tarch::la::Vector<Dimensions, double>&     patchSize,
   int                                              patchIndex,
@@ -112,9 +112,9 @@ void exahype2::fv::riemann::internal::computeRiemannSolution_LoopBody(
   int                                              normal,
   double* __restrict__ APDQ,
   double* __restrict__ AMDQ,
-  exahype2::enumerators::AoSLexicographicEnumerator DQEnumerator,
+  exahype2::enumerator::AoSLexicographicEnumerator DQEnumerator,
   double* __restrict__ QMaxEigenvalue,
-  exahype2::enumerators::AoSLexicographicEnumerator QMaxEigenvalueEnumerator
+  exahype2::enumerator::AoSLexicographicEnumerator QMaxEigenvalueEnumerator
 )  {
   tarch::la::Vector<Dimensions, int> leftVolume  = volumeIndex;
   tarch::la::Vector<Dimensions, int> rightVolume = volumeIndex;

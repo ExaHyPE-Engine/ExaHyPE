@@ -1,4 +1,4 @@
-#include "exahype2/enumerators/FaceAoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
 #include "FluxAverage.h"
 #include "peano4/utils/Loop.h"
 
@@ -24,8 +24,8 @@ void exahype2::dg::fluxaverage::solveRiemannProblem_pointwise_in_situ(
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * cellSize;
   faceOffset(faceNumber%Dimensions) += 0.5 * cellSize(faceNumber%Dimensions);
 
-  exahype2::enumerators::FaceAoSLexicographicEnumerator inputEnumerator (faceNumber,order+1,1,unknowns,auxiliaryVariables);
-  exahype2::enumerators::FaceAoSLexicographicEnumerator outputEnumerator(faceNumber,order+1,1,unknowns,0);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator inputEnumerator (faceNumber,order+1,1,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator outputEnumerator(faceNumber,order+1,1,unknowns,0);
 
   double* deltaQ          = new double[unknowns+auxiliaryVariables];
   double* averageQ        = new double[unknowns+auxiliaryVariables];

@@ -89,7 +89,7 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
   ) { 
     logTraceIn( "touchCellFirstTime(...)" );
     
-    ::exahype2::enumerators::AoSLexicographicEnumerator enumerator(
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumerator(
       1, // only one patch
       {{ORDER}}+1,
       0, // int haloSize,
@@ -136,7 +136,7 @@ class DoFWisePostprocessSolution(AbstractAderDGActionSet):
         return (
             super(DoFWisePostprocessSolution, self).get_includes()
             + """
-#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 """
         )
 

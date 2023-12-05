@@ -6,7 +6,7 @@
 
 #if defined(GPUOffloadingSYCL)
 
-#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
@@ -125,10 +125,10 @@ namespace exahype2 {
        * @see destroy()
        */
       GPUUSMCellData(
-        const CellData& hostObject, const enumerators::AoSLexicographicEnumerator& inEnumerator, const enumerators::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
       );
 
-      void destroy(CellData& hostObject, const enumerators::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
+      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
     };
 
     /**
@@ -218,10 +218,10 @@ namespace exahype2 {
        * @see destroy()
        */
       GPUCopyCellData(
-        const CellData& hostObject, const enumerators::AoSLexicographicEnumerator& inEnumerator, const enumerators::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
       );
 
-      void destroy(CellData& hostObject, const enumerators::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
+      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
     };
 
 
@@ -302,10 +302,10 @@ namespace exahype2 {
        * @see destroy()
        */
       GPUManagedCellData(
-        const CellData& hostObject, const enumerators::AoSLexicographicEnumerator& inEnumerator, const enumerators::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
+        const CellData& hostObject, const enumerator::AoSLexicographicEnumerator& inEnumerator, const enumerator::AoSLexicographicEnumerator& outEnumerator, ::sycl::queue& queue
       );
 
-      void destroy(CellData& hostObject, const enumerators::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
+      void destroy(CellData& hostObject, const enumerator::AoSLexicographicEnumerator& outEnumerator, bool copyEigenvaluesBack, ::sycl::queue& queue);
     };
   } // namespace fv::rusanov::sycl
 } // namespace exahype2

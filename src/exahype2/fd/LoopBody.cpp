@@ -10,7 +10,7 @@ void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
   int                     auxiliaryVariables,
   MaxEigenvalue           maxEigenvalue
 ) {
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(1, numberOfGridCellsPerPatchPerAxis, overlap, unknowns, auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1, numberOfGridCellsPerPatchPerAxis, overlap, unknowns, auxiliaryVariables);
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     double newMaxEigenvalue = 0.0;
@@ -37,7 +37,7 @@ void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
 template <>
 double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     const double* __restrict__                   QOut,
-    const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
     exahype2::fd::MaxEigenvalue                  maxEigenvalue,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,

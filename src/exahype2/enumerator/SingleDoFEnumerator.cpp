@@ -3,7 +3,7 @@
 #include "SingleDoFEnumerator.h"
 
 #if defined(GPUOffloadingOff)
-std::string exahype2::enumerators::SingleDoFEnumerator::toString() const {
+std::string exahype2::enumerator::SingleDoFEnumerator::toString() const {
   std::ostringstream msg;
   msg << "(single-dof"
       << ",#unknowns=" << _unknowns << ",#aux=" << _numberOfAuxiliaryVariables << ")";

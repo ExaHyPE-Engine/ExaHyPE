@@ -8,7 +8,7 @@ namespace {
    */
   template <void (*recompute_LoopBody)(
       double* __restrict__                                       QIn,
-      const ::exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
+      const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,
       int                                          patchIndex,
@@ -23,7 +23,7 @@ namespace {
     int                     auxiliaryVariables
   ) {
     assertion( haloSize >= 3 );
-    ::exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
+    ::exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
 
     for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
       if (Dimensions==2) {
@@ -160,7 +160,7 @@ void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_4thOrder(
   int                     auxiliaryVariables
 ) {
   assertion( haloSize >= 3 );
-  ::exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
+  ::exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
 
   for (int patchIndex=0; patchIndex<patchData.numberOfCells; patchIndex++) {
     if (Dimensions==2) {
@@ -239,7 +239,7 @@ void applications::exahype2::ccz4::recomputeAuxiliaryVariablesFD4_4thOrder(
 
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_centralDifferences_LoopBody(
   double* __restrict__                                       QIn,
-  const ::exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
@@ -280,7 +280,7 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_cent
 
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_leftDifferences_LoopBody(
   double* __restrict__                                       QIn,
-  const ::exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
@@ -319,7 +319,7 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_left
 
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_rightDifferences_LoopBody(
   double* __restrict__                                       QIn,
-  const ::exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
@@ -356,7 +356,7 @@ void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_righ
 
 void applications::exahype2::ccz4::internal::recomputeAuxiliaryVariablesFD4_4thOrder_LoopBody(
   double* __restrict__                                       QIn,
-  const ::exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const ::exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,

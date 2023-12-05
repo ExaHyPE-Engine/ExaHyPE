@@ -29,8 +29,8 @@ void exahype2::fd::fd4::timeStep_patchwise_heap_functors(
   bool evaluateKODissipation = KOSigma>0.0;
   bool second_order_formulation = false;
 
-  exahype2::enumerators::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
-  exahype2::enumerators::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,0);
+  exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfGridCellsPerPatchPerAxis,haloSize,unknowns,auxiliaryVariables);
+  exahype2::enumerator::AoSLexicographicEnumerator QOutEnumerator(1,numberOfGridCellsPerPatchPerAxis,0,       unknowns,0);
 
   logDebug( "timeStep_patchwise_heap_functors(...)", "size of temp flux field=" << QOutEnumerator.size() );
   double* tempFluxX =  evaluateFlux                                                ? tarch::allocateMemory<double>( QOutEnumerator.size(),tarch::MemoryLocation::Heap ) : nullptr;
