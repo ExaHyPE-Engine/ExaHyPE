@@ -20,7 +20,7 @@ build_mode = "Release"
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Finite Volumes Rusanov Kernel Benchmarking Script')
 parser.add_argument("-m",       "--build-mode",         dest="build_mode",        choices=build_modes.keys(),   default=build_mode,         help="|".join(build_modes.keys()))
 parser.add_argument("-t",       "--num-threads",        dest="num_threads",       type=int,                     default=1,                  help="Number of launching threads")
-parser.add_argument("-p",       "--num-patches",        dest="num_patches",       type=int,                     required=True,              help="Number of patches to study")
+parser.add_argument("-p",       "--num-patches",        dest="num_patches",       type=int, nargs='+',          default=[32, 64, 128],      help="Number of patches to study")
 parser.add_argument("-ps",      "--patch-size",         dest="patch_size",        type=int,                     required=True,              help="Number of finite volumes per axis (dimension) per patch")
 parser.add_argument("-s" ,      "--samples",            dest="samples",           type=int,                     default=100,                help="Number of samples per measurement")
 parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=0.0,                help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
@@ -37,7 +37,7 @@ if(args.accuracy < 0):
   import numpy
   accuracy = default=numpy.finfo(float).eps
 
-executable_name = "kernel-benchmarks-fv-rusanov-ps-"+ str(args.patch_size) + "-p-" + str(args.num_patches) + "-" + str(args.build_mode)
+executable_name = "kernel-benchmarks-fv-rusanov-ps-"+ str(args.patch_size) + "-" + str(args.build_mode)
 my_project = exahype2.Project(
   namespace     = ["benchmarks", "exahype2", "kernelbenchmarks"],
   project_name  = "KernelBenchmarksFVRusanov",
@@ -162,7 +162,10 @@ my_project = my_project.generate_Peano4_project(verbose=True)
 
 my_project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "double")
 my_project.constants.export_constexpr_with_type("NumberOfSamples", str(args.samples), "int")
-my_project.constants.export_constexpr_with_type("NumberOfPatchesToStudy", str(args.num_patches), "int")
+formatted_num_patches = "{{{}}}".format(', '.join(str(val) for val in args.num_patches))
+my_project.constants.export_const_with_type(
+    "NumberOfPatchesToStudy", str(formatted_num_patches), "::tarch::la::Vector<%s, int>" % len(args.num_patches)
+)
 my_project.constants.export_constexpr_with_type("NumberOfLaunchingThreads", str(args.num_threads), "int")
 
 my_project.constants.export_boolean("EvaluateFlux", False)

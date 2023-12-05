@@ -1620,7 +1620,7 @@ int main(int argc, char** argv) {
   logInfo("main()", "===============================================================");
   logInfo("main()", "Dimensions: " << Dimensions);
   logInfo("main()", "Number of threads launching compute kernels: " << NumberOfLaunchingThreads);
-  logInfo("main()", "Number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy);
+  logInfo("main()", "Number of patches per thread/compute kernel launch to study: " << toString(NumberOfPatchesToStudy));
   logInfo("main()", "Number of compute threads: " << ::tarch::multicore::Core::getInstance().getNumberOfThreads());
   logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
   logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
@@ -1641,10 +1641,15 @@ int main(int argc, char** argv) {
 #pragma omp master
     {
 #endif
-      std::stringstream msg;
-      msg << "kernel-benchmarks-" << NumberOfPatchesToStudy << "-patches-" << ::tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
-      OTTER_PHASE_SWITCH(msg.str().c_str());
-      runBenchmarks(NumberOfPatchesToStudy, NumberOfLaunchingThreads);
+      for (int n = 0; n < NumberOfPatchesToStudy.size(); n++) {
+        logInfo("main()", "---------------------------------------------------------------");
+        logInfo("main()", "Current number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy[n]);
+        logInfo("main()", "---------------------------------------------------------------");
+        std::stringstream msg;
+        msg << "kernel-benchmarks-" << NumberOfPatchesToStudy[n] << "-patches-" << ::tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
+        OTTER_PHASE_SWITCH(msg.str().c_str());
+        runBenchmarks(NumberOfPatchesToStudy[n], NumberOfLaunchingThreads);
+      }
 #if defined(SharedOMP)
     }
   }
