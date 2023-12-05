@@ -131,8 +131,8 @@ void reportRuntime(const std::string& kernelIdentificator, const ::tarch::timing
   logInfo(
     "reportRuntime()",
     kernelIdentificator
-      << "\t| " << timingKernelLaunch.getValue() << "\t| " << (timingKernelLaunch.getValue() / patches / NumberOfFiniteVolumesPerPatch / NumberOfSamples) << "\t| "
-      << timingComputeKernel.getValue() << "\t| " << (timingComputeKernel.getValue() / patches / NumberOfFiniteVolumesPerPatch / NumberOfSamples) << "\t| "
+      << "\t| " << timingKernelLaunch.getValue() << "\t| " << (timingKernelLaunch.getValue() / patches / NumberOfFiniteVolumesPerPatch) << "\t| "
+      << timingComputeKernel.getValue() << "\t| " << (timingComputeKernel.getValue() / patches / NumberOfFiniteVolumesPerPatch) << "\t| "
       << timingKernelLaunch.toString() << "\t| " << timingComputeKernel.toString()
   );
 }
@@ -1615,7 +1615,7 @@ int main(int argc, char** argv) {
   }
   ::peano4::runTestsAndBenchmarks();
   OTTER_INITIALISE();
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+  //eenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
   logInfo("main()", "===============================================================");
   logInfo("main()", "Dimensions: " << Dimensions);
