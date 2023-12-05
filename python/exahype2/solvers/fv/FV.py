@@ -1253,13 +1253,23 @@ The finest mesh width of """
         implementationDictionary = {}
         self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
         self._init_dictionary_with_default_parameters(implementationDictionary)
+
+        header_file_abstr_template = templatefile_prefix + "Abstract.template.h"
+        cpp_file_abstr_template = templatefile_prefix + "Abstract.template.cpp"
+        abstractHeaderDictionary[ "HEADER_FILE_ABSTR_TEMPLATE" ] = os.path.basename(header_file_abstr_template)
+        abstractHeaderDictionary[ "CPP_FILE_ABSTR_TEMPLATE" ] = os.path.basename(cpp_file_abstr_template)
         self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
+
+        header_file_template = templatefile_prefix + ".template.h"
+        cpp_file_template = templatefile_prefix + ".template.cpp"
+        implementationDictionary[ "HEADER_FILE_TEMPLATE" ] = os.path.basename(header_file_template)
+        implementationDictionary[ "CPP_FILE_TEMPLATE" ] = os.path.basename(cpp_file_template)
         self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                templatefile_prefix + "Abstract.template.h",
-                templatefile_prefix + "Abstract.template.cpp",
+                header_file_abstr_template,
+                cpp_file_abstr_template,
                 "Abstract" + self._name,
                 namespace,
                 ".",
@@ -1270,8 +1280,8 @@ The finest mesh width of """
         )
         generated_solver_files = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                templatefile_prefix + ".template.h",
-                templatefile_prefix + ".template.cpp",
+                header_file_template,
+                cpp_file_template,
                 self._name,
                 namespace,
                 ".",

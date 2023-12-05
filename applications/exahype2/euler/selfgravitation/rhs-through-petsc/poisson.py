@@ -140,9 +140,9 @@ poisson_project.add_solver(poisson_solver)
 # Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
 # for the Poisson updates.
 #
-euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fineGridCell" + \
-  poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" + euler_solver.name + \
-  "CellLabel.getTimeStamp() )"
+# euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fineGridCell" + \
+#   poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" + euler_solver.name + \
+#   "CellLabel.getTimeStamp() )"
 
 #
 # Add the coupling terms
@@ -150,19 +150,20 @@ euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fi
 euler_solver.add_user_action_set_includes( """
 #include "toolbox/blockstructured/Copy.h"
 """)
-euler_solver.postprocess_updated_patch = """
- ::toolbox::blockstructured::copyUnknown(
-   {},      // no of unknowns per dimension
-   fineGridCell{}Q.value, // source
-   0,       // the first index (0) is rho
-   5+3,     // unknowns in source (incl material parameters)
-   0,       // no overlap/halo here
-   fineGridCell{}PETScData.value, // dest
-   4,       // index four in destination, i.e. fifth entry
-   4+1,     // four unknowns in source (incl material parameters)
-   0        // no overlap/halo here
- );
-""".format(args.patch_size, euler_solver.name, poisson_solver.name)
+
+# euler_solver.postprocess_updated_patch = """
+#  ::toolbox::blockstructured::copyUnknown(
+#    {},      // no of unknowns per dimension
+#    fineGridCell{}Q.value, // source
+#    0,       // the first index (0) is rho
+#    5+3,     // unknowns in source (incl material parameters)
+#    0,       // no overlap/halo here
+#    fineGridCell{}PETScData.value, // dest
+#    4,       // index four in destination, i.e. fifth entry
+#    4+1,     // four unknowns in source (incl material parameters)
+#    0        // no overlap/halo here
+#  );
+# """.format(args.patch_size, euler_solver.name, poisson_solver.name)
 
 # poisson_solver.add_user_action_set_includes( """
 # #include "toolbox/blockstructured/Derivative.h"
@@ -232,9 +233,9 @@ poisson_project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-euler_project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
+euler_project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 euler_project.set_Peano4_installation(args.peanodir, modes[args.mode])
-poisson_project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()")
+poisson_project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()")
 poisson_project.set_Peano4_installation(args.peanodir, modes[args.mode])
 
 #
@@ -251,22 +252,30 @@ poisson_peano4_project = poisson_project.generate_Peano4_project(args.verbose)
 #
 # Merge two Peano4 projects into one and build
 #
-peano4_project = peano4.Project.merge(
-   euler_peano4_project,
-   poisson_peano4_project,
-   project_name="EulerPoisson",
-   executable="selfgravitation-with-petsc",
-)
+# peano4_project = peano4.Project.merge(
+#    euler_peano4_project,
+#    poisson_peano4_project,
+#    project_name="EulerPoisson",
+#    executable="selfgravitation-with-petsc",
+# )
 
-peano4_project.output.makefile.add_h_file("Euler.h")
-peano4_project.output.makefile.add_cpp_file("Euler.cpp")
-peano4_project.output.makefile.add_h_file("Poisson.h")
-peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
+euler_peano4_project.output.makefile.add_h_file("Euler.h")
+euler_peano4_project.output.makefile.add_cpp_file("Euler.cpp")
+# euler_peano4_project.output.makefile.add_h_file("Poisson.h")
+# euler_peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
 
-peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+euler_peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
 if args.j==0:
-  peano4_project.generate()
+  euler_peano4_project.generate()
 else:
-  peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+  euler_peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+print("Euler Peano4 Project built successfully")
 
-print("Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")
+poisson_peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+if args.j==0:
+  poisson_peano4_project.generate()
+else:
+  poisson_peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+print("Poisson Peano4 Project built successfully")
+
+# print("Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")

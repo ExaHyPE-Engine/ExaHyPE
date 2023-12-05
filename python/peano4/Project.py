@@ -337,7 +337,11 @@ class Project (object):
       #
       # merge all steps of solversteps
       #
-      for step in lhs.solversteps._steps + rhs.solversteps._steps:
+      for step in lhs.solversteps._steps:
+        step.name = lhs.project_name
+        result_project.solversteps.add_step(step)
+      for step in rhs.solversteps._steps:
+        step.name = rhs.project_name
         result_project.solversteps.add_step(step)
 
       #
@@ -440,5 +444,9 @@ class Project (object):
       # merge all constants
       #
       result_project.constants.d = {**lhs.constants.d, **rhs.constants.d}
+
+      # ...
+      # result_project.set_solver_repository_dict()
+      # result_project.generate_solver_repository()
 
       return result_project

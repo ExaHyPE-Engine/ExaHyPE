@@ -69,22 +69,22 @@ class Project(object):
         self._tracer_particle_sets = []
 
         self.create_grid = peano4.solversteps.Step(
-            self._project.project_name+"_CreateGrid", False
+            "CreateGrid", False
         )
         self.init_grid = peano4.solversteps.Step(
-            self._project.project_name+"_InitGrid", False
+            "InitGrid", False
         )
         self.create_grid_but_postpone_refinement = peano4.solversteps.Step(
-            self._project.project_name+"_CreateGridButPostponeRefinement", False
+            "CreateGridButPostponeRefinement", False
         )
         self.create_grid_and_converge_lb = peano4.solversteps.Step(
-            self._project.project_name+"_CreateGridAndConvergeLoadBalancing", False
+            "CreateGridAndConvergeLoadBalancing", False
         )
         self.plot_solution = peano4.solversteps.Step(
-            self._project.project_name+"_PlotSolution", False
+            "PlotSolution", False
         )
         self.perform_time_step = peano4.solversteps.Step(
-            self._project.project_name+"_TimeStep", False
+            "TimeStep", False
         )
 
 
@@ -362,12 +362,8 @@ thus appreciate any citation of the original release paper
     def add_mainfile_include(self,value):
         self._additional_includes.append( value )
 
-    def __generate_solver_repository(self):
-        """
-        I have to call finishedTraversal() for each tracer set. As tracers
-        are a subclass of DoF, they have a name property.
-        """
-        solverRepositoryDictionary = {
+    def __set_solver_repository_dict(self):
+        self.solverRepositoryDictionary = {
             "SOLVERS":                  [],
             "LOAD_BALANCER":            self._load_balancer_name,
             "LOAD_BALANCER_ARGUMENTS":  self._load_balancer_arguments,
@@ -381,8 +377,16 @@ thus appreciate any citation of the original release paper
             "ADDITIONAL_INCLUDES":      self._additional_includes,
         }
 
+    def __generate_solver_repository(self):
+        """
+        I have to call finishedTraversal() for each tracer set. As tracers
+        are a subclass of DoF, they have a name property.
+        """
+
+        self.__set_solver_repository_dict()
+
         for solver in self._solvers:
-            solverRepositoryDictionary["SOLVERS"].append(
+            self.solverRepositoryDictionary["SOLVERS"].append(
                 (solver._name, solver.get_name_of_global_instance())
             )
 
@@ -396,7 +400,7 @@ thus appreciate any citation of the original release paper
                 "SolverRepository",
                 self._project.namespace + ["repositories"],
                 "repositories",
-                solverRepositoryDictionary,
+                self.solverRepositoryDictionary,
                 True,
             )
         )

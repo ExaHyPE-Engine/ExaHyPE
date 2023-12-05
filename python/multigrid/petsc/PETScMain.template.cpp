@@ -1,11 +1,12 @@
+// (Generated from multigrid/petsc/{{CPP_FILE_TEMPLATE}})
 #include "{{MAIN_NAME}}.h"
 
-#include "observers/Assemble.h"
-#include "observers/CreateGrid.h"
-#include "observers/EnumerateAndInitSolution.h"
-#include "observers/MapSolutionOntoMesh.h"
-#include "observers/Plot.h"
-#include "observers/Solve.h"
+#include "observers/{{PROJECT_NAME}}/Assemble.h"
+#include "observers/{{PROJECT_NAME}}/CreateGrid.h"
+#include "observers/{{PROJECT_NAME}}/EnumerateAndInitSolution.h"
+#include "observers/{{PROJECT_NAME}}/MapSolutionOntoMesh.h"
+#include "observers/{{PROJECT_NAME}}/Plot.h"
+#include "observers/{{PROJECT_NAME}}/Solve.h"
 
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"

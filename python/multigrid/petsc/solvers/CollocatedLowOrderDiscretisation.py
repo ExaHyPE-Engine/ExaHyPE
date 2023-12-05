@@ -272,13 +272,13 @@ class CollocatedLowOrderDiscretisation(Solver):
   def __str__(self):
       result = (
           """
-Name:                   """
+Name:            """
           + self._name
           + """
-Type:                   """
+Type:            """
           + self.__class__.__name__
           + """
-Unknowns:               """
+Unknowns:        """
           + str(self._unknowns)
           + """
 min_h:           """
