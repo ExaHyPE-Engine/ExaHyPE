@@ -25,7 +25,7 @@ parser.add_argument("-ps",      "--patch-size",         dest="patch_size",      
 parser.add_argument("-s" ,      "--samples",            dest="samples",           type=int,                     default=100,                help="Number of samples per measurement")
 parser.add_argument("-a",       "--accuracy",           dest="accuracy",          type=float,                   default=0.0,                help="Floating point accuracy to which the different kernel variants have to match (absolute). Pass in 0 to disable correctness check. Pass in values < 0 to use machine epsilon (default).")
 parser.add_argument("-e",       "--eval-eig",           dest="eval_eig",          action="store_true",                                      help="Evaluate max. eigenvalue")
-parser.add_argument(            "--make",               dest="make",              action="store_true",                                      help="Compile the code after generation")
+parser.add_argument(            "--no-make",            dest="no_make",           action="store_true",                                      help="Do not compile the code after generation")
 args = parser.parse_args()
 
 if args.build_mode not in build_modes:
@@ -176,7 +176,7 @@ my_project.output.makefile.add_cpp_file("../../../../applications/exahype2/ccz4/
 
 os.system("cp {} KernelBenchmarksFVRusanov-main.cpp".format("../../euler/kernel-benchmarks/KernelBenchmarksFVRusanov-main.cpp"))
 
-my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
+my_project.build(make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True)
 
 print("Executable is ", executable_name)
 print("Clean object files via 'make clean'")

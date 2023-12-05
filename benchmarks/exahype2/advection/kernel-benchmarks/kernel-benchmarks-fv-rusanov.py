@@ -84,7 +84,7 @@ parser.add_argument(
     help="Evaluate max. eigenvalue",
 )
 parser.add_argument(
-    "--make", dest="make", action="store_true", help="Compile the code after generation"
+    "--no-make", dest="no_make", action="store_true", help="Do not compile the code after generation"
 )
 args = parser.parse_args()
 
@@ -195,7 +195,7 @@ os.system(
 )
 
 my_project.build(
-    make=args.make, make_clean_first=True, throw_away_data_after_build=True
+    make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True
 )
 
 print("Executable is ", executable_name)
