@@ -126,8 +126,8 @@ class Prediction(AbstractAderDGActionSet):
             d["FUSED_PREDICTOR_VOLUME_INTEGRAL"]        = create_fstpvi_call(self.is_linear, self.usePointSource, self.use_kernelgenerator)
             d["SOLUTION_UPDATE"]                        = create_solution_update(self.use_kernelgenerator)
             d["PROJECT_SOLUTION_TO_FACES"]              = (
-                copy_estimates_into_faces() if self.onHangingCells
-                else copy_estimates_and_perform_riemann_solution_on_hanging_faces(self.use_custom_riemann_solver, self.use_kernelgenerator, self.is_linear)
+                copy_estimates_and_perform_riemann_solution_on_hanging_faces(self.use_custom_riemann_solver, self.use_kernelgenerator, self.is_linear) if self.onHangingCells
+                else copy_estimates_into_faces()
             )
             d["COMPUTE_AND_PROJECT_LOCAL_MIN_AND_MAX"]  = (
                 compute_local_min_and_max_and_project() if self.use_DMP

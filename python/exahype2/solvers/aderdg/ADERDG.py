@@ -190,8 +190,8 @@ class ADERDG(object):
             copied to faces to communicate this status to the neighbours.
         """
         self._hold_previous_time_step           = False
-        self._use_troubled_marker               = True
-        self._use_limiting                      = True
+        self._use_troubled_marker               = False
+        self._use_limiting                      = False
         self._number_of_dmp_observables         = 0
         self._physical_admissibility_criterion  = PDETerms.None_Implementation
 

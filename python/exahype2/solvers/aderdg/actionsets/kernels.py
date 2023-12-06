@@ -161,7 +161,7 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
       repositories::{{SOLVER_INSTANCE}},
       lduh, lQhbnd, lFhbnd,
       lQi, lFi, lSi,
-      lQhi, lFhi lShi,
+      lQhi, lFhi, lShi,
       gradQ, nullptr, nullptr,
       luh,
       marker.x(), marker.h(), timeStamp, timeStepSize,
@@ -466,8 +466,7 @@ def face_integral(use_kernelgenerator, is_linear):
         return template_generic_nonlinear
     
 def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riemann_solver, use_kernelgenerator, is_linear):
-    Template = jinja2.Template(
-        """
+    Template = """
     /*
     Copy the estimates into the face data containers. Note that peano uses a different ordering of
     the faces that the kernels, so these are reordered somewhat.
@@ -492,21 +491,21 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
         //Left values
         if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
-            double* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value;
-            double* FR = &lFhbnd[2*d*fluxElementsPerFace];
-            double* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
-            double* QR = &lQhbnd[2*d*basisElementsPerFace];
+            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FL = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value;
+            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FR = &lFhbnd[2*d*fluxElementsPerFace];
+            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QL = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value;
+            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QR = &lQhbnd[2*d*basisElementsPerFace];
             int orientation = 0;
             int faceNumber  = d;
             bool isBoundary = false;
             tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
             faceCentre[d] -= 0.5*marker.h()[d];
 
-{{RIEMANN_SOLVER}}
+    """ + riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear) + """
 
-            double* FIN = FR;
+            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FIN = FR;
 
-{{FACE_INTEGRAL}}
+    """ + face_integral(use_kernelgenerator, is_linear) + """
 
         }
         else{
@@ -518,21 +517,21 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
         //Right values
         if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()){
-            double* FL = &lFhbnd[(2*d+1)*fluxElementsPerFace];
-            double* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsPerFace;
-            double* QL = &lQhbnd[(2*d+1)*basisElementsPerFace];
-            double* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsPerFace;
+            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FL = &lFhbnd[(2*d+1)*fluxElementsPerFace];
+            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FR = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value+fluxElementsPerFace;
+            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QL = &lQhbnd[(2*d+1)*basisElementsPerFace];
+            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* QR = fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d+Dimensions).value+basisElementsPerFace;
             int orientation = 0;
             int faceNumber  = d+Dimensions;
             bool isBoundary = false;
             tarch::la::Vector<Dimensions,double> faceCentre = marker.x();
             faceCentre[d] += 0.5*marker.h()[d];
         
-{{RIEMANN_SOLVER}}
+    """ + riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear) + """
 
-            double* FIN = FL;
+            {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* FIN = FL;
 
-{{FACE_INTEGRAL}}
+    """ + face_integral(use_kernelgenerator, is_linear) + """
         
         }
         else{
@@ -544,13 +543,11 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
     }
 
-""",
-        undefined=jinja2.DebugUndefined,
-    )
+"""
     d = {}
     d["RIEMANN_SOLVER"] = riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear)
     d["FACE_INTEGRAL"] = face_integral(use_kernelgenerator, is_linear)
-    return Template.render(**d)
+    return Template#Template.render(**d)
 
 def check_troubledness(usePAC, useDMP, useTroubledMarkers):
     templatePAC = """

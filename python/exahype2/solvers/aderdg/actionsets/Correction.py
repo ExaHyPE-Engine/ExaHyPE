@@ -50,10 +50,10 @@ class Correction(AbstractAderDGActionSet):
     2d: 0,1,2,3 -> 0,2,1,3
     3d: 0,1,2,3,4,5 -> 0,3,1,4,2,5
     */
-    double* FL = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value;
-    double* FR = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace;
-    double* QL = fineGridFace{{SOLVER_NAME}}QEstimates.value;
-    double* QR = fineGridFace{{SOLVER_NAME}}QEstimates.value+basisElementsPerFace;
+    {{CORRECTOR_COMPUTATION_PRECISION}}* FL = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value;
+    {{CORRECTOR_COMPUTATION_PRECISION}}* FR = fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+fluxElementsPerFace;
+    {{CORRECTOR_COMPUTATION_PRECISION}}* QL = fineGridFace{{SOLVER_NAME}}QEstimates.value;
+    {{CORRECTOR_COMPUTATION_PRECISION}}* QR = fineGridFace{{SOLVER_NAME}}QEstimates.value+basisElementsPerFace;
     const int direction = marker.getSelectedFaceNumber()%Dimensions;
     const int faceNumber  = marker.getSelectedFaceNumber();
     const bool isBoundary = fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary();
@@ -83,7 +83,7 @@ class Correction(AbstractAderDGActionSet):
 
       //negative face
       if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
-        double* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace;
         const int orientation = 0;
 
         {{FACE_INTEGRAL}}
@@ -92,7 +92,7 @@ class Correction(AbstractAderDGActionSet):
 
       //positive face
       if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()){
-        double* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value;
+        {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value;
         const int orientation = 1;
 
         {{FACE_INTEGRAL}}
