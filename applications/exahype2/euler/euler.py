@@ -227,7 +227,7 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--make", dest="make", action="store_true", help="Compile the code after generation"
+    "--no-make", dest="no_make", action="store_true", help="Do not compile the code after generation"
 )
 parser.add_argument(
     "--executable",
@@ -518,7 +518,7 @@ my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
 my_project.output.makefile.add_cpp_file(solver_name + ".cpp")
 
 my_project.build(
-    make=args.make, make_clean_first=True, throw_away_data_after_build=True
+    make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True
 )
 
 print("Executable is ", executable_name)
