@@ -454,10 +454,22 @@ Particle properties:
 
         return steps
 
-    def add_dependency_checks(self):
+    def _add_dependency_checks(self):
         """!
 
-        Add dependency checks: We first create Enumerations representing each
+        Add dependency (particle consistency) checks
+        
+        This routine should be called in the subclass directly after you have
+        befilled self._algorithm_steps and self._initialisation_steps. It is 
+        safe to add this stuff to your particle model all the time - the 
+        actual checks kick in if and only if you run in non-release modes.
+        However, you might want to call the function only in these cases to 
+        ensure that no (empty) C++ code is generated and the compiler can 
+        optimise more aggressively. 
+        
+        ## Realisation
+
+        We first create Enumerations representing each
         algorithm step defined for the Particle, as well as each sweep stage of
         any grid traversal.
 
@@ -473,6 +485,7 @@ Particle properties:
 
         This is done both for the main algorithm steps as well as for the
         initialisation steps individually.
+        
         """
 
         ifdefs = ["PeanoDebug > 0"]
