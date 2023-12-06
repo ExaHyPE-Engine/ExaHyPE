@@ -107,4 +107,4 @@ class LinearCombinationOfEstimates(AbstractRKFDActionSet):
   def get_includes(self):
     return super(LinearCombinationOfEstimates,self).get_includes() + """
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-"""    
+"""

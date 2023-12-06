@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.abspath('../../../python'))
 
 import peano4
 import exahype2
-from exahype2.solvers.fv.PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 dimensions            = 2 # this is fixed to 2 in pde.py
 width                 = [10, 10]

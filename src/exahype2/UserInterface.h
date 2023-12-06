@@ -4,4 +4,4 @@
 
 namespace exahype2 {
   void setDefaultLogStatements();
-}
+} // namespace exahype2

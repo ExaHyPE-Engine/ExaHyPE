@@ -14,7 +14,6 @@
 #include "tarch/mpi/tests/StringTest.h"
 
 
-
 tarch::tests::TestCase* tarch::getUnitTests() {
   tarch::tests::TreeTestCaseCollection* result = new tarch::tests::TreeTestCaseCollection();
 
