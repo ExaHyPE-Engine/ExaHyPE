@@ -19,7 +19,6 @@ class UserDefinedType(Attribute):
         qualifier=Attribute.Qualifier.NONE,
         initval=None,
         getter_returns_reference=True,
-        generate_setter=False,
         user_type_has_toString_method=True,
     ):
         """!
@@ -48,7 +47,6 @@ class UserDefinedType(Attribute):
         self._type = type
         self._include = include
         self._getter_returns_reference = getter_returns_reference
-        self._generate_setter = generate_setter
         self._user_type_has_toString_method = user_type_has_toString_method
         pass
 
@@ -90,8 +88,7 @@ class UserDefinedType(Attribute):
 
         # Add a setter method, if it makes sense.
         if (
-            not (self._is_const_static or self._is_const or self._is_constexpr)
-            and self._generate_setter
+            not (self._is_const_static or self._is_const or self._is_constexpr or self._is_static)
         ):
             methods.append(
                 ("set" + accessor_name + "(const " + self._type + "& value)", "void")

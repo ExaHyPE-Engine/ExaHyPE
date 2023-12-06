@@ -87,19 +87,33 @@ class DastgenTestDummyParticle(Particle):
 
     def _generate_user_defined_attributes(self, ifdefs: bool):
         if ifdefs:
-            var_basename = "DebugUserDefined"
+            var_basename = "DebugUserDefinedAttribute"
             defs = ["PeanoDebug > 0"]
-        if ifdefs and not compress:
-            var_basename = "DebugUserDefined"
+        else:
+            var_basename = "UserDefinedAttribute"
             defs = []
         self.data.add_attribute(
             dastgen2.attributes.UserDefinedType(
-                name = "UserDefinedAttribute",
+                name = "my" + var_basename,
                 type = "std::string",
                 include = """
 #include <string>                
 """,
                 ifdefs = defs,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
+                user_type_has_toString_method=False,
+            )
+        )
+        self.data.add_attribute(
+            dastgen2.attributes.UserDefinedType(
+                name = "myStatic" + var_basename,
+                type = "std::string",
+                include = """
+#include <string>                
+""",
+                ifdefs = defs,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                user_type_has_toString_method=False,
             )
         )
 
@@ -718,7 +732,7 @@ class DastgenTestDummyParticle(Particle):
             name="dummyDastgenTest",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""::swift2::dastgenTest::checkDastgen(localParticles);""",
+            touch_vertex_first_time_kernel="""::swift2::dastgenTest::checkDastgen(assignedParticles);""",
             prepare_traversal_kernel="""
                 ::swift2::dastgenTest::dummyMoveForwardInTime<globaldata::{}>();""".format(
                 self.name
@@ -736,7 +750,7 @@ class DastgenTestDummyParticle(Particle):
             name="dummyDastgenTest2",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_last_time_kernel="""::swift2::dastgenTest::checkDastgen(localParticles);""",
+            touch_vertex_last_time_kernel="""::swift2::dastgenTest::checkDastgen(assignedParticles);""",
             unprepare_traversal_kernel="""
                                        globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
                                        ::swift2::dastgenTest::reportStep<globaldata::{PARTICLE}>( "{PARTICLE}" );
