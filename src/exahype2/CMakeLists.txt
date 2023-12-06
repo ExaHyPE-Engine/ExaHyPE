@@ -7,19 +7,18 @@ foreach(mode IN LISTS BUILD_MODES)
 
   foreach(dimension IN LISTS WITH_DIMENSIONS)
     add_library(ExaHyPE2Core${dimension}d_${mode_lower} STATIC)
-    #display_header("Creating Makefile of ExaHyPE2Core${dimension}d_${mode_lower}")
+    display_header("Creating Makefile of ExaHyPE2Core${dimension}d_${mode_lower}")
 
     target_sources(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ${SOURCES})
     target_include_directories(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    target_compile_definitions(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS} Dimensions=${dimension})
-    target_link_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
+    target_compile_definitions(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
+    target_link_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC project_options Peano4Core${dimension}d_${mode_lower})
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxLoadBalancing${dimension}d_${mode_lower})
     target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC ToolboxBlockStructured${dimension}d_${mode_lower})
-
-    if(NOT "${WITH_GPU}" STREQUAL "cuda")
-      target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE project_warnings)
-    endif()
+    target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${mode_upper}}>)
+    target_compile_options(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${mode_upper}}>)
+    target_link_libraries(ExaHyPE2Core${dimension}d_${mode_lower} PRIVATE project_warnings)
 
     install(TARGETS ExaHyPE2Core${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
