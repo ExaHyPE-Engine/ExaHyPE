@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
-from .AbstractUpdateParticleGridAssociation import AbstractUpdateParticleGridAssociation
+from peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation import AbstractUpdateParticleGridAssociation
 
 import jinja2
 

@@ -111,6 +111,57 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     (in the second grid sweep) happens before anybody else touches the particles,
     while the extraction of particles or moves from fine to coarse are epilogues to
     any operation in the primary mesh sweep.
+    
+    
+    ## Grid resorting followed by particle-particle interactions
+    
+    If you have particle-particle interactions while particles may drop within 
+    the mesh (due to dynamic AMR or particle movements), you have to be extra 
+    careful. There are two major issues to consider, which both can be 
+    illustrated with the sketch below.
+    
+    @image html toolbox/particles/SievingAlongAMRBoundaries.png
+    
+    ### Particles along AMR boundaries
+    
+    In the sketch, the green particle would logically belong into the finer mesh
+    level. However, we should not move it up and down: The routine 
+    touchVertexFirstTime() should grab particles from the coarser level and drop 
+    them, but the routine createHangingVertex() should not. If we dropped them,
+    we would have to lift them immediately afterwards again, as hanging vertices
+    are not persistent in Peano.
+    
+    This would yield a lot of memory movements and also potentially destroy 
+    any well-aligned and ordered memory arrangement which is poissoneous for 
+    vectorisation. Therefore, we leave particles on coarser levels. The green
+    particles is no dropped.
+    
+    Let the green particle affect the blue one. As a consequence of the 
+    constraint above, the green particle has to be updated with contributions
+    from blue. We need a proper multiscale interaction.
+    
+    ### Multiscale interaction 
+    
+    Let green and blue interact. If blue resides on the coarser level and is 
+    dropped in the very same mesh traversal, we have to be extra careful: 
+    
+    - The blue and the green particle are both cleared on the coarse level.
+      Blue gets contributions from green within the coarse cell, and green gets
+      contributions from blue.
+    - Now we drop blue.
+    - Blue is cleared due to the drop.
+    - Blue is now getting contributiosn from the coarser level, i.e. green. As
+      this is a multiscale relation, green is also added (fine grid) 
+      contributions from blue. 
+      
+    Consequently, the particles on the coarser level gets two times the 
+    contributions from the particle which is dropped in this very mesh 
+    traversal. To avoid this, we either veto any particle-particle interaction
+    in a mesh traversal which also drops, or we find a mechanism to remove the
+    contributions to coarse meshes whenever we drop a particle. In don't do the
+    latter usually, as it is more complicated.
+    
+    
 
     """
 
