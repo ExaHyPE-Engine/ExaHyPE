@@ -79,8 +79,30 @@ class DastgenTestDummyParticle(Particle):
         self._generate_peano_integer_array_attributes(compress=True, ifdefs=False)
         self._generate_peano_integer_array_attributes(compress=False, ifdefs=True)
         self._generate_peano_integer_array_attributes(compress=True, ifdefs=True)
+        
+        self._generate_user_defined_attributes(ifdefs=False)
+        self._generate_user_defined_attributes(ifdefs=True)
 
         return
+
+    def _generate_user_defined_attributes(self, ifdefs: bool):
+        if ifdefs:
+            var_basename = "DebugUserDefined"
+            defs = ["PeanoDebug > 0"]
+        if ifdefs and not compress:
+            var_basename = "DebugUserDefined"
+            defs = []
+        self.data.add_attribute(
+            dastgen2.attributes.UserDefinedType(
+                name = "UserDefinedAttribute",
+                type = "std::string",
+                include = """
+#include <string>                
+""",
+                ifdefs = defs,
+            )
+        )
+
 
     def _generate_boolean_attributes(self, ifdefs: bool):
         """!
