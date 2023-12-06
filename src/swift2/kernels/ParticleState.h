@@ -59,8 +59,11 @@ namespace swift2 {
     ) {
 
       return (
-        not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())
-        and not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker)
+        not localParticle->getCellHasUpdatedParticle()
+        and
+        marker.isContained(localParticle->getX())
+        and 
+        not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker)
       );
     }
 
