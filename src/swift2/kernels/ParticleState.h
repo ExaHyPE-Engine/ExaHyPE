@@ -50,6 +50,24 @@ namespace swift2 {
     /**
      * @brief Can we do work on this particle during a cell kernel sweep stage?
      *
+     * I originally thought that this predicate should resemble
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      return (
+        not localParticle->getCellHasUpdatedParticle()
+        and
+        marker.isContained(localParticle->getX())
+        and
+        not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker)
+      );
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * However, that's a poor idea, as it does not work along AMR boundaries for
+     * particles which reside in a refined cell yet would be dropped into a hanging
+     * vertex (which we don't). The file peano4.toolbox.particles.api.AbstractParticleGridAssociation
+     * provides some examples on this.
+     *
+     *
      * @param localParticle: particle to check for
      * @param marker: the cell's CellMarker
      */
@@ -62,8 +80,6 @@ namespace swift2 {
         not localParticle->getCellHasUpdatedParticle()
         and
         marker.isContained(localParticle->getX())
-        and 
-        not toolbox::particles::particleWillBeDroppedFurther(*localParticle, marker)
       );
     }
 
