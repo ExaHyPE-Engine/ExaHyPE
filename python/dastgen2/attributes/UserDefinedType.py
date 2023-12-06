@@ -48,6 +48,9 @@ class UserDefinedType(Attribute):
         self._include = include
         self._getter_returns_reference = getter_returns_reference
         self._user_type_has_toString_method = user_type_has_toString_method
+        
+        assert qualifier==Attribute.Qualifier.STATIC or qualifier==Attribute.Qualifier.CONST_STATIC
+
         pass
 
     def get_methods(self, _full_qualified_class_name, for_declaration=True):

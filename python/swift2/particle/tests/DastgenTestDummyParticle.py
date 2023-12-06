@@ -94,18 +94,6 @@ class DastgenTestDummyParticle(Particle):
             defs = []
         self.data.add_attribute(
             dastgen2.attributes.UserDefinedType(
-                name = "my" + var_basename,
-                type = "std::string",
-                include = """
-#include <string>                
-""",
-                ifdefs = defs,
-                qualifier=dastgen2.attributes.Attribute.Qualifier.NONE,
-                user_type_has_toString_method=False,
-            )
-        )
-        self.data.add_attribute(
-            dastgen2.attributes.UserDefinedType(
                 name = "myStatic" + var_basename,
                 type = "std::string",
                 include = """
