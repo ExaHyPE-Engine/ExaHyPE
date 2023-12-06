@@ -153,8 +153,7 @@ class UserDefinedType(Attribute):
         the bool to an integer, then it seems to work.
 
         """
-        # return [ ("MPI_C_BOOL", 1) ]
-        return [("MPI_BYTE", 1)]
+        return [("MPI_BYTE", "sizeof(" + self._type + ")")]
 
     def get_to_string(self):
         """
