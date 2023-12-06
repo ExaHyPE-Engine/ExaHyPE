@@ -6,7 +6,6 @@ sys.path.insert(0, os.path.abspath('../../../python'))
 import peano4
 import exahype2
 
-dimensions                = 2
 auxiliary_variables       = 13
 cell_size                 = 0.0022
 amr_levels                = 3
@@ -17,7 +16,6 @@ end_time                  = 1.0
 plot_interval             = end_time/100
 #plot_interval             = 0
 use_gpu                   = False
-use_make                  = True
 use_symbolic_description  = False
 output_path               = "solution"
 
@@ -41,7 +39,6 @@ rkdg_rusanov_solvers = {
 
 aderdg_rusanov_solvers = {
   "ADERDGRusanovGlobalAdaptive":exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep
-
 }
 
 solvers = {}
@@ -71,7 +68,6 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - Saint-Venant Applicati
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default=solver,             help="|".join(solvers.keys()))
 parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default=output_path,        help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
 parser.add_argument("-m",       "--build-mode",        dest="build_mode",     choices=build_modes.keys(), default=build_mode,         help="|".join(build_modes.keys()))
-parser.add_argument("-d",       "--dim",               dest="dim",            type=int,                   default=dimensions,         help="Number of space dimensions")
 
 parser.add_argument("-st",      "--storage",           dest="storage",        choices=storage_types.keys(), default=storage_type,     help="|".join(storage_types.keys()))
 parser.add_argument("-sc",      "--scenario",          dest="scenario",       choices=scenarios,          default=scenario,           help="|".join(scenarios))
@@ -90,16 +86,9 @@ parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     ty
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   default=rk_order,           help="Order of time discretisation for Runge-Kutta scheme.")
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   default=dg_order,           help="Order of space discretisation for Discontinuous Galerkin.")
 
-parser.add_argument(            "--make",                                     action="store_true",                                    help="Compile the code after generation")
-parser.add_argument(            "--no-make",           dest="use_make",       action="store_false",                                   help="Do not compile the code after generation")
-parser.set_defaults(make=True)
+parser.add_argument(            "--no-make",           dest="no_make",                                    action="store_true",        help="Do not compile the code after generation")
 parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
 args = parser.parse_args()
-
-
-if args.dim not in [2, 3]:
-    print("Error, dimension must be 2 or 3, you supplied {}".format(args.dim))
-    sys.exit(1)
 
 if args.build_mode not in build_modes:
     print("Error, mode must be {} or {}, you supplied {}".format(", ".join(list(build_modes.keys())[:-1]), list(build_modes.keys())[-1], args.build_mode))
@@ -120,7 +109,7 @@ if args.scenario not in scenarios:
 if args.executable:
   executable_name = args.executable
 else:
-  executable_name = "saintvenant-" + str(args.dim) + "d-" + str(args.scenario)
+  executable_name = "saintvenant-" + str(args.scenario)
 my_project = exahype2.Project(
   namespace=["applications", "exahype2", "saintvenant"],
   project_name="SaintVenant" + args.scenario,
@@ -138,13 +127,13 @@ solver_name = "SaintVenantSolver" + str(args.scenario) + str(solver_type)
 if args.use_gpu:
   solver_name += "GPU"
 
-unknowns = args.dim + 1 
+unknowns = 3
 my_solver = None
 if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
   my_solver = solvers[solver_type](
     name=solver_name,
     patch_size=args.patch_size,
-    unknowns=args.dim + 1, # [h, hu, hv]
+    unknowns=unknowns, # [h, hu, hv]
     auxiliary_variables=auxiliary_variables,
     max_volume_h=args.max_cell_size,
     min_volume_h=args.max_cell_size * 3.0**(-args.amr_levels),
@@ -171,7 +160,7 @@ elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
   my_solver = solvers[solver_type](
     name=solver_name,
     patch_size=args.patch_size,
-    unknowns=args.dim + 1, # [h, hu, hv]
+    unknowns=unknowns, # [h, hu, hv]
     auxiliary_variables=auxiliary_variables,
     max_volume_h=args.max_cell_size,
     min_volume_h=min_h,
@@ -185,7 +174,7 @@ elif solver_type in rkdg_rusanov_solvers and "Adaptive" in solver_type:
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
-    unknowns                  = args.dim + 1, # [h, hu, hv]
+    unknowns                  = unknowns, # [h, hu, hv]
     auxiliary_variables       = auxiliary_variables,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = args.max_cell_size * 3.0**(-args.amr_levels),
@@ -201,7 +190,7 @@ elif solver_type in rkdg_rusanov_solvers and "Fixed" in solver_type:
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2?
-    unknowns                  = args.dim + 1, # [h, hu, hv,]
+    unknowns                  = unknowns, # [h, hu, hv,]
     auxiliary_variables       = auxiliary_variables,
     max_cell_h                = args.max_cell_size,
     min_cell_h                = min_h,
@@ -213,13 +202,13 @@ elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
   my_solver = solvers[solver_type](
     name = solver_name,
     order = 3,
-    unknowns = args.dim + 1,
+    unknowns = unknowns,
     auxiliary_variables = auxiliary_variables,
     min_cell_h = min_h,
     max_cell_h = args.max_cell_size,
     time_step_relaxation = 0.5,
-    ncp = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+    ncp = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.PDETerms.User_Defined_Implementation,
   )
 
 if args.use_gpu:
@@ -233,7 +222,7 @@ user_includes = """
 preprocess_reconstructed_patch = """
   ::exahype2::saintvenant::extrapolateHalo(oldQWithHalo, {patch_size}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables} );
   ::exahype2::saintvenant::calculateDerivatives(oldQWithHalo, {patch_size}, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables} );
-  """.format(patch_size=patch_size, NumberOfUnknowns=args.dim + 1, NumberOfAuxiliaryVariables=auxiliary_variables)
+  """.format(patch_size=patch_size, NumberOfUnknowns=unknowns, NumberOfAuxiliaryVariables=auxiliary_variables)
 
 
 if args.scenario == "Avalanche":
@@ -249,10 +238,20 @@ if args.scenario == "Avalanche":
       eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
       ncp                   = my_scenario.implementation_of_ncp(),
       source_term           = my_scenario.implementation_of_sources(),
-      refinement_criterion  = my_scenario.implementation_of_refinement_criterion()   
+      refinement_criterion  = my_scenario.implementation_of_refinement_criterion()
     )
-    
-  
+  elif "RKDG" in solver_type:
+    my_solver.add_user_solver_includes(user_includes)
+    my_solver._preprocess_reconstructed_patch = preprocess_reconstructed_patch
+    my_solver.set_implementation(
+      initial_conditions    = my_scenario.implementation_of_initial_conditions(),
+      boundary_conditions   = my_scenario.implementation_of_boundary_conditions(),
+      flux                  = my_scenario.implementation_of_flux(),
+      ncp                   = my_scenario.implementation_of_ncp(),
+      source_term           = my_scenario.implementation_of_sources(),
+      eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
+      refinement_criterion  = my_scenario.implementation_of_refinement_criterion()
+    )
   elif "ADERDG" in solver_type:
     my_solver.user_solver_includes = user_includes
     my_solver.set_preprocess_reconstructed_patch_kernel(preprocess_reconstructed_patch)
@@ -263,21 +262,13 @@ if args.scenario == "Avalanche":
       ncp                   = my_scenario.implementation_of_ncp(),
       source_term           = my_scenario.implementation_of_sources(),
       eigenvalues           = my_scenario.implementation_of_max_eigenvalue(),
-      refinement_criterion  = my_scenario.implementation_of_refinement_criterion()   
+      refinement_criterion  = my_scenario.implementation_of_refinement_criterion()
     )
-
-
-
-
 
 if args.symbolic:
   my_solver.plot_description = my_scenario.pde.unknown_identifier_for_plotter()
 else:
-  if args.dim == 2:
-    my_solver.plot_description = "h, hu, hv, b, h_x, h_y, u_x, u_y, u_xx, u_yy, u_xy, v_x, v_y, v_xx, v_yy, v_xy"
-  
-  
-                                    
+  my_solver.plot_description = "h, hu, hv, b, h_x, h_y, u_x, u_y, u_xx, u_yy, u_xy, v_x, v_y, v_xx, v_yy, v_xy"
 
 my_project.add_solver(my_solver)
 
@@ -286,13 +277,11 @@ if args.periodic_boundary_conditions:
 else:
   periodic_BC = [False, False, False]
 
-if args.dim == 2:
-  size                    = [1.58, 0.70]
-  offset                  = [0.0, 0.0]
-
+size                    = [1.58, 0.70]
+offset                  = [0.0, 0.0]
 
 my_project.set_global_simulation_parameters(
-    dimensions=args.dim,
+    dimensions=2,
     size=size,
     offset=offset,
     min_end_time=args.end_time,
@@ -302,18 +291,16 @@ my_project.set_global_simulation_parameters(
     periodic_BC=periodic_BC,
 )
 
-solution_dir = str(args.output_path) + "-" + str(solver_name) + "-" + str(args.dim) + "d"
+solution_dir = str(args.output_path) + "-" + str(solver_name)
 my_project.set_output_path(solution_dir)
 if not os.path.exists(solution_dir):
   os.makedirs(solution_dir)
-
 
 my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-my_project.build(make=args.use_make, make_clean_first=True, throw_away_data_after_build=True)
-
+my_project.build(make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True)
 
 with open("postprocess.py", "w") as file:
     file.write('''

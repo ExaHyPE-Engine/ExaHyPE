@@ -15,11 +15,11 @@ void benchmarks::exahype2::ccz4::CCZ4SBH_FV::initialCondition(
   double* __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& volumeCentre,
   const tarch::la::Vector<Dimensions, double>& volumeH,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
-  logTraceInWith3Arguments("initialCondition(...)", volumeCentre, volumeH, gridIsConstructred);
+  logTraceInWith3Arguments("initialCondition(...)", volumeCentre, volumeH, gridIsConstructed);
 
-  applications::exahype2::ccz4::ApplyTwoPunctures(Q, volumeCentre, 0, twoPunctures, not gridIsConstructred);
+  applications::exahype2::ccz4::ApplyTwoPunctures(Q, volumeCentre, 0, twoPunctures, not gridIsConstructed);
 
   logTraceOut("initialCondition(...)");
 }

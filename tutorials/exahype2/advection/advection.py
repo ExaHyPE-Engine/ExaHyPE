@@ -1,5 +1,9 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import sys
+import sympy
+import subprocess
 
 #
 # We use our code Python generator to generate additional glue code.
@@ -39,30 +43,36 @@ volume_size = 0.1
 end_time = 1
 
 #
+# Define the advection speed.
+#
+advection_speed = 1.0
+
+#
 # Choose domain size and offset.
 #
-if dimensions == 2:
-    size = [1.0, 1.0]
-    offset = [0.0, 0.0]
-else:
-    size = [1.0, 1.0, 1.0]
-    offset = [0.0, 0.0, 0.0]
+size = [1.0, 1.0, 1.0]
+offset = [0.0, 0.0, 0.0]
 
 #
 # If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
 #
-use_make = True
+use_make = False
+
+#
+# Set to true, to visualise/convert the output data using a postprocessor.
+#
+visualise = False
 
 #
 # Choose how often a snapshot is written.
 #
-time_in_between_two_snapshots = end_time/100
-#time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
+time_in_between_two_snapshots = end_time / 100
+# time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
 
 #
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-compile_mode=peano4.output.CompileMode.Release
+compile_mode = peano4.output.CompileMode.Release
 
 #
 # We first create a new ExaHyPE 2 project.
@@ -70,10 +80,10 @@ compile_mode=peano4.output.CompileMode.Release
 # We amend the executable name by the space dimensions.
 #
 my_project = exahype2.Project(
-  namespace     = ["tutorials", "exahype2", "advection"],
-  project_name  = "AdvectionTutorial",
-  directory     = ".",
-  executable    = "advection-" + str(dimensions) + "d"
+    namespace=["tutorials", "exahype2", "advection"],
+    project_name="AdvectionTutorial",
+    directory=".",
+    executable="advection-" + str(dimensions) + "d",
 )
 
 #
@@ -95,10 +105,46 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 #
 # We want to define our PDE symbolically.
 # For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
-# For reusability in other applications we implement the PDE model in the Python script pde.py.
 #
-from pde import PDE
-my_pde = PDE(unknowns=dimensions, auxiliary_variables=0, dimensions=dimensions)
+my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(
+    unknowns=dimensions, auxiliary_variables=0, dimensions=dimensions
+)
+v = my_pde.name_Q_entries(0, dimensions, "v")
+c = sympy.symbols("c")
+
+#
+# Define the equation system
+#
+# Flux [unknowns, dimensions]
+if dimensions == 2:
+    my_pde.F[0, 0] = v[0]
+    my_pde.F[1, 0] = 0
+
+    my_pde.F[0, 1] = 0
+    my_pde.F[1, 1] = v[1]
+else:
+    my_pde.F[0, 0] = v[0]
+    my_pde.F[1, 0] = 0
+    my_pde.F[2, 0] = 0
+
+    my_pde.F[0, 1] = 0
+    my_pde.F[1, 1] = v[1]
+    my_pde.F[2, 1] = 0
+
+    my_pde.F[0, 2] = 0
+    my_pde.F[1, 2] = 0
+    my_pde.F[2, 2] = v[2]
+
+# Eigenvalues [unknowns, dimensions]
+if dimensions == 2:
+    my_pde.eigenvalues[0] = c
+    my_pde.eigenvalues[1] = c
+else:
+    my_pde.eigenvalues[0] = c
+    my_pde.eigenvalues[1] = c
+    my_pde.eigenvalues[2] = c
+
+my_pde.substitute_expression(c, advection_speed)
 
 #
 # Since 'my_pde' only holds the PDE for the advection equation without initial- or boundary conditions,
@@ -112,8 +158,6 @@ my_pde.initial_values[0] = my_pde.x[0]
 my_pde.initial_values[1] = my_pde.x[1]
 if dimensions == 3:
     my_pde.initial_values[2] = my_pde.x[2]
-
-my_pde.substitute_expression(my_pde.c, 1.0)
 
 #
 # Specify which implementation our solvers uses.
@@ -143,8 +187,8 @@ my_project.add_solver(my_solver)
 #
 my_project.set_global_simulation_parameters(
     dimensions=dimensions,
-    size=size,
-    offset=offset,
+    size=size[0:dimensions],
+    offset=offset[0:dimensions],
     min_end_time=end_time,
     max_end_time=end_time,
     first_plot_time_stamp=0.0,
@@ -159,6 +203,18 @@ my_project.set_global_simulation_parameters(
 my_project.set_output_path("solution")
 if not os.path.exists("solution"):
     os.makedirs("solution")
+
+if visualise:
+    output_patch_file = "solution/solution-AdvectionSolver.peano-patch-file"
+    if os.path.isfile(output_patch_file):
+        subprocess.call(
+            [
+                "python3",
+                "../../../python/peano4/visualisation/render.py",
+                str(output_patch_file),
+            ]
+        )
+    sys.exit(0)
 
 #
 # If you only target a sequential execution, you can omit the load balancing.
@@ -199,24 +255,6 @@ my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 #
 my_project.build(make=use_make, make_clean_first=True, throw_away_data_after_build=True)
 
-#
-# Create a postprocessing script which converts the output patch files of the simulation
-# to VTU files which can be read by ParaView e.g.
-#
-with open("postprocess.py", "w") as file:
-    file.write('''
-import os
-import sys
-import subprocess
-
-output_patch_file = "solution/solution-AdvectionSolver.peano-patch-file"
-if os.path.isfile(output_patch_file):
-    subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file),
-    ])
-''')
-
 print("\nPDE is: ")
 print(my_pde.__str__())
 print("Executable is advection-" + str(dimensions) + "d")
@@ -224,4 +262,3 @@ print("Clean object files via 'make clean'")
 print("(Re)compile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
 print("Regenerate all code by running 'python3 advection.py' again")
-print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")

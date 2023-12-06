@@ -28,8 +28,9 @@ template <typename T> T** {{codeNamespace}}::DGMatrices<T>::fineGridProjector1d_
 template class {{codeNamespace}}::DGMatrices<{{computePrecisions[precision_number]}}>;
 {% endfor %}
 
-template <typename T>
-void {{codeNamespace}}::DGMatrices<T>::freeDGMatrices() {
+{% for precision_number in range(0,computePrecisions|length) %}
+template <>
+void {{codeNamespace}}::DGMatrices<{{computePrecisions[precision_number]}}>::freeDGMatrices() {
   _mm_free(FLCoeff);
   _mm_free(FRCoeff);
   _mm_free(dudx);
@@ -50,24 +51,24 @@ void {{codeNamespace}}::DGMatrices<T>::freeDGMatrices() {
 }
 
 
-template <typename T>
-void {{codeNamespace}}::DGMatrices<T>::initDGMatrices() {
+template <>
+void {{codeNamespace}}::DGMatrices<{{computePrecisions[precision_number]}}>::initDGMatrices() {
   
-  FLCoeff = (T *) _mm_malloc(sizeof(T)*{{nDofPad}}, {{alignmentSize}});
-  FRCoeff = (T *) _mm_malloc(sizeof(T)*{{nDofPad}}, {{alignmentSize}});
+  FLCoeff = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad}}, {{alignmentSize}});
+  FRCoeff = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad}}, {{alignmentSize}});
   //note: FLCoeff is also F0
   
-  dudx    = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
-  dudx_T  = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
-  iK1_T   = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
-  Kxi     = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
-  Kxi_T   = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
+  dudx    = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad*nDof}}, {{alignmentSize}});
+  dudx_T  = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad*nDof}}, {{alignmentSize}});
+  iK1_T   = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad*nDof}}, {{alignmentSize}});
+  Kxi     = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad*nDof}}, {{alignmentSize}});
+  Kxi_T   = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad*nDof}}, {{alignmentSize}});
 
-  fineGridProjector1d            = new T* [3];
-  fineGridProjector1d_T_weighted = new T* [3];
+  fineGridProjector1d            = new {{computePrecisions[precision_number]}}* [3];
+  fineGridProjector1d_T_weighted = new {{computePrecisions[precision_number]}}* [3];
   for(int i=0; i<3; i++) {
-    fineGridProjector1d[i]            = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
-    fineGridProjector1d_T_weighted[i] = (T *) _mm_malloc(sizeof(T)*{{nDofPad*nDof}}, {{alignmentSize}});
+    fineGridProjector1d[i]            = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad*nDof}}, {{alignmentSize}});
+    fineGridProjector1d_T_weighted[i] = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad*nDof}}, {{alignmentSize}});
   }
   
 {% for i in nDofPad_seq %}
@@ -117,5 +118,5 @@ void {{codeNamespace}}::DGMatrices<T>::initDGMatrices() {
 {% for i in nDofPadTimesnDof_seq %}
   fineGridProjector1d_T_weighted[2][{{i}}] = {{"{:.15e}".format(fineGridProjector1d_T_weighted_2[i])}};
 {% endfor %}
-
 }
+{% endfor %}

@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
+from exahype2.solvers.PDETerms    import PDETerms
 from exahype2.solvers.fv.SingleSweep import SingleSweep
-from exahype2.solvers.fv.PDETerms    import PDETerms
 
 import jinja2
 
@@ -136,7 +136,7 @@ class SubcyclingFixedTimeStep( SingleSweep ):
 
     self._user_action_set_includes += """
 #include "exahype2/TimeStepping.h"
-#include "exahype2/fv/rusanov/Rusanov.h"
+#include "exahype2/fv/rusanov/rusanov.h"
 """
       
     super(SubcyclingFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
