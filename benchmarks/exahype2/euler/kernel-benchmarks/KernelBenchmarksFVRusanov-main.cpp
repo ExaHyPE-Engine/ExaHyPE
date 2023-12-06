@@ -131,8 +131,8 @@ void reportRuntime(const std::string& kernelIdentificator, const ::tarch::timing
   logInfo(
     "reportRuntime()",
     kernelIdentificator
-      << "\t| " << timingKernelLaunch.getValue() << "\t| " << (timingKernelLaunch.getValue() / patches / NumberOfFiniteVolumesPerPatch / NumberOfSamples) << "\t| "
-      << timingComputeKernel.getValue() << "\t| " << (timingComputeKernel.getValue() / patches / NumberOfFiniteVolumesPerPatch / NumberOfSamples) << "\t| "
+      << "\t| " << timingKernelLaunch.getValue() << "\t| " << (timingKernelLaunch.getValue() / patches / NumberOfFiniteVolumesPerPatch) << "\t| "
+      << timingComputeKernel.getValue() << "\t| " << (timingComputeKernel.getValue() / patches / NumberOfFiniteVolumesPerPatch) << "\t| "
       << timingKernelLaunch.toString() << "\t| " << timingComputeKernel.toString()
   );
 }
@@ -1670,13 +1670,13 @@ int main(int argc, char** argv) {
   // }
   ::peano4::runTestsAndBenchmarks();
   OTTER_INITIALISE();
-  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+  //eenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
   if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
     logInfo("main()", "===============================================================");
     logInfo("main()", "Dimensions: " << Dimensions);
     logInfo("main()", "Number of threads launching compute kernels: " << NumberOfLaunchingThreads);
-    logInfo("main()", "Number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy);
+    logInfo("main()", "Number of patches per thread/compute kernel launch to study: " << toString(NumberOfPatchesToStudy));
     logInfo("main()", "Number of compute threads: " << ::tarch::multicore::Core::getInstance().getNumberOfThreads());
     logInfo("main()", "Number of MPI ranks: " << ::tarch::mpi::Rank::getInstance().getNumberOfRanks());
     logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
@@ -1699,10 +1699,15 @@ int main(int argc, char** argv) {
 #pragma omp master
     {
 #endif
-      std::stringstream msg;
-      msg << "kernel-benchmarks-" << NumberOfPatchesToStudy << "-patches-" << ::tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
-      OTTER_PHASE_SWITCH(msg.str().c_str());
-      runBenchmarks(NumberOfPatchesToStudy, NumberOfLaunchingThreads);
+      for (int n = 0; n < NumberOfPatchesToStudy.size(); n++) {
+        logInfo("main()", "---------------------------------------------------------------");
+        logInfo("main()", "Current number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy[n]);
+        logInfo("main()", "---------------------------------------------------------------");
+        std::stringstream msg;
+        msg << "kernel-benchmarks-" << NumberOfPatchesToStudy[n] << "-patches-" << ::tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
+        OTTER_PHASE_SWITCH(msg.str().c_str());
+        runBenchmarks(NumberOfPatchesToStudy[n], NumberOfLaunchingThreads);
+      }
 #if defined(SharedOMP)
     }
   }

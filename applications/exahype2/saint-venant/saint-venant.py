@@ -86,7 +86,7 @@ parser.add_argument("-ps",      "--patch-size",        dest="patch_size",     ty
 parser.add_argument("-rk-order","--rk-order",          dest="rk_order",       type=int,                   default=rk_order,           help="Order of time discretisation for Runge-Kutta scheme.")
 parser.add_argument("-dg-order","--dg-order",          dest="dg_order",       type=int,                   default=dg_order,           help="Order of space discretisation for Discontinuous Galerkin.")
 
-parser.add_argument(            "--make",              dest="make",                                       action="store_true",        help="Compile the code after generation")
+parser.add_argument(            "--no-make",           dest="no_make",                                    action="store_true",        help="Do not compile the code after generation")
 parser.add_argument(            "--executable",        dest="executable",     type=str,                                               help="Specify the executable name. If none is chosen, the name is automatically deduced by some parameters.")
 args = parser.parse_args()
 
@@ -300,7 +300,7 @@ my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHier
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
-my_project.build(make=args.make, make_clean_first=True, throw_away_data_after_build=True)
+my_project.build(make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True)
 
 with open("postprocess.py", "w") as file:
     file.write('''
