@@ -175,7 +175,7 @@ public:
    *
    * Has to be called per rank prior to any collection of stats.
    * I used to call this routine in the prepare traversal event, i.e. in
-   * peano4.toolbox.particles.AbstractUpdateParticleGridAssociation.get_body_of_prepareTraversal().
+   * peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation.get_body_of_prepareTraversal().
    * However, this is not clever, as the reassignment usually spans multiple
    * grid sweeps. If we clear the stats prior to each of these sweeps, we
    * will only get a state snapshot from what happened in the last sweep.
