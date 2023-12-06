@@ -200,12 +200,16 @@ my_project.constants.export_boolean(
     "EvaluateMaximumEigenvalueAfterTimeStep", True if args.eval_eig else False
 )  # Reduction
 
-my_project.constants.export_boolean(
-    "EvaluateHostKernels", True if args.eval_cpu else False
-)
-my_project.constants.export_boolean(
-    "EvaluateDeviceKernels", True if args.eval_gpu else False
-)
+if args.eval_cpu == False and args.eval_gpu == False:
+  my_project.constants.export_boolean("EvaluateHostKernels", True)
+  my_project.constants.export_boolean("EvaluateDeviceKernels", True)
+else:
+  my_project.constants.export_boolean(
+      "EvaluateHostKernels", True if args.eval_cpu else False
+  )
+  my_project.constants.export_boolean(
+      "EvaluateDeviceKernels", True if args.eval_gpu else False
+  )
 
 my_project.constants.define_value("ADVECTION_SPEED", str(1.0))
 
