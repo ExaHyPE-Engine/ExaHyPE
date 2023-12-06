@@ -120,7 +120,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     careful. There are two major issues to consider, which both can be 
     illustrated with the sketch below.
     
-    @image html toolbox/particles/SievingAlongAMRBoundaries.png
+    @image html SievingAlongAMRBoundaries.png
     
     ### Particles along AMR boundaries
     
