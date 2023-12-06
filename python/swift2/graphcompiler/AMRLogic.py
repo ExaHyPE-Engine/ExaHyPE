@@ -314,7 +314,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
 
             if global_steps_to_update_particle_grid_assocation[i]:
                 action_set_update_particle_grid_association = (
-                    peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(
+                    peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
                         current_species_set
                     )
                 )
@@ -325,7 +325,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 steps[i].add_action_set(action_set_update_particle_grid_association)
                 if verbose:
                     print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: add peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop for species {} to step {}".format(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: add peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop for species {} to step {}".format(
                             current_species_set.name, i
                         )
                     )
@@ -398,7 +398,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
     @param species_sets: [Species]
 
     @param sort_with_lifts_and_drops: {True, False}
-      If this flag is set, we use peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop
+      If this flag is set, we use peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop
       to sort the particles into the mesh. If it is not set, we use
 
     @param verbose: {True, False}
@@ -526,12 +526,12 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
             if global_steps_to_update_particle_grid_assocation[i]:
                 if sort_with_lifts_and_drops:
                     action_set_update_particle_grid_association = (
-                        peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(
+                        peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
                             current_species_set
                         )
                     )
                 else:
-                    action_set_update_particle_grid_association = peano4.toolbox.particles.UpdateParticleGridAssociation_BucketSort(
+                    action_set_update_particle_grid_association = peano4.toolbox.particles.api.UpdateParticleGridAssociation_BucketSort(
                         current_species_set
                     )
                 action_set_update_particle_grid_association.descend_invocation_order = (
