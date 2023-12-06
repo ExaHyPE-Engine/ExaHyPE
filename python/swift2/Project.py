@@ -456,7 +456,7 @@ levels.
         #
         for current_species_set in self._particle_species_set:
             self.algorithm_step_plot.add_action_set(
-                peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(
+                peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
                     current_species_set
                 )
             )
