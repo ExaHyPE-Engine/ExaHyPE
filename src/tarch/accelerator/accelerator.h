@@ -16,27 +16,32 @@
 #include "tarch/accelerator/sycl/Device.h"
 
 namespace tarch {
-/**
- * We need an annotation GPUCallableMethod for some targets like HIP. This
- * marker is to be used before the return type is written down. This is different
- * to the InlineMethod marker which is to be used after the argument list.
- */
-#if defined(GPUOffloadingHIP)
-#define GPUCallableMethod __host__ __device__
-#elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
-#define GPUCallableMethod SYCL_EXTERNAL
-#elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
-#define GPUCallableMethod __host__ __device__
-#else
-#define GPUCallableMethod
-#endif
+  #if defined(GPUOffloadingHIP)
+    #define GPUCallableMethod __host__ __device__
+  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+    #define GPUCallableMethod SYCL_EXTERNAL
+  #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
+    #define GPUCallableMethod __host__ __device__
+  #else
+    #define GPUCallableMethod
+  #endif
 
-/**
- * Delegates to std::abort() if no GPU offloading is active. Otherwise is
- * degenerates to nop, as there is no abort on an accelerator. The vanilla
- * implementation can be found in accelerator.cpp. The vendor-specific
- * implementations are hold within their accelerator.cpp file.
- */
+  #if defined(GPUOffloadingHIP)
+    #define GPUCallableInlineMethod __host__ __device__ __forceinline__
+  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+    #define GPUCallableInlineMethod inline
+  #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
+    #define GPUCallableInlineMethod __host__ __device__ __forceinline__
+  #else
+    #define GPUCallableInlineMethod //inline
+  #endif
+
+  /**
+   * Delegates to std::abort() if no GPU offloading is active. Otherwise is
+   * degenerates to nop, as there is no abort on an accelerator. The vanilla
+   * implementation can be found in accelerator.cpp. The vendor-specific
+   * implementations are hold within their accelerator.cpp file.
+   */
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
   void gpuAbort();

@@ -107,9 +107,9 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
           #  )
 
         self.set_implementation(
-            initial_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
         )
 
         if parallelisation_of_kernels == KernelParallelisation.SUBTASKS:
@@ -258,9 +258,9 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
         self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
           
         self.set_implementation(
-            initial_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-            boundary_conditions=exahype2.solvers.fv.PDETerms.None_Implementation,
+            initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.None_Implementation,
         )
         self.add_all_solver_constants()
                 

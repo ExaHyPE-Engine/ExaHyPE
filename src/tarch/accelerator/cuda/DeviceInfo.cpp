@@ -12,7 +12,7 @@
 
 #if defined(GPUOffloadingCUDA)
 std::vector<bool> testKernelLauncher();
-void              copyKernelLauncher(const float* a, float* b, size_t N, int gridSize, int blockSize);
+void              copyKernelLauncher(const double* a, double* b, size_t N, int gridSize, int blockSize);
 void              maxPotentialBlockSize(int* minGridSize, int* blockSize);
 
 #define CHECK_CUDA_ERROR() \
@@ -31,9 +31,7 @@ namespace tarch::accelerator::cuda {
     int               numberOfDevices;
     cudaGetDeviceCount(&numberOfDevices);
     unsigned int                          propertyCount = tarch::accelerator::properties.size();
-    std::vector<std::vector<std::string>> _propertyMatrix(
-      propertyCount, std::vector<std::string>(numberOfDevices, "X")
-    );
+    std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(numberOfDevices, "X"));
     propertyMatrix = std::move(_propertyMatrix);
 
     int defaultDevice;
@@ -44,17 +42,13 @@ namespace tarch::accelerator::cuda {
       cudaGetDeviceProperties(&props, i);
       size_t free, total;
       cudaMemGetInfo(&free, &total);
-      constexpr unsigned int kb                                               = 1024;
-      constexpr unsigned int mb                                               = kb * kb;
-      propertyMatrix[tarch::accelerator::getPropertyOffset("Device Name")][i] = props.name;
-      propertyMatrix[tarch::accelerator::getPropertyOffset("Global Memory")][i]
-        = std::to_string(props.totalGlobalMem / mb) + " mb";
-      propertyMatrix[tarch::accelerator::getPropertyOffset("Free Memory")][i] = std::to_string(free / mb) + " mb";
-      propertyMatrix[tarch::accelerator::getPropertyOffset("Clock Frequency")][i]
-        = std::to_string(props.clockRate / 1000) + " mHz";
-      propertyMatrix[tarch::accelerator::getPropertyOffset("Compute Units")][i] = std::to_string(
-        props.multiProcessorCount
-      );
+      constexpr unsigned int kb                                                   = 1024;
+      constexpr unsigned int mb                                                   = kb * kb;
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Device Name")][i]     = props.name;
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Global Memory")][i]   = std::to_string(props.totalGlobalMem / mb) + " mb";
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Free Memory")][i]     = std::to_string(free / mb) + " mb";
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Clock Frequency")][i] = std::to_string(props.clockRate / 1000) + " mHz";
+      propertyMatrix[tarch::accelerator::getPropertyOffset("Compute Units")][i]   = std::to_string(props.multiProcessorCount);
     }
     cudaSetDevice(defaultDevice);
   }
@@ -90,110 +84,116 @@ namespace tarch::accelerator::cuda {
     std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
 
     constexpr uint64_t repeats = tarch::accelerator::repeats;
+    int currentDevice;
+    cudaGetDevice(&currentDevice);
+    CHECK_CUDA_ERROR();
 
     for (int deviceId = 0; deviceId < numberOfDevices; deviceId++) {
+      cudaSetDevice(deviceId);
+      CHECK_CUDA_ERROR();
       tarch::accelerator::BenchmarkResultInNanoSeconds& benchmarkResult = benchmarkResults[deviceId];
       benchmarkResult.repeats                                           = repeats;
 
       // Copy Kernel inside GPU
       int blockSize;   // The launch configurator returned block size
       int minGridSize; // The minimum grid size needed to achieve the
-                      // maximum occupancy for a full device launch
+                       // maximum occupancy for a full device launch
       int gridSize;    // The actual grid size needed, based on input size
 
-      maxPotentialBlockSize(&minGridSize, &blockSize);
+      // maxPotentialBlockSize(&minGridSize, &blockSize);
+
+      blockSize = 256;
 
       // Round up according to array size
       gridSize = (N + blockSize - 1) / blockSize;
 
       logInfo("copyKernel()", "gridSize: " << gridSize << ", blockSize: " << blockSize);
 
+      cudaEvent_t startCPUGPU, stopCPUGPU;
+      cudaEvent_t startGPUCPU, stopGPUCPU;
+      cudaEvent_t startGPUMalloc, stopGPUMalloc;
+      float executionTimeCPUGPU;
+      float executionTimeGPUCPU;
+      float executionTimeGPUMalloc;
+      cudaEventCreate(&startCPUGPU);
+      cudaEventCreate(&stopCPUGPU);
+      cudaEventCreate(&startGPUCPU);
+      cudaEventCreate(&stopGPUCPU);
+      cudaEventCreate(&startGPUMalloc);
+      cudaEventCreate(&stopGPUMalloc);
+
+      // Malloc memory in CPU
+      double* a = new double[N];
+      double* b = new double[N];
+      std::fill(a, a + N, 0.0);
+      std::fill(b, b + N, 0.0);
+      assert(alloc_size == N * sizeof(double));
+
+      // Malloc memory in GPU
+      cudaEventRecord(startGPUMalloc, 0);
+      double* a_dev;
+      double* b_dev;
+      cudaMalloc((void**)&a_dev, alloc_size);
+      cudaMalloc((void**)&b_dev, alloc_size);
+      CHECK_CUDA_ERROR();
+      cudaEventRecord(stopGPUMalloc, 0);
+      cudaEventSynchronize(stopGPUMalloc);
+      cudaEventElapsedTime(&executionTimeGPUMalloc, startGPUMalloc, stopGPUMalloc);
+      benchmarkResult.GPUMalloc += static_cast<uint64_t>(executionTimeGPUMalloc * 1e6);
+      CHECK_CUDA_ERROR();
+
+      // Copy from CPU to GPU
+      cudaEventRecord(startCPUGPU, 0);
+      cudaMemcpy(a_dev, a, alloc_size, cudaMemcpyHostToDevice);
+      cudaMemcpy(b_dev, b, alloc_size, cudaMemcpyHostToDevice);
+      cudaEventRecord(stopCPUGPU, 0);
+      cudaEventSynchronize(stopCPUGPU);
+      cudaEventElapsedTime(&executionTimeCPUGPU, startCPUGPU, stopCPUGPU);
+      benchmarkResult.CPUtoGPUCopy += static_cast<uint64_t>(executionTimeCPUGPU * 1e6);
+      CHECK_CUDA_ERROR();
+
       for (uint i = 0; i < repeats + 1; i++) {
-        // Copy Benchmark -> use ~80% of Memory's Available Memory for total array size
-        // size_t free;
-        // size_t total;
-        // cudaMemGetInfo(&free, &total);
-        // 100% of free memory will result with an out of memory problem
-        // free = free * 0.8;
-        // / sizeof(float) then * sizeof(float) for it to be a float array
-        // Also a multiply of 1024 because that will be the thread per block count - to avoid using if in kernels
-        // size_t alloc_size = ((free / 2) / (1024*sizeof(float))) * (1024*sizeof(float));
         size_t alloc_size                 = tarch::accelerator::alloc_size;
         size_t N                          = tarch::accelerator::N;
         benchmarkResult.readWriteSize     = alloc_size * 2;
         benchmarkResult.allocatedDataSize = alloc_size * 2;
 
         // One can reuse them
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-        float executionTime;
+        cudaEvent_t startGPUGPU, stopGPUGPU;
+        float executionTimeGPUGPU;
+        cudaEventCreate(&startGPUGPU);
+        cudaEventCreate(&stopGPUGPU);
 
-        // Malloc memory in CPU
-        float* a = new float[N];
-        float* b = new float[N];
-        std::fill(a, a + N, 0.0f);
-        std::fill(b, b + N, 0.0f);
-        assert(alloc_size == N * sizeof(float));
-        CHECK_CUDA_ERROR();
-
-        // Malloc memory in GPU
-        cudaEventRecord(start, 0);
-        float* a_dev;
-        float* b_dev;
-        cudaMalloc((void**)&a_dev, alloc_size);
-        cudaMalloc((void**)&b_dev, alloc_size);
-        CHECK_CUDA_ERROR();
-        cudaEventRecord(stop, 0);
-        cudaEventSynchronize(stop);
-        cudaEventElapsedTime(&executionTime, start, stop);
-        if (i > 0) {
-          benchmarkResult.GPUMalloc += static_cast<uint64_t>(executionTime * 1e6);
-        }
-        CHECK_CUDA_ERROR();
-
-        // Copy from CPU to GPU
-        cudaEventRecord(start, 0);
-        cudaMemcpy(a_dev, a, alloc_size, cudaMemcpyHostToDevice);
-        cudaMemcpy(b_dev, b, alloc_size, cudaMemcpyHostToDevice);
-        cudaEventRecord(stop, 0);
-        cudaEventSynchronize(stop);
-        cudaEventElapsedTime(&executionTime, start, stop);
-        if (i > 0) {
-          benchmarkResult.CPUtoGPUCopy += static_cast<uint64_t>(executionTime * 1e6);
-        }
-        CHECK_CUDA_ERROR();
-
-        cudaEventRecord(start, 0);
+        cudaEventRecord(startGPUGPU, 0);
         copyKernelLauncher(a_dev, b_dev, N, gridSize, blockSize);
-        cudaEventRecord(stop, 0);
-        cudaEventSynchronize(stop);
-        cudaEventElapsedTime(&executionTime, start, stop);
-        cudaDeviceSynchronize();
+        cudaEventRecord(stopGPUGPU, 0);
+        cudaEventSynchronize(stopGPUGPU);
+        cudaEventElapsedTime(&executionTimeGPUGPU, startGPUGPU, stopGPUGPU);
         if (i > 0) {
-          benchmarkResult.GPUtoGPUCopy += static_cast<uint64_t>(executionTime * 1e6);
+          benchmarkResult.GPUtoGPUCopy += static_cast<uint64_t>(executionTimeGPUGPU * 1e6);
         }
         CHECK_CUDA_ERROR();
-
-        // Copy from GPU to CPU
-        cudaEventRecord(start, 0);
-        cudaMemcpy(a, a_dev, alloc_size, cudaMemcpyDeviceToHost);
-        cudaMemcpy(b, b_dev, alloc_size, cudaMemcpyDeviceToHost);
-        cudaEventRecord(stop, 0);
-        cudaEventSynchronize(stop);
-        cudaEventElapsedTime(&executionTime, start, stop);
-        if (i > 0) {
-          benchmarkResult.GPUtoCPUCopy += static_cast<uint64_t>(executionTime * 1e6);
-        }
-        CHECK_CUDA_ERROR();
-
-        cudaFree(a_dev);
-        cudaFree(b_dev);
-        CHECK_CUDA_ERROR();
-        delete[] a;
-        delete[] b;
       }
+
+      // Copy from GPU to CPU
+      cudaEventRecord(startGPUCPU, 0);
+      cudaMemcpy(a, a_dev, alloc_size, cudaMemcpyDeviceToHost);
+      cudaMemcpy(b, b_dev, alloc_size, cudaMemcpyDeviceToHost);
+      cudaEventRecord(stopGPUCPU, 0);
+      cudaEventSynchronize(stopGPUCPU);
+      cudaEventElapsedTime(&executionTimeGPUCPU, startGPUCPU, stopGPUCPU);
+      benchmarkResult.GPUtoCPUCopy += static_cast<uint64_t>(executionTimeGPUCPU * 1e6);
+      CHECK_CUDA_ERROR();
+
+      cudaFree(a_dev);
+      cudaFree(b_dev);
+      CHECK_CUDA_ERROR();
+      delete[] a;
+      delete[] b;
     }
+
+
+    cudaSetDevice(currentDevice);
 
     return benchmarkResults;
   }

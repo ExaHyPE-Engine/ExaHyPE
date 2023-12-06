@@ -84,7 +84,7 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
-      bool                                         gridIsConstructred
+      bool                                         gridIsConstructed
     ) override;
     
 

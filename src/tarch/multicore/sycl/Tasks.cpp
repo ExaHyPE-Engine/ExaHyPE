@@ -11,8 +11,6 @@
 #include "tarch/multicore/sycl/Core.h"
 
 #if defined(SharedSYCL)
-#include <tbb/task_arena.h>
-#include <tbb/task_group.h>
 
 namespace {
   tarch::multicore::BooleanSemaphore suspensionPointSemaphore;

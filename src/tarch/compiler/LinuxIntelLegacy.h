@@ -30,10 +30,6 @@
 //#define CompilerDefinesMPIMaxNameString
 
 #if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
-/**
- * I use this flag to switch on __attribute__((always_inline))
- * which I otherwise mask out.
- */
 #define UseManualInlining
 #endif
 
@@ -46,12 +42,7 @@
 #define AlignmentOnHeap 64
 #endif
 
-/**
- * Clang requires us to put a static keyword in front of header file implementations,
- * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't
- * eat stuff. icpc is GNU-based and therefore we do not define the static keyword here.
- */
-#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions
+#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
 #define OpenMPTaskGroup
 

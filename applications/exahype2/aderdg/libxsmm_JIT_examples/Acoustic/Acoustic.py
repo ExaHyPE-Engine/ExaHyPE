@@ -37,12 +37,12 @@ theSolver = GlobalFixedTimeStep(
     min_cell_h=min_h,
     max_cell_h=max_h,
     time_step_size=timestep,
-    flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+    flux=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 
 
 theSolver.set_implementation(
-    refinement_criterion=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation
 )
 theSolver.add_kernel_optimizations(
     is_linear=True, use_kernel_generator=True, architecture="noarch", use_libxsmm_JIT=True

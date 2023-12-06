@@ -17,10 +17,7 @@ namespace tarch::accelerator::cpp {
   }
 
   void printDeviceInformation([[maybe_unused]] std::vector<std::vector<std::string>>& propertyMatrix) {
-    logInfo(
-      "printDeviceInformation()",
-      "Iso cpp accelerator back-end has no means to query the number of accelerators' properties"
-    );
+    logInfo("printDeviceInformation()", "C++ accelerator backend has no means to query the number of accelerators' properties");
     std::string deviceInfoStr = tarch::accelerator::parseMatrix(propertyMatrix, 1);
     logInfo("printDeviceInformation()", "\n" << deviceInfoStr);
   }
@@ -35,8 +32,8 @@ namespace tarch::accelerator::cpp {
   }
 
   std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> runBenchmarks() {
-    logInfo("runBenchmarks()", "Running benchmarks with ISO C++ backend");
-    logInfo("runBenchmarks()", "ISO C++ does not expose devices");
+    logInfo("runBenchmarks()", "Running benchmarks with C++ accelerator backend");
+    logInfo("runBenchmarks()", "C++ does not expose devices");
 
     constexpr uint64_t                                            repeats = tarch::accelerator::repeats;
     std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> benchmarkResults(1, {0});
@@ -47,29 +44,27 @@ namespace tarch::accelerator::cpp {
     benchmarkResult.readWriteSize                                                 = alloc_size * 2;
     benchmarkResult.allocatedDataSize                                             = alloc_size * 2;
 
-    for (uint i = 0; i < repeats + 1; i++) {
-      float* a = new float[N];
-      float* b = new float[N];
-      std::fill(a, a + N, 0.0f);
-      std::fill(b, b + N, 0.0f);
+    double* a = new double[N];
+    double* b = new double[N];
+    std::fill(a, a + N, 0.0);
+    std::fill(b, b + N, 0.0);
 
-      auto begin = std::chrono::high_resolution_clock::now();
-      std::for_each_n(
-        std::execution::par_unseq,
-        std::views::iota(0).begin(),
-        N, // loop range
-        [=](int i) {
-          a[i] = 0.0f;
-          b[i] = 0.0f;
-        }
-      );
-      auto end  = std::chrono::high_resolution_clock::now();
-      auto diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
-      if (i > 0) {
-        benchmarkResult.CPUtoGPUCopy += static_cast<uint64_t>(diff);
-        benchmarkResult.GPUtoCPUCopy += static_cast<uint64_t>(diff);
+    auto begin = std::chrono::high_resolution_clock::now();
+    std::for_each_n(
+      std::execution::par_unseq,
+      std::views::iota(0).begin(),
+      N, // loop range
+      [=](int i) {
+        a[i] = 0.125;
+        b[i] = 0.250;
       }
+    );
+    auto end  = std::chrono::high_resolution_clock::now();
+    auto diff = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
+    benchmarkResult.CPUtoGPUCopy += static_cast<uint64_t>(diff);
+    benchmarkResult.GPUtoCPUCopy += static_cast<uint64_t>(diff);
 
+    for (uint i = 0; i < repeats + 1; i++) {
       begin = std::chrono::high_resolution_clock::now();
       std::for_each_n(std::execution::par_unseq, std::views::iota(0).begin(), N, [=](int i) { b[i] = a[i]; });
       end  = std::chrono::high_resolution_clock::now();
@@ -77,10 +72,10 @@ namespace tarch::accelerator::cpp {
       if (i > 0) {
         benchmarkResult.GPUtoGPUCopy += static_cast<uint64_t>(diff);
       }
-
-      delete[] a;
-      delete[] b;
     }
+
+    delete[] a;
+    delete[] b;
 
     return benchmarkResults;
   }
