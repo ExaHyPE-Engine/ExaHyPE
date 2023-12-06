@@ -13,7 +13,7 @@ void swift2::dastgenTest::checkDastgen(ParticleContainer& localParticles) {
   for (auto particle : localParticles) {
     checkBooleans(particle);
     checkDoubles(particle);
-    checkEnums(particle);
+    checkEnums(*particle);
     checkIntegers(particle);
     checkStrings(particle);
 
@@ -265,42 +265,41 @@ void swift2::dastgenTest::checkDoubles(Particle& particle) {
 }
 
 
-template <typename Particle>
-void swift2::dastgenTest::checkEnums(Particle& particle) {
+void swift2::dastgenTest::checkEnums(benchmarks::swift2::dastgen_test::globaldata::dummyPart& particle) {
 
-  // Default enums
+  // Default MyEnumms
   // ----------------
 
-  using enu = std::remove_pointer<Particle>::type::MyEnum;
+  using MyEnum = benchmarks::swift2::dastgen_test::globaldata::dummyPart::MyEnum;
 
-  enu e1 = enu::Baz;
-  particle->setMyEnum(e1);
-  enu e2 = particle->getMyEnum();
+  MyEnum e1 = MyEnum::Baz;
+  particle.setMyEnum(e1);
+  MyEnum e2 = particle.getMyEnum();
   assert(e2 == e1);
 
-  // check casting to string for all enum variants
+  // check casting to string for all MyEnumm variants
   std::string teststring;
-  for (int i = 0; i != static_cast<int>(enu::Last); i++) {
-    enu e      = static_cast<enu>(i);
-    teststring = std::remove_pointer<Particle>::type::castMyEnumToString(e);
+  for (int i = 0; i != static_cast<int>(MyEnum::Last); i++) {
+    MyEnum e   = static_cast<MyEnum>(i);
+    teststring = benchmarks::swift2::dastgen_test::globaldata::dummyPart::toString(e);
   }
 
 
-  // enums + debug
+  // MyEnumms + debug
   // ----------------
 
 #if PeanoDebug > 0
-  using enuD = std::remove_pointer<Particle>::type::MyDebugEnum;
+  using MyEnumD = benchmarks::swift2::dastgen_test::globaldata::dummyPart::MyDebugEnum;
 
-  enuD eD1 = enuD::Baz;
-  particle->setMyDebugEnum(eD1);
-  enuD eD2 = particle->getMyDebugEnum();
+  MyEnumD eD1 = MyEnumD::Baz;
+  particle.setMyDebugEnum(eD1);
+  MyEnumD eD2 = particle.getMyDebugEnum();
   assert(eD2 == eD1);
 
-  // check casting to string for all enum variants
-  for (int i = 0; i != static_cast<int>(enuD::Last); i++) {
-    enuD e     = static_cast<enuD>(i);
-    teststring = std::remove_pointer<Particle>::type::castMyDebugEnumToString(e);
+  // check casting to string for all MyEnumm variants
+  for (int i = 0; i != static_cast<int>(MyEnumD::Last); i++) {
+    MyEnumD e  = static_cast<MyEnumD>(i);
+    teststring = benchmarks::swift2::dastgen_test::globaldata::dummyPart::toString(e);
   }
 #endif
 }

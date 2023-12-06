@@ -37,8 +37,7 @@ namespace swift2 {
     /**
      * Perform all the checks on a particle's enum members
      */
-    template <typename Particle>
-    void checkEnums(Particle& particle);
+    void checkEnums(benchmarks::swift2::dastgen_test::globaldata::dummyPart& particle);
 
 
     /**
