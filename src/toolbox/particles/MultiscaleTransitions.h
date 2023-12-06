@@ -303,11 +303,48 @@ namespace toolbox {
      * Throughout the top-down tree traversal, it is often important to know if
      * a particle will be pulled down further later on throughout the mesh
      * traversal. This routine tells the user if this will happen. It is
-     * somehow the top-down counterart of dropParticle() and sieveParticle().
+     * somehow the top-down counterpart of dropParticle() and sieveParticle().
      *
      * Consult @ref page_toolbox_particles_mesh_traversal "the generic mesh traversal discussion"
      * for some further "use cases" where this operation becomes absolutely
      * mandatory.
+     *
+     * ## Realisation
+     *
+     * There are two major checks which determine if a particle will be
+     * dropped further or not: The mesh size vs the cut off radius of a
+     * particle, and the mesh cell state. If a mesh cell is not refined
+     * and will not be refined throughout this very traversal, then the
+     * particle will also not be dropped. It will however be dropped if
+     * it resides within a cell that's already refined or will be refined
+     * in this mesh sweep, and the cut-off radius will also fit into the
+     * next finer level.
+     *
+     * A cell is refined or will be refined
+     *
+     * - if peano4::datamanagement::CellMarker::hasBeenRefined() holds,
+     *   as this means that this cell actually already has children; or
+     * - if peano4::datamanagement::CellMarker::willBeRefined() holds,
+     *   as this means that thsi cell either has children already or will
+     *   be added children in this very mesh sweep.
+     *
+     * We note that hasBeenRefined() can be wrong and willBeRefined() might
+     * hold. In this case, the new children in the tree are added in this
+     * very mesh traversal. It can also happen that hasBeenRefined() holds
+     * and willBeRefined() is wrong. In this case, this very mesh traversal
+     * will eliminate the children, i.e. coarsen. Nevertheless, the
+     * particles still are to be dropped into their respective mesh level -
+     * even though we might then lift them straightaway again as we coarsen.
+     *
+     *
+     * ## Usage in combination with particle-particle interactions
+     *
+     * Deciding whether to update a particle within a mesh sweep
+     * that also introduces drops is delicate: Quickly, we run into situations
+     * where particles are updated multiple times. The documentation of
+     * peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation
+     * provides examples for this.
+     *
      */
     template <typename Particle>
     bool particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::CellMarker& marker);

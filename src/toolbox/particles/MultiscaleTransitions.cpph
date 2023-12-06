@@ -120,7 +120,7 @@ bool toolbox::particles::particleWillBeDroppedFurther(
   const Particle& particle, const peano4::datamanagement::CellMarker& marker
 ) {
   static tarch::logging::Log _log("toolbox::particles");
-  bool                       result = marker.hasBeenRefined()
+  bool                       result = (marker.hasBeenRefined() or marker.willBeRefined())
                 and tarch::la::smallerEquals(particle.getSearchRadius() * 2.0, tarch::la::min(marker.h()) / 3.0);
   if (result) {
     logDebug(
