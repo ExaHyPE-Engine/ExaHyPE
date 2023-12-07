@@ -4,7 +4,7 @@ from exahype2.solvers.fv.SingleSweep import SingleSweep
 from peano4.toolbox.blockstructured  import ReconstructedArrayMemoryLocation
 from exahype2.solvers.fv.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 from .kernels                        import *
-from exahype2.solvers.fv             import PDETerms
+from exahype2.solvers                import PDETerms
 
 
 class UserDefinedRiemann( SingleSweep ):

@@ -1,34 +1,24 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "SoALexicographicEnumerator.h"
 
-#if !defined(GPUOffloadingOMP)
+#if defined(GPUOffloadingOff)
 std::string exahype2::enumerator::SoALexicographicEnumerator::toString() const {
   std::ostringstream msg;
-  msg << "(SoA-lex"
-      << ",#patches=" << _numberOfPatches
-      << ",#vols=" << _numberOfVolumesPerAxisInPatch
-      << ",#halo=" << _haloSize
-      << ",#unknowns=" << _unknowns
-      << ",#aux=" << _numberOfAuxiliaryVariables
-      << ")";
+  msg
+    << "(SoA-lex"
+    << ",#cells=" << _numberOfCells << ",#dofs=" << _numberOfDoFsPerAxisInCell << ",#halo=" << _haloSize << ",#unknowns=" << _unknowns << ",#aux=" << _numberOfAuxiliaryVariables
+    << ")";
 
-  #if PeanoDebug>0
-  msg << ", index-sequence=["
-      << "," << (*this)(0,{0,0},0)
-      << "," << (*this)(1,{0,0},0)
-      << ",..."
-      << "," << (*this)(0,{1,0},0)
-      << "," << (*this)(0,{2,0},0)
-      << ",..."
-      << "," << (*this)(0,{0,1},0)
-      << "," << (*this)(0,{0,2},0)
-      << ",..."
-      << "," << (*this)(0,{0,0},1)
-      << "," << (*this)(0,{0,0},2)
-      << ",..."
-      << "," << this->size()
-      << "]"
-      ;
-  #endif
+#if PeanoDebug > 0
+  msg
+    << ", index-sequence=["
+    << "," << (*this)(0, {0, 0}, 0) << "," << (*this)(1, {0, 0}, 0) << ",..."
+    << "," << (*this)(0, {1, 0}, 0) << "," << (*this)(0, {2, 0}, 0) << ",..."
+    << "," << (*this)(0, {0, 1}, 0) << "," << (*this)(0, {0, 2}, 0) << ",..."
+    << "," << (*this)(0, {0, 0}, 1) << "," << (*this)(0, {0, 0}, 2) << ",..."
+    << "," << this->size() << "]";
+#endif
 
   return msg.str();
 }

@@ -41,7 +41,6 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/la/tests/VectorTest.cpp \
 	tarch/la/ScalarOperations.cpp \
 	tarch/la/Scalar.cpp \
-	tarch/la/Vector.cpp \
 	tarch/la/DynamicMatrix.cpp \
 	tarch/accelerator/accelerator.cpp \
 	tarch/accelerator/Device.cpp \

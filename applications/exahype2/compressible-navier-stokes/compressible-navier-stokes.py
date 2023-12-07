@@ -51,11 +51,11 @@ else:
   my_solver.plot_description = "rho, u, v, w, e, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz"
 
 my_solver.set_implementation(
-  ncp                   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  flux                  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  eigenvalues           = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  #source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  ncp                   = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  flux                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  eigenvalues           = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  #source_term          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation
 )
 
 my_solver._preprocess_reconstructed_patch = """

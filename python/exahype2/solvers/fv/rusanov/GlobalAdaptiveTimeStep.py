@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
+from exahype2.solvers.PDETerms    import PDETerms
 from exahype2.solvers.fv.SingleSweep import SingleSweep
-from exahype2.solvers.fv.PDETerms    import PDETerms
 
 import jinja2
 
@@ -109,5 +109,5 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
   @property
   def user_action_set_includes(self):
     return super(GlobalAdaptiveTimeStep, self).user_action_set_includes + """
-#include "exahype2/fv/rusanov/Rusanov.h"
+#include "exahype2/fv/rusanov/rusanov.h"
 """
