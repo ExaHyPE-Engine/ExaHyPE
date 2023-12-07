@@ -317,7 +317,6 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     [&](std::function<void(int device, ::exahype2::CellData& patchData)> kernel, const std::string& markerName, int launchingThreads, int device, int patches) -> void {
     timingComputeKernel.erase();
     ::tarch::timing::Measurement timingKernelLaunch;
-    ::tarch::timing::Measurement localTimingKernelLaunch;
 
     for (int j = 0; j < NumberOfSamples; j++) {
       parallelFor(launchingThread, launchingThreads) {
@@ -338,55 +337,25 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         // if (j > 0) { // We skip the first measurement (warmup phase)
         //  TODO: Not very good to do it like this. Should use something like
         //  localTimingKernelLaunch.pop_front();
-        localTimingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
+        timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
         //}
 
-        double       globalTimingKernelValue = 0.0;
-        const double localTimingKernelValue  = localTimingKernelLaunch.getValue();
-#ifdef Parallel
-        ::tarch::mpi::Rank::getInstance()
-          .reduce(&localTimingKernelValue, &globalTimingKernelValue, 1, MPI_DOUBLE, MPI_SUM, ::tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
-            ::tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-          });
-
-        if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
-          timingKernelLaunch.setValue(globalTimingKernelValue);
-        }
-#else
-        timingKernelLaunch.setValue(localTimingKernelValue);
-#endif
-
         if constexpr (Accuracy > 0.0) {
-          int    localErrors        = 0;
-          double localMaxDifference = 0.0;
+          int    errors         = 0;
+          double maxDifference  = 0.0;
           for (int i = 0; i < patches; i++) {
             storeOutcome(patchData.QOut[i], patchData.maxEigenvalue[i]);
             auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome(patchData.QOut[i], i, patchData.maxEigenvalue[i]);
-            localErrors += errorsPerPatch;
-            localMaxDifference = std::max(localMaxDifference, maxDifferencePerPatch);
+            errors += errorsPerPatch;
+            maxDifference = std::max(maxDifference, maxDifferencePerPatch);
           }
 
-          int    globalErrors        = 0;
-          double globalMaxDifference = 0.0;
-
-#ifdef Parallel
-          ::tarch::mpi::Rank::getInstance().reduce(&localErrors, &globalErrors, 1, MPI_INT, MPI_SUM, ::tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
-            ::tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-          });
-          ::tarch::mpi::Rank::getInstance().reduce(&localMaxDifference, &globalMaxDifference, 1, MPI_DOUBLE, MPI_MAX, ::tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
-            ::tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-          });
-#else
-          globalErrors        = localErrors;
-          globalMaxDifference = localMaxDifference;
-#endif
-
-          if (globalErrors > 0) {
+          if (errors > 0) {
             logError(
               "main()",
               "max difference of outcome from "
-                << markerName << " for all patches is " << globalMaxDifference << " (admissible accuracy=" << Accuracy << ")"
-                << " for " << globalErrors << " entries"
+                << markerName << " for all patches is " << maxDifference << " (admissible accuracy=" << Accuracy << ")"
+                << " for " << errors << " entries"
             );
             std::abort();
           }
@@ -1668,9 +1637,12 @@ int main(int argc, char** argv) {
   //   logError("main()", "MPI runs without multithreading are not supported currently.");
   //   return EXIT_FAILURE;
   // }
-  ::peano4::runTestsAndBenchmarks();
+  //::peano4::runTestsAndBenchmarks();
   OTTER_INITIALISE();
-  //eenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+
+  if (EnableFPE) {
+    feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+  }
 
   if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
     logInfo("main()", "===============================================================");
@@ -1683,6 +1655,9 @@ int main(int argc, char** argv) {
     logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
     logInfo("main()", "Number of samples per measurement: " << NumberOfSamples);
     logInfo("main()", "Evaluate max. eigenvalue (reduction step): " << EvaluateMaximumEigenvalueAfterTimeStep);
+    if constexpr (EnableFPE) {
+      logInfo("main()", "Floating-point exception handler enabled");
+    }
     if constexpr (Accuracy > 0.0) {
       logInfo("main()", "Performing accuracy checks with precision: " << Accuracy);
     }
@@ -1700,9 +1675,11 @@ int main(int argc, char** argv) {
     {
 #endif
       for (int n = 0; n < NumberOfPatchesToStudy.size(); n++) {
-        logInfo("main()", "---------------------------------------------------------------");
-        logInfo("main()", "Current number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy[n]);
-        logInfo("main()", "---------------------------------------------------------------");
+        if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
+          logInfo("main()", "---------------------------------------------------------------");
+          logInfo("main()", "Current number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy[n]);
+          logInfo("main()", "---------------------------------------------------------------");
+        }
         std::stringstream msg;
         msg << "kernel-benchmarks-" << NumberOfPatchesToStudy[n] << "-patches-" << ::tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
         OTTER_PHASE_SWITCH(msg.str().c_str());
