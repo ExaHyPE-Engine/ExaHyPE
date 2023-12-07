@@ -334,15 +334,12 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
         kernel(device, patchData);
         watchKernelLaunch.stop();
-        // if (j > 0) { // We skip the first measurement (warmup phase)
-        //  TODO: Not very good to do it like this. Should use something like
-        //  localTimingKernelLaunch.pop_front();
-        timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
-        //}
+          timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
+        }
 
         if constexpr (Accuracy > 0.0) {
-          int    errors         = 0;
-          double maxDifference  = 0.0;
+          int    errors        = 0;
+          double maxDifference = 0.0;
           for (int i = 0; i < patches; i++) {
             storeOutcome(patchData.QOut[i], patchData.maxEigenvalue[i]);
             auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome(patchData.QOut[i], i, patchData.maxEigenvalue[i]);
