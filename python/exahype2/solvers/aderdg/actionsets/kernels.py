@@ -351,15 +351,15 @@ def number_of_precisions_iterator(iterator_content):
 def riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear):
     template_custom = """
     repositories::{{SOLVER_INSTANCE}}.riemannSolver(
-      FL
-      FR
-      QL
-      QR
+      FL,
+      FR,
+      QL,
+      QR,
       timeStamp,
       timeStepSize,
       marker.x(),
       faceCentre,
-      direction
+      direction,
       isBoundary,
       faceNumber
     );
@@ -414,10 +414,10 @@ def riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear):
       direction
     );
 """
-    if use_kernelgenerator:
-        return template_kernelgenerator
-    elif use_custom_riemann_solver:
+    if use_custom_riemann_solver:
         return template_custom
+    elif use_kernelgenerator:
+        return template_kernelgenerator
     elif is_linear:
         return template_generic_linear
     else:

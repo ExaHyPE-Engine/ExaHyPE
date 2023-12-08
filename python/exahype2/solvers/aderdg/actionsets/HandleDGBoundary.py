@@ -48,69 +48,46 @@ class HandleDGBoundary(AbstractAderDGActionSet):
     {{CORRECTOR_COMPUTATION_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? 0 : basisElementsByFace);
     {{CORRECTOR_COMPUTATION_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? basisElementsByFace : 0);    
 
-    tarch::la::Vector<Dimensions,double> bottomLeftPosition = marker.x()-marker.h();
-    bottomLeftPosition[normal] += marker.h()[normal];
+    tarch::la::Vector<Dimensions,double> faceOffset = marker.x() - 0.5 * marker.h();
+    faceOffset(normal) += 0.5 * marker.h()(normal);
 
-    for(int i=0; i<(Order+1); i++){
-      #if Dimensions==3
-      for(int j=0; j<(Order+1); j++){
-      {{CORRECTOR_COMPUTATION_PRECISION}}* F_In   = FIn  + i*NumberOfVariables*NumberOfVariables + j*NumberOfVariables;
-      {{CORRECTOR_COMPUTATION_PRECISION}}* Q_In   = QIn  + i*NumberOfData*NumberOfData + j*NumberOfData;
-      {{CORRECTOR_COMPUTATION_PRECISION}}* F_Out  = FOut + i*NumberOfVariables*NumberOfVariables + j*NumberOfVariables;
-      {{CORRECTOR_COMPUTATION_PRECISION}}* Q_Out  = QOut + i*NumberOfData*NumberOfData + j*NumberOfData;
-      #else
-      {{CORRECTOR_COMPUTATION_PRECISION}}* F_In   = FIn  + i*NumberOfVariables;
-      {{CORRECTOR_COMPUTATION_PRECISION}}* Q_In   = QIn  + i*NumberOfData;
-      {{CORRECTOR_COMPUTATION_PRECISION}}* F_Out  = FOut + i*NumberOfVariables; 
-      {{CORRECTOR_COMPUTATION_PRECISION}}* Q_Out  = QOut + i*NumberOfData;   
-      #endif
-
-        tarch::la::Vector<Dimensions,double> nodePosition = bottomLeftPosition;
-
-        #if Dimensions==2
-          nodePosition[1-normal] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[i]*marker.h()[1-normal];
-        #else
-          /*
-          * These access the first and second components that are not in the normal direction
-          * i.e. if normal = 0, they access components 1 and 2,
-          *      if normal = 1, they access components 0 and 2,
-          *      if normal = 2, they access components 0 and 1,
-          */
-          nodePosition[std::max((1-normal), 0)] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[i]
-                                                   *marker.h()[std::max((1-normal), 0)];
-          nodePosition[std::min(2, (3-normal))] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[j]
-                                                   *marker.h()[std::min(2, (3-normal))];
-        #endif
+    dfore(dof,Order+1,normal,0) {
+        tarch::la::Vector<Dimensions,double> nodePosition;
+        int dofSerialised = 0;
+        int basis         = 1;
+        for (int d=0; d<Dimensions; d++) {
+          nodePosition(d)  = faceOffset(d);
+          nodePosition(d) += (d==normal) ? 0.0 : repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[dof(d)] * marker.h()(d);
+          dofSerialised += (d==normal) ? 0 : dof(d)*basis;
+          basis *= (d==normal) ? 1 : (Order+1);
+        }
 
         repositories::{{SOLVER_INSTANCE}}.boundaryConditions(
-          Q_In,
-          Q_Out,
-          marker.x(),
+          QIn  + dofSerialised*NumberOfData,
+          QOut + dofSerialised*NumberOfData,
+          nodePosition,
           marker.h(),
           timeStamp,
           normal
         );
 
+        {% if USE_FLUX!="<none>" %}
         repositories::{{SOLVER_INSTANCE}}.flux(
-          Q_Out,
-          marker.x(),
+          QOut + dofSerialised*NumberOfData,
+          nodePosition,
           marker.h(),
           timeStamp,
           timeStepSize,
           normal,
-          F_Out
+          FOut + dofSerialised*NumberOfVariables
         );
-
+        {% else %}
         /*
-        FIn   += NumberOfVariables;
-        QIn   += NumberOfData;
-        FOut  += NumberOfVariables;
-        QOut  += NumberOfData;
+         * Not formally correct, should still be able to contain contributions from things such as sources, point sources etc.
+         * These must now be handled through the boundary conditions.
         */
-
-      #if Dimensions==3
-      }
-      #endif
+        std::fill_n(FOut + dofSerialised*NumberOfVariables, NumberOfVariables, 0.0);
+        {% endif %}
     }
    
   }
