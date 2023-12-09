@@ -2,4 +2,3 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .AMRMarker                                  import AMRMarker
 from .ConstrainedPoissonEquationForMarkerOnCells import ConstrainedPoissonEquationForMarkerOnCells
-

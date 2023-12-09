@@ -280,6 +280,8 @@ namespace swift2 {
 
 
     /**
+     * Two-step, vectorised interaction kernel
+     *
      * Alternative implementation of the hydro force which splits up the
      * underlying algorithm into two steps:
      *
@@ -289,23 +291,14 @@ namespace swift2 {
      * 2. For those interactions which are flagged as interactive, we actually
      *    evaluate the force.
      *
-     * In this variant, we primarily vectorise the first step, assuming that
-     * this is where the majority of the runtime is spent. This way, we might
-     * loose out on the vectorisation potential of the force, but we do not do
-     * a lot of calculations which eventually are masked out anyway.
-     *
-     * After step 1 has completed we have a list of markers. Now we stil try
-     * to vectorise over the markers with a 1: We run trough the particle set
-     * once again with a while loop. Whenever we find a particle which acts on
-     * the current particle, we look @f$ K \in \{2^1-1,2^2-1,2^3-1\} @f$ steps
-     * ahead. If several particle in a row are to be handled, i.e. are flagged,
-     * we us a vectorised for loop.
-     *
-     * To make this lookahead simpler, we extend the boolean field by default
-     * by MaxVectorise-1, i.e. @f$ 2^k-1 @f$, elements. Unfortunately, I had to
-     * manually unroll the lookahead function to make the compiler inline and
-     * vectorise properly. On the long term, this should be done automatically
-     * via a for loop.
+     * In this variant, we assume that the first step is the part
+     * where the majority of the runtime is spent.
+     * After step 1 has completed we have a list of markers. Now we still try
+     * to vectorise over the markers holding a 1/true: We run trough the particle set
+     * once again with a while loop and look ahead N elements (typically N=8). If a
+     * reasonable amount of particles hold a 1 marker within this chunk, we process
+     * all of them with the vectorised kernel, i.e. accept that some of them might
+     * be masked out.
      */
     template <typename ParticleContainer>
     void computeHydroForce_vectoriseDistanceChecks(

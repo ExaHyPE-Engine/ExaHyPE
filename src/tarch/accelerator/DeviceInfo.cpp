@@ -22,7 +22,7 @@
 #endif
 
 #include <cassert>
-// #else if defined(WITH_SYCL_API) // Possible TODO to differentiate SYCL_API and Sycl
+// #else if defined(WITH_SYCL_API) // Possible TODO to differentiate SYCL_API and SYCL
 
 namespace tarch::accelerator {
   std::vector<std::vector<std::string>> queryDeviceInformation() {
@@ -169,14 +169,10 @@ namespace tarch::accelerator {
 #elif defined(GPUOffloadingCPP)
     testResults = tarch::accelerator::cpp::testKernelLaunch();
     if (testResults.size() == 0) {
-      logInfo(
-        "offloadCapabiltiyTest()",
-        "Iso C++ GPU-Parallelism with NVHPC compilers can't check kernel launch tests currently"
-      );
       return;
     } else if (testResults.size() == 1 && !testResults[0]) {
       throw std::runtime_error(
-        "None of the found GPUs could successfully launch GPU Kernels (Check for wrong compile configuration)"
+        "None of the found devices could successfully launch GPU kernels. Check for wrong build configuration."
       );
     }
 #endif
@@ -191,7 +187,7 @@ namespace tarch::accelerator {
     for (unsigned int i = 0; i < testResults.size(); i++) {
       if (!testResults[i]) {
         // Using std::format would be nice but 10.06.2023 CUDA does support gcc upto 12, no std::format supprot
-        failMessage += "GPU Device " + std::to_string(i) + " could not successfully launch a GPU kernel\n";
+        failMessage += "Device " + std::to_string(i) + " could not successfully launch a GPU kernel\n";
       } else {
         offloadCapableGPUCount += 1;
       }
@@ -200,7 +196,7 @@ namespace tarch::accelerator {
     if (testResults.size() != 0) {
       if (offloadCapableGPUCount < testResults.size()) {
         if (offloadCapableGPUCount == 0) {
-          throw std::runtime_error("None of the found GPUs could successfully launch GPU Kernels");
+          throw std::runtime_error("None of the found devices could successfully launch GPU kernels");
         } else {
           throw std::runtime_error(failMessage);
         }
@@ -209,12 +205,12 @@ namespace tarch::accelerator {
       }
     } else {
       throw std::runtime_error(
-        "Peano 4 was configured to run on accelerators, but no offloading capable GPU were found."
+        "Peano was configured to run on accelerators, but no offload capable devices were found."
       );
     }
 #else
     // Print noinformation since we do not have an accelerator
-    logInfo("offloadCapabiltiyTest()", "No GPU Accelerator Backend is enabled. The code will run on CPUs.");
+    logInfo("offloadCapabiltiyTest()", "Peano was not configured to run on accelerators. The code will run on CPUs.");
 #endif
   }
 
@@ -240,24 +236,16 @@ namespace tarch::accelerator {
     std::vector<std::vector<std::string>>&     benchmarkResultsStringRepresentations
   ) {
 
-    // A * 1e-9 / (B * 1e-9) = A / B
-    // Therefore Byte / NanoSecond = GB / Second
+    // A * 1e-9 / (B * 1e-9) = A / B but, MB -> B 1024*1024 and for time it is 1e9.
     for (uint i = 0; i < benchmarkResults.size(); i++) {
       // Parse the results, bring nanoseconds to something humans would like more and add the units
       std::stringstream ss;
       auto&             benchmarkResult = benchmarkResults[i];
-      double            cpuToGpu        = benchmarkResult.allocatedDataSize * benchmarkResult.repeats
-                        * (1.0 / static_cast<double>(benchmarkResult.CPUtoGPUCopy));
-      double gpuToCpu = benchmarkResult.allocatedDataSize * benchmarkResult.repeats
-                        * (1.0 / static_cast<double>(benchmarkResult.GPUtoCPUCopy));
-      double averageStream = (cpuToGpu + gpuToCpu) / 2.0;
-      ss << averageStream << " Gb/s";
-      benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("Streaming Bandwidth")][i] = ss.str();
-      ss.str(std::string());
-      ss << benchmarkResult.allocatedDataSize * benchmarkResult.repeats
-              * (1.0 / static_cast<double>(benchmarkResult.GPUtoGPUCopy))
+      constexpr double  byteToGB        = (1.0/(1000.0*1000.0*1000.0));
+      ss << (static_cast<double>(benchmarkResult.allocatedDataSize) * static_cast<double>(benchmarkResult.repeats) * byteToGB)
+              * (1.0 / (static_cast<double>(benchmarkResult.GPUtoGPUCopy) * 1e-9)) 
          << " Gb/s";
-      benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("GPU-GPU Copy")][i] = ss.str();
+      benchmarkResultsStringRepresentations[tarch::accelerator::getPropertyOffset("Bandwidth")][i] = ss.str();
       ss.str(std::string());
     }
   }

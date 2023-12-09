@@ -73,9 +73,9 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   const tarch::la::Vector<Dimensions,int>&     point,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
-  logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructred );
+  logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructed );
 
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;

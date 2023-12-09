@@ -1,5 +1,4 @@
-
-// This file is part of the Peano project. For conditions of distribution and
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
@@ -71,9 +70,6 @@ Aborted (core dumped)
 
   public:
     InterpolationRestrictionTest();
-
-    /**
-     * This routine is triggered by the TestCaseCollection
-     */
+    
     virtual void run();
 };

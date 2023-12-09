@@ -36,6 +36,9 @@
 *.ii
 *.gpu
 *.ptx
+*.bin
+*.fat
+*.fat.s
 *.cubin
 *.fatbin
 
@@ -314,4 +317,3 @@ src/unittests/UnitTests*
 *.trs
 *.sh
 compile_commands.json
-/documentation/
