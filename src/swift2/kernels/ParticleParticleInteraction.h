@@ -23,6 +23,15 @@ namespace swift2 {
      * i.e. please assume that the routine is also called for self-interaction
      * potentials.
      *
+     *
+     * ## Multiscale interactions
+     *
+     * This routine follows Peano's @ref page_toolbox_particles_mesh_traversal "generic multiscale discussion",
+     * where we point out that we have correctly take particles into account
+     * which reside on coarser levels. This is necessary if some particles have
+     * larger cut-off radii than the others or if we work with adaptive meshes.
+     *
+     *
      * @param ParticleContainer Typicaly either
      *         std::list<Particle *>
      *   or
@@ -173,12 +182,38 @@ namespace swift2 {
       const ParticleContainer&                  activeParticles
     );
 
-    /** Hydro Force calculation particle-particle kernel
+    /**
+     * Hydro Force calculation particle-particle kernel
      *
-     * @brief Non-symmetric force interaction between two particles (as per Swift terminology).
-     * In this, only the Local particle is updated (in the symmetric case, both are updated at the same time).
-     * Time derivative of the internal energy, du/dt, is also updated here.
-     * Subscripts a and b represent indices of Local and Active particles, respectively:
+     * @brief Non-symmetric force interaction between two particles (as per
+     * Swift terminology). In this, only the Local particle is updated (in the
+     * symmetric case, both are updated at the same time). Time derivative of
+     * the internal energy, du/dt, is also updated here. Subscripts a and b
+     * represent indices of Local and Active particles, respectively:
+     *
+     * Our implementations loops over all local particles (outer loop) and, per
+     * local particle then over all active particles (inner loop). Inside this
+     * second loop, we compute the hydro force acting from the active particle
+     * onto the local particle. We know that the local particles are a subset
+     * of the active particle and that the hydroforce @f$ f(p,p) :=0 @f$: If a
+     * particle acts on itself, the arising force equals zero. So there's no
+     * need for a case distinction although we could use one.
+     *
+     * Important is a second case distinction: If a local and an active
+     * particle reside on the same level, we know that the symmetric force
+     * component will be computed later on. Let L be the local one and A the
+     * active one, we have
+     *
+     * @f$ f(L,A) = -f(A,L) @f$
+     *
+     * but this antisymmetry is not exploited in this kernel. We know that
+     * there will be another loop iteration or cell interaction kernel call
+     * which takes care of the negative complementary force.
+     *
+     * However, if A resides on a coarser level than L, this assumption is wrong.
+     * We need to add the force explicitly as discussed in @ref page_toolbox_particles_mesh_traversal.
+     *
+     *
      *
      * h_a: Smoothing length of Local particle
      * h_b: Smoothign length of Active particle
@@ -227,6 +262,12 @@ namespace swift2 {
      * See also @ref swift_particle_new_solver Create new solvers "Swift's discussion how to vectorise kernels"
      * for further details.
      *
+     * ## Multiscale relationships
+     *
+     * Consult computeHydroForce() for a discussion of the handling of
+     * multiscale relations. We can exploit the fact here that a set of
+     * continuous active particles all should have the same cut-off
+     * radius.
      */
     template <typename ParticleContainer>
     void computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking(

@@ -18,6 +18,9 @@ void swift2::kernels::genericInteraction(
     if (localParticleCanBeWorkedOnCellKernel(localParticle, marker)) {
       for (auto* activeParticle : activeParticles) {
         interaction(localParticle, activeParticle);
+        if (tarch::la::oneGreater(activeParticle->getCellH(), localParticle->getCellH())) {
+          interaction(activeParticle, localParticle);
+        }
       }
     }
   }
@@ -452,6 +455,10 @@ void swift2::kernels::computeDensityWithConstantSearchRadius(
       swift2::kernels::findSmoothingLengthWithConstantSearchRadius(localParticle, activeParticles);
     }
   }
+  // @todo
+  //  if ( tarch::la::oneGreater(activeParticle->getCellH(),localParticle->getCellH()) ) {
+  //    interaction(activeParticle, localParticle);
+  //  }
 }
 
 
@@ -476,6 +483,9 @@ void swift2::kernels::computeHydroForce(
     if (localParticleCanBeWorkedOnCellKernel(localParticle, marker)) {
       for (auto* activeParticle : activeParticles) {
         swift2::kernels::forceKernel(localParticle, activeParticle);
+        if (tarch::la::oneGreater(activeParticle->getCellH(), localParticle->getCellH())) {
+          swift2::kernels::forceKernel(activeParticle, localParticle);
+        }
       }
     }
   }
@@ -498,20 +508,39 @@ void swift2::kernels::computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking
     std::advance(localParticlesIterator, localParticlesChunkSize);
 
     typename std::list<typename ParticleContainer::value_type>::const_iterator activeParticlesIterator
-      = activeParticles.begin();
+      = activeParticles.cbegin();
     for (auto activeParticlesChunkSize : numberOfActiveParticlesPerVertexAdded) {
       typename ParticleContainer::value_type activeParticlesChunk = *activeParticlesIterator;
       std::advance(activeParticlesIterator, activeParticlesChunkSize);
 
       for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize;
            localParticleNumberInThisChunk++) {
+
+        bool evaluateMultiscaleRelation = tarch::la::smaller(
+          localParticlesChunk->getCellH(), activeParticlesChunk->getCellH()
+        );
+
         if (localParticleCanBeWorkedOnCellKernel(&localParticlesChunk[localParticleNumberInThisChunk], marker)) {
           for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
                activeParticleNumberInThisChunk++) {
+
+            assertionVectorNumericalEquals(
+              (localParticlesChunk)->getCellH(), (localParticlesChunk + localParticleNumberInThisChunk)->getCellH()
+            );
+            assertionVectorNumericalEquals(
+              (activeParticlesChunk)->getCellH(), (activeParticlesChunk + activeParticleNumberInThisChunk)->getCellH()
+            );
+
             swift2::kernels::forceKernelVectorised(
               localParticlesChunk + localParticleNumberInThisChunk,
               activeParticlesChunk + activeParticleNumberInThisChunk
             );
+            if (evaluateMultiscaleRelation) {
+              swift2::kernels::forceKernelVectorised(
+                activeParticlesChunk + activeParticleNumberInThisChunk,
+                localParticlesChunk + localParticleNumberInThisChunk
+              );
+            }
           }
         } // if
       }   // for localParticleNumberInThisChunk
@@ -530,6 +559,10 @@ void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
 ) {
   typename std::list<typename ParticleContainer::value_type>::const_iterator localParticlesIterator
     = particlesAssociatedWithLocalVertices.begin();
+  // @todo
+  //  if ( tarch::la::oneGreater(activeParticle->getCellH(),localParticle->getCellH()) ) {
+  //    interaction(activeParticle, localParticle);
+  //  }
 
   for (auto localParticlesChunkSize : numberOfParticlesPerLocalVertex) {
     typename ParticleContainer::value_type localParticlesChunk = *localParticlesIterator;
@@ -554,6 +587,14 @@ void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
           {
             for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
                  activeParticleNumberInThisChunk++) {
+
+              assertionVectorNumericalEquals(
+                (localParticlesChunk)->getCellH(), (localParticlesChunk + localParticleNumberInThisChunk)->getCellH()
+              );
+              assertionVectorNumericalEquals(
+                (activeParticlesChunk)->getCellH(), (activeParticlesChunk + activeParticleNumberInThisChunk)->getCellH()
+              );
+
               enabledInteractionPartners[activeParticleNumberInThisChunk] = swift2::kernels::forceKernelDistanceCheck(
                 localParticlesChunk + localParticleNumberInThisChunk,
                 activeParticlesChunk + activeParticleNumberInThisChunk
@@ -563,6 +604,12 @@ void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
               enabledInteractionPartners[i] = false;
             }
           }
+
+          assertionMsg(false, "not assymetry taken into account, as not merged yet");
+
+          bool evaluateMultiscaleRelation = tarch::la::smaller(
+            localParticlesChunk->getCellH(), activeParticlesChunk->getCellH()
+          );
 
           // Handle interactions
           // ===================

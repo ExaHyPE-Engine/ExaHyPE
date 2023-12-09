@@ -76,11 +76,7 @@ namespace swift2 {
       const Particle* localParticle, const peano4::datamanagement::CellMarker& marker
     ) {
 
-      return (
-        not localParticle->getCellHasUpdatedParticle()
-        and
-        marker.isContained(localParticle->getX())
-      );
+      return (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX()));
     }
 
 
