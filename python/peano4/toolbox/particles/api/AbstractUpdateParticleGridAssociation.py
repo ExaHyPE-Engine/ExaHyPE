@@ -239,6 +239,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
         if ( ::toolbox::particles::dropParticle(**p,marker) ) {
           _numberOfDrops++;
+          (*p)->setCellH(marker.h());
           assertion3( 
             fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),        
             fineGridVertex{{PARTICLES_CONTAINER}}.toString(), 
@@ -266,6 +267,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker );
 
     _numberOfDropsFromSieveSet += sievedParticles.size();
+    
+    for (auto& p: sievedParticles) {
+      p->setCellH(marker.h());
+    }
 
     fineGridVertex{{PARTICLES_CONTAINER}}.addParticles( sievedParticles );
     fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates();
@@ -300,6 +305,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).isValid(), coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                          coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     _numberOfLifts+=fineGridVertex{{PARTICLES_CONTAINER}}.size();
+    for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}}) {
+      p->setCellH(3.0 * marker.h());
+    }
     coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).grabParticles( fineGridVertex{{PARTICLES_CONTAINER}} );
   }
   else {

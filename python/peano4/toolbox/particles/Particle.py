@@ -76,6 +76,7 @@ class Particle(DaStGen2):
         self.name = name
 
         self.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("x", "Dimensions"))
+        self.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("cellH", "Dimensions"))
         self.data.add_attribute(dastgen2.attributes.Double("searchRadius"))
 
         #

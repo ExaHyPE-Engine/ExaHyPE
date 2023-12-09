@@ -176,6 +176,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         case 6+TwoPowerD:
         case 7+TwoPowerD:
         #endif
+          (*p)->setCellH(3.0 * marker.h());
           coarseGridVertices{{PARTICLES_CONTAINER}}(instruction-TwoPowerD).push_back(*p);
           p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
           _numberOfLifts ++;

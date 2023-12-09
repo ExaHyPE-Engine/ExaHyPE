@@ -35,6 +35,21 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
       closest vertex.
 
 
+    ## Dynamic adaptive mesh refinement
+    
+    If the grid is refined around a certain vertex, we usually have to drop
+    particles associated to the coarser vertex - which is now a refined one -
+    to the next finer level. However, such a drop would violate our bucketing
+    principle. The other sorting algorithms are fine with drops, but we are 
+    not using them here.
+    
+    What we do instead is that we identify such particles and lift them into
+    the sieve set. Which is counterintuitive as we lift particles which should
+    be dropped. However, we know that the subsequent mesh sweep then will 
+    insert them into the right level. That is, we map a drop operation onto
+    a lift-globally-sieve sequence.
+    
+
     ## Contextualisation
 
     The algorithm describes an incremental bucket sort and naturally
@@ -78,7 +93,14 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     toolbox::particles::ParticleReassociationInstruction instruction = toolbox::particles::liftParticleAssociatedWithVertex(**p, marker);
     switch ( instruction ) {
       case toolbox::particles::ParticleReassociationInstruction_Keep:
-        p++;
+        if (toolbox::particles::particleWillBeDroppedFurther(**p,marker)) {
+          _numberOfLiftsIntoSieveSet++;
+          logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " locally, as it has to be dropped to next level in next iteration" );
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p,_spacetreeId);    
+        }
+        else {
+          p++;
+        }
         break;
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
         _numberOfLiftsIntoSieveSet++;
@@ -122,6 +144,10 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 
     _numberOfDropsFromSieveSet += sievedParticles.size();
 
+    for (auto& p: sievedParticles) {
+      p->setCellH(marker.h());
+    }
+
     fineGridVertex{{PARTICLES_CONTAINER}}.addParticles( sievedParticles );
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
   }
@@ -129,6 +155,10 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker );
 
     _numberOfDropsFromSieveSet += sievedParticles.size();
+
+    for (auto& p: sievedParticles) {
+      p->setCellH(marker.h());
+    }
 
     fineGridVertex{{PARTICLES_CONTAINER}}.addParticles( sievedParticles );
     fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates();
