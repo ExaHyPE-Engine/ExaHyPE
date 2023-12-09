@@ -379,6 +379,12 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
   const int endPatch          = startPatch + patchesPerProcess + (rank == numberOfRanks - 1 ? remainder : 0);
   const int localPatches      = endPatch - startPatch;
 
+  if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
+    logInfo("main()", "---------------------------------------------------------------");
+    logInfo("main()", "Current number of patches per rank: " << localPatches);
+    logInfo("main()", "---------------------------------------------------------------");
+  }
+
   std::string deviceString;
 #ifdef Parallel
   std::vector<int> devices(numberOfRanks);
@@ -1644,7 +1650,7 @@ int main(int argc, char** argv) {
     logInfo("main()", "===============================================================");
     logInfo("main()", "Dimensions: " << Dimensions);
     logInfo("main()", "Number of threads launching compute kernels: " << NumberOfLaunchingThreads);
-    logInfo("main()", "Number of patches per thread/compute kernel launch to study: " << toString(NumberOfPatchesToStudy));
+    logInfo("main()", "Number of total patches per thread/compute kernel launch to study: " << toString(NumberOfPatchesToStudy));
     logInfo("main()", "Number of compute threads: " << ::tarch::multicore::Core::getInstance().getNumberOfThreads());
     logInfo("main()", "Number of MPI ranks: " << ::tarch::mpi::Rank::getInstance().getNumberOfRanks());
     logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
@@ -1671,11 +1677,6 @@ int main(int argc, char** argv) {
     {
 #endif
       for (int n = 0; n < NumberOfPatchesToStudy.size(); n++) {
-        if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
-          logInfo("main()", "---------------------------------------------------------------");
-          logInfo("main()", "Current number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy[n]);
-          logInfo("main()", "---------------------------------------------------------------");
-        }
         std::stringstream msg;
         msg << "kernel-benchmarks-" << NumberOfPatchesToStudy[n] << "-patches-" << ::tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
         OTTER_PHASE_SWITCH(msg.str().c_str());
