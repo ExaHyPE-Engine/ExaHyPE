@@ -5,8 +5,16 @@ from .Attribute import Attribute
 
 class UserDefinedType(Attribute):
     """!
+    
+    Wrapper around user-defined attribute
 
-    Wrapper around user-defined object, i.e. an instance of a proper class
+    Wrapper around user-defined object, i.e. an instance of a proper class that
+    is not built into C++. At the moment, we support this only for static 
+    attributes. On the one hand, having real object attributes which stem from
+    user code is tricky (are there appropriate to string methods, appropriate
+    constructors) for a "normal", serial code. It becomes close to impossible 
+    to map complex nested classes onto MPI. Therefore, this constraint to 
+    class attributes.
 
     """
 
@@ -48,8 +56,11 @@ class UserDefinedType(Attribute):
         self._include = include
         self._getter_returns_reference = getter_returns_reference
         self._user_type_has_toString_method = user_type_has_toString_method
-        
-        assert qualifier==Attribute.Qualifier.STATIC or qualifier==Attribute.Qualifier.CONST_STATIC
+
+        assert (
+            qualifier == Attribute.Qualifier.STATIC
+            or qualifier == Attribute.Qualifier.CONST_STATIC
+        )
 
         pass
 
@@ -90,8 +101,11 @@ class UserDefinedType(Attribute):
         methods.append(getter)
 
         # Add a setter method, if it makes sense.
-        if (
-            not (self._is_const_static or self._is_const or self._is_constexpr or self._is_static)
+        if not (
+            self._is_const_static
+            or self._is_const
+            or self._is_constexpr
+            or self._is_static
         ):
             methods.append(
                 ("set" + accessor_name + "(const " + self._type + "& value)", "void")
