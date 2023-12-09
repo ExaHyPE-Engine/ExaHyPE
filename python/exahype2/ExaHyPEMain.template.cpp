@@ -35,7 +35,6 @@
 #include "tarch/multicore/otter.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "tarch/timing/Measurement.h"
-#include "tarch/timing/TPSCalculator.h"
 #include "tarch/timing/Watch.h"
 #include "toolbox/blockstructured/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
@@ -51,7 +50,6 @@ using namespace {{NAMESPACE | join("::")}};
 tarch::logging::Log _log("::");
 
 
-tarch::timing::TPSCalculator tpsCalculator;
 tarch::timing::Measurement   tpsMeasurement;
 tarch::timing::Measurement   gridConstructionMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
@@ -435,9 +433,9 @@ void step() {
     OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
-    tpsCalculator.update(watch.getCalendarTime());
-    tpsMeasurement.setValue(tpsCalculator.getTPS());
-    logInfo("step()", "TPS: " << std::fixed << std::setprecision(2) << tpsCalculator.getTPS());
+    const double timestepsPerSecond = double(1 / watch.getCalendarTime()); // Inverse of the time per timestep
+    tpsMeasurement.setValue(timestepsPerSecond);
+    logInfo("step()", "TPS: " << std::fixed << std::setprecision(2) << timestepsPerSecond);
 
     repositories::finishTimeStep();
   } break;
