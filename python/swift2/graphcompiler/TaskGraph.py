@@ -288,54 +288,54 @@ def translate_one_step_of_species_into_mesh_traversal(
 ):
     """!
 
-    Translate one step of species into mesh traversal
+        Translate one step of species into mesh traversal
 
-    We create a new step and then add various different action sets depending
-    on the context and behaviour. Once befilled, the new step is appended to
-    mesh_traversals.
+        We create a new step and then add various different action sets depending
+        on the context and behaviour. Once befilled, the new step is appended to
+        mesh_traversals.
 
-    1. If this is an initialisation sequence, then I clear all the task
-       markers. This is to ensure that they do not hold any garbage. I can
-       clear the set as often as I want. It is just important that I clear
-       it at least once per particle species.
-    2. Update the particle markers (analysis of particles per cell). This is
-       something each and every step in Peano does.
-    3. Pick computational kernel. This is where the actual computation per step
-       is done. We have two fundamentally different kernels: one keeps track of
-       (multiscale) neighbours, while the other just updates the particles
-       within the octant (cell).
-    4. If an action set alters the position or cut-off of a particle, then we
-       append True to alter_particle_position. Otherwise, we append False.
+        1. If this is an initialisation sequence, then I clear all the task
+           markers. This is to ensure that they do not hold any garbage. I can
+           clear the set as often as I want. It is just important that I clear
+           it at least once per particle species.
+        2. Update the particle markers (analysis of particles per cell). This is
+           something each and every step in Peano does.
+        3. Pick computational kernel. This is where the actual computation per step
+           is done. We have two fundamentally different kernels: one keeps track of
+           (multiscale) neighbours, while the other just updates the particles
+           within the octant (cell).
+        4. If an action set alters the position or cut-off of a particle, then we
+           append True to alter_particle_position. Otherwise, we append False.
 
-       Here's where the action set differs completely from the Sequential graph
-       compiler. If we change a position, we erase all the task indices from
-       the tree.
+           Here's where the action set differs completely from the Sequential graph
+           compiler. If we change a position, we erase all the task indices from
+           the tree.
 
-    In general, we never assign any index to touchCellLastTime(), as Swift does
-    not only one type of plug-in points. This is actually touchCellFirstTime()
-    in the realisation, so one might be tempted to mask out touchCellLastTime()
-    and only use task indices for touchCellFirstTime(). However, we have to
-    plug into touchVertexLastTime(), too, and this one has to know about events
-    within the adjacent cells. The action set AssignTaskNumbersToMesh memorises
-    the touchCellLastTime() indices within the vertices, to we use the numbers
-    from touchCellLastTime() but actually plug into touchCellFirstTime().
+        In general, we never assign any index to touchCellLastTime(), as Swift does
+        not only one type of plug-in points. This is actually touchCellFirstTime()
+        in the realisation, so one might be tempted to mask out touchCellLastTime()
+        and only use task indices for touchCellFirstTime(). However, we have to
+        plug into touchVertexLastTime(), too, and this one has to know about events
+        within the adjacent cells. The action set AssignTaskNumbersToMesh memorises
+        the touchCellLastTime() indices within the vertices, to we use the numbers
+        from touchCellLastTime() but actually plug into touchCellFirstTime().
 
 
 
-    @param current_species_set: Particle
-      You get a specific algorithmic step as input. The current_species_set
-      highlights to which this step originally belonged to.
+        @param current_species_set: Particle
+          You get a specific algorithmic step as input. The current_species_set
+          highlights to which this step originally belonged to.
 
-    @param mesh_traversals: [peano4.solversteps.Step]
-      Inout parameter. We append a new step to this sequence.
+        @param mesh_traversals: [peano4.solversteps.Step]
+          Inout parameter. We append a new step to this sequence.
 
-    @param alter_particle_position: [Bool]
-      Inout parameter. We append a new marker to this sequence.
+        @param alter_particle_position: [Bool]
+          Inout parameter. We append a new marker to this sequence.
 
-    @param current_species_index: Integer
-      The number of this species set. So index 0 is the first species type.
+        @param current_species_index: Integer
+          The number of this species set. So index 0 is the first species type.
 
-@todo Compare against latest version of Sequential without any optimisation
+    @todo Compare against latest version of Sequential without any optimisation
 
     """
     new_step = peano4.solversteps.Step(

@@ -577,40 +577,40 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
 ):
     """!
 
-    Simpest graph compiler constructing a task tree
+        Simpest graph compiler constructing a task tree
 
-    This graph compiler is very very similar to Sequential.map_onto_separate_mesh_traversals().
-    It runs over the tree and generates one task per touchVertexFirstTime(),
-    touchCellFirstTime() and touchVertexLastTime(). We end up with a
-    task graph that resembles an overlay of a task tree and the graph
-    belonging to a Cartesian mesh with a vertex-cell-vertex update
-    sequence.
+        This graph compiler is very very similar to Sequential.map_onto_separate_mesh_traversals().
+        It runs over the tree and generates one task per touchVertexFirstTime(),
+        touchCellFirstTime() and touchVertexLastTime(). We end up with a
+        task graph that resembles an overlay of a task tree and the graph
+        belonging to a Cartesian mesh with a vertex-cell-vertex update
+        sequence.
 
-    @image html documentation/Doxygen/Swift/task-graph-tree.png
+        @image html documentation/Doxygen/Swift/task-graph-tree.png
 
-    Whenever we spawn a task, we first generate a new task id. This is the
-    number of this task which we store within the task and which the task
-    has to free eventually. We also store this task within the associated
-    mesh entity (vertex or cell) and hence can use the tree as a lookup
-    mechanism of the task dependencies. That is, the indices within the
-    tree are exclusively used for lookups and not for any semantics.
+        Whenever we spawn a task, we first generate a new task id. This is the
+        number of this task which we store within the task and which the task
+        has to free eventually. We also store this task within the associated
+        mesh entity (vertex or cell) and hence can use the tree as a lookup
+        mechanism of the task dependencies. That is, the indices within the
+        tree are exclusively used for lookups and not for any semantics.
 
 
-    @param sequence_of_steps: [(Species,Step)]
-      Sequence of tuples each consisting of one species and one step. Typically
-      constructed through functions within SpeciesStepOrdering.py.
+        @param sequence_of_steps: [(Species,Step)]
+          Sequence of tuples each consisting of one species and one step. Typically
+          constructed through functions within SpeciesStepOrdering.py.
 
-    @param optimisation: Optimisation,
+        @param optimisation: Optimisation,
 
-    @param observer_preamble: String
-      Usually people pass in "Init" or "Step" here to distinguish observers for
-      the initialisation from the actual particle update steps.
+        @param observer_preamble: String
+          Usually people pass in "Init" or "Step" here to distinguish observers for
+          the initialisation from the actual particle update steps.
 
-    @param verbose: {True, False}
+        @param verbose: {True, False}
 
-    @return mesh_traversals
+        @return mesh_traversals
 
-@todo Compare against latest version of Sequential without any optimisation
+    @todo Compare against latest version of Sequential without any optimisation
 
     """
     mesh_traversals = []

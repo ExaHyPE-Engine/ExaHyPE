@@ -248,16 +248,16 @@ def map_onto_separate_mesh_traversals(
     We assume that there is a tree marker already. So our analysis
     will create it, but we assume that it is already out there, so
     we don't have to add it actually to the project.
-    
+
     ## Adaptive mesh refinement
-    
-    If the mesh changes, we have to resort. In the second step of the 
+
+    If the mesh changes, we have to resort. In the second step of the
     sorting, particles might still be dropped. Throughout drops, we may
     not evaluate particle-particle interactions, as the mesh-particle
     topology continues to change, so we'll evaluate stuff twice. Therefore,
-    we have to insert dummy steps. This is not a problem when we bucket 
+    we have to insert dummy steps. This is not a problem when we bucket
     sort.
-    
+
 
     @param sequence_of_steps: [(Species,Step)]
       Sequence of tuples each consisting of one species and one step. Typically
@@ -294,12 +294,14 @@ def map_onto_separate_mesh_traversals(
         ), "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: ERROR have been asked to vectorise for species {}, but species does not support gathered data structures".format(
             current_species_set.particle_model.name
         )
-        
-        if (optimisation == Optimisation.NONE 
-            and len(alter_particle_position)>0
+
+        if (
+            optimisation == Optimisation.NONE
+            and len(alter_particle_position) > 0
             and alter_particle_position[-1]
-            and current_step_of_species.dependencies == AlgorithmStep.Dependencies.NEIGHBOURS
-            ):
+            and current_step_of_species.dependencies
+            == AlgorithmStep.Dependencies.NEIGHBOURS
+        ):
             use_lists_to_construct_active_sets = False
             add_additional_dummy_sweep = AddAdditionalDummySweep.BEFORE
         elif optimisation == Optimisation.NONE:
@@ -314,10 +316,13 @@ def map_onto_separate_mesh_traversals(
         ):
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = AddAdditionalDummySweep.NO
-            
-            if (current_step_of_species.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
-                or current_step_of_species.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-                ):
+
+            if (
+                current_step_of_species.effect
+                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
+                or current_step_of_species.effect
+                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+            ):
                 add_additional_dummy_sweep = AddAdditionalDummySweep.AFTER
         elif optimisation == Optimisation.SORT_ON_THE_FLY:
             use_lists_to_construct_active_sets = True
@@ -325,7 +330,7 @@ def map_onto_separate_mesh_traversals(
         else:
             assert False, "option not supported"
 
-        if add_additional_dummy_sweep==AddAdditionalDummySweep.BEFORE:
+        if add_additional_dummy_sweep == AddAdditionalDummySweep.BEFORE:
             if verbose:
                 print(
                     "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
@@ -344,7 +349,7 @@ def map_onto_separate_mesh_traversals(
             )
             mesh_traversals.append(new_step)
             alter_particle_position.append(True)
-            
+
         translate_one_step_of_species_into_mesh_traversal(
             step=current_step_of_species,
             current_species_set=current_species_set,
@@ -355,7 +360,7 @@ def map_onto_separate_mesh_traversals(
             verbose=verbose,
         )
 
-        if add_additional_dummy_sweep==AddAdditionalDummySweep.AFTER:
+        if add_additional_dummy_sweep == AddAdditionalDummySweep.AFTER:
             if verbose:
                 print(
                     "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals]: step no {} ({}) on particle {} has to be dummy step to clean up sorting".format(
