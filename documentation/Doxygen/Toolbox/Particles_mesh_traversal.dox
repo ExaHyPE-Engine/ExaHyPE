@@ -172,9 +172,6 @@ immediately as well within the loop. If we evaluate @f$ f(A,L) @f4 for
 feeds into an accummulation.
 
 
-Deshalb darf keine Multiscale-Interaction direkt nach Drop stattfinden
-Sieve dropt net, deshalb muessen Partikel explicit entfernt werden in erster Iteration, wenn sie weiter runter fliegen wuerden
-
 
 
 
