@@ -36,19 +36,19 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 
 
     ## Dynamic adaptive mesh refinement
-    
+
     If the grid is refined around a certain vertex, we usually have to drop
     particles associated to the coarser vertex - which is now a refined one -
     to the next finer level. However, such a drop would violate our bucketing
-    principle. The other sorting algorithms are fine with drops, but we are 
+    principle. The other sorting algorithms are fine with drops, but we are
     not using them here.
-    
+
     What we do instead is that we identify such particles and lift them into
     the sieve set. Which is counterintuitive as we lift particles which should
-    be dropped. However, we know that the subsequent mesh sweep then will 
+    be dropped. However, we know that the subsequent mesh sweep then will
     insert them into the right level. That is, we map a drop operation onto
     a lift-globally-sieve sequence.
-    
+
 
     ## Contextualisation
 
