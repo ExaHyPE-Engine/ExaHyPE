@@ -33,10 +33,11 @@ namespace swift2 {
     enum class Invariant {
       TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce,
       TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce,
-      TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce
+      TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce,
+      TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep
     };
 
-    std::string toString( Invariant policy );
+    std::string toString(Invariant policy);
 
     namespace internal {
       /**
@@ -44,12 +45,13 @@ namespace swift2 {
        * routine is called by the mark operations after(!) it has altered
        * the two counters numberOfUpdates and numberOfMaskOuts.
        */
-      bool isValid( Invariant policy, bool workOnParticle, int numberOfUpdates, int numberOfMaskOuts );
+      bool isValid(Invariant policy, bool workOnParticle, int numberOfUpdates, int numberOfMaskOuts);
 
       /**
        * Do all previous steps have to alter state at least once.
        */
-      bool previousStepsAllHaveToAccessAtLeastOnce( Invariant policy );
+      bool previousStepsAllHaveToAccessAtLeastOnce(Invariant policy);
+      bool futureStepsAllHaveToBeCleared(Invariant policy);
 
       /**
        * @brief This function is meant to be called on a particle on which dependency issues
@@ -124,13 +126,14 @@ namespace swift2 {
        * @return errors: Number of dependency errors detected
        */
       static int checkFutureStages(
+        Invariant  policy,
         const int  currentStep,
         const int  currentStage,
         const int  nsteps,
         const int  nstages,
         const int* sweepStateProgression
       );
-    }
+    } // namespace internal
 
     /**
      * @brief Mark a localParticle having entered a sweep stage in a main algorithm step.
@@ -166,7 +169,7 @@ namespace swift2 {
       typename std::remove_pointer<
         typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-             sweepStageMarkerEnum,
+                sweepStageMarkerEnum,
       Invariant policy,
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
     );
@@ -195,7 +198,7 @@ namespace swift2 {
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
         initStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-             sweepStageMarkerEnum,
+                sweepStageMarkerEnum,
       Invariant policy,
       bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
     );
@@ -223,7 +226,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer, typename Marker>
     static void checkAlgorithmStep(
-      Invariant policy,
+      Invariant                policy,
       const ParticleContainer& localParticles,
       const Marker&            marker,
       typename std::remove_pointer<
@@ -258,7 +261,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     static void checkParticlesAssignedToVertexInTouchLastTimeAlgorithmStep(
-      Invariant policy,
+      Invariant                policy,
       const ParticleContainer& assignedParticles,
       typename std::remove_pointer<
         typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum
@@ -287,7 +290,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer, typename Marker>
     static void checkInitStep(
-      Invariant policy,
+      Invariant                policy,
       const ParticleContainer& localParticles,
       const Marker&            marker,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
@@ -308,7 +311,7 @@ namespace swift2 {
      */
     template <typename ParticleContainer>
     static void checkParticlesAssignedToVertexInTouchLastTimeInitStep(
-      Invariant policy,
+      Invariant                policy,
       const ParticleContainer& activeParticles,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
         initStepMarkerEnum
