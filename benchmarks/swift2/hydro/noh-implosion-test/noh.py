@@ -200,12 +200,12 @@ if __name__ == "__main__":
         help="Peano4 directory",
     )
     parser.add_argument(
-        "-m",   
-        "--mode",               
-        dest="mode",           
-        choices=["release","stats","trace", "asserts", "debug"], 
-        default="release", 
-        help="Pick build type" 
+        "-m",
+        "--mode",
+        dest="mode",
+        choices=["release", "stats", "trace", "asserts", "debug"],
+        default="release",
+        help="Pick build type",
     )
     parser.add_argument(
         "-rea",
@@ -441,16 +441,16 @@ if __name__ == "__main__":
             )
         )
 
-    if args.mode=="release":
-      build_mode = peano4.output.CompileMode.Release
-    if args.mode=="stats":
-      build_mode = peano4.output.CompileMode.Stats
-    if args.mode=="asserts":
-      build_mode = peano4.output.CompileMode.Asserts
-    if args.mode=="trace":
-      build_mode = peano4.output.CompileMode.Trace
-    if args.mode=="debug":
-      build_mode = peano4.output.CompileMode.Debug
+    if args.mode == "release":
+        build_mode = peano4.output.CompileMode.Release
+    if args.mode == "stats":
+        build_mode = peano4.output.CompileMode.Stats
+    if args.mode == "asserts":
+        build_mode = peano4.output.CompileMode.Asserts
+    if args.mode == "trace":
+        build_mode = peano4.output.CompileMode.Trace
+    if args.mode == "debug":
+        build_mode = peano4.output.CompileMode.Debug
 
     # Set Peano4 simulation parameters ---------------------------------------------
     offset = [0, 0, 0]
