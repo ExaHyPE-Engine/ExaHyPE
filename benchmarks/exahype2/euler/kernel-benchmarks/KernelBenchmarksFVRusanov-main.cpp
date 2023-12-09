@@ -334,17 +334,13 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
         kernel(device, patchData);
         watchKernelLaunch.stop();
-        // if (j > 0) { // We skip the first measurement (warmup phase)
-        //  TODO: Not very good to do it like this. Should use something like
-        //  timingKernelLaunch.pop_front();
         timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
-        //}
 
         if constexpr (Accuracy > 0.0) {
           int    errors        = 0;
           double maxDifference = 0.0;
           for (int i = 0; i < patches; i++) {
-            storeOutcome(patchData.QOut[i], patchData.maxEigenvalue[0]);
+            storeOutcome(patchData.QOut[i], patchData.maxEigenvalue[i]);
             auto [maxDifferencePerPatch, errorsPerPatch] = validateOutcome(patchData.QOut[i], i, patchData.maxEigenvalue[i]);
             errors += errorsPerPatch;
             maxDifference = std::max(maxDifference, maxDifferencePerPatch);
@@ -369,1228 +365,1258 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       endParallelFor
     }
 
-    reportRuntime(markerName, timingKernelLaunch, patches);
+    if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
+      reportRuntime(markerName, timingKernelLaunch, patches);
+    }
   };
 
-  if constexpr (EvaluateHostKernels) {
-    assessKernel(
-      wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::None>,
-      "host, heap-functors, patch-wise, AoS, sequential",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::ParallelFor>,
-      "host, heap-functors, patch-wise, AoS, parallel-for",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::Subtasks>,
-      "host, heap-functors, patch-wise, AoS, subtasks",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
+  const int rank              = ::tarch::mpi::Rank::getInstance().getRank();
+  const int device            = rank;
+  const int numberOfRanks     = ::tarch::mpi::Rank::getInstance().getNumberOfRanks();
+  const int patchesPerProcess = numberOfPatches / numberOfRanks;
+  const int remainder         = numberOfPatches % numberOfRanks;
+  const int startPatch        = rank * patchesPerProcess;
+  const int endPatch          = startPatch + patchesPerProcess + (rank == numberOfRanks - 1 ? remainder : 0);
+  const int localPatches      = endPatch - startPatch;
 
-    assessKernel(
-      wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::None>,
-      "host, heap-functors, batched, AoS, sequential",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::ParallelFor>,
-      "host, heap-functors, batched, AoS, parallel-for",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::Subtasks>,
-      "host, heap-functors, batched, AoS, subtasks",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSLexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::None>,
-      "host, stateless, patch-wise, AoS, sequential",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSLexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::ParallelFor>,
-      "host, stateless, patch-wise, AoS, parallel-for",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSLexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::Subtasks>,
-      "host, stateless, patch-wise, AoS, subtasks",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::SoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::None>,
-      "host, stateless, patch-wise, SoA, sequential",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::SoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::ParallelFor>,
-      "host, stateless, patch-wise, SoA, parallel-for",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::SoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::Subtasks>,
-      "host, stateless, patch-wise, SoA, subtasks",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::None>,
-      "host, stateless, patch-wise, AoSoA, sequential",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::ParallelFor>,
-      "host, stateless, patch-wise, AoSoA, parallel-for",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::Subtasks>,
-      "host, stateless, patch-wise, AoSoA, subtasks",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSLexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::None>,
-      "host, stateless, batched, AoS, sequential",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSLexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::ParallelFor>,
-      "host, stateless, batched, AoS, parallel-for",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSLexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::Subtasks>,
-      "host, stateless, batched, AoS, subtasks",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::SoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::None>,
-      "host, stateless, batched, SoA, sequential",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::SoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::ParallelFor>,
-      "host, stateless, batched, SoA, parallel-for",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::SoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::Subtasks>,
-      "host, stateless, batched, SoA, subtasks",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::None>,
-      "host, stateless, batched, AoSoA, sequential",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::ParallelFor>,
-      "host, stateless, batched, AoSoA, parallel-for",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapStatelessHostKernel<
-        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
-          FVRusanovSolver,
-          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-          1,
-          FVRusanovSolver::NumberOfUnknowns,
-          FVRusanovSolver::NumberOfAuxiliaryVariables,
-          EvaluateFlux,
-          EvaluateNonconservativeProduct,
-          EvaluateSource,
-          EvaluateMaximumEigenvalueAfterTimeStep,
-          ::exahype2::enumerator::AoSoALexicographicEnumerator>,
-        ::peano4::utils::LoopParallelism::Subtasks>,
-      "host, stateless, batched, AoSoA, subtasks",
-      launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
-      numberOfPatches
-    );
-    /*
-      assessKernel(
-        wrapStatelessHostKernel<
-          ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseInsituStateless<
-            FVRusanovSolver,
-            FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-            1,
-            FVRusanovSolver::NumberOfUnknowns,
-            FVRusanovSolver::NumberOfAuxiliaryVariables,
-            EvaluateFlux,
-            EvaluateNonconservativeProduct,
-            EvaluateSource,
-            EvaluateMaximumEigenvalueAfterTimeStep>,
-          ::peano4::utils::LoopParallelism::None>,
-        "host, stateless, patch-wise, insitu, sequential",
-        launchingThreads,
-        ::tarch::accelerator::Device::HostDevice,
-        numberOfPatches
-      );
-
-          assessKernel(
-            wrapStatelessHostKernel<
-              ::exahype2::fv::rusanov::timeStepWithRusanovBatchedInsituStateless<
-                FVRusanovSolver,
-                FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-                1,
-                FVRusanovSolver::NumberOfUnknowns,
-                FVRusanovSolver::NumberOfAuxiliaryVariables,
-                EvaluateFlux,
-                EvaluateNonconservativeProduct,
-                EvaluateSource,
-                EvaluateMaximumEigenvalueAfterTimeStep>,
-              ::peano4::utils::LoopParallelism::None>,
-            "host, stateless, batched, insitu, sequential",
-            launchingThreads,
-            ::tarch::accelerator::Device::HostDevice,
-            numberOfPatches
-          );
-        */
+  if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
+    logInfo("main()", "---------------------------------------------------------------");
+    logInfo("main()", "Current number of patches per rank: " << localPatches);
+    logInfo("main()", "---------------------------------------------------------------");
   }
+
+  std::string deviceString;
+#ifdef Parallel
+  std::vector<int> devices(numberOfRanks);
+  MPI_Gather(&device, 1, MPI_INT, devices.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+  for (int i = 0; i < numberOfRanks; i++) {
+    deviceString += std::to_string(devices[i]);
+    if (i < numberOfRanks - 1) {
+      deviceString += ",";
+    }
+  }
+#else
+  deviceString = std::to_string(device);
+#endif
+
+if constexpr (EvaluateHostKernels) {
+  assessKernel(
+    wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::None>,
+    "host, heap-functors, patch-wise, AoS, sequential",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::ParallelFor>,
+    "host, heap-functors, patch-wise, AoS, parallel-for",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::Subtasks>,
+    "host, heap-functors, patch-wise, AoS, subtasks",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+
+  assessKernel(
+    wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::None>,
+    "host, heap-functors, batched, AoS, sequential",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::ParallelFor>,
+    "host, heap-functors, batched, AoS, parallel-for",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::Subtasks>,
+    "host, heap-functors, batched, AoS, subtasks",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::None>,
+    "host, stateless, patch-wise, AoS, sequential",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::ParallelFor>,
+    "host, stateless, patch-wise, AoS, parallel-for",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::Subtasks>,
+    "host, stateless, patch-wise, AoS, subtasks",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::SoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::None>,
+    "host, stateless, patch-wise, SoA, sequential",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::SoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::ParallelFor>,
+    "host, stateless, patch-wise, SoA, parallel-for",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::SoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::Subtasks>,
+    "host, stateless, patch-wise, SoA, subtasks",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::None>,
+    "host, stateless, patch-wise, AoSoA, sequential",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::ParallelFor>,
+    "host, stateless, patch-wise, AoSoA, parallel-for",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::Subtasks>,
+    "host, stateless, patch-wise, AoSoA, subtasks",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::None>,
+    "host, stateless, batched, AoS, sequential",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::ParallelFor>,
+    "host, stateless, batched, AoS, parallel-for",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSLexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::Subtasks>,
+    "host, stateless, batched, AoS, subtasks",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::SoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::None>,
+    "host, stateless, batched, SoA, sequential",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::SoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::ParallelFor>,
+    "host, stateless, batched, SoA, parallel-for",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::SoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::Subtasks>,
+    "host, stateless, batched, SoA, subtasks",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::None>,
+    "host, stateless, batched, AoSoA, sequential",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::ParallelFor>,
+    "host, stateless, batched, AoSoA, parallel-for",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  assessKernel(
+    wrapStatelessHostKernel<
+      ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapStateless<
+        FVRusanovSolver,
+        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+        1,
+        FVRusanovSolver::NumberOfUnknowns,
+        FVRusanovSolver::NumberOfAuxiliaryVariables,
+        EvaluateFlux,
+        EvaluateNonconservativeProduct,
+        EvaluateSource,
+        EvaluateMaximumEigenvalueAfterTimeStep,
+        ::exahype2::enumerator::AoSoALexicographicEnumerator>,
+      ::peano4::utils::LoopParallelism::Subtasks>,
+    "host, stateless, batched, AoSoA, subtasks",
+    launchingThreads,
+    ::tarch::accelerator::Device::HostDevice,
+    localPatches
+  );
+  /*
+    assessKernel(
+      wrapStatelessHostKernel<
+        ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseInsituStateless<
+          FVRusanovSolver,
+          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+          1,
+          FVRusanovSolver::NumberOfUnknowns,
+          FVRusanovSolver::NumberOfAuxiliaryVariables,
+          EvaluateFlux,
+          EvaluateNonconservativeProduct,
+          EvaluateSource,
+          EvaluateMaximumEigenvalueAfterTimeStep>,
+        ::peano4::utils::LoopParallelism::None>,
+      "host, stateless, patch-wise, insitu, sequential",
+      launchingThreads,
+      ::tarch::accelerator::Device::HostDevice,
+      localPatches
+    );
+
+    assessKernel(
+      wrapStatelessHostKernel<
+        ::exahype2::fv::rusanov::timeStepWithRusanovBatchedInsituStateless<
+          FVRusanovSolver,
+          FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+          1,
+          FVRusanovSolver::NumberOfUnknowns,
+          FVRusanovSolver::NumberOfAuxiliaryVariables,
+          EvaluateFlux,
+          EvaluateNonconservativeProduct,
+          EvaluateSource,
+          EvaluateMaximumEigenvalueAfterTimeStep>,
+        ::peano4::utils::LoopParallelism::None>,
+      "host, stateless, batched, insitu, sequential",
+      launchingThreads,
+      ::tarch::accelerator::Device::HostDevice,
+      localPatches
+    );
+  */
 
   if constexpr (EvaluateDeviceKernels) {
     int device = 0;
 #if defined(GPUOffloadingSYCL)
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoS, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, SoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoSoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoS, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, SoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoS, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, SoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, task-graph, AoS, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, task-graph, SoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, task-graph, AoSoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, task-graph, AoS, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, task-graph, SoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, task-graph, AoSoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoS, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, SoA, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoSoA, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoS, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, SoA, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoS, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, SoA, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, task-graph, AoS, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, task-graph, SoA, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, task-graph, AoSoA, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, task-graph, AoS, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, task-graph, SoA, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, task-graph, AoSoA, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoS, managed",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, SoA, managed",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoSoA, managed",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoS, managed",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, SoA, managed",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovBatchedManagedStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, managed",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoS, managed",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, SoA, managed",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, managed",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, managed",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, managed",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, managed",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, task-graph, AoS, managed",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, task-graph, SoA, managed",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, task-graph, AoSoA, managed",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, task-graph, AoS, managed",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, task-graph, SoA, managed",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::sycl::timeStepWithRusanovTaskgraphManagedStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, task-graph, AoSoA, managed",
+    launchingThreads,
+    device,
+    localPatches
+  );
 #endif
 
 #if defined(GPUOffloadingOMP)
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoS, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, SoA, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoSoA, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoS, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, SoA, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoS, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, SoA, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, copy",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, copy",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoS, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, SoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoSoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoS, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, SoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoS, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, SoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
 #endif
 
 #if defined(GPUOffloadingCPP)
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoS, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, SoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, batched, AoSoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoS, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, SoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovBatchedUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, batched, AoSoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
 
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoS, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, SoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        1,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device " + std::to_string(device) + ", stateless, patch-wise, AoSoA, usm",
-      launchingThreads,
-      device,
-      numberOfPatches
-    );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSLexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoS, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::SoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, SoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
+  assessKernel(
+    wrapDeviceKernel<::exahype2::fv::rusanov::cpp::timeStepWithRusanovPatchwiseUSMStateless<
+      FVRusanovSolver,
+      FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
+      1,
+      FVRusanovSolver::NumberOfUnknowns,
+      FVRusanovSolver::NumberOfAuxiliaryVariables,
+      EvaluateFlux,
+      EvaluateNonconservativeProduct,
+      EvaluateSource,
+      EvaluateMaximumEigenvalueAfterTimeStep,
+      ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
+    "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, usm",
+    launchingThreads,
+    device,
+    localPatches
+  );
 #endif
   }
 }
@@ -1613,31 +1639,40 @@ int main(int argc, char** argv) {
   ::exahype2::initNonCritialAssertionEnvironment();
   ::tarch::multicore::initSmartMPI();
   ::peano4::fillLookupTables();
-  if (::tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and ::tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
-    logError("main()", "MPI runs without multithreading are not supported currently.");
-    return EXIT_FAILURE;
-  }
-  ::peano4::runTestsAndBenchmarks();
+  // if (::tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and ::tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
+  //   logError("main()", "MPI runs without multithreading are not supported currently.");
+  //   return EXIT_FAILURE;
+  // }
+  //::peano4::runTestsAndBenchmarks();
   OTTER_INITIALISE();
-  //eenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
-  logInfo("main()", "===============================================================");
-  logInfo("main()", "Dimensions: " << Dimensions);
-  logInfo("main()", "Number of threads launching compute kernels: " << NumberOfLaunchingThreads);
-  logInfo("main()", "Number of patches per thread/compute kernel launch to study: " << toString(NumberOfPatchesToStudy));
-  logInfo("main()", "Number of compute threads: " << ::tarch::multicore::Core::getInstance().getNumberOfThreads());
-  logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
-  logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
-  logInfo("main()", "Number of samples per measurement: " << NumberOfSamples);
-  logInfo("main()", "Evaluate max. eigenvalue (reduction step): " << EvaluateMaximumEigenvalueAfterTimeStep);
-  if constexpr (Accuracy > 0.0) {
-    logInfo("main()", "Performing accuracy checks with precision: " << Accuracy);
+  if (EnableFPE) {
+    feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
   }
+
+  if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
+    logInfo("main()", "===============================================================");
+    logInfo("main()", "Dimensions: " << Dimensions);
+    logInfo("main()", "Number of threads launching compute kernels: " << NumberOfLaunchingThreads);
+    logInfo("main()", "Number of total patches per thread/compute kernel launch to study: " << toString(NumberOfPatchesToStudy));
+    logInfo("main()", "Number of compute threads: " << ::tarch::multicore::Core::getInstance().getNumberOfThreads());
+    logInfo("main()", "Number of MPI ranks: " << ::tarch::mpi::Rank::getInstance().getNumberOfRanks());
+    logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
+    logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
+    logInfo("main()", "Number of samples per measurement: " << NumberOfSamples);
+    logInfo("main()", "Evaluate max. eigenvalue (reduction step): " << EvaluateMaximumEigenvalueAfterTimeStep);
+    if constexpr (EnableFPE) {
+      logInfo("main()", "Floating-point exception handler enabled");
+    }
+    if constexpr (Accuracy > 0.0) {
+      logInfo("main()", "Performing accuracy checks with precision: " << Accuracy);
+    }
 #if defined(GPUOffloadingSYCL)
-  logInfo("main()", "Set SYCL_DEVICE_FILTER=gpu when using SYCL on the device");
-  logInfo("main()", "Set SYCL_PI_TRACE=2 in case of runtime errors");
+    logInfo("main()", "Set SYCL_DEVICE_FILTER=gpu when using SYCL on the device");
+    logInfo("main()", "Set SYCL_PI_TRACE=2 in case of runtime errors");
 #endif
-  logInfo("main()", "===============================================================");
+    logInfo("main()", "===============================================================");
+  }
 
 #if defined(SharedOMP)
 #pragma omp parallel
@@ -1646,9 +1681,6 @@ int main(int argc, char** argv) {
     {
 #endif
       for (int n = 0; n < NumberOfPatchesToStudy.size(); n++) {
-        logInfo("main()", "---------------------------------------------------------------");
-        logInfo("main()", "Current number of patches per thread/compute kernel launch: " << NumberOfPatchesToStudy[n]);
-        logInfo("main()", "---------------------------------------------------------------");
         std::stringstream msg;
         msg << "kernel-benchmarks-" << NumberOfPatchesToStudy[n] << "-patches-" << ::tarch::multicore::Core::getInstance().getNumberOfThreads() << "-threads";
         OTTER_PHASE_SWITCH(msg.str().c_str());

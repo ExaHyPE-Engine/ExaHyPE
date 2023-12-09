@@ -99,6 +99,13 @@ parser.add_argument(
     help="Evaluate device kernels",
 )
 parser.add_argument(
+    "-fpe",
+    "--fp-exception",
+    dest="enable_fpe",
+    action="store_true",
+    help="Enable a floating-point exception handler",
+)
+parser.add_argument(
     "--no-make", dest="no_make", action="store_true", help="Do not compile the code after generation"
 )
 args = parser.parse_args()
@@ -192,6 +199,11 @@ my_project.constants.export_const_with_type(
 my_project.constants.export_constexpr_with_type(
     "NumberOfLaunchingThreads", str(args.num_threads), "int"
 )
+
+if (args.enable_fpe):
+  my_project.constants.export_boolean("EnableFPE", True)
+else:
+  my_project.constants.export_boolean("EnableFPE", False)
 
 my_project.constants.export_boolean("EvaluateFlux", True)
 my_project.constants.export_boolean("EvaluateNonconservativeProduct", False)
