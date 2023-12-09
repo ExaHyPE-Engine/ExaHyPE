@@ -79,7 +79,7 @@ class DastgenTestDummyParticle(Particle):
         self._generate_peano_integer_array_attributes(compress=True, ifdefs=False)
         self._generate_peano_integer_array_attributes(compress=False, ifdefs=True)
         self._generate_peano_integer_array_attributes(compress=True, ifdefs=True)
-        
+
         self._generate_user_defined_attributes(ifdefs=False)
         self._generate_user_defined_attributes(ifdefs=True)
 
@@ -94,17 +94,16 @@ class DastgenTestDummyParticle(Particle):
             defs = []
         self.data.add_attribute(
             dastgen2.attributes.UserDefinedType(
-                name = "myStatic" + var_basename,
-                type = "std::string",
-                include = """
+                name="myStatic" + var_basename,
+                type="std::string",
+                include="""
 #include <string>                
 """,
-                ifdefs = defs,
+                ifdefs=defs,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
                 user_type_has_toString_method=False,
             )
         )
-
 
     def _generate_boolean_attributes(self, ifdefs: bool):
         """!
