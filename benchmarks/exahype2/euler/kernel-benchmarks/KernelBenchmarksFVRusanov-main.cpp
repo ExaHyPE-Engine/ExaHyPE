@@ -334,8 +334,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::tarch::timing::Watch watchKernelLaunch("::runBenchmarks", "assessKernel(...)", false);
         kernel(device, patchData);
         watchKernelLaunch.stop();
-          timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
-        }
+        timingKernelLaunch.setValue(watchKernelLaunch.getCalendarTime());
 
         if constexpr (Accuracy > 0.0) {
           int    errors        = 0;
