@@ -46,7 +46,7 @@ void exahype2::EnclaveBookkeeping::cancelTask(int number) {
     Entry storedData = _finishedTasks.at(number);
     _finishedTasks.erase(number);
     tarch::freeMemory(storedData.data, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    tarch::multicore::releaseTaskNumber(number);
+    exahype2::EnclaveTask::releaseTaskNumber(number);
   } else {
     _tasksThatHaveToBeCancelled.insert(number);
   }
