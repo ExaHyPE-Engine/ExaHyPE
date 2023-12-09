@@ -433,10 +433,6 @@ void step() {
     OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
-    const double timestepsPerSecond = double(1 / watch.getCalendarTime()); // Inverse of the time per timestep
-    tpsMeasurement.setValue(timestepsPerSecond);
-    logInfo("step()", "TPS: " << std::fixed << std::setprecision(2) << timestepsPerSecond);
-
     repositories::finishTimeStep();
   } break;
   case repositories::StepRepository::Steps::Undef:
@@ -451,9 +447,11 @@ int main(int argc, char** argv) {
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
 
+  static tarch::timing::Watch watch("::", "main()", false);
+
   peano4::initParallelEnvironment(&argc, &argv);
 
-  // Do this early, so people can use logInfo properly
+  // Do this early, so people can use logInfo properly.
   repositories::initLogFilters();
 
   exahype2::initNonCritialAssertionEnvironment();
@@ -505,8 +503,8 @@ int main(int argc, char** argv) {
 #endif
 
 #if defined(UseSmartMPI)
-      const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
 #else
   const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
@@ -514,7 +512,13 @@ int main(int argc, char** argv) {
 
       if (isGlobalMaster) {
         while (selectNextAlgorithmicStep()) {
+          watch.start();
           step();
+          watch.stop();
+
+          const double timestepsPerSecond = double(1 / watch.getCalendarTime()); // Inverse of the time per timestep
+          tpsMeasurement.setValue(timestepsPerSecond);
+          logInfo("main()", "TPS: " << std::fixed << std::setprecision(2) << timestepsPerSecond);
         }
 
         logInfo("main()", "terminated successfully");
@@ -533,7 +537,7 @@ int main(int argc, char** argv) {
           ) << "s\t" << timeStepMeasurement.toString()
         );
         logInfo(
-          "main()", "average TPS:                " << tpsMeasurement.getValue() << "\t" << tpsMeasurement.toString()
+          "main()", "average TPS:      " << tpsMeasurement.getValue() << "\t" << tpsMeasurement.toString()
         );
       } else if (isPeanoComputeNode) {
         while (peano4::parallel::Node::getInstance().continueToRun()) {
