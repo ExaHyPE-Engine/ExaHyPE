@@ -610,6 +610,8 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
 
     @return mesh_traversals
 
+@todo Compare against latest version of Sequential without any optimisation
+
     """
     mesh_traversals = []
     alter_particle_position = []

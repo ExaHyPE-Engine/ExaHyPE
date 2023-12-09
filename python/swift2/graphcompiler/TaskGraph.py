@@ -335,6 +335,8 @@ def translate_one_step_of_species_into_mesh_traversal(
     @param current_species_index: Integer
       The number of this species set. So index 0 is the first species type.
 
+@todo Compare against latest version of Sequential without any optimisation
+
     """
     new_step = peano4.solversteps.Step(
         "{}{}{}_sweep{}".format(
