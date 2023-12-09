@@ -10,21 +10,24 @@ equals one complete mesh traversal of all mesh resolutions. Throughout
 this traversal, the automaton triggers events (or observations) that
 are then mapped onto @ref peano_action_sets "action sets". 
 
-While running through the mesh, i.e. spacetree, the automaton maintains two
+While running through the mesh, i.e. spacetree, the automaton maintains 
 different particle sets. For the construction rules, it is important to keep
 in mind that vertices of any level hold only particles
 whose search radius is stricly smaller or equal to the corresponding mesh 
 size. Particles with a large search radius are consequently stored on coarser
 levels. This allows us to define our particle sets:
 
-- Particles associated with local vertices. This set, called 
-  localParticles, holds all the particle pointers which 
-  are associated to the @f$ 2^d @f$ vertices of the cell.
+- Particles associated with local, persistent (non-hanging) vertices of a cell.
+  This set, called localParticles, holds all the particle pointers which 
+  are associated to the @f$ 2^d @f$ vertices of the cell and therefore also 
+  some particles slightly outside of the current cell. However all particles
+  within this set are tied to the same resolution level.
 - The set of active particles is the local set plus the active set from
   the father cell in the spacetree. This is a recursive definition. So the set
   of active particles holds all local particles plus all the particles of
   coarser levels which might overlap with a local particle whose centre is
   within the current cell.
+- The particles associated to a single vertex.
 
 
 
@@ -87,7 +90,7 @@ The update then sets the marker to keep books which particles have been updated
 and which haven't.
 
 
-### Particle-particle interactions
+### Particle-particle interactions on one level
 
 If you want to update particles of a cell due to particle-particle interactions, you 
 should only update particles which hold the right value of the corresponding flag 
@@ -127,14 +130,58 @@ the particles in the local set. This requires an additional if in most kernels.
 
 
 All of these remarks do not apply if you work within touchVertexFirstTime() or 
-touchVertexLastTime(). Here, the local set, i.e. the particles associated with 
-a vertex, is unique. However, you cannot compute any proper particle-particle
+touchVertexLastTime(). Here, the set of particles associated with 
+the vertex is unique. However, you cannot compute any proper particle-particle
 interaction here, as you don't have the active sets of the neighbouring vertices.
 
 
+Our scheme at the moment does not provide any means to exploit force symmetries
+between cells. However, you can tailor compute kernels to exploit any symmetry
+you want.
 
 
-### Moving particles and particle sorting
+## Multiscale interactions
+
+Each particle has an attribute getCellH() which provides the user code information
+about the cell currently holding the particle.
+That is, whenever one of the update action sets moves particles up or down in the 
+mesh hierarchy due to particle state changes or adaptive mesh refinement, it will
+automatically adopt the cell h.
+
+
+We can exploit this property to implement valid multiscale interactions: 
+If two particles L (local) and A (active) are on the same grid level, we evaluate A-B and B-A
+separately, i.e. once draw A from the local set and B from the active set and
+then the other way round. That is, we evaluate a function @f$ f(L,A) @f$, knowing
+that @f$ f(A,L) @f$ will be done later in the neighbour cell, e.g. Notably, we 
+do not exploit 
+
+@f$
+ f(L,A) = -f(A,L)
+@f$
+
+and similar relations, even though they are omnipresent in Lagrangian formalisms.
+
+
+The assumption that the counterpart will be taken care of is wrong if A 
+resides on a coarser level than L. Local particles see all (active) particles
+from coarser scales, but coarse scale data doesn't see fine scale data. So if
+the particle's cell size @f$ h(A)>h(L) @f$, then we have evaluate @f$ f(A,L) @f$
+immediately as well within the loop. If we evaluate @f$ f(A,L) @f4 for 
+@f$ h(A)=h(L) @f$, it will be evaluated twice - which is bad if the evaluation
+feeds into an accummulation.
+
+
+Deshalb darf keine Multiscale-Interaction direkt nach Drop stattfinden
+Sieve dropt net, deshalb muessen Partikel explicit entfernt werden in erster Iteration, wenn sie weiter runter fliegen wuerden
+
+
+
+
+
+
+
+## Moving particles and particle sorting
 
 The construction of the active and local sets works if and only if the 
 particles are correctly assigned to mesh vertices. That is, they have 
@@ -211,19 +258,22 @@ onto the next finer level. Now, the dropped green particle will see the
 orange neighbours.
 
 
-For Swift 2 users:
+Checking particles with 
 
-- See swift2.particle.Particle for the introduction of the marker 
-  CellHasUpdatedParticle which we use to ensure that each particle is 
-  only updated once.
-- Consult swift2.actionsets.UpdateParticleMarker for documentation of the
-  action set which actually sets the marker.
-- Read through swift2.graphcompiler.Sequential for an example how and when the 
-  different active set construction schemes are used.
-- Read through swift2.graphcompiler.Sequential for an example how and when to 
-  invoke UpdateParticleMarker to ensure that the update markers are always set
-  to the correct value.
-- Read through the recommendations on @ref page_swift_performance_optimisation. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+particleWillBeDroppedFurther( *p, marker )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+can be very problematic along AMR boundaries, and peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation
+discusses these effects in detail using the arrangement below: 
+
+@image html SievingAlongAMRBoundaries.png
+
+The problems arise for particles associated to the coarser level 
+which you might want to sort into a hanging vertex on the next finer
+level. We never sort into hanging vertices, and this leads to the 
+observation that multiscale interactions are mandatory in Peano even 
+if you work only with the finest level logically.
 
 
 
@@ -239,6 +289,21 @@ in any way.
 The sets exclusively consist of pointers to particles, but the particles
 themselves remain
 @ref page_toolbox_particles_mesh_storage "tied to the vertices they belong to".
+
+
+## For Swift 2 users:
+
+- See swift2.particle.Particle for the introduction of the marker 
+  CellHasUpdatedParticle which we use to ensure that each particle is 
+  only updated once.
+- Consult swift2.actionsets.UpdateParticleMarker for documentation of the
+  action set which actually sets the marker.
+- Read through swift2.graphcompiler.Sequential for an example how and when the 
+  different active set construction schemes are used.
+- Read through swift2.graphcompiler.Sequential for an example how and when to 
+  invoke UpdateParticleMarker to ensure that the update markers are always set
+  to the correct value.
+- Read through the recommendations on @ref page_swift_performance_optimisation. 
 
 
 
