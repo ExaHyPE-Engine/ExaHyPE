@@ -66,6 +66,7 @@ void toolbox::particles::insertParticleIntoCell(
   }
 
   newParticle->setNewParallelState(Particle::NewParallelState::Local);
+  newParticle->setCellH(marker.h());
 
   const int linearisedTargetVertex = targetVertex.to_ulong();
 
