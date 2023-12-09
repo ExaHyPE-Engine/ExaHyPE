@@ -349,6 +349,8 @@ namespace toolbox {
     template <typename Particle>
     bool particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::CellMarker& marker);
 
+    template <typename Particle>
+    bool particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
     double relativeSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
     double relativeSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
