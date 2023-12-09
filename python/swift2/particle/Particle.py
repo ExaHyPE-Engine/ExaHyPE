@@ -316,7 +316,7 @@ Particle properties:
                 "PEANO4_EVENT_TYPE": peano4_event_enum.get_accessor_name(),
                 "CHECK_FUNCTION": None,
                 "EVENT": None,
-                "INVARIANT": None
+                "INVARIANT": None,
             }
 
             # first determine which type of algorithm step we have. Depending on its
@@ -351,8 +351,10 @@ Particle properties:
                     step.effect,
                 )
 
-            if step.touch_vertex_first_time_dependency_policy==None:
-                d["INVARIANT"] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce"
+            if step.touch_vertex_first_time_dependency_policy == None:
+                d[
+                    "INVARIANT"
+                ] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce"
             else:
                 d["INVARIANT"] = step.touch_vertex_first_time_dependency_policy
 
@@ -397,8 +399,10 @@ Particle properties:
             d["CHECK_FUNCTION"] = d["CHECK_FUNCTION_TEMPLATE"].replace(
                 "{STAGE}", "CellKernel"
             )
-            if step.cell_kernel_dependency_policy==None:
-                d["INVARIANT"] = "TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce"
+            if step.cell_kernel_dependency_policy == None:
+                d[
+                    "INVARIANT"
+                ] = "TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce"
             else:
                 d["INVARIANT"] = step.cell_kernel_dependency_policy
 
@@ -420,9 +424,11 @@ Particle properties:
             d["CHECK_FUNCTION"] = d["CHECK_FUNCTION_TEMPLATE"].replace(
                 "{STAGE}", "VertexKernel"
             )
-            
-            if step.touch_vertex_last_time_dependency_policy==None:
-                d["INVARIANT"] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce"
+
+            if step.touch_vertex_last_time_dependency_policy == None:
+                d[
+                    "INVARIANT"
+                ] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce"
             else:
                 d["INVARIANT"] = step.touch_vertex_last_time_dependency_policy
 
@@ -458,15 +464,15 @@ Particle properties:
         """!
 
         Add dependency (particle consistency) checks
-        
+
         This routine should be called in the subclass directly after you have
-        befilled self._algorithm_steps and self._initialisation_steps. It is 
-        safe to add this stuff to your particle model all the time - the 
+        befilled self._algorithm_steps and self._initialisation_steps. It is
+        safe to add this stuff to your particle model all the time - the
         actual checks kick in if and only if you run in non-release modes.
-        However, you might want to call the function only in these cases to 
-        ensure that no (empty) C++ code is generated and the compiler can 
-        optimise more aggressively. 
-        
+        However, you might want to call the function only in these cases to
+        ensure that no (empty) C++ code is generated and the compiler can
+        optimise more aggressively.
+
         ## Realisation
 
         We first create Enumerations representing each
@@ -485,7 +491,7 @@ Particle properties:
 
         This is done both for the main algorithm steps as well as for the
         initialisation steps individually.
-        
+
         """
 
         ifdefs = ["PeanoDebug > 0"]

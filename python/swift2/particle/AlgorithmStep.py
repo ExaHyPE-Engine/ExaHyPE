@@ -107,9 +107,9 @@ class AlgorithmStep(object):
         unprepare_traversal_kernel="",
         input_particles=None,
         includes="",
-        cell_kernel_dependency_policy             = None,
-        touch_vertex_first_time_dependency_policy = None,
-        touch_vertex_last_time_dependency_policy  = None,
+        cell_kernel_dependency_policy=None,
+        touch_vertex_first_time_dependency_policy=None,
+        touch_vertex_last_time_dependency_policy=None,
     ):
         """!
 
@@ -179,10 +179,14 @@ class AlgorithmStep(object):
 
         self.input_particles = input_particles
         self.includes = includes
-        
-        self.cell_kernel_dependency_policy             = cell_kernel_dependency_policy
-        self.touch_vertex_first_time_dependency_policy = touch_vertex_first_time_dependency_policy
-        self.touch_vertex_last_time_dependency_policy  = touch_vertex_last_time_dependency_policy
+
+        self.cell_kernel_dependency_policy = cell_kernel_dependency_policy
+        self.touch_vertex_first_time_dependency_policy = (
+            touch_vertex_first_time_dependency_policy
+        )
+        self.touch_vertex_last_time_dependency_policy = (
+            touch_vertex_last_time_dependency_policy
+        )
 
     def __str__(self):
         return "({},{},{})".format(self.name, self.dependencies, self.effect)

@@ -302,7 +302,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
         self._add_dependency_checks()
 
-
     def set_parameters(self):
         """
         This function translates "global" particle parameters which are
@@ -476,7 +475,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        #include "swift2/timestepping/GlobalTimeStepping.h"
                                        #include "swift2/timestepping/TimeStepping.h"
                                        """,
-            touch_vertex_first_time_dependency_policy = "TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce"                           
+            touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
+            # touch_vertex_last_time_dependency_policy  = "TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
+            cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
         )
         self.algorithm_steps_dict["PredictHydro"] = predictHydro
 
