@@ -54,7 +54,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 # Because this file is needed by CMake itself and not by the project.
 # We need to override specific compiler flags initialized by CMake, to
 # match them exactly with the flags defined in Peano Automake build system.
-# More details can be found in the cmake/PeanoCustomInitFlags.cmake file.
+# More details can be found in the cmake/PeanoCustomInitFlags. CMake file.
 # For example, the Peano release flags are -O3 and -O4 for NVHPC compilers (and -DNDEBUG in definitions);
 # but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/PeanoCustomInitFlags.cmake")
@@ -283,14 +283,14 @@ if(WITH_GPU)
 endif()
 
 # All type remove (and build only 2d or 3d) - like how cmake usually do: default am anfang is build none
-# As little as helper variables as possible 
+# As litle as helper variables as possible 
 # Remove Peano APP build type and build dimensions try to use CMAKE_BUILD_TYPE and WITH_DIMENSIONS
 
-# The CMAKE_BUILD_TYPE start empty, it can be only appended to the list of build types but removed
+# The CMAKE_BUILD_TYPE starts empty, it can be only appended to the list of build types but removed
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "Asserts" "Trace" "Stats" "Debug\;Release\;Asserts\;Trace\;Stats")
-# All applications currently support dimensions 2 or 3 right now, but the applications support arbitrary dimensions
+# All applications currently support dimensions 2 or 3, but the applications support arbitrary dimensions
 # And therefore WITH_DIMENSIONS should get a property string
-#set_property(CACHE WITH_DIMENSIONS PROPERTY STRINGS "2" "3" "2\;3")
+set(WITH_DIMENSIONS "" CACHE STRING "Dimensions to build with ;-separated list of dimensions")
 
 # Update core libraries' build modes and dimensions if it is not set to build all and if the build type of an application is different.
 if(PEANO_BUILD_TYPE)
