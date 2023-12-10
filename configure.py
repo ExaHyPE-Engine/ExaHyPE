@@ -60,7 +60,7 @@ args = parser.parse_args()
 
 cflags = "-O3"
 cxxflags = "-w -O3"
-cxxstandard = '-std=c++20'
+cxxstandard = "-std=c++20" # Needs to passed in varaible CXXFLAGS, as otherwise Automake might pass the default C++ standard (gnu++11)
 # cxxflags = '-W -Wall -Wextra -O3'
 nvccflags = "-O3"
 configure_args = []
@@ -249,12 +249,11 @@ if args.libxsmm:
         configure_args.append("--with-libxsmm")
 
 if args.cmake:
-  # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
-  env_vars = {
-      "CC": "{}".format(args.cc),
-      "CXX": "{}".format(args.cxx),
-      "CXXFLAGS": cxxstandard,
-  }
+    # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
+    env_vars = {
+        "CC": "{}".format(args.cc),
+        "CXX": "{}".format(args.cxx),
+    }
 
     # Create a string to display environment variables like in a terminal
     env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
@@ -274,9 +273,13 @@ if args.cmake:
 
 else:
     # Prepare the environment variables
+    # Read existing CXXFLAGS to not overwrite them
+    env_cxxflags = os.environ.get("CXXFLAGS")
+
     env_vars = {
         "CC": "{} {}".format(args.cc, cflags),
         "CXX": "{} {}".format(args.cxx, cxxflags),
+        "CXXFLAGS": "{} {}".format(env_cxxflags, cxxstandard),
     }
 
     if args.gpu == "cuda":
