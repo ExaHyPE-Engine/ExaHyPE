@@ -1,12 +1,12 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "SoALexicographicEnumerator.h"
+#include "AoSoALexicographicEnumerator.h"
 
 #if defined(GPUOffloadingOff)
-std::string exahype2::enumerators::SoALexicographicEnumerator::toString() const {
+std::string exahype2::enumerator::AoSoALexicographicEnumerator::toString() const {
   std::ostringstream msg;
   msg
-    << "(SoA-lex"
+    << "(AoSoA-lex"
     << ",#cells=" << _numberOfCells << ",#dofs=" << _numberOfDoFsPerAxisInCell << ",#halo=" << _haloSize << ",#unknowns=" << _unknowns << ",#aux=" << _numberOfAuxiliaryVariables
     << ")";
 

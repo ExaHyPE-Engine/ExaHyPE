@@ -11,7 +11,7 @@
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
-namespace exahype2::enumerators {
+namespace exahype2::enumerator {
   /**
    * Default enumerator for all DoFs in ExaHyPE 2
    *
@@ -127,4 +127,4 @@ namespace exahype2::enumerators {
     const int _unknowns;
     const int _numberOfAuxiliaryVariables;
   };
-} // namespace exahype2::enumerators
+} // namespace exahype2::enumerator

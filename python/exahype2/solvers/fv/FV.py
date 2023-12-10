@@ -1438,7 +1438,7 @@ The finest mesh width of """
 
         ## Access
 
-        We recommend that you use the AoS enumerator exahype2::enumerators::AoSLexicographicEnumerator.
+        We recommend that you use the AoS enumerator exahype2::enumerator::AoSLexicographicEnumerator.
         This one has to be given 1 as number of cells/patches, it requires the size
         of the patch, its halo size, you have to pass it the unkowns and the correct
         number of auxiliary parameters. If you want the preprocessing also to alter

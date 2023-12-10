@@ -6,7 +6,7 @@
 
 #include "tarch/logging/Log.h"
 
-#include "exahype2/enumerators/FaceAoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/FaceAoSLexicographicEnumerator.h"
 
 
 void exahype2::dg::applyBoundaryConditions(
@@ -37,7 +37,7 @@ void exahype2::dg::applyBoundaryConditions(
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * cellSize;
   faceOffset(faceNumber%Dimensions) += 0.5 * cellSize(faceNumber%Dimensions);
 
-  exahype2::enumerators::FaceAoSLexicographicEnumerator enumerator(faceNumber,order+1,1,unknowns,auxiliaryVariables);
+  exahype2::enumerator::FaceAoSLexicographicEnumerator enumerator(faceNumber,order+1,1,unknowns,auxiliaryVariables);
 
   dfore(dof,order+1,faceNumber % Dimensions,0) {
     tarch::la::Vector<Dimensions,double> x;

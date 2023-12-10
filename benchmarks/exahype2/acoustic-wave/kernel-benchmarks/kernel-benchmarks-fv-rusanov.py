@@ -48,8 +48,9 @@ parser.add_argument(
     "-p",
     "--num-patches",
     dest="num_patches",
+    nargs='+',
+    default=[32, 64, 128, 256, 512, 1024, 2048],
     type=int,
-    required=True,
     help="Number of patches to study",
 )
 parser.add_argument(
@@ -84,7 +85,14 @@ parser.add_argument(
     help="Evaluate max. eigenvalue",
 )
 parser.add_argument(
-    "--make", dest="make", action="store_true", help="Compile the code after generation"
+    "-fpe",
+    "--fp-exception",
+    dest="enable_fpe",
+    action="store_true",
+    help="Enable a floating-point exception handler",
+)
+parser.add_argument(
+    "--no-make", dest="no_make", action="store_true", help="Do not compile the code after generation"
 )
 args = parser.parse_args()
 
@@ -113,8 +121,6 @@ executable_name = (
     + str(args.dim)
     + "d-ps-"
     + str(args.patch_size)
-    + "-p-"
-    + str(args.num_patches)
     + "-"
     + str(args.build_mode)
 )
@@ -172,12 +178,18 @@ my_project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "doub
 my_project.constants.export_constexpr_with_type(
     "NumberOfSamples", str(args.samples), "int"
 )
-my_project.constants.export_constexpr_with_type(
-    "NumberOfPatchesToStudy", str(args.num_patches), "int"
+formatted_num_patches = "{{{}}}".format(', '.join(str(val) for val in args.num_patches))
+my_project.constants.export_const_with_type(
+    "NumberOfPatchesToStudy", str(formatted_num_patches), "::tarch::la::Vector<%s, int>" % len(args.num_patches)
 )
 my_project.constants.export_constexpr_with_type(
     "NumberOfLaunchingThreads", str(args.num_threads), "int"
 )
+
+if (args.enable_fpe):
+  my_project.constants.export_boolean("EnableFPE", True)
+else:
+  my_project.constants.export_boolean("EnableFPE", False)
 
 my_project.constants.export_boolean("EvaluateFlux", True)
 my_project.constants.export_boolean("EvaluateNonconservativeProduct", False)
@@ -191,8 +203,6 @@ my_project.constants.export_boolean(
 my_project.constants.define_value("RHO", str(1.0))
 my_project.constants.define_value("WAVE_SPEED", str(1.0))
 my_project.constants.define_value("SIGMA", str(1.0))
-my_project.constants.define_value("t0", str(1.0))
-my_project.constants.define_value("M0", str(1.0))
 
 os.system(
     "cp {} KernelBenchmarksFVRusanov-main.cpp".format(
@@ -201,7 +211,7 @@ os.system(
 )
 
 my_project.build(
-    make=args.make, make_clean_first=True, throw_away_data_after_build=True
+    make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True
 )
 
 print("Executable is ", executable_name)

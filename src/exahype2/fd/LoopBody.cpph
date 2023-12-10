@@ -132,7 +132,7 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
 template <typename Solver>
 void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   const double* __restrict__                   QIn,
-  const exahype2::enumerators::AoSLexicographicEnumerator& QInEnumerator,
+  const exahype2::enumerator::AoSLexicographicEnumerator& QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
@@ -140,7 +140,7 @@ void exahype2::fd::internal::addAlgebraicSourceTerm_LoopBody(
   double                                       t,
   double                                       dt,
   double* __restrict__                         QOut,
-  const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator
+  const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator
 ) {
   double* QAlgebraicSourceGathered = new double[QInEnumerator._unknowns];
 
@@ -212,7 +212,7 @@ double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
 template <typename Solver>
 double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     const double* __restrict__                   QOut,
-    const exahype2::enumerators::AoSLexicographicEnumerator& QOutEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,
     int                                          patchIndex,

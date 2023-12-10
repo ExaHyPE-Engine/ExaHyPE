@@ -22,8 +22,6 @@ plot_interval = end_time / 100
 rho = 2.7
 p_wave_speed = 6.0
 s_wave_speed = 3.464
-t0 = 0.1
-M0 = 1000.0
 
 scenarios = [
     "PointExplosion",
@@ -165,6 +163,14 @@ parser.add_argument(
     help="Use GPU offloading (requires a GPU enabled Peano build).",
 )
 parser.add_argument(
+    "-f",
+    "--fuse",
+    dest="fused_tasks",
+    type=int,
+    default=128,
+    help="Number of enclave tasks to fuse into one meta task to offload to GPUs.",
+)
+parser.add_argument(
     "-vis",
     "--visualise",
     dest="visualise",
@@ -228,9 +234,16 @@ parser.add_argument(
 parser.add_argument(
     "--timeout", dest="timeout", type=int, default=3600, help="MPI timeout in seconds."
 )
+parser.add_argument(
+    "-fpe",
+    "--fp-exception",
+    dest="enable_fpe",
+    action="store_true",
+    help="Enable a floating-point exception handler",
+)
 
 parser.add_argument(
-    "--make", dest="make", action="store_true", help="Compile the code after generation"
+    "--no-make", dest="no_make", action="store_true", help="Do not compile the code after generation"
 )
 parser.add_argument(
     "--executable",
@@ -508,21 +521,22 @@ else:
 
 my_project.set_timeout(args.timeout)
 
+my_project.set_multicore_orchestration("::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, ::tarch::mpi::Rank::getInstance().getRank())" % str(args.fused_tasks))
+
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
-my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+if (args.enable_fpe):
+  my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 my_project.constants.define_value("RHO", str(rho))
 my_project.constants.define_value("P_WAVE_SPEED", str(p_wave_speed))
 my_project.constants.define_value("S_WAVE_SPEED", str(s_wave_speed))
-my_project.constants.define_value("t0", str(t0))
-my_project.constants.define_value("M0", str(M0))
 my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)
 
 my_project.output.makefile.add_cpp_file(solver_name + ".cpp")
 
 my_project.build(
-    make=args.make, make_clean_first=True, throw_away_data_after_build=True
+    make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True
 )
 
 print("Executable is ", executable_name)

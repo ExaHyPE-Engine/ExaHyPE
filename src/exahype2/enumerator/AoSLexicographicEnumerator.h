@@ -11,32 +11,38 @@
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/multicore.h"
 
-namespace exahype2::enumerators {
+namespace exahype2::enumerator {
   /**
-   * AoSoA Lexicographic Enumerator
+   * Array of struct enumerator
    *
-   * Enumerates the degrees of freedom assuming that they are
+   * This is the default enumerator for all DoFs in ExaHyPE 2.
    *
-   * - organised as structure of arrays, i.e., if you store quantities (a,b,c) per
-   *   degree of freedom (dof), then the array first holds the a values, then all the b
-   *   values, then all the c values.
+   * We assume that we have a lexicographic ordering of the cell data or
+   * DG degree of freedom (quadrature points) and all data therein are
+   * ordered lexicographically and stored in as AoS: All data are
+   *
+   * - organised as array of structs, i.e. if you store quantities (a,b,c) per
+   *   degree of freedom (dof), then the array first holds the a value of the first
+   *   dof, then the b value, then the c value, and then it continues with the
+   *   a value of the next dof.
    * - organised lexicographically, i.e. we first enumerate all the degrees of
    *   freedom along the x-axis, then along the y-axis, then along the z-axis.
    * - organised from left to right, bottom-up and front to back.
-   * - organised per patch with this pattern, i.e., we first enumerate all the a values
-   *   of the first patch, then all the b values, the all the c values. After that
-   *   we continue with the data of the second patch.
+   * - organised one cell after another, i.e. we first enumerate all the values
+   *   of the first cell, before we continue with any value of the second
+   *   cell.
    *
-   * This enumerator enumerates the patches one after the other (AoS). Within each
-   * patch, it then however switches to an SoA data layout. The enumeration thus is
-   * a hybrid between AoS and SoA. The last property in the enumeration above is the
-   * decisive difference to the SoALexicographicEnumerator.
+   * @see enumerator.h for a generic description of attribute semantics.
    *
    *
-   * @see enumerators.h for a generic description of attribute semantics.
+   * @param numberOfCells The cells are enumerated one after another, i.e.,
+   *   we work with an array of cells hosting arrays of structs.
+   *
+   * @param haloSize Number of dofs around the cell which do not carry
+   *   active information, i.e., data you write to.
    */
-  struct AoSoALexicographicEnumerator {
-    constexpr GPUCallableInlineMethod AoSoALexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+  struct AoSLexicographicEnumerator {
+    constexpr GPUCallableInlineMethod AoSLexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
       _numberOfCells(numberOfCells),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),
@@ -54,14 +60,15 @@ namespace exahype2::enumerators {
       if constexpr (Dimensions == 2) {
         return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
                  * (_unknowns + _numberOfAuxiliaryVariables)
-               + unknown * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
-               + (volumeIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) + (volumeIndex(0) + _haloSize);
+               + (volumeIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables)
+               + (volumeIndex(0) + _haloSize) * (_unknowns + _numberOfAuxiliaryVariables) + unknown;
       } else {
         return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
                  * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables)
-               + unknown * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
                + (volumeIndex(2) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
-               + (volumeIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) + (volumeIndex(0) + _haloSize);
+                   * (_unknowns + _numberOfAuxiliaryVariables)
+               + (volumeIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables)
+               + (volumeIndex(0) + _haloSize) * (_unknowns + _numberOfAuxiliaryVariables) + unknown;
       }
     }
 
@@ -69,9 +76,6 @@ namespace exahype2::enumerators {
     std::string toString() const;
 #endif
 
-    /**
-     * Returns the total size.
-     */
     GPUCallableInlineMethod int size() const InlineMethod {
       if constexpr (Dimensions == 2) {
         return _numberOfCells * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables);
@@ -95,4 +99,4 @@ namespace exahype2::enumerators {
     const int _unknowns;
     const int _numberOfAuxiliaryVariables;
   };
-} // namespace exahype2::enumerators
+} // namespace exahype2::enumerator

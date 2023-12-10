@@ -87,7 +87,7 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
   ) { 
     logTraceIn( "touchCellFirstTime(...)" );
     
-    ::exahype2::enumerators::AoSLexicographicEnumerator enumerator(
+    ::exahype2::enumerator::AoSLexicographicEnumerator enumerator(
       1, // only one patch
       {{DG_ORDER}}+1,
       0, // int haloSize,
@@ -126,7 +126,7 @@ class DoFWisePreprocessSolution(AbstractRungeKuttaDGActionSet):
 
   def get_includes(self):
     return super(DoFWisePreprocessSolution,self).get_includes() + """
-#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 """
 
 

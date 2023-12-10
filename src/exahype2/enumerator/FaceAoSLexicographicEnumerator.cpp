@@ -3,7 +3,7 @@
 #include "FaceAoSLexicographicEnumerator.h"
 
 #if defined(GPUOffloadingOff)
-std::string exahype2::enumerators::FaceAoSLexicographicEnumerator::toString() const {
+std::string exahype2::enumerator::FaceAoSLexicographicEnumerator::toString() const {
   std::ostringstream msg;
   msg
     << "(FaceAoS-lex"

@@ -2,8 +2,6 @@
 
 #include "peano4/utils/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
-#include "exahype2/fd/BoundaryConditions.h"
-#include "exahype2/enumerators/enumerators.h"
 
 #include <iostream>
 

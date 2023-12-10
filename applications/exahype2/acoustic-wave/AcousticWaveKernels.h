@@ -41,6 +41,8 @@ namespace applications::exahype2::acousticwave {
 #endif
 
     if (pointSource) {
+      static constexpr double t0 = 0.7;
+      static constexpr double M0 = 1000.0;
       const double force = M0 * std::exp(-((t - t0) * (t - t0)) / (2.0 * SIGMA * SIGMA));
       S[0]               = force;
     }

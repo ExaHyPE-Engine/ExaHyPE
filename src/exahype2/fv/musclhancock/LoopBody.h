@@ -6,9 +6,9 @@
 
 #include "Functors.h"
 
-#include "exahype2/enumerators/AoSLexicographicEnumerator.h"
-#include "exahype2/enumerators/SoALexicographicEnumerator.h"
-#include "exahype2/enumerators/AoSoALexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSLexicographicEnumerator.h"
+#include "exahype2/enumerator/SoALexicographicEnumerator.h"
+#include "exahype2/enumerator/AoSoALexicographicEnumerator.h"
 
 #include "tarch/multicore/multicore.h"
 
