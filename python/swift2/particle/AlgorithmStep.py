@@ -54,13 +54,19 @@ class AlgorithmStep(object):
 
         Please note that any update of a particle position should happen within
         touch vertex last time. Otherwise, we'd destroy the particle topology.
+        
+        By default, any algorithm step runs only once. However, there are 
+        variants of each step which can rerun. But the user has to flag this 
+        possibility explicitly.
 
         """
 
         ALTER_GLOBAL_STATE = 0
-        ALTER_LOCAL_STATE = 1
-        CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN = 2
-        CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN = 3
+        ALTER_GLOBAL_STATE_AND_MIGHT_RERUN = 1
+        ALTER_LOCAL_STATE = 2
+        ALTER_LOCAL_STATE_AND_MIGHT_RERUN = 3
+        CHANGE_POSITION_OR_INTERACTION_RADIUS = 4
+        CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN = 5
 
     class PeanoEventUsedBySwift(IntEnum):
         """!
@@ -178,7 +184,10 @@ class AlgorithmStep(object):
         self.unprepare_traversal_kernel = unprepare_traversal_kernel
 
         self.input_particles = input_particles
-        self.includes = includes
+        self.includes = includes + """
+#include "Constants.h"
+#include "swift2/ParticleSetIterators.h"
+        """
 
         self.cell_kernel_dependency_policy = cell_kernel_dependency_policy
         self.touch_vertex_first_time_dependency_policy = (
