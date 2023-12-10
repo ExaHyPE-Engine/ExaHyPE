@@ -120,7 +120,7 @@
  * find out which core wrote the error message. So we have to circumnavigate
  * Peano's logging.
  */
-#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#if defined(GPUOffloadingSYCL)
 
 #pragma push_macro("Dimensions")
 #pragma push_macro("assertion")
