@@ -17,9 +17,6 @@ foreach(mode IN LISTS BUILD_MODES)
   target_compile_options(Tarch_${mode_lower} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>: ${PEANO_CUDA_FLAGS_${mode_upper}}>)
   target_link_libraries(Tarch_${mode_lower} PRIVATE project_warnings)
 
-  if("${CMAKE_CXX_COMPILER_ID}" MATCHES "IntelLLVM" AND ("${WITH_GPU}" STREQUAL "sycl" OR "${WITH_MULTITHREADING}" STREQUAL "sycl"))
-    add_sycl_to_target(TARGET Tarch_${mode_lower})
-  endif()
 
   install(TARGETS Tarch_${mode_lower}
     RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
