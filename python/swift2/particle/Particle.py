@@ -323,25 +323,31 @@ Particle properties:
             # effects and dependencies, we need to use a different function to check
             # whether a particle should be worked on.
             if (
-                step.effect
-                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
-            ):
+                step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
+                or
+                step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN 
+                ):
                 d[
                     "CHECK_FUNCTION_TEMPLATE"
                 ] = "::swift2::kernels::localParticleCanBeMoved"
             elif (
-                step.effect
-                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-            ):
-                raise NotImplementedError
-            elif step.effect == AlgorithmStep.Effect.ALTER_LOCAL_STATE:
+                step.effect == AlgorithmStep.Effect.ALTER_LOCAL_STATE
+                or
+                step.effect == AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN 
+                ):
                 d[
                     "CHECK_FUNCTION_TEMPLATE"
                 ] = "::swift2::kernels::localParticleCanBeWorkedOn{STAGE}"
-            elif step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE:
+            elif (
+                step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE
+                or
+                step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN 
+                ):
                 d[
                     "CHECK_FUNCTION_TEMPLATE"
                 ] = "::swift2::kernels::localParticleNoRestrictions"
+            else:
+                raise NotImplementedError
 
             if d["CHECK_FUNCTION_TEMPLATE"] is None:
                 raise ValueError(
