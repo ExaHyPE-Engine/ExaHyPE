@@ -35,7 +35,7 @@ namespace swift2 {
      * density sub-structure of a particle get zeroed in here.
      */
     template <typename Particle>
-    void hydro_init_part(Particle& localParticle);
+    void hydro_prepare_density(Particle* localParticle);
 
     /**
      * @brief Finishes the density calculation.
@@ -48,7 +48,12 @@ namespace swift2 {
      * Also adds/multiplies the cosmological terms if need be. (Not implemented yet)
      */
     template <typename Particle>
-    void hydro_end_density(Particle& localParticle);
+    void hydro_end_density(Particle* localParticle);
+
+    template <typename Particle>
+    void hydro_update_smoothing_length_and_rerun_if_required(
+      Particle* localParticle
+    );
 
     /**
      * @brief Prepare a particle for the force calculation.
@@ -61,7 +66,7 @@ namespace swift2 {
      * etc.
      */
     template <typename Particle>
-    void hydro_prepare_force(Particle& localParticle);
+    void hydro_prepare_force(Particle* localParticle);
 
     /**
      * @brief Reset acceleration fields of a particle
@@ -70,7 +75,7 @@ namespace swift2 {
      * for the sums taking place in the various force interactions.
      */
     template <typename Particle>
-    void hydro_reset_acceleration(Particle& localParticle);
+    void hydro_reset_acceleration(Particle* localParticle);
 
     /**
      * @brief Finishes the force calculation.
@@ -85,7 +90,7 @@ namespace swift2 {
      * @param cosmo The current cosmological model.
      */
     template <typename Particle>
-    void hydro_end_force(Particle& localParticle);
+    void hydro_end_force(Particle* localParticle);
 
 
     /**
@@ -95,7 +100,7 @@ namespace swift2 {
      * include thermal quantities (thermal energy or total energy or entropy, ...).
      */
     template <typename Particle>
-    void hydro_predict_extra(Particle& localParticle);
+    void hydro_predict_extra(Particle* localParticle);
 
     /**
      * @brief Kick the additional variables
@@ -104,14 +109,14 @@ namespace swift2 {
      * include thermal quantities (thermal energy or total energy or entropy, ...).
      */
     template <typename Particle>
-    void hydro_kick_extra(Particle& localParticle);
+    void hydro_kick_extra(Particle* localParticle);
 
     /**
      * @brief Sets the values to be predicted in the drifts to their values at a
      * kick time.
      */
     template <typename Particle>
-    void hydro_reset_predicted_values(Particle& localParticle);
+    void hydro_reset_predicted_values(Particle* localParticle);
 
 
   } // namespace kernelPlaceholders

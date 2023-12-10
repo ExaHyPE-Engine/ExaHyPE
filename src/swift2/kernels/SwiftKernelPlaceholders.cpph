@@ -6,7 +6,7 @@
 
 
 template <typename Particle>
-void swift2::kernelPlaceholders::hydro_init_part(Particle& localParticle) {
+void swift2::kernelPlaceholders::hydro_prepare_density(Particle* localParticle) {
   // temporary to get things to work
   localParticle->setDensity(0.0);
   localParticle->setWcount(0.0);
@@ -21,7 +21,176 @@ void swift2::kernelPlaceholders::hydro_init_part(Particle& localParticle) {
 
 
 template <typename Particle>
-void swift2::kernelPlaceholders::hydro_end_density(Particle& localParticle) {
+void swift2::kernelPlaceholders::hydro_update_smoothing_length_and_rerun_if_required(
+  Particle* localParticle
+) {
+  bool wouldLikeToRestart = true;
+
+  // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
+  using namespace swift2::legacy::kernelHydro;
+
+  static tarch::logging::Log _log("swift2::kernels");
+
+  /* Grab static parameters */
+  const int hydro_dimensions = localParticle->getHydroDimensions();
+
+  /* Initialize some variables */
+  double       hydro_h_max = std::min(localParticle->getSmlMax(), localParticle->getSearchRadius() / kernel_gamma);
+  const double hydro_h_min = localParticle->getSmlMin();
+  const double sml_tolerance_epsilon = localParticle->getSmlTolerance();
+  const double eta                   = localParticle->getEtaFactor();
+  const double eta_dim               = legacy::hydroDimensions::pow_dimension(eta);
+  const int    max_iterations        = localParticle->getSmlMaxIterations();
+
+  double left  = hydro_h_min;
+  double right = hydro_h_max;
+
+  // Now on to the smoothing length computation
+  const double h_old               = localParticle->getSmoothingLength();
+  const double h_old_dim           = legacy::hydroDimensions::pow_dimension(h_old);
+  const double h_old_dim_minus_one = legacy::hydroDimensions::pow_dimension_minus_one(h_old);
+  double       h_new;
+
+  // for now, make sure this fails even without debug mode
+  // TODO: Mladen needs to fix this later.
+  if (localParticle->getWcount() < 1.e-5 * kernel_root) {
+    logError(
+      "findSmoothingLengthWithConstantSearchRadius", "Got particle with no neighbour " << localParticle->toString()
+    );
+    wouldLikeToRestart = false;
+  }
+  // [> No neighbours case <]
+  // [> Double h and try again <]
+  // h_new = 2.f * h_old;
+  // // else {
+
+  // If we are using alternative definition of number of neighbours, e.g.
+  // mass weighted, then we'd need to make adaptations here.
+  // p->density.wcount = p->rho * inv_mass;
+  // p->density.wcount_dh = p->density.rho_dh * inv_mass;
+
+  // Compute one step of the Newton-Raphson scheme
+  const double wcount   = localParticle->getWcount();
+  const double n_sum    = wcount * h_old_dim;
+  const double n_target = eta_dim;
+  const double f        = n_sum - n_target;
+  const double f_prime  = localParticle->getWcount_dh() * h_old_dim + hydro_dimensions * wcount * h_old_dim_minus_one;
+
+  // Improve the bisection bounds
+  if (n_sum < n_target) {
+    left = std::max(left, h_old);
+  } else if (n_sum > n_target) {
+    right = std::min(right, h_old);
+  }
+
+  // Skip if h is already h_max and we don't have enough neighbours
+  // Same if we are below h_min
+  if (((h_old >= hydro_h_max) && (f < 0.)) || ((h_old <= hydro_h_min) && (f > 0.))) {
+    if (not localParticle->getIsBoundaryParticle()) {
+      logWarning(
+        "findSmoothingLengthWithConstantSearchRadius",
+        "Aborting unsuccessful smoothing length computation"
+          << " partID " << localParticle->getPartid() << " h_old " << h_old << " h_min " << hydro_h_min << " h_max "
+          << hydro_h_max << " f " << f
+      );
+    }
+    wouldLikeToRestart = false;
+  }
+
+  // TODO MLaden: check this condition here.
+  assertion3(
+      localParticle->getIsBoundaryParticle()
+      or
+      (left < right),
+      left, right, localParticle->toString()
+  );
+
+  // Normal case: Use Newton-Raphson to get a better value of h
+  // Avoid floating point exception from f_prime = 0
+  h_new = h_old - f / (f_prime + std::numeric_limits<double>::min());
+
+
+  // Be verbose about the particles that struggle to converge
+  // @todo Mladen and Tobias have to discuss how to avoid too many iterations
+/*
+  if (iteration > max_iterations - 10) {
+    logWarning(
+      "findSmoothingLengthWithConstantSearchRadius",
+      "Smoothing length convergence problem: iteration"
+        << iteration << " part ID " << localParticle->getPartid() << " h_old " << h_old << " h_new " << h_new << " f "
+        << f << "f_prime" << f_prime << " n_sum " << n_sum << " n_target " << n_target << " left " << left << "right "
+        << right
+    );
+  }
+*/
+
+  assertion1(
+    not(((f > 0. && h_new > h_old) || (f < 0. && h_new < h_old)) && (h_old < 0.999 * hydro_h_max)),
+    "Smoothing length correction not going in the right direction"
+  );
+
+  // Safety check: truncate to the range [ h_old/2 , 2h_old ].
+  h_new = std::min(h_new, 2. * h_old);
+  h_new = std::max(h_new, 0.5 * h_old);
+
+  // Verify that we are actually progressing towards the answer
+  h_new = std::max(h_new, left);
+  h_new = std::min(h_new, right);
+  // } // if no neighbours
+
+
+  // Check whether the particle has an appropriate smoothing length
+  if (std::abs(h_new - h_old) < sml_tolerance_epsilon * h_old) {
+    // we're done. Note that in SWIFT, they check the other way around.
+    localParticle->setSmoothingLength(h_new);
+    wouldLikeToRestart = false;
+  }
+
+  // Ok, we're not done and need to correct
+
+  // Case where we have been oscillating around the solution
+  if ((h_new == left && h_old == right) || (h_old == left && h_new == right)) {
+
+    // Bisect the remaining interval
+    const double temp = 0.5
+                        * (legacy::hydroDimensions::pow_dimension(left) + legacy::hydroDimensions::pow_dimension(right));
+    localParticle->setSmoothingLength(1. / legacy::hydroDimensions::pow_dimension(temp));
+  } else {
+    // Normal case
+    localParticle->setSmoothingLength(h_new);
+  }
+
+/*
+  // If within the allowed range, try again
+  if (localParticle->getSmoothingLength() < hydro_h_max && localParticle->getSmoothingLength() > hydro_h_min) {
+    // SWIFT calls hydro_init_part here. We do that at the start at the loop.
+    continue;
+  } else if (localParticle->getSmoothingLength() >= hydro_h_max) {
+
+    // Ok, this particle is a lost cause...
+    localParticle->setSmoothingLength(hydro_h_max);
+    logWarning(
+      "findSmoothingLengthWithConstantSearchRadius",
+      "Got a particle that is lost cause. Setting h = h_max , id=" << localParticle->getPartid()
+    );
+    // Do some damage control if no neighbours at all were found
+    // if (has_no_neighbours) {
+    //   ...
+    // }
+  } else {
+    logError(
+      "findSmoothingLengthWithConstantSearchRadius", "Fundamental problem with the smoothing length iteration logic."
+    );
+  }
+*/
+  if (wouldLikeToRestart) {
+    localParticle->getSpecies().setRerunPreviousGridSweep();
+  }
+}
+
+
+template <typename Particle>
+void swift2::kernelPlaceholders::hydro_end_density(Particle* localParticle) {
 
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::legacy::kernelHydro;
@@ -76,7 +245,7 @@ void swift2::kernelPlaceholders::hydro_end_density(Particle& localParticle) {
 
 
 template <typename Particle>
-void swift2::kernelPlaceholders::hydro_prepare_force(Particle& localParticle) {
+void swift2::kernelPlaceholders::hydro_prepare_force(Particle* localParticle) {
 
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::legacy::kernelHydro;
@@ -171,7 +340,7 @@ void swift2::kernelPlaceholders::hydro_prepare_force(Particle& localParticle) {
 
 
 template <typename Particle>
-void swift2::kernelPlaceholders::hydro_reset_acceleration(Particle& localParticle) {
+void swift2::kernelPlaceholders::hydro_reset_acceleration(Particle* localParticle) {
 
   /* Reset the acceleration*/
   localParticle->setA(0.0);
@@ -183,7 +352,7 @@ void swift2::kernelPlaceholders::hydro_reset_acceleration(Particle& localParticl
 }
 
 template <typename Particle>
-void swift2::kernelPlaceholders::hydro_end_force(Particle& localParticle) {
+void swift2::kernelPlaceholders::hydro_end_force(Particle* localParticle) {
 
   const int    hydroDimensions    = localParticle->getHydroDimensions();
   const double hydroDimensionsInv = 1. / (double)hydroDimensions;
@@ -194,7 +363,7 @@ void swift2::kernelPlaceholders::hydro_end_force(Particle& localParticle) {
 
 
 template <typename Particle>
-void swift2::kernelPlaceholders::hydro_predict_extra(Particle& localParticle) {
+void swift2::kernelPlaceholders::hydro_predict_extra(Particle* localParticle) {
 
   const int    hydroDimensions = localParticle->getHydroDimensions();
   const double timeStepSize    = localParticle->getSpecies().getMinTimeStepSize();
@@ -240,7 +409,7 @@ void swift2::kernelPlaceholders::hydro_predict_extra(Particle& localParticle) {
 
 
 template <typename Particle>
-void swift2::kernelPlaceholders::hydro_kick_extra(Particle& localParticle) {
+void swift2::kernelPlaceholders::hydro_kick_extra(Particle* localParticle) {
 
   /* In principle, this time-step could be different than that used for normal kick */
   double dt_kick_therm = 0.5 * localParticle->getSpecies().getMinTimeStepSize();
@@ -260,7 +429,7 @@ void swift2::kernelPlaceholders::hydro_kick_extra(Particle& localParticle) {
 }
 
 template <typename Particle>
-void swift2::kernelPlaceholders::hydro_reset_predicted_values(Particle& localParticle) {
+void swift2::kernelPlaceholders::hydro_reset_predicted_values(Particle* localParticle) {
 
   /* Re-set the predicted velocities */
   localParticle->setV(localParticle->getV_full());
