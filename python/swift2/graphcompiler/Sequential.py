@@ -184,7 +184,7 @@ def translate_one_step_of_species_into_mesh_traversal(
         step.effect
         == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
         or step.effect
-        == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
+        == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
     ):
         alter_particle_position.append(True)
     else:
@@ -319,7 +319,7 @@ def map_onto_separate_mesh_traversals(
 
             if (
                 current_step_of_species.effect
-                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN
+                == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
                 or current_step_of_species.effect
                 == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
             ):
