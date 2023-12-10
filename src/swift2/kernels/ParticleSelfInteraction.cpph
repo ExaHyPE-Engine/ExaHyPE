@@ -5,29 +5,6 @@
 #include "swift2/legacy/hydro_dimensions.h"
 #include "tarch/logging/Log.h"
 
-template <typename ParticleContainer, typename Particle>
-void swift2::kernels::genericSelfInteraction(
-  const ParticleContainer& localParticles, std::function<void(Particle* localParticle)> interaction
-) {
-  for (auto* particle : localParticles) {
-    interaction(particle);
-  }
-}
-
-
-template <typename ParticleContainer>
-void swift2::kernels::prepareDensityCalculation(const ParticleContainer& localParticles) {
-
-  // This will be necessary for SPH versions with non-constant search radii.
-  // We don't have that just yet.
-  static tarch::logging::Log _log("swift2::kernels");
-  logError("prepareDensityCalculation", "Don't use this yet. You shouldn't need it.");
-
-  for (auto* particle : localParticles) {
-    swift2::kernelPlaceholders::hydro_init_part(particle);
-  }
-}
-
 
 template <typename ParticleContainer>
 void swift2::kernels::endDensityCalculation(const ParticleContainer& localParticles) {

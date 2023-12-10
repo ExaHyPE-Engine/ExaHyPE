@@ -40,7 +40,7 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
     iteration++;
 
     // Prepare density computation
-    swift2::kernelPlaceholders::hydro_init_part(localParticle);
+    swift2::kernelPlaceholders::hydro_prepare_density(localParticle);
 
     // Do density interaction
     for (auto* activeParticle : activeParticles) {

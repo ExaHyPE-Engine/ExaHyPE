@@ -10,42 +10,7 @@
 
 namespace swift2 {
   namespace kernels {
-    /**
-     * Generic particle interaction kernel accepting a functor
-     *
-     * The generic implementation realises a nested loops: We call interaction
-     * per pair of local and active particles. The interaction functor may
-     * modify the local particle. Besides the simple nested loop, the routine
-     * ensures that no particle is updated twice if it belongs to two cells
-     * simultaneously.
-     *
-     * What the routine not does is to check if activeParticle!=localParticle,
-     * i.e. please assume that the routine is also called for self-interaction
-     * potentials.
-     *
-     *
-     * ## Multiscale interactions
-     *
-     * This routine follows Peano's @ref page_toolbox_particles_mesh_traversal "generic multiscale discussion",
-     * where we point out that we have correctly take particles into account
-     * which reside on coarser levels. This is necessary if some particles have
-     * larger cut-off radii than the others or if we work with adaptive meshes.
-     *
-     *
-     * @param ParticleContainer Typicaly either
-     *         std::list<Particle *>
-     *   or
-     *         std::unordered_set<Particle *>
-     *
-     *
-     */
-    template <typename Particle, typename ParticleContainer>
-    void genericInteraction(
-      const peano4::datamanagement::CellMarker&                                          marker,
-      const ParticleContainer&                                                           localParticles,
-      const ParticleContainer&                                                           activeParticles,
-      std::function<void(Particle* localParticle, const Particle* const activeParticle)> interaction
-    );
+    // @todo All of these things can now be rewritten and streamlined. We really only need particle-particle (1:1) interactions
 
     /**
      * @brief The actual density kernel, which interacts a local particle and an active
@@ -155,17 +120,6 @@ namespace swift2 {
     );
 
     /**
-     * @brief Same as computeDensity(...), but doesn't modify the particles' search radii.
-     *
-     */
-    template <typename ParticleContainer>
-    void computeDensityWithConstantSearchRadius(
-      const peano4::datamanagement::CellMarker& marker,
-      const ParticleContainer&                  localParticles,
-      const ParticleContainer&                  activeParticles
-    );
-
-    /**
      * @brief Same as computeDensity(...), but doesn't modify the particles' search radii
      * nor their smoothing length.
      *
@@ -174,6 +128,7 @@ namespace swift2 {
      * formulation which correctly works with constant smoothing lengths. We're solving
      * the wrong equations for that.
      *
+     * @todo This does not work anymore, as it should accumulate data
      */
     template <typename ParticleContainer>
     void computeDensityWithConstantSmoothingLengths(

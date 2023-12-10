@@ -59,7 +59,24 @@ namespace swift2 {
   /**
    * Run over all local particle-active particle combinations
    *
-   * This is basically a nested loop. The outer
+   * The generic implementation realises a nested loops: We call interaction
+   * per pair of local and active particles. The interaction functor may
+   * modify the local particle. Besides the simple nested loop, the routine
+   * ensures that no particle is updated twice if it belongs to two cells
+   * simultaneously.
+   *
+   * What the routine not does is to check if activeParticle!=localParticle,
+   * i.e. please assume that the routine is also called for self-interaction
+   * potentials.
+   *
+   *
+   * ## Multiscale interactions
+   *
+   * This routine follows Peano's @ref page_toolbox_particles_mesh_traversal "generic multiscale discussion",
+   * where we point out that we have correctly take particles into account
+   * which reside on coarser levels. This is necessary if some particles have
+   * larger cut-off radii than the others or if we work with adaptive meshes.
+   *
    *
    * @param LocalParticleContainer  A subtype of std::list<Particle *>
    * @param ActiveParticleContainer A subtype of std::list<Particle *>

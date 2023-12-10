@@ -25,6 +25,7 @@ namespace swift2 {
      *
      * @Mladen We have to discuss this effect.
      */
+    // @todo raus
     template <typename Particle, typename ParticleContainer>
     void findSmoothingLengthWithConstantSearchRadius(Particle& localParticle, const ParticleContainer& activeParticles);
 
