@@ -446,7 +446,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         drift = AlgorithmStep(
             name="Drift",
             dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN,
+            effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
             touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
             touch_vertex_last_time_kernel=touch_vertex_last_time_kernel_for_drift,
             includes="""
@@ -484,24 +484,24 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         densityWithConstantSearchRadius = AlgorithmStep(
             name="DensityLoopWithConstantSearchRadius",
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="",
-            # Keeping this as a reminder for SPH versions with variable search radii.
+            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
+            touch_vertex_first_time_kernel="::swift2::forAllParticles(assignedParticles, ::swift2::kernelPlaceholders::hydro_prepare_density<globaldata::{}> );".format(self.name),
+            # Keeping this as a reminder for SPH versions with variable search radii
+            # @todo DO not use this one, but use the formulation above instead
             #  touch_vertex_first_time_kernel="""
             #                             ::swift2::kernels::prepareDensityCalculation( localParticles );
             #                             """,
-            cell_kernel="""
-                                       ::swift2::kernels::computeDensityWithConstantSearchRadius(
-                                         marker, localParticles, activeParticles
-                                       );
-                                       """,
-            touch_vertex_last_time_kernel="",
+            cell_kernel="::swift2::forAllParticlePairs(marker, localParticles, activeParticles, ::swift2::kernels::densityKernel<globaldata::{}> );".format(self.name),
+            touch_vertex_last_time_kernel="""
+              ::swift2::forAllParticles(assignedParticles, ::swift2::kernelPlaceholders::hydro_end_density<globaldata::{}> );
+              ::swift2::forAllParticles(assignedParticles, ::swift2::kernelPlaceholders::hydro_update_smoothing_length_and_rerun_if_required<globaldata::{}> );
+            """.format(self.name, self.name),
             # Keeping this as a reminder for SPH versions with variable search radii.
             #  touch_vertex_last_time_kernel="""
             #                             ::swift2::kernels::endDensityCalculation(localParticles);
             #                             """,
             includes="""
-                                       #include "Constants.h"
+                                       #include "swift2/kernels/SwiftKernelPlaceholders.h"
                                        #include "swift2/kernels/ParticleParticleInteraction.h"
                                        #include "swift2/kernels/ParticleSelfInteraction.h"
                                        """,
