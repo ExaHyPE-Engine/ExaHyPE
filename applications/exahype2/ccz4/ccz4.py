@@ -638,8 +638,8 @@ if __name__ == "__main__":
     else:
       solver_name    = "FiniteVolume" + solver_name
 
-    #if args.DC_flag==True:
-    #  args.cfl=args.cfl/4
+    if args.DC_flag==True:
+      args.cfl=args.cfl/2
 
     min_h = args.min_h
     if min_h <=0.0:
