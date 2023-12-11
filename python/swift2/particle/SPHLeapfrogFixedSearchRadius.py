@@ -487,9 +487,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
             touch_vertex_first_time_kernel="::swift2::forAllParticles(assignedParticles, ::swift2::kernelPlaceholders::hydro_prepare_density<globaldata::{}> );".format(self.name),
             # Keeping this as a reminder for SPH versions with variable search radii
-            # @todo DO not use this one, but use the formulation above instead
-            #  touch_vertex_first_time_kernel="""
-            #                             ::swift2::kernels::prepareDensityCalculation( localParticles );
             #                             """,
             cell_kernel="::swift2::forAllParticlePairs(marker, localParticles, activeParticles, ::swift2::kernels::densityKernel<globaldata::{}> );".format(self.name),
             touch_vertex_last_time_kernel="""
@@ -512,7 +509,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             self._particle_interaction_kernel_realisation
             == self.ParticleKernelRealisation.DEFAULT
         ):
-            cell_kernel_for_force_calculation = "::swift2::kernels::computeHydroForce(marker, localParticles, activeParticles);"
+            cell_kernel_for_force_calculation = "::swift2::forAllParticlePairs(marker, localParticles, activeParticles,::swift2::kernels::forceKernel<globaldata::{}>);".format(self.name)
         elif (
             self._particle_interaction_kernel_realisation
             == self.ParticleKernelRealisation.VECTORISE_DISTANCE_CHECKS_AND_UNARY_OPERATIONS

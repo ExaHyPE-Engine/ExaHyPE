@@ -406,58 +406,6 @@ void swift2::kernels::forceKernelVectorised(
 
 
 template <typename ParticleContainer>
-void swift2::kernels::computeDensityWithConstantSmoothingLengths(
-  const peano4::datamanagement::CellMarker& marker,
-  const ParticleContainer&                  localParticles,
-  const ParticleContainer&                  activeParticles
-) {
-
-  static tarch::logging::Log _log("swift2::kernels");
-  logError("computeDensityWithConstantSmoothingLengths", "Don't use this. Not implemented yet.");
-
-  // for (auto* localParticle : localParticles) {
-  //   if (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX())) {
-  //     for (auto* activeParticle : activeParticles) {
-  //       swift2::kernels::densityKernel(localParticle, activeParticle);
-  //     }
-  //   }
-  // }
-}
-
-
-template <typename ParticleContainer>
-void swift2::kernels::computeDensity(
-  const peano4::datamanagement::CellMarker& marker,
-  const ParticleContainer&                  localParticles,
-  const ParticleContainer&                  activeParticles
-) {
-
-  static tarch::logging::Log _log("swift2::kernels");
-  logError("computeDensity", "Don't use this. Not implemented yet. Use computeDensityWithConstantSearchRadius");
-}
-
-
-// @todo raus. Kann man generishc abbilden
-template <typename ParticleContainer>
-void swift2::kernels::computeHydroForce(
-  const peano4::datamanagement::CellMarker& marker,
-  const ParticleContainer&                  localParticles,
-  const ParticleContainer&                  activeParticles
-) {
-  for (auto* localParticle : localParticles) {
-    if (localParticleCanBeWorkedOnCellKernel(localParticle, marker)) {
-      for (auto* activeParticle : activeParticles) {
-        swift2::kernels::forceKernel(localParticle, activeParticle);
-        if (tarch::la::oneGreater(activeParticle->getCellH(), localParticle->getCellH())) {
-          swift2::kernels::forceKernel(activeParticle, localParticle);
-        }
-      }
-    }
-  }
-}
-
-
-template <typename ParticleContainer>
 void swift2::kernels::computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking(
   const peano4::datamanagement::CellMarker& marker,
   const ParticleContainer&                  particlesAssociatedWithLocalVertices,

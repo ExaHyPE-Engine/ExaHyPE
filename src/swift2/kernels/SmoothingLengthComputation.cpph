@@ -1,3 +1,4 @@
+/*
 #include <cfloat>
 
 #include "swift2/kernels/ParticleParticleInteraction.h"
@@ -15,10 +16,10 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
 
   static tarch::logging::Log _log("swift2::kernels");
 
-  /* Grab static parameters */
+   Grab static parameters
   const int hydro_dimensions = localParticle->getHydroDimensions();
 
-  /* Initialize some variables */
+   Initialize some variables
   double       hydro_h_max = std::min(localParticle->getSmlMax(), localParticle->getSearchRadius() / kernel_gamma);
   const double hydro_h_min = localParticle->getSmlMin();
   const double sml_tolerance_epsilon = localParticle->getSmlTolerance();
@@ -192,3 +193,4 @@ void swift2::kernels::findSmoothingLengthWithConstantSearchRadius(
     );
   }
 }
+*/
