@@ -66,10 +66,10 @@ namespace swift2 {
        * N+n if they are clared.
        *
        * If you return 0, then this implies that all future steps have to be
-       * clared. If you return numeric_limits<int>::max(), we don't check any
+       * clared. If you return numberOfSteps, we don't check any
        * future step.
        */
-      int firstFutureStepThatHasToBeCleared(Invariant policy);
+      int firstFutureStepThatHasToBeCleared(Invariant policy, int numberOfSteps);
 
       /**
        * @brief This function is meant to be called on a particle on which dependency issues

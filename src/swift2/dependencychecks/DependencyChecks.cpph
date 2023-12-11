@@ -375,7 +375,7 @@ static int swift2::dependencychecks::internal::checkFutureStages(
   const int* sweepStateProgression
 ) {
   int errors = 0;
-  int firstFutureStepToCheck = firstFutureStepThatHasToBeCleared(policy);
+  int firstFutureStepToCheck = firstFutureStepThatHasToBeCleared(policy,nsteps);
 
   // Check everything *after* this stage, and check that everything
   // that shouldn't have run until now actually hasn't run.

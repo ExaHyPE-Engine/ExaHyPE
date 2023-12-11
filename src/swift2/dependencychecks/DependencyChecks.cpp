@@ -68,7 +68,7 @@ bool swift2::dependencychecks::internal::previousStepsAllHaveToAccessAtLeastOnce
 }
 
 
-int swift2::dependencychecks::internal::firstFutureStepThatHasToBeCleared(Invariant policy) {
+int swift2::dependencychecks::internal::firstFutureStepThatHasToBeCleared(Invariant policy, int numberOfSteps) {
   switch (policy) {
     case Invariant::TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce:
       return 0;
@@ -81,7 +81,7 @@ int swift2::dependencychecks::internal::firstFutureStepThatHasToBeCleared(Invari
     case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce:
       return 0;
     case Invariant::TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep:
-      return std::numeric_limits<int>::max();
+      return numberOfSteps;
   }
   return true;
 }
