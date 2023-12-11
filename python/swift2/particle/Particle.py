@@ -357,7 +357,15 @@ Particle properties:
                     step.effect,
                 )
 
-            if step.touch_vertex_first_time_dependency_policy == None:
+            if (
+                step.touch_vertex_first_time_dependency_policy == None
+                and 
+                AlgorithmStep.may_trigger_rerun(step.effect)
+                ):
+                d[
+                    "INVARIANT"
+                ] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce_SweepMayRerun"
+            elif step.touch_vertex_first_time_dependency_policy == None:
                 d[
                     "INVARIANT"
                 ] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce"
@@ -405,7 +413,15 @@ Particle properties:
             d["CHECK_FUNCTION"] = d["CHECK_FUNCTION_TEMPLATE"].replace(
                 "{STAGE}", "CellKernel"
             )
-            if step.cell_kernel_dependency_policy == None:
+            if (
+                step.cell_kernel_dependency_policy == None
+                and 
+                AlgorithmStep.may_trigger_rerun(step.effect)
+                ):
+                d[
+                    "INVARIANT"
+                ] = "TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce_SweepMayRerun"
+            elif step.cell_kernel_dependency_policy == None:
                 d[
                     "INVARIANT"
                 ] = "TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce"
@@ -431,7 +447,15 @@ Particle properties:
                 "{STAGE}", "VertexKernel"
             )
 
-            if step.touch_vertex_last_time_dependency_policy == None:
+            if (
+                step.touch_vertex_last_time_dependency_policy == None
+                and 
+                AlgorithmStep.may_trigger_rerun(step.effect)
+                ):
+                d[
+                    "INVARIANT"
+                ] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce_SweepMayRerun"
+            elif step.touch_vertex_last_time_dependency_policy == None:
                 d[
                     "INVARIANT"
                 ] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce"

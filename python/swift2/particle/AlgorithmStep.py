@@ -67,6 +67,23 @@ class AlgorithmStep(object):
         ALTER_LOCAL_STATE_AND_MIGHT_RERUN = 3
         CHANGE_POSITION_OR_INTERACTION_RADIUS = 4
         CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN = 5
+        
+    def may_trigger_rerun(effect: Effect):    
+        """!
+        
+        Return True if the effect object may trigger a rerun
+        
+        """
+        if (effect==AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN
+            or
+            effect==AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN
+            or
+            effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+            ):
+            return True
+        else:
+            return False
+        
 
     class PeanoEventUsedBySwift(IntEnum):
         """!

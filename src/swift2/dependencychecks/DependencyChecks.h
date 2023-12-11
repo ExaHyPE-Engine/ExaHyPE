@@ -32,7 +32,9 @@ namespace swift2 {
      */
     enum class Invariant {
       TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce,
+      TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce_SweepMayRerun,
       TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce,
+      TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce_SweepMayRerun,
       TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce,
       TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep
     };
@@ -41,9 +43,12 @@ namespace swift2 {
 
     namespace internal {
       /**
-       * Validate that policy is enforced. Usually used by assertions. This
-       * routine is called by the mark operations after(!) it has altered
-       * the two counters numberOfUpdates and numberOfMaskOuts.
+       * Is current state that's to be updated valid
+       *
+       * This routine is called by the mark operations after(!) it has altered
+       * the two counters numberOfUpdates and numberOfMaskOuts. The actual
+       * validation usually is enforced by assertions, but this has to happen
+       * outside. The routine here only determins if a state is valid or not.
        */
       bool isValid(Invariant policy, bool workOnParticle, int numberOfUpdates, int numberOfMaskOuts);
 
@@ -51,7 +56,20 @@ namespace swift2 {
        * Do all previous steps have to alter state at least once.
        */
       bool previousStepsAllHaveToAccessAtLeastOnce(Invariant policy);
-      bool futureStepsAllHaveToBeCleared(Invariant policy);
+
+      /**
+       * Which future steps should be checked
+       *
+       * This routine returns the relative step in the future which has
+       * to be cleared at this point (so no updated or masked out marker set).
+       * Invoked in teh Nth step and return n, we check all steps starting from
+       * N+n if they are clared.
+       *
+       * If you return 0, then this implies that all future steps have to be
+       * clared. If you return numeric_limits<int>::max(), we don't check any
+       * future step.
+       */
+      int firstFutureStepThatHasToBeCleared(Invariant policy);
 
       /**
        * @brief This function is meant to be called on a particle on which dependency issues
