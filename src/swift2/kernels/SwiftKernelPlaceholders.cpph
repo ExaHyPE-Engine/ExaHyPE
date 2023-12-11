@@ -140,7 +140,10 @@ void swift2::kernelPlaceholders::hydro_update_smoothing_length_and_rerun_if_requ
 
 
   // Check whether the particle has an appropriate smoothing length
-  if (std::abs(h_new - h_old) < sml_tolerance_epsilon * h_old) {
+  // @todo Mladen, Tobias: This criterion seems never to hold.
+  if (
+    std::abs(h_new - h_old) < sml_tolerance_epsilon * h_old
+  ) {
     // we're done. Note that in SWIFT, they check the other way around.
     localParticle->setSmoothingLength(h_new);
     wouldLikeToRestart = false;

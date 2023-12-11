@@ -83,22 +83,11 @@ namespace swift2 {
     template <typename Particle>
     bool forceKernelDistanceCheck(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle);
 
-    /**
-     *
-     *
-     * @param ParticleContainer Typicaly either
-     *         std::list<Particle *>
-     *   or
-     *         std::unordered_set<Particle *>
-     *   where Particle is your particular Particle type.
-     *
-     */
-    template <typename ParticleContainer>
-    void computeHydroForce(
-      const peano4::datamanagement::CellMarker& marker,
-      const ParticleContainer&                  localParticles,
-      const ParticleContainer&                  activeParticles
-    );
+    // @todo Tobias: Clean up these variants as well such that they work within
+    //               a generic setting. After that
+    // - Provide vectorised versions of the unary particle updates
+    // - Provide both a version which uses the distance check and which doesn't as generic version
+    // - docu
 
 
     /**

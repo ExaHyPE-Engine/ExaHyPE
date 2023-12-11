@@ -88,7 +88,7 @@ As an example, we discuss the SPH density loop:
         dependencies                   = AlgorithmStep.Dependencies.NEIGHBOURS,
         effect                         = AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel = """
-                                         ::swift2::kernels::prepareDensityCalculation( localParticles );
+            touch_vertex_first_time_kernel="::swift2::forAllParticles(assignedParticles, ::swift2::kernelPlaceholders::hydro_prepare_density<globaldata::{}> );".format(self.name),
                                          """,
 
         cell_kernel                    = """
