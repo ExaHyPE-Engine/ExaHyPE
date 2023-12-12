@@ -466,8 +466,7 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
             + """
                                                   and 
                                                   repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+            + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
                                                   and
                                                   not repositories::InstanceOf"""
             + self._name_without_FD4_extension
@@ -481,42 +480,36 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
             self,
             """
 if (
-repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.isCellOverlappingWithBHImpactArea(marker) 
-and
-not marker.willBeRefined()
-) { 
-logTraceIn( "touchCellFirstTime(...)-inject" );
+  repositories::InstanceOf{0}_FV.isCellOverlappingWithBHImpactArea(marker) 
+  and
+  not marker.willBeRefined()
+) {{
+  logTraceIn( "touchCellFirstTime(...)-inject" );
 
-repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.incNumberOfPatches();
+  repositories::InstanceOf{0}_FV.incNumberOfPatches();
+  
+  if ( repositories::InstanceOf{0}_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) ) {{
+    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
+      repositories::InstanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::InstanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::InstanceOf{0}_FV.NumberOfUnknowns + repositories::InstanceOf{0}_FV.NumberOfAuxiliaryVariables,
+      fineGridCell{0}_FVQ.value,
+      fineGridCell{0}_FD4Q.value
+    );
+  }}
+  else {{
+    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject_and_average(
+      repositories::InstanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::InstanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::InstanceOf{0}_FV.NumberOfUnknowns + repositories::InstanceOf{0}_FV.NumberOfAuxiliaryVariables,
+      fineGridCell{0}_FVQ.value,
+      fineGridCell{0}_FD4Q.value
+    );
+  }}
 
-::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
-  repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-  repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FD4.NumberOfGridCellsPerPatchPerAxis,
-  repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.NumberOfUnknowns + repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.NumberOfAuxiliaryVariables,
-  fineGridCell"""
-            + self._name_without_FD4_extension
-            + """_FVQ.value,
-  fineGridCell"""
-            + self._name_without_FD4_extension
-            + """_FD4Q.value
-);
-
-logTraceOut( "touchCellFirstTime(...)-inject" );
-}  
-""",
-        )
+  logTraceOut( "touchCellFirstTime(...)-inject" );
+}}
+""".format(self._name_without_FD4_extension))
 
 
 
