@@ -67,7 +67,7 @@ class benchmarks::exahype2::ccz4::CCZ4SBH_FD4: public benchmarks::exahype2::ccz4
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  meshCellCentre,
       const tarch::la::Vector<Dimensions,double>&  meshCellH,
-      bool                                         gridIsConstructred
+      bool                                         gridIsConstructed
     ) override;
     
     

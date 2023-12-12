@@ -14,7 +14,7 @@ import shutil
 # Parse user input
 ########################################################################################
 
-parser = argparse.ArgumentParser(description="SPH benchmarking script")
+parser = argparse.ArgumentParser(description="SPH testing script")
 parser.add_argument(
     "-j", "--parallel-builds", dest="j", type=int, default=-1, help="Parallel builds"
 )
@@ -120,7 +120,7 @@ args = parser.parse_args()
 # Generate SWIFT project
 ########################################################################################
 
-project_namespace = ["benchmarks", "swift2", "sedov"]
+project_namespace = ["tests", "swift2", "sedov"]
 
 project = swift2.Project(
     namespace=project_namespace, project_name="sedov", executable="sedov1D"
@@ -285,7 +285,7 @@ project.algorithm_step_initial_conditions.add_action_set(
         initialisation_call=initialisation_snippet,
         coordinates=coords,
         additional_includes="""
-#include "swift2/kernels/equation_of_state.h"
+#include "swift2/legacy/equation_of_state.h"
 """,
     )
 )

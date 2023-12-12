@@ -94,8 +94,8 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_FIRST_COMPUTE_KERNEL!=None %}
-  auto& localParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  int  numberOfActiveParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}}.size();
+  auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  int  numberOfAssignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.isGathered() ? fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.size() : 0;
 
   {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
   {% endif %}
@@ -105,8 +105,8 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
     __Template_TouchVertexLastTime = jinja2.Template(
         """
   {% if TOUCH_VERTEX_LAST_COMPUTE_KERNEL!=None %}
-  auto& localParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
-  int  numberOfActiveParticles = fineGridVertex{{ACTIVE_PARTICLES_CONTAINER}}.size();
+  auto& assignedParticles  = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  int  numberOfAssignedParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.isGathered() ? fineGridVertex{{LOCAL_PARTICLES_CONTAINER}}.size() : 0;
 
   {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
   {% endif %}

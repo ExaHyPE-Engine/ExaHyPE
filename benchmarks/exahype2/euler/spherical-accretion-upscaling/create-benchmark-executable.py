@@ -123,10 +123,10 @@ if "fv" in args.solver:
                                                                                    min_volume_h         = min_h, 
                                                                                    max_volume_h         = max_h,
                                                                                    time_step_relaxation = 0.1,
-                                                                                   flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                   refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                                   flux                 = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                                   eigenvalues          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                                   source_term          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                                   refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
                                                                                    pde_terms_without_state = args.optimise_stateless
                                                                                   )
   executable_name = executable_name + "-FV-" + str(patch_size)
@@ -152,10 +152,10 @@ if "fd4" in args.solver:
                                                                min_meshcell_h       = min_h, 
                                                                max_meshcell_h       = max_h,
                                                                time_step_relaxation = 0.1,
-                                                               flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                               eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                               source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                               refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                               flux                 = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                               eigenvalues          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                               source_term          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                               refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
 #                                                              pde_terms_without_state = args.optimise_stateless
                                                                )
   executable_name = executable_name + "-FD4-" + str(patch_size)
@@ -184,10 +184,10 @@ if "rk" in args.solver and "dg" in args.solver:
                                                                    min_cell_h           = min_h, 
                                                                    max_cell_h           = max_h,
                                                                    time_step_relaxation = 0.1,
-                                                                   flux                 = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
-                                                                   eigenvalues          = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
-                                                                   source_term          = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
-                                                                   refinement_criterion = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
+                                                                   flux                 = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                   eigenvalues          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                   source_term          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                   refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
                                                                    pde_terms_without_state = args.optimise_stateless
                                                                    )
   executable_name = executable_name + "-RK" + str(time_order) + "DG" + str(space_order)

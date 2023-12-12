@@ -23,13 +23,29 @@ module load intelmpi
 export I_MPI_CXX=icpx
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Hamilton's oneapi module is built against a GCC version which is too old and lacks
+Hamilton's default oneapi module is built against a GCC version which is too old and lacks
 important features within its standard library.
 Therefore, you have to manuall load the latest gcc.
 This is usually prevented by the system and leads to a conflict (so that you
 can't have multiple GCC versions loaded).
 We therefore have to disable conflict checks a priori.
+Eventually, I end up with 
 
+~~~~~~~~~~~~~~~~~~~~~~
+module purge
+module load oneapi/2023.2
+export FLAVOUR_NOCONFLICT=1
+module load gcc/13.xxx
+module load intelmpi
+
+export I_MPI_CXX=icpx
+~~~~~~~~~~~~~~~~~~~~~~
+
+For the vectorisation, we recognise that we always need
+
+~~~~~~~~~~~~~~~~~~~~~~
+ -Ofast -ffast-math
+~~~~~~~~~~~~~~~~~~~~~~
 
 If you use mpiicpc, the MPI wrapper still refers to icpc even though icpc is
 officially deprecated.
@@ -247,6 +263,24 @@ Swift also requires you to pass
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 to vectorisesome particular compute-heavy tasks (gravity).
+
+
+## Grace Hopper
+
+The Grace Hopper build configuration is similar to any other build:
+
+~~~~~~~~~~~~~~~~~~~~~~
+./configure CXX=nvc++ CC=nvc++ CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc90,cuda12.3" LDFLAGS="-mp=gpu -gpu=cc90,cuda12.3" --with-multithreading=omp  --with-gpu=omp --enable-exahype --enable-blockstructured --enable-loadbalancing
+~~~~~~~~~~~~~~~~~~~~~~
+
+It is important to use cc90 here plus a reasonably new CUDA version. 
+Furthermore, most systems deliver the NC++ pipeline with a rather 
+old GCC/STL version. It might be necessary to load a newer GCC.
+Depending on the SLURM configuration, people might have to request
+GPUs explicitly when they want a Grace Hopper node.
+
+
+
 
  */
  
