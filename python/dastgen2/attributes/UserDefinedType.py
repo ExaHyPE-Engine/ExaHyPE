@@ -161,10 +161,12 @@ class UserDefinedType(Attribute):
     def get_native_MPI_type(self):
         """
 
-        I originally wanted to map the booleans to MPI_CXX_BOOL. But
-        neither CXX_BOOL nor C_BOOL work for the Intel archtiectures.
-        All the datatypes that I use then seg fault. If I however map
-        the bool to an integer, then it seems to work.
+        I map the type onto a byte field,but it is not clear if this
+        actually works. At the moment, we do not use the MPI data
+        implicitly, as we support user-defined attributes if and only
+        if they are static. That is, we never exchange them as part of
+        an object. That is, at the moment this routine is kind of 
+        deprecated.
 
         """
         return [("MPI_BYTE", "sizeof(" + self._type + ")")]
