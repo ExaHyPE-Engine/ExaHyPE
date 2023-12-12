@@ -5,6 +5,7 @@ import peano4
 import jinja2
 
 from exahype2.solvers.ButcherTableau import ButcherTableau
+from exahype2.solvers.rkfd.OneSweepPerRungeKuttaStep import ReconstructLinearCombination
 
 
 class ComputeFirstDerivativesFV(peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor):
@@ -58,19 +59,46 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
     
     FD4 is implemented as Runge-Kutta scheme. So we first have to recompute
     the current solution guess according to the Butcher tableau. Then we feed
-    this reconstruction into the derivative computation. The actual first
-    reconstruction is missing in the code snippet ComputeDerivativesOverCell
-    below. That's because we still use the peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor
-    as a baseline and then add those Runge-Kutta guesses to this reconstruction.
-    There's no need to do this for the faces. The faces already hold the 
-    latest linear combination as per exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces.
-   
-    This makes using this action set very easy. We can assume that the faces 
-    hold the latest linear combination from the last Runge-Kutta sweep. So that
-    data is consistent. We also can assume that the cell solution holds all 
-    Runge-Kutta approximations at this point. So there's no need for ifs or 
-    similar.
+    this reconstruction into the derivative computation. In theory, this is all
+    simple, but in practice things require more work.
     
+    We assume that developers follow @ref page_exahype_coupling "ExaHyPE's generic recommendation how to add additional traversals".
+    Yet, this is only half of the story. If they follow the vanilla blueprint
+    and plug into a step after the last time step
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+      if (repositories::isLastGridSweepOfTimeStep()
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+      ) {
+        peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalMeshTraversal )
+      );
+      continueToSolve         = true;
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    then the reconstruction is only done after the last and final Runge-Kutta 
+    step. Alternatively, users might plug into the solver after each 
+    Runge-Kutta step. In principle, we might say "so what", as all the 
+    right-hand sides after the final step are there, so we can reconstruct
+    the final solution. However, there are two pitfalls:
+    
+    1. A solver might not hold the rhs estimates persistently in-between two 
+       time steps.
+    2. The solver's state always is toggled in startTimeStep() on the solver
+       instance's class. Therefore, an additional grid sweep after the last
+       Runge-Kutta sweep cannot be distinguished from an additional sweep
+       after the whole time step. They are the same.
+    
+    Consequently, we need special treatment for the very last Runge-Kutta step:
+    
+    - If we have an additional grid sweep after an intermediate RK step, we use
+      the right-hand side estimate of @f$ \partial _t Q = F(Q) @f$ to store the 
+      outcome. Furthermore, we scale the derivative with 1/dt, as the linear 
+      combination of RK will later on multiple this estimate with dt again.
+    - If we are in the very last grid sweep, we work with the current estimate.
+            
     The actual derviative calculation is "outsourced" to the routine
     
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -132,41 +160,13 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
         pass
 
 
-    ComputeDerivativesOverCell = jinja2.Template(
-        """
-      double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-
-      // Set the variable
-      //
-      // double timeStepSize
-      //
-      // Not required for derivative calculation but required to compute the 
-      // Runge-Kutta linear combination
-      {{COMPUTE_TIME_STEP_SIZE}}
-      
-      /*
-      {% for PREDICATE_NO in range(0,PREDICATES|length) %}
-      ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
-      ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
-    
-      if ({{PREDICATES[PREDICATE_NO]}}) {
-        dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
-          for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
-            {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
-            {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
-            oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
-              {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
-              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO-1}},dof,unknown) ];
-            {% endif %}
-            {% endfor %}
-          }      
-        }
-        
-        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
+    ComputeDerivativesOverCell = jinja2.Template( ReconstructLinearCombination + """
+      // take into account that linear combination has already been computed,
+      // and rhs even might not be held persistently
+      if ( repositories::isLastGridSweepOfTimeStep() ) {
+        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
       }
-      {% endfor %} 
-      */
-      
+            
       ::exahype2::CellData  patchData( 
         oldQWithHalo, 
         marker.x(), marker.h(), 
@@ -181,6 +181,15 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}}
       );
+      
+      if ( not repositories::isLastGridSweepOfTimeStep() ) {
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumerator( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+        dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+          for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
+            newQ[ enumerator(0,dof,unknown) ] *= 1.0 / timeStepSize;
+          }
+        }
+      }
       """)
     
     
