@@ -81,7 +81,7 @@ def construct_touch_vertex_first_time_call(
           ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime,
           {{SPECIES_INDEX}}
         };
-            
+
       {% if USE_MULTILEVEL_DEPENDENCIES %}
       std::set<::swift2::TaskNumber> parentTaskNumbers = ::swift2::getVertexNumbersOfParentVertices(
         marker,
@@ -92,7 +92,7 @@ def construct_touch_vertex_first_time_call(
       {% else %}
       std::set<::swift2::TaskNumber> parentTaskNumbers;
       {% endif %}
-      
+
       const ::swift2::TaskNumber taskNumberOfPreviousMeshTraversal{
           fineGridVertex{{MARKER_NAME}}.getNumber(),
           ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime,
@@ -100,13 +100,13 @@ def construct_touch_vertex_first_time_call(
         };
       parentTaskNumbers.insert( taskNumberOfPreviousMeshTraversal );
 
-      logInfo( 
-        "touchVertexFirstTime(...)", 
-        "create task " << taskNumberToBeUsed.toString() << 
+      logInfo(
+        "touchVertexFirstTime(...)",
+        "create task " << taskNumberToBeUsed.toString() <<
         " for " << marker.toString() <<
         " depends on " << ::swift2::toString(parentTaskNumbers)
       );
-      
+
       auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
           assignedParticles,
           [=](decltype(assignedParticles)& assignedParticles)->void {
@@ -116,7 +116,7 @@ def construct_touch_vertex_first_time_call(
           },
           false
         );
-      
+
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(parentTaskNumbers), ::swift2::flatten(taskNumberToBeUsed) );
     """
         ).render(**d)
@@ -145,7 +145,7 @@ def construct_touch_cell_first_time_call(
         ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime,
         {{SPECIES_INDEX}}
       };
-                  
+
       std::set<::swift2::TaskNumber> adjacentVertexAndParentTask;
       for (int i=0; i<TwoPowerD; i++) {
         adjacentVertexAndParentTask.insert( ::swift2::TaskNumber{
@@ -154,7 +154,7 @@ def construct_touch_cell_first_time_call(
           {{SPECIES_INDEX}}
         } );
       }
-      
+
       {% if USE_MULTILEVEL_DEPENDENCIES %}
       const ::swift2::TaskNumber  parentTaskNumber = ::swift2::TaskNumber(
         coarseGridCell{{MARKER_NAME}}.getNumber(),
@@ -164,13 +164,13 @@ def construct_touch_cell_first_time_call(
       adjacentVertexAndParentTask.insert( parentTaskNumber );
       {% endif %}
 
-      logInfo( 
-        "touchCellFirstTime(...)", 
-        "create task " << taskNumberToBeUsed.toString() << 
+      logInfo(
+        "touchCellFirstTime(...)",
+        "create task " << taskNumberToBeUsed.toString() <<
         " for " << marker.toString() <<
         " depends on " << ::swift2::toString(adjacentVertexAndParentTask)
       );
-      
+
       auto* newTask = new ::swift2::CellTask< decltype(localParticles) >(
         localParticles,
         activeParticles,
@@ -209,7 +209,7 @@ def construct_touch_vertex_last_time_call(
         ::swift2::TaskNumber::TaskAssociation::TouchVertexLastTime,
         {{SPECIES_INDEX}}
       };
-                
+
       std::set<::swift2::TaskNumber> adjacentCellTasks;
       for (int i=0; i<TwoPowerD; i++) {
         adjacentCellTasks.insert( ::swift2::TaskNumber{
@@ -218,23 +218,23 @@ def construct_touch_vertex_last_time_call(
           {{SPECIES_INDEX}}
         } );
       }
-      
+
       {% if USE_MULTILEVEL_DEPENDENCIES %}
-      std::set<::swift2::TaskNumber>  fineGridDependencies = ::swift2::getDependenciesForTask( 
-        taskNumberToBeUsed, 
-        _pendingDependencies 
+      std::set<::swift2::TaskNumber>  fineGridDependencies = ::swift2::getDependenciesForTask(
+        taskNumberToBeUsed,
+        _pendingDependencies
       );
       adjacentCellTasks.insert( fineGridDependencies.begin(), fineGridDependencies.end() );
       {% endif %}
 
-      
-      logInfo( 
-        "touchVertexLastTime(...)", 
-        "create task " << taskNumberToBeUsed.toString() << 
+
+      logInfo(
+        "touchVertexLastTime(...)",
+        "create task " << taskNumberToBeUsed.toString() <<
         " for " << marker.toString() <<
         " depends on " << ::swift2::toString(adjacentCellTasks)
       );
-      
+
       auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
           assignedParticles,
           [=](decltype(assignedParticles)& assignedParticles)->void {
@@ -244,7 +244,7 @@ def construct_touch_vertex_last_time_call(
           },
           false
         );
-      
+
       tarch::multicore::spawnTask( newTask, ::swift2::flatten(adjacentCellTasks), ::swift2::flatten(taskNumberToBeUsed) );
 
       {% if USE_MULTILEVEL_DEPENDENCIES %}
@@ -262,7 +262,7 @@ def construct_touch_vertex_last_time_call(
         }
       }
       {% endif %}
-      
+
       {% if ALTER_PARTICLE_POSITION_OR_GLOBAL_STATE %}
       constexpr bool alterParticlePositionOrGlobalState = true;
       {% else %}
@@ -699,7 +699,7 @@ def map_onto_separate_mesh_traversals_constructing_task_graph(
     if step_type == StepType.INITIALISATION:
         # When we insert particles initially, they will be scattered. So it is
         # important that we immediately gather them. We cannot flag step -1 as
-        # one that changes teh particle position, but we can present to the
+        # one that changes the particle position, but we can present to the
         # graph compiler that the last step will change the ordering. The graph
         # compiler does not distinguish initialisation from time stepping and
         # hence thinks that the sweep prior to the first sweep has changed the

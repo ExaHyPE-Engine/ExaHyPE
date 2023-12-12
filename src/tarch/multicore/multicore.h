@@ -191,7 +191,7 @@ and
  that is not used within a fork-join region or is totally free is assigned a
  unique number when we spawn it.
 
- Whenever we define a task, we can also define in dependencies. This is a sole
+ Whenever we define a task, we can also define its dependencies. This is a sole
  completion dependency: you tell the task system which task has to be completed
  before the currently submitted one is allwed to start. A DAG thus can be built
  up layer by layer. We start with the first task. This task might be
