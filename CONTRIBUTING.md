@@ -13,13 +13,13 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
+- [Join The Project Team](#join-the-project-team)
 - [I Have a Question](#i-have-a-question)
 - [I Want To Contribute](#i-want-to-contribute)
   - [Reporting Bugs](#reporting-bugs)
   - [Suggesting Enhancements](#suggesting-enhancements)
   - [Improving The Documentation](#improving-the-documentation)
 - [Styleguides](#styleguides)
-- [Join The Project Team](#join-the-project-team)
 
 
 ## Code of Conduct
@@ -27,22 +27,27 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 This project and everyone participating in it is governed by the
 [Code of Conduct](./CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
-to <peano-framework@lists.lrz.de>.
+to <tobias.weinzierl@durham.ac.uk>.
+
+
+## Join The Project Team
+
+We use Slack for internal communication. If you want join our workspace, write us an email to <tobias.weinzierl@durham.ac.uk>.
 
 
 ## I Have a Question
 
 > If you want to ask a question, we assume that you have read the available [Documentation](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html).
 
-Before you ask a question, it is best to search for existing [Issues](https://gitlab.lrz.de/hpcsoftware/Peano/issues) that might help you. In case you have found a suitable issue and still need clarification, you can write your question in this issue. It is also advisable to search the internet for answers first.
+Before you ask a question, it is best to search our Slack channels first. It is also advisable to search the internet for answers first.
 
 If you then still feel the need to ask a question and need clarification, we recommend the following:
 
-- Open an [Issue](https://gitlab.lrz.de/hpcsoftware/Peano/issues/new).
+- Decide into which Slack channel your question fits.
 - Provide as much context as you can about what you're running into.
-- Provide project and platform versions (nodejs, npm, etc), depending on what seems relevant.
+- Provide project and platform versions, depending on what seems relevant.
 
-We will then take care of the issue as soon as possible.
+We will then take care of your question as soon as possible.
 
 
 ## I Want To Contribute
@@ -71,7 +76,7 @@ A good bug report shouldn't leave others needing to chase you up for more inform
 <!-- omit in toc -->
 #### How Do I Submit a Good Bug Report?
 
-> You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead sensitive bugs must be sent by email to <peano-framework@lists.lrz.de>.
+> You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead sensitive bugs must be sent by email to <tobias.weinzierl@durham.ac.uk>.
 
 We use GitLab issues to track bugs and errors. If you run into an issue with the project:
 
@@ -123,6 +128,3 @@ Format your changes by using
 python3 format.py
 ```
 
-## Join The Project Team
-
-We use Slack for internal communication. If you want join, write us an email to <peano-framework@lists.lrz.de>.
