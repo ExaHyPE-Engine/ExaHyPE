@@ -228,6 +228,8 @@ It is important to recognise that `--with-gpu=omp` activates the
 offloading from 's point of view. However, as long as the NVIDIA
 compiler is not told which device to use, it will give you
 
+We require `-cuda` to be passed to the compiler and linker flags to enable Unified Shared Memory (USM).
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Found 0 devices
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

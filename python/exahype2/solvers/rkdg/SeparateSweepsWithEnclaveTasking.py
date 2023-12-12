@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .RungeKuttaDG import RungeKuttaDG
 from .SeparateSweeps import SeparateSweeps
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import peano4
 import exahype2
@@ -81,23 +81,13 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
 
     ## Task priorities
-<<<<<<< HEAD
-    
-    Use the attributes self.enclave_task_priority to change the priority of the 
-    task. This value can either be a string that C++ can evaluate into a 
-    priority or a plain numerical value. I set it to 
-    
-           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority-1"
-               
-=======
 
     Use the attributes self.enclave_task_priority to change the priority of the
     task. This value can either be a string that C++ can evaluate into a
     priority or a plain numerical value. I set it to
 
-           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority"
+           self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority-1"
 
->>>>>>> refs/remotes/origin/applications
     by default.
     """
 
@@ -168,7 +158,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
         self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)
         self._action_set_merge_enclave_task_outcome.priority = (
-            self._baseline_action_set_priority + 1
+            self._baseline_action_set_descend_invocation_order + 1
         )
 
     def add_implementation_files_to_project(self, namespace, output, dimensions):

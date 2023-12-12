@@ -31,13 +31,13 @@
 AC_INIT([Peano], [4.0])
 AC_CONFIG_MACRO_DIR([m4])
 
-# Automake sets C++ flags to "-O2 -g" for GNU compilers (and also for other compilers)
-# These flags are appended to every target. (To all 5, Debug, Release, Trace, Asserts, Stats)
+# Automake sets C++ flags to "-O2 -g" for GNU compilers (and also for other compilers).
+# These flags are appended to every target  (Debug, Release, Trace, Asserts, Stats).
 # To override these defaults, they need to be set between AC_INIT and AC_PROG_CXX for C++
 # and AC_PROG_CC for C.
-# If the flags are empty at this stage (user has not given flags), then we set the floags to none 
-# (empty string), so that "-g -O2" is not appended to every target
-# See Automake documentation and the stackoverflow post: https://stackoverflow.com/questions/3116645/default-compiler-flags-with-autotools
+# If the flags are empty at this stage (user has not given flags), then we set the flags to none
+# (empty string), so that "-g -O2" is not appended to every target.
+# See Automake documentation and the Stack Overflow post: https://stackoverflow.com/questions/3116645/default-compiler-flags-with-autotools
 if test -z "$CXXFLAGS"; then
   CXXFLAGS=''
 fi
@@ -86,7 +86,11 @@ AC_PROG_CXX
 AC_LANG(C++)
 
 #AX_COMPILER_VENDOR
-#AX_CXX_COMPILE_STDCXX_11
+
+AR="ar"
+ARFLAGS="rcD"
+AC_SUBST(AR)
+AC_SUBST(ARFLAGS)
 
 srcdir_full_path=`cd $srcdir && pwd`
 

@@ -1,8 +1,7 @@
 import math
 
 class Avalanche:
-
-    def __init__(self, unknowns, auxiliary_variables, solver="FVRusanovGlobalAdaptive", Zeta=35.0, Zeta1=28.95, Zeta2=44.09, Zeta3=31.81, Beta=1.07, Gamma=2.01, BetaStar=0.06, Kappa=1.0, FrictionLengthScale=0.00035, Gravity=9.81):
+    def __init__(self, unknowns, auxiliary_variables, solver, Zeta=35.0, Zeta1=28.95, Zeta2=44.09, Zeta3=31.81, Beta=1.07, Gamma=2.01, BetaStar=0.06, Kappa=1.0, FrictionLengthScale=0.00035, Gravity=9.81):
         """
         Kappa in the friction law is assumed to be 1 and is just initialised as a const double in the source function.
         The user can apply std::pow((Fr/BetaStar),Kappa) for evaluating T in the source function in case the value of Kappa is different from 1.
@@ -32,6 +31,7 @@ class Avalanche:
         self.Hstart = self.FrictionLengthScale*(((self.Mu2-self.Mu1)/(math.tan(self.Zeta)-self.Mu3))-1)
         self.Hstop = self.FrictionLengthScale*(((self.Mu2-self.Mu1)/(math.tan(self.Zeta)-self.Mu1))-1)
 
+
     def implementation_of_initial_conditions(self):
         initial_condition_string_template =  """
         const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{0.15,0.35}};
@@ -56,43 +56,47 @@ class Avalanche:
         """
         if "FV" in self.solver:
             return initial_condition_string_template.format(volumeCentre="volumeCentre")
+        elif "RKDG" in self.solver:
+            return initial_condition_string_template.format(volumeCentre="x")
         elif "ADERDG" in self.solver:
             return initial_condition_string_template.format(volumeCentre="x")
-    
+
+
     def implementation_of_boundary_conditions(self):
         return """
         ::exahype2::saintvenant::boundaryConditions(Qinside, Qoutside, faceCentre, t, normal, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables});
         """.format(NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables)
-    
-    def implementation_of_flux(self):
 
-        flux_string_template = """ 
+
+    def implementation_of_flux(self):
+        flux_string_template = """
         ::exahype2::saintvenant::flux(Q, {faceCentre}, t, dt, normal, F, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables},{Zeta}, {Gravity});
         """
-        
         if "FV" in self.solver:
             return flux_string_template.format(faceCentre="faceCentre", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables,Zeta=self.Zeta, Gravity=self.Gravity)
+        elif "RKDG" in self.solver:
+            return flux_string_template.format(faceCentre="volumeX", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables, Zeta=self.Zeta, Gravity=self.Gravity)
         elif "ADERDG" in self.solver:
             return flux_string_template.format(faceCentre="volumeX", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables, Zeta=self.Zeta, Gravity=self.Gravity)
-        
-    
+
+
     def implementation_of_max_eigenvalue(self):
         max_eigenvalue_string_template =  """
         return ::exahype2::saintvenant::maxEigenvalue(Q, {faceCentre}, t, dt, normal, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}, {Zeta}, {Gravity});
         """
-
         if "FV" in self.solver:
             return max_eigenvalue_string_template.format(faceCentre="faceCentre", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables,Zeta=self.Zeta, Gravity=self.Gravity)
+        elif "RKDG" in self.solver:
+            return max_eigenvalue_string_template.format(faceCentre="volumeX", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables, Zeta=self.Zeta, Gravity=self.Gravity)
         elif "ADERDG" in self.solver:
             return max_eigenvalue_string_template.format(faceCentre="volumeX", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables, Zeta=self.Zeta, Gravity=self.Gravity)
 
-    
 
     def implementation_of_ncp(self):
-        implementation_of_ncp_string_template = """ 
+        implementation_of_ncp_string_template = """
         if(tarch::la::greater(Q[0],0.0)){{
             const double ih = 1.0 / Q[0];
-            const double Nu = {Nu}; 
+            const double Nu = {Nu};
             const int NumberOfUnknowns = {NumberOfUnknowns};
 
             // Partial Derivatives of unknowns
@@ -128,9 +132,7 @@ class Avalanche:
                     {BTimesDeltaQ}[2] = -(volumeH(1) * Nu * sqrt(Q[0]) * (1.5 * hy * vy + Q[0] * vyy));
                 break;
             }}
-        }}
-
-        else{{
+        }} else{{
             switch (normal) {{
                 case 0: // x
                     {BTimesDeltaQ}[0] = 0.0;
@@ -147,9 +149,10 @@ class Avalanche:
         """
         if "FV" in self.solver:
             return implementation_of_ncp_string_template.format(BTimesDeltaQ="BTimesDeltaQ",Nu=self.Nu, NumberOfUnknowns=self.unknowns)
+        elif "RKDG" in self.solver:
+            return implementation_of_ncp_string_template.format(BTimesDeltaQ="BgradQ",Nu=self.Nu, NumberOfUnknowns=self.unknowns)
         elif "ADERDG" in self.solver:
             return implementation_of_ncp_string_template.format(BTimesDeltaQ="BgradQ",Nu=self.Nu, NumberOfUnknowns=self.unknowns)
-        
 
 
     def implementation_of_sources(self):
@@ -158,7 +161,7 @@ class Avalanche:
         The user can apply std::pow((Fr/BetaStar),Kappa) for evaluating T here in case the value of Kappa is different from 1.
         """
         return """
-        if(tarch::la::greater(Q[0],0.0)){{    
+        if(tarch::la::greater(Q[0],0.0)){{
             const double ih = 1.0 / Q[0];
             const double u  = ih * Q[1];
             const double v  = ih * Q[2];
@@ -178,7 +181,7 @@ class Avalanche:
             const double Mu3 = {Mu3};
             const double Nu = {Nu};
             const double Hstart = {Hstart};
-            const double Hstop = {Hstop}; 
+            const double Hstop = {Hstop};
 
             const double Fr       = ubar / sqrt(Gravity * Q[0] * cos(Zeta));
             const double Hstar    = (BetaStar + Gamma) * Hstop / Beta;
@@ -188,18 +191,14 @@ class Avalanche:
                 const double vstop  = (Q[0] * Beta) / (Fr + Gamma);
                 const double Mustop = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
                 Mu                  = Mustop;
-            }}
-
-            else if (Fr > 0 && Fr <= BetaStar) {{
+            }} else if (Fr > 0 && Fr <= BetaStar) {{
                 const double vstart  = Q[0];
                 const double vstop   = Q[0] * Beta / (BetaStar + Gamma);
                 const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
                 const double Mustop  = Mu1 + (Mu1 - Mu2) / (1 + vstop / FrictionLengthScale);
                 const double T       = Mustart + (Mustop - Mustart) * std::pow((Fr / BetaStar),Kappa);
                 Mu                   = T;
-            }}
-
-            else if (Fr == 0) {{
+            }} else if (Fr == 0) {{
                 const double vstart  = Q[0];
                 const double Mustart = Mu3 + (Mu1 - Mu2) / (1 + vstart / FrictionLengthScale);
                 Mu                   = Mustart;
@@ -218,21 +217,17 @@ class Avalanche:
                     S[0] = 0.0;
                     S[1] = Q[0] * Gravity * sin(Zeta);
                     S[2] = 0.0;
-                }}
-                else{{
+                }} else{{
                     S[0] = 0.0;
                     S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (frictionVector(0)/frictionVectorMagnitude) * Q[0] * Gravity * cos(Zeta);
                     S[2] = -Mu * (frictionVector(1)/frictionVectorMagnitude) * Q[0] * Gravity * cos(Zeta);
                 }}
-            }}
-            else if(tarch::la::greater(ubar,0.0)){{
+            }} else if(tarch::la::greater(ubar,0.0)){{
                 S[0] = 0.0;
                 S[1] = Q[0] * Gravity * sin(Zeta) - Mu * (u / ubar) * Q[0] * Gravity * cos(Zeta);
                 S[2] = -Mu * (v / ubar) * Q[0] * Gravity * cos(Zeta);
             }}
-        }}
-
-        else{{
+        }} else{{
             S[0] = 0.0;
             S[1] = 0.0;
             S[2] = 0.0;
@@ -245,13 +240,9 @@ class Avalanche:
         auto result = ::exahype2::RefinementCommand::Keep;
         if(volumeCentre(0)<0.79){
             result = ::exahype2::RefinementCommand::Refine;
-        }
-        else{
+        } else{
             result = ::exahype2::RefinementCommand::Erase;
         }
         // return result;
         return ::exahype2::RefinementCommand::Keep;
         """
-
-        
-

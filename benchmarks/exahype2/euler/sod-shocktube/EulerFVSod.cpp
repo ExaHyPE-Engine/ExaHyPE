@@ -8,9 +8,9 @@ void benchmarks::exahype2::euler::sod_shocktube::EulerFVSod::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructred );
+  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructed );
   // Initial data
   constexpr double gamma = 1.39999999999999991118;
   constexpr double x_0 = 0.50000000000000000000;

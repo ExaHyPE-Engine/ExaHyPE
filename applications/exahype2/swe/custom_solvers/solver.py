@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from exahype2.solvers.fv.PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 class Solver(ABC):
     """

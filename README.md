@@ -2,8 +2,8 @@
 <img src="./documentation/logos/Peano-logo.png"/>
 </div>
 
-# General Information
-Peano is an open source framework for solvers on dynamically adaptive
+# Overview
+Peano is an open-source framework for solvers on dynamically adaptive
 Cartesian meshes.
 
 Its core is built with C++, but many tools around it are written in Python.
@@ -17,14 +17,9 @@ forth operations on the grid. It also provides interfaces for dynamic
 load balancing, sophisticated geometry representations, and other features.
 
 # Availability
-All software is available as open source through www.peano-framework.org.
-This page also holds extensive [online documentation](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html) (written, extracted from
-source code and as video tutorials).
+All software is available as open source through [www.peano-framework.org](https://tobiasweinzierl.webspace.durham.ac.uk/software/peano/).
 
-# Supported Platforms
-We test and maintain Peano for Linux only.
-If you prefer Windows or MacOS, it should work as long as you provide
-the mandatory tools, but we won't be able to help.
+Please visit the [User Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html).
 
 # Dependencies and Prerequisites
 Peano's core is plain C++17/C++20 code.
@@ -39,6 +34,8 @@ The most important ones are:
 * Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading (optional).
 * CUDA, ROCm, OpenSYCL or Intel oneAPI for GPU offloading (optional).
 * The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities (optional).
+* HDF5 (optional).
+* NetCDF (optional).
 * Doxygen if you want to create HTML pages of the documentation (optional).
 
 # Quickstart
@@ -75,12 +72,6 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
 ./configure && make -j && make check
 ```
 
-# Containerisation
-We maintain a collection of Docker and Apptainer [containers](./containers/README.md) with all required dependencies. Refer to the documentation on how to use them.
-
-# Documentation
-The [documentation](./documentation/) consists mostly of Doxygen which can be built locally with
-
-```shell
-doxygen documentation/Doxyfile
-```
+# Docker and Apptainer
+We maintain a collection of Docker and Apptainer [containers](./containers/README.md)
+with all required dependencies.
