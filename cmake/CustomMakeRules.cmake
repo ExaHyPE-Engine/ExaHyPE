@@ -13,7 +13,7 @@
 # But with nvc++ and CUDA backend I have noticed that they are used, just in case we remove them too
 # as our flags provide the same behaviour as *_INIT flags.
 
-# The compile flags given by the user in the env variable CUDAFLAGS is used for CMAKE_CUDA_FLAGS
+# The compile flags given by the user in the env variable CUDAFLAGS is used for CMAKE_CUDA_FLAGS.
 # CUDA initiliases with -O3 and -DNDEBUG by default, we need to override it.
 foreach(BUILD_TYPE DEBUG;RELEASE;ASSERTS;TRACE;STATS)
   set(CMAKE_CXX_FLAGS_${BUILD_TYPE} "")
