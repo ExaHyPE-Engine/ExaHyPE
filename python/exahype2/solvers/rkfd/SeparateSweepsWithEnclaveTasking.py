@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .SeparateSweeps import SeparateSweeps
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.rkfd.actionsets.AbstractRKFDActionSet import AbstractRKFDActionSet
 
 import peano4
@@ -158,7 +158,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         return (
             """
 #include "exahype2/NonCriticalAssertions.h"
-#include "exahype2/enumerator/Enumerator.h"
+#include "exahype2/enumerator/enumerator.h"
 #include "exahype2/fd/PatchUtils.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "tarch/multicore/Tasks.h"

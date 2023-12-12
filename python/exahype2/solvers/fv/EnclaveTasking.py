@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .FV import FV
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import peano4
 import exahype2
@@ -17,7 +17,6 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
     """!
-
     Update cell in primary sweep
 
     This action set is used in the primary sweeps only. In the secondary sweep,
@@ -54,7 +53,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     that, alter self._action_set_update_cell._Template_TouchCellFirstTime_Preamble.
     I recommend to add an entry and not to replace the preamble, as the
     preamble already consists meaningful code.
-
     """
 
     TemplateUpdateCell = jinja2.Template(
@@ -668,9 +666,9 @@ class EnclaveTasking(FV):
         if use_split_loop:
             self._use_split_loop = use_split_loop
 
-        if refinement_criterion == exahype2.solvers.fv.PDETerms.None_Implementation:
+        if refinement_criterion == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "refinement criterion cannot be none"
-        if initial_conditions == exahype2.solvers.fv.PDETerms.None_Implementation:
+        if initial_conditions == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "initial conditions cannot be none"
 
         if (
@@ -795,6 +793,7 @@ class EnclaveTasking(FV):
         )
 
         output.add(generated_solver_files)
+        output.makefile.add_h_file("tasks/" + task_name + ".h", generated=True)
         output.makefile.add_cpp_file("tasks/" + task_name + ".cpp", generated=True)
 
         if self._pde_terms_without_state:

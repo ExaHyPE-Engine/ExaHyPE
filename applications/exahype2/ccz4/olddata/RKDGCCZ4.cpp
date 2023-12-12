@@ -122,9 +122,9 @@ void applications::exahype2::ccz4::RKDGCCZ4::initialCondition(
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   const tarch::la::Vector<Dimensions,int>&     point,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
-  logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructred );
+  logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructed );
 
   if ( Scenario==0 ) {
     applications::exahype2::ccz4::gaugeWave(Q, x, 0);
@@ -139,7 +139,7 @@ void applications::exahype2::ccz4::RKDGCCZ4::initialCondition(
   else if ( Scenario==2 ) {
 
    // We use the bool to trigger the hgh res interpolation once the grid is constructed
-    applications::exahype2::ccz4::ApplyTwoPunctures(Q, x, 0, _tp, not gridIsConstructred); //we interpolate for real IC here.
+    applications::exahype2::ccz4::ApplyTwoPunctures(Q, x, 0, _tp, not gridIsConstructed); //we interpolate for real IC here.
   }
   #endif
   else {

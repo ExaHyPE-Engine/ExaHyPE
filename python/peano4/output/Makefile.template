@@ -13,7 +13,7 @@ NVCC = {{NVCC}}
 
 {% if MODE=="RELEASE" and DIM=="2" %}
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_RELEASE}}
-LDFLAGS  += {{LDFLAGS_PEANO_RELEASE}} {{LDFLAGS}} 
+LDFLAGS  += {{LDFLAGS_PEANO_RELEASE}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_RELEASE}} {{LIBS}}
 NVCCFLAGS += {{NVCC_FLAGS_RELEASE}}
 {% endif %}
@@ -21,7 +21,7 @@ NVCCFLAGS += {{NVCC_FLAGS_RELEASE}}
 {% if MODE=="STATS" and DIM=="2" %}
 # It is important that Peano's includes are enlisted early, as other 3rd part
 # libraries might have their own config.h (if they use autotools, too) and thus
-# might break the Peano installation 
+# might break the Peano installation
 CXXFLAGS += -I. -I{{CONFIGUREPATH}}/src {{CXXFLAGS}} {{CXXFLAGS_PEANO_2D_STATS}}
 LDFLAGS  += {{LDFLAGS_PEANO_STATS}} {{LDFLAGS}}
 LIBS += -L{{CONFIGUREPATH}}/src {{LDADD_PEANO_2D_STATS}} {{LIBS}}
@@ -107,9 +107,9 @@ FORTRAN_OBJS+=$(subst .f,.o,$(subst .f90,.o,$(GENERATED_FORTRAN_SOURCES)))
 FORTRAN_MODULE_OBJS={% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".o") +" "}} {%- endfor %}
 
 {% if USING_CMAKE %}
-# The double cmake .. is necessary to add the generated target to the build there
-# The sceond cmake .. might be necessary to add the newly needed targets due to the changed CMAKE_BUILD_TYPE
-# The build type changes in the first call but propgates only in the second
+# The first 'cmake ..' is necessary to add the generated target to the build there.
+# The second 'cmake ..' might be necessary to add the newly generated targets due to the changed 'CMAKE_BUILD_TYPE'.
+# The build type changes in the first call but propagates only in the second call.
 all:
 	bash -c "{{CMAKE_MAKE_COMMAND}} && cmake .. && cmake .. && make $(MAKEFLAGS) {{EXECUTABLENAME}}"
 {% else %}
@@ -119,10 +119,8 @@ all: solver
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-
 %.o: %.f90
 	$(FC) $(FCFLAGS) -c -o $@ $<
-
 
 %.o: %.cu
 	$(NVCC) $(NVCCFLAGS) $(CXXFLAGS) -c -o $@ $<
@@ -150,7 +148,6 @@ clean:
 	rm -f {{EXECUTABLENAME}}
 {#{% endif %}#}
 
-
 distclean:
 	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS) $(CU_OBJS)
 	rm -f *.mod
@@ -165,6 +162,5 @@ distclean:
 	rm -f .gitignore
 	rm -f Makefile
 	{% if USING_CMAKE %}rm -f CMakeLists.txt{% endif %}
-	{% if USING_CMAKE %}rm -f {{GENERATED_SUBDIRECTORY_FULLPATH}}{% endif %}
 
 maintainer-clean: distclean

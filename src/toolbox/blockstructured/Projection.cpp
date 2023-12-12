@@ -2,9 +2,8 @@
 
 #include "peano4/utils/Loop.h"
 #include "toolbox/blockstructured/Enumeration.h"
-#include "exahype2/fd/BoundaryConditions.h"
-#include "exahype2/enumerator/Enumerator.h"
 
+#include <iostream>
 
 void toolbox::blockstructured::projectPatchSolutionOntoFaces(
     int    numberOfVolumesPerAxisInPatch,

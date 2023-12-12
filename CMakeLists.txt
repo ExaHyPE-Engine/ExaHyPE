@@ -49,6 +49,16 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
+# This has to be done before the project is created and before any languages are added.
+# Adding a subdirectory does not help here and needs to be explicitly given with the path( cmake/...),
+# Because this file is needed by CMake itself and not by the project.
+# We need to override specific compiler flags initialized by CMake, to
+# match them exactly with the flags defined in Peano Automake build system.
+# More details can be found in the cmake/PeanoCustomInitFlags.cmake file.
+# For example, the Peano release flags are -O3 and -O4 for NVHPC compilers (and -DNDEBUG in definitions);
+# but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/PeanoCustomInitFlags.cmake")
+
 set(LANGUAGES C CXX)
 project(
   ${META_PROJECT_NAME}
@@ -134,12 +144,22 @@ if(WITH_TOOLCHAIN STREQUAL "scorep")
   target_link_libraries(project_options INTERFACE ${SCOREP_LIBRARIES})
   target_compile_options(project_options INTERFACE ${SCOREP_COMPILE_FLAGS})
   target_link_options(project_options INTERFACE ${SCOREP_LINK_OPTION})
-elseif(WITH_TOOLCHAIN STREQUAL "intel")
+  add_compile_definitions(UseScoreP)
+  add_compile_definitions(UseLogService=ScorePLogger)
+elseif(WITH_TOOLCHAIN STREQUAL "itac")
   target_link_libraries(project_options INTERFACE VT::VT)
   target_include_directories(project_options SYSTEM INTERFACE ${VT_INCLUDE_DIRS})
   target_link_directories(project_options INTERFACE ${VT_LIBRARIES_DIR})
+  add_compile_definitions(UseITAC)
+  add_compile_definitions(UseLogService=ITACLogger)
 elseif(WITH_TOOLCHAIN STREQUAL "nvidia")
   check_include_files(nvToolsExt.h HAVE_NVTOOLSEXT_H)
+  find_package(CUDAToolkit REQUIRED)
+  target_link_libraries(project_options INTERFACE CUDA::nvToolsExt)
+  add_compile_definitions(UseNVTX)
+  add_compile_definitions(UseLogService=NVTXLogger)
+elseif(NOT WITH_TOOLCHAIN STREQUAL "")
+  message(FATAL_ERROR "CMake build system currently does not support the logger ${WITH_TOOLCHAIN}")
 endif()
 
 list(APPEND MULTICORES_BACKENDS
@@ -155,13 +175,14 @@ set_property(CACHE WITH_MULTITHREADING PROPERTY STRINGS ${MULTICORES_BACKENDS})
 if(WITH_MULTITHREADING)
   string(TOUPPER ${WITH_MULTITHREADING} WITH_MULTITHREADING_UPPER)
   target_compile_definitions(project_options INTERFACE Shared${WITH_MULTITHREADING_UPPER})
-endif()
+  target_compile_definitions(project_options INTERFACE SharedMemoryParallelisation)
+  endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
 
   # Workaround for Intel oneAPI. TODO: Fix this:
-  # "PLEASE append the compiler options "-save-temps -v", rebuild the application to to get the full command which is failing"
+  # "PLEASE append the compiler options "-save-temps -v", rebuild the application to get the full command which is failing"
   if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
     target_compile_options(project_options INTERFACE -fopenmp)
     target_link_libraries(project_options INTERFACE -fopenmp)
@@ -197,6 +218,7 @@ list(APPEND ACCELERATOR_ARCHITECTURES
   "sm_75"
   "sm_80"
   "sm_86"
+  "sm_89"
   "sm_90"
   "gfx906"
   "gfx908"
@@ -246,7 +268,6 @@ if(WITH_GPU)
       target_compile_options(project_options INTERFACE -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu)
     endif()
   elseif(WITH_GPU STREQUAL "sycl")
-    set(WITH_MULTITHREADING "sycl" CACHE STRING "GPU sycl needs tbb multithreading")
   elseif(WITH_GPU STREQUAL "hip")
   elseif(WITH_GPU STREQUAL "cuda")
     set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
@@ -261,33 +282,6 @@ if(WITH_GPU)
   endif()
 endif()
 
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-  #-march=native
-  list(TRANSFORM CMAKE_CXX_FLAGS_RELEASE REPLACE "-O3" "-O4")
-  list(TRANSFORM CMAKE_CUDA_FLAGS_RELEASE REPLACE "-O3" "-O4")
-endif()
-set(RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
-set(RELEASE_LDFLAGS -g)
-
-#-O2 -fno-omit-frame-pointer
-set(DEBUG_DEFINITIONS -DPeanoDebug=4)
-set(DEBUG_LDFLAGS -g)
-
-set(CMAKE_CXX_FLAGS_STATS ${CMAKE_CXX_FLAGS_RELEASE})
-set(CMAKE_CUDA_FLAGS_STATS ${CMAKE_CUDA_FLAGS_RELEASE})
-set(STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics)
-set(STATS_LDFLAGS -g)
-
-set(CMAKE_CXX_FLAGS_ASSERTS ${CMAKE_CXX_FLAGS_DEBUG})
-set(CMAKE_CUDA_FLAGS_ASSERTS ${CMAKE_CUDA_FLAGS_DEBUG})
-set(ASSERTS_DEFINITIONS -DPeanoDebug=2)
-set(ASSERTS_LDFLAGS -g)
-
-set(CMAKE_CXX_FLAGS_TRACE -g -O2)
-set(CMAKE_CUDA_FLAGS_TRACE ${CMAKE_CXX_FLAGS_TRACE})
-set(TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
-set(TRACE_LDFLAGS -g)
-
 set(CMAKE_CONFIGURATION_TYPES "Debug" "Release" "Asserts" "Trace" "Stats" CACHE STRING "Enabled build types" FORCE)
 if(NOT CMAKE_BUILD_TYPE OR NOT ${CMAKE_BUILD_TYPE} IN_LIST CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE "" CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
@@ -297,7 +291,52 @@ else()
   list(APPEND BUILD_MODES ${CMAKE_BUILD_TYPE})
 endif()
 
+# Update core libraries' build modes and dimensions if it is not set to build all and if the build type of an application is different.
+if(CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQUAL "${PEANO_APP_BUILD_TYPE}")
+  set(CMAKE_BUILD_TYPE ${PEANO_APP_BUILD_TYPE} CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
+  list(APPEND BUILD_MODES ${PEANO_APP_BUILD_TYPE})
+endif()
+
+# LDFLAGS are currently empty but might be required in the future
+# Note linkers (ld, lld) ignore the flag -g when passed
+# Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
+if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
+  set(PEANO_CXX_FLAGS_RELEASE -O4)
+  set(PEANO_CUDA_FLAGS_RELEASE -O3) # NVCC does not have -O4, if given, it will be forwarded only to host compiler.
+else()
+  set(PEANO_CXX_FLAGS_RELEASE -O3)
+  set(PEANO_CUDA_FLAGS_RELEASE -O3)
+endif()
+set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
+set(PEANO_RELEASE_LDFLAGS )
+
+#-O2 -fno-omit-frame-pointer
+set(PEANO_CXX_FLAGS_DEBUG -g -O0)
+set(PEANO_CUDA_FLAGS_DEBUG -g -O0)
+set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4)
+set(PEANO_DEBUG_LDFLAGS )
+
+set(PEANO_CXX_FLAGS_STATS ${PEANO_CXX_FLAGS_RELEASE})
+set(PEANO_CUDA_FLAGS_STATS ${PEANO_CUDA_FLAGS_RELEASE})
+set(PEANO_STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics)
+set(PEANO_STATS_LDFLAGS )
+
+set(PEANO_CXX_FLAGS_ASSERTS ${PEANO_CXX_FLAGS_DEBUG})
+set(PEANO_CUDA_FLAGS_ASSERTS ${PEANO_CUDA_FLAGS_DEBUG})
+set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2)
+set(PEANO_ASSERTS_LDFLAGS )
+
+set(PEANO_CXX_FLAGS_TRACE -g -O2)
+set(PEANO_CUDA_FLAGS_TRACE ${PEANO_CXX_FLAGS_TRACE})
+set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
+set(PEANO_TRACE_LDFLAGS )
+
 set(WITH_DIMENSIONS "2;3" CACHE STRING "Build with number of (space) dimensions")
+
+if(NOT "${WITH_DIMENSIONS}" STREQUAL "2;3" AND PEANO_APP_DIMENSION AND NOT "${WITH_DIMENSIONS}" STREQUAL "${PEANO_APP_DIMENSION}")
+  set(WITH_DIMENSIONS ${PEANO_APP_DIMENSION} CACHE STRING "Dimensions 2;3" FORCE)
+endif()
+
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
 option(WITH_OTTER "Build with Otter support" OFF)
 option(WITH_PETSC "Build with PETSc support" OFF)
@@ -362,11 +401,13 @@ if(WITH_NETCDF)
 endif()
 
 if(ENABLE_EXAHYPE)
-  target_compile_definitions(project_options INTERFACE UseExaHyPE)
+  #target_compile_definitions(project_options INTERFACE UseExaHyPE)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseExaHyPE)
 endif()
 
 if(ENABLE_SWIFT)
-  target_compile_definitions(project_options INTERFACE UseSWIFT)
+  #target_compile_definitions(project_options INTERFACE UseSWIFT)
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseSWIFT)
 endif()
 
 include(CMakePackageConfigHelpers)
@@ -405,7 +446,7 @@ endif(DOXYGEN_FOUND)
 
 add_subdirectory(src)
 
-#file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS "*/UnitTests/*")
+#file(GLOB_RECURSE UNIT_TEST_SOURCES CONFIGURE_DEPENDS "*/tests/*")
 #foreach(SOURCE_FILE ${UNIT_TEST_SOURCES})
 #    get_filename_component(TEST_NAME ${SOURCE_FILE} NAME_WE)
 #    add_executable(${TEST_NAME} ${SOURCE_FILE})
@@ -475,41 +516,34 @@ display_variable(CMAKE_CXX_COMPILER)
 display_variable(CMAKE_CXX_STANDARD)
 display_variable(CMAKE_BUILD_TYPE)
 display_variable(CMAKE_CONFIGURATION_TYPES)
-display_variable(CMAKE_CXX_FLAGS)
-display_variable(CMAKE_CXX_FLAGS_RELEASE)
-display_variable(RELEASE_DEFINITIONS)
-display_variable(RELEASE_LDFLAGS)
-display_variable(CMAKE_CXX_FLAGS_DEBUG)
-display_variable(DEBUG_DEFINITIONS)
-display_variable(DEBUG_LDFLAGS)
-display_variable(CMAKE_CXX_FLAGS_STATS)
-display_variable(STATS_DEFINITIONS)
-display_variable(STATS_LDFLAGS)
-display_variable(CMAKE_CXX_FLAGS_ASSERTS)
-display_variable(ASSERTS_DEFINITIONS)
-display_variable(ASSERTS_LDFLAGS)
-display_variable(CMAKE_CXX_FLAGS_TRACE)
-display_variable(TRACE_DEFINITIONS)
-display_variable(TRACE_LDFLAGS)
-display_variable(CMAKE_CXX_FLAGS_MINSIZEREL)
-display_variable(CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+display_variable(PEANO_CXX_FLAGS_RELEASE)
+display_variable(PEANO_RELEASE_DEFINITIONS)
+display_variable(PEANO_RELEASE_LDFLAGS)
+display_variable(PEANO_CXX_FLAGS_DEBUG)
+display_variable(PEANO_DEBUG_DEFINITIONS)
+display_variable(PEANO_DEBUG_LDFLAGS)
+display_variable(PEANO_CXX_FLAGS_STATS)
+display_variable(PEANO_STATS_DEFINITIONS)
+display_variable(PEANO_STATS_LDFLAGS)
+display_variable(PEANO_CXX_FLAGS_ASSERTS)
+display_variable(PEANO_ASSERTS_DEFINITIONS)
+display_variable(PEANO_ASSERTS_LDFLAGS)
+display_variable(PEANO_CXX_FLAGS_TRACE)
+display_variable(PEANO_TRACE_DEFINITIONS)
+display_variable(PEANO_TRACE_LDFLAGS)
 display_variable(CMAKE_VERBOSE_MAKEFILE)
 display_variable(BUILD_SHARED_LIBS)
 display_variable(CMAKE_CXX_FLAGS_INIT)
 
 if(WITH_GPU STREQUAL "cuda")
   display_variable(CMAKE_CUDA_FLAGS)
-  display_variable(CMAKE_CUDA_FLAGS_RELEASE)
-  display_variable(CMAKE_CUDA_FLAGS_DEBUG)
-  display_variable(CMAKE_CUDA_FLAGS_STATS)
-  display_variable(CMAKE_CUDA_FLAGS_ASSERTS)
-  display_variable(CMAKE_CUDA_FLAGS_TRACE)
-  display_variable(CMAKE_CUDA_FLAGS_MINSIZEREL)
-  display_variable(CMAKE_CUDA_FLAGS_RELWITHDEBINFO)
+  display_variable(PEANO_CUDA_FLAGS_RELEASE)
+  display_variable(PEANO_CUDA_FLAGS_DEBUG)
+  display_variable(PEANO_CUDA_FLAGS_STATS)
+  display_variable(PEANO_CUDA_FLAGS_ASSERTS)
+  display_variable(PEANO_CUDA_FLAGS_TRACE)
   display_variable(CMAKE_CUDA_HOST_COMPILER)
   display_variable(CMAKE_CUDA_ARCHITECTURES)
-  display_variable(CUDA_NVCC_FLAGS)
-  display_variable(CUDA_NVCC_FLAGS_RELEASE)
   display_variable(CUDA_SEPARABLE_COMPILATION)
   display_variable(CUDA_RESOLVE_DEVICE_SYMBOLS)
 endif()

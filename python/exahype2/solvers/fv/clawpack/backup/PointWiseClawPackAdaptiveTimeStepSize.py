@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .FV                       import FV
  
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import peano4
 import exahype2

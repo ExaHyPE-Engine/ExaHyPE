@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
+from exahype2.solvers.PDETerms    import PDETerms
 from exahype2.solvers.rkfd.SeparateSweepsWithEnclaveTasking import SeparateSweepsWithEnclaveTasking
-from exahype2.solvers.rkfd.PDETerms    import PDETerms
 
 import jinja2
 
