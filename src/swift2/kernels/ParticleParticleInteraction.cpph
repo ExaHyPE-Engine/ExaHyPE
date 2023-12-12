@@ -26,6 +26,7 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
   /* Compute the actual interaction radius */
   const double iactR = kernel_gamma * h_a;
 
+  // This will probably cause issues with vectorisation and should be outside of the loop.
   if (
     tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) /* Self-contribution is calculated elsewhere */
     // and
@@ -75,9 +76,6 @@ void swift2::kernels::densityKernel(Particle* localParticle, const Particle* act
     // @TODO Mladen: Implement 3D curl
     if (hydroDimensions == 3)
       assertionMsg(false, "3D not implemented");
-
-    /* Debug: Increment number of detected neighbours */
-    localParticle->setNcount(localParticle->getNcount() + 1);
 
   } /* End if r<iactR */
 }

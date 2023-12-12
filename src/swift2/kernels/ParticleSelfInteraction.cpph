@@ -211,6 +211,7 @@ void swift2::kernels::prepareHydroForceCalculation(const ParticleContainer& loca
 
   for (auto* particle : localParticles) {
     if (localParticleCanBeWorkedOnVertexKernel(particle)) {
+      particle->setSmoothingLengthIterCount(0);
       swift2::kernelPlaceholders::hydro_prepare_force(particle);
       swift2::kernelPlaceholders::hydro_reset_acceleration(particle);
     }

@@ -99,12 +99,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
     particle.f.valid_mantissa_bits            = args.mantissa_size
     particle.wcount_dh.valid_mantissa_bits    = args.mantissa_size
     particle.rho_dh.valid_mantissa_bits       = args.mantissa_size
-    particle.hleft.valid_mantissa_bits        = args.mantissa_size
-    particle.hright.valid_mantissa_bits       = args.mantissa_size
-    particle.smoothL_prev.valid_mantissa_bits = args.mantissa_size
     particle.wcount.valid_mantissa_bits       = args.mantissa_size
     particle.hDot.valid_mantissa_bits         = args.mantissa_size
-    particle.residual.valid_mantissa_bits     = args.mantissa_size
     particle.balsara.valid_mantissa_bits      = args.mantissa_size
     particle.rot_v.valid_mantissa_bits        = args.mantissa_size
     particle.div_v.valid_mantissa_bits        = args.mantissa_size
@@ -227,27 +223,17 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.f = dastgen2.attributes.Double("f")
         self.wcount_dh = dastgen2.attributes.Double("wcount_dh")
         self.rho_dh = dastgen2.attributes.Double("rho_dh")
-        self.hleft = dastgen2.attributes.Double("hLeft")
-        self.hright = dastgen2.attributes.Double("hRight")
         self.data.add_attribute(self.f)
         self.data.add_attribute(self.wcount_dh)
         self.data.add_attribute(self.rho_dh)
-        self.data.add_attribute(self.hleft)
-        self.data.add_attribute(self.hright)
 
         # Newton-Raphson iterations ----------------------------------------------------
-        self.smoothL_prev = dastgen2.attributes.Double("smoothingLengthPrevious")
         self.wcount = dastgen2.attributes.Double("wcount")
         self.hDot = dastgen2.attributes.Double("hDot")
-        self.residual = dastgen2.attributes.Double("residual")
-        self.iteration_count = dastgen2.attributes.Integer("iterCount")
-        self.has_converged = dastgen2.attributes.Boolean("hasConverged")
-        self.data.add_attribute(self.smoothL_prev)
+        self.sml_iteration_count = dastgen2.attributes.Integer("smoothingLengthIterCount")
         self.data.add_attribute(self.wcount)
         self.data.add_attribute(self.hDot)
-        self.data.add_attribute(self.residual)
-        self.data.add_attribute(self.iteration_count)
-        self.data.add_attribute(self.has_converged)
+        self.data.add_attribute(self.sml_iteration_count)
 
         # Artificial viscosity scheme --------------------------------------------------
         self.balsara = dastgen2.attributes.Double("balsara")
@@ -275,11 +261,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # Extra ------------------------------------------------------------------------
         self.has_no_neighbours = dastgen2.attributes.Boolean("hasNoNeighbours")
         self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
-        self.Ncount = dastgen2.attributes.Integer("Ncount")  # integer number count
         self.part_id = dastgen2.attributes.Integer("partid")
         self.data.add_attribute(self.has_no_neighbours)
         self.data.add_attribute(self.is_boundary_part)
-        self.data.add_attribute(self.Ncount)
         self.data.add_attribute(self.part_id)
 
         # Algorithm Steps ---------------------------------------------------------------
@@ -485,6 +469,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="DensityLoopWithConstantSearchRadius",
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
+            prepare_traversal_kernel="""
+                                       globaldata::{PARTICLE}::getSpecies().clearRerunPreviousGridSweepFlag();
+                                       """.replace("{PARTICLE}", self.name),
             touch_vertex_first_time_kernel="::swift2::forAllParticles(assignedParticles, ::swift2::kernelPlaceholders::hydro_prepare_density<globaldata::{}> );".format(self.name),
             cell_kernel="::swift2::forAllParticlePairs(marker, localParticles, activeParticles, ::swift2::kernels::densityKernel<globaldata::{}> );".format(self.name),
             touch_vertex_last_time_kernel="""
