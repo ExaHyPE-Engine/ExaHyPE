@@ -312,7 +312,7 @@ namespace toolbox {
      * ## Realisation
      *
      * There are two major checks which determine if a particle will be
-     * dropped further or not: The mesh size vs the cut off radius of a
+     * dropped further or not: The mesh size vs the cut-off radius of a
      * particle, and the mesh cell state. If a mesh cell is not refined
      * and will not be refined throughout this very traversal, then the
      * particle will also not be dropped. It will however be dropped if
@@ -325,7 +325,7 @@ namespace toolbox {
      * - if peano4::datamanagement::CellMarker::hasBeenRefined() holds,
      *   as this means that this cell actually already has children; or
      * - if peano4::datamanagement::CellMarker::willBeRefined() holds,
-     *   as this means that thsi cell either has children already or will
+     *   as this means that this cell either has children already or will
      *   be added children in this very mesh sweep.
      *
      * We note that hasBeenRefined() can be wrong and willBeRefined() might

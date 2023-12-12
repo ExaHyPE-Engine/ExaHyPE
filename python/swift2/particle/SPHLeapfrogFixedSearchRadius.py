@@ -476,7 +476,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                        #include "swift2/timestepping/TimeStepping.h"
                                        """,
             touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
-            # touch_vertex_last_time_dependency_policy  = "TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
+            #  touch_vertex_last_time_dependency_policy  = "TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
             cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
         )
         self.algorithm_steps_dict["PredictHydro"] = predictHydro
@@ -486,17 +486,11 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
             touch_vertex_first_time_kernel="::swift2::forAllParticles(assignedParticles, ::swift2::kernelPlaceholders::hydro_prepare_density<globaldata::{}> );".format(self.name),
-            # Keeping this as a reminder for SPH versions with variable search radii
-            #                             """,
             cell_kernel="::swift2::forAllParticlePairs(marker, localParticles, activeParticles, ::swift2::kernels::densityKernel<globaldata::{}> );".format(self.name),
             touch_vertex_last_time_kernel="""
               ::swift2::forAllParticles(assignedParticles, ::swift2::kernelPlaceholders::hydro_end_density<globaldata::{}> );
               ::swift2::forAllParticles(assignedParticles, ::swift2::kernelPlaceholders::hydro_update_smoothing_length_and_rerun_if_required<globaldata::{}> );
             """.format(self.name, self.name),
-            # Keeping this as a reminder for SPH versions with variable search radii.
-            #  touch_vertex_last_time_kernel="""
-            #                             ::swift2::kernels::endDensityCalculation(localParticles);
-            #                             """,
             includes="""
                                        #include "swift2/kernels/SwiftKernelPlaceholders.h"
                                        #include "swift2/kernels/ParticleParticleInteraction.h"

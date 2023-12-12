@@ -132,7 +132,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     are not persistent in Peano.
 
     This would yield a lot of memory movements and also potentially destroy
-    any well-aligned and ordered memory arrangement which is poissoneous for
+    any well-aligned and ordered memory arrangement which is poisoneous for
     vectorisation. Therefore, we leave particles on coarser levels. The green
     particles is no dropped.
 
@@ -150,7 +150,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       contributions from blue.
     - Now we drop blue.
     - Blue is cleared due to the drop.
-    - Blue is now getting contributiosn from the coarser level, i.e. green. As
+    - Blue is now getting contributions from the coarser level, i.e. green. As
       this is a multiscale relation, green is also added (fine grid)
       contributions from blue.
 
@@ -158,7 +158,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     contributions from the particle which is dropped in this very mesh
     traversal. To avoid this, we either veto any particle-particle interaction
     in a mesh traversal which also drops, or we find a mechanism to remove the
-    contributions to coarse meshes whenever we drop a particle. In don't do the
+    contributions to coarse meshes whenever we drop a particle. I don't do the
     latter usually, as it is more complicated.
 
 
@@ -213,18 +213,18 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     )
 
     """!
-    
+
    Drop fitting particles from coarser mesh level into fine grid mesh
 
    Happens when we touch a vertex for the first time. The only thing this routine
    does is to drop particles within the tree, i.e. move them to finer levels.
    No parallelisation is taken into account.
-   
-   We have to check carefully if all coarse grid particles are local. In the 
+
+   We have to check carefully if all coarse grid particles are local. In the
    example below
-   
+
    @image html UpdateParticleGridAssociation_LiftDrop.png
-   
+
    the coarse vertices could be on another rank if the tree is cut vertically.
    If could also be that the green vertex is actually from an adjacent domain
    and hence does not hold any reasonable information.
@@ -240,17 +240,17 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         if ( ::toolbox::particles::dropParticle(**p,marker) ) {
           _numberOfDrops++;
           (*p)->setCellH(marker.h());
-          assertion3( 
-            fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),        
-            fineGridVertex{{PARTICLES_CONTAINER}}.toString(), 
+          assertion3(
+            fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),
+            fineGridVertex{{PARTICLES_CONTAINER}}.toString(),
             coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString(),
-            _treeNumber 
+            _treeNumber
           );
-          assertion3( 
-            coarseGridVertices{{PARTICLES_CONTAINER}}(i).isValid(), 
-            fineGridVertex{{PARTICLES_CONTAINER}}.toString(), 
+          assertion3(
+            coarseGridVertices{{PARTICLES_CONTAINER}}(i).isValid(),
+            fineGridVertex{{PARTICLES_CONTAINER}}.toString(),
             coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString(),
-            _treeNumber 
+            _treeNumber
           );
           p = fineGridVertex{{PARTICLES_CONTAINER}}.grabParticle( p, coarseGridVertices{{PARTICLES_CONTAINER}}(i) );
         }
@@ -267,7 +267,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker );
 
     _numberOfDropsFromSieveSet += sievedParticles.size();
-    
+
     for (auto& p: sievedParticles) {
       p->setCellH(marker.h());
     }
@@ -280,7 +280,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     )
 
     """!
-    
+
   Lift all particles to next coarser level
 
   Explicit lift of particles to a coarser level. Usually, lifts are
@@ -288,7 +288,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   __Template_ReassignAndLiftWithinCell. If a vertex is however destroyed or
   is hanging, i.e. not persistent in-between two mesh traversals,
   then we have to lift the particles explicitly.
-  
+
   If the parent cell is local, we know that all @f$ 2^d @f$ parent
   vertices are local. However, we have to know if the real parent
   is local, too.
@@ -300,7 +300,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   for (int d=0; d<Dimensions; d++) {
     target[d] = marker.getRelativePositionWithinFatherCell()(d)>=2;
   }
-  
+
   if ( marker.isParentVertexLocal(target.to_ulong()) ) {
     assertion2( coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).isValid(), coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
     assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                          coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );

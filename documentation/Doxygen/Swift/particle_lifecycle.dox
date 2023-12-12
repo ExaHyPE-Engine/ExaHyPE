@@ -168,8 +168,8 @@ of the particles is correct.
 
 ## Drifts (movements)
 
-Movements and changes to the paticle cut-offs should, in line with the 
-@ref page_toolbox_particles_mesh_consistency "discussion in Peano's toolbox", 
+Movements and changes to the paticle cut-offs should, in line with the
+@ref page_toolbox_particles_mesh_consistency "discussion in Peano's toolbox",
 only be done in touchVertexLastTime(). That is, usually the movement delta is
 accumulated over the mesh traversal and then applied in this last access step.
 From hereon, it is Peano's responsibility to get the particle to the right
@@ -177,52 +177,52 @@ position in space in time for the next mesh sweep.
 
 ## Interaction range calculation
 
-There are multiple flavours of the computation of the particle interaction 
+There are multiple flavours of the computation of the particle interaction
 radius stemming from the density reconstruction:
 
 1. Invariant smoothing length;
 2. Adaptive smoothing length within the constraints of a given upper bound (cut-off radius);
 3. Adaptive smoothing length without constraints.
 
-The first variant is simple: We have to ensure in the particle initialisation 
-that the cut-off radius is bigger or equal to the fixed smoothing length. As 
+The first variant is simple: We have to ensure in the particle initialisation
+that the cut-off radius is bigger or equal to the fixed smoothing length. As
 the cut-off determines the distance in which Peano searches for neighbouring
-particles, we will then get a set of active particles per local particle, 
+particles, we will then get a set of active particles per local particle,
 iterate through them, and neglect all particles that are not within the
 smoothing length:
 
-- The algorithm step's swift2.particle.AlgorithmStep.Dependencies is set to 
+- The algorithm step's swift2.particle.AlgorithmStep.Dependencies is set to
   NEIGHBOURS.
-- The algorithm step's swift2.particle.AlgorithmStep.Effect is set to 
+- The algorithm step's swift2.particle.AlgorithmStep.Effect is set to
   ALTER_LOCAL_STATE.
-  
-The second variant can change the local state. It's 
- 
-- swift2.particle.AlgorithmStep.Dependencies is set to 
+
+The second variant can change the local state. It's
+
+- swift2.particle.AlgorithmStep.Dependencies is set to
   NEIGHBOURS;
-- swift2.particle.AlgorithmStep.Effect is set to 
+- swift2.particle.AlgorithmStep.Effect is set to
   ALTER_LOCAL_STATE_AND_MIGHT_RERUN.
 
-Consult the discussion of multiscale interactions below to understand why it 
-might happen that this algorithm reruns. The third, most flexible, variant 
-is configured with 
+Consult the discussion of multiscale interactions below to understand why it
+might happen that this algorithm reruns. The third, most flexible, variant
+is configured with
 
-- swift2.particle.AlgorithmStep.Dependencies is set to 
+- swift2.particle.AlgorithmStep.Dependencies is set to
   NEIGHBOURS;
-- swift2.particle.AlgorithmStep.Effect is set to 
+- swift2.particle.AlgorithmStep.Effect is set to
   CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN.
 
 
 ### Multiscale interactions
 
-If particles interact with particles, we have to keep keep in mind that these
+If particles interact with particles, we have to keep in mind that these
 are realised through computations between the local set and the active set.
 The recursive definition of the @ref page_toolbox_particles_mesh_traversal "active set"
-implies that the active set exclusively hosts particles of the same mesh 
+implies that the active set exclusively hosts particles of the same mesh
 resolution plus the ones stemming from coarser levels. We miss out on particles
 which are stored on finer levels.
 
-This is not only a constraint for setups with largely varying smoothing 
+This is not only a constraint for setups with largely varying smoothing
 lengths. It already becomes a serious issue if you employ adaptive grids. The
 action set peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation
 discusses this phenomenon in detail.
@@ -230,19 +230,19 @@ discusses this phenomenon in detail.
 The solution to this "problem" is to accumulate all data (including the density)
 and to make (local) particles add contributions to active particles on coarser
 levels. Usually, i.e. on a single level, active particles act on local levels
-but are not updated themselves. So we 
+but are not updated themselves. So we
 
 - reset the particle state in touchVertexFirstTime();
 - accumulate data within the cell kernels;
 - update the state in touchVertexLastTime().
 
-If the calculation of a particle state is itself an iterative scheme, we have 
+If the calculation of a particle state is itself an iterative scheme, we have
 to map the iterations onto mesh sweep reruns: In Peano, we never have the whole
-set of neighbouring particles available! Rerunning a step is triggered through 
+set of neighbouring particles available! Rerunning a step is triggered through
 the particle's species: The code has to invoke its setRerunPreviousGridSweep().
 
 
-@todo Conflict of concurrent data access is here, but it is not really a 
+@todo Conflict of concurrent data access is here, but it is not really a
 conflict. It is a simple critical section.
 
 

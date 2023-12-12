@@ -48,7 +48,7 @@ namespace swift2 {
        * This routine is called by the mark operations after(!) it has altered
        * the two counters numberOfUpdates and numberOfMaskOuts. The actual
        * validation usually is enforced by assertions, but this has to happen
-       * outside. The routine here only determins if a state is valid or not.
+       * outside. The routine here only determines if a state is valid or not.
        */
       bool isValid(Invariant policy, bool workOnParticle, int numberOfUpdates, int numberOfMaskOuts);
 
@@ -62,11 +62,11 @@ namespace swift2 {
        *
        * This routine returns the relative step in the future which has
        * to be cleared at this point (so no updated or masked out marker set).
-       * Invoked in teh Nth step and return n, we check all steps starting from
-       * N+n if they are clared.
+       * Invoked in the Nth step and return n, we check all steps starting from
+       * N+n if they are cleared.
        *
        * If you return 0, then this implies that all future steps have to be
-       * clared. If you return numberOfSteps, we don't check any
+       * cleared. If you return numberOfSteps, we don't check any
        * future step.
        */
       int firstFutureStepThatHasToBeCleared(Invariant policy, int numberOfSteps);
