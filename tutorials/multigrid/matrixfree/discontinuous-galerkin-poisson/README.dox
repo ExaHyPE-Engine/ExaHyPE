@@ -1,0 +1,47 @@
+/**
+
+ @page tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson Matrix-free Discontinuous Galerkin for the Poisson equation
+
+ This simple example discusses the steps from the file t.b.d..
+ We omit some technical details (such as the parsing of the command line) and 
+ focus on key ingredients. Therefore, it is reasonable to study this description 
+ in combination with the actual script. It is best to read this documentation in 
+ combination with the docu of the class multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver,
+ which provides a lot of details on the actual implementation and mathematical ingredients.
+ This page is more on the how to use the class to construct a working solver.
+ 
+ Once again, we solve the Poisson equation, and employ a Discontinuous Galerkin
+ formalism with a point-wise Riemann solver. That is, we start from
+ 
+ \f{eqnarray*}{
+ - \Delta u & = & f \\
+ \int \left( - \Delta u, \phi \right) dx & = & \int (f, \phi) dx \\
+ \int _c \left( \nabla u, \nabla \phi \right) dx - \sum _f \int _f \left( \nabla u, n \right) \phi dS(x) & = & \int (f, \phi) dx \\
+ \int _c \left( \nabla u, \nabla \phi \right) dx - \sum _f \int _f \left( \mathcal{R}(u^-,u^+), n \right) \phi dS(x) & = & \int (f, \phi) dx
+ \f}
+ 
+ which leads to the equation system
+
+ @f$
+  A u|_c - P \mathcal{R}(u^-,u^+) = A u|_c - P \mathcal{R}(u|_f) = A u|_c - P \varphi|_f = Mf
+  @f$  
+ 
+ per cell.
+ 
+ 
+ # Project setup
+ 
+ To be written.
+ 
+ We create a solver of the type multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.
+ This solver is given the name MyDG in the present example.
+ 
+ # Implement core
+ 
+ Upon the first run of the Python script, we get two new C++ classes, i.e. four
+ files: AbstractMyDG.h, AbstractMyDG.cpp, MyDG.h, MyDG.cpp. The interesting file
+ for the user is MyDG.cpp
+ 
+ 
+ 
+*/
