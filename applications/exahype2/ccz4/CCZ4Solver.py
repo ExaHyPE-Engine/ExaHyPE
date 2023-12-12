@@ -780,7 +780,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             min_meshcell_h=min_meshcell_h,
             max_meshcell_h=max_meshcell_h,
             time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
-            / 16.0,
+            ,
             pde_terms_without_state = pde_terms_without_state,
         )
 
