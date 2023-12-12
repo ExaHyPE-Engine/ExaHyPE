@@ -18,10 +18,9 @@ size. Particles with a large search radius are consequently stored on coarser
 levels. This allows us to define our particle sets:
 
 - Particles associated with local, persistent (non-hanging) vertices of a cell.
-  This set, called localParticles, holds all the particle pointers which
-  are associated to the @f$ 2^d @f$ vertices of the cell and therefore also
-  some particles slightly outside of the current cell. However all particles
-  within this set are tied to the same resolution level.
+  This set, called localParticles, holds all the particle pointers of particles
+  that reside on the same resolution level as the set's vertex and where the 
+  current vertex is the closest one to the particles' coordinates.
 - The set of active particles is the local set plus the active set from
   the father cell in the spacetree. This is a recursive definition. So the set
   of active particles holds all local particles plus all the particles of

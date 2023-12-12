@@ -74,12 +74,9 @@ class AlgorithmStep(object):
         Return True if the effect object may trigger a rerun
         
         """
-        if (effect==AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN
-            or
-            effect==AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN
-            or
-            effect==AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
-            ):
+        if effect in [AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN,
+                      AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
+                      AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN]:
             return True
         else:
             return False
@@ -141,30 +138,30 @@ class AlgorithmStep(object):
 
         ## Parameters/attributes
 
-        cell_kernel: C++ code (string)
+        @param cell_kernel: C++ code (string)
           Kernel invocation what happens in a cell. Set to None if nothing
           is to be done per cell.
 
-        touch_vertex_first_time_kernel: C++ code (string)
+        @param touch_vertex_first_time_kernel: C++ code (string)
           Kernel invocation what happens when we read a vertex and its particles
           for the first time. Set to None if nothing is to be done.
 
-        touch_vertex_last_time_kernel: C++ code (string)
+        @param touch_vertex_last_time_kernel: C++ code (string)
           Kernel invocation what happens when we read a vertex and its particles
           for the last time. Set to None if nothing is to be done.
 
-        input_particles: ParticleSet
+        @param input_particles: ParticleSet
           Switch to None in most cases. This fragment gives you the opportunity
           to couple the particles of one step with another particle species. If
           you hand in None, then we assume that the algorithm step updates the
           particles as input function from the particles.
 
-        includes: String
+        @param includes: String
           Additional include statements
 
                    prepare_traversals_kernel        = None,
 
-        prepare_traversal_kernel: String (C++ code snippet)
+        @param prepare_traversal_kernel: String (C++ code snippet)
           Whenever Peano runs through the mesh, it creates one instance of the
           mesh observer and then runs through all subpartitions (trees) in
           parallel. Each replica of the observer issues its own touchVertexFirstTime(),
@@ -180,11 +177,21 @@ class AlgorithmStep(object):
           for some MPI communication (global data exchange), e.g., or to update
           some other static properties for whole sets of objects.
 
-        self.unprepare_traversal_kernel: String (C++ code snippet)
+        @param unprepare_traversal_kernel: String (C++ code snippet)
           Counterpart of prepare_traversal_kernel. Consult
           @ref peano_action_sets "action sets" for more context.
 
-        self.cell_kernel_dependency_policy: String or None
+        @param cell_kernel_dependency_policy: String or None
+          If it is a string, it should identify one of the variants of
+          swift2::dependencychecks::Invariant. If you pick None, Swift 2
+          will add default dependencies. They might be too strict.
+
+        @param touch_vertex_first_time_dependency_policy: String or None
+          If it is a string, it should identify one of the variants of
+          swift2::dependencychecks::Invariant. If you pick None, Swift 2
+          will add default dependencies. They might be too strict.
+          
+        @param touch_vertex_last_time_dependency_policy: String or None
           If it is a string, it should identify one of the variants of
           swift2::dependencychecks::Invariant. If you pick None, Swift 2
           will add default dependencies. They might be too strict.
