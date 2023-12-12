@@ -282,8 +282,12 @@ if(WITH_GPU)
   endif()
 endif()
 
+# Set default build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Debug;Release;Asserts;Trace;Stats" CACHE STRING "Choose the type of build (Debug, Release, Asserts, Trace, Stats)" FORCE)
+endif()
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS " " "Debug" "Release" "Asserts" "Trace" "Stats" "Debug\;Release\;Asserts\;Trace\;Stats")
-set(WITH_DIMENSIONS "" CACHE STRING "Dimensions to build with ;-separated list of values")
+set(WITH_DIMENSIONS "2;3" CACHE STRING "Dimensions to build with ;-separated list of values")
 
 if(PEANO_BUILD_TYPE)
   if(CMAKE_BUILD_TYPE)
