@@ -260,9 +260,10 @@ std::string tarch::mpi::MPIStatusToString( const MPI_Status& status ) {
 
 #ifdef Parallel
 void tarch::mpi::Rank::initialiseLocalAcceleratorDeviceId() {
+#if !defined(GPUOffloadingOff)
   MPI_Comm nodeLocal;
   constexpr int splitType = MPI_COMM_TYPE_SHARED;
-  int worldRank = getRank()
+  int worldRank = getRank();
 
   MPI_Comm_split_type(MPI_COMM_WORLD, splitType, worldRank, MPI_INFO_NULL, &nodeLocal);
 
@@ -277,9 +278,12 @@ void tarch::mpi::Rank::initialiseLocalAcceleratorDeviceId() {
   int numberOfAcceleratorDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
   int nodeLocalSize = MPI_Comm_size(nodeLocal, &nodeLocalSize);
   asertion2(numberOfAcceleratorDevices == nodeLocalSize, numberOfAcceleratorDevices, nodeLocalSize);
+
+  logInfo("tarch::mpi::Rank()", "Rank " << worldRank << " has node local rank and accelerator device Id: " << tarch::mpi::Rank::_localDeviceId);
 #endif
 
   MPI_Comm_free(&node_local);
+#endif
 }
 
 #endif
