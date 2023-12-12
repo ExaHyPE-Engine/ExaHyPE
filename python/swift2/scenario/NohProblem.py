@@ -36,7 +36,6 @@ class NohProblemIC:
       const double eta_fac = particle->getEtaFactor();
       /* Initial estimate for smoothing length */
       particle->setSmoothingLength( eta_fac * std::pow(particle->getMass() / particle->getDensity(), 1.0 / HYDRO_DIMENSIONS) );
-      particle->setSmoothingLengthPrevious( particle->getSmoothingLength() );
 
       /* Set neglibible internal energy */
       particle->setU( 1e-6 );
@@ -87,18 +86,12 @@ class NohProblemIC:
       particle->setUDot  (0.0);
       particle->setHDot  (0.0);
       particle->setWcount(0.0);
-      particle->setNcount(0  );
       particle->setF     (0.0);
       particle->setRho_dh(0.0);
       particle->setWcount_dh(0.0);
 
-      particle->setHLeft (particle->getSmlMin());
-      particle->setHRight(particle->getSmlMax());
-
-      particle->setHasConverged(false);
       particle->setHasNoNeighbours(false);
-      particle->setResidual(0.0);
-      particle->setIterCount(0);
+      particle->setSmoothingLengthIterCount(0);
       particle->setIsBoundaryParticle(false);
 
       // Artificial viscosity scheme
