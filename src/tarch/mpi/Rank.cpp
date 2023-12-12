@@ -17,6 +17,7 @@
 
 #ifdef PeanoDebug>=4
 #include "tarch/accelerator/Device.h"
+#include "tarch/Assertions.h"
 #endif
 
 /**
@@ -276,20 +277,23 @@ void tarch::mpi::Rank::initialiseLocalAcceleratorDeviceId() {
 
 #if PeanoDebug>=4
   int numberOfAcceleratorDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
-  int nodeLocalSize = MPI_Comm_size(nodeLocal, &nodeLocalSize);
-  asertion2(numberOfAcceleratorDevices == nodeLocalSize, numberOfAcceleratorDevices, nodeLocalSize);
+  int nodeLocalSize;
+  MPI_Comm_size(nodeLocal, &nodeLocalSize);
+  if (numberOfAcceleratorDevices != nodeLocalSize){
+    logWarning("tarch::mpi::Rank()", "Number of ranks per node: " << nodeLocalSize << " is not equal to number of accelerator decives: " << numberOfAcceleratorDevices);
+  }
 
   logInfo("tarch::mpi::Rank()", "Rank " << worldRank << " has node local rank and accelerator device Id: " << tarch::mpi::Rank::_localDeviceId);
 #endif
 
-  MPI_Comm_free(&node_local);
+  MPI_Comm_free(&nodeLocal);
 #endif
 }
 
 #endif
 
 #ifdef Parallel
-int getLocalDeviceId() {
+int tarch::mpi::Rank::getLocalDeviceId() {
   assertion(_initIsCalled);
   return tarch::mpi::Rank::_localDeviceId;
 }
