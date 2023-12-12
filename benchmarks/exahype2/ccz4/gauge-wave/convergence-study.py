@@ -142,10 +142,12 @@ if "fd4-rk" in args.solver:
     order = int(args.solver[-1])
     my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         name="CCZ4FD4RK" + str(order),
-        patch_size=5,
+        patch_size=9,
         rk_order=order,
         min_meshcell_h=args.cell_size / 3,
         max_meshcell_h=args.cell_size / 3,
+        use_heap_storage=False,
+        pde_terms_without_state=True
     )
     my_solver.set_implementation(
         initial_conditions="""
