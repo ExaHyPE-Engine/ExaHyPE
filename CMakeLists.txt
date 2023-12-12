@@ -282,11 +282,9 @@ if(WITH_GPU)
   endif()
 endif()
 
-# The CMAKE_BUILD_TYPE starts empty, it can be only appended to the list of build types but removed
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS " " "Debug" "Release" "Asserts" "Trace" "Stats" "Debug\;Release\;Asserts\;Trace\;Stats")
 set(WITH_DIMENSIONS "" CACHE STRING "Dimensions to build with ;-separated list of values")
 
-# Update core libraries' build modes and dimensions if it is not set to build all and if the build type of an application is different.
 if(PEANO_BUILD_TYPE)
   if(CMAKE_BUILD_TYPE)
     list(FIND CMAKE_BUILD_TYPE ${PEANO_BUILD_TYPE} index)
