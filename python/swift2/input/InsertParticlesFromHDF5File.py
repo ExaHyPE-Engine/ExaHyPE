@@ -117,8 +117,6 @@ class InsertParticlesFromHDF5File(ActionSet):
        * initialisation script general for any hydro scheme, etc.
        */
 
-      newParticle->setSmoothingLengthPrevious( SmoothingLength );
-
       newParticle->setSearchRadius(GridSize_x / 2.0);
 
       newParticle->setPressure  ( Pressure );
@@ -139,19 +137,13 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setUDot  (0.0);
       newParticle->setHDot  (0.0);
       newParticle->setWcount(0.0);
-      newParticle->setNcount(0  );
-      newParticle->setF     (0.0);
+      newParticle->setF(0.0);
       newParticle->setRho_dh(0.0);
       newParticle->setWcount_dh(0.0);
 
-      newParticle->setHLeft (hmin);
-      newParticle->setHRight(hmax);
 
 //      newParticle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
-      newParticle->setHasConverged(false);
-      newParticle->setHasNoNeighbours(false);
-      newParticle->setResidual(0.0);
-      newParticle->setIterCount(0);
+      newParticle->setSmoothingLengthIterCount(0);
       newParticle->setIsBoundaryParticle(false);
 
       // Artificial viscosity scheme

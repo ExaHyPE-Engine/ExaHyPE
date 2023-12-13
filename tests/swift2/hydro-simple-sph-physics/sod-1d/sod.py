@@ -138,7 +138,6 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=20,
     min_h=args.cell_size,
     max_h=args.cell_size,
-    asserts=args.asserts,
 )
 
 
@@ -280,8 +279,6 @@ particle_plotter.add_attribute_to_plot(particle.density, 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-particle_plotter.add_attribute_to_plot(particle.f, 1)
-particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
 particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 

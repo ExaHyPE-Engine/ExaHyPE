@@ -8,12 +8,12 @@ set -e
 export OMP_NUM_THREADS=4
 
 # Parameters
-N_PART=64
+N_PART=128
 END_TIME=0.2
 TIMESTEP_SIZE=1e-3
 CFL_FACTOR=0.2
 PLOT_DELTA=0.01
-CELL_SIZE=0.1
+CELL_SIZE=0.2
 
 # Run python script to generate the experiment
 echo 'generate and compile code ...'
