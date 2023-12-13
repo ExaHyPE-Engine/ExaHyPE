@@ -332,7 +332,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
 
             if global_steps_to_update_parallel_state[i]:
                 action_set_update_parallel_state = (
-                    peano4.toolbox.particles.UpdateParallelState(
+                    peano4.toolbox.particles.api.UpdateParallelState(
                         particle_set=current_species_set,
                     )
                 )

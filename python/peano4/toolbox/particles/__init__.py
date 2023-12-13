@@ -31,8 +31,6 @@ from .ParticleTreeAnalysis import create_cell_marker
 from .ParticleTreeAnalysis import ParticleTreeAnalysis
 
 
-from .UpdateParallelState import UpdateParallelState
-
 from .GatherParticlesInMemoryPool import GatherParticlesInMemoryPool
 
 from .InsertRandomParticlesIntoUnrefinedCells import (

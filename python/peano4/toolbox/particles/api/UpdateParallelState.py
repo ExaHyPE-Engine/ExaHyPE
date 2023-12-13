@@ -237,6 +237,9 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     _numberOfIncomingLocalParticles++;
     (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
     p++;
+    #if defined(Parallel) or defined(SharedMemoryParallelism)
+    assertion(false);
+    #endif
   }
   else if (
     (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
@@ -246,6 +249,9 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was local but now is remote. Remove local copy" );
     _numberOfLeavingLocalParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
+    #if defined(Parallel) or defined(SharedMemoryParallelism)
+    assertion(false);
+    #endif
   }
   else if (
     (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual
@@ -255,6 +261,9 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " was virtual and remains virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
     _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
+    #if defined(Parallel) or defined(SharedMemoryParallelism)
+    assertion(false);
+    #endif
   }
   else {
     assertion3( false, (*p)->toString(), fineGridVertex{{PARTICLES_CONTAINER}}.toString(), marker.toString() );

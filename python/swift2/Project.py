@@ -14,7 +14,7 @@ from swift2.actionsets.DynamicMeshRefinementAnalysis import (
 )
 from swift2.output.SWIFTMain import SWIFTMain
 
-import swift2.graphcompiler
+import swift2.api.graphcompiler
 
 
 from abc import abstractmethod
@@ -67,10 +67,10 @@ class Project(object):
         self.algorithm_step_plot = peano4.solversteps.Step("Plot", False)
 
         self.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals
+            swift2.api.graphcompiler.map_particle_steps_onto_separate_mesh_traversals
         )
         self.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals
+            swift2.api.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals
         )
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
@@ -462,7 +462,7 @@ levels.
             )
 
             self.algorithm_step_plot.add_action_set(
-                peano4.toolbox.particles.UpdateParallelState(current_species_set)
+                peano4.toolbox.particles.api.UpdateParallelState(current_species_set)
             )
 
         #
