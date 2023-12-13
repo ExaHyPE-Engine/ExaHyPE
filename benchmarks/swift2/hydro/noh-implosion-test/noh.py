@@ -551,7 +551,6 @@ if __name__ == "__main__":
     # which returns an object that holds global information about this particle
     # type.
     ###############################################################################
-    # particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
     particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
         "particles",
         particle_set,
@@ -565,8 +564,6 @@ if __name__ == "__main__":
     particle_plotter.add_attribute_to_plot(particle.pressure, 1)
     particle_plotter.add_attribute_to_plot(particle.u, 1)
     particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-    particle_plotter.add_attribute_to_plot(particle.f, 1)
-    particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
     particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
     project.algorithm_step_plot.add_action_set(particle_plotter)
 
