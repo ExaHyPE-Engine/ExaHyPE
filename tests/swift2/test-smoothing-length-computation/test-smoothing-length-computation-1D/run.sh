@@ -22,7 +22,7 @@ python3 makeIC.py -np $N_PART -s $rand
 for neighbors in 3 5 10; do
     echo running for $neighbors neighbors
     echo 'generate and compile code ...'
-    python3 ./test_smoothing_length_computation_1D.py -cs $CELL_SIZE -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE > /dev/null
+    python3 ./test_smoothing_length_computation_1D.py -cs $CELL_SIZE -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE --asserts > /dev/null
     echo 'running test ...'
     ./testSML > /dev/null
     echo 'comparing results ...'
