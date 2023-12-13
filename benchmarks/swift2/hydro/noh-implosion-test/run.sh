@@ -12,5 +12,8 @@ N_PART=200
 PLOT_DELTA=0
 
 # Run python script to generate the experiment
-python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -opt continuous-per-vertex-vectorise -v
+for REALISATION in domain-decomposition.scattered
+do
+  python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v
+done
 
