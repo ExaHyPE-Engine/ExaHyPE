@@ -552,11 +552,12 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
 
   DoubleMessage::initDatatype();
   IntegerMessage::initDatatype();
+
+  initialiseLocalAcceleratorDeviceId();
   #endif
 
   _initIsCalled = true;
 
-  initialiseLocalAcceleratorDeviceId();
   return true;
 }
 
