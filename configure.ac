@@ -110,11 +110,11 @@ CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0 "
 # Note: the flag "-g" is essentially a flag for the compiler driver.
 # Given as a linker flag, the linker does not complain but it will be ignored.
 # Taken from GNU ld documentation: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
-LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
-LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
-LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
-LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
-LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src/tarch -L$srcdir_full_path/src/peano4 "
+LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
+LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src "
+LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src "
+LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src "
+LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src "
 
 LDADD_PEANO_2D_RELEASE=" -lPeano4Core2d         -lTarch"
 LDADD_PEANO_2D_STATS="   -lPeano4Core2d_stats   -lTarch_stats"
