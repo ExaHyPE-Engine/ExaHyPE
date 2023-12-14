@@ -303,6 +303,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     def get_includes(self):
         result = jinja2.Template(
             """
+#include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
 

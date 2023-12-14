@@ -176,9 +176,15 @@ class InsertParticlesFromHDF5File(ActionSet):
 
     __Template_EndTraversal = jinja2.Template(
         """
-  logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree "
-                                         << _spacetreeId
-                                         << " (boundary vertices might host redundant particle data)" );
+  if (_particleNumberOnThisTree==0) {
+    logWarning( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId );
+  }
+  else {
+    logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)" );
+  }  
+  #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
+  assertion( _particleNumberOnThisTree>0 );
+  #endif
 """
     )
 
@@ -202,6 +208,7 @@ class InsertParticlesFromHDF5File(ActionSet):
     def get_includes(self):
         result = jinja2.Template(
             """
+#include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
