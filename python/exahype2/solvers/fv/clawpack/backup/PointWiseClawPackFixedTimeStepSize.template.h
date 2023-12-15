@@ -45,7 +45,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
-      bool                                         gridIsConstructred
+      bool                                         gridIsConstructed
     ) override;
     {% endif %}
 

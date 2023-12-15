@@ -128,6 +128,26 @@ class Constants(object):
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
 
+  def define_value(self, name, value):
+    new_entry = "#define " + name + " " + value
+    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
+    pass
+
+  def use(self, original):
+    new_entry = "using " + original
+    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + ";\n"
+    pass
+
+  def use_alias(self, alias, original):
+    new_entry = "using " + alias + "=" + original
+    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + ";\n"
+    pass
+
+  def use_namespace_alias(self, alias, original):
+    new_entry = "namespace " + alias + "=" + original
+    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + ";\n"
+    pass
+
   def generate(self, overwrite, directory):
     filename = directory + "/Constants.h"
     if write_file(overwrite,self.default_overwrite,filename):

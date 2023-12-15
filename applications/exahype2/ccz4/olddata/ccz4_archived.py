@@ -243,12 +243,12 @@ if __name__ == "__main__":
         self._domain_r = domain_r
 
         self.set_implementation(
-          boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          flux=exahype2.solvers.fv.PDETerms.None_Implementation,
-          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          flux=exahype2.solvers.PDETerms.None_Implementation,
+          source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
+          eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation
         )
 
         if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
@@ -745,8 +745,8 @@ if __name__ == "__main__":
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
           min_h, args.max_h, time_step_size,
           flux = None,
-          ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-          sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+          ncp  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+          sources = exahype2.solvers.PDETerms.User_Defined_Implementation
       )
     else:
       my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r,args.CCZ4KOSigma)
@@ -981,12 +981,12 @@ if __name__ == "__main__":
       my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
    
 
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-    #project.set_load_balancing("toolbox::loadbalancing::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-    #project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
 
 
 ########################################################################################

@@ -1,0 +1,106 @@
+/**
+
+ @page tests_swift2_hydro_simple_sph_sod_1d Sod Shockwave 1d (Simple SPH)
+
+The setup runs the 1d sod shockwave with a simple SPH scheme, i.e. fixed
+interaction radius. By default, we embed the 1d setup into a 2d mesh, but
+you can also change it to three dimensions.
+
+
+## Prepare the run
+
+First of all, we have to create the initial conditions.
+
+
+        python3 makeIC.py
+
+This one should give you a file ```sodShock.hdf5```. If you encounter
+issues around HDF5, it makes sense to consult our general discussion of
+@ref swift_initial_conditions "Swift's initial conditions".
+
+
+## Create the setup
+
+The setup can be defined via one simple Python call
+
+
+        python3 sod.py
+
+
+Passing in --help gives you all the instructions needed. This documentation
+hosts a script (below) which you can alternatively copy n paste into your
+terminal.
+
+
+## Postprocessing
+
+We ship a Jupyter notebook to postprocess the output data directly:
+
+        jupyter-notebook plot-SodShock_1D.ipynb
+
+
+## Script to run experiment (Sod shockwave 1D)
+
+~~~~~~~~~~~~~~~~~~
+
+# set threads number
+export OMP_NUM_THREADS=1
+
+IC_FILENAME="sodShock.hdf5"
+
+# Parameters
+N_PART=900          # fixed by IC file
+END_TIME=0.1
+TIMESTEP_SIZE=1e-3
+CFL_FACTOR=0.2
+PLOT_DELTA=0.01
+CELL_SIZE=0.1
+#
+# Generate initial condition file
+if [ ! -e $IC_FILENAME ]
+then
+    echo 'Generating initial conditions...'
+    python3 makeIC.py
+fi
+
+# Run python script to generate the experiment
+echo 'generate and compile code ...'
+echo python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
+python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
+
+# run experiment
+echo 'running experiment...'
+./sod1D > output.txt
+echo 'experiment run finished.'
+
+echo 'post-processing results...'
+
+# generate Peano grid for Paraview (if needed)
+pvpython ../../../../python/peano4/visualisation/render.py grid.peano-patch-file
+
+# Save results into directory
+DIRNAME="output"
+if [ -d $DIRNAME ]
+then
+    rm -r $DIRNAME
+fi
+mkdir $DIRNAME
+mv output.txt $DIRNAME
+
+# Save file with parameters and metadata
+less Constants.h > Constants.txt && mv Constants.txt $DIRNAME
+
+# Save snapshots
+mkdir $DIRNAME"/snapshots/"
+mv particles* grid* $DIRNAME"/snapshots/"
+
+# Save other data, if any
+if [ -e *.csv ]
+then
+    mv *.csv $DIRNAME
+fi
+~~~~~~~~~~~~~~~~~~
+
+ */
+
+

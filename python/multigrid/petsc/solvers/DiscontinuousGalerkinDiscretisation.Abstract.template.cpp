@@ -82,7 +82,16 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAM
 }
 {% endif %}
 
-
+/**
+* This method requires custom scaling in each part of the matrix
+* for the DGPoisson experiment. This has been implemented in child 
+* class in the benchmarks directory, and it works by calling this
+* abstract method to grab the unscaled matrix that was supplied
+* by the user, before putting in appropriate scaling and returning.
+* 
+* If custom behaviour is desired, ensure to pass "None" to the  
+* solver class.
+*/
 {% if CELL_TO_FACE_MATRIX!=[] %}
 tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknowns*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FacesPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getProjectionOfCellDataOntoFace(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
@@ -95,19 +104,36 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAM
       {% endfor %}
   };
   double scaling = 1.0;
-  {% if CELL_TO_FACE_MATRIX_SCALING >= 0 %}
+
+  {% if CELL_TO_FACE_MATRIX_SCALING is none %}
+  // supplied "none" to the scaling for cell to face matrix. putting in custom behaviour
+  // in dervied class. reuse this method to grab the matrix itself
+  return result;
+
+  {% elif CELL_TO_FACE_MATRIX_SCALING >= 0 %}
   for (int i=0; i<{{CELL_TO_FACE_MATRIX_SCALING}}; i++) {
     scaling *= cellSize(0);
-  {% else %}
-  for (int i=0; i<(-1)*{{CELL_TO_FACE_MATRIX_SCALING}}; i++) {
-    scaling /= cellSize(0);
-  {% endif %}
   }
   return scaling * result;
+  {% elif CELL_TO_FACE_MATRIX_SCALING <  0 %}
+  for (int i=0; i<(-1)*{{CELL_TO_FACE_MATRIX_SCALING}}; i++) {
+    scaling /= cellSize(0);
+  }
+  return scaling * result;
+  {% endif %}
 }
 {% endif %}
 
-
+/**
+* This method requires custom scaling in each part of the matrix
+* for the DGPoisson experiment. This has been implemented in child 
+* class in the benchmarks directory, and it works by calling this
+* abstract method to grab the unscaled matrix that was supplied
+* by the user, before putting in appropriate scaling and returning.
+* 
+* If custom behaviour is desired, ensure to pass "None" to the  
+* solver class.
+*/
 {% if FACE_TO_CELL_MATRIX!=[] %}
 tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::NodesPerFace*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknowns*{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FacesPerCell, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getProjectionOfRiemannSolutionOntoCell(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
@@ -120,15 +146,22 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::DoFsPerCell, {{NAM
       {% endfor %}
   };
   double scaling = 1.0;
-  {% if FACE_TO_CELL_MATRIX_SCALING >= 0 %}
+  {% if FACE_TO_CELL_MATRIX_SCALING is none %}
+  // supplied "none" to the scaling for cell to face matrix. putting in custom behaviour
+  // in dervied class. reuse this method to grab the matrix itself
+  return result;
+
+  {% elif FACE_TO_CELL_MATRIX_SCALING >= 0 %}
   for (int i=0; i<{{FACE_TO_CELL_MATRIX_SCALING}}; i++) {
     scaling *= cellSize(0);
-  {% else %}
-  for (int i=0; i<(-1)*{{FACE_TO_CELL_MATRIX_SCALING}}; i++) {
-    scaling /= cellSize(0);
-  {% endif %}
   }
   return scaling * result;
+  {% elif FACE_TO_CELL_MATRIX_SCALING <  0 %}
+  for (int i=0; i<(-1)*{{FACE_TO_CELL_MATRIX_SCALING}}; i++) {
+    scaling /= cellSize(0);
+  }
+  return scaling * result;
+  {% endif %}
 }
 {% endif %}
 

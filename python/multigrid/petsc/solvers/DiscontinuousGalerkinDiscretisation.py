@@ -29,7 +29,14 @@ class AssemblePetscMatrix(ActionSet):
   TemplateTouchCellFirstTime = """
   if (fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior) {
     std::pair<int,int> localCellIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
-    int globalCellIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localCellIndex);
+    int globalCellIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localCellIndex, ::petsc::LocalToGlobalMap::Type::Cell);
+
+    /*
+    This trace is in place just so that we can generate a map of the facets with their
+    global indices. It is not necessary long term and can be deleted soon...
+    */
+    logTraceInWith2Arguments("tcft_experimenter", marker.toString(), globalCellIndex);
+    logTraceOut("tcft_experimenter");
 
     // ================================
     // Left-hand side A_cc contribution
@@ -59,7 +66,7 @@ class AssemblePetscMatrix(ActionSet):
         rhs += rhsCellMatrix(row,col) * fineGridCell{{SOLVER_NAME}}.getRhs(col);
       }
       repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-        row, rhs
+        globalCellIndex+row, rhs
       );
     }
     
@@ -77,10 +84,10 @@ class AssemblePetscMatrix(ActionSet):
         fineGridFaces{{SOLVER_NAME}}PETScData(d).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Boundary
       ) {
         std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
-        int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
+        int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace, ::petsc::LocalToGlobalMap::Type::Face);
       
         assertion1(globalFirstDoFIndexOfLeftFace>=0,  marker.toString());
-        logTraceInWith4Arguments( "TCFT::LeftProjection", globalFirstDoFIndexOfLeftFace, globalCellIndex , projectionCellToFaceMatrix, projectionFaceToCellMatrix );
+        logTraceInWith5Arguments( "TCFT::LeftProjection", globalFirstDoFIndexOfLeftFace, globalCellIndex , projectionCellToFaceMatrix, projectionFaceToCellMatrix, marker.toString() );
 
         for (int row=0; row<dofsPerFace; row++ ) {
           for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
@@ -92,7 +99,7 @@ class AssemblePetscMatrix(ActionSet):
             );
             logTraceOut("CellToFace");
 
-            logTraceIn("FaceToCell");
+            logTraceInWith1Argument("FaceToCellInsertion", projectionFaceToCellMatrix(col, d * dofsPerFace + row));
             repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
               globalCellIndex+col,
               globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
@@ -110,7 +117,7 @@ class AssemblePetscMatrix(ActionSet):
         fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Boundary
       ) {
         std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
-        int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
+        int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace, ::petsc::LocalToGlobalMap::Type::Face);
       
         assertion1(globalFirstDoFIndexOfRightFace>=0, marker.toString());
 
@@ -140,13 +147,21 @@ class AssemblePetscMatrix(ActionSet):
 
   TemplateTouchFaceFirstTime="""
   auto RiemannSolverMatrix = repositories::{{SOLVER_INSTANCE}}.getRiemannSolver(marker.x(),marker.h());
-  int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
+  int dofsPerFace          = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
   if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
     std::pair<int,int> localFirstDoFIndex = std::make_pair(_spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
-    int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex);
+    int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex, ::petsc::LocalToGlobalMap::Type::Face);
 
     assertion( globalFirstDoFIndex>=0 );
 
+    /*
+    This trace is in place just so that we can generate a map of the facets with their
+    global indices. It is not necessary long term and can be deleted soon...
+    */
+    logTraceInWith2Arguments("tfft_experimenter", marker.toString(), globalFirstDoFIndex);
+    logTraceOut("tfft_experimenter");
+
+    logTraceInWith2Arguments("TFFT", globalFirstDoFIndex, RiemannSolverMatrix);
     for (int row=0; row<dofsPerFace; row++)
 
     // we have col<2*dofsPerFace here since we have left and right projections here.
@@ -163,6 +178,22 @@ class AssemblePetscMatrix(ActionSet):
         RiemannSolverMatrix(row, col)
       );
     }
+
+    // 3*dofsPerFace so that each of the -, + and solution variables receive an identity here.
+    for (int i=0; i<3*dofsPerFace; i++)
+    {
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        globalFirstDoFIndex + i,
+        globalFirstDoFIndex + i,
+        -1
+      );
+    }
+
+  logTraceOut("TFFT");
+
+  }
+  else if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Boundary ){
+    // add some more identities!
   }
   """
   

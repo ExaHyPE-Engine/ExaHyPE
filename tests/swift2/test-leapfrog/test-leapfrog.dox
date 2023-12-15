@@ -1,0 +1,19 @@
+/**
+
+ @page tests_swift2_test_leapfrog Test Leapfrog Integrator
+
+  Test the leapfrog time integrator on a simple planet-sun orbit
+  system.
+
+ Consult `run.sh` on how to run the program, and run
+
+ ~~~~~~~~~~~~~~~~~~~~~
+ python3 planet-orbit-leapfrog.py --help
+ ~~~~~~~~~~~~~~~~~~~~~
+
+ for available configuration options of the experiment.
+
+
+ */
+
+

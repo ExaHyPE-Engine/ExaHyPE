@@ -4,68 +4,68 @@
 
 
 This section discusses some Swift-specific performance optimisation steps.
-While Swift 2.0 and its baseline, Peano, provide simplistic performance analysis 
+While Swift 2.0 and its baseline, Peano, provide simplistic performance analysis
 features to spot some flaws, a proper performance optimisation has to be guided
 by external performance analysis tools.
-Furthermore, please read @ref page_peano_performance_optimisation "Peano's generic performance optimisation remarks" parallel to this 
+Furthermore, please read @ref page_peano_performance_optimisation "Peano's generic performance optimisation remarks" parallel to this
 page.
 All of the recommendations there apply for SWIFT, too.
 
 
 
 
-## Optimisting the single core performance of individual species (vectorisation)
+# Optimisting the single core performance of individual species (vectorisation)
 
-To enable proper vectorisation is not trivial within a Lagrangian framework, 
-as we typically need the right instructions, i.e. compute kernels, but also 
-a fitting memory layout. 
+To enable proper vectorisation is not trivial within a Lagrangian framework,
+as we typically need the right instructions, i.e. compute kernels, but also
+a fitting memory layout.
 As a user, you are responsible to ensure that the memory layout is properly
 chosen, and then you can activate the solvers' vectorisation.
 
 
 
-Some of Swift's solvers are however already well-prepared to exploit the knowledge about 
-optimised memory layouts and proper setups of action sets and hence can be 
+Some of Swift's solvers are however already well-prepared to exploit the knowledge about
+optimised memory layouts and proper setups of action sets and hence can be
 vectorised.
 This does not hold for all solvers. You have to study their documentation,
 typically alter some switches and then tune the memory layout and particle
 handling as described below.
-Please note that not all solvers are compatible with all graph compiler 
+Please note that not all solvers are compatible with all graph compiler
 flavours either. Again, this is something you might want to check with the
 solver documentation.
 
 Even if your solver does not support vectorisation, you might benefit from the
 discussions below such as the memory pool and the different flavours of active
-set handling. 
+set handling.
 The impact just won't be that big.
-The page @ref swift_particle_new_solver provides further details how to write 
+The page @ref swift_particle_new_solver provides further details how to write
 vectorised solvers, i.e. how to prepare solvers to be able to exploit continuous,
 well-administered memory.
 
 
 
-### Step 1: Maintaining the active sets
+## Step 1: Maintaining the active sets
 
 There are two different versions how to maintain the active sets: We can either
-build them up as proper sets and add particles to the set whenever we 
+build them up as proper sets and add particles to the set whenever we
 touchCellFirstTime() and remove them from the cell when we invoke
 touchCellLastTime(). Or we can work with a list, memorise how many particles we
 add per touchCellFirstTime() and remove exactly this number when we backtrack
-through the tree. 
+through the tree.
 
 The set variant is robust, but it is not very fast as we have to check for each
-particle in touchCellLastTime() where it is within the set and then we can 
+particle in touchCellLastTime() where it is within the set and then we can
 remove it. We also miss out on any adjacent memory storage. The list variant
 is faster and preserves the ordering of the particles per vertex/cell (see the
-remarks below), but it works if and only if the particle-mesh association 
-remains invariant. Such an "ordered" particle sequence allows you to use 
+remarks below), but it works if and only if the particle-mesh association
+remains invariant. Such an "ordered" particle sequence allows you to use
 compute kernels with coalesced memory access, i.e. vectorisation.
 This insight gives rise to a third variant, where we use the coalesced memory
 storage and insert sorting sweeps whenever the particle positions change, such
 that we can always work with properly sorted particles.
 
-Whether or not to use one variant or the other is a decision that's made by the 
-graph compiler. Some compiler flavours support different active set 
+Whether or not to use one variant or the other is a decision that's made by the
+graph compiler. Some compiler flavours support different active set
 construction variants, others are tied to one variant only.
 By default, the project initialises its graph compiler with the variant
 that does not try to vectorise or use sorted particles.
@@ -73,27 +73,36 @@ You can alter that in your code:
 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.serialise_algorithmic_steps_and_map_onto_separate_mesh_traversals_no_vec
+project.algorithm_steps_task_graph_compiler      = swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_and_vectorise
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Just pick another variant (consult namespace docu) here. Please note that these
 operations do typically unfold their potential if and only if you use a fully
 vectorised solver in combination with a proper particle memory management below.
 
-### Step 2: Storage of particles and maintaining the particle-mesh association
+Note: If you use a scheme which relies on vectorisation all the time, you have
+to also alter the initialisation via
 
-Maintaining the association of particles to meshes is key, as Peano traverses 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.initialisation_steps_task_graph_compiler  = swift2.graphcompiler.serialise_initialisation_steps_and_map_onto_separate_mesh_traversals_for_coalescend_memory_access
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Step 2: Storage of particles and maintaining the particle-mesh association
+
+Maintaining the association of particles to meshes is key, as Peano traverses
 the mesh and issues the particle updates for those particles tied to particular
 vertices or cells. We distinguish different ways how the particles themselves
 are organised in the memory and how the indices over the particles are built
-up and maintained. All particles are always stored on the heap, but how they 
-populate the heap can be changed.
+up and maintained. All particles are always stored on the heap, but how they
+populate the heap can be changed by using different
+@ref toolbox_particles_memorypool "memor pools".
 
 
 You can alter the scheme per particle species by taking your
 instance of peano4.toolbox.particles.ParticleSet. Each particle set hosts an
-attribute generator. You can exchange the generator and thus switch 
-administration and storage variants.
+attribute generator. You can exchange the generator and thus switch
+administration and storage variants per species.
 
 
 Feature | Generator | Semantics
@@ -101,12 +110,13 @@ Feature | Generator | Semantics
 scattered particles, list index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ScatteredOnHeap_IndexByList | Scatter the particles all over the heap. The pointers per vertex to the particles are organised as a linked list.
 scattered particles, vector index | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ScatteredOnHeap_IndexByVector | Almost the same as peano4.toolbox.particles.ParticleSetGenerator_ScatteredOnHeap_IndexByList, but the lists of pointers are realised through std::vector.
 arrays of particles per vertex | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_ContinuousPerVertex | The code tries to hold the particles associated with one vertex in one consecutive array. Whenever this is not possible, we use a linked list to reference the particles scattered over the memory.
+global array of particles | peano4.toolbox.particles.ParticleSet.ParticleSetGenerator_GlobalContinuous | The code tries to hold the particles in one big consecutive array where all particles associated with one vertex are held en bloc.
 
 
-The scattered variants holds the particles somewhere on the global heap, and 
-try never to move them. If particles travel within their subdomain, the code 
+The scattered variants holds the particles somewhere on the global heap, and
+try never to move them. If particles travel within their subdomain, the code
 solely update the pointers each vertex holds to the particle. As a consequence,
-we might run into a fragmented heap occupation and the compute kernels will 
+we might run into a fragmented heap occupation and the compute kernels will
 have to deal with scattered memory access. Coalescent memory access is basically
 never possible.
 
@@ -114,8 +124,8 @@ never possible.
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_ScatteredOnHeap.png
 
 
-In return, we don't move 
-(potentially heavy) particles around in memory and hence don't stress the 
+In return, we don't move
+(potentially heavy) particles around in memory and hence don't stress the
 OS memory system. To maintain the lists of the particles per vertex, we offer
 different versions. Again, the pointers can be stored within a consecutive
 memory block (array), or we can use a list which adds another level of overhead
@@ -125,9 +135,9 @@ but is more flexible if particle-associations change frequently.
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_ContinuousPerVertex.png
 
 We also offer a variant which @ref toolbox_particles_memorypool "stores the particles continuously within one memory chunks per vertex".
-You can study toolbox::particles::memorypool::VertexWiseContinuousMemoryPool 
+You can study toolbox::particles::memorypool::VertexWiseContinuousMemoryPool
 for a discussion on its realisation.
-Finally, there's also a variant which tries to hold all the particles in one 
+Finally, there's also a variant which tries to hold all the particles in one
 big blob, i.e. as one large array. This global sorting is realised through
 toolbox::particles::memorypool::GlobalContinuousMemoryPool.
 
@@ -135,7 +145,7 @@ toolbox::particles::memorypool::GlobalContinuousMemoryPool.
 @image html python/peano4/toolbox/particles/ParticleSetGenerator_GlobalContinuous.png
 
 
-The code to switch the storage scheme is relatively easy. Capture the particle 
+The code to switch the storage scheme is relatively easy. Capture the particle
 set that the Swift 2 project returns when you add a particle species:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -143,15 +153,15 @@ particle_set = project.add_particle_species(particle)
 particle_set.generator = peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(particle_set)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The line above changes the particle set generator, i.e. the class which maps the 
-particle set onto an implementation. 
+The line above changes the particle set generator, i.e. the class which maps the
+particle set onto an implementation.
 
 
-### Step 3: Expose all particle attributes
+## Step 3: Expose all particle attributes
 
-Vectorisation requires very aggressive inlining. To facilitate such inlining, 
+Vectorisation requires very aggressive inlining. To facilitate such inlining,
 all the setters and getters of particle attributes have to be available in the
-header. Study the 
+header. Study the
 @ref page_dastgen "DaStGen documentation" for remarks how to move getters and
 settings into the header. Notably study the semantics of the function
 
@@ -159,20 +169,233 @@ settings into the header. Notably study the semantics of the function
 particle.data.expose_all_attributes_in_header_file()
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-which moves all attribute setters and getters into the header and hence 
+which moves all attribute setters and getters into the header and hence
 facilitiates very aggressive inlining via copy n paste.
 
 
 
-### Step 4: Equip your solver with vectorised kernels
+## Step 4: Equip your solver with vectorised kernels
 
-Some of Swift's solvers are already well-prepared to exploit the knowledge about 
-optimised memory layouts and proper setups of action sets. Once you have 
+Some of Swift's solvers are already well-prepared to exploit the knowledge about
+optimised memory layouts and proper setups of action sets. Once you have
 followed the steps above, you can now activate this vectorisation. It differs
 from solver to solver how to do this, but most offer a boolean flag in their
 constructor.
 
+### Step 4.1: Making your kernels vectoriser friendly
 
+While vectorising any non-trivial kernel is as much art as it is engineering, there are common steps most kernels can benefit from.
+
+
+#### Analyse tool feedback 
+
+Start by gathering vectoriser output. If you use LLVM/Clang, recompile the appropriate object file with the flags 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+-Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize`
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+Find the desired loop in the output. For templates, the reported file/line is of the template, not the template instantiation location. When working with nested loops, usually only the innermost loop gets vectorised, so focus on this one.
+Sample expected output:
+
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:481:11: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
+         for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes the vectoriser only mentions that the loop isn't vectorised without 
+mentioning why. This is usually the case where the are multiple issues. A safe
+point in this case is it to start to try to inline any major functions called 
+inside the loop. If your kernel consists of a loop that calls a single 
+interaction function, manually inline this function.
+
+
+The Intel toolchain is a little bit more convenient:
+Include '''-O3 -xHost -qopt-report=3''' in the compile call. This make the
+compiler yield a .optrpt text file, which contains the actual optimisation 
+feedback. Often, you don't want to configure with the optimisation report
+and get one optimisation report per file. If you know where your routines
+are used, generate your code plus the Makefile through Python and, afterwards,
+manipulate the Makefile:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
+	rm observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.o
+	$(CXX) -qopt-report=3 $(CXXFLAGS) -c -o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.cpp
+	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where the observer file names have to be replaced with the name of the file
+which uses your altered kernel invocation.
+This tweaked makefile builds all object files. After that, it deletes the object
+file behind the action set StephydroPartForceLoop. This is the step where the
+force kernel is actually used. We then retranslate this single object file with
+Intel's -opt-report flag which provides ample evidence which vectorisation
+optimisation has been performed by the compiler.
+
+You should get a file observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.optrpt
+which summarises if the compiler has vectorised your code and even how much
+speedup you might expect. Please note that every rerun of the Python script
+overwrites the Makefile. However, there's no need to do this while you tweak
+the kernels. Just re-invoke make.
+
+
+#### Fix issues
+
+We've started to collect a list of todos and no-goes for the vectorisation
+below. You might want to weak this in one way or the other and it will be
+incomplete. But it is a reasonable starting point:
+
+- You cannot collapse the two for loops that invoke the force kernel. That 
+  would lead to a scattered iteration space in memory and hence make any 
+  vectorisation impossible. In general, it makes sense to try to have only
+  one loop and/or to vectorise over the innermost loop. 
+- The compiler has to be able to inline. According to https://clang.llvm.org/docs/AttributeReference.html#always-inline-force-inline
+  this is something one should be able to control via the annotation
+
+          [[clang::always_inline]]
+
+  but this led to multiple compiler crashes (again with Intel). To some
+  degree this makes sense: The function has to be in the header! I played
+  around with ipo, but that did not resolve the fundamental issues. So you
+  have to put everything used in the for loops into headers.
+- You might have to recursively study all inlined methods and make the
+  stuff they use inline as well.
+- Big if branches are challenging for the vectoriser. Hence, I compute one
+  scalar which is either set to 1.0 if we should update and otherwise 0.0. By
+  multiplying all updates with this scalar, we can effectively mask out the
+  kernel or keep its action. This works as long as all updates are additive,
+  i.e. we take the existing value and add something onto it, though some
+  slight tweaking also makes it work with the max and min function.
+- The tarch::la macros like smaller() or smallerEquals() might stop the
+  vectorisation. In this case, you have to move the implementations
+  into the header. We don't move all linear algebra routines into the
+  header, as this would blow up the executable size. For this
+  particular kernel, we have moved the required routines already.
+- It seemed originally that one has to replace the std::pow function
+  with a specialised version that takes into account that the power is
+  an integer. The C++ standard https://en.cppreference.com/w/cpp/numeric/math/pow
+  is not clear if there is still a specialised version of pow for
+  integers. However, all seems to vectorise nicely even if we use
+  the power with the Intel 2023.2 compiler. 
+  
+  Along the same lines, we sometimes encouter issues with the max and 
+  min function. While replacing it with a manual case distinction 
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
+  auto value = newValue > value : newValue : value;
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
+  
+  might
+  help for some compilers, it is usually a bad idea and leads to error
+  reports due to dependencies. We found it more convenient to work with
+  the actual C++ max function. In this case, the vectorisation however
+  works if and only if we translate with -Ofast or -ffast-math!
+- Complex statements such as
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Update the signal velocity
+  localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), mask * v_sig));
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  break the vectorisation. But once you replace them with statements
+  similar to
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  const double currentAV = localParticle->getV_sig_AV();
+  const double biggerAV  = mask * v_sig;
+  const double newAV     = biggerAV > currentAV ? biggerAV : currentAV;
+  localParticle->setV_sig_AV(newAV);
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  vectorisation seems to work.
+- Besides inlining, a good approach is to move as many function calls and/or 
+  data accesses outside the loop as possible. Specifically:
+  - All reads from the local particle (which is to be updated) should be done 
+    before the loop. Store the read data as local variables, i.e. manually 
+    extract parameters from their underlying struct.
+  - Inside the loop, all reads/writes that touch the local particle should be 
+    substituted with the newly created local variables.
+  - All writes to the local particle should be done after the loop by loading 
+    data from the local variables.
+  If you don't follow these recipes, you typically get messages similar to
+  ~~~~~~~~~~~~~~~~~~~
+   ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:316:23: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
+    void swift2::kernels::computeHydroForce(
+  ~~~~~~~~~~~~~~~~~~~
+
+#### Validate outcome
+
+For fully vectorised kernels, the reported width will always match the machine 
+width (4 for AVX2 and 8 for AVX512 capable machines and double precision 
+kernels). Sometimes, the compiler decides against vectorisation:
+
+  ~~~~~~~~~~~~~~~~~~~
+../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: Disabling scalable vectorization, because target does not support scalable vectors. [-Rpass-analysis=loop-vectorize]
+            for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
+            ^
+../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: the cost-model indicates that interleaving is not beneficial [-Rpass-analysis=loop-vectorize]
+../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: vectorized loop (vectorization width: 8, interleaved count: 1) [-Rpass=loop-vectorize]
+  ~~~~~~~~~~~~~~~~~~~
+
+In this case, it might make sense to overwrite the compiler heuristics. Consult
+your compiler handbook. Again, it might be inconvenient to do this for the whole
+code. Instead, you might want to do it only for one object file. Follow the same
+pattern as introduced above for the optimisation report.
+
+Unfortunately, Swift/Peano has currently no feature to pick compiler arguments 
+manually. Worse, the Python API overwrite the Makefile. It might make sense to 
+design a proper makefile manually and then to disable the overwriting in the 
+Peano 4 project that is produced by Swift's Python API. Consult peano4.Project 
+for details (see its attribute makefile and the docu of the underlying class
+peano4.output.Makefile).
+
+We ran sometimes into issues when we studied the success of our vectorisation
+"only" via performance analysis tools such as Advisor or MAQAO. The tools 
+showed that we use vectorisation. Still, the code remained slow. In many of 
+these cases, the compiler failed to vectorise over multiple particles but 
+was successful in vectorising some subcalculations per particle. The resulting
+code then contained AVX instructions, and the tool reported "successfully vectorised"
+which is not what we wanted. It is important to study the actual compiler 
+feedback.
+
+
+
+### Step 4.2: Selecting carefully
+
+You switch from normal to any vectorised kernels within the Python interface
+by replacing the cell or vertex kernels. Some care is required for one of 
+them:
+
+- cell_kernel. You may assume that all data are always properly aligned
+  in memory when your solver's kernels are invoked. 
+- touch_vertex_first_time_kernel. Same story. By the time the user's touch
+  first kernels are actually called, all the data is in the right place.
+- touch_vertex_last_time_kernel. You have to be a little bit careful here.
+  In principle, the data of the vertex should be fine. However, a finer
+  vertex might have decided to lift particles from its place one level up
+  and to place them with the parent. This triggers a scatter on the coarser
+  vertex, and its data is not contiguously stored anymore. Therefore, it 
+  makes sense to insert an additional case distinction:
+ 
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+          touch_vertex_last_time_kernel_for_drift = """
+              if (numberOfAssignedParticles>0) {
+                ::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles, numberOfAssignedParticles );
+              }
+              else {
+                ::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles );
+              }
+          """
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# Further References
+
+See also
+
+- Notes in @ref benchmarks_swift2_hydro_noh_imposion_test
+- Section @ref section_new_solver_vectorisation_hints on page @ref swift_particle_new_solver
 
  */
- 
+

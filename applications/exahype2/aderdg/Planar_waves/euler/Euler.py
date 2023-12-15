@@ -36,7 +36,7 @@ theSolver=GlobalAdaptiveTimeStep(
   name="eulerSolver",  order=order,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
   min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9,
-  flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+  flux=exahype2.solvers.PDETerms.User_Defined_Implementation
   )
 
 
@@ -88,7 +88,7 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing( "toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( "../../../../../", build_mode )
 peano4_project = project.generate_Peano4_project("False")
 

@@ -40,7 +40,6 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/la/tests/VectorTest.cpp \
 	tarch/la/ScalarOperations.cpp \
 	tarch/la/Scalar.cpp \
-	tarch/la/Vector.cpp \
 	tarch/la/DynamicMatrix.cpp \
 	tarch/accelerator/accelerator.cpp \
 	tarch/accelerator/Device.cpp \
@@ -55,6 +54,7 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/accelerator/sycl/accelerator.cpp \
 	tarch/accelerator/sycl/Device.cpp \
 	tarch/accelerator/sycl/DeviceInfo.cpp \
+	tarch/accelerator/sycl/GPUMemoryManager.cpp \
 	tarch/accelerator/cuda/ErrorCheck.cpp \
 	tarch/accelerator/cuda/DeviceInfo.cpp \
 	tarch/accelerator/cuda/Device.cpp \

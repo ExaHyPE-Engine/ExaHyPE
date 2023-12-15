@@ -3,19 +3,15 @@
 #if !defined( _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_OMP_H_) && defined(SharedOMP)
 #define _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_OMP_H_
 
-namespace tarch {
-  namespace multicore {
-    class BooleanSemaphore;
-    class Lock;
-  }
-}
-
+#include "tarch/multicore/BooleanSemaphore.h"
 #include <string>
 #include <omp.h>
 
 class tarch::multicore::BooleanSemaphore {
   private:
     friend class tarch::multicore::Lock;
+    friend class tarch::mpi::BooleanSemaphore;
+
     omp_lock_t lock;
 
     void enterCriticalSection();

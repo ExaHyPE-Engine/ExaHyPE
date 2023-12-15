@@ -6,15 +6,6 @@ import os
 
 class PETScMain(peano4.runner.DefaultSequence):
 
-  #add in some templates
-
-  #template for HDG, add in extra observer to get indices on the vertices
-  templateAddDofsToVertices=f"""
-        observers::InitPETSc observer;
-        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-  """
-
-
   def __init__(self,
                project,
                domain_offset,

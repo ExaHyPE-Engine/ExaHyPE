@@ -136,6 +136,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
   """
 
     def _get_constructor_arguments(self):
+        """
+        Generates the list of constructor arguments needed to fully
+        instantiate an object of the class the datamodel generates.
+        """
         result = "("
         is_first = True
         for attribute in self._attributes:
@@ -143,10 +147,9 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 attribute._is_static
                 or attribute._is_const_static
                 or attribute._is_constexpr
+                or attribute._is_const
             ):
                 continue
-            elif attribute._is_const:
-                raise NotImplementedError
             for entry in attribute.get_constructor_arguments():
                 if not is_first:
                     result += ", "
@@ -199,9 +202,7 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 d["METHOD_DECLARATIONS"] += "    "
                 if attribute.expose_in_header_file:
                     d["METHOD_DECLARATIONS"] += " inline "
-                d["METHOD_DECLARATIONS"] += (
-                    method[1] + "   " + method[0] + ";\n"
-                )
+                d["METHOD_DECLARATIONS"] += method[1] + "   " + method[0] + ";\n"
             if attribute.ifdefs != []:
                 d["METHOD_DECLARATIONS"] += "#endif \n"
 
@@ -243,10 +244,9 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 output.write(self._Header_Template_With_Data_Store.format(**d))
             else:
                 output.write(self._Header_Template_Without_Data_Store.format(**d))
-                
+
             self.__generate_accessors(output, False)
             output.write("\n\n\n")
-
 
     def __generate_constructor_definition(self, output):
         """
@@ -270,11 +270,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 attribute._is_static
                 or attribute._is_const_static
                 or attribute._is_constexpr
+                or attribute._is_const
             ):
                 # no need to copy static class fields.
                 continue
-            elif attribute._is_const:
-                raise NotImplementedError
 
             if attribute.ifdefs != []:
                 output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))
@@ -329,11 +328,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 attribute._is_static
                 or attribute._is_const_static
                 or attribute._is_constexpr
+                or attribute._is_const
             ):
                 # no need to copy static class fields.
                 continue
-            elif attribute._is_const:
-                raise NotImplementedError
             if attribute.ifdefs != []:
                 output.write(dastgen2.construct_ifdef_string(attribute.ifdefs))
             uppercase_name = attribute.name[0].upper() + attribute.name[1:]
@@ -344,21 +342,21 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 output.write("#endif \n")
         output.write("}\n\n\n")
 
-    def __generate_accessors(self, 
-                             output,
-                             is_cpp_file
-                             ):
+    def __generate_accessors(self, output, is_cpp_file):
         """!
-        
+
         Generate getter/setter functions.
-        
-        Generate all the setters and getters and use get_methods() to 
+
+        Generate all the setters and getters and use get_methods() to
         construct them for the individual attributes.
-        
-        output: File
-        
-        is_cpp_file: Boolean
-        
+
+        output: File object
+            File object that will be written to.
+
+        is_cpp_file: Boolean.
+            True if the output is intended to be the .cpp file. False if it's
+            the header file.
+
         """
         for attribute in self._attributes:
             if attribute.expose_in_header_file != is_cpp_file:
@@ -368,12 +366,12 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                     self._full_qualified_name, for_declaration=False
                 ):
                     output.write(
-                      method[1]
-                      + "   "
-                      + self._full_qualified_name
-                      + "::"
-                      + method[0]
-                      + " {\n"
+                        method[1]
+                        + "   "
+                        + self._full_qualified_name
+                        + "::"
+                        + method[0]
+                        + " {\n"
                     )
                     output.write(attribute.get_method_body(method[0]))
                     output.write("}\n\n\n")
@@ -419,5 +417,5 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
                 output.write(aspect.get_implementation(self._full_qualified_name))
 
     def expose_all_attributes_in_header_file(self):
-       for i in self._attributes:
-           i.expose_in_header_file = True
+        for i in self._attributes:
+            i.expose_in_header_file = True

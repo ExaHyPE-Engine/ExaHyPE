@@ -239,12 +239,12 @@ if __name__ == "__main__":
         self._domain_r = domain_r
 
         self.set_implementation(
-          boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          flux=exahype2.solvers.fv.PDETerms.None_Implementation,
-          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          flux=exahype2.solvers.PDETerms.None_Implementation,
+          source_term=exahype2.solvers.PDETerms.User_Defined_Implementation,
+          refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
+          eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation
         )
 
         if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
@@ -502,7 +502,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
 
     std::fstream fin;
-    std::string att="_"""+args.tra_name+""".txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+    std::string att="_"""+args.exe_name+""".txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
     const int n_a_v=""" + str( self._auxiliary_variables ) + """;
     const double overlap=3;
 
@@ -645,8 +645,8 @@ if __name__ == "__main__":
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
           min_h, args.max_h, time_step_size,
           flux = None,
-          ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-          sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+          ncp  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+          sources = exahype2.solvers.PDETerms.User_Defined_Implementation
       )
     else:
       my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r,args.CCZ4KOSigma)
@@ -916,12 +916,12 @@ if __name__ == "__main__":
       pass#my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
    
 
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-    #project.set_load_balancing("toolbox::loadbalancing::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
-    project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
-    #project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.9,1000,16))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOut","(new ::exahype2::LoadBalancingConfiguration(0.95))" )
+    project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
+    #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
 
 
 ########################################################################################
@@ -931,9 +931,9 @@ if __name__ == "__main__":
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=61 )
         init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
             particle_set=tracer_particles, coordinates=[[0,0,8.0],[0,0,-8.0],[8.0,8.0,0],[-8.0,-8.0,0]])
-            #particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
+        #    particle_set=tracer_particles, coordinates=[[-0.1,0,0],[0.1,0,0],[0,0.1,0],[0,-0.1,0]])
         #init_action_set = exahype2.tracer.InsertParticlesFromFile( 
-        #                            particle_set=tracer_particles, filename="test-design.dat", scale_factor=abs(offset[0])*0.8)
+        #                            particle_set=tracer_particles, filename="t-design.dat", scale_factor=abs(offset[0])*0.8)
         #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
         init_action_set.priority = 0
         project.add_action_set_to_initialisation( init_action_set )

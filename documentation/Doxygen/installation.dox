@@ -41,8 +41,8 @@ We however use a whole set of tools around it:
 We test and maintain Peano  for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the
 mandatory tools from above, but we won't be able to help.
-Peano is well-integrated with a number of @ref page_third_party "third party tools", 
-but these are all optional. 
+Peano is well-integrated with a number of @ref page_third_party "third party tools",
+but these are all optional.
 
 
 Configure Peano
@@ -153,19 +153,43 @@ Python configuration
 Peano's Python front-end (API) is developed with Python 3.
 Python 2 is not supported.
 
+
+Package Installation
+----------------------
+
+The easiest way to install the Peano python packages is to navigate to
+`myPeanoDirectory/python` first (you're in the right place if you see the
+`pyproject.toml` file), and then run
+
+      pip3 install -e .
+
+to install the packages.
+
+Note:
+- It is strongly recommended to install the python packages in editable mode
+  (which is what the `-e` flag does). Otherwise, you'll have to re-install the
+  packages every time something is changed.
+- The packages are not, and likely will never be, available through PyPI or
+  other official python package distributions. It simply doesn't make sense for
+  them to be published this way.
+
+
+
 Python paths
 -------------------
 
-To make any Python example pass, you have to set the Python paths. There
+As an alternative to installing the packages, you can modify your Python paths. There
 are multiple ways to do so.
 The standard way is to set the `PYTHONPATH`:
 
        export PYTHONPATH=myPeanoDirectory/python
 
-This can even be done in the `.bashrc`.
+This can even be done in the `.bashrc`. If you "install" the Peano python
+packages this way, you will also need to manually install additional
+dependencies, as noted below.
 
 
-Python packages
+Python Dependencies
 -------------------
 
 Peano currently relies on the following Python packages/projects:
@@ -175,11 +199,31 @@ Peano currently relies on the following Python packages/projects:
 
         python3-jinja2
 
+- numpy for numeric operations. Most Linux distributions ship this
+  one as
+
+        python3-numpy
 
 - sympy for the symbolic modelling of partial differential equations. Most
   Linux distributions ship it through
 
         python3-sympy
+
+- matplotlib for plotting:
+
+        python3-matplotlib
+
+
+- Optional: Some scripts in the particles/swift2 make use of the python hdf5
+  package:
+
+        python3-h5py
+
+- Optional: Some scripts in the particles/swift2 make use of the VTUinterface
+  package for visualisation. The package is available <a
+  href="https://github.com/joergbuchwald/VTUinterface"> ``on github``</a>.
+
+
 
 
 Fortran

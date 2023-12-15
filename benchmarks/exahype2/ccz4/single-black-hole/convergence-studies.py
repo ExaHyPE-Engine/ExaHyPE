@@ -214,10 +214,9 @@ if __name__ == "__main__":
                 time_delta_between_two_snapsots = 0.0,
             )
 
-    # project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
     project.set_load_balancing(
-        "toolbox::loadbalancing::SpreadOutHierarchically",
-        "(new ::exahype2::LoadBalancingConfiguration(0.98, 100, 8))",
+        "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
+        "(new ::exahype2::LoadBalancingConfiguration(0.98, 100, 8), new toolbox::loadbalancing::metrics::CellCount())",
     )
 
     peano4_project = project.generate_Peano4_project(verbose=args.verbose)

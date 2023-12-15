@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .CellCenteredFiniteDifferences import CellCenteredFiniteDifferences
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import peano4
 import exahype2
@@ -172,7 +172,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         return (
             """
 #include "exahype2/NonCriticalAssertions.h"
-#include "exahype2/enumerator/Enumerator.h"
+#include "exahype2/enumerator/enumerator.h"
 #include "exahype2/fd/PatchUtils.h"
 """
             + self._solver._get_default_includes()
@@ -301,7 +301,7 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0AfterGridInitialisation or
       repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep0 or
       repositories::{}.getSolverState()=={}::SolverState::PlottingAfterGridInitialisation or
-      repositories::{}.getSolverState()=={}::SolverState::Plotting
+      repositories::{}.getSolverState()=={}::SolverState::Plotting or
       repositories::{}.getSolverState()=={}::SolverState::Suspended
     )""".format(
             self.get_name_of_global_instance(), self._name,
@@ -354,7 +354,7 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
         """
         super(SeparateSweeps, self).create_action_sets()
         self._action_set_update_cell = UpdateCell(self)
-        self._action_set_update_cell.priority = self._baseline_action_set_priority + 4
+        self._action_set_update_cell.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 4
         self._action_set_compute_final_linear_combination.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::RungeKuttaSubStep{}".format(
             self.get_name_of_global_instance(),
             self._name,
@@ -414,9 +414,9 @@ class SeparateSweeps(CellCenteredFiniteDifferences):
         if memory_location is not None:
             self._reconstructed_array_memory_location = memory_location
 
-        if refinement_criterion == exahype2.solvers.fv.PDETerms.None_Implementation:
+        if refinement_criterion == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "refinement criterion cannot be none"
-        if initial_conditions == exahype2.solvers.fv.PDETerms.None_Implementation:
+        if initial_conditions == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "initial conditions cannot be none"
 
         if flux is not None:

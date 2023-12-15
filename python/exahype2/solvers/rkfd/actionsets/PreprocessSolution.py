@@ -22,7 +22,7 @@ class EmptyPreprocessSolution(AbstractRKFDActionSet):
     AbstractRKFDActionSet.__init__(self,solver)
     # Is there for compatibility reasons
     self.guard               = "true"
-    self.priority            = 1 
+    self.descend_invocation_order            = 1 
 
 
   def get_body_of_operation(self,operation_name):
@@ -101,7 +101,7 @@ class CellWisePreprocessSolution(AbstractRKFDActionSet):
     AbstractRKFDActionSet.__init__(self,solver)
     self.guard               = "true"
     self._compute_kernel     = ""
-    self.priority            = 2
+    self.descend_invocation_order            = 2
 
 
   def add_postprocessing_kernel(self, operation_per_point):

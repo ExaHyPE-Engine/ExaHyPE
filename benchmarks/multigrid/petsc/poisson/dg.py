@@ -23,7 +23,7 @@ parser.add_argument("-v",   "--verbose",            dest="verbose",        actio
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-deg", "--degree",             dest="degree",         type=int, default=1, help="Polynomial degree")
 parser.add_argument("-upcn", "--cell-unknowns",     dest="upcn",           type=int, default=1, help="Unknowns per cell node")
-parser.add_argument("-upfn", "--face-unknowns",     dest="upfn",           type=int, default=1, help="Unknowns per face node")
+parser.add_argument("-upfn", "--face-unknowns",     dest="upfn",           type=int, default=2, help="Unknowns per face node")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.4, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
@@ -32,7 +32,11 @@ assert args.dimensions == 2, "not ready for 3d yet"
 
 #! [Create project]
 project = multigrid.petsc.Project(project_name = "DG", 
-                                  namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
+                                  namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ],
+
+                                  # next two arguments let us customise the solver we use in petsc
+                                  preconditioner_type = "LU",
+                                  solver_type         = "GMRES"
                                   ) 
 #! [Create project]
 
@@ -60,8 +64,8 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      face_to_cell_matrix     = matrices.get_face_to_cell_matrix(), 
                                                                      
                                                                      # removing scaling for debugging
-                                                                     cell_to_face_matrix_scaling  = 0,
-                                                                     face_to_cell_matrix_scaling  = 0, 
+                                                                     cell_to_face_matrix_scaling  = None,
+                                                                     face_to_cell_matrix_scaling  = None, 
                                                                      face_face_Riemann_problem_matrix=matrices.get_face_face_riemann_problem_matrix(),
                                                                      quadrature_points_in_unit_interval = matrices.get_points_unit_interval()
                                                                      )
@@ -87,7 +91,7 @@ project.set_global_simulation_parameters(
 )
 
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 #! [Configure build]
     

@@ -37,7 +37,7 @@ void exahype2::fd::reduceMaxEigenvalue_patchwise_functors(
 template <>
 double exahype2::fd::internal::reduceMaxEigenvalue_LoopBody(
     const double* __restrict__                   QOut,
-    const exahype2::enumerator::AoSLexicographicEnumerator&                    QOutEnumerator,
+    const exahype2::enumerator::AoSLexicographicEnumerator& QOutEnumerator,
     exahype2::fd::MaxEigenvalue                  maxEigenvalue,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
     const tarch::la::Vector<Dimensions,double>&  patchSize,

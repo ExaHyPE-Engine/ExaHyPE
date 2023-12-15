@@ -16,13 +16,45 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
   TemplateTouchFaceFirstTime = """
   if (fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Boundary) {
     std::pair<int,int> localFaceIndex = std::make_pair(_spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
-    int globalFaceIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFaceIndex);
+    int globalFaceIndex               = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFaceIndex, ::petsc::LocalToGlobalMap::Type::Face);
     
     assertion( globalFaceIndex>=0 );
+
+    /*
+    This trace is in place just so that we can generate a map of the facets with their
+    global indices. It is not necessary long term and can be deleted soon...
+    */
+    logTraceInWith2Arguments("tfft_experimenter", marker.toString(), globalFaceIndex);
+    logTraceOut("tfft_experimenter");
+
+    logTraceInWith2Arguments("TFFT::Boundary", globalFaceIndex, marker.toString());
     
+    /*
+    we want to place -1 on the diagonal for each "interior-side" projection.
+    That is, for face 0 and 2, we write to the "+" projection
+             for face 1 and 3, we write to the "-" projection
+
+    We also write -1 to all of the "exterior-side" projections. The actual
+    value we use here is immaterial, so long as it is not zero.
+    This makes the matrix full-rank. We use -1 to make this loop easier
+    to write.
+
+    we go up to 2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns
+    since this is total number of q^-, q^+, u^-, u^+.
+    */
+    for (int i=0; i<2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; i++)
+    {
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        globalFaceIndex + i,
+        globalFaceIndex + i,
+        -1
+      );
+    }
+
     int faceNormalAxis = marker.getSelectedFaceNumber()%Dimensions;
     int row = 0;        
     dfore(faceNode, repositories::{{SOLVER_INSTANCE}}.Order+1, faceNormalAxis, 0) {
+
       tarch::la::Vector<Dimensions,double> x = marker.x(); // centre of face
       for (int dd=0; dd<Dimensions; dd++) {
         if (dd!=faceNormalAxis) {
@@ -30,6 +62,8 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
           x(dd) += repositories::{{SOLVER_INSTANCE}}.QuadraturePointsInUnitInterval[ faceNode(dd) ] * marker.h()(dd);
         }
       }
+
+      logTraceInWith5Arguments("TFFT::dfore", faceNode, faceNormalAxis, marker.x(), x,repositories::{{SOLVER_INSTANCE}}.FaceUnknowns);
           
       // Look up the value: rhs is not relevant here, but I want to reuse the existing signatures 
       double value, rhs;
@@ -41,14 +75,88 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
       );
       
       for (int unknown = 0; unknown<repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; unknown++) {
+        // row corresponding to solution
         int globalMatrixRow = globalFaceIndex + row + 2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
-        // @todo Alex, your code
-        row++;          
+        
+        logTraceInWith4Arguments("TFFT:unknownLoop", unknown, globalMatrixRow, row, marker.toString());
+
+        // insert identity into row corresponding to solution at this node / for this unknown
+        repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+          globalMatrixRow,
+          globalMatrixRow,
+          1
+        );
+        
+        static_assert(Dimensions==2, "the bodge on the line below is untested for Dimensions != 2. see comment in code");
+
+        /*
+        The faces are enumerated as follows:
+          negative x axis
+          negative y axis
+          negative z axis
+          positive x axis
+          positive y axis
+          positive z axis
+        if we are on negative side of coordinate axis, then we wanna write to the positive projection, 
+        since this is the one that is on interior side of cell.
+
+        So, if the face number is >= than Dimensions, we wanna write to negative side projection.
+        */
+        bool writeToNegativeProjection = (marker.getSelectedFaceNumber() >= Dimensions);
+
+        /*
+        This part is to round off the equation. If q^- projection is on the inside of the cell,
+        then we want the equation to read q^f - q^- = 0. Hence we write 1 onto the row, col 
+        corresponding to q^f and then -1 in col for q^-. rhs will be zero to round this off.
+        */
+
+        // makes sure we only do this for q unknown
+        if ( row < repositories::{{SOLVER_INSTANCE}}.FaceUnknowns )
+        {
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalMatrixRow,
+            globalFaceIndex + row, // q^-
+            writeToNegativeProjection ? -1 : 0
+          );
+
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalMatrixRow,
+            globalFaceIndex + row + repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns, // q^+
+            writeToNegativeProjection ? 0 : -1
+          );
+        }
+
+        /*
+        Custom behaviour for u unknown. We want to:
+          - find the row associated with the u^f solution (already done)
+          - write +1 on diagonal (already done)
+          - write -0.5 in column associated with u^-
+          - write -0.5 in column associated with u^+
+        The effect being we have u^f - 0.5 * u^+ - 0.5 * u^-
+        */
+        if ( row >= repositories::{{SOLVER_INSTANCE}}.FaceUnknowns  )
+        {
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalMatrixRow,
+            globalFaceIndex + row, // u^-
+            -0.5
+          );
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalMatrixRow,
+            globalFaceIndex + row + repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns, // u^+
+            -0.5
+          );
+        }
+
+
+        row++;
+
+        logTraceOut("TFFT:unknownLoop");
       }
-//      int 
-//NodesPerFace
+      logTraceOut("TFFT::dfore");
 
     }
+    logTraceOut("TFFT::Boundary");
   }
   """
   

@@ -7,6 +7,10 @@
 #include <utility>
 #include <map>
 
+#include "tarch/logging/Log.h"
+#include "tarch/logging/Statistics.h"
+#include "tarch/logging/LogFilter.h"
+#include "tarch/logging/LogFilterFileReader.h"
 
 namespace petsc {
   class LocalToGlobalMap;
@@ -15,6 +19,11 @@ namespace petsc {
 
 class petsc::LocalToGlobalMap {
   public:
+
+    enum class Type: int{
+      Vertex=0, Cell=1, Face=2
+    };
+
     static constexpr int RankGlobalTreeNumber = -1;
 
     /**
@@ -54,8 +63,15 @@ class petsc::LocalToGlobalMap {
      * local map. Usually, the method is called for map -1, i.e. the map
      * that is held for the rank as a whole and is given the map of a
      * subdomain.
+     *
+     * We add an argument of "Type", an enum that denotes which kind of 
+     * L2GM we are merging in. So, in the global map, we keep a count 
+     * of how many vertices, cells and faces we saw. 
+     *
+     * This will allow us to later enumerate the facets one after 
+     * another.
      */
-    void merge( const LocalToGlobalMap& otherMap );
+    void merge( const LocalToGlobalMap& otherMap, Type type );
 
     /**
      * Maps the local index onto a global index
@@ -63,7 +79,7 @@ class petsc::LocalToGlobalMap {
      * Pass in the combination of tree number and local index and return the
      * global index according to the map.
      */
-    int getGlobalIndex( const std::pair<int,int>& index );
+    int getGlobalIndex( const std::pair<int,int>& index, Type type );
 
     /**
      * Compute global to local map
@@ -72,6 +88,13 @@ class petsc::LocalToGlobalMap {
      *
      */
     void computeLocalToGlobalMap();
+
+    /*
+    Increase count of indices we reserve for a particular facet type 
+    (currently support vertices, faces, cells). Pass in the type and
+    the integer
+    */
+    void increaseCountOfFacetType(Type type, int count);
 
     int getTotalNumberOfIndices() const;
 
@@ -84,6 +107,14 @@ class petsc::LocalToGlobalMap {
   
   private:
     int _treeNumber;
+
+    /*
+    these three should sum to the same
+    as _totalNumberOfIndices
+    */
+    int _numberOfVertices;
+    int _numberOfCells;
+    int _numberOfFaces;
     
     // let's make this total number of indices in this tree specifically.
     // later, we use this to make sure the merge was successful
@@ -97,6 +128,8 @@ class petsc::LocalToGlobalMap {
      * used for computing local to global map.
     */
     std::map<int,int> _indicesPerSubtree;
+
+    static tarch::logging::Log  _log;
 
 };
 

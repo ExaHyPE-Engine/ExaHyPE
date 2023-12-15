@@ -71,9 +71,9 @@ if args.type=="global-fixed":
     3, #auxiliary_variables,
     min_h, max_h,
     time_step_size,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
   poisson_solver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
     "Poisson",
@@ -82,9 +82,9 @@ if args.type=="global-fixed":
     1, #auxiliary_variables,
     min_h, max_h,
     time_step_size / 4 / 3.1415**2,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
 if args.type=="global-adaptive":
   euler_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
@@ -94,9 +94,9 @@ if args.type=="global-adaptive":
     3, #auxiliary_variables,
     min_h, max_h,
     time_step_relaxation = 1e-2,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
   poisson_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     "Poisson",
@@ -105,12 +105,12 @@ if args.type=="global-adaptive":
     1, #auxiliary_variables,
     min_h, max_h,
     time_step_relaxation =  1e-3,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
 
-euler_solver.set_implementation(refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation)
+euler_solver.set_implementation(refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation)
 
 project.add_solver(euler_solver)
 project.add_solver(poisson_solver)
@@ -205,7 +205,7 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing("toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
+project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 project.set_Peano4_installation(args.peanodir, modes[args.mode])
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.output.makefile.add_cpp_file("Euler.cpp")

@@ -40,11 +40,11 @@ theSolver=GlobalAdaptiveTimeStep(
   name="elastic",  order=3,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
   min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9,
-  flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+  flux=exahype2.solvers.PDETerms.User_Defined_Implementation
 )
 
 theSolver.add_kernel_optimizations(is_linear=True,use_kernel_generator=True,architecture="noarch")
-theSolver.set_implementation( refinement_criterion=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation)
+theSolver.set_implementation( refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation)
 
 project.add_solver(theSolver)
 
@@ -53,7 +53,7 @@ tracer_particles = project.add_tracer( name="Tracer_elastic",attribute_count=12 
 init_action_set =  exahype2.tracer.InsertParticlesByCoordinates( 
     particle_set=tracer_particles, coordinates=[[0.0,0.0,0.0][0:dimensions],[0.25,0.25,0.25][0:dimensions],
                                                 [0.5,0.5,0.5][0:dimensions],[0.75,0.75,0.75][0:dimensions]])
-init_action_set.priority = 0
+init_action_set.descend_invocation_order = 0
 project.add_action_set_to_initialisation( init_action_set )
 
 tracer_action_set=exahype2.tracer.DiscontinuousGalerkinTracing(
@@ -61,7 +61,7 @@ tracer_action_set=exahype2.tracer.DiscontinuousGalerkinTracing(
   theSolver,
   project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
 )
-tracer_action_set.priority = 1
+tracer_action_set.descend_invocation_order = 1
 project.add_action_set_to_timestepping(tracer_action_set)
 project.add_action_set_to_initialisation(tracer_action_set)
 
@@ -76,7 +76,7 @@ dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
   time_delta_between_two_snapsots=0.001
   )
 
-dump_action_set.priority = 3
+dump_action_set.descend_invocation_order = 3
 project.add_action_set_to_timestepping(dump_action_set)
 
 
@@ -99,7 +99,7 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( "../../../../", build_mode )
 peano4_project = project.generate_Peano4_project("False")
 

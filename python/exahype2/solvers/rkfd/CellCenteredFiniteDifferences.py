@@ -17,7 +17,7 @@ from enum import Enum
 import exahype2
 import exahype2.solvers.rkfd.actionsets
 
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
 
@@ -30,7 +30,6 @@ class Storage(Enum):
 
 class CellCenteredFiniteDifferences(object):
     """
-
     Abstract solver for patch-based finite diffences
 
     All solvers in ExaHyPE are cell-centered discretisations.
@@ -69,10 +68,7 @@ class CellCenteredFiniteDifferences(object):
                     0.0,0.0,0.0,0.0,1.0,
                     0.0,0.0,0.0,0.0,1.0
             };" "" )
-
-
     """
-
     def __init__(
         self,
         name,
@@ -85,7 +81,7 @@ class CellCenteredFiniteDifferences(object):
         max_meshcell_h,
         plot_grid_properties,
         kernel_namespace,
-        baseline_action_set_priority=0,
+        baseline_action_set_descend_invocation_order=0,
     ):
         """
         name: string
@@ -120,7 +116,6 @@ class CellCenteredFiniteDifferences(object):
         plot_grid_properties: Boolean
            Clarifies whether a dump of the data should be enriched with grid info
            (such as enclave status flags), too.
-
         """
         self._name = name
 
@@ -131,8 +126,53 @@ class CellCenteredFiniteDifferences(object):
         self._patch_size = patch_size
         self._overlap = overlap
         self._rk_order = rk_order
-        self._unknowns = unknowns
-        self._auxiliary_variables = auxiliary_variables
+
+        """
+        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
+        auxiliary variables in the equation to be computed. Unknowns are variables that change over
+        time whereas auxiliary variables can be space-dependent but don't vary over time.
+        These can be specified either as simple ints or by a dictionary
+        (e.g.) unknowns = {'a': 1, 'b': 1, 'c': 3}
+        in which the user specifies the multiplicity of the variable (the velocity has one component
+        per dimension for example.)
+        If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
+        allows the user to specifiy a variable by name and automatically maps this to the right position
+        in an array for better legibility. Otherwise they must manually remember the position of each
+        variable manually.
+
+        use_var_shortcut is used to know whether or not the user passed their variables via a dict
+        variable_names and variable_pos are used internally to remember the names and respective
+        positions of variables if set by a dictionary.
+        """
+        self._use_var_shortcut = False
+        self._variable_names = []
+        self._variable_pos = [0]
+
+        if type(unknowns) is dict:
+            self._unknowns = sum(unknowns.values())
+            self._variable_names += list(unknowns.keys())
+            for var in list(unknowns.values()):
+                self._variable_pos.append(var + self._variable_pos[-1])
+            self._use_var_shortcut = True
+        elif type(unknowns) is int:
+            self._unknowns = unknowns
+        else:
+            raise Exception(
+                "not a valid type for parameter unknowns, needs to be int or dictionary"
+            )
+
+        if type(auxiliary_variables) is dict:
+            self._auxiliary_variables = sum(auxiliary_variables.values())
+            self._variable_names += list(auxiliary_variables.keys())
+            for var in list(auxiliary_variables.values()):
+                self._variable_pos.append(var + self._variable_pos[-1])
+            self._use_var_shortcut = True
+        elif type(auxiliary_variables) is int:
+            self._auxiliary_variables = auxiliary_variables
+        else:
+            raise Exception(
+                "not a valid type for parameter auxiliary_variables, needs to be int or dictionary"
+            )
 
         self._solver_constants = ""
         self._user_action_set_includes = ""
@@ -200,7 +240,7 @@ class CellCenteredFiniteDifferences(object):
         self._cell_data_storage = Storage.CallStack
         self._face_data_storage = Storage.CallStack
 
-        self._baseline_action_set_priority = baseline_action_set_priority
+        self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
         self.create_data_structures()
         self.create_action_sets()
@@ -673,7 +713,7 @@ The finest mesh width of """
         All action sets are given the right (default) priorities in this step.
         You can alter them in subclasses, but it might be more appropriate to
         set the priorities of your own action sets relative to the existing
-        ones using self._baseline_action_set_priority.
+        ones using self._baseline_action_set_descend_invocation_order.
 
         """
         self._action_set_initial_conditions = (
@@ -748,43 +788,43 @@ The finest mesh width of """
         self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel(self._name)
         self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel(self._name)
 
-        self._action_set_initial_conditions.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_initial_conditions.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_initial_conditions_for_grid_construction.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = (
-            self._baseline_action_set_priority
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )
-        self._action_set_copy_new_faces_onto_old_faces.priority = (
-            self._baseline_action_set_priority
+        self._action_set_copy_new_faces_onto_old_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )
-        self._action_set_roll_over_update_of_faces.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_roll_over_update_of_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_update_face_label.priority = (
-            self._baseline_action_set_priority + 2
+        self._action_set_update_face_label.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
         )
-        self._action_set_update_cell_label.priority = (
-            self._baseline_action_set_priority + 2
+        self._action_set_update_cell_label.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
         )
-        self._action_set_handle_boundary.priority = (
-            self._baseline_action_set_priority + 3
+        self._action_set_handle_boundary.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 3
         )
-        # self._action_set_update_cell                                                      = self._baseline_action_set_priority + 4
-        self._action_set_project_patch_onto_faces.priority = (
-            self._baseline_action_set_priority + 5
+        # self._action_set_update_cell                                                      = self._baseline_action_set_descend_invocation_order + 4
+        self._action_set_project_patch_onto_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 5
         )
-        self._action_set_compute_final_linear_combination.priority = (
-            self._baseline_action_set_priority + 5
+        self._action_set_compute_final_linear_combination.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 5
         )
-        self._action_set_AMR.priority = self._baseline_action_set_priority + 6
-        self._action_set_postprocess_solution.priority = (
-            self._baseline_action_set_priority
+        self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 6
+        self._action_set_postprocess_solution.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )  # will be in touch last
-        self._action_set_preprocess_solution.priority = (
-            self._baseline_action_set_priority
+        self._action_set_preprocess_solution.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )
 
         self._action_set_update_cell = None
@@ -985,8 +1025,8 @@ The finest mesh width of """
 
         """
         assert (
-            self._action_set_copy_new_faces_onto_old_faces.priority
-            < self._action_set_roll_over_update_of_faces.priority
+            self._action_set_copy_new_faces_onto_old_faces.descend_invocation_order
+            < self._action_set_roll_over_update_of_faces.descend_invocation_order
         )
 
         step.add_action_set(self._action_set_preprocess_solution)
@@ -1091,7 +1131,7 @@ The finest mesh width of """
             time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
             select_dofs=self.select_dofs_to_print,
         )
-        plot_patches_action_set.priority = self._baseline_action_set_priority
+        plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
         step.add_action_set(plot_patches_action_set)
 
         if self._plot_grid_properties:
@@ -1105,7 +1145,7 @@ The finest mesh width of """
 #include "../repositories/SolverRepository.h"
 """,
             )
-            plot_grid_action_set.priority = self._baseline_action_set_priority
+            plot_grid_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
             step.add_action_set(plot_grid_action_set)
 
         pass
@@ -1193,8 +1233,25 @@ The finest mesh width of """
 
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
+        output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
+        output.makefile.add_h_file(self._name + ".h", generated=True)
         output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
         output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
+
+        if self._use_var_shortcut:
+            generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
+                os.path.dirname(os.path.realpath(__file__))
+                + "/"
+                + "../VariableShortcuts.template.h",
+                "VariableShortcuts",
+                namespace,
+                ".",
+                implementationDictionary,
+                True,
+                True,
+            )
+            output.add(generated_shortcut_file)
+            output.makefile.add_h_file("VariableShortcuts.h", generated=True)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
@@ -1204,15 +1261,12 @@ The finest mesh width of """
 
     def _init_dictionary_with_default_parameters(self, d):
         """
-
         This one is called by all algorithmic steps before I invoke
         add_entries_to_text_replacement_dictionary().
 
         See the remarks on set_postprocess_updated_patch_kernel to understand why
         we have to apply the (partially befilled) dictionary to create a new entry
         for this very dictionary.
-
-
         """
         d["NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS"] = self._patch.dim[0]
         d["OVERLAP"] = self._overlap
@@ -1292,6 +1346,10 @@ The finest mesh width of """
         d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
 
         d["KERNEL_NAMESPACE"] = self._kernel_namespace
+
+        d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
+        d["VARIABLE_NAMES"] = self._variable_names
+        d["VARIABLE_POSITIONS"] = self._variable_pos
 
     @property
     def unknowns(self):

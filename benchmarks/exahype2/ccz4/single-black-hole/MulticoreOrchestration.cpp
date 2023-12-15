@@ -35,35 +35,17 @@ int benchmarks::exahype2::ccz4::MulticoreOrchestration::getNumberOfTasksToHoldBa
   }
 
   if (
-    _nestedBSPLevels==0
-    or
-    taskType==tarch::multicore::orchestration::Strategy::EndOfBSPSection
-  ) {
-    return 0;
-  }
-  else if (
+    _nestedBSPLevels>0
+    and
     tarch::accelerator::Device::getInstance().getNumberOfDevices()>0
     and
     taskType == tasks::CCZ4SBH_FVEnclaveTask::getEnclaveTaskTypeId()
   ) {
-    return 1;
+    return _maxFiniteVolumeTasks;
   }
-  else if (
-    tarch::accelerator::Device::getInstance().getNumberOfDevices()==0
-    and
-    taskType == tasks::CCZ4SBH_FVEnclaveTask::getEnclaveTaskTypeId()
-  ) {
+  else {
     return 0;
   }
-  else if (
-    taskType == tasks::CCZ4SBH_FD4EnclaveTask::getEnclaveTaskTypeId()
-    and
-    _finiteVolumeTasksInThisBSPSection < _maxFiniteVolumeTasks
-  ) {
-    return std::numeric_limits<int>::max();
-  }
-
-  return 0;
 }
 
 benchmarks::exahype2::ccz4::MulticoreOrchestration::FuseInstruction benchmarks::exahype2::ccz4::MulticoreOrchestration::getNumberOfTasksToFuseAndTargetDevice(

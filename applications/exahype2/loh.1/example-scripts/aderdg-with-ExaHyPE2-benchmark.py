@@ -93,7 +93,7 @@ if args.GPU:
     min_h, max_h,
     time_step_size,
     flux = None, 
-    ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+    ncp  = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
 
 else:
@@ -103,7 +103,7 @@ else:
     exahype2.solvers.aderdg.Polynomials.Gauss_Legendre, 
     min_h, max_h, time_step_size,
     flux = None, 
-    ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+    ncp  = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
   thesolver.set_plot_description( "(0,1,2): Velocities, (3,4,5,6,7,8): (Sym.) Stress Tensor Components")
 
@@ -129,7 +129,7 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.load_balancing_quality) + ")" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveBipartition", "(" + str(args.load_balancing_quality) + ")" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )

@@ -36,6 +36,9 @@
 *.ii
 *.gpu
 *.ptx
+*.bin
+*.fat
+*.fat.s
 *.cubin
 *.fatbin
 
@@ -105,6 +108,10 @@ src/stamp-h1
 # can automatically generate from config.status script
 # (which is called by configure script))
 Makefile
+
+# CMake cache file and supporting files
+CMakeCache.txt
+/CMakeFiles
 
 .vscode/*
 .vscode/settings.json

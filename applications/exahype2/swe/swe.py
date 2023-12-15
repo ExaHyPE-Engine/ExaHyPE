@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.abspath('../../../python'))
 
 import peano4
 import exahype2
-from exahype2.solvers.fv.PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 dimensions            = 2 # this is fixed to 2 in pde.py
 width                 = [10, 10]
@@ -452,8 +452,8 @@ if args.scenario == "Tsunami":
 
 my_project = exahype2.Project( namespace=["applications", "exahype2", "swe"], project_name="SWEApplication", executable=executable_name)
 my_project.add_solver( my_solver )
-#my_project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
-my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
+#my_project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
 my_project.set_Peano4_installation("../../../", build_modes[args.build_mode])
 my_project.set_output_path(output_path)
 if not os.path.exists(output_path):

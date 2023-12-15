@@ -46,15 +46,15 @@ theSolver = GlobalAdaptiveTimeStep(
     min_cell_h=min_h,
     max_cell_h=max_h,
     time_step_relaxation=0.9,
-    flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-    ncp=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+    flux=exahype2.solvers.PDETerms.User_Defined_Implementation,
+    ncp=exahype2.solvers.PDETerms.User_Defined_Implementation,
 )
 
 theSolver.add_kernel_optimizations(
     is_linear=True, use_kernel_generator=True, architecture="noarch", use_BLIS=True
 )
 theSolver.set_implementation(
-    refinement_criterion=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+    refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation
 )
 
 project.add_solver(theSolver)
@@ -81,7 +81,7 @@ project.set_global_simulation_parameters(
 # prototype we did start off with.
 #
 project.set_load_balancing(
-    "toolbox::loadbalancing::RecursiveBipartition",
+    "toolbox::loadbalancing::strategies::RecursiveBipartition",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 project.set_Peano4_installation("../../../../../", build_mode)

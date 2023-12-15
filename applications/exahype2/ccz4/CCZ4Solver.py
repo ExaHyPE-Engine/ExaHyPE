@@ -52,9 +52,9 @@ class AbstractCCZ4Solver(object):
     you might want to pass in
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    my_solver.set_implementation(initial_conditions   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                 refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                 boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    my_solver.set_implementation(initial_conditions   = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                 refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                 boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation
                                  )
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -314,11 +314,11 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
         self._add_standard_includes()
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp=construct_FV_ncp(),
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term=construct_FV_source_term(),
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues=construct_FV_eigenvalues(),
         )
 
@@ -433,11 +433,11 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
             )
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp=construct_FV_ncp(),
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term=construct_FV_source_term(),
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues=construct_FV_eigenvalues(),
         )
 
@@ -591,7 +591,7 @@ def add_tracer_to_FV_solver(
     init_action_set = exahype2.tracer.InsertParticlesByCoordinates(
         particle_set=tracer_particles, coordinates=coordinates
     )
-    init_action_set.priority = 0
+    init_action_set.descend_invocation_order = 0
     project.add_action_set_to_initialisation(init_action_set)
 
     project_on_tracer_properties_kernel = ""
@@ -620,7 +620,7 @@ def add_tracer_to_FV_solver(
         solver,
         project_on_tracer_properties_kernel=project_on_tracer_properties_kernel,
     )
-    tracing_action_set.priority = solver._action_set_update_cell.priority + 1
+    tracing_action_set.descend_invocation_order = solver._action_set_update_cell.descend_invocation_order + 1
     project.add_action_set_to_timestepping(tracing_action_set)
     project.add_action_set_to_initialisation(tracing_action_set)
 
@@ -634,7 +634,7 @@ def add_tracer_to_FV_solver(
         time_delta_between_two_snapsots = time_delta_between_two_snapsots,
         clearDatabaseAfterFlush         = True,
     )
-    dump_into_database_action_set.priority = solver._action_set_update_cell.priority + 2
+    dump_into_database_action_set.descend_invocation_order = solver._action_set_update_cell.descend_invocation_order + 2
     project.add_action_set_to_timestepping(dump_into_database_action_set)
 
 
@@ -691,8 +691,8 @@ def add_tracer_to_FD4_solver(
         solver,
         project_on_tracer_properties_kernel=project_on_tracer_properties_kernel,
     )
-    tracing_action_set.priority = (
-        solver._action_set_compute_final_linear_combination.priority + 1
+    tracing_action_set.descend_invocation_order = (
+        solver._action_set_compute_final_linear_combination.descend_invocation_order + 1
     )
     project.add_action_set_to_timestepping(tracing_action_set)
 
@@ -706,8 +706,8 @@ def add_tracer_to_FD4_solver(
         time_delta_between_two_snapsots = time_delta_between_two_snapsots,
         clearDatabaseAfterFlush         = True,
     )
-    dump_into_database_action_set.priority = (
-        solver._action_set_compute_final_linear_combination.priority + 2
+    dump_into_database_action_set.descend_invocation_order = (
+        solver._action_set_compute_final_linear_combination.descend_invocation_order + 2
     )
     project.add_action_set_to_timestepping(dump_into_database_action_set)
 
@@ -797,11 +797,11 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             )
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp=construct_FD4_ncp(),
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term=construct_FD4_source_term(),
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues=construct_FD4_eigenvalues(),
         )
 
@@ -891,11 +891,11 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
         self._add_standard_includes()
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp=construct_FD4_ncp(),
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term=construct_FD4_source_term(),
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues=construct_FD4_eigenvalues(),
         )
 
@@ -1039,7 +1039,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             self.switch_to_heap_storage(Storage.SmartPointers, Storage.SmartPointers)
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp="""
   double deltaQSerialised[NumberOfUnknowns*3];
   for (int i=0; i<NumberOfUnknowns; i++) {
@@ -1051,12 +1051,12 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
   }
   ::applications::exahype2::ccz4::ncpSecondOrderFormulation(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
-            flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term="""
   memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::sourceSecondOrderFormulation(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
 """,
-            refinement_criterion=exahype2.solvers.fv.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues="""
           // do we only set Q
   return ::applications::exahype2::ccz4::maxEigenvalueSecondOrderFormulation(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
@@ -1136,7 +1136,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
         init_action_set = exahype2.tracer.InsertParticlesByCoordinates(
             particle_set=tracer_particles, coordinates=coordinates
         )
-        init_action_set.priority = 0
+        init_action_set.descend_invocation_order = 0
         project.add_action_set_to_initialisation(init_action_set)
 
         project_on_tracer_properties_kernel = ""
@@ -1162,8 +1162,8 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             self,
             project_on_tracer_properties_kernel=project_on_tracer_properties_kernel,
         )
-        tracing_action_set.priority = (
-            self._action_set_compute_final_linear_combination.priority + 1
+        tracing_action_set.descend_invocation_order = (
+            self._action_set_compute_final_linear_combination.descend_invocation_order + 1
         )
         project.add_action_set_to_timestepping(tracing_action_set)
         project.add_action_set_to_initialisation(tracing_action_set)
@@ -1178,8 +1178,8 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             time_delta_between_two_snapsots = time_delta_between_two_snapsots,
             clearDatabaseAfterFlush         = True,
         )
-        dump_into_database_action_set.priority = (
-            self._action_set_compute_final_linear_combination.priority + 2
+        dump_into_database_action_set.descend_invocation_order = (
+            self._action_set_compute_final_linear_combination.descend_invocation_order + 2
         )
         project.add_action_set_to_timestepping(dump_into_database_action_set)
 
@@ -1266,7 +1266,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
             )
 
         self.set_implementation(
-            boundary_conditions=exahype2.solvers.rkdg.PDETerms.Empty_Implementation,
+            boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
             ncp="""
   double dQdxSerialised[NumberOfUnknowns*3];
   for (int i=0; i<NumberOfUnknowns; i++) {
@@ -1278,12 +1278,12 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
   }
   ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
 """,
-            flux=exahype2.solvers.rkdg.PDETerms.None_Implementation,
+            flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term="""
   memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
 """,
-            refinement_criterion=exahype2.solvers.rkdg.PDETerms.Empty_Implementation,
+            refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
             eigenvalues="""
   return ::applications::exahype2::ccz4::maxEigenvalue(Q, normal%Dimensions, CCZ4e, CCZ4ds, CCZ4GLMc, CCZ4GLMd );
 """,
@@ -1336,7 +1336,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
         init_action_set = exahype2.tracer.InsertParticlesByCoordinates(
             particle_set=tracer_particles, coordinates=coordinates
         )
-        init_action_set.priority = 0
+        init_action_set.descend_invocation_order = 0
         project.add_action_set_to_initialisation(init_action_set)
 
         assert tracer_unknowns == None
@@ -1346,8 +1346,8 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
             solver=self,
             project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle",
         )
-        tracing_action_set.priority = (
-            self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority
+        tracing_action_set.descend_invocation_order = (
+            self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order
             + 1
         )
         project.add_action_set_to_timestepping(tracing_action_set)
@@ -1363,8 +1363,8 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
             time_delta_between_two_snapsots = time_delta_between_two_snapsots,
             clearDatabaseAfterFlush         = True,
         )
-        dump_into_database_action_set.priority = (
-            self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority
+        dump_into_database_action_set.descend_invocation_order = (
+            self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order
             + 1
         )
         project.add_action_set_to_timestepping(dump_into_database_action_set)

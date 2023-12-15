@@ -124,10 +124,10 @@ class MyDGSolver(exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclave
                                                                    min_cell_h           = min_h, 
                                                                    max_cell_h           = max_h,
                                                                    time_step_relaxation = 0.1,
-                                                                   flux                 = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
-                                                                   eigenvalues          = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
-                                                                   source_term          = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
-                                                                   refinement_criterion = exahype2.solvers.rkdg.PDETerms.User_Defined_Implementation,
+                                                                   flux                 = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                   eigenvalues          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                   source_term          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                   refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
                                                                    pde_terms_without_state = args.optimise_stateless
                                                                    )
 
@@ -149,7 +149,7 @@ class MyDGSolver(exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclave
       and
       (alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AnotB or alpha.getMarker()==celldata::AlphaPoissonMarker::Marker::AdeterminesB)
     )
-""""
+""")
     
     
     # Bei compute bin ich mir echt unsicher
@@ -171,10 +171,10 @@ fv_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
                                                                                  min_volume_h         = min_h, 
                                                                                  max_volume_h         = max_h,
                                                                                  time_step_relaxation = 0.1,
-                                                                                 flux                 = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                 eigenvalues          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                 source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-                                                                                 refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+                                                                                 flux                 = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                                 eigenvalues          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                                 source_term          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+                                                                                 refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation,
                                                                                  pde_terms_without_state = args.optimise_stateless
                                                                                 )
 
@@ -272,10 +272,9 @@ project.set_global_simulation_parameters(
 )
 
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( args.peanodir, build_mode )
-    
-    
+
 #
 # Generate code and then copy cpp file over main
 #

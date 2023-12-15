@@ -51,11 +51,11 @@ else:
   my_solver.plot_description = "rho, u, v, w, e, dudx, dudy, dudz, dvdx, dvdy, dvdz, dwdx, dwdy, dwdz"
 
 my_solver.set_implementation(
-  ncp                   = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  flux                  = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  eigenvalues           = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  #source_term          = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  ncp                   = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  flux                  = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  eigenvalues           = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  #source_term          = exahype2.solvers.PDETerms.User_Defined_Implementation,
+  refinement_criterion = exahype2.solvers.PDETerms.User_Defined_Implementation
 )
 
 my_solver._preprocess_reconstructed_patch = """
@@ -87,7 +87,7 @@ my_project.set_output_path("solution")
 if not os.path.exists("solution"):
   os.makedirs("solution")
 
-my_project.set_load_balancing("toolbox::loadbalancing::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
+my_project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically", "new ::exahype2::LoadBalancingConfiguration(0.98)")
 my_project.set_Peano4_installation("../../../", mode )
 my_project = my_project.generate_Peano4_project(verbose=True)
 my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")

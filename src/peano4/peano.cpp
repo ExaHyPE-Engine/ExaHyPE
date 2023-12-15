@@ -30,7 +30,7 @@ void peano4:: writeCopyrightMessage() {
   static bool wrote = false;
   if (
     not wrote and tarch::mpi::Rank::getInstance().getRank() == tarch::mpi::Rank::getGlobalMasterRank() ) {
-    std::cout << "Peano 4 (C) www.peano-framework.org " << std::endl;
+    std::cout << "Peano 4 (C) www.peano-framework.org" << std::endl;
     std::string buildInfo = "build: ";
 
     buildInfo += std::to_string(Dimensions);

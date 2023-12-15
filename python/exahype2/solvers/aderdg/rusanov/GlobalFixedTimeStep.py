@@ -1,8 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.ADERDG import PrecisionType
 from exahype2.solvers.aderdg.SingleSweep import SingleSweep
-from exahype2.solvers.aderdg.PDETerms import PDETerms
 
 from exahype2.solvers.aderdg.kernels import create_abstract_solver_declarations
 from exahype2.solvers.aderdg.kernels import create_abstract_solver_definitions
@@ -77,6 +77,7 @@ class GlobalFixedTimeStep(SingleSweep):
         self,
         flux=None,
         ncp=None,
+        eigenvalues=None,
         boundary_conditions=None,
         refinement_criterion=None,
         initial_conditions=None,
@@ -94,7 +95,7 @@ class GlobalFixedTimeStep(SingleSweep):
             additional_user_includes="",
             flux=flux,
             ncp=ncp,
-            eigenvalues=PDETerms.User_Defined_Implementation,
+            eigenvalues=eigenvalues,
             source_term=source_term,
             material_parameters=material_parameters,
             point_source=point_source,

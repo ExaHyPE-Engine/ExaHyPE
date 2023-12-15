@@ -1,14 +1,12 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
-
 import peano4.toolbox.blockstructured
 import peano4.datamodel
 import peano4.output
 import exahype2.grid
 import exahype2.solvers.aderdg.actionsets
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 from .kernels import (get_face_overlap_merge_implementation, create_abstract_solver_user_declarations_for_error_measurement,
   create_abstract_solver_user_definitions_for_error_measurement, create_finish_time_step_implementation_for_error_measurement,
   add_final_action_for_error_measurement)
@@ -81,28 +79,28 @@ class ADERDG(object):
         self._name = name
 
         """
-    polynomial order of the representation of the underlying function in each spatial dimension.
-    The number of support points used to represent this polynomial is always the order + 1
-    """
+        Polynomial order of the representation of the underlying function in each spatial dimension.
+        The number of support points used to represent this polynomial is always the order + 1
+        """
         self._order = order
 
         """
-    self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
-    auxiliary variables in the equation to be computed. Unknowns are variables that change over
-    time whereas auxiliary variables can be space-dependent but don't vary over time.
-    These can be specified either as simple ints or by a dictionary
-    (e.g.) unknowns = {'a': 1, 'b': 1, 'c': 3}
-    in which the user specifies the multiplicity of the variable (the velocity has one component
-    per dimension for example.)
-    If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
-    allows the user to specifiy a variable by name and automatically maps this to the right position
-    in an array for better legibility. Otherwise they must manually remember the position of each
-    variable manually.
+        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
+        auxiliary variables in the equation to be computed. Unknowns are variables that change over
+        time whereas auxiliary variables can be space-dependent but don't vary over time.
+        These can be specified either as simple ints or by a dictionary
+        (e.g.) unknowns = {'a': 1, 'b': 1, 'c': 3}
+        in which the user specifies the multiplicity of the variable (the velocity has one component
+        per dimension for example.)
+        If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
+        allows the user to specify a variable by name and automatically maps this to the right position
+        in an array for better legibility. Otherwise they must manually remember the position of each
+        variable manually.
 
-    use_var_shortcut is used to know whether or not the user passed their variables via a dict
-    variable_names and variable_pos are used internally to remember the names and respective
-    positions of variables if set by a dictionary.
-    """
+        use_var_shortcut is used to know whether or not the user passed their variables via a dict
+        variable_names and variable_pos are used internally to remember the names and respective
+        positions of variables if set by a dictionary.
+        """
         self._use_var_shortcut = False
         self._variable_names = []
         self._variable_pos = [0]
@@ -134,9 +132,9 @@ class ADERDG(object):
             )
 
         """
-    Minimal and maximal accepted sizes for the cell, domain will be subdivided until the cell size is smaller
-    than the minimal size but will never be subdivided to be smaller than the minimal size.
-    """
+        Minimal and maximal accepted sizes for the cell, domain will be subdivided until the cell size is smaller
+        than the minimal size but will never be subdivided to be smaller than the minimal size.
+        """
         self._min_cell_h = min_cell_h
         self._max_cell_h = max_cell_h
         if min_cell_h > max_cell_h:
@@ -505,24 +503,24 @@ class ADERDG(object):
                 self, self._store_cell_data_default_guard()
             )
 
-        self._action_set_update_face_label.priority = 0
-        self._action_set_update_cell_label.priority = 0
+        self._action_set_update_face_label.descend_invocation_order = 0
+        self._action_set_update_cell_label.descend_invocation_order = 0
 
-        self._action_set_initial_conditions.priority = 1
-        self._action_set_initial_conditions_for_grid_construction.priority = 1
-        self._action_set_handle_boundary.priority = 1
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = (
+        self._action_set_initial_conditions.descend_invocation_order = 1
+        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = 1
+        self._action_set_handle_boundary.descend_invocation_order = 1
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
             1
         )
-        self._action_set_prediction.priority = 1
-        self._action_set_prediction_on_hanging_cells.priority = 1
-        self._action_set_correction.priority = (
+        self._action_set_prediction.descend_invocation_order = 1
+        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 1
+        self._action_set_correction.descend_invocation_order = (
             1  # needs to happen after handle_boundary but this is done on faces anyway
         )
 
-        self._action_set_AMR.priority = 2
-        self._action_set_AMR_commit_without_further_analysis.priority = 2
-        self._action_set_postprocess_solution.priority = 2
+        self._action_set_AMR.descend_invocation_order = 2
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 2
+        self._action_set_postprocess_solution.descend_invocation_order = 2
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
@@ -540,6 +538,20 @@ class ADERDG(object):
 
     def get_user_solver_includes(self):
         return self.user_solver_includes
+
+    def add_user_action_set_includes(self, value):
+        """
+        Add further includes to this property, if your action sets require some additional
+        routines from other header files.
+        """
+        self.user_action_set_includes += value
+
+    def add_user_solver_includes(self, value):
+        """
+        Add further includes to this property, if your solver requires some additional
+        routines from other header files.
+        """
+        self.user_solver_includes += value
 
     def _store_cell_data_default_guard(self):
         return (
@@ -929,28 +941,25 @@ class ADERDG(object):
             )
 
     """
-  This tells peano to add the solver files to the project. It generates any files that are not
-  specifically cell or face data or grid actions such as the actionsets.
-  Currently it generates solver implementation and header files as well as abstract solver
-  implementation and header files.
-  In addition to this if the user has specified that they would like to use shortcuts to refer
-  to their variable (e.g. specified their unknowns or aux. variables through a dict) it generates
-  a VariableShortcuts file which is then connected to the solver so that users can specify their
-  variables through name.
-  Finally, if the kernelgenerator option is chosen this calls generate_kernels() which then generates
-  optimized aderdg kernels and adds these to the makefile.
-  """
-
+    This tells peano to add the solver files to the project. It generates any files that are not
+    specifically cell or face data or grid actions such as the actionsets.
+    Currently it generates solver implementation and header files as well as abstract solver
+    implementation and header files.
+    In addition to this if the user has specified that they would like to use shortcuts to refer
+    to their variable (e.g., specified their unknowns or aux. variables through a dict) it generates
+    a VariableShortcuts file which is then connected to the solver so that users can specify their
+    variables through name.
+    Finally, if the kernelgenerator option is chosen this calls generate_kernels() which then generates
+    optimized aderdg kernels and adds these to the makefile.
+    """
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         """
-
         The ExaHyPE2 project will call this operation when it sets
         up the overall environment.
 
         This routine is typically not invoked by a user.
 
         output: peano4.output.Output
-
         """
         templatefile_prefix = os.path.dirname(os.path.realpath(__file__)) + "/"
 
@@ -993,6 +1002,8 @@ class ADERDG(object):
 
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
+        output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
+        output.makefile.add_h_file(self._name + ".h", generated=True)
         output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
         output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
 
@@ -1000,8 +1011,8 @@ class ADERDG(object):
             generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
                 os.path.dirname(os.path.realpath(__file__))
                 + "/"
-                + "VariableShortcuts.template.h",
-                "VariableShortcuts_" + self._name,
+                + "../VariableShortcuts.template.h",
+                "VariableShortcuts",
                 namespace,
                 ".",
                 implementationDictionary,
@@ -1009,6 +1020,7 @@ class ADERDG(object):
                 True,
             )
             output.add(generated_shortcut_file)
+            output.makefile.add_h_file("VariableShortcuts.h", generated=True)
 
         if self._use_kernel_generator:
             self.generate_kernels(namespace, output, dimensions)
@@ -1061,10 +1073,9 @@ class ADERDG(object):
         pass
 
     """
-  Generates a dictionary of "words" that will later be used in various templates to fill these out by adding
-  information from the solver or which was specified by the user.
-  """
-
+    Generates a dictionary of "words" that will later be used in various templates to fill these out by adding
+    information from the solver or which was specified by the user.
+    """
     def _init_dictionary_with_default_parameters(self, d):
         d["ORDER"] = self._order
         d["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
@@ -1259,7 +1270,7 @@ class ADERDG(object):
             exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
         )
         self._action_set_postprocess_solution._compute_kernel += add_final_action_for_error_measurement()
-        self._action_set_postprocess_solution.priority = 3
+        self._action_set_postprocess_solution.descend_invocation_order = 3
 
 
     """

@@ -14,7 +14,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 from exahype2.solvers.ButcherTableau import RungeKutta_steps
 
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import jinja2
 import math
@@ -175,7 +175,7 @@ class RungeKuttaDG(object):
         min_cell_h,
         max_cell_h,
         plot_grid_properties,
-        baseline_action_set_priority=0,
+        baseline_action_set_descend_invocation_order=0,
     ):
         """
         Constructor of the Runge-Kutta Discontinuous Galerkin solver
@@ -263,8 +263,52 @@ class RungeKuttaDG(object):
         self._multiply_with_inverted_mass_matrix_call = "#error Please set the solver property _multiply_with_inverted_mass_matrix_call in the Python class"
         self._kernel_namespace = "#error Please set the solver property _kernel_namespace in the Python class"
 
-        self._unknowns = unknowns
-        self._auxiliary_variables = auxiliary_variables
+        """
+        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
+        auxiliary variables in the equation to be computed. Unknowns are variables that change over
+        time whereas auxiliary variables can be space-dependent but don't vary over time.
+        These can be specified either as simple ints or by a dictionary
+        (e.g.) unknowns = {'a': 1, 'b': 1, 'c': 3}
+        in which the user specifies the multiplicity of the variable (the velocity has one component
+        per dimension for example.)
+        If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
+        allows the user to specifiy a variable by name and automatically maps this to the right position
+        in an array for better legibility. Otherwise they must manually remember the position of each
+        variable manually.
+
+        use_var_shortcut is used to know whether or not the user passed their variables via a dict
+        variable_names and variable_pos are used internally to remember the names and respective
+        positions of variables if set by a dictionary.
+        """
+        self._use_var_shortcut = False
+        self._variable_names = []
+        self._variable_pos = [0]
+
+        if type(unknowns) is dict:
+            self._unknowns = sum(unknowns.values())
+            self._variable_names += list(unknowns.keys())
+            for var in list(unknowns.values()):
+                self._variable_pos.append(var + self._variable_pos[-1])
+            self._use_var_shortcut = True
+        elif type(unknowns) is int:
+            self._unknowns = unknowns
+        else:
+            raise Exception(
+                "not a valid type for parameter unknowns, needs to be int or dictionary"
+            )
+
+        if type(auxiliary_variables) is dict:
+            self._auxiliary_variables = sum(auxiliary_variables.values())
+            self._variable_names += list(auxiliary_variables.keys())
+            for var in list(auxiliary_variables.values()):
+                self._variable_pos.append(var + self._variable_pos[-1])
+            self._use_var_shortcut = True
+        elif type(auxiliary_variables) is int:
+            self._auxiliary_variables = auxiliary_variables
+        else:
+            raise Exception(
+                "not a valid type for parameter auxiliary_variables, needs to be int or dictionary"
+            )
 
         self._min_cell_h = min_cell_h
         self._max_cell_h = max_cell_h
@@ -325,7 +369,7 @@ class RungeKuttaDG(object):
         self._cell_data_storage = Storage.CallStack
         self._face_data_storage = Storage.CallStack
 
-        self._baseline_action_set_priority = baseline_action_set_priority
+        self._baseline_action_set_descend_invocation_order = baseline_action_set_descend_invocation_order
 
         self.create_data_structures()
         self.create_action_sets()
@@ -864,53 +908,53 @@ We use RK("""
         self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel(self._name)
         self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel(self._name)
 
-        self._action_set_update_face_label.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_update_face_label.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_update_cell_label.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_update_cell_label.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_linear_combination_of_estimates.priority = (
-            self._baseline_action_set_priority + 2
+        self._action_set_linear_combination_of_estimates.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
         )
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.priority = (
-            self._baseline_action_set_priority + 2
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
         )
-        self._action_set_project_linear_combination_onto_faces.priority = (
-            self._baseline_action_set_priority + 3
+        self._action_set_project_linear_combination_onto_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 3
         )  # depends on lienar combination of estimates
-        self._action_set_solve_volume_integral.priority = (
-            self._baseline_action_set_priority + 3
+        self._action_set_solve_volume_integral.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 3
         )  # the two 3s could run in parallel
-        self._action_set_handle_boundary.priority = (
-            self._baseline_action_set_priority + 2
+        self._action_set_handle_boundary.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 2
         )
-        self._action_set_solve_Riemann_problem.priority = (
-            self._baseline_action_set_priority + 3
+        self._action_set_solve_Riemann_problem.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 3
         )  # boundary has to be known
-        self._action_set_add_volume_and_face_solution.priority = (
-            self._baseline_action_set_priority + 3
+        self._action_set_add_volume_and_face_solution.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 3
         )  # can also run in parallel, as it never occurs at same time
-        self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.priority = (
-            self._baseline_action_set_priority + 4
+        self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 4
         )  # depends on other guys
-        self._action_set_AMR.priority = self._baseline_action_set_priority + 5
-        self._action_set_AMR_commit_without_further_analysis.priority = (
-            self._baseline_action_set_priority + 5
+        self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 5
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 5
         )
 
-        self._action_set_initial_conditions.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_initial_conditions.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
-        self._action_set_initial_conditions_for_grid_construction.priority = (
-            self._baseline_action_set_priority + 1
+        self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 1
         )
 
-        self._action_set_preprocess_solution.priority = (
-            self._baseline_action_set_priority
+        self._action_set_preprocess_solution.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )  # touch cell first time, i.e. enter cell
-        self._action_set_postprocess_solution.priority = (
-            self._baseline_action_set_priority
+        self._action_set_postprocess_solution.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order
         )  # touch cell last time, i.e. leave cell
 
 
@@ -1158,7 +1202,7 @@ We use RK("""
             plot_cell_data=False,
             select_dofs=self.select_dofs_to_print,
         )
-        plot_patches_action_set.priority = self._baseline_action_set_priority
+        plot_patches_action_set.descend_invocation_order = self._baseline_action_set_descend_invocation_order
         step.add_action_set(plot_patches_action_set)
 
         if self._plot_grid_properties:
@@ -1173,8 +1217,8 @@ We use RK("""
 """,
                 plot_cell_data=False,
             )
-            plot_grid_properties_action_set.priority = (
-                self._baseline_action_set_priority
+            plot_grid_properties_action_set.descend_invocation_order = (
+                self._baseline_action_set_descend_invocation_order
             )
             step.add_action_set(plot_grid_properties_action_set)
 
@@ -1285,10 +1329,25 @@ We use RK("""
 
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
-        output.makefile.add_h_file( "Abstract" + self._name + ".h", generated=True )
-        output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
+        output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
         output.makefile.add_h_file(self._name + ".h", generated=True)
+        output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
         output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
+
+        if self._use_var_shortcut:
+            generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
+                os.path.dirname(os.path.realpath(__file__))
+                + "/"
+                + "../VariableShortcuts.template.h",
+                "VariableShortcuts",
+                namespace,
+                ".",
+                implementationDictionary,
+                True,
+                True,
+            )
+            output.add(generated_shortcut_file)
+            output.makefile.add_h_file("VariableShortcuts.h", generated=True)
 
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
@@ -1402,6 +1461,10 @@ We use RK("""
 
         d["KERNEL_NAMESPACE"] = self._kernel_namespace
 
+        d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
+        d["VARIABLE_NAMES"] = self._variable_names
+        d["VARIABLE_POSITIONS"] = self._variable_pos
+
         self._basis.init_dictionary_with_default_parameters(d, False)
 
         # Has to come last, as we already use the other entries
@@ -1469,9 +1532,9 @@ We use RK("""
         if initial_conditions is not None:
             self._initial_conditions_implementation = initial_conditions
 
-        if refinement_criterion == exahype2.solvers.fv.PDETerms.None_Implementation:
+        if refinement_criterion == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "refinement criterion cannot be none"
-        if initial_conditions == exahype2.solvers.fv.PDETerms.None_Implementation:
+        if initial_conditions == exahype2.solvers.PDETerms.None_Implementation:
             assert False, "initial conditions cannot be none"
 
         if flux is not None:

@@ -58,7 +58,7 @@ if args.gpu:
     min_h          = mesh_size,
     max_h          = mesh_size,
     flux = None,
-    ncp            = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    ncp            = exahype2.solvers.PDETerms.User_Defined_Implementation,
     ngrabmax=args.nmax
     )
 else:
@@ -71,7 +71,7 @@ else:
     min_h          = mesh_size,
     max_h          = mesh_size,
     flux = None,
-    ncp            = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    ncp            = exahype2.solvers.PDETerms.User_Defined_Implementation
     )
 
 
@@ -93,7 +93,7 @@ project.add_solver( solver );
     # min_h          = mesh_size,
     # max_h          = mesh_size,
     # flux = None,
-    # ncp            = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    # ncp            = exahype2.solvers.PDETerms.User_Defined_Implementation,
 
     # ngrabmax=args.nmax
     # ))
@@ -116,7 +116,7 @@ project.set_global_simulation_parameters(
 )
 
 
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(0.9)" )
+project.set_load_balancing( "toolbox::loadbalancing::strategies::RecursiveSubdivision", "(0.9)" )
 
 
 
