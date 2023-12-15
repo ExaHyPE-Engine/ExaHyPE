@@ -20,26 +20,20 @@ corresponding entry in the solution vector reads like.
   """
   
   
-  TemplateInitCell = """
-  if ( not marker.willBeRefined() ) { 
-    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
+  TemplateTouchCellFirstTime = """
+  if ( fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
+    logTraceIn( "touchCellFirstTime(...)" );
     
-    // Commenting out so that we don't get compilation errors, as we are halfway through making changes
-    /*
     std::pair<int,int> localIndex( _spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber() );
-    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getCellLocalToGlobalMap().getGlobalIndex(localIndex);
+    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex, ::petsc::LocalToGlobalMap::Type::Cell);
 
-    tarch::la::Vector<{{CELL_CARDINALITY}}, double> cellDofs;
     for (int i=0; i<{{CELL_CARDINALITY}}; i++){
-      cellDofs[i] = repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().get(globalIndex + i);
+      // place values into mesh
+      fineGridCell{{SOLVER_NAME}}.setValue( i,
+        repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().get(globalIndex + i) );
     }
 
-    //place this vector into the mesh
-    fineGridCell{{SOLVER_NAME}}.setValue(cellDofs);
-    
-    */
-
-    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
+    logTraceOut( "touchCellFirstTime(...)" );
   }
 """
   
@@ -77,7 +71,7 @@ in init().
     """
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.TemplateInitCell).render(**self.d)
+      result = jinja2.Template(self.TemplateTouchCellFirstTime).render(**self.d)
       pass 
     return result
 
@@ -159,7 +153,7 @@ corresponding entry in the solution vector reads like.
   TemplateTouchVertexFirstTime = """
   if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
     std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
-    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
+    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex, ::petsc::LocalToGlobalMap::Type::Vertex);
 
     for (int i=0; i<{{VERTEX_CARDINALITY}}; i++){
       fineGridVertex{{SOLVER_NAME}}.setValue(

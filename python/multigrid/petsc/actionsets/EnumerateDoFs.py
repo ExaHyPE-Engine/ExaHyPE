@@ -4,12 +4,23 @@ from peano4.solversteps.ActionSet import ActionSet
 
 import peano4
 import jinja2
-
+ 
 
 class EnumerateDoFs(ActionSet):
   """!
 
   Enumerate the vertices, cells and face entries
+  
+  This is the first step in a typical PETSc algorithm, as discussed on @ref documentation_multigrid_petsc.
+  It has to ensure that each mesh entity hosts the appropriate number of 
+  degrees of freedom. It hence strongly depends on the solver chosen, as 
+  different solvers place different amounts of data and auxiliary quantities on
+  the mesh entities. The information on data cardinality is queried from the 
+  solver objects. The added logic contributed by this action set is if a mesh
+  entity really holds unknowns or not. That is, this action set injects the 
+  domain layout and boundary data knowledge into the mesh. This guiding 
+  principles of this injection are discussed on 
+  @ref documentation_multigrid_boundary_conditions "Peano's generic boundary condition pages".
   
   """
   
@@ -25,22 +36,49 @@ class EnumerateDoFs(ActionSet):
   };
 
   fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
+  fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Undefined );
   
-  if ( not marker.willBeRefined() ) { 
-    switch ( isOnBoundary(marker.x()) ){
-      case true:
+  vertexdata::{{SOLVER_NAME}}PETScData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
+  
+  switch (dofType) {
+    case vertexdata::{{SOLVER_NAME}}PETScData::Type::Boundary:
+      {
         fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Boundary );
-        break;
-      case false:
-        fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior );
-        {% if VERTEX_CARDINALITY>0 %}
-        fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localVertexMap.reserveIndex( {{VERTEX_CARDINALITY}} ) );
+        {% if BOUNDARY_VERTICES_HOLD_DATA %}
+        if ( marker.willBeRefined() ) { 
+          fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+        }
+        else {
+          fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localVertexMap.reserveIndex( {{VERTEX_CARDINALITY}} ) );
+        }
         {% endif %}
-        break;
-    }
-  }
-  else {
-    fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+      }
+      break;
+    case vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior:
+      {
+        if (isOnBoundary(marker.x())) {
+          logWarning( "touchVertexFirstTime(...)", "vertex at " << marker.toString() << " labelled as interior even though it is located at global domain boundary" );
+        }
+        if ( marker.willBeRefined() ) { 
+          fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+        }
+        else {
+          fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior );
+          fineGridVertex{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localVertexMap.reserveIndex( {{VERTEX_CARDINALITY}} ) );
+        }
+      }
+      break;
+    case vertexdata::{{SOLVER_NAME}}PETScData::Type::Coarse:
+      assertionMsg(false, "should not be returned by user" );
+      break;
+    case vertexdata::{{SOLVER_NAME}}PETScData::Type::Outside:
+      {
+        fineGridVertex{{SOLVER_NAME}}PETScData.setType( vertexdata::{{SOLVER_NAME}}PETScData::Type::Outside );
+      }
+      break;
+    case vertexdata::{{SOLVER_NAME}}PETScData::Type::Undefined:
+      assertionEquals( {{VERTEX_CARDINALITY}}, 0 );
+      break;
   }
 """
 
@@ -56,50 +94,105 @@ class EnumerateDoFs(ActionSet):
   };
 
   fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
+  fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Undefined );
   
-  if ( not marker.willBeRefined()  ) { 
-    switch ( isOnBoundary(marker.x()) ){
-      case true:
+  facedata::{{SOLVER_NAME}}PETScData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceDoFType(marker.x(),marker.h());
+  
+  switch (dofType) {
+    case facedata::{{SOLVER_NAME}}PETScData::Type::Boundary:
+      {
         fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Boundary );
-        break;
-      case false:
-        fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Interior );
-        {% if FACE_CARDINALITY>0 %}
-        fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
+        {% if BOUNDARY_FACES_HOLD_DATA %}
+        if ( marker.willBeRefined() ) { 
+          fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+        }
+        else {
+          fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
+        }
         {% endif %}
-        break;
-    }
-  } 
-  else {
-    fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+      }
+      break;
+    case facedata::{{SOLVER_NAME}}PETScData::Type::Interior:
+      {
+        if (isOnBoundary(marker.x())) {
+          logWarning( "touchFaceFirstTime(...)", "face at " << marker.toString() << " labelled as interior even though it is located at global domain boundary" );
+        }
+        if ( marker.willBeRefined() ) { 
+          fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+        }
+        else {
+          fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Interior );
+          fineGridFace{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localFaceMap.reserveIndex( {{FACE_CARDINALITY}} ) );
+        }
+      }
+      break;
+    case facedata::{{SOLVER_NAME}}PETScData::Type::Coarse:
+      assertionMsg(false, "should not be returned by user" );
+      break;
+    case facedata::{{SOLVER_NAME}}PETScData::Type::Outside:
+      {
+        fineGridFace{{SOLVER_NAME}}PETScData.setType( facedata::{{SOLVER_NAME}}PETScData::Type::Outside );
+      }
+      break;
+    case facedata::{{SOLVER_NAME}}PETScData::Type::Undefined:
+      assertionEquals( {{FACE_CARDINALITY}}, 0 );
+      break;
   }
 """
 
   
   TemplateEnumerateCell = """
   fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( ::petsc::LocalToGlobalMap::NoDegreeOfFreedom );
+  fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Undefined );
   
-  if ( not marker.willBeRefined()  ) { 
-    fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Interior );
-    {% if CELL_CARDINALITY>0 %}
-    fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localCellMap.reserveIndex( {{CELL_CARDINALITY}} ) );
-    {% endif %}
-  } 
-  else {
-    fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+  celldata::{{SOLVER_NAME}}PETScData::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
+  
+  switch (dofType) {
+    case celldata::{{SOLVER_NAME}}PETScData::Type::Interior:
+      {
+        if ( marker.willBeRefined()  ) { 
+          fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Coarse );
+        }
+        else {
+          fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Interior );
+          fineGridCell{{SOLVER_NAME}}PETScData.setUnknownBaseNumber( _localCellMap.reserveIndex( {{CELL_CARDINALITY}} ) );
+        }
+      }
+      break;
+    case celldata::{{SOLVER_NAME}}PETScData::Type::Coarse:
+      assertionMsg(false, "should not be returned by user" );
+      break;
+    case celldata::{{SOLVER_NAME}}PETScData::Type::Outside:
+      {
+        fineGridCell{{SOLVER_NAME}}PETScData.setType( celldata::{{SOLVER_NAME}}PETScData::Type::Outside );
+      }
+      break;
+    case celldata::{{SOLVER_NAME}}PETScData::Type::Undefined:
+      assertionEquals( {{CELL_CARDINALITY}}, 0 );
+      break;
   }
 """
 
   
   TemplateEndTraversal = """
-  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localVertexMap );
-  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localFaceMap );
-  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localCellMap );
+  logInfo( 
+    "endTraversal()", 
+    "vertex dofs=" << _localVertexMap.getTotalNumberOfIndices() <<
+    ", face dofs=" << _localFaceMap.getTotalNumberOfIndices() <<
+    ", cell dofs=" << _localCellMap.getTotalNumberOfIndices()
+  );
+    
+  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localVertexMap, ::petsc::LocalToGlobalMap::Type::Vertex );
+  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localFaceMap,   ::petsc::LocalToGlobalMap::Type::Face );
+  repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().merge( _localCellMap,   ::petsc::LocalToGlobalMap::Type::Cell );
 """
 
 
   def __init__(self,
-               solver):
+               solver,
+               boundary_vertices_hold_data,
+               boundary_faces_hold_data,
+               ):
     """!A
     
 Enumerate vertex-associated degrees of freedom
@@ -119,6 +212,8 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     self.d["VERTEX_CARDINALITY"] = solver.number_of_matrix_entries_per_vertex
     self.d["FACE_CARDINALITY"]   = solver.number_of_matrix_entries_per_face
     self.d["CELL_CARDINALITY"]   = solver.number_of_matrix_entries_per_cell
+    self.d["BOUNDARY_VERTICES_HOLD_DATA"] = boundary_vertices_hold_data
+    self.d["BOUNDARY_FACES_HOLD_DATA"]    = boundary_faces_hold_data
 
 
   def get_body_of_operation(self,operation_name):

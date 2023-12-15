@@ -45,10 +45,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     /**
      * Initialise a degree of freedom
      *
+     * This routine will be called only for interior DoFs. See the correlation
+     * to getCellDoFType() in the superclass.
+     *
      * @todo Please add your documentation here
-     */
-    /**
-     * Initialise a vertex degree of freedom
      */
     virtual void initNode(
       const tarch::la::Vector<Dimensions, double>&  x,

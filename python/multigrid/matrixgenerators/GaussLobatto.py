@@ -6,9 +6,9 @@ from   scipy.interpolate import lagrange
 
 import peano4
 
-from   .MatrixGenerator import MatrixGenerator
-
-
+from .MatrixGenerator import MatrixGenerator
+#from .BlockMatrix.block_matrix_dgpoisson2d import DGPoisson2dBlockMatrix
+from .BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
 
 class GaussLobatto(MatrixGenerator):
   '''
@@ -43,6 +43,10 @@ class GaussLobatto(MatrixGenerator):
 
     if use_unit_interval:
       self.points1d    = self.get_points_()
+
+    r_press = self.poly_degree # polynomial order for p
+    self.block_matrix = DGPoisson2dPenaltyBlockMatrix(r_press)
+    #self.block_matrix = DGPoisson2dBlockMatrix(r_press)
 
   def get_points1d(self):
     """!
@@ -130,35 +134,127 @@ class GaussLobatto(MatrixGenerator):
     return output
 
   def get_cell_system_matrix_for_laplacian(self):
-    '''!
-
-    Create a cell-cell mass matrix
-    
-    
-    needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
-    so normalise by h
+    '''Create a cell-cell mass matrix for $\nabla p \cdot \nabla v$
     '''
-    dim    = self.cell_nodes * self.unknowns_per_cell_node
-    output = np.zeros((dim,dim))
-    for i in range( self.cell_nodes ):
-      for j in range( self.cell_nodes ):
-        for k in range( self.unknowns_per_cell_node ):
-          pass
-          # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
-          #output[3*i+1, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # phi_x-u coupling
-          #output[3*i+2, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # phi_y-u coupling
-          #output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
-          #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
-    return output
-
-  def get_cell_to_face_matrix(self):
-    faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces
-    cellDim = self.cell_nodes * self.unknowns_per_cell_node
-    return np.zeros((faceDim,cellDim))
+    # dim    = self.cell_nodes * self.unknowns_per_cell_node
+    # output = np.zeros((dim,dim))
+    # for i in range( self.cell_nodes ):
+    #   for j in range( self.cell_nodes ):
+    #     for k in range( self.unknowns_per_cell_node ):
+    #       pass
+    #       # We should have different getDeriv2d, getPoly2d for different fields: u, phi_x, phi_y
+    #       #output[3*i+1, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # phi_x-u coupling
+    #       #output[3*i+2, 3*j] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # phi_y-u coupling
+    #       #output[3*i, 3*j+1] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,0), self.getPoly2d(j) ]) # u-phi_x coupling
+    #       #output[3*i, 3*j+2] += self.evaluateIntegral2d(factor=2.0, functions2d=[ self.getDeriv2d(i,1), self.getPoly2d(j) ]) # u-phi_y coupling
+    return self.block_matrix._A_CC[(0,0)][(0,0)]
   
-  def get_face_to_face_matrix(self):
-    dim = self.face_nodes * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
-    return np.eye(dim,dim)
+  def get_face_to_cell_matrix(self):
+
+    """Return the cel-to-face matrix A_p^qf
+    """
+    # SCALING: scaled by h
+    A_CF_q_left   = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
+    A_CF_q_bottom = self.block_matrix._A_CF[(0,2)]["bottom"][(1,0)]
+    A_CF_q_right  = self.block_matrix._A_CF[(0,2)]["right"][(0,1)]
+    A_CF_q_top    = self.block_matrix._A_CF[(0,2)]["top"][(1,0)]
+
+    # SCALING:
+    # !!! A_{C<-F} has penalty components of different scaling!  
+    # For now, we just sum them up into one matrix with scaling (0,0)
+    # Need to work out how to separate them in the solver.
+    A_CF_u_left   = self.block_matrix._A_CF[(0,5)]["left"][(0,0)] # + block_matrix._A_CF[(0,5)]["left"][(0,1)]
+    A_CF_u_bottom = self.block_matrix._A_CF[(0,5)]["bottom"][(0,0)] # + block_matrix._A_CF[(0,5)]["bottom"][(1,0)]
+    A_CF_u_right  = self.block_matrix._A_CF[(0,5)]["right"][(0,0)] # + block_matrix._A_CF[(0,5)]["right"][(0,1)]
+    A_CF_u_top    = self.block_matrix._A_CF[(0,5)]["top"][(0,0)] # + block_matrix._A_CF[(0,5)]["top"][(1,0)]
+
+    A_CF_left = np.concatenate((A_CF_q_left, A_CF_u_left), axis=1)
+    A_CF_bottom = np.concatenate((A_CF_q_bottom, A_CF_u_bottom), axis=1)
+    A_CF_right = np.concatenate((A_CF_q_right, A_CF_u_right), axis=1)
+    A_CF_top = np.concatenate((A_CF_q_top, A_CF_u_top), axis=1)
+
+    A_CF_result = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
+    
+    return A_CF_result
+  
+    # SCALING: Consider our case with 4x16 matrix:
+    #
+    #    by h        by h        by 1        by 1        by h        by h        by 1        by 1        by h        by h        by 1        by 1        by h        by h        by 1        by 1      
+    # [[ 0.33333333  0.16666667  0.33333333  0.16666667 -0.33333333 -0.16666667  0.33333333  0.16666667  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.33333333 -0.16666667]
+    #  [ 0.          0.         -0.33333333 -0.16666667 -0.16666667 -0.33333333  0.16666667  0.33333333 -0.33333333 -0.16666667  0.33333333  0.16666667  0.          0.         -0.16666667 -0.33333333]
+    #  [ 0.16666667  0.33333333  0.16666667  0.33333333  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.16666667 -0.33333333  0.33333333  0.16666667  0.33333333  0.16666667]
+    #  [ 0.          0.         -0.16666667 -0.33333333  0.          0.         -0.16666667 -0.33333333 -0.16666667 -0.33333333  0.16666667  0.33333333  0.16666667  0.33333333  0.16666667  0.33333333]]
+  
+    #faceDim = self.face_nodes * self.unknowns_per_face_node * 2 * self.Dimensions * 2 # * 2 at the end since we are glueing together 2 faces
+    #cellDim = self.cell_nodes * self.unknowns_per_cell_node
+    # 
+    #return np.zeros((faceDim,cellDim))
+  
+  def get_cell_to_face_matrix(self):
+    """Return the projection operator
+    """
+    ### Compute the normal gradient projections
+    A_qp_u_left = self.block_matrix._A_FC[(0,0)]["left"][(0,0)]
+    A_qp_u_bottom = self.block_matrix._A_FC[(0,0)]["bottom"][(0,0)]
+    A_qm_u_right = self.block_matrix._A_FC[(1,0)]["right"][(0,0)]
+    A_qm_u_top = self.block_matrix._A_FC[(1,0)]["top"][(0,0)]
+
+    M_qp_qp_left   = self.block_matrix._A_FF[(0,0)]["left"][(0,1)]   # These are now the same;
+    M_qp_qp_bottom = self.block_matrix._A_FF[(0,0)]["bottom"][(1,0)] # keep for generality
+    M_qm_qm_right = self.block_matrix._A_FF[(1,1)]["right"][(0,1)]   #
+    M_qm_qm_top  = self.block_matrix._A_FF[(1,1)]["top"][(1,0)]      #
+
+    # SCALING: All P_q matrices are scaled with power -1 (i.e. 1/h)
+    P_qp_u_left = -np.dot(np.linalg.inv(M_qp_qp_left), A_qp_u_left)
+    P_qp_u_bottom = -np.dot(np.linalg.inv(M_qp_qp_bottom), A_qp_u_bottom)
+    P_qm_u_right = -np.dot(np.linalg.inv(M_qm_qm_right), A_qm_u_right)
+    P_qm_u_top = -np.dot(np.linalg.inv(M_qm_qm_top), A_qm_u_top)
+
+    ### Compute the solution projections
+    A_up_u_left = self.block_matrix._A_FC[(3,0)]["left"][(0,1)]
+    A_up_u_bottom = self.block_matrix._A_FC[(3,0)]["bottom"][(1,0)]
+    A_um_u_right = self.block_matrix._A_FC[(4,0)]["right"][(0,1)]
+    A_um_u_top = self.block_matrix._A_FC[(4,0)]["top"][(1,0)]
+
+    M_up_up_left   = self.block_matrix._A_FF[(3,3)]["left"][(0,1)]   # These are now the same;
+    M_up_up_bottom = self.block_matrix._A_FF[(3,3)]["bottom"][(1,0)] # keep for generality
+    M_um_um_right = self.block_matrix._A_FF[(4,4)]["right"][(0,1)]   #
+    M_um_um_top  = self.block_matrix._A_FF[(4,4)]["top"][(1,0)]      #
+
+    # SCALING: All P_u matrices are scaled with power 0
+    P_up_u_left = -np.dot(np.linalg.inv(M_up_up_left), A_up_u_left)
+    P_up_u_bottom = -np.dot(np.linalg.inv(M_up_up_bottom), A_up_u_bottom)
+    P_um_u_right = -np.dot(np.linalg.inv(M_um_um_right), A_um_u_right)
+    P_um_u_top = -np.dot(np.linalg.inv(M_um_um_top), A_um_u_top)
+
+    # Components of the resulting matrix  
+    # SCALING: Resulting matrix is made by concatenating P_q matrices and P_u matrices in the following order
+    P_left = np.concatenate((P_qp_u_left, P_up_u_left), axis=0)
+    P_bottom = np.concatenate((P_qp_u_bottom, P_up_u_bottom), axis=0)
+    P_right = np.concatenate((P_qm_u_right, P_um_u_right), axis=0)
+    P_top = np.concatenate((P_qm_u_top, P_um_u_top), axis=0)
+
+    # SCALING: As a result, in the output matrix first two rows should be scaled by 1/h, following 2 rows -- by 1, following two rows -- by 1/h, etc. 
+    return np.concatenate((P_left, P_bottom, P_right, P_top), axis=0)
+  
+    # SCALING: Consider our case with 16x4 matrix:
+    # [[ 1. -1. -0. -0.]  -- scale by 1/h
+    #  [-0. -0.  1. -1.]  -- scale by 1/h
+    #  [-1. -0. -0. -0.]  -- scale by 1
+    #  [-0. -0. -1. -0.]  -- scale by 1
+    #  [ 1. -0. -1. -0.]  -- scale by 1/h
+    #  [-0.  1. -0. -1.]  -- scale by 1/h
+    #  [-1. -0. -0. -0.]  -- scale by 1
+    #  [-0. -1. -0. -0.]  -- scale by 1
+    #  [-1.  1. -0. -0.]  -- scale by 1/h
+    #  [-0. -0. -1.  1.]  -- scale by 1/h
+    #  [-0.  1. -0. -0.]  -- scale by 1
+    #  [-0. -0. -0.  1.]  -- scale by 1
+    #  [-1. -0.  1. -0.]  -- scale by 1/h
+    #  [-0. -1. -0.  1.]  -- scale by 1/h
+    #  [-0. -0.  1. -0.]  -- scale by 1
+    #  [-0. -0. -0.  1.]] -- scale by 1
+
 
   def get_averaging_riemann_solver(self):
     """!
@@ -179,4 +275,33 @@ class GaussLobatto(MatrixGenerator):
     return np.eye(dim,dim)
 
   def get_face_face_riemann_problem_matrix(self):
-    return np.array([0.5, 0.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.5]).reshape((4,2))
+    # modified averaging matrix. set a = b = 0 for original matrix
+    a = 1/2  * 0
+    b = 1/16 * 0
+    return np.array([0.5,  0,  b,  0,0.5,  0, -b,  0,
+                       0,0.5,  0,  b,  0,0.5,  0, -b,
+                       a,  0,0.5,  0, -a,  0,0.5,  0,
+                       0,  a,  0,0.5,  0, -a,  0,0.5]).reshape(4,8)
+  
+    # def get_face_to_face_matrix(self):
+  #   """ Face-face coupling block.
+  #   I provede here the entire block includind identities and zeros, not only the averaging part,
+  #   because later we may want to
+  #   1) use more general definition of the flux,
+  #   2) keep the face-face mass matrices, resulting from L-2 projections, in this block.
+  #   """
+  #   F_qf_qp = self.block_matrix._A_FF[(2,0)]["left"][(0,0)]
+  #   F_qf_qm = self.block_matrix._A_FF[(2,1)]["left"][(0,0)]
+  #   F_qf_qf = self.block_matrix._A_FF[(2,2)]["left"][(0,0)]
+  #   Eye = np.eye(np.shape(F_qf_qf)[0])
+  #   Zeros = np.zeros(np.shape(F_qf_qf))
+
+  #   # Let it be like this for a while...
+  #   # We can later import zero and identity blocks of the right shape form BlockMatrix 
+  #   # or decide that we don't need them at all and only supply the flux-defining block (last line) 
+  #   return np.concatenate((np.concatenate((Eye,     Zeros,   Zeros), axis=1),
+  #                          np.concatenate((Zeros,   Eye,     Zeros), axis=1),
+  #                          np.concatenate((F_qf_qp, F_qf_qm, F_qf_qf), axis=1)), axis=0)
+  
+  #   # dim = self.face_nodes * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
+  #   # return np.eye(dim,dim)

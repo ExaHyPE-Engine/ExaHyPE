@@ -1,6 +1,6 @@
 /**
  
- @page tutorials_multigrid_petsc_mixed_galerkin_poisson Mixed Galerkin for the Poisson equation with PETSc
+ @page tutorials_documentation_multigrid_petsc_mixed_galerkin_poisson Mixed Galerkin for the Poisson equation with PETSc
  
 A brief, informal discussion how to implement mixed Galerkin methods with PETSc within Peano.
 
@@ -13,7 +13,7 @@ informal (from a maths point of view) but puts special emphasis
 on how numerical concepts are mapped onto Peano's data structures and mesh 
 traversal. 
 We focus notably on the combination of mixed methods with 
-@ref tutorials_multigrid_petsc_discontinuous_galerkin_poisson "Discontinous Galerkin" methods.
+@ref tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson "Discontinous Galerkin" methods.
 One can use mixed continuous Galerkin methods, but they are not particular 
 widespread due to multiple numerical issues.
 The script code resulting from this tutorial can be found in benchmarks/multigrid/petsc/mixed.py.
@@ -57,7 +57,7 @@ We can write the second and third line as one with the gradient:
 Nothing has been gained so far, despite the fact that the gradient is now 
 explicitly available in our formulation. Some codes can use this for their 
 algorithm. We have indeed "lost" a little bit of efficiency. In the normal
-@ref tutorials_multigrid_petsc_continuous_galerkin_poisson "continuous Galerkin case", for example, 
+@ref tutorials_documentation_multigrid_petsc_continuous_galerkin_poisson "continuous Galerkin case", for example, 
 we have only one unknown, i.e. a scalar, per degree of freedom. This time, we have 
 have to maintain @f$ d+1 @f$ unknowns.
 
@@ -176,7 +176,7 @@ Once we commit to the formulation
 \f}
 
 and omit, for the time being, the right-hand side, as see that this system of 
-PDEs translates 1:1 onto two @ref tutorials_multigrid_petsc_discontinuous_galerkin_poisson "Discontinuous Galerkin"
+PDEs translates 1:1 onto two @ref tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson "Discontinuous Galerkin"
 solvers:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -226,7 +226,7 @@ two even though the cells' hold vector unknowns.
          
 The other ingredients, i.e. the Riemann solver and the cell-to-face projections
 all follow 1:1 the discussion for the 
-@ref tutorials_multigrid_petsc_discontinuous_galerkin_poisson "Discontinuous Galerkin"
+@ref tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson "Discontinuous Galerkin"
 solver. We have to set them per PDE system, but they are totally analogous.
 
 

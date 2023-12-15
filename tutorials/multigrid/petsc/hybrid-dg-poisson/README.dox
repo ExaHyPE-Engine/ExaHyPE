@@ -1,6 +1,6 @@
 /**
  
- @page tutorials_multigrid_petsc_hybrid_galerkin_poisson Hybrid Galerkin for the Poisson equation with PETSc
+ @page tutorials_documentation_multigrid_petsc_hybrid_galerkin_poisson Hybrid Galerkin for the Poisson equation with PETSc
 
 A brief, informal discussion of hybrid DG methods plus some examples how to solve such equations.
 

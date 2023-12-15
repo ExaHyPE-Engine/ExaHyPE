@@ -1,9 +1,6 @@
 # This file is part of the Peano multigrid project. For conditions of 
 # distribution and use, please see the copyright notice at www.peano-framework.org
 import numpy as np
-from   numpy.polynomial.legendre  import leggauss
-from   scipy.interpolate import lagrange
-
 import peano4
 
 from   .MatrixGenerator import MatrixGenerator
@@ -97,7 +94,8 @@ class DLinear(MatrixGenerator):
     so normalise by h
 
     '''
-    dim    = (self.poly_degree + 1) ** self.Dimensions
+    # making it 2^D since this is number of vertices per cell
+    dim    = self._cell_dofs
     output = np.zeros((dim,dim))
 
     for i in range(output.shape[0]):
@@ -113,30 +111,17 @@ class DLinear(MatrixGenerator):
 
   def pad_matrix(self, matrix):
     """!
-    This method will pad a matrix out with interleaving strategy
-    If we have more than one dof per node, this will ensure identical
-    matrix entries are present in correct poisions in all of them
+    This method pads a matrix by concatenating one copy of itself to the end
+    for each unknown_per_vertex dof.
 
     @todo - Currently this just pads the same matrix out to each of the multiple dofs per node. Maybe provide option to not do this, eg just leave some of them empty
     """
-    shape = matrix.shape
-    # scale up each entry
-    upv    = self.unknowns_per_vertex_dof #alias
-    shape  = [s * upv for s in shape]
-    output = np.zeros(shape)
-    # pad!
-    for i in range(matrix.shape[0]):
-        # now we want to loop over the rows within the node
-      for dof in range(upv):
-        # get the row we want from the matrix passed in
-        row = matrix[i]
+    shape  = matrix.shape
+    # make it bigger 
+    output_shape  = [ self.unknowns_per_vertex_dof * s for s in shape ]
+    output        = np.zeros( output_shape )
 
-        #make a dummy row to fill out
-        newRow = np.zeros( matrix.shape[0] * upv )
-
-        # we want to populate every upv'th entry, starting with dof
-        for d in range(row.shape[0]):
-          newRow[ upv*d + dof ] = row[d]
-        #place this into the output
-        output[ upv*i + dof ] = newRow
+    for u in range( self.unknowns_per_vertex_dof ):
+      output[ shape[0]*u: shape[0]*(1+u), shape[1]*u:shape[1]*(1+u) ] = matrix
+    
     return output
