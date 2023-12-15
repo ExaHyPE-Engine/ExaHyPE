@@ -1,10 +1,8 @@
-/*
-This is the config.h.in file for the CMake build system,
-CMake build system does not need the config file as all of the
-definitions are given as compile definitions (-D...) during the
-build. The file still needs to be generated for the files to
-compile as they need to include config.h to be able to be 
-built with the Automake system.
-
-Do not delete this generated (yet empty) file.
-*/
+/**
+ * This is the config.h.in file for the CMake build system.
+ * The CMake build system does not need the config file as all of the
+ * definitions are given as compile definitions (-D...) during the
+ * build. The file still needs to be generated as source files include config.h.
+ *
+ * Do not delete this generated (yet empty) file.
+ */

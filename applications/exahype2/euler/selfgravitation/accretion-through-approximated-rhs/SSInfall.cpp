@@ -238,9 +238,9 @@ void applications::exahype2::euler::sphericalaccretion::SSInfall::initialConditi
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
-  logDebug( "initialCondition(...)", "init volume at " << volumeCentre << "x" << volumeH << " (grid constructed=" << gridIsConstructred << ")" );
+  logDebug( "initialCondition(...)", "init volume at " << volumeCentre << "x" << volumeH << " (grid constructed=" << gridIsConstructed << ")" );
 
   constexpr double pi = M_PI;
   double x=volumeCentre(0)-OverDensityCentre(0);

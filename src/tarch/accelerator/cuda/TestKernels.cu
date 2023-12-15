@@ -36,26 +36,17 @@ std::vector<bool> testKernelLauncher() {
 }
 
 // Avoid templates so we do need to include the functions to .cpp files we have
-__global__ void copyKernelFloat(const float* a, float* b, size_t N) {
-  const int i = blockDim.x * blockIdx.x + threadIdx.x;
-  if (i < N) {
-    b[i] = a[i];
-  }
-}
-
 __global__ void copyKernelDouble(const double* a, double* b, size_t N) {
   const int i = blockDim.x * blockIdx.x + threadIdx.x;
-  if (i < N) {
-    b[i] = a[i];
-  }
+  b[i] = a[i];
 }
 
 void maxPotentialBlockSize(int* minGridSize, int* blockSize) {
-  cudaOccupancyMaxPotentialBlockSize(minGridSize, blockSize, copyKernelFloat, 0, 0);
+  cudaOccupancyMaxPotentialBlockSize(minGridSize, blockSize, copyKernelDouble, 0, 0);
 }
 
-void copyKernelLauncher(const float* a, float* b, size_t N, int gridSize, int blockSize) {
-  copyKernelFloat<<<gridSize, blockSize, 0>>>(a, b, N);
+void copyKernelLauncher(const double* a, double* b, size_t N, int gridSize, int blockSize) {
+  copyKernelDouble<<<gridSize, blockSize, 0>>>(a, b, N);
 }
 
 #else

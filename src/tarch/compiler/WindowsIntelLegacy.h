@@ -25,12 +25,7 @@
 #define AlignmentOnHeap 16
 #endif
 
-/**
- * Clang requires us to put a static keyword in front of header file implementations,
- * so we avoid duplicate symbols. This is not C++ conformal, and therefore GCC doesn't
- * eat stuff. icpc is GNU-based and therefore we do not define the static keyword here.
- */
-#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions
+#define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
 #define OpenMPTaskGroup
 

@@ -7,14 +7,15 @@ foreach(mode IN LISTS BUILD_MODES)
 
   foreach(dimension IN LISTS WITH_DIMENSIONS)
     add_library(convert_${dimension}d_${mode_lower} STATIC)
-    #display_header("Creating Makefile of convert_${dimension}d_${mode_lower}")
+    display_header("Creating Makefile of convert_${dimension}d_${mode_lower}")
 
     target_sources(convert_${dimension}d_${mode_lower} PRIVATE ${SOURCES})
     target_include_directories(convert_${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-    target_compile_definitions(convert_${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_DEFINITIONS} Dimensions=${dimension})
-    target_link_options(convert_${dimension}d_${mode_lower} PUBLIC ${${mode_upper}_LDFLAGS})
+    target_compile_definitions(convert_${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
+    target_link_options(convert_${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
     target_link_libraries(convert_${dimension}d_${mode_lower} PUBLIC project_options)
     target_link_libraries(convert_${dimension}d_${mode_lower} PRIVATE project_warnings)
+    target_compile_options(convert_${dimension}d_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
 
     install(TARGETS convert_${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}

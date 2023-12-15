@@ -29,7 +29,7 @@ theSolver=GlobalAdaptiveTimeStep(
   name="elastic",  order=3,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
   min_cell_h=min_h, max_cell_h=max_h, time_step_relaxation=0.9,
-  flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+  flux=exahype2.solvers.PDETerms.User_Defined_Implementation
 )
 
 

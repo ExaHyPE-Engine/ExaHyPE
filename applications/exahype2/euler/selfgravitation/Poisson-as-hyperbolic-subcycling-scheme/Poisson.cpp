@@ -58,9 +58,9 @@ void applications::exahype2::euler::selfgravitation::Poisson::initialCondition(
   double* __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& volumeCentre,
   const tarch::la::Vector<Dimensions, double>& volumeH,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
-  logTraceInWith3Arguments("initialCondition(...)", volumeCentre, volumeH, gridIsConstructred);
+  logTraceInWith3Arguments("initialCondition(...)", volumeCentre, volumeH, gridIsConstructed);
 
   // Trivial initial conditions
   Q[0] = 0.0;

@@ -6,7 +6,7 @@ import scenarios.scenario
 
 from abc import ABC, abstractmethod
 
-from exahype2.solvers.fv.PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 class Template_Scenario(pde.PDE, scenarios.scenario.Scenario, ABC):
     """
