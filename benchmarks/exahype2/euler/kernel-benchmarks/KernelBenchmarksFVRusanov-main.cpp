@@ -6,7 +6,7 @@
 
 #include "config.h"
 #include "Constants.h"
-#include "exahype2/NonCriticalAssertions.h"
+#include "../../../../src/tarch/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
 #include "observers/CreateGrid.h"
 #include "observers/CreateGridAndConvergeLoadBalancing.h"

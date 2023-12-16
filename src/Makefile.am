@@ -31,6 +31,7 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
 
 Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/Enumerator.cpp \
+    tarch/NonCriticalAssertions.cpp \
 	tarch/UnitTests.cpp \
 	tarch/la/tests/DynamicMatrixTest.cpp \
 	tarch/la/tests/MatrixVectorTest.cpp \

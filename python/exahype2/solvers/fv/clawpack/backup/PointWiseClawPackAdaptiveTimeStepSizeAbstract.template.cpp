@@ -1,7 +1,8 @@
+
 {% include "AbstractSolverAdaptiveTimeStepSize.template.cpp" %}
 
 
-#include "exahype2/NonCriticalAssertions.h"
+#include "../../../../../../src/tarch/NonCriticalAssertions.h"
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():

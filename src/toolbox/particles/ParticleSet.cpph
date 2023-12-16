@@ -1,5 +1,6 @@
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/NonCriticalAssertions.h"
 
 
 template <typename T>
@@ -99,7 +100,7 @@ void toolbox::particles::ParticleSet<T>::clearReassignmentStatistics() {
 template <typename T>
 void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
   #if PeanoDebug >= 1 and !defined(Parallel) and !defined(SharedMemoryParallelisation)
-  assertion10(
+  nonCriticalAssertion10(
     _numberOfRemainingLocalParticles==0 or _numberOfRemainingLocalParticles==_numberOfParticlesInLastClear or _numberOfParticlesInLastClear==0,
     _numberOfParticlesInLastClear,
     _numberOfRemainingLocalParticles,

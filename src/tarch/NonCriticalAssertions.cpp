@@ -1,4 +1,5 @@
-#include "NonCriticalAssertions.h"
+#include "tarch/NonCriticalAssertions.h"
+
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
@@ -35,26 +36,26 @@ namespace {
 }
 
 
-void exahype2::enableNonCriticalAssertions(bool value) {
+void tarch::enableNonCriticalAssertions(bool value) {
   useNonCriticalAssertions = value;
 }
 
 
-void exahype2::shutdownNonCritialAssertionEnvironment() {
+void tarch::shutdownNonCritialAssertionEnvironment() {
   #if defined(Parallel)
   tarch::mpi::Rank::releaseTag( assertionExchangeTag );
   #endif
 }
 
 
-void exahype2::initNonCritialAssertionEnvironment() {
+void tarch::initNonCriticalAssertionEnvironment() {
   #if defined(Parallel)
   assertionExchangeTag = tarch::mpi::Rank::reserveFreeTag( "mpi::noncriticalassertion" );
   #endif
 }
 
 
-void exahype2::triggerNonCriticalAssertion( std::string file, int line, std::string expression, std::string parameterValuePairs ) {
+void tarch::triggerNonCriticalAssertion( std::string file, int line, std::string expression, std::string parameterValuePairs ) {
   static tarch::logging::Log _log( "exahype2" );
 
   tarch::multicore::Lock lock( assertionSemaphore );
@@ -87,7 +88,7 @@ void exahype2::triggerNonCriticalAssertion( std::string file, int line, std::str
 }
 
 
-bool exahype2::hasNonCriticalAssertionBeenViolated() {
+bool tarch::hasNonCriticalAssertionBeenViolated() {
   #if defined(Parallel)
   static tarch::logging::Log _log( "exahype2" );
 
