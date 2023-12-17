@@ -3,6 +3,7 @@ import re
 import shlex
 import argparse
 import subprocess
+import gpu_select
 
 parser = argparse.ArgumentParser(
     description="Configuration helper script for GNU Autotools and CMake"
@@ -301,3 +302,6 @@ else:
     args_list = shlex.split(args_str)
 
     subprocess.check_call(["./configure"] + args_list, cwd=os.getcwd(), env=new_env)
+
+if args.gpu != None:
+    gpu_select.render_gpu_select_script(mpicxx=args.mpi, arch=args.arch, builddir="." if args.cmake == None else args.cmake)
