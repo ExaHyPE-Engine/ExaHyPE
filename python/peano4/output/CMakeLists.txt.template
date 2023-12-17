@@ -143,7 +143,7 @@ if (WITH_GPU)
 
   # Add a custom target to run the Python script whenever the trigger file changes
   add_custom_target(run_gpu_select_generator
-    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${GPU_SELECT_GENERATOR_SCRIPT} "${MPI_CXX_COMPILER_TO_PASS}" "${WITH_GPU_ARCH}" "${CMAKE_CURRENT_SOURCE_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${GPU_SELECT_GENERATOR_SCRIPT} "${MPI_CXX_COMPILER_TO_PASS}" "${WITH_GPU_ARCH}" "${CMAKE_CURRENT_SOURCE_DIR}" "CMAKE"
     DEPENDS gpu_select.timestamp
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Running gpu_select.py"

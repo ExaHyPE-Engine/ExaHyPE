@@ -17,6 +17,26 @@ def get_gpu_vendor(architecture_string):
     return "NVIDIA"
   return None
 
+def parse_flags_and_get_gpu_vendor(cxxflags):
+  # There various ways to pass gpu archiectures as a part of CXXFLAGS
+  # It can be: --offload-arch=<...>, --cuda-gpu-arch=<...>, --arch=<...>, -gpu=<...>
+  cxxflags_tokenized = cxxflags.split()
+  offload_flags = ["--offload-arch", "--cuda-gpu-arch", "--arch", "-gpu"]
+  gpu_arch = None
+  for cxxflag_token in cxxflags_tokenized:
+    for offload_flag in offload_flags:
+       if cxxflag_token.startswith(offload_flag):
+          if "=" in cxxflag_token:
+            gpu_arch = cxxflag_token.split("=")[1]
+          else:
+            gpu_arch = cxxflag_token.split()[1]
+          break
+    if gpu_arch:
+      break
+  if gpu_arch:
+    return get_gpu_vendor(architecture_string=gpu_arch)
+  return None
+
 def get_mpi_implementation(mpicxx):
     # Run mpicxx --version and infer which MPI implementation is being used,
     # MPICH and Intel oneAPI print information including MPICH and Intel(R) MPI Library
@@ -40,16 +60,7 @@ def get_mpi_implementation(mpicxx):
     return None
 
 
-def render_gpu_select_script(mpicxx, arch, output_dir):
-    mpi_implementation = get_mpi_implementation(mpicxx)
-    gpu_vendor = get_gpu_vendor(arch)
-
-    if gpu_vendor == None:
-        gpu_vendor = ""
-    if mpi_implementation == None:
-        mpi_implementation = ""
-
-    template_string="""#!/bin/bash
+template_string="""#!/bin/bash
 
 unset node_local_mpi_rank
 
@@ -96,6 +107,15 @@ export OPENCL_VISIBLE_DEVICES="$node_local_mpi_rank"
 $1
 """
 
+def cmake_render_gpu_select_script(mpicxx, arch, output_dir):
+    mpi_implementation = get_mpi_implementation(mpicxx)
+    gpu_vendor = get_gpu_vendor(arch)
+
+    if gpu_vendor == None:
+        gpu_vendor = ""
+    if mpi_implementation == None:
+        mpi_implementation = ""
+
     context = {
         "gpu_vendor": gpu_vendor,
         "mpi_implementation": mpi_implementation
@@ -108,8 +128,35 @@ $1
       file.write(rendered_content)
 
 
+def automake_render_gpu_select_script(mpicxx, cxxflags, output_dir):
+    mpi_implementation = get_mpi_implementation(mpicxx)
+    gpu_vendor = parse_flags_and_get_gpu_vendor(cxxflags)
+
+    if gpu_vendor == None:
+        gpu_vendor = ""
+    if mpi_implementation == None:
+        mpi_implementation = ""
+
+    context = {
+        "gpu_vendor": gpu_vendor,
+        "mpi_implementation": mpi_implementation
+    }
+
+    template = Template(template_string)
+    rendered_content = template.render(context)
+
+    with open(os.path.join(output_dir, "gpu_select.sh"), "w") as file:
+      file.write(rendered_content)
+
 mpicxx = sys.argv[1]
 gpu_arch = sys.argv[2]
 output_dir = sys.argv[3]
+build_tool = sys.argv[4]
 
-render_gpu_select_script(mpicxx=mpicxx, arch=gpu_arch, output_dir=output_dir)
+if build_tool == "CMAKE":
+  cmake_render_gpu_select_script(mpicxx=mpicxx, arch=gpu_arch, output_dir=output_dir)
+else:
+  # CXX is in the form of g++ <flags...> or mpicxx <flags...> with compiler possibilities
+  # Compiler is the first component, cxx flags is given as CXX + CXXFLAGS together to this script
+  # It will split it into individual flags and check all of them
+  automake_render_gpu_select_script(mpicxx=mpicxx.split()[0], cxxflags=gpu_arch, output_dir=output_dir)

@@ -725,3 +725,7 @@ then this message can typically be ignored.
         # Generate CMakeLists only if we are using the CMake backend (CMake build directory found)
         if cmake_build_dir != "":
           generate_build_file(cmake_list_output_pair[0], cmake_list_output_pair[1])
+
+        if cmake_build_dir == "":
+            file_dir = os.path.dirname(os.path.realpath(__file__))
+            result = subprocess.run(f'python {file_dir}/gpu_select.py "{self.d["CXX"]}" "{self.d["CXX"] + " " + self.d["CXXFLAGS"]}" "." "AUTOMAKE"', shell=True)
