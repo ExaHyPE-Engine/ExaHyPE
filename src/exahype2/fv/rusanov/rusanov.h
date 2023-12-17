@@ -640,29 +640,60 @@ namespace exahype2::fv::rusanov {
   ) InlineMethod;
 
 
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovFusedStateless(
+    ::exahype2::CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovFusedStateless(
+    ::exahype2::CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
   namespace internal {
-    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables);
     tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesUnknowns(int numberOfVolumesPerAxisInPatch, int unknowns);
+    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables);
 
     tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatches(int numberOfVolumesPerAxisInPatch, int patches);
+    tarch::la::Vector<Dimensions + 2, int> rangeOverVolumesTimesUnknownsTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int patches);
     tarch::la::Vector<Dimensions + 2, int> rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(
       int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables, int patches
     );
-    tarch::la::Vector<Dimensions + 2, int> rangeOverVolumesTimesUnknownsTimesPatches(int numberOfVolumesPerAxisInPatch, int unknowns, int patches);
 
-    tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch);
-    tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch);
-    tarch::la::Vector<3, int>          rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch);
+    tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int haloSize);
+    tarch::la::Vector<Dimensions, int> rangeOverVolumesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int haloSize);
+    tarch::la::Vector<3, int>          rangeOverVolumesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int haloSize);
 
-    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int patches);
-    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int patches);
-    tarch::la::Vector<3 + 1, int>          rangeOverVolumesTimesPatchesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int patches);
+    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInXDirection(int numberOfVolumesPerAxisInPatch, int haloSize, int patches);
+    tarch::la::Vector<Dimensions + 1, int> rangeOverVolumesTimesPatchesPlusHaloInYDirection(int numberOfVolumesPerAxisInPatch, int haloSize, int patches);
+    tarch::la::Vector<3 + 1, int>          rangeOverVolumesTimesPatchesPlusHaloInZDirection(int numberOfVolumesPerAxisInPatch, int haloSize, int patches);
   } // namespace internal
 } // namespace exahype2::fv::rusanov
 
 #include "BatchedFunctors.cpph"
 #include "BatchedInsitu.cpph"
 #include "BatchedStateless.cpph"
+#include "FusedStateless.cpph"
 #include "PatchwiseFunctors.cpph"
 #include "PatchwiseInsitu.cpph"
 #include "PatchwiseStateless.cpph"
