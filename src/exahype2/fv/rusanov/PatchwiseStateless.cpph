@@ -269,7 +269,7 @@ namespace exahype2::fv::rusanov::internal {
         endSimtDfor
 
 #if Dimensions == 3
-          simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
+          simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
           volume(2) -= HaloSize;
           loopbodies::computeNonconservativeFlux<SolverType>(
             patchData.QIn[patchIndex],
