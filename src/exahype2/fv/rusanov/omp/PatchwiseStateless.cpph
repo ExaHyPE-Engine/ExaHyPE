@@ -39,7 +39,7 @@ namespace exahype2::fv::rusanov::omp::internal {
     const TempDataEnumeratorType                 ncpEnumerator(numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
     const TempDataEnumeratorType                 eigenvalueEnumerator(numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
-#pragma omp target teams distribute device(targetDevice) nowait
+#pragma omp target teams distribute device(targetDevice) // nowait
     for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       // ====================================================
       // Copy solution over and evaluate source (if required)

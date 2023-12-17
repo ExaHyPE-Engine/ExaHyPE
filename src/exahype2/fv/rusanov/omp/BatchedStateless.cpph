@@ -44,7 +44,7 @@ namespace exahype2::fv::rusanov::omp::internal {
     // ====================================================
     if constexpr (EvaluateSource) {
 #if Dimensions == 2
-#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -64,7 +64,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 #else
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -88,7 +88,7 @@ namespace exahype2::fv::rusanov::omp::internal {
 #endif
     } else {
 #if Dimensions == 2
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -99,7 +99,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 #else
-#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -120,7 +120,7 @@ namespace exahype2::fv::rusanov::omp::internal {
     // Compute damping due to max eigenvalue
     // ====================================================
 #if Dimensions == 2
-#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) // nowait
     for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
         for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; x++) {
@@ -141,7 +141,7 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 
-#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) // nowait
     for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
         for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -162,7 +162,7 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
     for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
         for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -188,7 +188,7 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 #else
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
     for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -211,7 +211,7 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
     for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
@@ -234,7 +234,7 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
     for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int z = 0; z < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; z++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -257,7 +257,7 @@ namespace exahype2::fv::rusanov::omp::internal {
       }
     }
 
-#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) // nowait
     for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
       for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -291,7 +291,7 @@ namespace exahype2::fv::rusanov::omp::internal {
     // ====================================================
     if constexpr (EvaluateFlux) {
 #if Dimensions == 2
-#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; x++) {
@@ -312,7 +312,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -333,7 +333,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -357,7 +357,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 #else
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -380,7 +380,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; y++) {
@@ -403,7 +403,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch + 2 * HaloSize; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -426,7 +426,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -456,7 +456,7 @@ namespace exahype2::fv::rusanov::omp::internal {
 
     if constexpr (EvaluateNonconservativeProduct) {
 #if Dimensions == 2
-#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; x++) {
@@ -477,7 +477,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(3) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -498,7 +498,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
           for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -522,7 +522,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 #else
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -545,7 +545,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; y++) {
@@ -568,7 +568,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(4) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch + 2 * HaloSize - 1; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
@@ -591,7 +591,7 @@ namespace exahype2::fv::rusanov::omp::internal {
         }
       }
 
-#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) nowait
+#pragma omp target teams distribute parallel for simd collapse(5) device(targetDevice) // nowait
       for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
         for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
           for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
