@@ -122,3 +122,32 @@ endif()
 if(ENABLE_MULTIPRECISION)
   target_link_libraries(${TARGET_NAME} PRIVATE ToolboxMultiprecision${PEANO_APP_DIMENSION}d_${PEANO_APP_MODE_LOWER})
 endif()
+
+if (WITH_GPU)
+  set(GPU_SELECT_GENERATOR_SCRIPT ${CMAKE_SOURCE_DIR}/python/peano4/output/gpu_select.py)
+
+  # Add a custom command to create a trigger file
+  add_custom_command(
+    OUTPUT gpu_select.timestamp
+    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/gpu_select.timestamp
+    COMMENT "Create gpu_select.timestamp"
+  )
+
+  # If MPI_CXX_COMPILER is not defined, the argument is not passed to the script
+  if (MPI_CXX_COMPILER)
+    set(MPI_CXX_COMPILER_TO_PASS "${MPI_CXX_COMPILER}")
+  else()
+    set(MPI_CXX_COMPILER_TO_PASS "NONE")
+  endif()
+
+
+  # Add a custom target to run the Python script whenever the trigger file changes
+  add_custom_target(run_gpu_select_generator
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} python ${GPU_SELECT_GENERATOR_SCRIPT} "${MPI_CXX_COMPILER_TO_PASS}" "${WITH_GPU_ARCH}" "${CMAKE_CURRENT_SOURCE_DIR}"
+    DEPENDS gpu_select.timestamp
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Running gpu_select.py"
+  )
+
+  add_dependencies(${TARGET_NAME} run_gpu_select_generator)
+endif()

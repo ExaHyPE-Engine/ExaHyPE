@@ -534,6 +534,7 @@ display_variable(PEANO_TRACE_LDFLAGS)
 display_variable(CMAKE_VERBOSE_MAKEFILE)
 display_variable(BUILD_SHARED_LIBS)
 display_variable(CMAKE_CXX_FLAGS_INIT)
+display_variable(MPI_CXX_COMPILER)
 
 if(WITH_GPU STREQUAL "cuda")
   display_variable(CMAKE_CUDA_FLAGS)
