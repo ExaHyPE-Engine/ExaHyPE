@@ -243,6 +243,12 @@ project.algorithm_step_initial_conditions.add_action_set(
 )
 
 
+project.additional_action_sets_per_solver_step.append(
+    swift2.boundaryconditions.Fixed(particle_set=particle_set)
+    )
+
+
+
 ###############################################################################
 # Set up the plotter
 ###############################################################################

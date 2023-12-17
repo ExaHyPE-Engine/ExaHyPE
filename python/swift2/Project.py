@@ -66,6 +66,8 @@ class Project(object):
         )
         self.algorithm_step_plot = peano4.solversteps.Step("Plot", False)
 
+        self.additional_action_sets_per_solver_step = []
+
         self.algorithm_steps_task_graph_compiler = (
             swift2.api.graphcompiler.map_particle_steps_onto_separate_mesh_traversals
         )
@@ -561,6 +563,8 @@ levels.
         self._project.solversteps.add_step(self.algorithm_step_plot)
 
         for solverstep in solver_steps:
+            for action_set in self.additional_action_sets_per_solver_step:
+                solverstep.add_action_set(action_set)
             self._project.solversteps.add_step(solverstep)
 
         for initialisation_step in initialisation_steps:
