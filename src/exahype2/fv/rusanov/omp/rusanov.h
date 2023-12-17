@@ -187,7 +187,43 @@ namespace exahype2::fv::rusanov::omp {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData& patchData) InlineMethod;
+
+
+  /**
+   * @see timeStepWithRusanovPatchwiseCopyStateless()
+   */
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovVolumewiseStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement)
+    InlineMethod;
+
+
+  /**
+   * @see timeStepWithRusanovPatchwiseCopyStateless()
+   */
+  template <
+    class SolverType,
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovVolumewiseStateless(int targetDevice, CellData& patchData) InlineMethod;
 } // namespace exahype2::fv::rusanov::omp
 
 #include "BatchedStateless.cpph"
 #include "PatchwiseStateless.cpph"
+#include "VolumewiseStateless.cpph"

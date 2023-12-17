@@ -452,6 +452,50 @@ namespace exahype2::fv::rusanov {
   ) InlineMethod;
 
 
+  /**
+   * @see timeStepWithRusanovPatchwiseHeapFunctors()
+   */
+  template <
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovVolumewiseFunctors(
+    CellData&                            patchData,
+    const FluxFunctor&                   fluxFunctor,
+    const NonconservativeProductFunctor& nonconservativeProductFunctor,
+    const SourceFunctor&                 sourceFunctor,
+    const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
+    tarch::timing::Measurement&          measurement,
+    peano4::utils::LoopParallelism       loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
+  template <
+    int  NumberOfVolumesPerAxisInPatch,
+    int  HaloSize,
+    int  NumberOfUnknowns,
+    int  NumberOfAuxiliaryVariables,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateSource,
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovVolumewiseFunctors(
+    CellData&                            patchData,
+    const FluxFunctor&                   fluxFunctor,
+    const NonconservativeProductFunctor& nonconservativeProductFunctor,
+    const SourceFunctor&                 sourceFunctor,
+    const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
+    peano4::utils::LoopParallelism       loopParallelism = peano4::utils::LoopParallelism::None
+  ) InlineMethod;
+
+
   template <
     class SolverType,
     int  NumberOfVolumesPerAxisInPatch,
@@ -649,8 +693,9 @@ namespace exahype2::fv::rusanov {
     bool EvaluateFlux,
     bool EvaluateNonconservativeProduct,
     bool EvaluateSource,
-    bool EvaluateMaximumEigenvalueAfterTimeStep>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovFusedStateless(
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovVolumewiseStateless(
     ::exahype2::CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
   ) InlineMethod;
 
@@ -664,8 +709,9 @@ namespace exahype2::fv::rusanov {
     bool EvaluateFlux,
     bool EvaluateNonconservativeProduct,
     bool EvaluateSource,
-    bool EvaluateMaximumEigenvalueAfterTimeStep>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovFusedStateless(
+    bool EvaluateMaximumEigenvalueAfterTimeStep,
+    class TempDataEnumeratorType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovVolumewiseStateless(
     ::exahype2::CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
   ) InlineMethod;
 
@@ -693,10 +739,11 @@ namespace exahype2::fv::rusanov {
 #include "BatchedFunctors.cpph"
 #include "BatchedInsitu.cpph"
 #include "BatchedStateless.cpph"
-#include "FusedStateless.cpph"
 #include "PatchwiseFunctors.cpph"
 #include "PatchwiseInsitu.cpph"
 #include "PatchwiseStateless.cpph"
+#include "VolumewiseFunctors.cpph"
+#include "VolumewiseStateless.cpph"
 
 #if defined(GPUOffloadingOMP)
 #include "exahype2/fv/rusanov/omp/rusanov.h"

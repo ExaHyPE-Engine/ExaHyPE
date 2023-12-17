@@ -870,10 +870,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int tar
   static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
   logTraceIn("timeStepWithRusanovBatchedCopyStateless()");
 
-#ifdef UseTargetDART
-  targetDevice = TARGETDART_ANY;
-#endif
-
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const TempDataEnumeratorType                 fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
@@ -1037,10 +1033,6 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless(int tar
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
   logTraceIn("timeStepWithRusanovBatchedCopyStateless()");
-
-#ifdef UseTargetDART
-  targetDevice = TARGETDART_ANY;
-#endif
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);

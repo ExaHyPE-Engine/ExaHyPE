@@ -27,13 +27,13 @@ Colours = [
 
 
 Devices = ["host", "device(s)"]
-CallSemantics = ["heap-functors", "stateless"]
-DataFlow = ["patch-wise", "batched", "task-graph", "insitu"]
+CallSemantics = ["functors", "stateless"]
+DataFlow = ["patch-wise", "batched", "task-graph", "insitu", "volume-wise"]
 Parallelisation = ["sequential", "parallel-for", "subtasks", "managed", "usm", "copy"]
 
 
 def parse(device, call_semantics, data_flow, parallelisation):
-    """ "
+    """
     Parse file and search for entries for particular argument combination
     We return two lists: The first one gives the total throughput per measurement
     while the second one gives the throughput for one kernel.
