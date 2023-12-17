@@ -524,20 +524,21 @@ int main(int argc, char** argv) {
         logInfo("main()", "terminated successfully");
         logInfo(
           "main()",
-          "initial grid construction:  " << gridConstructionMeasurement.getAccumulatedValue(
+          "initial grid construction: " << gridConstructionMeasurement.getAccumulatedValue(
           ) << "s\t" << gridConstructionMeasurement.toString()
         );
         logInfo(
           "main()",
-          "plotting:                   " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString()
+          "plotting:                  " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString()
         );
         logInfo(
           "main()",
-          "time stepping:              " << timeStepMeasurement.getAccumulatedValue(
+          "time stepping:             " << timeStepMeasurement.getAccumulatedValue(
           ) << "s\t" << timeStepMeasurement.toString()
         );
         logInfo(
-          "main()", "average TPS:      " << tpsMeasurement.getValue() << "\t" << tpsMeasurement.toString()
+          "main()",
+          "average TPS:               " << tpsMeasurement.getValue() << "\t" << tpsMeasurement.toString()
         );
       } else if (isPeanoComputeNode) {
         while (peano4::parallel::Node::getInstance().continueToRun()) {
