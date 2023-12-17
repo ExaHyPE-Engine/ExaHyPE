@@ -59,8 +59,8 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-cflags = "-O3 -march=native -mtune=native"
-cxxflags = "-std=c++20 -w -O3 -march=native -mtune=native"
+cflags = "-O3 -march=native"
+cxxflags = "-std=c++20 -w -O3 -march=native"
 # cxxflags = '-std=c++20 -W -Wall -Wextra -O3 -march=native -mtune=native'
 nvccflags = "-O3" #-march=native -mtune=native
 configure_args = []
@@ -90,10 +90,6 @@ Specify compatible C and C++ compilers by using -cc and -cxx or the environment 
     )
     exit(-1)
 
-if "nvc" in args.cc and "nvc++" in args.cxx:
-    cflags = re.sub(r"-O3", "-O4", cflags)
-    cxxflags = re.sub(r"-O3", "-O4", cxxflags)
-
 if (
     args.gpu == "omp"
     and ("clang" in args.cc or "clangwrap" in args.cc or "tdclang" in args.cc)
@@ -119,7 +115,7 @@ if (
 elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
     cflags += " -lstdc++fs --offload-arch=" + args.arch
     cxxflags += " -lstdc++fs --offload-arch=" + args.arch
-elif args.gpu == "omp" and "nvc" in args.cc and "nvc++" in args.cxx:
+elif args.gpu == "omp" and ("nvc" in args.cc or "nvc++ in args.cc") and "nvc++" in args.cxx:
     cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     if args.asm:

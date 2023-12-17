@@ -55,7 +55,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 # We need to override specific compiler flags initialized by CMake, to
 # match them exactly with the flags defined in Peano Automake build system.
 # More details can be found in the cmake/CustomMakeRules.cmake file.
-# For example, the Peano release flags are -O3 and -O4 for NVHPC compilers (and -DNDEBUG in definitions);
+# For example, the Peano release optimisation flag is -O3. (and -DNDEBUG in definitions);
 # but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/CustomMakeRules.cmake")
 
@@ -314,15 +314,10 @@ if(PEANO_DIMENSIONS)
   endforeach()
 endif()
 
-# Note linkers (ld, lld) ignore the flag -g when passed
+# Note: linkers (ld, lld) ignore the flag -g when passed.
 # Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-  set(PEANO_CXX_FLAGS_RELEASE -O4)
-  set(PEANO_CUDA_FLAGS_RELEASE -O3) # NVCC does not have -O4, if given, it will be forwarded only to the host compiler.
-else()
-  set(PEANO_CXX_FLAGS_RELEASE -O3)
-  set(PEANO_CUDA_FLAGS_RELEASE -O3)
-endif()
+set(PEANO_CXX_FLAGS_RELEASE -O3)
+set(PEANO_CUDA_FLAGS_RELEASE -O3)
 set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
 
 #-O2 -fno-omit-frame-pointer
