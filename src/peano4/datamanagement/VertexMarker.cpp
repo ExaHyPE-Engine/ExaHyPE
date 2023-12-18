@@ -102,6 +102,7 @@ std::string peano4::datamanagement::VertexMarker::toString() const {
          ",will-be-refined=" << _willBeRefined <<
          ",is-parent-vertex-local=" << _isParentVertexLocal <<
          ",is-parent-cell-local=" << _isParentCellLocal <<
+         ",rel-pos-within-father=" << _relativePositionOfCellWithinFatherCell <<
          ")";
   return msg.str();
 }
