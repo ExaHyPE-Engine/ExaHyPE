@@ -22,6 +22,10 @@
 
 #include "Constants.h"
 
+#include "vertexdata/{{SOLVER_NAME}}PETScData.h"
+#include "facedata/{{SOLVER_NAME}}PETScData.h"
+#include "celldata/{{SOLVER_NAME}}PETScData.h"
+
 
 {{SOLVER_INCLUDES}}
 
@@ -78,6 +82,54 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  rhs
       {% endif %}
     ) = 0;
+
+
+    /**
+     * In the DG case, there is no data tied to the vertices. Hence, this
+     * routine returns Outside all the time.
+     */
+    virtual vertexdata::{{SOLVER_NAME}}PETScData::Type getVertexDoFType(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h
+    ) final;
+
+
+    /**
+     * Find out what DoF type a face has
+     *
+     * The default implementation here sets the face type to boundary for the
+     * boundaries of the computational domain, and to interior everywhere else.
+     * You can alter this behaviour by overwriting this file. Admissible return
+     * flags are
+     *
+     * - Interior
+     * - Boundary
+     * - Outside
+     *
+     * The result enum also offers Coarse. This however is not a valid result
+     * here. Whenever this routine is called for faces on the global domain
+     * boundary, you are not supposed to return Interior.
+     */
+    virtual facedata::{{SOLVER_NAME}}PETScData::Type getFaceDoFType(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h
+    );
+
+
+    /**
+     * Find out what DoF type a cell has
+     *
+     * THe default implementation returns the interior flag. The enum also
+     * offers a flag Coarse, but you are not supposed to return this one. If
+     * you have a non-cubic domain, you can return Outside for a cell. In
+     * this case, you have to amend the getFaceDoFType such that it returns
+     * compatible boundary flags.
+     */
+    virtual celldata::{{SOLVER_NAME}}PETScData::Type getCellDoFType(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h
+    );
+
 
     /**
      * Called after assembly is complete.

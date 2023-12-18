@@ -1,0 +1,67 @@
+/**
+
+ @page documentation_multigrid_boundary_conditions Boundary Conditions
+
+ Peano works with cubic domains by default. They can be generalised to 
+ hexahedrons, but you have to check carefully if the solvers are prepared to
+ handle non-cube finite elements. Complicated domains can be used by embedding
+ the domain into a cube and then refining accordingly. There's also the 
+ opportunity to use mesh deformation techniques, obviously. In all cases, 
+ you will need to set proper boundary conditions.
+ 
+ 
+ # Initialising the domain
+ 
+ If you work with a cubic computational domain or decide to cut out a non-cubic
+ domain - in both cases, you will need to ensure that the boundary degrees of 
+ freedom are properly initialised (or eliminated). First of all, the code has
+ to be informed what type of unknowns you want to use. Each cell, face, vertex
+ in the code has a type which is either
+ 
+ - Coarse. This degree of freedom is member of a coarser geometric mesh than 
+   the actual compute mesh. It might be used by a geometric, matrix-free 
+   multigrid solver, but there is no need to initialise values tied to such a 
+   manifold.
+ - Interior. All the degrees of freedom tied to this mesh entity hold proper
+   values that feed into the equation system to be solved.
+ - Boundary. The degrees of freedom tied to this mesh entity are somehow 
+   prescribed by the PDE and hence are no dofs in the classic sense. Faces and
+   vertices can be on boundaries. Cells can not.
+ - Outside. Mesh entity that's there to make the data structure mesh a cube 
+   again. But it is outside of the computational domain.
+ - Undefined. This flag indicates that there are no dofs associated with this
+   mesh entity.
+
+ Peano's multigrid extension will ensure that each mesh entity (cell, face, vertex)
+ hosts a meta data object (for PETSc, you will recognise it by the extension
+ PETScData). From hereon, it will query the solver which type of entity you 
+ find per mesh entity.
+
+ The DoF enumeration (if required) as well as the initialisation will take the 
+ DoF type, and it will assign each interior mesh entity a number (if we use a 
+ global matrix), and initialise all the proper degrees of freedoms of mesh
+ intenties marked as interior with the user's intiial guess and the right-hand
+ side.
+ 
+ 
+ # Boundary conditions for DG
+ 
+ In our DG implementations, we flag faces as boundary or interior (or outside, 
+ but we don't have to discuss anything for outside). At the same time, only 
+ the cells hold "proper" degrees of freedom, i.e. span the solution. Therefore,
+ the faces do not know about their boundary type or values, and all the 
+ boundary handling is exclusively realised within the cells.
+ 
+ - Boundary faces do not hold any degrees of freedom, i.e. they have no indices.
+ - No data is to be projected onto boundary faces, and no data is to be 
+   projected from boundary faces.
+ - The user code has to amend the degrees of freedom within the cell such that
+   they realise the boundary conditions. That is, we project the boundary rules
+   into the volumes adjacent to the boundary.
+ 
+  
+ # Mesh deformation
+ 
+ @todo Yet to be written/sketched
+    
+*/

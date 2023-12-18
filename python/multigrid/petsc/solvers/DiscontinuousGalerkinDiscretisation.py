@@ -12,6 +12,7 @@ from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
 from multigrid.petsc.actionsets.InitCellDoFs              import InitCellDoFs
 from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
 from multigrid.petsc.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
+from multigrid.petsc.actionsets.ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod   import ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod 
 
 from abc import abstractmethod
 
@@ -28,9 +29,22 @@ class AssemblePetscMatrix(ActionSet):
   TemplateTouchCellFirstTime = """
   if (fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior) {
     std::pair<int,int> localCellIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
-    int globalCellIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localCellIndex);
+    int globalCellIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localCellIndex, ::petsc::LocalToGlobalMap::Type::Cell);
 
+    /*
+    This trace is in place just so that we can generate a map of the facets with their
+    global indices. It is not necessary long term and can be deleted soon...
+    */
+    logTraceInWith2Arguments("tcft_experimenter", marker.toString(), globalCellIndex);
+    logTraceOut("tcft_experimenter");
+
+    // ================================
+    // Left-hand side A_cc contribution
+    // ================================
     auto lhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
+
+    logTraceInWith3Arguments( "touchCellFirstTime()", globalCellIndex, lhsCellMatrix.toString(), marker.toString() );
+
     for (int row=0; row<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; row++) 
     for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
       repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
@@ -39,69 +53,147 @@ class AssemblePetscMatrix(ActionSet):
         lhsCellMatrix(row,col)
       );
     }
+    logTraceOut( "touchCellFirstTime()" );
     
+    // ================================
+    // Right-hand side vector contribution (multiply rhs (mass) matrix with rhs initial values
+    // ================================
     auto rhsCellMatrix = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
+
     for (int row=0; row<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; row++) {
       double rhs = 0.0;
       for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
         rhs += rhsCellMatrix(row,col) * fineGridCell{{SOLVER_NAME}}.getRhs(col);
       }
       repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-        row, rhs
+        globalCellIndex+row, rhs
       );
     }
     
     auto projectionCellToFaceMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfCellDataOntoFace(marker.x(),marker.h());
     auto projectionFaceToCellMatrix = repositories::{{SOLVER_INSTANCE}}.getProjectionOfRiemannSolutionOntoCell(marker.x(),marker.h());
     int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
+    
     for (int d=0; d<Dimensions; d++) {
-      std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
-      std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
-      int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace);
-      int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace);
+      // =================================
+      // Project to left face along axis d
+      // =================================
+      if ( 
+        fineGridFaces{{SOLVER_NAME}}PETScData(d).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Interior 
+        or
+        fineGridFaces{{SOLVER_NAME}}PETScData(d).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Boundary
+      ) {
+        std::pair<int,int> localFirstDoFIndexOfLeftFace  = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d).getUnknownBaseNumber());
+        int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace, ::petsc::LocalToGlobalMap::Type::Face);
       
-      for (int row=0; row<dofsPerFace; row++ ) {
-        for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
-            globalCellIndex+col,
-            projectionCellToFaceMatrix(d * dofsPerFace + row,col)
-          );
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalFirstDoFIndexOfRightFace + row, 
-            globalCellIndex+col,
-            projectionCellToFaceMatrix(d * dofsPerFace + row + Dimensions*dofsPerFace,col)
-          );
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalCellIndex+col,
-            globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
-            projectionFaceToCellMatrix(col, d * dofsPerFace + row)
-          );
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-            globalCellIndex+col,
-            globalFirstDoFIndexOfRightFace + row + 2 * dofsPerFace, 
-            projectionFaceToCellMatrix(col, d * dofsPerFace + row + Dimensions*dofsPerFace)
-          );
+        assertion1(globalFirstDoFIndexOfLeftFace>=0,  marker.toString());
+        logTraceInWith5Arguments( "TCFT::LeftProjection", globalFirstDoFIndexOfLeftFace, globalCellIndex , projectionCellToFaceMatrix, projectionFaceToCellMatrix, marker.toString() );
+
+        for (int row=0; row<dofsPerFace; row++ ) {
+          for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+            logTraceIn("CellToFace");
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalFirstDoFIndexOfLeftFace + row + dofsPerFace, 
+              globalCellIndex+col,
+              projectionCellToFaceMatrix(d * dofsPerFace + row,col)
+            );
+            logTraceOut("CellToFace");
+
+            logTraceInWith1Argument("FaceToCellInsertion", projectionFaceToCellMatrix(col, d * dofsPerFace + row));
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalCellIndex+col,
+              globalFirstDoFIndexOfLeftFace + row + 2 * dofsPerFace, 
+              projectionFaceToCellMatrix(col, d * dofsPerFace + row)
+            );
+            logTraceOut("FaceToCell");
+          }
         }
+        logTraceOut( "TCFT::LeftProjection" );
       }
+      
+      if ( 
+        fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Interior 
+        or
+        fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getType()==facedata::{{SOLVER_NAME}}PETScData::Type::Boundary
+      ) {
+        std::pair<int,int> localFirstDoFIndexOfRightFace = std::make_pair(_spacetreeId, fineGridFaces{{SOLVER_NAME}}PETScData(d+Dimensions).getUnknownBaseNumber());
+        int globalFirstDoFIndexOfRightFace = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfRightFace, ::petsc::LocalToGlobalMap::Type::Face);
+      
+        assertion1(globalFirstDoFIndexOfRightFace>=0, marker.toString());
+
+        logTraceInWith2Arguments( "TCFT::RightProjection", globalFirstDoFIndexOfRightFace, marker.toString() );
+        
+        for (int row=0; row<dofsPerFace; row++ ) {
+          for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalFirstDoFIndexOfRightFace + row, 
+              globalCellIndex+col,
+              projectionCellToFaceMatrix(d * dofsPerFace + row + Dimensions*dofsPerFace,col)
+            );
+            repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+              globalCellIndex+col,
+              globalFirstDoFIndexOfRightFace + row + 2 * dofsPerFace, 
+              projectionFaceToCellMatrix(col, d * dofsPerFace + row + Dimensions*dofsPerFace)
+            );
+          }
+        }
+      } // end of if interior face
+
+      logTraceOut( "TCFT::RightProjection" );
     }
+  
   }
   """
 
   TemplateTouchFaceFirstTime="""
   auto RiemannSolverMatrix = repositories::{{SOLVER_INSTANCE}}.getRiemannSolver(marker.x(),marker.h());
-  int dofsPerFace = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
-  if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() != facedata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+  int dofsPerFace          = repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
+  if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
     std::pair<int,int> localFirstDoFIndex = std::make_pair(_spacetreeId, fineGridFace{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
-    int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex);
+    int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex, ::petsc::LocalToGlobalMap::Type::Face);
+
+    assertion( globalFirstDoFIndex>=0 );
+
+    /*
+    This trace is in place just so that we can generate a map of the facets with their
+    global indices. It is not necessary long term and can be deleted soon...
+    */
+    logTraceInWith2Arguments("tfft_experimenter", marker.toString(), globalFirstDoFIndex);
+    logTraceOut("tfft_experimenter");
+
+    logTraceInWith2Arguments("TFFT", globalFirstDoFIndex, RiemannSolverMatrix);
     for (int row=0; row<dofsPerFace; row++)
+
+    // we have col<2*dofsPerFace here since we have left and right projections here.
+    // ie, we have a certain number of "true" dofsPerFace and then twice as many
+    // helper dofs to hold the projections. 
+    // In this loop, we are setting the values of the true face Dofs, using the 
+    // left and right projections. This is why we get the global index of the 
+    // face and offset by 2*dofsPerFace: this will index the true dofs,
+    // which are enumerated AFTER the projections.
     for (int col=0; col<2*dofsPerFace; col++) {
       repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
-        globalFirstDoFIndex + 2*dofsPerFace,
+        globalFirstDoFIndex + 2*dofsPerFace + row,
         globalFirstDoFIndex + col, 
         RiemannSolverMatrix(row, col)
       );
     }
+
+    // 3*dofsPerFace so that each of the -, + and solution variables receive an identity here.
+    for (int i=0; i<3*dofsPerFace; i++)
+    {
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+        globalFirstDoFIndex + i,
+        globalFirstDoFIndex + i,
+        -1
+      );
+    }
+
+  logTraceOut("TFFT");
+
+  }
+  else if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Boundary ){
+    // add some more identities!
   }
   """
   
@@ -420,50 +512,68 @@ class DiscontinuousGalerkinDiscretisation(Solver):
   equation system.
   </div>
 
+  ## Data storage
+  
+  The data storage within a cell is not prescribed by Peano, i.e. you can, 
+  in principle decide if you want to reorder the @ref page_multigrid_terminology "nodes within the cell"
+  or you can decide to order the degrees of freedom overall as SoA as opposed
+  to AoS. At the end of the day, Peano maintains an array of doubles per
+  cell and does not really care about the semantics of those. However, we
+  strongly recommend that you stick to the default configuration where 
+  possible:
 
+  @image html degree_of_freedom_semantics.png
+
+  - Nodes are enumerated following our @ref multigrid_enumeration "dimension-generic conventions".
+  - Data are stored as an Array of Structs (AoS), i.e. first all the unknowns
+    of the first node, then all of the second, and so forth.
+    
+  If you change any ordering, you have to take this into account for all 
+  associated operators (such as projections onto the faces), but you also 
+  will have to amend the plotters which are tied to these conventions.
+  
+  Data on the faces is 
+  
+  - stored as AoS by default;
+  - per face, we first store the left projection @f$ x^- @f$, then the right projection @f$ x^+ @f$
+    and then the outcome of the flux or associated reconstruction. That is, all the @f$ x^- @f$
+    are held en bloc first before we hold @f$ x^+ @f$.
+  - Per @f$ x^\pm @f$, the storage of the nodes and unknowns
+    follows again the @ref multigrid_enumeration "dimension-generic conventions".
+    
+  It is important to recognise that we store three types of quantities 
+  per unknown: Its left projection, its right projection, and its 
+  outcome which can be either the flux or a reconstructed
+  income. The semantics of the outcome depend upon your operators, i.e. 
+  they are not baked into the formalism. Furthermore, there is no 
+  assumption about the spacing along the faces. Naturally, you might
+  assume that a Gauss-Lobatto layout within the cell implies a 
+  Gauss-Lobatto distribution on the faces. However, no such thing
+  is encoded within the code, as we solely work with operators. They 
+  have to encode the correct spacing. 
+  
+  Another assumptions is baked into the realisation as a default:
+  The polynomial degree on the facet result @f$ x_f @f$ equals the 
+  polynomial degree within the cell.
+
+  @todo Different polynomial degrees are simple to realise. This is
+        something to do in the future. Note that +/- are to be 
+        taken from the same space as the cell, as they are projections,
+        but maybe we want to alter this, and even provide completely 
+        different degrees for the result of the Riemann solve.
+        
+  
+  
   ## Examples
   
   Multiple examples are shipped with Peano which demonstrate how to use the 
   plain Discontiuous Galerking solver:
   
   - benchmarks/multigrid/petsc/poisson/dg.py Hosts a simple solver for the 
-    Poisson equation. All the rationale are discussed in @ref benchmarks_multigrid_petsc_poisson.
+    Poisson equation. All the rationale are discussed in @ref benchmarks_documentation_multigrid_petsc_poisson.
     
 
 
-
-  ## Attributes
-  
-  
-  cell_cell_lhs_matrix: [Float] or []
-    Pass in [] if you prefer to assemble the matrix per cell yourself. If this
-    is the @f$ \hat \mathcal{L} @f$ part in @ref page_multigrid_numerics_Disontinuous_Galerkin.
-    
-  cell_cell_rhs_matrix: [Float] or []
-    Pass in [] if you prefer to assemble the matrix per cell yourself. This 
-    part is not extensively discussed in the @ref page_multigrid_numerics_Disontinuous_Galerkin "generic DG discussion", 
-    but it is the part that enters the right-hand side, so typically the one
-    arising from @f$ \int f \cdot v \ dx @f$. 
-
-  cell_cell_lhs_matrix_scaling: Positive integer
-    The lhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
-    parameter. If you don't specify an lhs matrix, i.e. you prefer to inject
-    this matrix manually, you can leave this parameter None, as it is not 
-    used.
-    
-  cell_cell_rhs_matrix_scaling: Positive integer
-    The rhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
-    parameter. If you don't specify a rhs matrix, i.e. you prefer to inject
-    this matrix manually, you can leave this parameter None, as it is not 
-    used.
-    
-  face_face_Riemann_problem_matrix: [Float] or []
-    Pass in [] if you prefer to assemble the matrix per cell yourself. This 
-    matrix represents the actual Riemann solver. It accepts the left projection
-    @f$ u^- @f$ and @f$ u^+ @f$ and yields a "reconstructed" value at this 
-    point passed into the differential operator. Therefore, this is a band
-    matrix.
-  
   """
   def __init__(self,
                name,
@@ -486,8 +596,67 @@ class DiscontinuousGalerkinDiscretisation(Solver):
                ):
     """!
    
- Test comment (C)
+ Constructor of DG class
     
+ 
+## Cell to face projection
+
+Consult @ref multigrid_enumeration "Peano's enumeration for multigrid" page
+for info on the ordering. For 2d with a layout as below
+   
+@image documentation/Doxygen/Multigrid/face-ordering.png
+   
+the matrix is applied to
+   
+@f$
+   P_{cf} 
+   \begin{bmatrix}
+   x_0^+ \\ x_1^+ \\ x_2^- \\ x_3^- 
+   \end{bmatrix}
+   = 
+   x_{c}
+@f$
+ 
+
+## Attributes
+
+
+@param cell_cell_lhs_matrix: [Float] or []                           
+  Pass in [] if you prefer to assemble the matrix per cell yourself. This
+  is the @f$ \tilde{\mathcal{L}} @f$ part above. The ordering of the 
+  degrees of freedom follows the discussion above. The matrix is from
+  @f$ K(p+1) \times K(p+1) @f$.
+  
+@param cell_cell_rhs_matrix: [Float] or []
+  Pass in [] if you prefer to assemble the matrix per cell yourself. This 
+  matrix arises from @f$ \int f \cdot v \ dx @f$ and is applied to the nodal
+  values of the PDE within the quadrature nodes of a cell. The matrix is 
+  from @f$ K(p+1) \times K(p+1) @f$. 
+
+@param cell_cell_lhs_matrix_scaling: Positive integer
+  The lhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
+  parameter. If you don't specify an lhs matrix, i.e. you prefer to inject
+  this matrix manually, you can leave this parameter None, as it is not 
+  used.
+  
+@param cell_cell_rhs_matrix_scaling: Positive integer
+  The rhs matrix is scaled with @f$ h^x @f$ where the x is defined by this 
+  parameter. If you don't specify a rhs matrix, i.e. you prefer to inject
+  this matrix manually, you can leave this parameter None, as it is not 
+  used.
+
+@param cell_to_face_matrix: [Float]
+  If you study the global equation system above, you recognise that
+  this matrix is applied to the left or right solutions of a cell's
+  faces. 
+
+@param face_face_Riemann_problem_matrix: [Float] or []
+  Pass in [] if you prefer to assemble the matrix per cell yourself. This 
+  matrix represents the actual Riemann solver. It accepts the left projection
+  @f$ u^- @f$ and @f$ u^+ @f$ and yields a "reconstructed" value at this 
+  point passed into the differential operator. Therefore, this is a band
+  matrix.
+
    
     """
     super( DiscontinuousGalerkinDiscretisation, self ).__init__( name,
@@ -577,12 +746,18 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     to the observer.
     
     """
-    observer.add_action_set( EnumerateDoFs(self) )
+    observer.add_action_set( EnumerateDoFs(self,
+                                           boundary_vertices_hold_data = False,
+                                           boundary_faces_hold_data = True,
+                                           ))
+    
+    
     observer.add_action_set( InitCellDoFs(self) ) 
     pass
   
   def add_to_assemble(self, observer):
     observer.add_action_set( AssemblePetscMatrix(self) )
+    observer.add_action_set( ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(self) )
     pass
 
   def add_to_init_petsc(self, observer):
@@ -630,6 +805,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
         "CELL_CELL_RHS_MATRIX_SCALING": self.cell_cell_rhs_matrix_scaling,
         "CELL_TO_FACE_MATRIX_SCALING":           self.cell_to_face_matrix_scaling,
         "FACE_TO_CELL_MATRIX_SCALING":           self.face_to_cell_matrix_scaling,
+        "SOLVER_NAME":                           self.typename(),
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

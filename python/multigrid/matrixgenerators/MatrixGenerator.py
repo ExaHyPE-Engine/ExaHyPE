@@ -247,7 +247,7 @@ class MatrixGenerator:
     """
     if dim == -1: 
       dim = self.Dimensions
-    assert dimForDeriv in range(dim), f"dimForDeriv={dimForDeriv}, dim={dimForDeriv}"
+    assert dimForDeriv in range(dim), f"dimForDeriv={dimForDeriv}, dim={dim}"
 
 
     # the indices of the polynomials we wanna fetch
@@ -272,26 +272,6 @@ class MatrixGenerator:
 
     #return this function object
     return returnFunc
-
-  def eval_polynomial(self, index, point, dim=-1):
-    """!
-    Method to evaluate a d-dimensional polynomial at the supplied
-    point. We convert an index into a d-dimensional tuple, and
-    evaluate each corresponding poynomial in each dimension.
-    \param index - an index in the range @f$ 0, ... , polynomial_degree ** Dimensions @f$
-    \param point - a tuple with the (x,y,z) coordinates that we wish to evaluate at. len(point) must match dim
-    \param dim   - dimensions we wish to use. 
-    """
-    if dim == -1:
-      dim = self.Dimensions
-    assert len(point) == dim, "We must have same number of coordinates as number of dimensions!"
-    index = self.convert_index_to_dim(index, dim)
-    output = 1
-    for i,p in zip(index, point):
-      #evaluate polynomial at given point
-      val = self.polynomials1d[i]( p )
-      output *= val
-    return output
 
   def eval_integral(self, functions, dim=-1, factor=1):
     if dim == -1:

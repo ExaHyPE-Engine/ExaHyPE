@@ -29,56 +29,62 @@ class AssemblePetscMatrix(ActionSet):
   if (fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior) {
       //init a vector to collect global indices, and recall their position in the 
       //enumeration so we can apply the stencil correctly
-      std::vector<int> enumeratedIndices(TwoPowerD, -1);
+      std::vector<int> vertexIndices(TwoPowerD, -1);
     
       for (int i=0; i<TwoPowerD ; i++) {
         if (fineGridVertices{{SOLVER_NAME}}PETScData(i).getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
           //get a global index
           std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertices{{SOLVER_NAME}}PETScData(i).getUnknownBaseNumber());
-          int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
-          enumeratedIndices[i] = globalIndex;
+          int globalIndex               = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex, ::petsc::LocalToGlobalMap::Type::Vertex);
+          vertexIndices[i]              = globalIndex;
         }
       }
-    
-      //next, loop twice over TwoPowerD, so we can correctly fill the petsc matrix.
-      //calling our increment function 16 times is temporary; this can be done with 
-      //one call to PETSc. While in development, we do it the dumb way.
-      //recall that the vertices are enumerated in the following way:
-      /*
-      2 3
-      0 1
-      */
-      // this geometry is crucial to getting the correct entries from the stencil
-    
-      for (int i=0; i<TwoPowerD; i++) {
-        for (int j=0; j<TwoPowerD; j++) {
-          if (enumeratedIndices[i] != -1 and enumeratedIndices[j] != -1) {
-            auto lhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
-    
+      
+      //lhs
+      auto lhsMatrixEntry = repositories::{{SOLVER_INSTANCE}}.getLhsMatrix(marker.x(),marker.h());
+      // loop over the dofs
+      for (int d=0; d<{{VERTEX_CARDINALITY}}; d++)
+      {
+        for (int i=0; i<TwoPowerD; i++) {
+          for (int j=0; j<TwoPowerD; j++) {
+            if (vertexIndices[i] != -1 and vertexIndices[j] != -1) {
+              repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().increment(
+                vertexIndices[i] + d, //d for dof
+                vertexIndices[j] + d, 
+                lhsMatrixEntry(d*TwoPowerD+i,d*TwoPowerD+j)
+              );
+            }
+          }
+        }
+      
+        // rhs
+        auto   rhs = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
+        for (int i=0; i<TwoPowerD; i++) {
+        logTraceInWith2Arguments( "TCFT::RHS", marker.toString(), rhs );
+          if (fineGridVertices{{SOLVER_NAME}}PETScData(i).getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
+            double rhsContribution = 0.0;
+            for (int j=0; j<TwoPowerD; j++) {
+              double rhsValue = fineGridVertices{{SOLVER_NAME}}(j).getRhs(d);
+              
+              /*
+              we call d*TwoPowerD+i here because the rhs matrix typically has dimensions
+              TwoPowerD x TwoPowerD. When we promote to n unknowns, we make the matrix
+              larger: n*TwoPowerD x n*TwoPowerD. So, we call d*TwoPowerD+i so that we can
+              skip past the parts of the matrix we are no longer interested in.
+              */
+              rhsContribution += rhs(d*TwoPowerD+i,d*TwoPowerD+j) * rhsValue;
+              logTraceInWith3Arguments("AssembleRhs", rhs(d*TwoPowerD+i,d*TwoPowerD+j), rhsContribution, rhsValue);
+              logTraceOut("AssembleRhs");
+            }
             repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().increment(
-              enumeratedIndices[i], 
-              enumeratedIndices[j], 
-              lhsMatrixEntry(i,j)
+              vertexIndices[i] + d,
+              rhsContribution
             );
           }
         }
+
       }
-    
-      // rhs
-      auto   rhs = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
-      for (int i=0; i<TwoPowerD; i++) {
-        if (fineGridVertices{{SOLVER_NAME}}PETScData(i).getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
-          double rhsContribution = 0.0;
-          for (int j=0; j<TwoPowerD; j++) {
-            double rhsValue = fineGridVertices{{SOLVER_NAME}}(j).getRhs(0);
-            rhsContribution += rhs(i,j) * rhsValue;
-          }
-          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().increment(
-            enumeratedIndices[i],
-            rhsContribution
-          );
-        }
-      }
+      logTraceOut( "TCFT::RHS" );
   }
   """
 
@@ -88,15 +94,18 @@ class AssemblePetscMatrix(ActionSet):
   if (fineGridVertex{{SOLVER_NAME}}PETScData.getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
     //first, get global index
     std::pair<int,int> localIndex = std::make_pair(_spacetreeId, fineGridVertex{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
-    int globalIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex);
+    int globalIndex               = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localIndex, ::petsc::LocalToGlobalMap::Type::Vertex);
     
     assertion3(globalIndex>=0, globalIndex, marker.toString(), fineGridVertex{{SOLVER_NAME}}PETScData.toString() );
 
-    //get the rhs that was present in the mesh
-    double rhs = fineGridVertex{{SOLVER_NAME}}.getRhs(0);
+    for (int i=0; i<{{VERTEX_CARDINALITY}}; i++)
+    {
+      //get the rhs that was present in the mesh
+      double rhs = fineGridVertex{{SOLVER_NAME}}.getRhs(i);
 
-    //send these to petsc
-    repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(globalIndex, rhs);
+      //send these to petsc
+      repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(globalIndex + i, rhs);
+    }
 
   }
   """
@@ -115,14 +124,12 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
   degrees of freedom are assigned exclusively to the vertices.
 
     """
-    #pass in stencil as a list of lists
-    #convert it to a flat list for passing as std::initializer_list
-    #stencil=[item for sublist in stencil for item in sublist]
 
     super( AssemblePetscMatrix, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
+    self.d["VERTEX_CARDINALITY"]     = solver.number_of_matrix_entries_per_vertex
 
   def get_body_of_operation(self,operation_name):
     """!
@@ -325,7 +332,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     to the observer.
     
     """
-    observer.add_action_set( EnumerateDoFs(self) )
+    observer.add_action_set( EnumerateDoFs(self, True, False) )
     observer.add_action_set( InitVertexDoFs(self) ) 
     pass
   
@@ -374,6 +381,7 @@ class CollocatedLowOrderDiscretisation(Solver):
         "VERTEX_CARDINALITY": self.number_of_matrix_entries_per_vertex,
         "CELL_LHS_MATRIX_SCALING": self.cell_lhs_matrix_scaling,
         "CELL_RHS_MATRIX_SCALING": self.cell_rhs_matrix_scaling,
+        "SOLVER_NAME":                           self.typename(),
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

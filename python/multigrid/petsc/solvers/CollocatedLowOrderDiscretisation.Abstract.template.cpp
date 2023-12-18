@@ -28,8 +28,13 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
       {% endfor %}
   };
   double scaling = 1.0;
+  {% if CELL_LHS_MATRIX_SCALING >= 0 %}
   for (int i=0; i<{{CELL_LHS_MATRIX_SCALING}}; i++) {
     scaling *= cellSize(0);
+  {% else %}
+  for (int i=0; i<(-1)*{{CELL_LHS_MATRIX_SCALING}}; i++) {
+    scaling /= cellSize(0);
+  {% endif %}
   }
   return scaling * result;
 }
@@ -48,13 +53,48 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
       {% endfor %}
   };
   double scaling = 1.0;
+  {% if CELL_RHS_MATRIX_SCALING >= 0 %}
   for (int i=0; i<{{CELL_RHS_MATRIX_SCALING}}; i++) {
     scaling *= cellSize(0);
+  {% else %}
+  for (int i=0; i<(-1)*{{CELL_RHS_MATRIX_SCALING}}; i++) {
+    scaling /= cellSize(0);
+  {% endif %}
   }
   return scaling * result;
 }
 {% endif %}
 
+
+{{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h
+) {
+  auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & x ) -> bool{
+    bool isOnBoundary = false;
+    for (int d=0; d<Dimensions; d++) {
+      isOnBoundary |= tarch::la::smallerEquals( x(d), DomainOffset(d) );
+      isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
+    }
+    return isOnBoundary;
+  };
+
+  return isOnBoundary(x) ? vertexdata::{{SOLVER_NAME}}PETScData::Type::Boundary : vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior;
+}
+
+{{NAMESPACE | join("::")}}::facedata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceDoFType(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h
+){
+  return facedata::{{SOLVER_NAME}}PETScData::Type::Outside;
+}
+
+{{NAMESPACE | join("::")}}::celldata::{{SOLVER_NAME}}PETScData::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellDoFType(
+  const tarch::la::Vector<Dimensions, double>&  x,
+  const tarch::la::Vector<Dimensions, double>&  h
+) {
+  return celldata::{{SOLVER_NAME}}PETScData::Type::Interior;
+}
 
 ::petsc::LocalToGlobalMap&  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLocalToGlobalMap() {
   return _localToGlobalMap;

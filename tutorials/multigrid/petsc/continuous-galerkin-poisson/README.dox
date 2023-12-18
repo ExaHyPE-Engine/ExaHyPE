@@ -1,6 +1,6 @@
 /**
 
- @page tutorials_multigrid_petsc_continuous_galerkin_poisson Continuous Galerkin for the Poisson equation with PETSc
+ @page tutorials_documentation_multigrid_petsc_continuous_galerkin_poisson Continuous Galerkin for the Poisson equation with PETSc
 
 <!-- Add this one for href links to subitems -->
 \tableofcontents
@@ -142,7 +142,7 @@ peano4_project.generate()
   The main file realises one by one the different steps of a PETSc-based multigrid
   solver and therefore follows exactly @ref peano_main "the vanilla Peano main file structure".
   It runs through the algorithmic steps   
-  Per algorithmic step that we @ref multigrid_petsc "find in any PETSc" project one by one.
+  Per algorithmic step that we @ref documentation_multigrid_petsc "find in any PETSc" project one by one.
   Per step, it issues one mesh traversal (besides for the actual solve, which is a single PETSc
   call).
   Per traversal, it hands in an observer.

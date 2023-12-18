@@ -105,35 +105,58 @@ double petsc::LinearEquationSystem::get(int i) const {
 
 
 void petsc::LinearEquationSystem::insert(int row, int col, double val){
+  assertion3( row >= 0, row, col, val );
+  assertion3( col >= 0, row, col, val );
+
+  logTraceInWith3Arguments( "insert()", row, col, val );
+
   MatSetValue(_A, row, col, val, INSERT_VALUES);
+
+  logTraceOut("insert()");
 }
 
 
 //storing doubles to be placed into A
 void petsc::LinearEquationSystem::increment( int row, int col, double val ){
+  assertion3( row >= 0, row, col, val );
+  assertion3( col >= 0, row, col, val );
+
+  logTraceInWith3Arguments( "increment()", row, col, val );
   MatSetValue(_A, row, col, val, ADD_VALUES);
+  logTraceOut("increment()");
 }
 
 
 void petsc::LinearEquationSystem::insert(int row, double val){
+  assertion2( row >= 0, row, val );
+  logTraceInWith2Arguments( "insert()", row, val );
+
   // insert "val" into _x 
   VecSetValue(_x, row, 0.0, INSERT_VALUES);
 
   // insert "rhs" into _b
   VecSetValue(_b, row, val, INSERT_VALUES);
+  logTraceOut("insert()");
+
 }
 
 
 void petsc::LinearEquationSystem::increment(int row, double val){
+  assertion2( row >= 0, row, val );
+
+  logTraceInWith2Arguments( "increment()", row, val );
+
   // insert "val" into _x
   VecSetValue(_x, row, 0.0, INSERT_VALUES);
 
   // insert "rhs" into _b
   VecSetValue(_b, row, val, ADD_VALUES);
+  logTraceOut("increment()");
+
 }
 
 
-void petsc::LinearEquationSystem::solve(){
+void petsc::LinearEquationSystem::solve(PreconditionerType pctype, KSPSolverType ksptype){
   //assemble matrices
   MatAssemblyBegin(_A,MAT_FINAL_ASSEMBLY);
   MatAssemblyEnd(_A,MAT_FINAL_ASSEMBLY);
@@ -165,8 +188,12 @@ void petsc::LinearEquationSystem::solve(){
   //set runtime options
   KSPSetFromOptions(ksp);
 
-  PCSetType(pc, PCNONE); //no preconditioner
-  KSPSetType(ksp, KSPGMRES);
+  // convert each of the enums into Petsc macros
+  PCType  preconditionerType = getPreconditionerTypeFromEnum(pctype);
+  KSPType kspsolvertype      = getKSPSolverTypeFromEnum(ksptype);
+
+  PCSetType(pc, preconditionerType);
+  KSPSetType(ksp, kspsolvertype);
   KSPSetUp(ksp);
   KSPSetTolerances(ksp, 1.e-7, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT);
 
@@ -178,12 +205,57 @@ void petsc::LinearEquationSystem::solve(){
 
   PetscInt its;
   KSPGetIterationNumber(ksp, &its);
+  logInfo("petscSolve()", "used preconditioner " << preconditionerType << " and solver " << kspsolvertype);
   logInfo("petscSolve()", "number of iterations was " << (int)its);
   logInfo("petscSolve()", "converged for reason " << KSPConvergedReasons[reason]);
 
   //tidy up temp objects
   KSPDestroy(&ksp);
 
+}
+
+PCType petsc::LinearEquationSystem::getPreconditionerTypeFromEnum(PreconditionerType type)
+{
+  PCType output;
+  switch (type)
+  {
+    case PreconditionerType::None:
+    {
+      output = PCNONE;
+    } break;
+    case PreconditionerType::LU:
+    {
+      output = PCLU;
+    } break;
+    default:
+    {
+      // invalid enum passed to this point
+      assertion(false);
+    }
+  }
+  return output;
+}
+
+KSPType petsc::LinearEquationSystem::getKSPSolverTypeFromEnum(KSPSolverType type)
+{
+  KSPType output;
+  switch (type)
+  {
+    case KSPSolverType::GMRES:
+    {
+      output = KSPGMRES;
+    } break;
+    case KSPSolverType::CG:
+    {
+      output = KSPCG;
+    } break;
+    default:
+    {
+      // invalid enum passed to this point
+      assertion(false);
+    }
+  }
+  return output;
 }
 
 void petsc::LinearEquationSystem::cleanUpPetscObjects(){

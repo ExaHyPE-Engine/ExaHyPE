@@ -1,41 +1,210 @@
 /**
 
- @page tutorials_multigrid_petsc_discontinuous_galerkin_poisson Discontinuous Galerkin for the Poisson equation with PETSc
+ @page tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson Discontinuous Galerkin for the Poisson equation with PETSc
 
- This simple example discusses the steps from the file benchmarks/multigrid/petsc/poisson/dg.py.
+ We solve the Poisson equation 
+ 
+ @f$ -\Delta u = 2 \pi^2 \Pi _d \sin (\pi x_d) @f$
+ 
+ over the unit square or cube, respectively.
+ Things that you should be familiar with before you read this tutorial:
+ 
+ - Peano's @ref Multigrid "multigrid terminology";
+ - DG basics (from a math point of view, though no in-depth knowledge is required);
+ - How to @ref page_installation "install and build Peano" and notably how to enable it's @ref documentation_multigrid_petsc "PETSc backend".
+ 
+ 
+ This simple example discusses the steps and code snippets from the file benchmarks/multigrid/petsc/poisson/dg.py.
  We omit some technical details (such as the parsing of the command line) and 
  focus on key ingredients. Therefore, it is reasonable to study this description 
- in combination with the actual script. It is best to read this documentation in 
+ in combination with the actual script. It is best to read all high-level documentation in 
  combination with the docu of the class multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation
  which provides a lot of details on the actual implementation and mathematical ingredients.
  This page is more on the how to use the class to construct a working solver.
  
  
- # Code usage
+ # High level overview of Python script structure
   
- ## Create a project
+ ## Set up the project
  
  First, we have to create a multigrid project.
- 
- ~~~~~~~~~~~~~~~~~~~~~~~~
-project = multigrid.petsc.Project(project_name = "DG", 
-                                  namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
-                                  ) 
- ~~~~~~~~~~~~~~~~~~~~~~~~
 
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Create project
+ 
  This is kind of an empty hull until we befill it with some global information 
  (such as the domain size) and also tell the API to scan the global Makefile.
  
+ We will insert the solvers into this project in a minute. Once this is done,
+ we need to configure the project
+ 
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Configure build 
 
- @image html degree_of_freedom_semantics_Lobatto.png
- @image html face_to_face_projection.png
- @image html gaussLobatto.png
- @image html piecewise_discontinuous_shape_functions.png
- @image html projection.png
+ ## Introduce the solver
+
+@todo Change the arguments' names to the "from" notation.
+  
+ A DG solver is created through 
+
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Create solver
+
+ We discuss the details of the parameters below, as they depend - to some 
+ degree - upon the chosen Riemann solver. For the time being, it is sufficient
+ to recognise that we create a solver object, instruct it about the matrices/operators
+ that are to be used, and the add it to the PETSc project.
+ 
+ ## Deliver C++ code
+ 
+ Finally, we can ask the PETSc project to build a Peano project which we can 
+ translate into C++.
+ So we have a multilevel architecture: A high-level, PETSc-specific view is used
+ to construct the solver.
+ Peano's Python API breaks it down into a Peano representation which is a 
+ conceptual/logical representation of the final C++ code.
+ This Peano project then is used to actually write all code snippets and glue 
+ code to end up with a genuine C++ application. 
+ You can then either compile the code via a plain Makefile through the Python API
+ or you switch to the command line. 
+ All of these steps follow @ref page_architecture "the generic architecture of any Peano project".
+ 
+ @snippet benchmarks/multigrid/petsc/poisson/dg.py Create Peano project
+ 
+ 
+ # Created C++ code
+ 
+ Once the script has terminated, a lot of subdirectories will be there in your 
+ project repository. They contain glue code and usually don't have to be 
+ inspected. There are four files which represent your solver: An abstract
+ solver class AbstractDGPoisson (with a header and an implementation) and 
+ its implementation DGPoisson (header plus implementation).
+ 
+ You should never edit the abstract class, as it is overwritten every time 
+ you invoke the Python script. However, it is worth having a look: This
+ abstract superclass contains all the matrices, constants, ... That is, it
+ picks up the details from the Python script.
+ 
+ The actual implementation is something you can edit and alter. Unless you
+ prescribe a right-hand side (not done in the example discussed), this is 
+ the place where you introduce your problem-specific right-hand side. It is
+ also the place where you inject Dirichlet Boundary conditions for example.
+ 
+ 
+ # Solver flavours
+ 
+ Throughout the tutorial, we follow the notation as used for <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation</a>
+ and obtain, for Poisson, @f$ \mathcal{L}(u) = -\Delta u = - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u @f$.
+ The extension to higher dimensions is straightforward.
+ Our weak formulation becomes
 
 
+\f{eqnarray*}{
+  \int _\Omega \mathcal{L}(u) \cdot v \ dx 
+  &=& 
+  \int _\Omega ( -\Delta u) \cdot v \ dx
+  \\ 
+  &=& 
+  \int _{\text{cell}_v} (- \Delta u) \cdot v \ dx
+  \\ 
+  &=& 
+  \int _{\text{cell}_v} ( \nabla u, \nabla v) \ dx
+  - 
+  \int _{\partial \text{cell}_v} (\hat{\nabla u},n) \cdot v \ dx
+  =
+  \int _{\text{cell}_v} f \cdot v \ dx 
+\f}
 
+As the problem is discretized by chosing appropriate test functions and calculating the integrals,
+the latest equation can be written in the matrix form:
+
+\f{equation}{
+  A_{cc} \ \bar{u} + A_{c \leftarrow f} \ \bar{q}^f = b,
+\f}
+
+where @f$ \bar{u} @f$ is the vector of unknowns that contatins the values of the unknow function 
+@f$ u @f$ at the cell nodes. Here we have also introduced @f$ q^f := \left. (\hat{\nabla u},n) \right|_{\partial \text{cell}_v} @f$,
+which is the normal component of the gradient vector on the cell's boundary; and the corresponding vector @f$ \bar{q}^f @f$ for @f$ q^f @f$ evaluated 
+at all face nodes for all faces touching the given cell.
+Further, the operator @f$ A_{cc} @f$ appears from calculating the cell integral
+@f$ \int _{\text{cell}_v} ( \nabla u, \nabla v) \ dx @f$, operator @f$ A_{c \leftarrow f} @f$ represents the face integral
+@f$ - \int _{\partial \text{cell}_v} (\hat{\nabla u},n) \cdot v \ dx =: - \int _{\partial \text{cell}_v} q^f \cdot v \ dx @f$
+and @f$ b @f$ is the right-hand side vector obtained from @f$ \int _{\text{cell}_v} f \cdot v \ dx @f$.
+
+ There are some ingredients that are the same for each and every DG flavour:
+ 
+  - Each cell holds @f$ (p+1)^d @f$ degrees of freedom (dof). We specify this 
+    through the variable <code> polynomial_degree </code>. The solver class internally then
+    will take care of the +1. 
+
+  - Each node within the cell holds one unknown, as we solve a scalar equation.
+    Therefore, 
+    
+            cell_unknowns = 1
+
+    If you have vector-valued PDEs, it is worth studying the documentation of
+    <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver itself</a>
+    and notably the section "Data storage" therein.
+    <br><br>
+
+  - The operator @f$ A_{cc} @f$ takes the dofs within a cell and couples
+    them with each other. As mentioned earlier, it respresents @f$ \int _{\text{cell}_v} ( \nabla u, \nabla v) \ dx @f$.
+    In the interface above, it is specified by the two parameters <code> cell_cell_lhs_matrix </code>
+    and <code> cell_cell_lhs_matrix_scaling </code>.
+    <br><br>
+
+  - The operator @f$ P_{f \leftarrow c} @f$ takes the values from a cell and projects it onto
+    the faces. Hence, @f$ P_{f \leftarrow c} \in \mathbb{R}^{2d(p+1)^{d-1} \times (p+1)^{d}} @f$.
+    The 2d equals the number of faces of a cell, while the cell is a submanifold
+    and therefore hosts @f$ (p+1)^{d-1} @f$.
+    For the Poisson equation, we need to project onto the faces not the solution itself, but the normal component of the gradient of the solution.
+    This is because the normal gradient appears in the face integral of the above weak formulation, and so it will need to be evaluated on the cell's boundary.
+    As such, the operator @f$ P_{f \leftarrow c} @f$ takes the gradient @f$ \nabla u @f$ from a cell and projects it onto the faces to get the normal component
+    @f$ ( \nabla u, n ) @f$, which is, in fact, one of @f$ \frac{\partial u}{ \partial x_i}, i = 0,..,d-1 @f$ as we have a Cartesian mesh.
+    The result is written into @f$ q^+ @f$ or @f$ q^- @f$ on the faces, depending on the relative position of the face with respect to the cell.
+    Read through <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver's</a>
+    data storage section and also consult Peano's @ref multigrid_enumeration "enumeration discussion"
+    for information on the ordering.
+    In the interface above, it is specified by the two parameters <code> cell_to_face_matrix </code> and <code> cell_to_face_matrix_scaling </code>.
+    <br><br>
+
+  - The operator @f$ P_{c \leftarrow f} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values @f$ \hat u @f$ on the face and yields
+    the updates for the cell.
+    For the Poisson equation, we use it for storing the matrix @f$ A_{c \leftarrow f} @f$ responsible for the face integral of the normal gradient in the above formulation.
+    In the Python interface, it is specified by the two parameters <code> face_to_cell_matrix </code> and <code> face_to_cell_matrix_scaling </code>.
+    <br><br>
+    
+  - The right-hand side operator is the @f$ (p+1) \times (p+1) @f$ matrix which is
+    applied to the nodal values of f, i.e. the @f$ f(x) @f$ within the Gauss-Lobatto
+    or Gauss-Legendre points of a cell. This default right-hand side is a ***mass matrix***
+    and scaled with @f$ h^d @f$ due to the integral. Consequently, 
+    
+                   cell_cell_rhs_matrix_scaling = args.dimensions
+
+  - The quadrature points are dumped into the solver and are mainly used for 
+    the visualisation, but also to evaluate @f$ f(x) @f$ for the right-hand
+    side at the correct positions in space.
+ 
 ## The simplest Riemann solver: averaging
+
+@todo Tobias. Continue writing.
+
+  - On the faces, we have the gradient @f$ \nabla u @f$ from the left and from
+    right right. So we might be tempted to hold @f$ \nabla u^+ @f$ and
+    @f$ \nabla u^- @f$. So @f$ 2d @f$ quantities in total. However, this is 
+    not necessary: We are really only interested in the gradient along the 
+    normal. Therefore, we set 
+     
+            face_unknowns = 1 
+    
+    These are not really unknowns in the linear algebra sense. They are 
+    helpers.        
+  - The operator @f$ A_{ff} @f$ takes the @f$ 2(p+1)^{d-1} @f$ on the face
+    and yields the 
+    @f$ (p+1)^{d-1} @f$ averages.
+    In the interface, it is specified by the parameter <code> face_face_Riemann_problem_matrix </code>.
+
+ 
+ 
+The treatment of the face terms differs from Riemann solver to Riemann solver.
+
 
 This discussion follows the Discontinuous Galerking discussion. The only
 difference is that we have to extend our averaging such that both solution
@@ -97,5 +266,18 @@ and hence not subject to any additional equations.
 The third line averages the @f$ u @f$ values from left and right, the
 fourth line addresses the normal projections of @f$ \phi @f$. 
 
+  
+ In the example above, we use d-linear shape functions arranged along the 
+ Gauss-Lobatto integration points. So the two nodes carrying the shape 
+ function weights are spread out over the unit interval.
+ 
+
+ @image html face_to_face_projection.png
+ @image html piecewise_discontinuous_shape_functions.png
+ @image html projection.png
+
+
+
+ 
  
 */

@@ -72,6 +72,13 @@ either Peano's routines, routines from the toolbox, or functions from the
 solver objects. These action sets define what happens if the code reads a
 vertex for the first time of a mesh traversal, e.g.
 
+
+## Links to high level concepts
+
+- For the types of mesh entities, please consult @ref documentation_multigrid_boundary_conditions.
+
+
+
   """
   
   
@@ -97,9 +104,9 @@ vertex for the first time of a mesh traversal, e.g.
     self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Integer( "unknownBaseNumber" ) )
     self._cell_petsc_data.data.add_attribute(   dastgen2.attributes.Integer( "unknownBaseNumber" ) )
 
-    self._vertex_petsc_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse"] ) )
-    self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse"] ) )
-    self._cell_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Interior", "Coarse"] ) )
+    self._vertex_petsc_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
+    self._face_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
+    self._cell_petsc_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Interior", "Coarse", "Outside", "Undefined"] ) )
     pass
     
     
@@ -231,58 +238,6 @@ Return the name of the object that will be created for this solver.
     
     """
     return "instanceOf" + self.typename()  
-
-  @abstractmethod
-  def get_solver_repository_snippets(self):
-    """!
-    
-    Add instructions to the global repository implementations
-    
-    Returns a snippet to go into the header and another to go into the cpp.
-    
-    """
-    header = """ """
-    cpp    = """ """
-    return header, cpp
-
-
-#  @abstractmethod
-#  def initGaussLobatto(self):
-#    """!
-#    methods to init quadrature weights and points.
-#    can be overridden but at time of writing two
-#    classes use this exact same code.
-#
-#    use numpy/scipy to calculate gaussian quadratures correctly
-#    returns: points, weights and an (n+1) * (n+1) array of 
-#    polynomial coefficients
-#    """
-#    #construct poly coeffs first
-#    coeffs = []
-#    x = np.linspace(-1,1, self.polynomial_degree + 1)
-#    for j in range(self.polynomial_degree + 1):
-#      y = np.zeros_like(x)
-#      y[j] = 1.0
-#      coeffs.append( list( lagrange(x,y).coeffs ) )
-#    
-#    #finally construct the points and weights
-#    points, weights = leggauss( self.polynomial_degree + 1 )
-#
-#    return points, weights, coeffs
-
-  def _convertMatrixToInitList(self, matrix):
-    """!
-    
-    Simple conversion routine which takes a Python matrix and converts it into 
-    a C++ initialiser list. Is used by subclasses to construct the respective
-    dictionaries for their solvers.
-    
-    """
-    output = "{ " + str(matrix[0,0])
-    for el in matrix.flatten():
-      output += f", {str(el)}"
-    output += "}"
-    return output
 
   @property
   def number_of_matrix_entries_per_vertex(self):

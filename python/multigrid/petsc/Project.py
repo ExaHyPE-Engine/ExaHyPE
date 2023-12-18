@@ -49,7 +49,14 @@ mark these steps as private via a leading underscore.
   
   - _solvers: [Solver]
       List of tuples of typename and names of solvers that this project should use simultaneously.
-  
+  - preconditioner_type: String
+      Preconditioner type to be used. This part of the string should match the final 
+      part of the enum class in src/petsc/LinearEquationSystem.h. The namespaceing is 
+      taken care of downstream.
+  - solver_type: String
+      Solver type to be used. This part of the string should match the final 
+      part of the enum class in src/petsc/LinearEquationSystem.h. The namespaceing is 
+      taken care of downstream.
   
   """
   def __init__(self, 
@@ -57,6 +64,8 @@ mark these steps as private via a leading underscore.
                project_name, 
                directory  = ".", 
                executable = "peano4petsc",
+               preconditioner_type = "None",
+               solver_type         = "GMRES"
                ):
     self._project = peano4.Project(namespace, project_name, directory)
     self._project.output.makefile.add_cmake_core_library("petsc")
@@ -80,7 +89,9 @@ mark these steps as private via a leading underscore.
     self._algorithm_step_solve                       = peano4.solversteps.Step( "Solve",                     False )
     self.algorithm_step_map_solution_onto_mesh       = peano4.solversteps.Step( "MapSolutionOntoMesh",       False )
     self.algorithm_step_plot                         = peano4.solversteps.Step( "Plot",                      False )
-                
+
+    self.preconditioner_type = preconditioner_type
+    self.solver_type         = solver_type
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
     """
@@ -236,18 +247,9 @@ This yet has to be written.
     """
     dictionary = {}
     dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
+    dictionary[ "PRECONDITIONER_TYPE" ] = "::petsc::LinearEquationSystem::PreconditionerType::" + self.preconditioner_type
+    dictionary[ "SOLVER_TYPE" ]         = "::petsc::LinearEquationSystem::KSPSolverType::" + self.solver_type
     
-    '''
-    put in a guard clause to skip over CollocatedLowOrderDiscretisation
-    if it has one, it should have the others
-    '''
-
-
-    if hasattr(self, 'quadrature_points'):
-      #this function returns a dict. use it to update 
-      #"dictionary" here.
-      dictionary.update(self.get_dict_for_quad_points()) 
-
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"
     generated_repository_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -369,89 +371,3 @@ This is yet to be written, and we need to have a paper on our work.
                 i.create_readme_descriptor()
             )
 
-
-#  @staticmethod
-#  def convertArrayToCppVector(array):
-#    output = "{" + str(array[0])
-#    for el in array[1:]:
-#      output += f", {str(el)}"
-#    output += "}"
-#    return output
-
-#  def get_dict_for_quad_points(self):
-#    '''
-#    use this method to generate a dict that contains all the 
-#    strings for quad weights and quadpoints etc. we then merge it
-#    into the dict that we use for the solver repo##
-#
-#    below is a little bit of dark python magic. 
-#    basically, we have a 1d array of weights and points that looks like:
-#    
-#    [w0, w1, w2, ... , wn]
-#    [p0, p1, p2, ... , pn]
-#
-#    we need to convert this to 2d. so we go:
-#
-#    pn |
-#    ...|
-#    ...|
-#    ...|  ETC
-#    p2 |
-#    p1 |(p0,p1) 
-#    p0 |(p0,p0) (p1,p0) (p2,p0)    (pn,p0)
-#    -----------------------------------------
-#        p0      p1      p2     ... pn#
-#
-#    and:
-#
-#    wn |
-#    ...|
-#    ...|
-#    ...|  ETC
-#    w2 |
-#    w1 | w0*w1 
-#    w0 | w0*w0  w1*w0  w2*w0      wn*w0
-#    -----------------------------------------
-#        w0      w1      w2     ... wn
-#
-#    below is some awful python code to do just that. it works in any dimension.
-#
-#    we paste this into the code as:
-#      a std::vector of length (n+1)^d for points,  each containing 1 std::vector for (pi, pj,pk)
-#      a std::vector of length (n+1)^d for weights, each containing 1 double for wi*wj*wk  
-#
-#    we could have done this as [w1*w2   for w1 in self.weights for w2 in self.weights]
-#    or                         [(p1,p2) for p1 in self.points  for p2 in self.points ]
-#    but this works in any dimensions
-#    ''' #
-#
-#    #dummy function to return the product of all elements in an array 
-#    def productOfArray(array):
-#      output = 1
-#      for el in array: output *= el
-#      return output
-#
-#    dictionary = {}#
-#
-#    quad_points = list( itertools.product( *( [ self.quadrature_points for _ in range(self.dimensions)] ) ) )
-#    # dictionary[ "QUADRATURE_POINTS"] = self.convertArrayToCppVector(self.quadrature_points)
-#   #we have an array of arrays#
-#    dictionary[ "QUADRATURE_POINTS"] = "{ "
-#    for array in quad_points:
-#      dictionary[ "QUADRATURE_POINTS"] += self.convertArrayToCppVector( array )
-#      dictionary[ "QUADRATURE_POINTS"] += ", \n"
-#    dictionary[ "QUADRATURE_POINTS"]   += " }"
-#    
-#    weights = [productOfArray(el) for el in itertools.product( *( [ self.weights for _ in range(self.dimensions)] ) )]
-#    #                                       ^create cartesian product
-#    dictionary[ "WEIGHTS"]           = self.convertArrayToCppVector(weights)
-#    
-#    #slightly more fiddly; we have an array of arrays
-#    dictionary[ "POLY_COEFFS"]       = "{ "
-#    for array in self.poly_coeffs:
-#      dictionary[ "POLY_COEFFS"] += self.convertArrayToCppVector( array )
-#      dictionary[ "POLY_COEFFS"] += ", \n"
-#    dictionary[ "POLY_COEFFS"]   += " }"#
-#
-#    dictionary["POLY_DEGREE"]  = self.polynomial_degree
-#    return dictionary

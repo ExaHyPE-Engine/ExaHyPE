@@ -31,19 +31,7 @@ void {{NAMESPACE | join("::")}}::repositories::initMatricesAndVectors() {
 
 void {{NAMESPACE | join("::")}}::repositories::solve() {
   {% for SOLVER in SOLVER_INSTANCES %}
-  {{SOLVER[1]}}.getLinearEquationSystem().solve();
+  {{SOLVER[1]}}.getLinearEquationSystem().solve({{PRECONDITIONER_TYPE}}, {{SOLVER_TYPE}});
   {% endfor %}
 }
-
-/*
-int {{NAMESPACE | join("::")}}::repositories::getTotalNumberOfDegreesOfFreedom() {
-int result = 0;
-{% for SOLVER in SOLVER_INSTANCES %}
-result += {{SOLVER[1]}}.getLocalToGlobalMap().getTotalNumberOfIndices();
-{% endfor %}
-return result;
-}
-"""
-  return header, cpp
-*/
 

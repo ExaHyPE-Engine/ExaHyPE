@@ -13,7 +13,7 @@ Initialise degrees of freedom associated with cells
       
   """
   TemplateInitCell = """
-  if ( fineGridCell{{SOLVER_NAME}}PETScData.getType() != celldata::{{SOLVER_NAME}}PETScData::Type::Coarse ) {
+  if ( fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior ) {
     int dof = 0;
     dfor( k, {{POLYNOMIAL_DEGREE+1}} ) {
       {% if CELL_UNKNOWNS>1 %}
