@@ -169,18 +169,6 @@ bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCells( const tar
 }
 
 
-/*
-bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary() const {
-  return isAdjacentToParallelDomainBoundary(_select);
-}
-
-
-bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary(int i) const {
-  return _isAdjacentToParallelDomainBoundary[i];
-}
-*/
-
-
 tarch::la::Vector<Dimensions,int> peano4::datamanagement::VertexMarker::getRelativeAdjacentCell( const tarch::la::Vector<Dimensions,double>& x ) const {
   tarch::la::Vector<Dimensions,int> result;
   for (int d=0; d<Dimensions; d++) {
