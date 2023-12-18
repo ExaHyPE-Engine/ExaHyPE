@@ -189,6 +189,16 @@ namespace toolbox {
     );
 
     /**
+     * Implementation of liftParticleAssociatedWithVertex() without the template
+     */
+    ParticleReassociationInstruction liftParticleAssociatedWithVertex(
+      bool                                         isLocal,
+      double                                       searchRadius,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const peano4::datamanagement::VertexMarker   marker
+    );
+
+    /**
      * Find out which vertex should hold a particle.
      *
      * @param particle The particle of interest to be studied.

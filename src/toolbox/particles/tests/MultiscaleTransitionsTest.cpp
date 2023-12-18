@@ -69,7 +69,37 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testSievePredicate() 
 #endif
 }
 
-void toolbox::particles::tests::MultiscaleTransitionsTest::run() { testMethod(testSievePredicate); }
+void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftParticleAssociatedWithVertex() {
+  #if Dimensions==2
+  const int select = 0;
+  peano4::datamanagement::VertexMarker marker;
+
+  const double  meshSize = 0.111111;
+
+  marker._cellCentre = {0.611111, 0.166667};
+  marker._h          = {meshSize, meshSize};
+  marker._isHanging  = 0;
+  marker._select     = 0;
+
+  tarch::la::Vector<Dimensions,double> x = {0.554725,0.166678};
+  const double                         searchRadius = 0.0185185;
+  toolbox::particles::ParticleReassociationInstruction instruction = toolbox::particles::liftParticleAssociatedWithVertex(
+    true,                  // ParallelState=Local
+    searchRadius,
+    x,
+    marker
+  );
+
+  validateWithParams4(2.0 * searchRadius<meshSize, marker.toString(), instruction, (x-marker._cellCentre), searchRadius );
+  validateWithParams4(tarch::la::max(x-marker._cellCentre)<0.5 * meshSize, marker.toString(), instruction, (x-marker._cellCentre), searchRadius );
+  validateWithParams4(instruction==ParticleReassociationInstruction_Keep, marker.toString(), instruction, (x-marker._cellCentre), searchRadius );
+  #endif
+}
+
+void toolbox::particles::tests::MultiscaleTransitionsTest::run() {
+  testMethod(testSievePredicate);
+  testMethod(testLiftParticleAssociatedWithVertex);
+}
 
 #ifdef UseTestSpecificCompilerSettings
 #pragma optimize("", on)
