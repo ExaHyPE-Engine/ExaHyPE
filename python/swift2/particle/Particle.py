@@ -208,10 +208,19 @@ Particle properties:
         Besides the name of interest, we also require a list of algorithmic
         steps through which the code runs through.
 
+        
+        ## Default settings
+        
+        If the user does not define bespoke default settings, this routine adds
+        default ones. 
+        
+        - For vertices, this is touch-at-most-once-mask-out-otherwise-all-previous-steps-update-at-least-once.
+        - For cells, this is 
+
         ## Additional attributes
 
-        First, the particle is added an enum which identifies the current
-        algorithmic step in which the particle resides.
+        First, the particle is added two counters which count up how often a 
+        particle is touched or masked out.
 
         @param Steplist:       list
             list of AlgorithmStep objects to work on
@@ -319,44 +328,6 @@ Particle properties:
                 "INVARIANT": None,
             }
 
-            # first determine which type of algorithm step we have. Depending on its
-            # effects and dependencies, we need to use a different function to check
-            # whether a particle should be worked on.
-            if (
-                step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
-                or
-                step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN 
-                ):
-                d[
-                    "CHECK_FUNCTION_TEMPLATE"
-                ] = "::swift2::kernels::localParticleCanBeMoved"
-            elif (
-                step.effect == AlgorithmStep.Effect.ALTER_LOCAL_STATE
-                or
-                step.effect == AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN 
-                ):
-                d[
-                    "CHECK_FUNCTION_TEMPLATE"
-                ] = "::swift2::kernels::localParticleCanBeWorkedOn{STAGE}"
-            elif (
-                step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE
-                or
-                step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN 
-                ):
-                d[
-                    "CHECK_FUNCTION_TEMPLATE"
-                ] = "::swift2::kernels::localParticleNoRestrictions"
-            else:
-                raise NotImplementedError
-
-            if d["CHECK_FUNCTION_TEMPLATE"] is None:
-                raise ValueError(
-                    "Got check_function == None for step",
-                    step.name,
-                    "effect",
-                    step.effect,
-                )
-
             if (
                 step.touch_vertex_first_time_dependency_policy == None
                 and 
@@ -377,9 +348,7 @@ Particle properties:
             d["EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_FIRST_TIME
             )
-            d["CHECK_FUNCTION"] = d["CHECK_FUNCTION_TEMPLATE"].replace(
-                "{STAGE}", "VertexKernel"
-            )
+            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeWorkedOnVertexKernel"
 
             if step.touch_vertex_first_time_kernel is None:
                 step.touch_vertex_first_time_kernel = ""
@@ -410,9 +379,8 @@ Particle properties:
             d["EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.CELL_KERNEL
             )
-            d["CHECK_FUNCTION"] = d["CHECK_FUNCTION_TEMPLATE"].replace(
-                "{STAGE}", "CellKernel"
-            )
+            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeWorkedOnCellKernel"
+            
             if (
                 step.cell_kernel_dependency_policy == None
                 and 
@@ -443,9 +411,7 @@ Particle properties:
             d["EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_LAST_TIME
             )
-            d["CHECK_FUNCTION"] = d["CHECK_FUNCTION_TEMPLATE"].replace(
-                "{STAGE}", "VertexKernel"
-            )
+            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeWorkedOnVertexKernel"
 
             if (
                 step.touch_vertex_last_time_dependency_policy == None
@@ -521,6 +487,7 @@ Particle properties:
 
         This is done both for the main algorithm steps as well as for the
         initialisation steps individually.
+        
 
         """
 

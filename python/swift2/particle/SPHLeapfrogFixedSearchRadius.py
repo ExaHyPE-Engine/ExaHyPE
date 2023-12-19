@@ -439,6 +439,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                                            #include "swift2/timestepping/GlobalTimeStepping.h"
                                            #include "swift2/timestepping/TimeStepping.h"
                                            """,
+            touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
+            touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
         )
         self.algorithm_steps_dict["Drift"] = drift
 
@@ -590,7 +592,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="ReduceGlobalQuantities",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-            cell_kernel="""::swift2::statistics::reduceVelocityAndSearchRadius( localParticles );""",
+            touch_vertex_last_time_kernel="::swift2::forAllParticles(assignedParticles, ::swift2::statistics::reduceVelocityAndSearchRadius<globaldata::{}> );".format(self.name),
             prepare_traversal_kernel="""
                                        globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                        globaldata::{PARTICLE}::getSpecies().clearVelocity();
