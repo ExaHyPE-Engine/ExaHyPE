@@ -4,55 +4,16 @@
 
 
 template <typename Particle>
-toolbox::particles::ParticleReassociationInstruction toolbox::particles::
-  getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-    const Particle& particle, const ::peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
-  ) {
-  static tarch::logging::Log _log("toolbox::particles");
-
-  if (
-    not marker.isContained(particle.getX(), relativeSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE)
-    or
-    particle.getParallelState()!=Particle::ParallelState::Local
-  ) {
-    return ParticleReassociationInstruction_Keep;
-  } else {
-    std::bitset<Dimensions> currentAssociation = numberOfVertexWithinCell;
-    std::bitset<Dimensions> destAssociation;
-    bool                    remainsOnSameLevel = tarch::la::min(marker.h()) * MultilevelSortingTolerance
-                              >= 2.0 * particle.getSearchRadius();
-
-    // marker.x() gives me the centre of the cell
-    for (int d = 0; d < Dimensions; d++) {
-      destAssociation[d] = tarch::la::greaterEquals(particle.getX(d), marker.x()(d));
-      remainsOnSameLevel &= tarch::la::smallerEquals(
-        std::abs(particle.getX(d) - marker.x()(d)), marker.h()(d) * MultilevelSortingTolerance
-      );
-    }
-
-    if (remainsOnSameLevel and currentAssociation == destAssociation) {
-      return ParticleReassociationInstruction_Keep;
-    } else if (remainsOnSameLevel) {
-      logDebug(
-        "getParticleReassociationInstructionWithinCellWithIntraCellReassignment(...)",
-        "reassign particle "
-          << particle.toString() << " within cell " << marker.toString() << " which had been associated with vertex "
-          << currentAssociation << " but belongs to " << destAssociation
-      );
-      return destAssociation.to_ulong();
-    } else if (not marker.isParentLocal()) {
-      return ParticleReassociationInstruction_SieveGlobally;
-    } else {
-      logDebug(
-        "getParticleReassociationInstructionWithinCellWithIntraCellReassignment(...)",
-        "lift particle "
-          << particle.toString() << " from cell " << marker.toString() << " as difference is "
-          << (particle.getX() - marker.x())
-      );
-      return destAssociation.to_ulong() + TwoPowerD;
-    }
-  }
-  return -65536;
+toolbox::particles::ParticleReassociationInstruction toolbox::particles::getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+  const Particle& particle, const ::peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
+) {
+  return getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+    particle.getParallelState()==Particle::ParallelState::Local,
+    particle.getSearchRadius(),
+    particle.getX(),
+    marker,
+    numberOfVertexWithinCell
+  );
 }
 
 template <typename Particle>
@@ -67,33 +28,14 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
   );
 }
 
-template <typename Particle>
-std::bitset<Dimensions> toolbox::particles::getParticleAssociationWithinCell(
-  const Particle& particle, const peano4::datamanagement::CellMarker marker
-) {
-  std::bitset<Dimensions> destAssociation;
-
-  // marker.x() gives me the centre of the cell
-  for (int d = 0; d < Dimensions; d++) {
-    destAssociation[d] = tarch::la::greaterEquals(particle.getX(d), marker.x()(d));
-  }
-
-  return destAssociation;
-}
 
 template <typename Particle>
 bool toolbox::particles::sieveParticle(const Particle& particle, const ::peano4::datamanagement::VertexMarker& marker) {
-  bool belongsIntoNeighbouringCells = marker.isContainedInAdjacentCells(
+  return sieveParticle(
+    particle.getSearchRadius(),
     particle.getX(),
-    0.5,
-    relativeSpatialSortingTolerance(marker) * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+    marker
   );
-  bool fitsIntoCurrentMeshLevel = tarch::la::min(marker.h()) * MultilevelSortingTolerance * AsymmetricSortingDamping
-                                  >= 2.0 * particle.getSearchRadius();
-  bool willNotBeDroppedFurther = tarch::la::greater(2.0 * particle.getSearchRadius(), tarch::la::min(marker.h()) / 3.0)
-                                 or not marker.hasBeenRefined();
-
-  return belongsIntoNeighbouringCells and fitsIntoCurrentMeshLevel and willNotBeDroppedFurther;
 }
 
 
@@ -101,16 +43,7 @@ template <typename Particle>
 bool toolbox::particles::particleWillBeDroppedFurther(
   const Particle& particle, const peano4::datamanagement::CellMarker& marker
 ) {
-  static tarch::logging::Log _log("toolbox::particles");
-  bool                       result = (marker.hasBeenRefined() or marker.willBeRefined())
-                and tarch::la::smallerEquals(particle.getSearchRadius() * 2.0, tarch::la::min(marker.h()) / 3.0);
-  if (result) {
-    logDebug(
-      "particleWillBeDroppedFurther(...)",
-      "particle " << particle.toString() << " within " << marker.toString() << " will be dropped further"
-    );
-  }
-  return result;
+  return particleWillBeDroppedFurther(particle.getSearchRadius, marker);
 }
 
 
@@ -118,25 +51,15 @@ template <typename Particle>
 bool toolbox::particles::particleWillBeDroppedFurther(
   const Particle& particle, const peano4::datamanagement::VertexMarker& marker
 ) {
-  static tarch::logging::Log _log("toolbox::particles");
-  bool                       result = (marker.hasBeenRefined() or marker.willBeRefined())
-                and tarch::la::smallerEquals(particle.getSearchRadius() * 2.0, tarch::la::min(marker.h()) / 3.0);
-  if (result) {
-    logDebug(
-      "particleWillBeDroppedFurther(...)",
-      "particle " << particle.toString() << " within " << marker.toString() << " will be dropped further"
-    );
-  }
-  return result;
+  return particleWillBeDroppedFurther(particle.getSearchRadius, marker);
 }
 
 
 template <typename Particle>
 bool toolbox::particles::dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker) {
-  return tarch::la::min(marker.h()) > 2.0 * particle.getSearchRadius()
-         and marker.isContainedInAdjacentCells(
-           particle.getX(),
-           0.5,
-           relativeSpatialSortingTolerance(marker) * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE
-         );
+  return dropParticle(
+    particle.getSearchRadius(),
+    particle.getX(),
+    marker
+  );
 }

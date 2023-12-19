@@ -17,120 +17,56 @@ namespace toolbox {
     constexpr int ParticleReassociationInstruction_SieveGlobally = -2;
 
     /**
-     * Multilevel sorting tolerance
+     * Sorting tolerance
      *
      * As the particle association is not unique and not sharp, as we work with
      * floating point numbers. The correlation
      *
-     * @f$ centre_{left} + h/2 < centre_{left} - h/2 @f$
+     * @f$ centre_{left} + h/2 < centre_{right} - h/2 @f$
      *
-     * might not hold for two neighbouring voxels, and notably there might be a
+     * might not hold for two neighbouring voxels, i.e. there might be a floating-point
      * gap in-between two voxels. If particles fall into this gap, they would
      * not belong to any voxel. We therefore give each voxel a small overlap.
-     * The relative size of this overlap is quantified by SpatialSortingTolerance.
+     * The relative size of this overlap is quantified by ReleaseOwnershipSpatialSortingTolerance.
      * This is out first principle: particles are always assigned to a cell/volume
      * relative to a relative threshold. We issue a resort if and only if the
      * particle is outside of its respective control volume subject to the
-     * additional tolerance.
+     * additional tolerance. If a particle leaves a cell or-vertex environment
+     * subject to the ReleaseOwnershipSpatialSortingTolerance, we either assign it
+     * to a neighbouring voxel or lift it into a coarser level or assign it to
+     * a global sorting list.
      *
      * There is a second threshold: Our sorting should be idempotent. That is,
      * once we assign a particle to a vertex or cell, we should not immediately
-     * require yet another resorting step.
+     * require yet another resorting step. Two rules formalise this:
+     *
+     * 1. If a vertex releases a stationary particle, it will never grab it
+     *    back.
+     * 2. If a vertex grabs a stationary particle, it will never release it.
      *
      * The two principles imply that we work with two thresholds: We trigger a
-     * resort if a particle leaves its control volume. When we re-assign a
-     * particle into a control volume, we have to be careful: we have to be on
-     * the save side and be sure that this re-assignment will, under no
-     * circumstances, trigger a new resort.
+     * resort if a particle leaves its control volume. The region in which we
+     * grab a particle however is slightly smaller. We work with two
+     * thresholds, which all span areas which are slighter than the control
+     * volumes. However, releases are way more conservative/careful than grabs
+     * or drops.
      *
      * @image MultiscaleTransitions.png
      *
-     * The sketch above illustrates this fact which essentially means that we
-     * work with two tresholds: Green and blue are two cells. Each is
-     * surrounded by a halo layer (grey). A particle is reassigned to another
-     * cell if and only if it leaves the corresponding halo. So a particle
-     * might start in the green cell and move to the right. But the green cell
-     * will not trigger a resort unless the particle also leaves its halo.
-     * This is kind of a push mechanism (get rid of a particle).
-     *
-     * If a particle is to be sorted globally, i.e. resides within a global
-     * list and has to be sorted into a cells, we realise some kind of pull
-     * mechanism. Individual cells grab particles. Same happens throughout
-     * drops: cells grab particles from coarser levels. This happens if and
-     * only if a particle would end up in the light blue or green,
-     * respectively, domain. As this one is smaller than the grey halo, we
-     * are on the safe side, i.e. we know that a particle pull (drop or
-     * sieve) would not trigger a resort.
-     *
-     *
      * ## Related action sets
      *
-     * The action set toolbox.particles.UpdateParallelState employs the
-     * threshold to decide if a particle is local or not.
-     *
-     *
-     * ## Quantities
-     *
-     * - It is an absolute tolerance.
-     * - MultilevelSortingTolerance is the counterpart for multilevel
-     *   transitions.
-     * - AsymmetricSortingDamping defines the inner ratio relative to the
-     *   tolerance.
-     *
+     * The action set peano4.toolbox.particles.api.UpdateParallelState employs the
+     * threshold to decide if a particle is local or not. It has to use the
+     * most generic environment, i.e. the release radius.
      *
      * @see AsymmetricSortingDamping
-     * @see getParticleReassociationInstructionWithinCellWithIntraCellReassignment()
      */
-    constexpr double SpatialSortingTolerance = 1.01;
+    constexpr double ReleaseOwnershipSpatialSortingTolerance = 1.01;
 
     /**
      * @see SpatialReassignmentTolerance
      */
-    constexpr double MultilevelSortingTolerance = SpatialSortingTolerance;
-
-    /**
-     * We try to pick the damping such that the two halo layers from the
-     * description of SpatialSortingTolerance are roughly of the same size.
-     *
-     * 0.5 ( 1.0+SpatialSortingTolerance ) = AsymmetricSortingDamping * SpatialSortingTolerance
-     *
-     * That is
-     *
-     * 0.5 + 0.5 * SpatialSortingTolerance = AsymmetricSortingDamping * SpatialSortingTolerance
-     *
-     * @see MultilevelSortingTolerance
-     * @see SpatialSortingTolerance
-     */
-    constexpr double AsymmetricSortingDamping = 0.5 / SpatialSortingTolerance + 0.5;
-
-    /**
-     * If you use this operation, you can be sure that every particle is
-     * associated to the right vertex after we've finished the traversal, or
-     * it is dumped into the set of particles that have to be sieved.
-     * Therefore, you don't have to check any particle anymore in
-     * touchVertexLastTime(). All should be in place.
-     *
-     * We return
-     *
-     * - ParticleReassociationInstruction_Keep if the particle should
-     *   remain where it is.
-     * - A value between 0 and 2^d-1 if we should assign it to another
-     *   vertex of this cell (on the same level).
-     *
-     * ## Algorithm
-     *
-     * - If the particle is not local or actually not covered by the current
-     *   cell, we return keep, as we don't dare to make a decision.
-     * - When we identify the destination cell, we violate our halo discussion
-     *   above, i.e. we move the association within a cell given harsh
-     *   boundaries not subject to MultilevelSortingTolerance.
-     *
-     *
-     */
-    template <typename Particle>
-    ParticleReassociationInstruction getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-      const Particle& p, const peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
-    );
+    constexpr double GrabOwnershipSpatialSortingTolerance = 1.001;
 
     /**
      * Take particle from current vertex and lift and further
@@ -199,24 +135,6 @@ namespace toolbox {
     );
 
     /**
-     * Find out which vertex should hold a particle.
-     *
-     * @param particle The particle of interest to be studied.
-     * @param marker   A description of the cell into which the particle is
-     *                 currently inserted or shall be inserted.
-     * @return         The number of the vertex within the cell identified by
-     *                 marker to which you should assign particle. Use
-     *                 to_ulong() to convert the result, as the result
-     *                 identifies the vertex in z-order, i.e. if it returns 00
-     *                 it is the left bottom vertex, 10 is the right bottom
-     *                 one, and so forth.
-     */
-    template <typename Particle>
-    std::bitset<Dimensions> getParticleAssociationWithinCell(
-      const Particle& particle, const peano4::datamanagement::CellMarker marker
-    );
-
-    /**
      * A particle is to be sieved into a vertex if
      *
      * - this vertex is closer to the particle than half the mesh size of
@@ -244,8 +162,6 @@ namespace toolbox {
      * into a rather coarse resolution level and rely on the drop. The remote
      * child will insert the particle as well. The father will not be able to
      * drop the particle all the way down into a remote tree.
-     *
-     *
      *
      * When we sieve a particle into the next level, we have to find
      * out to which particle we do so. To find this out, we run over
@@ -285,7 +201,7 @@ namespace toolbox {
      * AsymmetricSortingDamping >= 2.0 * particle.getSearchRadius(); const bool   fitsIntoNextFinerGridResolution =
      * tarch::la::min( marker.h() )/3.0 >  2.0 * particle.getSearchRadius();
      *
-     *  return marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeSpatialSortingTolerance(marker) *
+     *  return marker.isContainedInAdjacentCells( particle.getX(), 0.5, relativeReleaseOwnershipSpatialSortingTolerance(marker) *
      * AsymmetricSortingDamping * tarch::la::NUMERICAL_ZERO_DIFFERENCE) and fitsIntoThisGridResolution and ( not
      * fitsIntoNextFinerGridResolution or not marker.hasBeenRefined()
      *     );
@@ -301,8 +217,26 @@ namespace toolbox {
     template <typename Particle>
     bool sieveParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
+    bool sieveParticle(
+      double                                       searchRadius,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const peano4::datamanagement::VertexMarker&  marker
+    );
+
     template <typename Particle>
     bool dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
+
+    /**
+     * Alternative version of dropParticle() without templates
+     *
+     * This is the actual implementation, i.e. the template delegates to this
+     * one. Through the method, we can unittest the drop logic.
+     */
+    bool dropParticle(
+      double                                       searchRadius,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const peano4::datamanagement::VertexMarker& marker
+    );
 
     /**
      * Will the particle be dropped further throughout the traversal
@@ -359,13 +293,106 @@ namespace toolbox {
     template <typename Particle>
     bool particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::CellMarker& marker);
 
+    bool particleWillBeDroppedFurther(
+      double      searchRadius,
+      const peano4::datamanagement::CellMarker& marker
+    );
+
+    /**
+     * Will a particle be dropped further
+     *
+     * A a first glance, this routine seems to be a replica of dropParticle().
+     * However, this is not the case. dropParticle() is asked from a child for
+     * a parent vertex if it shall drop a particle from the parent into this
+     * particular child vertex. This routine is called for a plain vertex
+     * without any multiscale relation and tells the callee if a vertex
+     * holding this particular particle will later on be stipped off the
+     * particle.
+     */
     template <typename Particle>
     bool particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
-    double relativeSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
-    double relativeSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
-    double relativeMultilevelSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
-    double relativeMultilevelSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
+    bool particleWillBeDroppedFurther(
+      double searchRadius,
+      const peano4::datamanagement::VertexMarker& marker
+    );
+
+    /**
+     * Ownership tolerance
+     *
+     * A particle is "owned" by a cell (or vertex, respectively), if it resides
+     * within its area. However, we slightly augment this area, and this
+     * tolerance reflects the augmentation. It basically invokes
+     * internal::relativeReleaseOwnershipSpatialSortingTolerance() and
+     * multiply it with the numerical zero
+     * tarch::la::NUMERICAL_ZERO_DIFFERENCE.
+     */
+    double relativeSpatialOwnershipTolerance(const ::peano4::datamanagement::CellMarker& marker);
+
+    /**
+     * If you use this operation, you can be sure that every particle is
+     * associated to the right vertex after we've finished the traversal, or
+     * it is dumped into the set of particles that have to be sieved.
+     * Therefore, you don't have to check any particle anymore in
+     * touchVertexLastTime(). All should be in place.
+     *
+     * We return
+     *
+     * - ParticleReassociationInstruction_Keep if the particle should
+     *   remain where it is.
+     * - A value between 0 and 2^d-1 if we should assign it to another
+     *   vertex of this cell (on the same level).
+     *
+     * ## Algorithm
+     *
+     * - If the particle is not local or actually not covered by the current
+     *   cell, we return keep, as we don't dare to make a decision.
+     * - When we identify the destination cell, we violate our halo discussion
+     *   above, i.e. we move the association within a cell given harsh
+     *   boundaries not subject to MultilevelSortingTolerance.
+     *
+     *
+     */
+    template <typename Particle>
+    ParticleReassociationInstruction getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+      const Particle& p, const peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
+    );
+
+    ParticleReassociationInstruction getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
+      bool                                         isLocal,
+      double                                       searchRadius,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const peano4::datamanagement::CellMarker&    marker,
+      int numberOfVertexWithinCell
+    );
+
+    namespace internal {
+      double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
+      double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
+      double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
+      double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
+
+      bool fitsIntoLevel( double searchRadius, const ::peano4::datamanagement::CellMarker& marker );
+      bool fitsIntoLevel( double searchRadius, const ::peano4::datamanagement::VertexMarker& marker );
+
+      /**
+       * Find out which vertex should hold a particle.
+       *
+       * @param particle The particle of interest to be studied.
+       * @param marker   A description of the cell into which the particle is
+       *                 currently inserted or shall be inserted.
+       * @return         The number of the vertex within the cell identified by
+       *                 marker to which you should assign particle. Use
+       *                 to_ulong() to convert the result, as the result
+       *                 identifies the vertex in z-order, i.e. if it returns 00
+       *                 it is the left bottom vertex, 10 is the right bottom
+       *                 one, and so forth.
+       */
+      std::bitset<Dimensions> getParticleAssociationWithinCell(
+        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  cellCentre
+      );
+    }
   } // namespace particles
 } // namespace toolbox
 

@@ -198,3 +198,23 @@ bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary(in
   return _isAdjacentToParallelDomainBoundary[i];
 }
 
+
+tarch::la::Vector<Dimensions, double> peano4::datamanagement::VertexMarker::getInvokingCellCentre() const {
+  return _cellCentre;
+}
+
+
+tarch::la::Vector<Dimensions, double> peano4::datamanagement::VertexMarker::getInvokingCellsFatherCentre() const {
+  tarch::la::Vector<Dimensions, double> result = _cellCentre;
+  for (int d=0; d<Dimensions; d++) {
+    assertion1( _relativePositionOfCellWithinFatherCell(d)>=0, toString() );
+    assertion1( _relativePositionOfCellWithinFatherCell(d)<=2, toString() );
+    if (_relativePositionOfCellWithinFatherCell(d)==0) {
+      result(d) += _h(d);
+    }
+    if (_relativePositionOfCellWithinFatherCell(d)==2) {
+      result(d) -= _h(d);
+    }
+  }
+  return result;
+}

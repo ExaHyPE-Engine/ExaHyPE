@@ -312,4 +312,21 @@ public:
    *
    */
   tarch::la::Vector<Dimensions, int> getRelativeAdjacentCell(const tarch::la::Vector<Dimensions, double>& x) const;
+
+  /**
+   * Return centre of cell from which this vertex marker is constructed
+   *
+   * Peano runs through the mesh element-wisely. That is, each
+   * touchVertexFirstTime() and touchVertexLastTime() is called from a cell.
+   * It looks at its @f$ 2^d @f$ adjacent vertices and then invokes the vertex
+   * events for these vertices if necessary. This routine yields the centre of
+   * this cell.
+   */
+  tarch::la::Vector<Dimensions, double> getInvokingCellCentre() const;
+
+  /**
+   * See getInvokingCellCentre(). This routine gives you the centre of its
+   * parent cell.
+   */
+  tarch::la::Vector<Dimensions, double> getInvokingCellsFatherCentre() const;
 };

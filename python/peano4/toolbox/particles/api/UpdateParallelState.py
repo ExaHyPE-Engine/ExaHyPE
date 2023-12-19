@@ -185,7 +185,7 @@ class UpdateParallelState(ActionSet):
 for (int i=0; i<TwoPowerD; i++) {
   for (auto* p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
     if (
-      marker.isContained(p->getX(), toolbox::particles::relativeSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE )
+      marker.isContained(p->getX(), toolbox::particles::relativeSpatialOwnershipTolerance(marker) )
     ) {
       logDebug( "touchCellFirstTime(...)", "label particle " << p->toString() << " as local on tree " << _treeNumber );
       p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );

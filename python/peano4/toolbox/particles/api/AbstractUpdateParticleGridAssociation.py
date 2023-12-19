@@ -239,6 +239,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
         if ( ::toolbox::particles::dropParticle(**p,marker) ) {
           _numberOfDrops++;
+//          logInfo( "touchVertexFirstTime(...)", "I did drop " << (*p)->toString() );
           (*p)->setCellH(marker.h());
           assertion3(
             fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),

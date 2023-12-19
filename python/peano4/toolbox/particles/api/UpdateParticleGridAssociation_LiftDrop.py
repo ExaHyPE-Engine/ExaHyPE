@@ -122,8 +122,10 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
 
     """!
   
-  Takes those particles which are not within h/2 reach of a vertex
-  and lift those.
+  Takes those particles which are not within h/2 reach of a vertex and lift those.
+  
+  This code snippet is used with touchVertexLastTime(). Therefore, the marker
+  is a vertex marker.
   
   """
     __Template_LiftOrReassignParticles = jinja2.Template(
@@ -152,7 +154,7 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
       case 7:
       #endif
         _numberOfLifts ++;
-        logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " to next coarser vertex " << instruction << ". Previously assigned to " << marker.toString() );
+//        logInfo( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " to next coarser vertex " << instruction << ". Previously assigned to " << marker.toString() );
         (*p)->setCellH(3.0 * marker.h());
         p = coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).grabParticle( p, fineGridVertex{{PARTICLES_CONTAINER}} );
         assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                    fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );    

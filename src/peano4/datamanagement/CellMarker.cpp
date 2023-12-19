@@ -84,6 +84,21 @@ bool peano4::datamanagement::CellMarker::isParentLocal() const { return _isParen
 
 tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::x() const { return _centre; }
 
+tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::getInvokingCellsFatherCentre() const {
+  tarch::la::Vector<Dimensions, double> result = _centre;
+  for (int d=0; d<Dimensions; d++) {
+    assertion1( _relativePositionOfCellWithinFatherCell(d)>=0, toString() );
+    assertion1( _relativePositionOfCellWithinFatherCell(d)<=2, toString() );
+    if (_relativePositionOfCellWithinFatherCell(d)==0) {
+      result(d) += _h(d);
+    }
+    if (_relativePositionOfCellWithinFatherCell(d)==2) {
+      result(d) -= _h(d);
+    }
+  }
+  return result;
+}
+
 tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::h() const { return _h; }
 
 tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::getOffset() const {

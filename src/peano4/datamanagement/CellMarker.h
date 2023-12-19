@@ -103,6 +103,12 @@ public:
   tarch::la::Vector<Dimensions, double> x() const;
 
   /**
+   * See getInvokingCellCentre(). This routine gives you the centre of its
+   * parent cell.
+   */
+  tarch::la::Vector<Dimensions, double> getInvokingCellsFatherCentre() const;
+
+  /**
    * Is x contained within cell identified by marker object
    *
    * Check whether the point x is contained within the marker. This is an
