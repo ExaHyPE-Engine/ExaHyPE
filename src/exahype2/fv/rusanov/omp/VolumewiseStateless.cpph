@@ -28,35 +28,61 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
   const TempDataEnumeratorType                 eigenvalueEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
   const TempDataEnumeratorType                 ncpEnumerator(1, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
 
-  alignas(AlignmentOnHeap) double tempFlux[3][fluxEnumerator.size()];
-  alignas(AlignmentOnHeap) double tempEigenvalue[3][eigenvalueEnumerator.size()];
-  alignas(AlignmentOnHeap) double tempNonconservativeProduct[3][ncpEnumerator.size()];
-  const int                       numberOfCells          = patchData.numberOfCells;
-  double**                        mappedPointersToQIn    = patchData.QIn;
-  double**                        mappedPointersToQOut   = patchData.QOut;
-  double*                         rawPointerToCellCentre = patchData.cellCentre[0].data();
-  double*                         rawPointerToCellSize   = patchData.cellSize[0].data();
-  double*                         t                      = patchData.t;
-  double*                         dt                     = patchData.dt;
-  double*                         maxEigenvalue          = patchData.maxEigenvalue;
+  alignas(AlignmentOnHeap) double tempFluxX[fluxEnumerator.size()];
+  alignas(AlignmentOnHeap) double tempFluxY[fluxEnumerator.size()];
+  alignas(AlignmentOnHeap) double tempFluxZ[fluxEnumerator.size()];
+  alignas(AlignmentOnHeap) double tempEigenvalueX[eigenvalueEnumerator.size()];
+  alignas(AlignmentOnHeap) double tempEigenvalueY[eigenvalueEnumerator.size()];
+  alignas(AlignmentOnHeap) double tempEigenvalueZ[eigenvalueEnumerator.size()];
+  alignas(AlignmentOnHeap) double tempNonconservativeProductX[ncpEnumerator.size()];
+  alignas(AlignmentOnHeap) double tempNonconservativeProductY[ncpEnumerator.size()];
+  alignas(AlignmentOnHeap) double tempNonconservativeProductZ[ncpEnumerator.size()];
+
+  const int numberOfCells          = patchData.numberOfCells;
+  double*   rawPointerToCellCentre = patchData.cellCentre[0].data();
+  double*   rawPointerToCellSize   = patchData.cellSize[0].data();
+  double*   t                      = patchData.t;
+  double*   dt                     = patchData.dt;
+  double*   maxEigenvalue          = patchData.maxEigenvalue;
+  double    newMaxEigenvalue       = 0.0;
+
+  double** mappedPointersToQIn  = new double*[patchData.numberOfCells];
+  double** mappedPointersToQOut = new double*[patchData.numberOfCells];
+
+  for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
+    const double* currentQIn  = patchData.QIn[patchIndex];
+    double*       currentQOut = patchData.QOut[patchIndex];
+#pragma omp target enter data map(to : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
+#pragma omp target enter data map(alloc : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
+    mappedPointersToQIn[patchIndex]  = static_cast<double*>(omp_get_mapped_ptr(currentQIn, targetDevice));
+    mappedPointersToQOut[patchIndex] = static_cast<double*>(omp_get_mapped_ptr(currentQOut, targetDevice));
+  }
 
   // clang-format off
-  /*map( \
-      to : patchData.cellCentre[0].data()[0 : numberOfCells * Dimensions], \
-        patchData.cellSize[0].data()[0 : numberOfCells * Dimensions], \
-        patchData.QIn[0 : numberOfCells][0 : QInEnumerator.size()], \
-        patchData.t[0 : numberOfCells], \
-        patchData.dt[0 : numberOfCells] \
-  ) map(from : patchData.QOut[0 : numberOfCells][0 : QOutEnumerator.size()], patchData.maxEigenvalue[0 : numberOfCells])*/
-
-#pragma omp target teams distribute device(targetDevice) parallel for simd collapse(3) reduction(max : maxEigenvalue[0 : numberOfCells]) \
-  map(alloc : tempFlux[0 : 3][0 : fluxEnumerator.size()], \
-              tempEigenvalue[0 : 3][0 : eigenvalueEnumerator.size()], \
-              tempNonconservativeProduct[0 : 3][ncpEnumerator.size()])
+#pragma omp target teams distribute device(targetDevice) map( \
+  to : tempFluxX[0 : fluxEnumerator.size()], \
+       tempFluxY[0 : fluxEnumerator.size()], \
+       tempFluxY[0 : fluxEnumerator.size()], \
+       tempEigenvalueX[0 : eigenvalueEnumerator.size()], \
+       tempEigenvalueY[0 : eigenvalueEnumerator.size()], \
+       tempEigenvalueZ[0 : eigenvalueEnumerator.size()], \
+       tempNonconservativeProductX[0 : ncpEnumerator.size()], \
+       tempNonconservativeProductY[0 : ncpEnumerator.size()], \
+       tempNonconservativeProductZ[0 : ncpEnumerator.size()], \
+       rawPointerToCellCentre[0 : numberOfCells * Dimensions], \
+       rawPointerToCellSize[0 : numberOfCells * Dimensions], \
+       t[0 : numberOfCells], \
+       dt[0 : numberOfCells], \
+       mappedPointersToQIn[0 : numberOfCells], \
+       mappedPointersToQOut[0 : numberOfCells], \
+)
   // clang-format on
   for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
 #if Dimensions == 3
+#pragma omp parallel for simd collapse(3) schedule(static, 1)
     for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
+#else
+#pragma omp parallel for simd collapse(2) schedule(static, 1)
 #endif
       for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
         for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -86,6 +112,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
               QOutEnumerator
             );
           } else {
+#pragma unroll
             for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
               loopbodies::copySolution(mappedPointersToQIn[patchIndex], QInEnumerator, patchIndex, currentVolume, unknown, mappedPointersToQOut[patchIndex], QOutEnumerator);
             }
@@ -94,34 +121,145 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           // ====================================================
           // Compute damping due to max eigenvalue
           // ====================================================
-          for (int d = 0; d < Dimensions; d++) {
-            auto volumeWithHalo = currentVolume;
-            volumeWithHalo(d) -= HaloSize;
-            for (int h = 0; h <= HaloSize * 2; h++) {
-              loopbodies::computeMaxEigenvalue<SolverType>(
-                mappedPointersToQIn[patchIndex],
-                QInEnumerator,
-                rawPointerToCellCentre[patchIndex],
-                rawPointerToCellSize[patchIndex],
-                patchIndex,
-                volumeWithHalo,
-                t[patchIndex],
-                dt[patchIndex],
-                d, // normal
-                tempEigenvalue[d],
-                eigenvalueEnumerator
-              );
-              volumeWithHalo(d) += HaloSize;
-            }
-          }
+          auto volumeWithHalo = currentVolume;
+          loopbodies::computeMaxEigenvalue<SolverType>(
+            mappedPointersToQIn[patchIndex],
+            QInEnumerator,
+            rawPointerToCellCentre[patchIndex],
+            rawPointerToCellSize[patchIndex],
+            patchIndex,
+            volumeWithHalo,
+            t[patchIndex],
+            dt[patchIndex],
+            0, // normal
+            tempEigenvalueX,
+            eigenvalueEnumerator
+          );
+          volumeWithHalo(0) = x - HaloSize;
+          loopbodies::computeMaxEigenvalue<SolverType>(
+            mappedPointersToQIn[patchIndex],
+            QInEnumerator,
+            rawPointerToCellCentre[patchIndex],
+            rawPointerToCellSize[patchIndex],
+            patchIndex,
+            volumeWithHalo,
+            t[patchIndex],
+            dt[patchIndex],
+            0, // normal
+            tempEigenvalueX,
+            eigenvalueEnumerator
+          );
+          volumeWithHalo(0) = x + HaloSize;
+          loopbodies::computeMaxEigenvalue<SolverType>(
+            mappedPointersToQIn[patchIndex],
+            QInEnumerator,
+            rawPointerToCellCentre[patchIndex],
+            rawPointerToCellSize[patchIndex],
+            patchIndex,
+            volumeWithHalo,
+            t[patchIndex],
+            dt[patchIndex],
+            0, // normal
+            tempEigenvalueX,
+            eigenvalueEnumerator
+          );
 
+          volumeWithHalo = currentVolume;
+          loopbodies::computeMaxEigenvalue<SolverType>(
+            mappedPointersToQIn[patchIndex],
+            QInEnumerator,
+            rawPointerToCellCentre[patchIndex],
+            rawPointerToCellSize[patchIndex],
+            patchIndex,
+            volumeWithHalo,
+            t[patchIndex],
+            dt[patchIndex],
+            1, // normal
+            tempEigenvalueY,
+            eigenvalueEnumerator
+          );
+          volumeWithHalo(1) = y - HaloSize;
+          loopbodies::computeMaxEigenvalue<SolverType>(
+            mappedPointersToQIn[patchIndex],
+            QInEnumerator,
+            rawPointerToCellCentre[patchIndex],
+            rawPointerToCellSize[patchIndex],
+            patchIndex,
+            volumeWithHalo,
+            t[patchIndex],
+            dt[patchIndex],
+            1, // normal
+            tempEigenvalueY,
+            eigenvalueEnumerator
+          );
+          volumeWithHalo(1) = y + HaloSize;
+          loopbodies::computeMaxEigenvalue<SolverType>(
+            mappedPointersToQIn[patchIndex],
+            QInEnumerator,
+            rawPointerToCellCentre[patchIndex],
+            rawPointerToCellSize[patchIndex],
+            patchIndex,
+            volumeWithHalo,
+            t[patchIndex],
+            dt[patchIndex],
+            1, // normal
+            tempEigenvalueY,
+            eigenvalueEnumerator
+          );
+
+#if Dimensions == 3
+          volumeWithHalo = currentVolume;
+          loopbodies::computeMaxEigenvalue<SolverType>(
+            mappedPointersToQIn[patchIndex],
+            QInEnumerator,
+            rawPointerToCellCentre[patchIndex],
+            rawPointerToCellSize[patchIndex],
+            patchIndex,
+            volumeWithHalo,
+            t[patchIndex],
+            dt[patchIndex],
+            2, // normal
+            tempEigenvalueZ,
+            eigenvalueEnumerator
+          );
+          volumeWithHalo(2) = z - HaloSize;
+          loopbodies::computeMaxEigenvalue<SolverType>(
+            mappedPointersToQIn[patchIndex],
+            QInEnumerator,
+            rawPointerToCellCentre[patchIndex],
+            rawPointerToCellSize[patchIndex],
+            patchIndex,
+            volumeWithHalo,
+            t[patchIndex],
+            dt[patchIndex],
+            2, // normal
+            tempEigenvalueZ,
+            eigenvalueEnumerator
+          );
+          volumeWithHalo(2) = z + HaloSize;
+          loopbodies::computeMaxEigenvalue<SolverType>(
+            mappedPointersToQIn[patchIndex],
+            QInEnumerator,
+            rawPointerToCellCentre[patchIndex],
+            rawPointerToCellSize[patchIndex],
+            patchIndex,
+            volumeWithHalo,
+            t[patchIndex],
+            dt[patchIndex],
+            2, // normal
+            tempEigenvalueZ,
+            eigenvalueEnumerator
+          );
+#endif
+
+#pragma unroll
           for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
             loopbodies::updateSolutionWithEigenvalueDamping(
               mappedPointersToQIn[patchIndex],
               QInEnumerator,
-              tempEigenvalue[0],
-              tempEigenvalue[1],
-              tempEigenvalue[2],
+              tempEigenvalueX,
+              tempEigenvalueY,
+              tempEigenvalueZ,
               eigenvalueEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -138,32 +276,143 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           // Normal (conservative) flux
           // ====================================================
           if constexpr (EvaluateFlux) {
-            for (int d = 0; d < Dimensions; d++) {
-              auto volumeWithHalo = currentVolume;
-              volumeWithHalo(d) -= HaloSize;
-              for (int h = 0; h <= HaloSize * 2; h++) {
-                loopbodies::computeFlux<SolverType>(
-                  mappedPointersToQIn[patchIndex],
-                  QInEnumerator,
-                  rawPointerToCellCentre[patchIndex],
-                  rawPointerToCellSize[patchIndex],
-                  patchIndex,
-                  volumeWithHalo,
-                  t[patchIndex],
-                  dt[patchIndex],
-                  d, // normal
-                  tempFlux[d],
-                  fluxEnumerator
-                );
-                volumeWithHalo(d) += HaloSize;
-              }
-            }
+            auto volumeWithHalo = currentVolume;
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              0, // normal
+              tempFluxX,
+              fluxEnumerator
+            );
+            volumeWithHalo(0) = x - HaloSize;
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              0, // normal
+              tempFluxX,
+              fluxEnumerator
+            );
+            volumeWithHalo(0) = x + HaloSize;
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              0, // normal
+              tempFluxX,
+              fluxEnumerator
+            );
 
+            volumeWithHalo = currentVolume;
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              1, // normal
+              tempFluxY,
+              fluxEnumerator
+            );
+            volumeWithHalo(1) = y - HaloSize;
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              1, // normal
+              tempFluxY,
+              fluxEnumerator
+            );
+            volumeWithHalo(1) = y + HaloSize;
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              1, // normal
+              tempFluxY,
+              fluxEnumerator
+            );
+
+#if Dimensions == 3
+            volumeWithHalo = currentVolume;
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              2, // normal
+              tempFluxZ,
+              fluxEnumerator
+            );
+            volumeWithHalo(2) = z - HaloSize;
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              2, // normal
+              tempFluxZ,
+              fluxEnumerator
+            );
+            volumeWithHalo(2) = z + HaloSize;
+            loopbodies::computeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              2, // normal
+              tempFluxZ,
+              fluxEnumerator
+            );
+#endif
+
+#pragma unroll
             for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
               loopbodies::updateSolutionWithFlux(
-                tempFlux[0],
-                tempFlux[1],
-                tempFlux[2],
+                tempFluxX,
+                tempFluxY,
+                tempFluxZ,
                 fluxEnumerator,
                 rawPointerToCellCentre[patchIndex],
                 rawPointerToCellSize[patchIndex],
@@ -178,32 +427,101 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           }
 
           if constexpr (EvaluateNonconservativeProduct) {
-            for (int d = 0; d < Dimensions; d++) {
-              auto volumeWithHalo = currentVolume;
-              volumeWithHalo(d) -= HaloSize;
-              for (int h = 0; h <= HaloSize * 2 - 1; h++) {
-                loopbodies::computeNonconservativeFlux<SolverType>(
-                  mappedPointersToQIn[patchIndex],
-                  QInEnumerator,
-                  rawPointerToCellCentre[patchIndex],
-                  rawPointerToCellSize[patchIndex],
-                  patchIndex,
-                  volumeWithHalo,
-                  t[patchIndex],
-                  dt[patchIndex],
-                  d, // normal
-                  tempNonconservativeProduct[d],
-                  ncpEnumerator
-                );
-                volumeWithHalo(d) += HaloSize;
-              }
-            }
+            auto volumeWithHalo = currentVolume;
+            loopbodies::computeNonconservativeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              0, // normal
+              tempNonconservativeProductX,
+              ncpEnumerator
+            );
+            volumeWithHalo(0) = x - HaloSize;
+            loopbodies::computeNonconservativeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              0, // normal
+              tempNonconservativeProductX,
+              ncpEnumerator
+            );
 
+            volumeWithHalo = currentVolume;
+            loopbodies::computeNonconservativeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              1, // normal
+              tempNonconservativeProductY,
+              ncpEnumerator
+            );
+            volumeWithHalo(1) = y - HaloSize;
+            loopbodies::computeNonconservativeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              1, // normal
+              tempNonconservativeProductY,
+              ncpEnumerator
+            );
+
+#if Dimensions == 3
+            volumeWithHalo = currentVolume;
+            loopbodies::computeNonconservativeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              2, // normal
+              tempNonconservativeProductZ,
+              ncpEnumerator
+            );
+            volumeWithHalo(2) = z - HaloSize;
+            loopbodies::computeNonconservativeFlux<SolverType>(
+              mappedPointersToQIn[patchIndex],
+              QInEnumerator,
+              rawPointerToCellCentre[patchIndex],
+              rawPointerToCellSize[patchIndex],
+              patchIndex,
+              volumeWithHalo,
+              t[patchIndex],
+              dt[patchIndex],
+              2, // normal
+              tempNonconservativeProductZ,
+              ncpEnumerator
+            );
+#endif
+
+#pragma unroll
             for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
               loopbodies::updateSolutionWithNonconservativeFlux(
-                tempNonconservativeProduct[0],
-                tempNonconservativeProduct[1],
-                tempNonconservativeProduct[2],
+                tempNonconservativeProductX,
+                tempNonconservativeProductY,
+                tempNonconservativeProductZ,
                 ncpEnumerator,
                 rawPointerToCellCentre[patchIndex],
                 rawPointerToCellSize[patchIndex],
@@ -239,8 +557,19 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
 #endif
   }
 
+  for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+    const double* currentQIn  = patchData.QIn[patchIndex];
+    double*       currentQOut = patchData.QOut[patchIndex];
+#pragma omp target exit data map(delete : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
+#pragma omp target exit data map(from : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
+  }
+
+  delete[] mappedPointersToQIn;
+  delete[] mappedPointersToQOut;
+
   logTraceOut("timeStepWithRusanovVolumewiseStateless()");
 }
+
 
 template <
   class SolverType,

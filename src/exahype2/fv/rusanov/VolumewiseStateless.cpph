@@ -219,6 +219,7 @@ void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseStateless(CellData& pat
   logTraceOut("timeStepWithRusanovVolumewiseStateless()");
 }
 
+
 template <
   class SolverType,
   int  NumberOfVolumesPerAxisInPatch,

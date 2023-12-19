@@ -228,6 +228,7 @@ void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseFunctors(
   logTraceOut("timeStepWithRusanovVolumewiseFunctors()");
 }
 
+
 template <
   int  NumberOfVolumesPerAxisInPatch,
   int  HaloSize,
