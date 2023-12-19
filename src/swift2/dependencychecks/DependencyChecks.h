@@ -3,7 +3,7 @@
 #include <string>
 #include <type_traits>
 
-#include "swift2/kernels/ParticleState.h"
+#include "swift2/kernels/ParticleUpdatePredicates.h"
 
 
 namespace swift2 {

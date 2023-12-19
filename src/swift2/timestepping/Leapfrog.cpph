@@ -1,4 +1,4 @@
-#include "swift2/kernels/ParticleState.h"
+#include "swift2/kernels/ParticleUpdatePredicates.h"
 #include "tarch/la/ScalarOperations.h"
 #include "tarch/la/VectorOperations.h"
 #include "tarch/la/VectorVectorOperations.h"

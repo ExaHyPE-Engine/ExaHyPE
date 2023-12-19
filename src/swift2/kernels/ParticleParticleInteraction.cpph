@@ -1,4 +1,4 @@
-#include "swift2/kernels/ParticleState.h"
+#include "swift2/kernels/ParticleUpdatePredicates.h"
 #include "swift2/kernels/SmoothingLengthComputation.h"
 #include "swift2/legacy/hydro_dimensions.h"
 #include "swift2/legacy/kernel_hydro.h"
