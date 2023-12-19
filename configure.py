@@ -209,12 +209,12 @@ if args.exahype:
         configure_args.append("-DENABLE_EXAHYPE=ON")
         configure_args.append("-DENABLE_LOADBALANCING=ON")
         configure_args.append("-DENABLE_BLOCKSTRUCTURED=ON")
-        # configure_args.append("-DWITH_LIBXSMM=ON")
+        configure_args.append("-DWITH_LIBXSMM=ON")
     else:
         configure_args.append("--enable-exahype")
         configure_args.append("--enable-loadbalancing")
         configure_args.append("--enable-blockstructured")
-        # configure_args.append("--with-libxsmm")
+        configure_args.append("--with-libxsmm")
 
 if args.loadbalancing:
     if args.cmake:

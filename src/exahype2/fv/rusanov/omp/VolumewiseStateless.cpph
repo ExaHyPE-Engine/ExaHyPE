@@ -59,23 +59,25 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
   }
 
   // clang-format off
-#pragma omp target teams distribute device(targetDevice) map( \
-  to : tempFluxX[0 : fluxEnumerator.size()], \
-       tempFluxY[0 : fluxEnumerator.size()], \
-       tempFluxY[0 : fluxEnumerator.size()], \
-       tempEigenvalueX[0 : eigenvalueEnumerator.size()], \
-       tempEigenvalueY[0 : eigenvalueEnumerator.size()], \
-       tempEigenvalueZ[0 : eigenvalueEnumerator.size()], \
-       tempNonconservativeProductX[0 : ncpEnumerator.size()], \
-       tempNonconservativeProductY[0 : ncpEnumerator.size()], \
-       tempNonconservativeProductZ[0 : ncpEnumerator.size()], \
-       rawPointerToCellCentre[0 : numberOfCells * Dimensions], \
-       rawPointerToCellSize[0 : numberOfCells * Dimensions], \
-       t[0 : numberOfCells], \
-       dt[0 : numberOfCells], \
-       mappedPointersToQIn[0 : numberOfCells], \
-       mappedPointersToQOut[0 : numberOfCells], \
-)
+#pragma omp target teams distribute device(targetDevice) \
+  map(to : \
+           tempFluxX[0 : fluxEnumerator.size()], \
+           tempFluxY[0 : fluxEnumerator.size()], \
+           tempFluxY[0 : fluxEnumerator.size()], \
+           tempEigenvalueX[0 : eigenvalueEnumerator.size()], \
+           tempEigenvalueY[0 : eigenvalueEnumerator.size()], \
+           tempEigenvalueZ[0 : eigenvalueEnumerator.size()], \
+           tempNonconservativeProductX[0 : ncpEnumerator.size()], \
+           tempNonconservativeProductY[0 : ncpEnumerator.size()], \
+           tempNonconservativeProductZ[0 : ncpEnumerator.size()], \
+           rawPointerToCellCentre[0 : numberOfCells * Dimensions], \
+           rawPointerToCellSize[0 : numberOfCells * Dimensions], \
+           t[0 : numberOfCells], \
+           dt[0 : numberOfCells], \
+           mappedPointersToQIn[0 : numberOfCells]), \
+  map(from : \
+           maxEigenvalue[0 : numberOfCells] \
+           mappedPointersToQOut[0 : numberOfCells])
   // clang-format on
   for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
 #if Dimensions == 3
