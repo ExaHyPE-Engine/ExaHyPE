@@ -147,7 +147,7 @@ elif args.gpu == "sycl" and "icx" in args.cc and "icpx" in args.cxx:
             + args.arch
         )
 elif args.gpu == "cuda":
-    nvccflags += f"-arch=sm_{args.arch}"
+    nvccflags += f" -arch=sm_{args.arch}"
     if args.cuda_path is not None:
         if not args.cmake:
             # CUDA path is only needed with Automake builds

@@ -1,7 +1,8 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 import os.path
-import re
+import subprocess
+import os
 
 from .Overwrite import Overwrite
 
@@ -145,3 +146,123 @@ def caller_distance_to_build_root():
     dist += 1
 
   return -1
+
+# Find out GPU vendor
+def get_gpu_vendor(architecture_string):
+  if architecture_string == None:
+    return None
+  elif architecture_string.lower().startswith("gfx"):
+    return "AMD"
+  elif architecture_string.lower().startswith("spir"):
+    return "INTEL"
+  elif architecture_string.lower().startswith("sm") or \
+    architecture_string.lower().startswith("cc") or \
+    architecture_string.isnumeric():
+    return "NVIDIA"
+  return None
+
+
+def get_mpi_implementation(mpicxx):
+    # Run mpicxx --version and infer which MPI implementation is being used,
+    # MPICH and Intel oneAPI print information including MPICH and Intel(R) MPI Library
+    # OpenMPI doesn't print any information that enables identification,
+    # A workaround be running mpicxx --showme that will also involve openmpi include etc.
+    bash_command = f"{mpicxx} -v"
+    result = subprocess.run(bash_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result_str = ""
+    if result.returncode == 0:
+        result_str = result.stdout
+    if "MPICH" in result_str: # MPICH
+        return "MPICH"
+    elif "Intel(R) MPI Library" in result_str: # Intel oneAPI
+        return "INTEL"
+    else:
+        showme_bash_command = f"{mpicxx} --showme"
+        showme_result = subprocess.run(showme_bash_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if showme_result.returncode == 0:
+            if "openmpi" in showme_result.stdout:
+                return "OPENMPI"
+    return None
+
+def parse_cmake_cache_for_mpi_and_gpu_vendor():
+  try:
+    cmake_build_dir = find_CMake_build_dir()
+    mpi_vendor = None
+    gpu_vendor = None
+    with open(os.path.join(cmake_build_dir, "CMakeCache.txt"), "r") as f:
+      for line in f:
+        if "MPI_CXX_COMPILER:FILEPATH" in line:
+          mpicxx = line.split("=")[1] # get pat to mpicxx like /usr/bin/mpicxx
+          mpi_vendor = get_mpi_implementation(mpicxx)
+        if "WITH_GPU_ARCH:STRING" in line:
+          gpu_arch = line.split("=")[1] # get gpu arch
+          gpu_vendor = get_gpu_vendor(gpu_arch)
+        if mpi_vendor and gpu_vendor:
+          break
+    return (mpi_vendor, gpu_vendor)
+  except:
+    return (None, None)
+
+def parse_makefile_for_mpi_and_gpu_vendor():
+  try:
+    # Automake does not differentiate between mpicxx and cxx variables
+    cxx = None
+    cxxflags = None
+    nvcc = None
+    nvccflags = None
+    gpu_vendor = None
+    mpi_vendor = None
+
+    peano_root_path = os.path.join(os.path.dirname(__file__), "..", "..", "..")
+    makefile_path = os.path.join(peano_root_path, "src", "Makefile")
+
+    with open(makefile_path, "r") as makefile:
+      for line in makefile:
+        if line.startswith("CXX ="):
+          cxx = line[len("CXX ="):]
+        elif line.startswith("CXXFLAGS ="):
+          cxxflags = line[len("CXXFLAGS ="):]
+        elif line.startswith("NVCC ="):# for CUDA backend
+          nvcc = line[len("NVCC ="):]
+        if line.startswith("NVCCFLAGS ="):
+          nvccflags = line[len("NVCCFLAGS ="):]
+        if cxx and cxxflags and nvcc and nvccflags:
+          break
+    if nvcc == None:
+      nvcc = ""
+    if nvccflags == None:
+      nvccflags = ""
+
+    print(cxx, cxxflags, nvcc, nvccflags)
+    cxxflags = cxx + " " +  cxxflags
+    nvccflags = nvcc + " " + nvccflags
+
+    # There various ways to pass gpu archiectures as a part of CXXFLAGS
+    # It can be: --offload-arch=<...>, --cuda-gpu-arch=<...>, --arch=<...>, -gpu=<...>
+    # Get GPU vendor
+    cxxflags_tokenized = cxxflags.split()
+    nvccflags_tokenized = nvccflags.split()
+    offload_flags = ["--offload-arch", "--cuda-gpu-arch", "--arch", "-gpu", "-arch"]
+    mpi_vendor = get_mpi_implementation(cxx.split()[0])
+
+    gpu_arch = None
+    for flags_tokenized in [cxxflags_tokenized, nvccflags_tokenized]:
+      for flag_token in flags_tokenized:
+        for offload_flag in offload_flags:
+          if flag_token.startswith(offload_flag):
+              if "=" in flag_token:
+                gpu_arch = flag_token.split("=")[1]
+              else:
+                gpu_arch = flag_token.split()[1]
+              break
+        if gpu_arch:
+          break
+      if gpu_arch:
+        break
+
+    if gpu_arch:
+      gpu_vendor = get_gpu_vendor(architecture_string=gpu_arch)
+
+    return (mpi_vendor, gpu_vendor)
+  except:
+    return (None, None)

@@ -1,7 +1,8 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .Makefile import Makefile
-from .Readme   import Readme
+from .Makefile  import Makefile
+from .Readme    import Readme
+from .GPUSelect import GPUSelect
 
 class Output(object):
   """
@@ -12,6 +13,7 @@ class Output(object):
     self.artefacts  = []
     self.readme     = Readme()
     self.makefile   = Makefile()
+    self.gpu_select = GPUSelect()
 
   def clear(self):
     """
@@ -43,3 +45,5 @@ class Output(object):
     self.readme.add_package_description( self.makefile.readme_package_descriptor )
 
     self.readme.generate(directory)
+
+    self.gpu_select.generate(directory)
