@@ -50,14 +50,14 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 # This has to be done before the project is created and before any languages are added.
-# Adding a subdirectory does not help here and needs to be explicitly given with the path( cmake/...),
+# Adding a subdirectory does not help here and needs to be explicitly given with the path(cmake/...),
 # Because this file is needed by CMake itself and not by the project.
 # We need to override specific compiler flags initialized by CMake, to
 # match them exactly with the flags defined in Peano Automake build system.
-# More details can be found in the cmake/PeanoCustomInitFlags.cmake file.
+# More details can be found in the cmake/CustomMakeRules.cmake file.
 # For example, the Peano release flags are -O3 and -O4 for NVHPC compilers (and -DNDEBUG in definitions);
 # but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
-set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/PeanoCustomInitFlags.cmake")
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/CustomMakeRules.cmake")
 
 set(LANGUAGES C CXX)
 project(
@@ -282,22 +282,37 @@ if(WITH_GPU)
   endif()
 endif()
 
-set(CMAKE_CONFIGURATION_TYPES "Debug" "Release" "Asserts" "Trace" "Stats" CACHE STRING "Enabled build types" FORCE)
-if(NOT CMAKE_BUILD_TYPE OR NOT ${CMAKE_BUILD_TYPE} IN_LIST CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE "" CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES})
-  list(APPEND BUILD_MODES ${CMAKE_CONFIGURATION_TYPES})
-else()
-  list(APPEND BUILD_MODES ${CMAKE_BUILD_TYPE})
+# Set default build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Debug;Release;Asserts;Trace;Stats" CACHE STRING "Choose the type of build (Debug, Release, Asserts, Trace, Stats)" FORCE)
+endif()
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS " " "Debug" "Release" "Asserts" "Trace" "Stats" "Debug\;Release\;Asserts\;Trace\;Stats")
+set(WITH_DIMENSIONS "2;3" CACHE STRING "Dimensions to build with ;-separated list of values")
+
+if(PEANO_BUILD_TYPE)
+  if(CMAKE_BUILD_TYPE)
+    list(FIND CMAKE_BUILD_TYPE ${PEANO_BUILD_TYPE} index)
+    if(index EQUAL -1)
+      set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} ${PEANO_BUILD_TYPE} CACHE STRING "List of build types" FORCE)
+    endif()
+  else()
+    set(CMAKE_BUILD_TYPE ${PEANO_BUILD_TYPE} CACHE STRING "List of build types" FORCE)
+  endif()
 endif()
 
-# Update core libraries' build modes and dimensions if it is not set to build all and if the build type of an application is different.
-if(CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQUAL "${PEANO_APP_BUILD_TYPE}")
-  set(CMAKE_BUILD_TYPE ${PEANO_APP_BUILD_TYPE} CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
-  list(APPEND BUILD_MODES ${PEANO_APP_BUILD_TYPE})
+if(PEANO_DIMENSIONS)
+  foreach(DIMENSION IN LISTS PEANO_DIMENSIONS)
+    list(FIND WITH_DIMENSIONS "${PEANO_DIMENSIONS}" index)
+    if(index EQUAL -1)
+      if (WITH_DIMENSIONS)
+        set(WITH_DIMENSIONS "${WITH_DIMENSIONS};${DIMENSION}" CACHE STRING "Dimensions to build with ;-separated list of values" FORCE)
+      else()
+        set(WITH_DIMENSIONS "${DIMENSION}" CACHE STRING "Dimensions to build with ;-separated list of values" FORCE)
+      endif()
+    endif()
+  endforeach()
 endif()
 
-# LDFLAGS are currently empty but might be required in the future
 # Note linkers (ld, lld) ignore the flag -g when passed
 # Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
@@ -308,34 +323,23 @@ else()
   set(PEANO_CUDA_FLAGS_RELEASE -O3)
 endif()
 set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
-set(PEANO_RELEASE_LDFLAGS )
 
 #-O2 -fno-omit-frame-pointer
 set(PEANO_CXX_FLAGS_DEBUG -g -O0)
 set(PEANO_CUDA_FLAGS_DEBUG -g -O0)
 set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4)
-set(PEANO_DEBUG_LDFLAGS )
 
 set(PEANO_CXX_FLAGS_STATS ${PEANO_CXX_FLAGS_RELEASE})
 set(PEANO_CUDA_FLAGS_STATS ${PEANO_CUDA_FLAGS_RELEASE})
 set(PEANO_STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics)
-set(PEANO_STATS_LDFLAGS )
 
 set(PEANO_CXX_FLAGS_ASSERTS ${PEANO_CXX_FLAGS_DEBUG})
 set(PEANO_CUDA_FLAGS_ASSERTS ${PEANO_CUDA_FLAGS_DEBUG})
 set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2)
-set(PEANO_ASSERTS_LDFLAGS )
 
 set(PEANO_CXX_FLAGS_TRACE -g -O2)
 set(PEANO_CUDA_FLAGS_TRACE ${PEANO_CXX_FLAGS_TRACE})
 set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
-set(PEANO_TRACE_LDFLAGS )
-
-set(WITH_DIMENSIONS "2;3" CACHE STRING "Build with number of (space) dimensions")
-
-if(NOT "${WITH_DIMENSIONS}" STREQUAL "2;3" AND PEANO_APP_DIMENSION AND NOT "${WITH_DIMENSIONS}" STREQUAL "${PEANO_APP_DIMENSION}")
-  set(WITH_DIMENSIONS ${PEANO_APP_DIMENSION} CACHE STRING "Dimensions 2;3" FORCE)
-endif()
 
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
 option(WITH_OTTER "Build with Otter support" OFF)
@@ -515,22 +519,16 @@ display_variable(CMAKE_C_STANDARD)
 display_variable(CMAKE_CXX_COMPILER)
 display_variable(CMAKE_CXX_STANDARD)
 display_variable(CMAKE_BUILD_TYPE)
-display_variable(CMAKE_CONFIGURATION_TYPES)
 display_variable(PEANO_CXX_FLAGS_RELEASE)
 display_variable(PEANO_RELEASE_DEFINITIONS)
-display_variable(PEANO_RELEASE_LDFLAGS)
 display_variable(PEANO_CXX_FLAGS_DEBUG)
 display_variable(PEANO_DEBUG_DEFINITIONS)
-display_variable(PEANO_DEBUG_LDFLAGS)
 display_variable(PEANO_CXX_FLAGS_STATS)
 display_variable(PEANO_STATS_DEFINITIONS)
-display_variable(PEANO_STATS_LDFLAGS)
 display_variable(PEANO_CXX_FLAGS_ASSERTS)
 display_variable(PEANO_ASSERTS_DEFINITIONS)
-display_variable(PEANO_ASSERTS_LDFLAGS)
 display_variable(PEANO_CXX_FLAGS_TRACE)
 display_variable(PEANO_TRACE_DEFINITIONS)
-display_variable(PEANO_TRACE_LDFLAGS)
 display_variable(CMAKE_VERBOSE_MAKEFILE)
 display_variable(BUILD_SHARED_LIBS)
 display_variable(CMAKE_CXX_FLAGS_INIT)
