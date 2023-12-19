@@ -103,7 +103,7 @@ DaStGen2. See the corresponding documentation on \ref page_dastgen.
 
 With the particle data defined, we can now set up what equations are being solved, and in
 which order, for each particle for each simulation step. This is documented in detail in
-@ref Section_SwiftAlgorithmStep on the @ref swift_particle_lifecycle page.
+@ref Section_SwiftAlgorithmStep on the @ref swift_particle_new_solver page.
 
 If you are planning on using a new solver, you will need to write new solver kernels.
 Consult the documentation on that given on the

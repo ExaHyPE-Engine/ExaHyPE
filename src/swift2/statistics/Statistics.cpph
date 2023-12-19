@@ -1,13 +1,15 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 template <typename Particle>
-void swift2::statistics::reduceVelocityAndSearchRadius(const std::list<Particle*>& localParticles) {
-  if (not localParticles.empty()) {
+void swift2::statistics::reduceVelocityAndSearchRadius(Particle*  particle) {
+  // @todo Nicht so schoen, weil wir ja schon eigentlich eine Reduktion ueber das lokale set erst mal machen sollten
+/*
+  if (not particles.empty()) {
     double vMin = std::numeric_limits<double>::max();
     double vMax = 0.0;
     double rMin = std::numeric_limits<double>::max();
     double rMax = 0.0;
-    for (const auto* particle : localParticles) {
+    for (const auto* particle : particles) {
       vMin = std::min(vMin, tarch::la::norm2(particle->getV()));
       vMax = std::max(vMax, tarch::la::norm2(particle->getV()));
       rMin = std::min(rMin, particle->getSearchRadius());
@@ -15,4 +17,11 @@ void swift2::statistics::reduceVelocityAndSearchRadius(const std::list<Particle*
     }
     Particle::getSpecies().setVelocity(vMin, vMax, rMin, rMax);
   }
+*/
+  Particle::getSpecies().setVelocity(
+    tarch::la::norm2(particle->getV()),
+    tarch::la::norm2(particle->getV()),
+    particle->getSearchRadius(),
+    particle->getSearchRadius()
+  );
 }

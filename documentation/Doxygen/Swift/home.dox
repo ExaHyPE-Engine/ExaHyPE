@@ -10,7 +10,6 @@
 \li \subpage swift_tests
 \li \subpage swift_tutorials
 \li \subpage swift_building_project_from_scratch
-\li \subpage swift_particle_lifecycle
 \li \subpage swift_initial_conditions
 \li \subpage swift_boundary_conditions
 \li \subpage swift_particle_new_solver

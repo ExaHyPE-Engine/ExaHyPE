@@ -8,12 +8,15 @@
 namespace swift2 {
   namespace statistics {
     /**
-     * It is important that we have an if here and don't do anything if the
-     * cell is empty. Because if we did set the default values, we'd likely
-     * overwite the .
+     * Reduce velocity and search radius stats into species information
+     *
+     * Inform the species about a local particle's search radius and velocity.
+     * This
      */
     template <typename Particle>
-    void reduceVelocityAndSearchRadius(const std::list<Particle*>& localParticles);
+    void reduceVelocityAndSearchRadius(
+      Particle*        particle
+    );
   } // namespace statistics
 } // namespace swift2
 
