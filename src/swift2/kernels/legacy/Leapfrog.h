@@ -44,7 +44,7 @@ namespace swift2 {
 
       template <typename Particle>
       void leapfrogDriftWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker, localParticle)) {
+        if (::swift2::kernels::localParticleCanBeMoved(marker, localParticle)) {
           leapfrog_drift_global_time_step_size(&localParticle);
         }
       }
