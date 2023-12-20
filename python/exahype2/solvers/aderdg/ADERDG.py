@@ -665,7 +665,7 @@ class ADERDG(object):
         return self._name + "Q"
 
     def get_name_of_global_instance(self):
-        return "InstanceOf" + self._name
+        return "instanceOf" + self._name
 
     def _get_default_includes(self):
         return """
