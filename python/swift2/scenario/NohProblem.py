@@ -41,11 +41,11 @@ class NohProblemIC:
       particle->setU( 1e-6 );
 
       /* Compute the pressure from the EoS */
-      const double pressure = ::swift2::legacy::eos::gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
+      const double pressure = ::swift2::kernels::legacy::eos::gas_pressure_from_internal_energy( particle->getDensity(), particle->getU() );
       particle->setPressure( pressure );
 
       /* Compute the sound speed */
-      const double soundspeed = ::swift2::legacy::eos::gas_soundspeed_from_internal_energy( particle->getU() );
+      const double soundspeed = ::swift2::kernels::legacy::eos::gas_soundspeed_from_internal_energy( particle->getU() );
       particle->setSoundSpeed(soundspeed);
 
       /*
