@@ -212,7 +212,7 @@ void swift2::kernels::computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking
           localParticlesChunk->getCellH(), activeParticlesChunk->getCellH()
         );
 
-        if (localParticleCanBeWorkedOnInCellKernel(&localParticlesChunk[localParticleNumberInThisChunk], marker)) {
+        if (localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(&localParticlesChunk[localParticleNumberInThisChunk], marker)) {
           for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
                activeParticleNumberInThisChunk++) {
 
@@ -268,7 +268,7 @@ void swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
 
       for (int localParticleNumberInThisChunk = 0; localParticleNumberInThisChunk < localParticlesChunkSize;
            localParticleNumberInThisChunk++) {
-        if (localParticleCanBeWorkedOnInCellKernel(&localParticlesChunk[localParticleNumberInThisChunk], marker)) {
+        if (localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(&localParticlesChunk[localParticleNumberInThisChunk], marker)) {
           bool*         enabledInteractionPartners = tarch::allocateMemory<bool>(
             activeParticlesChunkSize, tarch::MemoryLocation::Heap
           );

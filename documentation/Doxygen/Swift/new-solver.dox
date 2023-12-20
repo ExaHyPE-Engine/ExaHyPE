@@ -307,8 +307,8 @@ have to commit to a few basic conventions:
    kernel (unary), it should check that the particle has not been moved 
    meanwhile and hence is updated twice. For a cell (binary) kernel, it should
    check that the particle resides within the cell of interest. For both 
-   checks, Swift provides the generic check routines localParticleCanBeWorkedOnInVertexKernel()
-   and localParticleCanBeWorkedOnInCellKernel() which usually serve the needs.
+   checks, Swift provides the generic check routines localParticleCanBeUpdatedInVertexKernel()
+   and localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle() which usually serve the needs.
 4. Kernels can be either void or return a value. However, any assumption that
    some data is to be (globally) reduced has to be documented explicitly, and 
    it will become the responsibility of the user to care for this reduction.

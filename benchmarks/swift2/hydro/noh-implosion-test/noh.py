@@ -308,13 +308,13 @@ if __name__ == "__main__":
         )
     )
 
+    particle_interaction_kernel_realisation = (
+        swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
+    )
+    
     if VectorisationOffNoOptimisation in args.realisation:
         particle_interaction_kernel_realisation = (
             swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
-        )
-    elif VectorisationOffOuterGuards in args.realisation:
-        particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
         )
     elif VectorisationOfDistanceChecks in args.realisation:
         particle_interaction_kernel_realisation = (

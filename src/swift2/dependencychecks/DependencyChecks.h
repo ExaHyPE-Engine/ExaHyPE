@@ -209,7 +209,7 @@ namespace swift2 {
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
                 sweepStageMarkerEnum,
       Invariant                                   policy,
-      ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+      ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
     );
 
 
@@ -257,7 +257,7 @@ namespace swift2 {
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
                 sweepStageMarkerEnum,
       Invariant policy,
-      ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+      ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
     );
 
 
@@ -291,7 +291,7 @@ namespace swift2 {
         typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
         sweepStageMarkerEnum,
-        ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+        ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
     );
 
 
@@ -382,7 +382,7 @@ namespace swift2 {
         initStepMarkerEnum,
       typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
         sweepStageMarkerEnum,
-      ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+      ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
     );
 
     /**

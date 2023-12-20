@@ -31,7 +31,7 @@ namespace swift2 {
      *
      * The interface uses the marker, as it is the @ref swift_particle_new_solver "responsibility of any
      * update to check if the update is actually valid". That is, a binary
-     * operator should always use a UpdateParticleWithinCellPredicate
+     * operator should always use a UpdateParticlePairWithinCellPredicate
      * internally to check if it actually should update. How this knowledge
      * is taken into account is however up to the realisation. In the simplest
      * case, it is just a mere enclosing if statement.
@@ -74,7 +74,7 @@ namespace swift2 {
       const peano4::datamanagement::VertexMarker& marker,
       ParticleContainer& assignedParticles,
       ParticleUnaryOperator<typename ParticleContainer::DoFType >      f,
-      UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate = ::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel<typename ParticleContainer::DoFType>
+      UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate = ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
     );
 
 
@@ -138,14 +138,14 @@ namespace swift2 {
      * This would be a generic predicate as most kernels require it:
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~
-     * UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type> predicate = ::swift2::kernels::localParticleCanBeWorkedOnInCellKernel<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
+     * UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type> predicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
      * ~~~~~~~~~~~~~~~~~~~~~~~
      *
      * However, as this function is usually invoked by code generated through
      * Python, I personally recommend to use a syntax that is easier to parse:
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~
-     * "UpdateParticleWithinCellPredicate<globaldata::{}>".format( particle._name )
+     * "UpdateParticlePairWithinCellPredicate<globaldata::{}>".format( particle._name )
      * ~~~~~~~~~~~~~~~~~~~~~~~
      *
      *
@@ -180,11 +180,15 @@ namespace swift2 {
      */
     template <typename LocalParticleContainer, typename ActiveParticleContainer>
     void forAllParticlePairs(
-      const peano4::datamanagement::CellMarker& marker,
-      LocalParticleContainer&  localParticles,
-      ActiveParticleContainer& activeParticles,
-      ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>  f,
-      UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type> predicate = ::swift2::kernels::localParticleCanBeWorkedOnInCellKernel<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
+      const peano4::datamanagement::CellMarker&  marker,
+      LocalParticleContainer&                    localParticles,
+      ActiveParticleContainer&                   activeParticles,
+      ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
+          f,
+      UpdateParticleAssignedToCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
+          localParticlePredicate = ::swift2::kernels::alwaysUpdateInCellKernel<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>,
+      UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
+          particlePairPredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
     );
   }
 }

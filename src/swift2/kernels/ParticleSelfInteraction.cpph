@@ -16,7 +16,7 @@ void swift2::kernels::flagBoundaryParticles(
 
   /* TODO MLADEN: Document parameters? */
   for (auto* particle : localParticles) {
-//    if (localParticleCanBeWorkedOnInVertexKernel(particle) and not particle->getIsBoundaryParticle()) {
+//    if (localParticleCanBeUpdatedInVertexKernel(particle) and not particle->getIsBoundaryParticle()) {
     /// @todo Das ist falsch
     if (true) {
       /* Flag if particle is at boundary of the simulation box */

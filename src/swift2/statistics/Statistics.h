@@ -22,7 +22,7 @@ namespace swift2 {
 
     template <typename Particle>
     void reduceVelocityAndSearchRadius(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-      if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+      if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
         reduceVelocityAndSearchRadius_without_check(&localParticle);
       }
     }

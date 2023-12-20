@@ -395,8 +395,16 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         )
         self.algorithm_steps_dict["FlagBoundaryParticles"] = flagBoundaryParticlesStep
         
-        iterate_over_particles_assigned_to_vertex = "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::" + self.name + ">);"
-        iterate_over_particles_assigned_to_cell   = "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0}<globaldata::" + self.name + ">);"
+        if self._particle_interaction_kernel_realisation==SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION:
+            iterate_over_particles_assigned_to_vertex          = "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::" + self.name + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::" + self.name + ">);"
+            iterate_over_particles_assigned_to_cell            = "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0}<globaldata::" + self.name + ">, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::" + self.name + ">, ::swift2::kernels::alwaysUpdateParticlePairs<globaldata::" + self.name + ">);"
+            iterate_over_particles_assigned_to_vertex_for_move = "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::" + self.name + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::" + self.name + ">);"
+        elif self._particle_interaction_kernel_realisation==SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS:
+            iterate_over_particles_assigned_to_vertex          = "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::" + self.name + ">);"
+            iterate_over_particles_assigned_to_cell            = "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0}<globaldata::" + self.name + ">, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::" + self.name + ">);"
+            iterate_over_particles_assigned_to_vertex_for_move = "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::" + self.name + ">);"
+        else:
+            raise NotImplemented()
 
         kick1 = AlgorithmStep(
             name="Kick1",
@@ -420,7 +428,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
             touch_vertex_first_time_kernel = iterate_over_particles_assigned_to_vertex.format( "::swift2::timestepping::resetMovedParticleMarker" ),
-            touch_vertex_last_time_kernel  = iterate_over_particles_assigned_to_vertex.format( "::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSize" ),
+            touch_vertex_last_time_kernel  = iterate_over_particles_assigned_to_vertex_for_move.format( "::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSize" ),
             includes="""
                 #include "Constants.h"
                 #include "swift2/kernels/legacy/Leapfrog.h"

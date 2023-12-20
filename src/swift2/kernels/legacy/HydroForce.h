@@ -28,7 +28,7 @@ namespace swift2 {
 
       template <typename Particle>
       void prepareHydroForce(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_prepare_force(&localParticle);
         }
       }
@@ -50,7 +50,7 @@ namespace swift2 {
 
       template <typename Particle>
       void endHydroForceCalculation(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_end_force(&localParticle);
         }
       }
@@ -80,7 +80,7 @@ namespace swift2 {
 
       template <typename Particle>
       void forceKernel(const peano4::datamanagement::CellMarker& marker, Particle& localParticle, const Particle& activeParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInCellKernel(marker, localParticle, activeParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(marker, localParticle, activeParticle)) {
           force_kernel(&localParticle, &activeParticle);
         }
       }
@@ -96,7 +96,7 @@ namespace swift2 {
 
       template <typename Particle>
       void predictHydro(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           predict_hyrdro(&localParticle);
         }
       }

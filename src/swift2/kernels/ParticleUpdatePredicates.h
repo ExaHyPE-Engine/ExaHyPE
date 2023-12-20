@@ -7,7 +7,10 @@
 namespace swift2 {
   namespace kernels {
     template <typename Particle>
-    using UpdateParticleWithinCellPredicate = std::function<bool(const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle)>;
+    using UpdateParticlePairWithinCellPredicate = std::function<bool(const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle)>;
+
+    template <typename Particle>
+    using UpdateParticleAssignedToCellPredicate = std::function<bool(const peano4::datamanagement::CellMarker& marker, const Particle& localParticle)>;
 
     template <typename Particle>
     using UpdateParticleAssignedToVertexPredicate = std::function<bool(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle)>;
@@ -16,8 +19,20 @@ namespace swift2 {
     /**
      * Degenerated predicate which always allows for an update.
      */
-    template <typename Particle, typename Marker>
-    bool alwaysUpdate(const Marker& marker, const Particle& localParticle) {
+    template <typename Particle>
+    bool alwaysUpdateInVertexKernel(const peano4::datamanagement::VertexMarker&  marker, const Particle& localParticle) {
+      return true;
+    }
+
+
+    template <typename Particle>
+    bool alwaysUpdateInCellKernel(const peano4::datamanagement::CellMarker&  marker, const Particle& localParticle) {
+      return true;
+    }
+
+
+    template <typename Particle>
+    bool alwaysUpdateParticlePairs(const peano4::datamanagement::CellMarker&  marker, const Particle& localParticle, const Particle& activeParticle) {
       return true;
     }
 
@@ -84,11 +99,20 @@ namespace swift2 {
      * @param marker: the cell's CellMarker
      */
     template <typename Particle>
-    bool localParticleCanBeWorkedOnInCellKernel(
+    bool localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
       const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
     ) {
       return &localParticle != &activeParticle
          and not localParticle.getCellHasUpdatedParticle()
+         and marker.isContained(localParticle.getX());
+    }
+
+
+    template <typename Particle>
+    bool localParticleCanBeUpdatedInCellKernel(
+      const peano4::datamanagement::CellMarker& marker, const Particle& localParticle
+    ) {
+      return not localParticle.getCellHasUpdatedParticle()
          and marker.isContained(localParticle.getX());
     }
 
@@ -99,7 +123,7 @@ namespace swift2 {
      * @param localParticle: particle to check for
      */
     template <typename Particle>
-    bool localParticleCanBeWorkedOnInVertexKernel(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
+    bool localParticleCanBeUpdatedInVertexKernel(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
       return particleIsLocal(marker, localParticle);
     }
   } // namespace kernels

@@ -24,7 +24,7 @@ namespace swift2 {
 
       template <typename Particle>
       void hydroPredictExtra(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_predict_extra(&localParticle);
         }
       }
@@ -41,7 +41,7 @@ namespace swift2 {
 
       template <typename Particle>
       void prepareDensity(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_prepare_density(&localParticle);
         }
       }
@@ -62,7 +62,7 @@ namespace swift2 {
 
       template <typename Particle>
       void endDensityComputation(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_end_density(&localParticle);
         }
       }
@@ -77,7 +77,7 @@ namespace swift2 {
 
       template <typename Particle>
       void densityKernel(const peano4::datamanagement::CellMarker& marker, Particle& localParticle, const Particle& activeParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInCellKernel(marker, localParticle, activeParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(marker, localParticle, activeParticle)) {
           density_kernel(&localParticle, &activeParticle);
         }
       }
@@ -109,7 +109,7 @@ namespace swift2 {
 
       template <typename Particle>
       void endDensityCalculation(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker, localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
           end_density_calculation(&localParticle);
         }
       }
@@ -129,7 +129,7 @@ namespace swift2 {
 
       template <typename Particle>
       void endDensityCalculationConstantSmoothingLength(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle, const Particle& activeParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           end_density_calculation_constant_smoothing_length(&localParticle);
         }
       }

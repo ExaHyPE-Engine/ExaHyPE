@@ -51,7 +51,7 @@ namespace swift2 {
     namespace legacy {
       template <typename Particle>
       void resetSmoothingLengthIterationCounter(const peano4::datamanagement::VertexMarker& marker, Particle& particle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,particle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle)) {
           particle.setSmoothingLengthIterCount(0);
         }
       }
@@ -68,7 +68,7 @@ namespace swift2 {
 
       template <typename Particle>
       void resetAcceleration(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_reset_acceleration(&localParticle);
         }
       }

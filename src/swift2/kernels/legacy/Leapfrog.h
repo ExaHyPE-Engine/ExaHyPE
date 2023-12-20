@@ -80,7 +80,7 @@ namespace swift2 {
 
       template <typename Particle>
       void leapfrogKickWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker, localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
           leapfrog_kick_global_time_step_size(&localParticle);
         }
       }
@@ -101,7 +101,7 @@ namespace swift2 {
 
       template <typename Particle>
       void leapfrogKickExtraWithGlobalTimeStepSize(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_kick_extra_global_time_step_size(&localParticle);
         }
       }
@@ -115,7 +115,7 @@ namespace swift2 {
 
       template <typename Particle>
       void resetPredictedValues(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_reset_predicted_values(&localParticle);
         }
       }

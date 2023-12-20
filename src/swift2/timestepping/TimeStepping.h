@@ -26,7 +26,7 @@ namespace swift2 {
       const peano4::datamanagement::VertexMarker&  marker,
       Particle&                                    particle
     ) {
-      if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,particle)) {
+      if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle)) {
         reset_moved_particle_marker(particle);
       }
     }

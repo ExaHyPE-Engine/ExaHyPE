@@ -28,7 +28,7 @@ void swift2::dependencychecks::markAlgorithmStep(
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
             sweepStageMarkerEnum,
   Invariant                                   policy,
-  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+  ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
 ) {}
 
 template <typename ParticleContainer>
@@ -53,7 +53,7 @@ void swift2::dependencychecks::markInitStep(
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
             sweepStageMarkerEnum,
   Invariant policy,
-  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+  ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
 ) {}
 
 template <typename ParticleContainer>
@@ -66,7 +66,7 @@ void swift2::dependencychecks::checkAlgorithmStep(
     typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
     sweepStageMarkerEnum,
-    ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+    ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
 ) {}
 
 template <typename ParticleContainer>
@@ -111,7 +111,7 @@ void swift2::dependencychecks::checkInitStep(
     initStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
     sweepStageMarkerEnum,
-  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+  ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
 ) {}
 
 template <typename ParticleContainer>
@@ -331,7 +331,7 @@ static void swift2::dependencychecks::markAlgorithmStep(
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
             sweepStageMarkerEnum,
   Invariant                                   policy,
-  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+  ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
             workOnParticle
 ) {
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
@@ -442,7 +442,7 @@ static void swift2::dependencychecks::markInitStep(
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
       sweepStageMarkerEnum,
   Invariant                                   policy,
-  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+  ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
       workOnParticle
 ) {
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
@@ -584,7 +584,7 @@ void swift2::dependencychecks::checkAlgorithmStep(
       algorithmStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
       sweepStageMarkerEnum,
-  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+  ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
       workOnParticle
 ) {
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
@@ -738,7 +738,7 @@ static void swift2::dependencychecks::checkInitStep(
       initStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
       sweepStageMarkerEnum,
-  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+  ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
 ) {
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
 

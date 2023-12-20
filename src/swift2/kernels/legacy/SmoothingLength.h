@@ -30,7 +30,7 @@ namespace swift2 {
 
       template <typename Particle>
       void updateSmoothingLengthAndRerunIfRequired(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_update_smoothing_length_and_rerun_if_required(&localParticle);
         }
       }
