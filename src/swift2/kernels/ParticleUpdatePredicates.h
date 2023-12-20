@@ -89,7 +89,7 @@ namespace swift2 {
     ) {
       return &localParticle != &activeParticle
          and not localParticle.getCellHasUpdatedParticle()
-         and marker.isContained(localParticle.getX();
+         and marker.isContained(localParticle.getX());
     }
 
 
