@@ -165,7 +165,7 @@ poisson_solver.postprocess_updated_patch = """
    0,       // no overlap/halo here
    marker.h()
  );
- repositories::InstanceOf{}.reportGradientDelta( delta );
+ repositories::instanceOf{}.reportGradientDelta( delta );
 """.format(args.patch_size, poisson_solver.name)
 
 #
@@ -209,6 +209,7 @@ project.set_global_simulation_parameters(
 project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 project.set_Peano4_installation(args.peanodir, modes[args.mode])
 peano4_project = project.generate_Peano4_project(args.verbose)
+peano4_project.output.makefile.add_h_file("Euler.h")
 peano4_project.output.makefile.add_cpp_file("Euler.cpp")
 peano4_project.output.makefile.add_h_file("Poisson.h")
 peano4_project.output.makefile.add_cpp_file("Poisson.cpp")

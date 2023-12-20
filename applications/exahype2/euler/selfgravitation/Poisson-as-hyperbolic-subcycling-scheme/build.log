@@ -1,0 +1,810 @@
+rm -f Euler.o Poisson.o  AbstractEuler.o AbstractPoisson.o repositories/SolverRepository.o celldata/EulerCellLabel.o celldata/EulerQ.o celldata/PoissonCellLabel.o celldata/PoissonQ.o facedata/EulerQOld.o facedata/EulerQNew.o facedata/EulerQUpdate.o facedata/EulerFaceLabel.o facedata/PoissonQOld.o facedata/PoissonQNew.o facedata/PoissonQUpdate.o facedata/PoissonFaceLabel.o repositories/DataRepository.o ./observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_InitialCondition0.o ./observers/Poisson_CreateGrid2exahype2_grid_FaceLabel1.o ./observers/Poisson_CreateGrid2exahype2_grid_CellLabel2.o ./observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_InitialCondition3.o ./observers/Poisson_CreateGrid2exahype2_grid_FaceLabel4.o ./observers/Poisson_CreateGrid2exahype2_grid_CellLabel5.o ./observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion6.o ./observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion7.o ./observers/Poisson_CreateGrid.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PreprocessSolution0.o ./observers/Poisson_InitGrid2peano4_toolbox_blockstructured_BackupPatchOverlap1.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PostprocessSolution2.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PreprocessSolution3.o ./observers/Poisson_InitGrid2peano4_toolbox_blockstructured_BackupPatchOverlap4.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PostprocessSolution5.o ./observers/Poisson_InitGrid2exahype2_grid_FaceLabel6.o ./observers/Poisson_InitGrid2exahype2_grid_CellLabel7.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_DynamicAMR8.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_RollOverUpdatedFace9.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_DynamicAMR10.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_InitialCondition11.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_RollOverUpdatedFace12.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_InitialCondition13.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces14.o ./observers/Poisson_InitGrid2exahype2_grid_FaceLabel15.o ./observers/Poisson_InitGrid2exahype2_grid_CellLabel16.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces17.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion18.o ./observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion19.o ./observers/Poisson_InitGrid.o ./observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_InitialCondition0.o ./observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_FaceLabel1.o ./observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_CellLabel2.o ./observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_InitialCondition3.o ./observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_FaceLabel4.o ./observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_CellLabel5.o ./observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_AdaptivityCriterion6.o ./observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_AdaptivityCriterion7.o ./observers/Poisson_CreateGridButPostponeRefinement.o ./observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_InitialCondition0.o ./observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_FaceLabel1.o ./observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_CellLabel2.o ./observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_InitialCondition3.o ./observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_FaceLabel4.o ./observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_CellLabel5.o ./observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_AdaptivityCriterion6.o ./observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_AdaptivityCriterion7.o ./observers/Poisson_CreateGridAndConvergeLoadBalancing.o ./observers/Poisson_PlotSolution2peano4_toolbox_blockstructured_PlotPatchesInPeanoBlockFormat0.o ./observers/Poisson_PlotSolution2peano4_toolbox_blockstructured_PlotPatchesInPeanoBlockFormat1.o ./observers/Poisson_PlotSolution2exahype2_grid_FaceLabel2.o ./observers/Poisson_PlotSolution2exahype2_grid_CellLabel3.o ./observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces4.o ./observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_DynamicAMR5.o ./observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_DynamicAMR6.o ./observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_RollOverUpdatedFace7.o ./observers/Poisson_PlotSolution2exahype2_grid_FaceLabel8.o ./observers/Poisson_PlotSolution2exahype2_grid_CellLabel9.o ./observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces10.o ./observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_RollOverUpdatedFace11.o ./observers/Poisson_PlotSolution.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PreprocessSolution0.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PostprocessSolution1.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PreprocessSolution2.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PostprocessSolution3.o ./observers/Poisson_TimeStep2exahype2_grid_CellLabel4.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_HandleBoundary5.o ./observers/Poisson_TimeStep2peano4_toolbox_blockstructured_ReconstructPatchAndApplyFunctor6.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces7.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_DynamicAMR8.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_RollOverUpdatedFace9.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_DynamicAMR10.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_RollOverUpdatedFace11.o ./observers/Poisson_TimeStep2exahype2_grid_FaceLabel12.o ./observers/Poisson_TimeStep2exahype2_grid_CellLabel13.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_HandleBoundary14.o ./observers/Poisson_TimeStep2peano4_toolbox_blockstructured_ReconstructPatchAndApplyFunctor15.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces16.o ./observers/Poisson_TimeStep2exahype2_grid_FaceLabel17.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_AdaptivityCriterion18.o ./observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_AdaptivityCriterion19.o ./observers/Poisson_TimeStep.o repositories/StepRepository.o Poisson-main.o      
+rm -f *.mod
+rm -f subcycling-scheme
+VTK is not available, not loading peano4.visualisation.
+ParaView is not available, not loading peano4.visualisation.
+Peano 4 (C) www.peano-framework.org
+ExaHyPE 2 (C) www.peano-framework.org
+
+Configuring 2D Euler problem. Buildmode is release, nbuilds=-1.
+
+---------------------------------------
+Create data for solver Euler
+---------------------------------------
+
+Name:                   Euler
+Type:                   GlobalFixedTimeStep
+Patch size:             17  
+Overlap:                1  
+Unknowns:               5
+Auxiliary variables:    3
+h_volume_min:           0.09
+h_volume_max:           0.09999999999999999
+
+---------------------------------------
+Create data for solver Poisson
+---------------------------------------
+
+Name:                   Poisson
+Type:                   GlobalFixedTimeStep
+Patch size:             17  
+Overlap:                1  
+Unknowns:               4
+Auxiliary variables:    1
+h_volume_min:           0.09
+h_volume_max:           0.09999999999999999
+
+parse configure outcome ../../../../..//config.log to extract configure settings
+found the configure call info   $ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-finiteelements --with-mpi=mpicxx --with-multithreading=omp --with-petsc CXXFLAGS=--std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang:: -I/nobackup/lcgk69/petsc-1/include -I/nobackup/lcgk69/petsc-1/arch-linux-c-debug/include LDFLAGS=-fopenmp -Wl,-rpath,/nobackup/lcgk69/petsc-1/arch-linux-c-debug/lib -L/nobackup/lcgk69/petsc-1/arch-linux-c-debug/lib -L/apps/developers/compilers/gcc/11.2/1/default/lib64 -lpetsc
+
+parse configure outcome ../../../../..//src/Makefile to extract compile settings
+add CUDA_INCLUDE_FLAGS=
+add CUDA_LIBS=
+add CUDA_PATH=
+add CXX=mpicxx
+add CXXFLAGS=--std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang:: -I/nobackup/lcgk69/petsc-1/include -I/nobackup/lcgk69/petsc-1/arch-linux-c-debug/include
+add CXXFLAGS_PEANO_2D_ASSERTS=-DDimensions=2 -DPeanoDebug=2 -g
+add CXXFLAGS_PEANO_2D_DEBUG=-DDimensions=2 -DPeanoDebug=4 -g -O0
+add CXXFLAGS_PEANO_2D_RELEASE=-DDimensions=2 -DPeanoDebug=0
+add CXXFLAGS_PEANO_2D_STATS=-DDimensions=2 -DPeanoDebug=0 -DTrackStatistics
+add CXXFLAGS_PEANO_2D_TRACE=-DDimensions=2 -DPeanoDebug=1 -g
+add CXXFLAGS_PEANO_3D_ASSERTS=-DDimensions=3 -DPeanoDebug=2 -g
+add CXXFLAGS_PEANO_3D_DEBUG=-DDimensions=3 -DPeanoDebug=4 -g -O0
+add CXXFLAGS_PEANO_3D_RELEASE=-DDimensions=3 -DPeanoDebug=0
+add CXXFLAGS_PEANO_3D_STATS=-DDimensions=3 -DPeanoDebug=0 -DTrackStatistics
+add CXXFLAGS_PEANO_3D_TRACE=-DDimensions=3 -DPeanoDebug=1 -g
+add LDADD_PEANO_2D_ASSERTS=-lExaHyPE2Core2d_asserts  -lPETSc_asserts  -lToolboxBlockstructured2d_asserts  -lToolboxLoadBalancing2d_asserts  -lToolboxFiniteElements2d_asserts  -lPeano4Core2d_asserts -lTarch_asserts
+add LDADD_PEANO_2D_DEBUG=-lExaHyPE2Core2d_debug      -lPETSc_debug      -lToolboxBlockstructured2d_debug      -lToolboxLoadBalancing2d_debug      -lToolboxFiniteElements2d_debug      -lPeano4Core2d_debug   -lTarch_debug
+add LDADD_PEANO_2D_RELEASE=-lExaHyPE2Core2d          -lPETSc          -lToolboxBlockstructured2d          -lToolboxLoadBalancing2d          -lToolboxFiniteElements2d          -lPeano4Core2d         -lTarch
+add LDADD_PEANO_2D_STATS=-lExaHyPE2Core2d_stats      -lPETSc_stats      -lToolboxBlockstructured2d_stats      -lToolboxLoadBalancing2d_stats      -lToolboxFiniteElements2d_stats      -lPeano4Core2d_stats   -lTarch_stats
+add LDADD_PEANO_2D_TRACE=-lExaHyPE2Core2d_trace      -lPETSc_trace      -lToolboxBlockstructured2d_trace      -lToolboxLoadBalancing2d_trace      -lToolboxFiniteElements2d_trace      -lPeano4Core2d_trace   -lTarch_trace
+add LDADD_PEANO_3D_ASSERTS=-lExaHyPE2Core3d_asserts  -lPETSc_asserts  -lToolboxBlockstructured3d_asserts  -lToolboxLoadBalancing3d_asserts  -lToolboxFiniteElements3d_asserts  -lPeano4Core3d_asserts -lTarch_asserts
+add LDADD_PEANO_3D_DEBUG=-lExaHyPE2Core3d_debug      -lPETSc_debug      -lToolboxBlockstructured3d_debug      -lToolboxLoadBalancing3d_debug      -lToolboxFiniteElements3d_debug      -lPeano4Core3d_debug   -lTarch_debug
+add LDADD_PEANO_3D_RELEASE=-lExaHyPE2Core3d          -lPETSc          -lToolboxBlockstructured3d          -lToolboxLoadBalancing3d          -lToolboxFiniteElements3d          -lPeano4Core3d         -lTarch
+add LDADD_PEANO_3D_STATS=-lExaHyPE2Core3d_stats      -lPETSc_stats      -lToolboxBlockstructured3d_stats      -lToolboxLoadBalancing3d_stats      -lToolboxFiniteElements3d_stats      -lPeano4Core3d_stats   -lTarch_stats
+add LDADD_PEANO_3D_TRACE=-lExaHyPE2Core3d_trace      -lPETSc_trace      -lToolboxBlockstructured3d_trace      -lToolboxLoadBalancing3d_trace      -lToolboxFiniteElements3d_trace      -lPeano4Core3d_trace   -lTarch_trace
+add LDFLAGS=-fopenmp -Wl,-rpath,/nobackup/lcgk69/petsc-1/arch-linux-c-debug/lib -L/nobackup/lcgk69/petsc-1/arch-linux-c-debug/lib -L/apps/developers/compilers/gcc/11.2/1/default/lib64 -lpetsc
+add LDFLAGS_PEANO_ASSERTS=-L/nobackup/lcgk69/Peano/src  -L/nobackup/lcgk69/Peano/src/toolbox/finiteelements  -L/nobackup/lcgk69/Peano/src/toolbox/loadbalancing  -L/nobackup/lcgk69/Peano/src/toolbox/blockstructured  -L/nobackup/lcgk69/Peano/src/petsc  -L/nobackup/lcgk69/Peano/src/exahype2
+add LDFLAGS_PEANO_DEBUG=-L/nobackup/lcgk69/Peano/src    -L/nobackup/lcgk69/Peano/src/toolbox/finiteelements    -L/nobackup/lcgk69/Peano/src/toolbox/loadbalancing    -L/nobackup/lcgk69/Peano/src/toolbox/blockstructured    -L/nobackup/lcgk69/Peano/src/petsc    -L/nobackup/lcgk69/Peano/src/exahype2
+add LDFLAGS_PEANO_RELEASE=-L/nobackup/lcgk69/Peano/src  -L/nobackup/lcgk69/Peano/src/toolbox/finiteelements  -L/nobackup/lcgk69/Peano/src/toolbox/loadbalancing  -L/nobackup/lcgk69/Peano/src/toolbox/blockstructured  -L/nobackup/lcgk69/Peano/src/petsc  -L/nobackup/lcgk69/Peano/src/exahype2
+add LDFLAGS_PEANO_STATS=-L/nobackup/lcgk69/Peano/src    -L/nobackup/lcgk69/Peano/src/toolbox/finiteelements    -L/nobackup/lcgk69/Peano/src/toolbox/loadbalancing    -L/nobackup/lcgk69/Peano/src/toolbox/blockstructured    -L/nobackup/lcgk69/Peano/src/petsc    -L/nobackup/lcgk69/Peano/src/exahype2
+add LDFLAGS_PEANO_TRACE=-L/nobackup/lcgk69/Peano/src    -L/nobackup/lcgk69/Peano/src/toolbox/finiteelements    -L/nobackup/lcgk69/Peano/src/toolbox/loadbalancing    -L/nobackup/lcgk69/Peano/src/toolbox/blockstructured    -L/nobackup/lcgk69/Peano/src/petsc    -L/nobackup/lcgk69/Peano/src/exahype2
+add LIBS=
+add NVCC=
+add NVCC_FLAGS_ASSERTS=
+add NVCC_FLAGS_DEBUG=
+add NVCC_FLAGS_RELEASE=
+add NVCC_FLAGS_STATS=
+add NVCC_FLAGS_TRACE=
+used OpenMP tasking backend. Augment linker with  -fopenmp 
+parse configure outcome ../../../../..//config.log to extract configure settings
+found the configure call info   $ ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-finiteelements --with-mpi=mpicxx --with-multithreading=omp --with-petsc CXXFLAGS=--std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang:: -I/nobackup/lcgk69/petsc-1/include -I/nobackup/lcgk69/petsc-1/arch-linux-c-debug/include LDFLAGS=-fopenmp -Wl,-rpath,/nobackup/lcgk69/petsc-1/arch-linux-c-debug/lib -L/nobackup/lcgk69/petsc-1/arch-linux-c-debug/lib -L/apps/developers/compilers/gcc/11.2/1/default/lib64 -lpetsc
+
+parse configure outcome ../../../../..//src/Makefile to extract compile settings
+add CUDA_INCLUDE_FLAGS=
+add CUDA_LIBS=
+add CUDA_PATH=
+add CXX=mpicxx
+add CXXFLAGS=--std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang:: -I/nobackup/lcgk69/petsc-1/include -I/nobackup/lcgk69/petsc-1/arch-linux-c-debug/include
+add CXXFLAGS_PEANO_2D_ASSERTS=-DDimensions=2 -DPeanoDebug=2 -g
+add CXXFLAGS_PEANO_2D_DEBUG=-DDimensions=2 -DPeanoDebug=4 -g -O0
+add CXXFLAGS_PEANO_2D_RELEASE=-DDimensions=2 -DPeanoDebug=0
+add CXXFLAGS_PEANO_2D_STATS=-DDimensions=2 -DPeanoDebug=0 -DTrackStatistics
+add CXXFLAGS_PEANO_2D_TRACE=-DDimensions=2 -DPeanoDebug=1 -g
+add CXXFLAGS_PEANO_3D_ASSERTS=-DDimensions=3 -DPeanoDebug=2 -g
+add CXXFLAGS_PEANO_3D_DEBUG=-DDimensions=3 -DPeanoDebug=4 -g -O0
+add CXXFLAGS_PEANO_3D_RELEASE=-DDimensions=3 -DPeanoDebug=0
+add CXXFLAGS_PEANO_3D_STATS=-DDimensions=3 -DPeanoDebug=0 -DTrackStatistics
+add CXXFLAGS_PEANO_3D_TRACE=-DDimensions=3 -DPeanoDebug=1 -g
+add LDADD_PEANO_2D_ASSERTS=-lExaHyPE2Core2d_asserts  -lPETSc_asserts  -lToolboxBlockstructured2d_asserts  -lToolboxLoadBalancing2d_asserts  -lToolboxFiniteElements2d_asserts  -lPeano4Core2d_asserts -lTarch_asserts
+add LDADD_PEANO_2D_DEBUG=-lExaHyPE2Core2d_debug      -lPETSc_debug      -lToolboxBlockstructured2d_debug      -lToolboxLoadBalancing2d_debug      -lToolboxFiniteElements2d_debug      -lPeano4Core2d_debug   -lTarch_debug
+add LDADD_PEANO_2D_RELEASE=-lExaHyPE2Core2d          -lPETSc          -lToolboxBlockstructured2d          -lToolboxLoadBalancing2d          -lToolboxFiniteElements2d          -lPeano4Core2d         -lTarch
+add LDADD_PEANO_2D_STATS=-lExaHyPE2Core2d_stats      -lPETSc_stats      -lToolboxBlockstructured2d_stats      -lToolboxLoadBalancing2d_stats      -lToolboxFiniteElements2d_stats      -lPeano4Core2d_stats   -lTarch_stats
+add LDADD_PEANO_2D_TRACE=-lExaHyPE2Core2d_trace      -lPETSc_trace      -lToolboxBlockstructured2d_trace      -lToolboxLoadBalancing2d_trace      -lToolboxFiniteElements2d_trace      -lPeano4Core2d_trace   -lTarch_trace
+add LDADD_PEANO_3D_ASSERTS=-lExaHyPE2Core3d_asserts  -lPETSc_asserts  -lToolboxBlockstructured3d_asserts  -lToolboxLoadBalancing3d_asserts  -lToolboxFiniteElements3d_asserts  -lPeano4Core3d_asserts -lTarch_asserts
+add LDADD_PEANO_3D_DEBUG=-lExaHyPE2Core3d_debug      -lPETSc_debug      -lToolboxBlockstructured3d_debug      -lToolboxLoadBalancing3d_debug      -lToolboxFiniteElements3d_debug      -lPeano4Core3d_debug   -lTarch_debug
+add LDADD_PEANO_3D_RELEASE=-lExaHyPE2Core3d          -lPETSc          -lToolboxBlockstructured3d          -lToolboxLoadBalancing3d          -lToolboxFiniteElements3d          -lPeano4Core3d         -lTarch
+add LDADD_PEANO_3D_STATS=-lExaHyPE2Core3d_stats      -lPETSc_stats      -lToolboxBlockstructured3d_stats      -lToolboxLoadBalancing3d_stats      -lToolboxFiniteElements3d_stats      -lPeano4Core3d_stats   -lTarch_stats
+add LDADD_PEANO_3D_TRACE=-lExaHyPE2Core3d_trace      -lPETSc_trace      -lToolboxBlockstructured3d_trace      -lToolboxLoadBalancing3d_trace      -lToolboxFiniteElements3d_trace      -lPeano4Core3d_trace   -lTarch_trace
+add LDFLAGS=-fopenmp -Wl,-rpath,/nobackup/lcgk69/petsc-1/arch-linux-c-debug/lib -L/nobackup/lcgk69/petsc-1/arch-linux-c-debug/lib -L/apps/developers/compilers/gcc/11.2/1/default/lib64 -lpetsc
+add LDFLAGS_PEANO_ASSERTS=-L/nobackup/lcgk69/Peano/src  -L/nobackup/lcgk69/Peano/src/toolbox/finiteelements  -L/nobackup/lcgk69/Peano/src/toolbox/loadbalancing  -L/nobackup/lcgk69/Peano/src/toolbox/blockstructured  -L/nobackup/lcgk69/Peano/src/petsc  -L/nobackup/lcgk69/Peano/src/exahype2
+add LDFLAGS_PEANO_DEBUG=-L/nobackup/lcgk69/Peano/src    -L/nobackup/lcgk69/Peano/src/toolbox/finiteelements    -L/nobackup/lcgk69/Peano/src/toolbox/loadbalancing    -L/nobackup/lcgk69/Peano/src/toolbox/blockstructured    -L/nobackup/lcgk69/Peano/src/petsc    -L/nobackup/lcgk69/Peano/src/exahype2
+add LDFLAGS_PEANO_RELEASE=-L/nobackup/lcgk69/Peano/src  -L/nobackup/lcgk69/Peano/src/toolbox/finiteelements  -L/nobackup/lcgk69/Peano/src/toolbox/loadbalancing  -L/nobackup/lcgk69/Peano/src/toolbox/blockstructured  -L/nobackup/lcgk69/Peano/src/petsc  -L/nobackup/lcgk69/Peano/src/exahype2
+add LDFLAGS_PEANO_STATS=-L/nobackup/lcgk69/Peano/src    -L/nobackup/lcgk69/Peano/src/toolbox/finiteelements    -L/nobackup/lcgk69/Peano/src/toolbox/loadbalancing    -L/nobackup/lcgk69/Peano/src/toolbox/blockstructured    -L/nobackup/lcgk69/Peano/src/petsc    -L/nobackup/lcgk69/Peano/src/exahype2
+add LDFLAGS_PEANO_TRACE=-L/nobackup/lcgk69/Peano/src    -L/nobackup/lcgk69/Peano/src/toolbox/finiteelements    -L/nobackup/lcgk69/Peano/src/toolbox/loadbalancing    -L/nobackup/lcgk69/Peano/src/toolbox/blockstructured    -L/nobackup/lcgk69/Peano/src/petsc    -L/nobackup/lcgk69/Peano/src/exahype2
+add LIBS=
+add NVCC=
+add NVCC_FLAGS_ASSERTS=
+add NVCC_FLAGS_DEBUG=
+add NVCC_FLAGS_RELEASE=
+add NVCC_FLAGS_STATS=
+add NVCC_FLAGS_TRACE=
+used OpenMP tasking backend. Augment linker with  -fopenmp 
+generate all code ...
+some artefacts have already been added to repository ... assume this is intentional (by higher abstraction layer, e.g.)
+write ./Makefile
+write ./.gitignore
+././AbstractEuler.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/exahype2/solvers/fv/SingleSweepAbstract.template.h)
+././AbstractEuler.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/exahype2/solvers/fv/SingleSweepAbstract.template.cpp)
+././AbstractPoisson.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/exahype2/solvers/fv/SingleSweepAbstract.template.h)
+././AbstractPoisson.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/exahype2/solvers/fv/SingleSweepAbstract.template.cpp)
+./repositories/SolverRepository.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/exahype2/ProjectSolverRepository.template.h)
+./repositories/SolverRepository.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/exahype2/ProjectSolverRepository.template.cpp)
+./celldata/EulerQ.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.h)
+./celldata/EulerQ.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.cpp)
+./celldata/PoissonQ.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.h)
+./celldata/PoissonQ.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.cpp)
+./facedata/EulerQOld.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.h)
+./facedata/EulerQOld.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.cpp)
+./facedata/EulerQNew.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.h)
+./facedata/EulerQNew.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.cpp)
+./facedata/EulerQUpdate.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.h)
+./facedata/EulerQUpdate.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.cpp)
+./facedata/PoissonQOld.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.h)
+./facedata/PoissonQOld.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.cpp)
+./facedata/PoissonQNew.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.h)
+./facedata/PoissonQNew.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.cpp)
+./facedata/PoissonQUpdate.h written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.h)
+./facedata/PoissonQUpdate.cpp written by Jinja2TemplatedHeaderImplementationFilePair.py (from template /nobackup/lcgk69/Peano/python/peano4/datamodel/PatchToDoubleArray.template.cpp)
+./repositories/DataRepository.h written by TemplatedHeaderImplementationFilePair.py
+./repositories/DataRepository.cpp written by TemplatedHeaderImplementationFilePair.py
+././observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_InitialCondition0.h written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_InitialCondition0.cpp written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_grid_FaceLabel1.h written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_grid_FaceLabel1.cpp written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_grid_CellLabel2.h written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_grid_CellLabel2.cpp written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_InitialCondition3.h written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_InitialCondition3.cpp written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_grid_FaceLabel4.h written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_grid_FaceLabel4.cpp written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_grid_CellLabel5.h written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_grid_CellLabel5.cpp written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion6.h written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion6.cpp written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion7.h written by ActionSet.py
+././observers/Poisson_CreateGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion7.cpp written by ActionSet.py
+write ././observers/Poisson_CreateGrid.h
+././observers/Poisson_CreateGrid.cpp written by Observer.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PreprocessSolution0.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PreprocessSolution0.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2peano4_toolbox_blockstructured_BackupPatchOverlap1.h written by ActionSet.py
+././observers/Poisson_InitGrid2peano4_toolbox_blockstructured_BackupPatchOverlap1.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PostprocessSolution2.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PostprocessSolution2.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PreprocessSolution3.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PreprocessSolution3.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2peano4_toolbox_blockstructured_BackupPatchOverlap4.h written by ActionSet.py
+././observers/Poisson_InitGrid2peano4_toolbox_blockstructured_BackupPatchOverlap4.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PostprocessSolution5.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_PostprocessSolution5.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_grid_FaceLabel6.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_grid_FaceLabel6.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_grid_CellLabel7.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_grid_CellLabel7.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_DynamicAMR8.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_DynamicAMR8.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_RollOverUpdatedFace9.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_RollOverUpdatedFace9.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_DynamicAMR10.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_DynamicAMR10.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_InitialCondition11.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_InitialCondition11.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_RollOverUpdatedFace12.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_RollOverUpdatedFace12.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_InitialCondition13.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_InitialCondition13.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces14.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces14.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_grid_FaceLabel15.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_grid_FaceLabel15.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_grid_CellLabel16.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_grid_CellLabel16.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces17.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces17.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion18.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion18.cpp written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion19.h written by ActionSet.py
+././observers/Poisson_InitGrid2exahype2_solvers_fv_actionsets_AdaptivityCriterion19.cpp written by ActionSet.py
+write ././observers/Poisson_InitGrid.h
+././observers/Poisson_InitGrid.cpp written by Observer.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_InitialCondition0.h written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_InitialCondition0.cpp written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_FaceLabel1.h written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_FaceLabel1.cpp written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_CellLabel2.h written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_CellLabel2.cpp written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_InitialCondition3.h written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_InitialCondition3.cpp written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_FaceLabel4.h written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_FaceLabel4.cpp written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_CellLabel5.h written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_grid_CellLabel5.cpp written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_AdaptivityCriterion6.h written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_AdaptivityCriterion6.cpp written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_AdaptivityCriterion7.h written by ActionSet.py
+././observers/Poisson_CreateGridButPostponeRefinement2exahype2_solvers_fv_actionsets_AdaptivityCriterion7.cpp written by ActionSet.py
+write ././observers/Poisson_CreateGridButPostponeRefinement.h
+././observers/Poisson_CreateGridButPostponeRefinement.cpp written by Observer.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_InitialCondition0.h written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_InitialCondition0.cpp written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_FaceLabel1.h written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_FaceLabel1.cpp written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_CellLabel2.h written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_CellLabel2.cpp written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_InitialCondition3.h written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_InitialCondition3.cpp written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_FaceLabel4.h written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_FaceLabel4.cpp written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_CellLabel5.h written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_grid_CellLabel5.cpp written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_AdaptivityCriterion6.h written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_AdaptivityCriterion6.cpp written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_AdaptivityCriterion7.h written by ActionSet.py
+././observers/Poisson_CreateGridAndConvergeLoadBalancing2exahype2_solvers_fv_actionsets_AdaptivityCriterion7.cpp written by ActionSet.py
+write ././observers/Poisson_CreateGridAndConvergeLoadBalancing.h
+././observers/Poisson_CreateGridAndConvergeLoadBalancing.cpp written by Observer.py
+././observers/Poisson_PlotSolution2peano4_toolbox_blockstructured_PlotPatchesInPeanoBlockFormat0.h written by ActionSet.py
+././observers/Poisson_PlotSolution2peano4_toolbox_blockstructured_PlotPatchesInPeanoBlockFormat0.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2peano4_toolbox_blockstructured_PlotPatchesInPeanoBlockFormat1.h written by ActionSet.py
+././observers/Poisson_PlotSolution2peano4_toolbox_blockstructured_PlotPatchesInPeanoBlockFormat1.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_grid_FaceLabel2.h written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_grid_FaceLabel2.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_grid_CellLabel3.h written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_grid_CellLabel3.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces4.h written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces4.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_DynamicAMR5.h written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_DynamicAMR5.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_DynamicAMR6.h written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_DynamicAMR6.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_RollOverUpdatedFace7.h written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_RollOverUpdatedFace7.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_grid_FaceLabel8.h written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_grid_FaceLabel8.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_grid_CellLabel9.h written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_grid_CellLabel9.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces10.h written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces10.cpp written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_RollOverUpdatedFace11.h written by ActionSet.py
+././observers/Poisson_PlotSolution2exahype2_solvers_fv_actionsets_RollOverUpdatedFace11.cpp written by ActionSet.py
+write ././observers/Poisson_PlotSolution.h
+././observers/Poisson_PlotSolution.cpp written by Observer.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PreprocessSolution0.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PreprocessSolution0.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PostprocessSolution1.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PostprocessSolution1.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PreprocessSolution2.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PreprocessSolution2.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PostprocessSolution3.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_PostprocessSolution3.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_grid_CellLabel4.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_grid_CellLabel4.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_HandleBoundary5.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_HandleBoundary5.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2peano4_toolbox_blockstructured_ReconstructPatchAndApplyFunctor6.h written by ActionSet.py
+././observers/Poisson_TimeStep2peano4_toolbox_blockstructured_ReconstructPatchAndApplyFunctor6.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces7.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces7.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_DynamicAMR8.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_DynamicAMR8.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_RollOverUpdatedFace9.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_RollOverUpdatedFace9.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_DynamicAMR10.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_DynamicAMR10.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_RollOverUpdatedFace11.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_RollOverUpdatedFace11.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_grid_FaceLabel12.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_grid_FaceLabel12.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_grid_CellLabel13.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_grid_CellLabel13.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_HandleBoundary14.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_HandleBoundary14.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2peano4_toolbox_blockstructured_ReconstructPatchAndApplyFunctor15.h written by ActionSet.py
+././observers/Poisson_TimeStep2peano4_toolbox_blockstructured_ReconstructPatchAndApplyFunctor15.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces16.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_ProjectPatchOntoFaces16.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_grid_FaceLabel17.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_grid_FaceLabel17.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_AdaptivityCriterion18.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_AdaptivityCriterion18.cpp written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_AdaptivityCriterion19.h written by ActionSet.py
+././observers/Poisson_TimeStep2exahype2_solvers_fv_actionsets_AdaptivityCriterion19.cpp written by ActionSet.py
+write ././observers/Poisson_TimeStep.h
+././observers/Poisson_TimeStep.cpp written by Observer.py
+./repositories/StepRepository.h written by TemplatedHeaderImplementationFilePair.py
+./repositories/StepRepository.cpp written by TemplatedHeaderImplementationFilePair.py
+write ./Constants.h
+generation complete
+clean up project ...
+clean complete
+start to compile with concurrency level of 128 ...
+
+Warnings (485):
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: warning: warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: warning: warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]warning: 
+warning: warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: unknown warning option '-Wno-attributes=clang::'; did you mean '-Wno-attributes'? [-Wunknown-warning-option]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: :8GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]:
+warning: In file included from GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]../../../../..//src/tarch/tarch.h
+warning: 
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: 1:
+warning: 96GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]:
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: #define InlineMethod __attribute__((always_inline))GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: In file included from GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]../../../../..//src/tarch/la/VectorOperations.h
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]#define InlineMethod __attribute__((always_inline))
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: expanded from macro 'InlineMethod'GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: 
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: ../../../../..//src/tarch/tarch.hGCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]:
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: 
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: non-void function does not return a value [-Wreturn-type]
+warning: non-void function does not return a value [-Wreturn-type]
+warning: enumeration value 'Suspended' not handled in switch [-Wswitch]
+warning: enumeration value 'Suspended' not handled in switch [-Wswitch]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: :
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: :GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat] 
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: :GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]1
+warning: : GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]note: 
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: 
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: :
+warning: :    ^GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]36
+warning: :GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]56  ) InlineMethod {
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]In file included from 
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning:  warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: ../../../../..//src/exahype2/fv/rusanov/PatchwiseFunctors.cpphGCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]:
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: 82GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]:
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: In file included from GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: 
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning:s1 generated:
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: :33GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]:
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+warning: GCC does not allow 'always_inline' attribute in this position on a function definition [-Wgcc-compat]
+compile completed successfully
+Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file
