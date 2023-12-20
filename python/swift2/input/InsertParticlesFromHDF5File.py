@@ -98,10 +98,10 @@ class InsertParticlesFromHDF5File(ActionSet):
       const double GridSize_x = GridSize(0);
 
       /* Compute the pressure from the EoS */
-      const double Pressure = ::swift2::legacy::eos::gas_pressure_from_internal_energy( Density, InternalEnergy );
+      const double Pressure = ::swift2::kernels::legacy::eos::gas_pressure_from_internal_energy( Density, InternalEnergy );
 
       /* Sound speed */
-      const double Soundspeed = ::swift2::legacy::eos::gas_soundspeed_from_internal_energy( InternalEnergy );
+      const double Soundspeed = ::swift2::kernels::legacy::eos::gas_soundspeed_from_internal_energy( InternalEnergy );
 
       /* Now set the values */
       newParticle->setV              ( Velocity );
@@ -218,8 +218,8 @@ class InsertParticlesFromHDF5File(ActionSet):
 
 #include "Constants.h"
 
-#include "swift2/legacy/kernel_hydro.h"
-#include "swift2/legacy/equation_of_state.h"
+#include "swift2/kernels/legacy/kernel_hydro.h"
+#include "swift2/kernels/legacy/equation_of_state.h"
 
 #include <fstream>
 #include <string>
