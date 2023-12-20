@@ -14,11 +14,11 @@ SWIFT2Sources = \
   UnitTests.cpp \
   UserInterface.cpp \
   kernels/ParticleSelfInteraction.cpp \
-  kernels/SwiftKernelPlaceholders.cpp \
-  kernels/SmoothingLengthComputation.cpp \
   kernels/legacy/Density.cpp \
   kernels/legacy/HydroForce.cpp \
+  kernels/legacy/SmoothingLength.cpp \
   kernels/legacy/Swift.cpp \
+  timestepping/TimeStepping.cpp \
   dependencychecks/DependencyChecks.cpp
 
 libSWIFT2Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
