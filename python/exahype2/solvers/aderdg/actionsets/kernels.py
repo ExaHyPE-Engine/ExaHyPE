@@ -33,8 +33,8 @@ def create_predictor_allocations(use_kernelgenerator=True):
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi = memory; memory+=sizeLFhi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lduh = memory; memory+=sizeLduh;
     
-    {{PREDICTOR_STORAGE_PRECISION}} lQhbnd[2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
-    {{PREDICTOR_STORAGE_PRECISION}} lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
+    {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
+    {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
 """
 
     Template_kernelgenerator = """
@@ -96,7 +96,7 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
       false, //useMM
       {{SOLVER_NAME}},
       {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, //predictor_computation_precision
-      {{PREDICTOR_STORAGE_PRECISION}} //predictor_storage_precision
+      {{CORRECTOR_COMPUTATION_PRECISION}} //predictor_storage_precision
       >(
         repositories::{{SOLVER_INSTANCE}},
         lQhbnd, lFhbnd,
@@ -131,7 +131,7 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
       false, //noTimeAveraging
       {{SOLVER_NAME}},
       {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, //predictor_computation_precision
-      {{PREDICTOR_STORAGE_PRECISION}} //predictor_storage_precision
+      {{CORRECTOR_COMPUTATION_PRECISION}} //predictor_storage_precision
       >(
         repositories::{{SOLVER_INSTANCE}},
         lQhbnd, nullptr, lFhbnd,
@@ -234,10 +234,7 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
 
 def create_solution_update(use_kernelgenerator):
     template_generic = """
-    kernels::aderdg::generic::c::solutionUpdate<
-    {{SOLVER_NAME}},
-    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} //predictor_computation_precision
-      >(
+    kernels::aderdg::generic::c::solutionUpdate(
       repositories::{{SOLVER_INSTANCE}},
       luh,
       luh,
@@ -603,6 +600,17 @@ def check_troubledness(usePAC, useDMP, useTroubledMarkers):
 
 def create_corrector_allocations(use_kernelgenerator):
     template_generic = """
+    const int Order = {{ORDER}};
+    const int NumberOfVariables  = {{NUMBER_OF_UNKNOWNS}};
+    
+    #if Dimensions==2
+    constexpr int spaceBasisSize     = (Order+1)*(Order+1);
+    constexpr int spaceFaceSize      = (Order+1);
+    #else
+    constexpr int spaceBasisSize     = (Order+1)*(Order+1)*(Order+1);
+    constexpr int spaceFaceSize      = (Order+1)*(Order+1);
+    #endif
+
     {{CORRECTOR_COMPUTATION_PRECISION}} lduh[spaceBasisSize*NumberOfVariables]{0.0};
     const int fluxElementsPerFace = spaceFaceSize*NumberOfVariables;
 """
