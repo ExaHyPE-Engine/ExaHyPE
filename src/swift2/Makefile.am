@@ -16,6 +16,9 @@ SWIFT2Sources = \
   kernels/ParticleSelfInteraction.cpp \
   kernels/SwiftKernelPlaceholders.cpp \
   kernels/SmoothingLengthComputation.cpp \
+  kernels/legacy/Density.cpp \
+  kernels/legacy/HydroForce.cpp \
+  kernels/legacy/Swift.cpp \
   dependencychecks/DependencyChecks.cpp
 
 libSWIFT2Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
