@@ -5,40 +5,80 @@
 
 
 #if PeanoDebug == 0
-template <typename ParticleContainer, typename Marker>
+template <typename ParticleContainer>
 void swift2::dependencychecks::markAlgorithmStep(
-  const ParticleContainer& assignedParticles,
-  const Marker&            marker,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated
-    algorithmStepMarkerEnum,
+  const ParticleContainer&                    particles,
+  const peano4::datamanagement::VertexMarker& marker,
+  typename std::remove_pointer<
+    typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
             sweepStageMarkerEnum,
-  Invariant policy,
-  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+  Invariant                                   policy,
+  ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+            workOnParticle
 ) {}
 
-template <typename ParticleContainer, typename Marker>
+template <typename ParticleContainer>
+void swift2::dependencychecks::markAlgorithmStep(
+  const ParticleContainer&                    localParticles,
+  const ParticleContainer&                    activeParticles,
+  const peano4::datamanagement::CellMarker&   marker,
+  typename std::remove_pointer<
+    typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+            sweepStageMarkerEnum,
+  Invariant                                   policy,
+  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+) {}
+
+template <typename ParticleContainer>
 void swift2::dependencychecks::markInitStep(
   const ParticleContainer& localParticles,
-  const Marker&            marker,
+  const peano4::datamanagement::VertexMarker&            marker,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
     initStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
             sweepStageMarkerEnum,
   Invariant policy,
-  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+  ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
 ) {}
 
-template <typename ParticleContainer, typename Marker>
+template <typename ParticleContainer>
+void swift2::dependencychecks::markInitStep(
+  const ParticleContainer& localParticles,
+  const ParticleContainer& activeParticles,
+  const peano4::datamanagement::CellMarker&            marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+    initStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+            sweepStageMarkerEnum,
+  Invariant policy,
+  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+) {}
+
+template <typename ParticleContainer>
 void swift2::dependencychecks::checkAlgorithmStep(
   Invariant                policy,
   const ParticleContainer& localParticles,
-  const Marker&            marker,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated
-    algorithmStepMarkerEnum,
+  const ParticleContainer& activeParticles,
+  const peano4::datamanagement::CellMarker&            marker,
+  typename std::remove_pointer<
+    typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
     sweepStageMarkerEnum,
-  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+    ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+) {}
+
+template <typename ParticleContainer>
+void swift2::dependencychecks::checkAlgorithmStep(
+  Invariant                policy,
+  const ParticleContainer& localParticles,
+  const peano4::datamanagement::VertexMarker&            marker,
+  typename std::remove_pointer<
+    typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+    sweepStageMarkerEnum,
+  ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
 ) {}
 
 template <typename ParticleContainer>
@@ -49,16 +89,29 @@ void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTimeAlgo
     algorithmStepMarkerEnum
 ) {}
 
-template <typename ParticleContainer, typename Marker>
+template <typename ParticleContainer>
 void swift2::dependencychecks::checkInitStep(
   Invariant                policy,
   const ParticleContainer& localParticles,
-  const Marker&            marker,
+  const peano4::datamanagement::VertexMarker&            marker,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
     initStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
     sweepStageMarkerEnum,
-  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+  ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+) {}
+
+template <typename ParticleContainer>
+void swift2::dependencychecks::checkInitStep(
+  Invariant                policy,
+  const ParticleContainer& localParticles,
+  const ParticleContainer& activeParticles,
+  const peano4::datamanagement::CellMarker&            marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+    initStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+    sweepStageMarkerEnum,
+  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
 ) {}
 
 template <typename ParticleContainer>
@@ -214,32 +267,32 @@ static std::string swift2::dependencychecks::internal::outputParticle(
 }
 
 
-template <typename ParticleContainer, typename Marker>
+template <typename ParticleContainer>
 static void swift2::dependencychecks::markAlgorithmStep(
-  const ParticleContainer& localParticles,
-  const Marker&            marker,
+  const ParticleContainer&                      particles,
+  const peano4::datamanagement::VertexMarker&   marker,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated
-    algorithmStep,
+            algorithmStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-            action,
-  Invariant policy,
-  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+            sweepStageMarkerEnum,
+  Invariant                                     policy,
+  ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+            workOnParticle
 ) {
-
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
 
-  const int algorithmStepMarker = static_cast<int>(algorithmStep);
-  const int sweepStageMarker    = static_cast<int>(action);
+  const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
+  const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
 
   const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
   const int nsteps  = static_cast<int>(PartType::DependencyChecksAlgorithmStepLastUpdated::count);
 
   const int index_this_stage = algorithmStepMarker * nstages + sweepStageMarker;
 
-  for (auto* particle : localParticles) {
+  for (auto* particle : particles) {
 
     // Mark what we have just completed, but only if the particle was actually touched!
-    if (workOnParticle(particle, marker)) {
+    if (workOnParticle(marker, *particle)) {
       particle->setDependencyChecksAlgorithmStepUpdates(
         index_this_stage, particle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage] + 1
       );
@@ -252,15 +305,15 @@ static void swift2::dependencychecks::markAlgorithmStep(
     assertion2(
       internal::isValid(
         policy,
-        workOnParticle(particle, marker),
+        workOnParticle(marker, *particle),
         particle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage],
         particle->getDependencyChecksAlgorithmStepMaskOuts()[index_this_stage]
       ),
       toString(policy),
       internal::outputParticle(
         particle,
-        algorithmStep,
-        action,
+        algorithmStepMarkerEnum,
+        sweepStageMarkerEnum,
         1 // errors,
       )
     );
@@ -268,32 +321,89 @@ static void swift2::dependencychecks::markAlgorithmStep(
 }
 
 
-template <typename ParticleContainer, typename Marker>
-static void swift2::dependencychecks::markInitStep(
-  const ParticleContainer& localParticles,
-  const Marker&            marker,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
-    initStep,
+template <typename ParticleContainer>
+static void swift2::dependencychecks::markAlgorithmStep(
+  const ParticleContainer&                    localParticles,
+  const ParticleContainer&                    activeParticles,
+  const peano4::datamanagement::CellMarker&   marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated
+            algorithmStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-            action,
-  Invariant policy,
-  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+            sweepStageMarkerEnum,
+  Invariant                                   policy,
+  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+            workOnParticle
 ) {
-
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
 
-  const int initStepMarker   = static_cast<int>(initStep);
-  const int sweepStageMarker = static_cast<int>(action);
+  const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
+  const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
+
+  const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
+  const int nsteps  = static_cast<int>(PartType::DependencyChecksAlgorithmStepLastUpdated::count);
+
+  const int index_this_stage = algorithmStepMarker * nstages + sweepStageMarker;
+
+  for (auto* pLocalParticle :  localParticles) {
+    bool doWork = false;
+    for (auto* pActiveParticle : activeParticles) {
+      doWork |= workOnParticle(marker, *pLocalParticle, *pActiveParticle);
+    }
+
+    if (doWork) {
+      pLocalParticle->setDependencyChecksAlgorithmStepUpdates(
+        index_this_stage, pLocalParticle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage] + 1
+      );
+    } else {
+      pLocalParticle->setDependencyChecksAlgorithmStepMaskOuts(
+        index_this_stage, pLocalParticle->getDependencyChecksAlgorithmStepMaskOuts()[index_this_stage] + 1
+      );
+    }
+
+    assertion2(
+      internal::isValid(
+        policy,
+        doWork,
+        pLocalParticle->getDependencyChecksAlgorithmStepUpdates()[index_this_stage],
+        pLocalParticle->getDependencyChecksAlgorithmStepMaskOuts()[index_this_stage]
+      ),
+      toString(policy),
+      internal::outputParticle(
+        pLocalParticle,
+        algorithmStepMarkerEnum,
+        sweepStageMarkerEnum,
+        1 // errors,
+      )
+    );
+  }
+}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencychecks::markInitStep(
+    const ParticleContainer& localParticles,
+    const peano4::datamanagement::VertexMarker&            marker,
+    typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+      initStepMarkerEnum,
+    typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+              sweepStageMarkerEnum,
+    Invariant policy,
+    ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+) {
+  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  const int algorithmStepMarker = static_cast<int>(initStepMarkerEnum);
+  const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
 
   const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
   const int nsteps  = static_cast<int>(PartType::DependencyChecksInitStepLastUpdated::count);
 
-  const int index_this_stage = initStepMarker * nstages + sweepStageMarker;
+  const int index_this_stage = algorithmStepMarker * nstages + sweepStageMarker;
 
   for (auto* particle : localParticles) {
-
     // Mark what we have just completed, but only if the particle was actually touched!
-    if (workOnParticle(particle, marker)) {
+    bool doWork = workOnParticle(marker, *particle);
+    if (doWork) {
       particle->setDependencyChecksInitStepUpdates(
         index_this_stage, particle->getDependencyChecksInitStepUpdates()[index_this_stage] + 1
       );
@@ -306,15 +416,73 @@ static void swift2::dependencychecks::markInitStep(
     assertion2(
       internal::isValid(
         policy,
-        workOnParticle(particle, marker),
+        doWork,
         particle->getDependencyChecksInitStepUpdates()[index_this_stage],
         particle->getDependencyChecksInitStepMaskOuts()[index_this_stage]
       ),
       toString(policy),
       internal::outputParticle(
         particle,
-        initStep,
-        action,
+        initStepMarkerEnum,
+        sweepStageMarkerEnum,
+        1 // errors,
+      )
+    );
+  }
+}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencychecks::markInitStep(
+  const ParticleContainer&                    localParticles,
+  const ParticleContainer&                    activeParticles,
+  const peano4::datamanagement::CellMarker&   marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+      initStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+      sweepStageMarkerEnum,
+  Invariant                                   policy,
+  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+      workOnParticle
+) {
+  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  const int algorithmStepMarker = static_cast<int>(initStepMarkerEnum);
+  const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
+
+  const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
+  const int nsteps  = static_cast<int>(PartType::DependencyChecksInitStepLastUpdated::count);
+
+  const int index_this_stage = algorithmStepMarker * nstages + sweepStageMarker;
+
+  for (auto* pLocalParticle : localParticles) {
+    bool doWork = false;
+    for (auto* pActiveParticle : activeParticles) {
+      doWork |= workOnParticle(marker, *pLocalParticle, *pActiveParticle);
+    }
+
+    if (doWork) {
+      pLocalParticle->setDependencyChecksInitStepUpdates(
+        index_this_stage, pLocalParticle->getDependencyChecksInitStepUpdates()[index_this_stage] + 1
+      );
+    } else {
+      pLocalParticle->setDependencyChecksInitStepMaskOuts(
+        index_this_stage, pLocalParticle->getDependencyChecksInitStepMaskOuts()[index_this_stage] + 1
+      );
+    }
+
+    assertion2(
+      internal::isValid(
+        policy,
+        doWork,
+        pLocalParticle->getDependencyChecksInitStepUpdates()[index_this_stage],
+        pLocalParticle->getDependencyChecksInitStepMaskOuts()[index_this_stage]
+      ),
+      toString(policy),
+      internal::outputParticle(
+        pLocalParticle,
+        initStepMarkerEnum,
+        sweepStageMarkerEnum,
         1 // errors,
       )
     );
@@ -406,22 +574,23 @@ static int swift2::dependencychecks::internal::checkFutureStages(
 }
 
 
-template <typename ParticleContainer, typename Marker>
-static void swift2::dependencychecks::checkAlgorithmStep(
-  Invariant                policy,
-  const ParticleContainer& localParticles,
-  const Marker&            marker,
+template <typename ParticleContainer>
+void swift2::dependencychecks::checkAlgorithmStep(
+  Invariant                                   policy,
+  const ParticleContainer&                    localParticles,
+  const ParticleContainer&                    activeParticles,
+  const peano4::datamanagement::CellMarker&   marker,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated
-    algorithmStep,
+      algorithmStepMarkerEnum,
   typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-    action,
-  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+      sweepStageMarkerEnum,
+  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+      workOnParticle
 ) {
-
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
 
-  const int algorithmStepMarker = static_cast<int>(algorithmStep);
-  const int sweepStageMarker    = static_cast<int>(action);
+  const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
+  const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
 
   const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
   const int nsteps  = static_cast<int>(PartType::DependencyChecksAlgorithmStepLastUpdated::count);
@@ -435,12 +604,51 @@ static void swift2::dependencychecks::checkAlgorithmStep(
     errors = internal::checkPastStages(policy, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, algorithmStep, action, errors));
+    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors));
 
     errors = internal::checkFutureStages(policy, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, algorithmStep, action, errors));
+    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors));
+  }
+}
+
+
+template <typename ParticleContainer>
+void swift2::dependencychecks::checkAlgorithmStep(
+  Invariant                policy,
+  const ParticleContainer& localParticles,
+  const peano4::datamanagement::VertexMarker&            marker,
+  typename std::remove_pointer<
+      typename ParticleContainer::value_type>::type::DependencyChecksAlgorithmStepLastUpdated algorithmStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+      sweepStageMarkerEnum,
+  ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+      workOnParticle
+) {
+  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
+  const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
+
+  const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
+  const int nsteps  = static_cast<int>(PartType::DependencyChecksAlgorithmStepLastUpdated::count);
+
+
+  for (auto* particle : localParticles) {
+
+    int        errors = 0;
+    const int* arr    = particle->getDependencyChecksAlgorithmStepUpdates();
+
+    errors = internal::checkPastStages(policy, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors));
+
+    errors = internal::checkFutureStages(policy, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, algorithmStepMarkerEnum, sweepStageMarkerEnum, errors));
   }
 }
 
@@ -482,22 +690,21 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
 }
 
 
-template <typename ParticleContainer, typename Marker>
+template <typename ParticleContainer>
 static void swift2::dependencychecks::checkInitStep(
-  Invariant                policy,
-  const ParticleContainer& localParticles,
-  const Marker&            marker,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
-    initStep,
-  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
-    action,
-  bool (*workOnParticle)(const typename std::remove_pointer<typename ParticleContainer::value_type>::type*, const Marker&)
+    Invariant                policy,
+    const ParticleContainer& localParticles,
+    const peano4::datamanagement::VertexMarker&            marker,
+    typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+      initStepMarkerEnum,
+    typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+      sweepStageMarkerEnum,
+    ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
 ) {
-
   using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
 
-  const int initStepMarker   = static_cast<int>(initStep);
-  const int sweepStageMarker = static_cast<int>(action);
+  const int algorithmStepMarker = static_cast<int>(initStepMarkerEnum);
+  const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
 
   const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
   const int nsteps  = static_cast<int>(PartType::DependencyChecksInitStepLastUpdated::count);
@@ -508,11 +715,52 @@ static void swift2::dependencychecks::checkInitStep(
     int        errors = 0;
     const int* arr    = particle->getDependencyChecksInitStepUpdates();
 
-    errors = internal::checkPastStages(policy, initStepMarker, sweepStageMarker, nsteps, nstages, arr)
-             + internal::checkFutureStages(policy, initStepMarker, sweepStageMarker, nsteps, nstages, arr);
+    errors = internal::checkPastStages(policy, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
 
     // If there are any errors, print out a detailed report and exit.
-    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, initStep, action, errors));
+    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, initStepMarkerEnum, sweepStageMarkerEnum, errors));
+
+    errors = internal::checkFutureStages(policy, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, initStepMarkerEnum, sweepStageMarkerEnum, errors));
+  }
+}
+
+
+template <typename ParticleContainer>
+static void swift2::dependencychecks::checkInitStep(
+  Invariant                                   policy,
+  const ParticleContainer&                    localParticles,
+  const ParticleContainer&                    activeParticles,
+  const peano4::datamanagement::CellMarker&            marker,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksInitStepLastUpdated
+      initStepMarkerEnum,
+  typename std::remove_pointer<typename ParticleContainer::value_type>::type::DependencyChecksPeanoEventUsedBySwift
+      sweepStageMarkerEnum,
+  ::swift2::kernels::UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle
+) {
+  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+
+  const int algorithmStepMarker = static_cast<int>(initStepMarkerEnum);
+  const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
+
+  const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
+  const int nsteps  = static_cast<int>(PartType::DependencyChecksInitStepLastUpdated::count);
+
+  for (auto* particle : localParticles) {
+    int        errors = 0;
+    const int* arr    = particle->getDependencyChecksInitStepUpdates();
+
+    errors = internal::checkPastStages(policy, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, initStepMarkerEnum, sweepStageMarkerEnum, errors));
+
+    errors = internal::checkFutureStages(policy, algorithmStepMarker, sweepStageMarker, nsteps, nstages, arr);
+
+    // If there are any errors, print out a detailed report and exit.
+    assertionEquals2(errors, 0, toString(policy), internal::outputParticle(particle, initStepMarkerEnum, sweepStageMarkerEnum, errors));
   }
 }
 

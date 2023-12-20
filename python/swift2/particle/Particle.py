@@ -269,10 +269,11 @@ Particle properties:
   ::swift2::dependencychecks::check{STEP_TYPE}(
                   ::swift2::dependencychecks::Invariant::{INVARIANT},
                   localParticles,
+                  activeParticles,
                   marker,
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
                   globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
-                  &{CHECK_FUNCTION}
+                  {CHECK_FUNCTION}
   );
 """
 
@@ -283,18 +284,19 @@ Particle properties:
                   marker,
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
                   globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
-                  &{CHECK_FUNCTION}
+                  {CHECK_FUNCTION}
   );
 """
 
         mark_template_cell_operation = """
   ::swift2::dependencychecks::mark{STEP_TYPE}(
                   localParticles,
+                  activeParticles,
                   marker,
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
                   globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
                   ::swift2::dependencychecks::Invariant::{INVARIANT},
-                  &{CHECK_FUNCTION}
+                  {CHECK_FUNCTION}
   );
 """
 
@@ -305,7 +307,7 @@ Particle properties:
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
                   globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
                   ::swift2::dependencychecks::Invariant::{INVARIANT},
-                  &{CHECK_FUNCTION}
+                  {CHECK_FUNCTION}
   );
 """
 
@@ -348,7 +350,7 @@ Particle properties:
             d["EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_FIRST_TIME
             )
-            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeWorkedOnVertexKernel"
+            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel<globaldata::{}>".format( self.name )
 
             if step.touch_vertex_first_time_kernel is None:
                 step.touch_vertex_first_time_kernel = ""
@@ -379,7 +381,7 @@ Particle properties:
             d["EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.CELL_KERNEL
             )
-            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeWorkedOnCellKernel"
+            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeWorkedOnInCellKernel<globaldata::{}>".format( self.name )
             
             if (
                 step.cell_kernel_dependency_policy == None
@@ -411,7 +413,7 @@ Particle properties:
             d["EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_LAST_TIME
             )
-            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeWorkedOnVertexKernel"
+            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel<globaldata::{}>".format( self.name )
 
             if (
                 step.touch_vertex_last_time_dependency_policy == None
