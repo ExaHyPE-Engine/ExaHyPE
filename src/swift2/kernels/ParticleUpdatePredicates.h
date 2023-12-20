@@ -1,25 +1,33 @@
 #pragma once
 
 #include "toolbox/particles/MultiscaleTransitions.h"
+#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/VertexMarker.h"
 
 namespace swift2 {
   namespace kernels {
+    template <typename Particle>
+    using UpdateParticleWithinCellPredicate = std::function<bool(const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle)>;
+
+    template <typename Particle>
+    using UpdateParticleAssignedToVertexPredicate = std::function<bool(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle)>;
+
+
+    /**
+     * Degenerated predicate which always allows for an update.
+     */
+    template <typename Particle, typename Marker>
+    bool alwaysUpdate(const Marker& marker, const Particle& localParticle) {
+      return true;
+    }
+
 
     /**
      * @brief is this localParticle a local particle (in the ParallelState sense)?
      */
     template <typename Particle>
-    bool localParticleIsLocal(const Particle& localParticle) {
-      return (localParticle->getParallelState() == std::remove_pointer<Particle>::type::ParallelState::Local);
-    }
-
-    /**
-     * Overload for convenience. `marker` may be required for function prototype
-     * to be passed as argument to other function.
-     */
-    template <typename Particle, typename Marker>
-    bool localParticleIsLocal(const Particle& localParticle, const Marker& marker) {
-      return localParticleIsLocal(localParticle);
+    bool particleIsLocal(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
+      return localParticle.getParallelState() == Particle::ParallelState::Local;
     }
 
 
@@ -30,25 +38,29 @@ namespace swift2 {
      * @param marker: dummy parameter so this function can be passed on as a parameter
      */
     template <typename Particle>
-    bool localParticleCanBeMoved(const Particle* localParticle) {
+    bool localParticleCanBeMoved(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
       return (
-        (localParticle->getMoveState() == std::remove_pointer<Particle>::type::MoveState::NotMovedYet)
-        & localParticleIsLocal(localParticle)
+        (localParticle.getMoveState() == Particle::MoveState::NotMovedYet)
+        & particleIsLocal(marker, localParticle)
       );
     }
 
     /**
-     * Overload for convenience. `marker` may be required for function prototype
-     * to be passed as argument to other function.
-     */
-    template <typename Particle, typename Marker>
-    bool localParticleCanBeMoved(const Particle* localParticle, const Marker& marker) {
-      return localParticleCanBeMoved(localParticle);
-    }
-
-
-    /**
      * @brief Can we do work on this particle during a cell kernel sweep stage?
+     *
+     * A particle is to be updated if and only if
+     *
+     * - it is located within the cell of interest;
+     * - it has not yet been updated by a cell;
+     * - the particle interaction triggering the update is not a
+     *   self-interaction.
+     *
+     * The second point is important. A particle might be located right at
+     * the face in-between two cells. In this case, it is not clear to which
+     * cell is actually belong to. So we are fine if either cell updates it,
+     * but it should be only one cel at a time.
+     *
+     * ## Further remarks
      *
      * I originally thought that this predicate should resemble
      *
@@ -72,11 +84,12 @@ namespace swift2 {
      * @param marker: the cell's CellMarker
      */
     template <typename Particle>
-    bool localParticleCanBeWorkedOnCellKernel(
-      const Particle* localParticle, const peano4::datamanagement::CellMarker& marker
+    bool localParticleCanBeWorkedOnInCellKernel(
+      const peano4::datamanagement::CellMarker& marker, const Particle& localParticle, const Particle& activeParticle
     ) {
-
-      return (not localParticle->getCellHasUpdatedParticle() and marker.isContained(localParticle->getX()));
+      return &localParticle != &activeParticle
+         and not localParticle.getCellHasUpdatedParticle()
+         and marker.isContained(localParticle.getX();
     }
 
 
@@ -86,31 +99,8 @@ namespace swift2 {
      * @param localParticle: particle to check for
      */
     template <typename Particle>
-    bool localParticleCanBeWorkedOnVertexKernel(const Particle* localParticle) {
-      return localParticleIsLocal(localParticle);
-    }
-
-    /**
-     * Overload for convenience. `marker` may be required for function prototype
-     * to be passed as argument to other function.
-     */
-    template <typename Particle>
-    bool localParticleCanBeWorkedOnVertexKernel(
-      const Particle* localParticle, const peano4::datamanagement::VertexMarker& marker
-    ) {
-      return localParticleCanBeWorkedOnVertexKernel(localParticle);
-    }
-
-
-    /**
-     * @brief Dummy function that returns true, so it can be passed on as a parameter.
-     *
-     * @param localParticle: dummy particle parameter so this function can be passed on as a parameter
-     * @param marker: dummy parameter so this function can be passed on as a parameter
-     */
-    template <typename Particle, typename Marker>
-    bool localParticleNoRestrictions(const Particle* localParticle, const Marker& marker) {
-      return true;
+    bool localParticleCanBeWorkedOnInVertexKernel(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
+      return particleIsLocal(marker, localParticle);
     }
   } // namespace kernels
 } // namespace swift2
