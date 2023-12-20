@@ -42,9 +42,11 @@ namespace swift2 {
     /**
      * Run over all particles and update them independent of each other
      *
-     * This is a generic particle self-interaction kernel accepting a functor to
-     * update one particle. We provide two flavours of the concept: One accepts a
-     * particle reference and the other one a pointer.
+     * The routine accepts a container over particle pointers, but the
+     * functor f actually accepts references. It is the responsibility of
+     * this routine to map pointers onto references.
+     *
+     * The predicate can be used to mask out certain updates.
      *
      * We distinguish two use cases for the particle self-interactions:
      *
@@ -66,7 +68,6 @@ namespace swift2 {
      *
      *
      * @param ParticleContainer A subtype of std::list<Particle *>
-     * @param UpdateFunction Has to be of type std::function<void(Particle* localParticle)>.
      */
     template <typename ParticleContainer>
     void forAllParticles(
@@ -82,26 +83,36 @@ namespace swift2 {
      *
      * The generic implementation realises a nested loops: We call interaction
      * per pair of local and active particles. The interaction functor may
-     * modify the local particle. Besides the simple nested loop, the routine
-     * ensures that no particle is updated twice if it belongs to two cells
-     * simultaneously.
+     * modify the local particle. It is the responsibility of the update
+     * predicate to ensure that no particle is updated twice, even if it is
+     * sitting right at the face in-between two cell. The predicate also
+     * should check if there's a self-interaction and mask it out if
+     * appropriate.
      *
-     * What the routine not does is to check if activeParticle!=localParticle,
-     * i.e. please assume that the routine is also called for self-interaction
-     * potentials.
+     * The routine accepts a container over particle pointers, but the
+     * functor f actually accepts references. It is the responsibility of
+     * this routine to map pointers onto references. We use
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *   for (auto& localParticle : localParticles) {
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * here, but it is important to note that this reference still becomes a
+     * reference to a pointer as localParticle is a container over pointers.
      *
      * In Swift's terminology, this is a non-symmetric XXX calculation where XXX
      * is the compute kernel (such as density):
      * Our implementations loops over all local particles (outer loop) and, per
      * local particle then over all active particles (inner loop). Inside this
      * second loop, we compute a force acting from the active particle
-     * onto the local particle. We know that the local particles are a subset
-     * of the active particle and that the force @f$ f(p,p) :=0 @f$: If a
-     * particle acts on itself, the arising force equals zero. So there's no
-     * need for a case distinction although we could use one (see remark above
-     * that you have to mask out checks against itself).
+     * onto the local particle.
      *
-     * Important is a second case distinction: If a local and an active
+     * To avoid self-interaction, users have to ensure that @f$ f(p,p) :=0 @f$: If a
+     * particle acts on itself, the arising force equals zero. This should
+     * always be the case, as the predicate passed in here is an optimisation,
+     * i.e. users should not rely on it to mask out self-interaction a priori.
+     *
+     * Equally important is a second case distinction: If a local and an active
      * particle reside on the same level, we know that the symmetric force
      * component will be computed later on. Let L be the local one and A the
      * active one, we have
@@ -128,6 +139,13 @@ namespace swift2 {
      *
      * ~~~~~~~~~~~~~~~~~~~~~~~
      * UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type> predicate = ::swift2::kernels::localParticleCanBeWorkedOnInCellKernel<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
+     * ~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * However, as this function is usually invoked by code generated through
+     * Python, I personally recommend to use a syntax that is easier to parse:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~
+     * "UpdateParticleWithinCellPredicate<globaldata::{}>".format( particle._name )
      * ~~~~~~~~~~~~~~~~~~~~~~~
      *
      *

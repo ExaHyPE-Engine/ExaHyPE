@@ -2,42 +2,37 @@
 
 
 template <typename ParticleContainer>
-void swift2::forAllParticles(
+void swift2::kernels::forAllParticles(
+    const peano4::datamanagement::VertexMarker& marker,
     ParticleContainer& assignedParticles,
-    ParticleUnaryOperator<typename ParticleContainer::DoFType>     f
+    ParticleUnaryOperator<typename ParticleContainer::DoFType>     f,
+    UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate
 ) {
-  for (auto* particle : assignedParticles) {
-    f(*particle);
-  }
-}
-
-
-template <typename ParticleContainer>
-void swift2::forAllParticles(
-  ParticleContainer& assignedParticles,
-  ParticleUnaryOperatorWithPointerCallSemantics<typename ParticleContainer::DoFType>     f
-) {
-  for (auto* particle : assignedParticles) {
-    f(particle);
+  for (auto& particle : assignedParticles) {
+    if (predicate(marker,*particle)) {
+      f(marker,*particle);
+    }
   }
 }
 
 
 template <typename LocalParticleContainer, typename ActiveParticleContainer>
-void swift2::forAllParticlePairs(
+void swift2::kernels::forAllParticlePairs(
   const peano4::datamanagement::CellMarker&  marker,
   LocalParticleContainer&                    localParticles,
   ActiveParticleContainer&                   activeParticles,
-  ParticleBinaryOperator<typename LocalParticleContainer::value_type, typename ActiveParticleContainer::value_type>  f
+  ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>  f,
+  UpdateParticleWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>  predicate
 ) {
-  for (auto* localParticle : localParticles) {
-    if (::swift2::kernels::localParticleCanBeWorkedOnCellKernel(localParticle, marker)) {
-      for (auto* activeParticle : activeParticles) {
-        f(localParticle, activeParticle);
+  for (auto& localParticle : localParticles) {
+    for (auto& activeParticle : activeParticles) {
+      if ( predicate(marker, *localParticle, *activeParticle) ) {
+        f(marker, *localParticle, *activeParticle);
         if (tarch::la::oneGreater(activeParticle->getCellH(), localParticle->getCellH())) {
-          f(activeParticle, localParticle);
+          f(marker, *activeParticle, *localParticle);
         }
       }
     }
   }
 }
+
