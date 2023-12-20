@@ -38,53 +38,46 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
   alignas(AlignmentOnHeap) double tempNonconservativeProductY[ncpEnumerator.size()];
   alignas(AlignmentOnHeap) double tempNonconservativeProductZ[ncpEnumerator.size()];
 
-  const int numberOfCells          = patchData.numberOfCells;
-  double*   rawPointerToCellCentre = patchData.cellCentre[0].data();
-  double*   rawPointerToCellSize   = patchData.cellSize[0].data();
-  double*   t                      = patchData.t;
-  double*   dt                     = patchData.dt;
-  double*   maxEigenvalue          = patchData.maxEigenvalue;
-  double    newMaxEigenvalue       = 0.0;
-
-  double** mappedPointersToQIn  = new double*[patchData.numberOfCells];
-  double** mappedPointersToQOut = new double*[patchData.numberOfCells];
-
-  for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
-    const double* currentQIn  = patchData.QIn[patchIndex];
-    double*       currentQOut = patchData.QOut[patchIndex];
-#pragma omp target enter data map(to : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
-#pragma omp target enter data map(alloc : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
-    mappedPointersToQIn[patchIndex]  = static_cast<double*>(omp_get_mapped_ptr(currentQIn, targetDevice));
-    mappedPointersToQOut[patchIndex] = static_cast<double*>(omp_get_mapped_ptr(currentQOut, targetDevice));
+  const int     numberOfCells          = patchData.numberOfCells;
+  const double* rawPointerToCellCentre = patchData.cellCentre[0].data();
+  const double* rawPointerToCellSize   = patchData.cellSize[0].data();
+  const double* t                      = patchData.t;
+  const double* dt                     = patchData.dt;
+  double*       maxEigenvalue          = patchData.maxEigenvalue;
+  double        newMaxEigenvalue       = 0.0;
+  double*       mappedPointersToQOut   = new double[numberOfCells * QOutEnumerator.size()];
+  double*       mappedPointersToQIn    = new double[numberOfCells * QInEnumerator.size()];
+  for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+    std::memcpy(&mappedPointersToQIn[patchIndex * QInEnumerator.size()], patchData.QIn[patchIndex], QInEnumerator.size() * sizeof(double));
   }
 
   // clang-format off
 #pragma omp target teams distribute device(targetDevice) \
   map(to : \
-           tempFluxX[0 : fluxEnumerator.size()], \
-           tempFluxY[0 : fluxEnumerator.size()], \
-           tempFluxY[0 : fluxEnumerator.size()], \
-           tempEigenvalueX[0 : eigenvalueEnumerator.size()], \
-           tempEigenvalueY[0 : eigenvalueEnumerator.size()], \
-           tempEigenvalueZ[0 : eigenvalueEnumerator.size()], \
-           tempNonconservativeProductX[0 : ncpEnumerator.size()], \
-           tempNonconservativeProductY[0 : ncpEnumerator.size()], \
-           tempNonconservativeProductZ[0 : ncpEnumerator.size()], \
-           rawPointerToCellCentre[0 : numberOfCells * Dimensions], \
-           rawPointerToCellSize[0 : numberOfCells * Dimensions], \
-           t[0 : numberOfCells], \
-           dt[0 : numberOfCells], \
-           mappedPointersToQIn[0 : numberOfCells]), \
+    tempFluxX[0 : fluxEnumerator.size()], \
+    tempFluxY[0 : fluxEnumerator.size()], \
+    tempFluxY[0 : fluxEnumerator.size()], \
+    tempEigenvalueX[0 : eigenvalueEnumerator.size()], \
+    tempEigenvalueY[0 : eigenvalueEnumerator.size()], \
+    tempEigenvalueZ[0 : eigenvalueEnumerator.size()], \
+    tempNonconservativeProductX[0 : ncpEnumerator.size()], \
+    tempNonconservativeProductY[0 : ncpEnumerator.size()], \
+    tempNonconservativeProductZ[0 : ncpEnumerator.size()], \
+    rawPointerToCellCentre[0 : numberOfCells * Dimensions], \
+    rawPointerToCellSize[0 : numberOfCells * Dimensions], \
+    t[0 : numberOfCells], \
+    dt[0 : numberOfCells], \
+    mappedPointersToQIn[0 : numberOfCells * QInEnumerator.size()]) \
   map(from : \
-           maxEigenvalue[0 : numberOfCells] \
-           mappedPointersToQOut[0 : numberOfCells])
+    maxEigenvalue[0 : numberOfCells], \
+    mappedPointersToQOut[0 : numberOfCells * QOutEnumerator.size()])
   // clang-format on
   for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
 #if Dimensions == 3
-#pragma omp parallel for simd collapse(3) schedule(static, 1)
+#pragma omp parallel for simd collapse(3) reduction(max : newMaxEigenvalue) schedule(static, 1)
     for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
 #else
-#pragma omp parallel for simd collapse(2) schedule(static, 1)
+#pragma omp parallel for simd collapse(2) reduction(max : newMaxEigenvalue) schedule(static, 1)
 #endif
       for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
         for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
@@ -102,7 +95,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           // ====================================================
           if constexpr (EvaluateSource) {
             loopbodies::copySolutionAndAddSourceTerm<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -110,13 +103,21 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
               currentVolume,
               t[patchIndex],
               dt[patchIndex],
-              mappedPointersToQOut[patchIndex],
+              &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
               QOutEnumerator
             );
           } else {
 #pragma unroll
             for (int unknown = 0; unknown < NumberOfUnknowns + NumberOfAuxiliaryVariables; unknown++) {
-              loopbodies::copySolution(mappedPointersToQIn[patchIndex], QInEnumerator, patchIndex, currentVolume, unknown, mappedPointersToQOut[patchIndex], QOutEnumerator);
+              loopbodies::copySolution(
+                &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
+                QInEnumerator,
+                patchIndex,
+                currentVolume,
+                unknown,
+                &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
+                QOutEnumerator
+              );
             }
           }
 
@@ -125,7 +126,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           // ====================================================
           auto volumeWithHalo = currentVolume;
           loopbodies::computeMaxEigenvalue<SolverType>(
-            mappedPointersToQIn[patchIndex],
+            &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
@@ -139,7 +140,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           );
           volumeWithHalo(0) = x - HaloSize;
           loopbodies::computeMaxEigenvalue<SolverType>(
-            mappedPointersToQIn[patchIndex],
+            &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
@@ -153,7 +154,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           );
           volumeWithHalo(0) = x + HaloSize;
           loopbodies::computeMaxEigenvalue<SolverType>(
-            mappedPointersToQIn[patchIndex],
+            &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
@@ -168,7 +169,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
 
           volumeWithHalo = currentVolume;
           loopbodies::computeMaxEigenvalue<SolverType>(
-            mappedPointersToQIn[patchIndex],
+            &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
@@ -182,7 +183,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           );
           volumeWithHalo(1) = y - HaloSize;
           loopbodies::computeMaxEigenvalue<SolverType>(
-            mappedPointersToQIn[patchIndex],
+            &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
@@ -196,7 +197,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           );
           volumeWithHalo(1) = y + HaloSize;
           loopbodies::computeMaxEigenvalue<SolverType>(
-            mappedPointersToQIn[patchIndex],
+            &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
@@ -212,7 +213,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
 #if Dimensions == 3
           volumeWithHalo = currentVolume;
           loopbodies::computeMaxEigenvalue<SolverType>(
-            mappedPointersToQIn[patchIndex],
+            &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
@@ -226,7 +227,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           );
           volumeWithHalo(2) = z - HaloSize;
           loopbodies::computeMaxEigenvalue<SolverType>(
-            mappedPointersToQIn[patchIndex],
+            &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
@@ -240,7 +241,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           );
           volumeWithHalo(2) = z + HaloSize;
           loopbodies::computeMaxEigenvalue<SolverType>(
-            mappedPointersToQIn[patchIndex],
+            &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
             QInEnumerator,
             rawPointerToCellCentre[patchIndex],
             rawPointerToCellSize[patchIndex],
@@ -257,7 +258,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
 #pragma unroll
           for (int unknown = 0; unknown < NumberOfUnknowns; unknown++) {
             loopbodies::updateSolutionWithEigenvalueDamping(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               tempEigenvalueX,
               tempEigenvalueY,
@@ -269,7 +270,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
               currentVolume,
               unknown,
               dt[patchIndex],
-              mappedPointersToQOut[patchIndex],
+              &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
               QOutEnumerator
             );
           }
@@ -280,7 +281,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           if constexpr (EvaluateFlux) {
             auto volumeWithHalo = currentVolume;
             loopbodies::computeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -294,7 +295,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
             );
             volumeWithHalo(0) = x - HaloSize;
             loopbodies::computeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -308,7 +309,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
             );
             volumeWithHalo(0) = x + HaloSize;
             loopbodies::computeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -323,7 +324,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
 
             volumeWithHalo = currentVolume;
             loopbodies::computeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -337,7 +338,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
             );
             volumeWithHalo(1) = y - HaloSize;
             loopbodies::computeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -351,7 +352,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
             );
             volumeWithHalo(1) = y + HaloSize;
             loopbodies::computeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -367,7 +368,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
 #if Dimensions == 3
             volumeWithHalo = currentVolume;
             loopbodies::computeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -381,7 +382,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
             );
             volumeWithHalo(2) = z - HaloSize;
             loopbodies::computeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -395,7 +396,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
             );
             volumeWithHalo(2) = z + HaloSize;
             loopbodies::computeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -422,7 +423,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
                 currentVolume,
                 unknown,
                 dt[patchIndex],
-                mappedPointersToQOut[patchIndex],
+                &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
                 QOutEnumerator
               );
             }
@@ -431,7 +432,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
           if constexpr (EvaluateNonconservativeProduct) {
             auto volumeWithHalo = currentVolume;
             loopbodies::computeNonconservativeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -445,7 +446,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
             );
             volumeWithHalo(0) = x - HaloSize;
             loopbodies::computeNonconservativeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -460,7 +461,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
 
             volumeWithHalo = currentVolume;
             loopbodies::computeNonconservativeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -474,7 +475,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
             );
             volumeWithHalo(1) = y - HaloSize;
             loopbodies::computeNonconservativeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -490,7 +491,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
 #if Dimensions == 3
             volumeWithHalo = currentVolume;
             loopbodies::computeNonconservativeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -504,7 +505,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
             );
             volumeWithHalo(2) = z - HaloSize;
             loopbodies::computeNonconservativeFlux<SolverType>(
-              mappedPointersToQIn[patchIndex],
+              &mappedPointersToQIn[patchIndex * QInEnumerator.size()],
               QInEnumerator,
               rawPointerToCellCentre[patchIndex],
               rawPointerToCellSize[patchIndex],
@@ -531,17 +532,17 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
                 currentVolume,
                 unknown,
                 dt[patchIndex],
-                mappedPointersToQOut[patchIndex],
+                &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
                 QOutEnumerator
               );
             }
           }
 
           if constexpr (EvaluateMaximumEigenvalueAfterTimeStep) {
-            maxEigenvalue[patchIndex] = std::max(
-              maxEigenvalue[patchIndex],
+            newMaxEigenvalue = std::max(
+              newMaxEigenvalue,
               loopbodies::reduceMaxEigenvalue<SolverType>(
-                mappedPointersToQOut[patchIndex],
+                &mappedPointersToQOut[patchIndex * QOutEnumerator.size()],
                 QOutEnumerator,
                 rawPointerToCellCentre[patchIndex],
                 rawPointerToCellSize[patchIndex],
@@ -557,13 +558,11 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
 #if Dimensions == 3
     }
 #endif
+    maxEigenvalue[patchIndex] = newMaxEigenvalue;
   }
 
   for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
-    const double* currentQIn  = patchData.QIn[patchIndex];
-    double*       currentQOut = patchData.QOut[patchIndex];
-#pragma omp target exit data map(delete : currentQIn[0 : QInEnumerator.size()]) device(targetDevice)
-#pragma omp target exit data map(from : currentQOut[0 : QOutEnumerator.size()]) device(targetDevice)
+    std::memcpy(patchData.QOut[patchIndex], &mappedPointersToQOut[patchIndex * QOutEnumerator.size()], QOutEnumerator.size() * sizeof(double));
   }
 
   delete[] mappedPointersToQIn;
