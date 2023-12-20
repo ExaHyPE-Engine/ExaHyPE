@@ -13,12 +13,12 @@
 #include "{{MAIN_NAME}}.h"
 #include "exahype2/UnitTests.h"
 #include "exahype2/UserInterface.h"
-#include "observers/{{PROJECT_NAME}}/CreateGrid.h"
-#include "observers/{{PROJECT_NAME}}/CreateGridAndConvergeLoadBalancing.h"
-#include "observers/{{PROJECT_NAME}}/CreateGridButPostponeRefinement.h"
-#include "observers/{{PROJECT_NAME}}/InitGrid.h"
-#include "observers/{{PROJECT_NAME}}/PlotSolution.h"
-#include "observers/{{PROJECT_NAME}}/TimeStep.h"
+#include "observers/{{PROJECT_NAME}}_CreateGrid.h"
+#include "observers/{{PROJECT_NAME}}_CreateGridAndConvergeLoadBalancing.h"
+#include "observers/{{PROJECT_NAME}}_CreateGridButPostponeRefinement.h"
+#include "observers/{{PROJECT_NAME}}_InitGrid.h"
+#include "observers/{{PROJECT_NAME}}_PlotSolution.h"
+#include "observers/{{PROJECT_NAME}}_TimeStep.h"
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
 #include "repositories/DataRepository.h"
@@ -83,7 +83,7 @@ bool selectNextAlgorithmicStep() {
 
   if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
+      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::{{PROJECT_NAME}}_PlotSolution)
     );
     haveReceivedNoncriticialAssertion = true;
     logError(
@@ -102,11 +102,11 @@ bool selectNextAlgorithmicStep() {
     }
 
     peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(
-      repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing
+      repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGridAndConvergeLoadBalancing
     ));
   } else if (gridBalanced and not gridInitialised) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::InitGrid)
+      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::{{PROJECT_NAME}}_InitGrid)
     );
 
     gridInitialised = true;
@@ -127,7 +127,7 @@ bool selectNextAlgorithmicStep() {
       and
       // ensure that a proper creation has been ran before, so the mesh had the opportunity
       // to refine further if it has not done yet
-      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) == repositories::StepRepository::Steps::CreateGrid
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) == repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGrid
     ) {
       logInfo(
         "selectNextAlgorithmicStep()", "grid has been stationary for quite some time. Terminate grid construction"
@@ -147,11 +147,11 @@ bool selectNextAlgorithmicStep() {
     // Actual grid traversal choice
     if (addGridSweepWithoutGridRefinementNext) {
       peano4::parallel::Node::getInstance().setNextProgramStep(repositories::StepRepository::toProgramStep(
-        repositories::StepRepository::Steps::CreateGridButPostponeRefinement
+        repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGridButPostponeRefinement
       ));
     } else {
       peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGrid)
+        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGrid)
       );
     }
 
@@ -186,20 +186,20 @@ bool selectNextAlgorithmicStep() {
       nextMaxPlotTimeStamp = std::max(nextMaxPlotTimeStamp, nextMinPlotTimeStamp);
 
       peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
+        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::{{PROJECT_NAME}}_PlotSolution)
       );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
     } else if (repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime) {
       peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::TimeStep)
+        repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::{{PROJECT_NAME}}_TimeStep)
       );
       continueToSolve         = true;
       haveJustWrittenSnapshot = false;
     } else {
       if (not haveJustWrittenSnapshot and TimeInBetweenPlots > 0.0 and repositories::mayPlot()) {
         peano4::parallel::Node::getInstance().setNextProgramStep(
-          repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
+          repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::{{PROJECT_NAME}}_PlotSolution)
         );
         continueToSolve         = true; // don't want to terminate immediately
         haveJustWrittenSnapshot = true;
@@ -233,7 +233,7 @@ void step() {
   static int creepingNumberOfLocalCells = 0;
 
   switch (stepName) {
-  case repositories::StepRepository::Steps::CreateGridButPostponeRefinement: {
+  case repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGridButPostponeRefinement: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid-but-postpone-refinement");
 
     OTTER_PHASE_SWITCH(otter::phase::create_grid_no_refine);
@@ -243,7 +243,7 @@ void step() {
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::CreateGridButPostponeRefinement observer;
+    observers::{{PROJECT_NAME}}_CreateGridButPostponeRefinement observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
@@ -256,7 +256,7 @@ void step() {
 
     repositories::finishGridConstructionStep();
   } break;
-  case repositories::StepRepository::Steps::CreateGrid: {
+  case repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGrid: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("create-grid");
 
     OTTER_PHASE_SWITCH(otter::phase::create_grid);
@@ -266,7 +266,7 @@ void step() {
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::CreateGrid observer;
+    observers::{{PROJECT_NAME}}_CreateGrid observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
@@ -284,7 +284,7 @@ void step() {
     creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
                                  + tarch::multicore::Core::getInstance().getNumberOfThreads() * 3;
   } break;
-  case repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing: {
+  case repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGridAndConvergeLoadBalancing: {
     if (creepingNumberOfLocalCells < ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() - 1) {
       logInfo(
         "step()",
@@ -321,7 +321,7 @@ void step() {
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::CreateGridButPostponeRefinement observer;
+    observers::{{PROJECT_NAME}}_CreateGridButPostponeRefinement observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
@@ -352,7 +352,7 @@ void step() {
                                    / 2;
     }
   } break;
-  case repositories::StepRepository::Steps::InitGrid: {
+  case repositories::StepRepository::Steps::{{PROJECT_NAME}}_InitGrid: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("init-grid");
     repositories::loadBalancer.enable(false);
 
@@ -363,7 +363,7 @@ void step() {
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::InitGrid observer;
+    observers::{{PROJECT_NAME}}_InitGrid observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
@@ -376,7 +376,7 @@ void step() {
 
     repositories::finishGridInitialisationStep();
   } break;
-  case repositories::StepRepository::Steps::PlotSolution: {
+  case repositories::StepRepository::Steps::{{PROJECT_NAME}}_PlotSolution: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("plot-solution");
     const double minTimeStamp    = repositories::getMinTimeStamp();
     const double maxTimeStamp    = repositories::getMaxTimeStamp();
@@ -390,7 +390,7 @@ void step() {
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::PlotSolution observer;
+    observers::{{PROJECT_NAME}}_PlotSolution observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
@@ -403,7 +403,7 @@ void step() {
 
     repositories::finishPlottingStep();
   } break;
-  case repositories::StepRepository::Steps::TimeStep: {
+  case repositories::StepRepository::Steps::{{PROJECT_NAME}}_TimeStep: {
     tarch::logging::LogFilter::getInstance().switchProgramPhase("time-step");
     if (repositories::loadBalancer.isEnabled(false)) {
       logInfo("step()", "disable load balancing throughout initialisation (to be removed in later releases)");
@@ -417,14 +417,14 @@ void step() {
     const double minMeshSize     = repositories::getMinMeshSize();
     const double maxMeshSize     = repositories::getMaxMeshSize();
 
-    OTTER_PHASE_SWITCH(otter::phase::timestep);
+    OTTER_PHASE_SWITCH(otter::phase::{{PROJECT_NAME}}_TimeStep);
 
     repositories::startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize);
 
     OTTER_DEFINE_TASK(step_task, OTTER_NULL_TASK, otter_add_to_pool, otter::label::step);
     OTTER_TASK_START(step_task);
 
-    observers::TimeStep observer;
+    observers::{{PROJECT_NAME}}_TimeStep observer;
     watch.start();
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();

@@ -18,10 +18,10 @@ modes = {
 }
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("-j",   "--parallel-builds",          dest="j",                       type=int,   default=-1, help="Parallel builds. Set to 0 to disable compile or to -1 to use all cores")
+parser.add_argument("-j",   "--parallel-builds",          dest="j",                       type=int,   default=1, help="Parallel builds. Set to 0 to disable compile or to -1 to use all cores")
 parser.add_argument("-pd",  "--peano-dir",                dest="peanodir",                            default="../../../../../", help="Peano4 directory")
 parser.add_argument("-cd",  "--configure-dir",            dest="configuredir",                        default="../../../../../", help="Location of configure" )
-parser.add_argument("-v",   "--verbose",                  dest="verbose",                 action="store_true", default=False, help="Verbose")
+parser.add_argument("-v",   "--verbose",                  dest="verbose",                 action="store_true", default=True, help="Verbose")
 parser.add_argument("-d",   "--dimensions",               dest="dimensions",              type=int,   default=2, help="Dimensions")
 parser.add_argument("-upvd","--unknowns_per_vertex_dof",  dest="unknowns_per_vertex_dof", type=int,   default=3, help="unknowns per vertex dof")
 parser.add_argument("-et",  "--end-time",                 dest="end_time",                type=float, default=1.0, help="Number of timesteps")
@@ -92,9 +92,9 @@ if args.type=="global-fixed":
     3, #auxiliary_variables,
     min_h, max_h,
     time_step_size,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
   # class DLinearFixedTimeStep(DLinear) # just the LHS matrix modification?
   # matrices = DLinearFixedTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
@@ -106,9 +106,9 @@ if args.type=="global-adaptive":
     3, #auxiliary_variables,
     min_h, max_h,
     time_step_relaxation = 1e-2,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    source_term = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation,
+    source_term = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
   # class DLinearAdaptiveTimeStep(DLinear) # just the LHS matrix modification?
   # matrices = DLinearAdaptiveTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
@@ -131,7 +131,7 @@ assert (
     poisson_solver.name != euler_solver.name
 ), "names the solvers should not be the same"
 
-euler_solver.set_implementation(refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation)
+euler_solver.set_implementation(refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation)
 
 euler_project.add_solver(euler_solver)
 poisson_project.add_solver(poisson_solver)
@@ -187,7 +187,7 @@ euler_solver.add_user_action_set_includes( """
 #    0,       // no overlap/halo here
 #    marker.h()
 #  );
-#  repositories::InstanceOf{}.reportGradientDelta( delta );
+#  repositories::instanceOf{}.reportGradientDelta( delta );
 # """.format(args.patch_size, poisson_solver.name)
 
 #
@@ -249,20 +249,18 @@ euler_peano4_project = euler_project.generate_Peano4_project(args.verbose)
 poisson_peano4_project = poisson_project.generate_Peano4_project(args.verbose)
 
 
-#
-# Merge two Peano4 projects into one and build
-#
-# peano4_project = peano4.Project.merge(
-#    euler_peano4_project,
-#    poisson_peano4_project,
-#    project_name="EulerPoisson",
-#    executable="selfgravitation-with-petsc",
-# )
+poisson_peano4_project.output.makefile.add_h_file("""{}.h""".format(poisson_solver.name))
+poisson_peano4_project.output.makefile.add_cpp_file("""{}.cpp""".format(poisson_solver.name))
 
-euler_peano4_project.output.makefile.add_h_file("Euler.h")
-euler_peano4_project.output.makefile.add_cpp_file("Euler.cpp")
-# euler_peano4_project.output.makefile.add_h_file("Poisson.h")
-# euler_peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
+poisson_peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+if args.j==0:
+  poisson_peano4_project.generate()
+else:
+  poisson_peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+print("Poisson Peano4 Project built successfully")
+
+euler_peano4_project.output.makefile.add_h_file("""{}.h""".format(euler_solver.name))
+euler_peano4_project.output.makefile.add_cpp_file("""{}.cpp""".format(euler_solver.name))
 
 euler_peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
 if args.j==0:
@@ -271,11 +269,26 @@ else:
   euler_peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 print("Euler Peano4 Project built successfully")
 
-poisson_peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+#
+# Merge two Peano4 projects into one and build
+#
+peano4_project = peano4.Project.merge(
+   poisson_peano4_project,
+   euler_peano4_project,
+   project_name="EulerPoisson",
+   executable="selfgravitation-with-petsc",
+)
+
+# peano4_project.output.makefile.add_h_file("Poisson.h")
+# peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
+# peano4_project.output.makefile.add_h_file("Euler.h")
+# peano4_project.output.makefile.add_cpp_file("Euler.cpp")
+
+peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
 if args.j==0:
-  poisson_peano4_project.generate()
+  peano4_project.generate()
 else:
-  poisson_peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
-print("Poisson Peano4 Project built successfully")
+  peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+print("The combined Euler-Poisson Peano4 project built successfully")
 
 # print("Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")

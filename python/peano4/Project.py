@@ -338,10 +338,10 @@ class Project (object):
       # merge all steps of solversteps
       #
       for step in lhs.solversteps._steps:
-        step.name = lhs.project_name
+        # step.name = lhs.project_name
         result_project.solversteps.add_step(step)
       for step in rhs.solversteps._steps:
-        step.name = rhs.project_name
+        # step.name = rhs.project_name
         result_project.solversteps.add_step(step)
 
       #
@@ -433,12 +433,20 @@ class Project (object):
       for i in rhs.output.readme._package_descriptions:
         result_project.output.readme.add_package_description(i)
 
-      result_project.output.readme._package_descriptions = lhs.output.makefile.d["GENERATED_INCLUDE_DIRS"] | rhs.output.makefile.d["GENERATED_INCLUDE_DIRS"]
+      for i in lhs.output.readme._entries:
+        result_project.output.readme.add_entry(i)
+      for i in rhs.output.readme._entries:
+        result_project.output.readme.add_entry(i)
 
-      for artefact in result_project.output.artefacts:
-        result_project.output.add(artefact)
+      for i in lhs.output.artefacts:
+        result_project.output.add(i)
+      for i in rhs.output.artefacts:
+        result_project.output.add(i)
       
-      result_project.main.d["MAIN_NAME"] = result_project.project_name
+      result_project.main.d["HEADER_FILE_TEMPLATE"] = rhs.main.d["HEADER_FILE_TEMPLATE"]
+      result_project.main.d["CPP_FILE_TEMPLATE"] = rhs.main.d["CPP_FILE_TEMPLATE"]
+      result_project.main.d["PROJECT_NAME"] = result_project.project_name
+      result_project.main.d["MAIN_NAME"] = result_project.project_name + "-main"
 
       #
       # merge all constants
@@ -448,5 +456,22 @@ class Project (object):
       # ...
       # result_project.set_solver_repository_dict()
       # result_project.generate_solver_repository()
+
+      # print("=== BEGIN output artefacts: ===")
+      # artefacts_list = []
+      # for item in result_project.output.artefacts:
+      #   # if isinstance(item, peano4.output.Jinja2TemplatedHeaderImplementationFilePair):
+      #     artefacts_list.append(f"Item = \nHeaderFile:{type(item)}")
+      # output_str = '\n'.join(artefacts_list)
+      # print(output_str)
+      # print("=== END output artefacts: ===")
+
+      print("=== BEGIN main dict: ===")
+      main_dict = []
+      for key, value in result_project.main.d.items():
+          main_dict.append(f"Key = {key}, Value = \n{value}")
+      output_str = '\n'.join(main_dict)
+      print(output_str)
+      print("=== END main dict: ===")
 
       return result_project

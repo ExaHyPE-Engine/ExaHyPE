@@ -1,12 +1,12 @@
 // (Generated from multigrid/petsc/{{CPP_FILE_TEMPLATE}})
 #include "{{MAIN_NAME}}.h"
 
-#include "observers/{{PROJECT_NAME}}/Assemble.h"
-#include "observers/{{PROJECT_NAME}}/CreateGrid.h"
-#include "observers/{{PROJECT_NAME}}/EnumerateAndInitSolution.h"
-#include "observers/{{PROJECT_NAME}}/MapSolutionOntoMesh.h"
-#include "observers/{{PROJECT_NAME}}/Plot.h"
-#include "observers/{{PROJECT_NAME}}/Solve.h"
+#include "observers/{{PROJECT_NAME}}_Assemble.h"
+#include "observers/{{PROJECT_NAME}}_CreateGrid.h"
+#include "observers/{{PROJECT_NAME}}_EnumerateAndInitSolution.h"
+#include "observers/{{PROJECT_NAME}}_MapSolutionOntoMesh.h"
+#include "observers/{{PROJECT_NAME}}_Plot.h"
+#include "observers/{{PROJECT_NAME}}_Solve.h"
 
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
@@ -75,50 +75,50 @@ bool selectNextAlgorithmicStep() {
     auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 
     switch ( stepName ) {
-      case repositories::StepRepository::Steps::CreateGrid:
+      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGrid:
         {
             peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::EnumerateAndInitSolution )
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_EnumerateAndInitSolution )
             );
         }
         break;
      
-      case repositories::StepRepository::Steps::EnumerateAndInitSolution:
+      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_EnumerateAndInitSolution:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitPETSc )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_InitPETSc )
           );
         }
         break;
-      case repositories::StepRepository::Steps::InitPETSc:
+      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_InitPETSc:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Assemble )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_Assemble )
           );
         }
         break;
-      case repositories::StepRepository::Steps::Assemble:
+      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Assemble:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_Solve )
           );
         }
         break;
-      case repositories::StepRepository::Steps::Solve:
+      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Solve:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::MapSolutionOntoMesh )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_MapSolutionOntoMesh )
           );
         }
         break;
-      case repositories::StepRepository::Steps::MapSolutionOntoMesh:
+      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_MapSolutionOntoMesh:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_Plot )
           );
         }
         break;
-      case repositories::StepRepository::Steps::Plot:
+      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Plot:
         {
           continueToSolve = false;
         }
@@ -134,7 +134,7 @@ bool selectNextAlgorithmicStep() {
     static int globalNumberOfTrees = 0;
 
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGrid)
+      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGrid)
     );
 
     if (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps() > 5) {
@@ -165,11 +165,11 @@ void step() {
   static int creepingNumberOfLocalCells = 0;
 
   switch ( stepName ) {
-    case repositories::StepRepository::Steps::CreateGrid:
+    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGrid:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
 
-        observers::CreateGrid  observer;
+        observers::{{PROJECT_NAME}}_CreateGrid  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
@@ -177,18 +177,18 @@ void step() {
       }
       break;
     
-    case repositories::StepRepository::Steps::EnumerateAndInitSolution:
+    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_EnumerateAndInitSolution:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate-and-init-solution" );
 
-        observers::EnumerateAndInitSolution  observer;
+        observers::{{PROJECT_NAME}}_EnumerateAndInitSolution  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         enumerateMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::InitPETSc:
+    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_InitPETSc:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-PETSc" );
 
@@ -202,11 +202,11 @@ void step() {
         initMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::Assemble:
+    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Assemble:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "assemble" );
 
-        observers::Assemble  observer;
+        observers::{{PROJECT_NAME}}_Assemble  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
 
@@ -214,7 +214,7 @@ void step() {
         assembleMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::Solve:
+    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Solve:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
 
@@ -225,11 +225,11 @@ void step() {
         solveMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::MapSolutionOntoMesh:
+    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_MapSolutionOntoMesh:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "map-solution-onto-mesh" );
 
-        observers::MapSolutionOntoMesh  observer;
+        observers::{{PROJECT_NAME}}_MapSolutionOntoMesh  observer;
         watch.start();
 
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
@@ -238,11 +238,11 @@ void step() {
         mapSolutionOntoMeshMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::Plot:
+    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Plot:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
 
-        observers::Plot  observer;
+        observers::{{PROJECT_NAME}}_Plot  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();

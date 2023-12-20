@@ -74,25 +74,25 @@ mark these steps as private via a leading underscore.
     self._solvers = []
 
     self.algorithm_step_create_grid = peano4.solversteps.Step(
-      "CreateGrid", False
+      self._project.project_name+"_CreateGrid", False
     )
     self.algorithm_step_enumerate_and_init_solution = peano4.solversteps.Step(
-      "EnumerateAndInitSolution", False
+      self._project.project_name+"_EnumerateAndInitSolution", False
     )
     self._algorithm_step_init_petsc = peano4.solversteps.Step(
-      "InitPETSc", False
+      self._project.project_name+"_InitPETSc", False
     )
     self.algorithm_step_assemble = peano4.solversteps.Step(
-      "Assemble", False
+      self._project.project_name+"_Assemble", False
     )
     self._algorithm_step_solve = peano4.solversteps.Step(
-      "Solve", False
+      self._project.project_name+"_Solve", False
     )
     self.algorithm_step_map_solution_onto_mesh = peano4.solversteps.Step(
-      "MapSolutionOntoMesh", False
+      self._project.project_name+"_MapSolutionOntoMesh", False
     )
     self.algorithm_step_plot = peano4.solversteps.Step(
-      "Plot", False
+      self._project.project_name+"_Plot", False
     )
                 
     

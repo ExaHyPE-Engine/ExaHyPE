@@ -69,22 +69,22 @@ class Project(object):
         self._tracer_particle_sets = []
 
         self.create_grid = peano4.solversteps.Step(
-            "CreateGrid", False
+            self._project.project_name+"_CreateGrid", False
         )
         self.init_grid = peano4.solversteps.Step(
-            "InitGrid", False
+            self._project.project_name+"_InitGrid", False
         )
         self.create_grid_but_postpone_refinement = peano4.solversteps.Step(
-            "CreateGridButPostponeRefinement", False
+            self._project.project_name+"_CreateGridButPostponeRefinement", False
         )
         self.create_grid_and_converge_lb = peano4.solversteps.Step(
-            "CreateGridAndConvergeLoadBalancing", False
+            self._project.project_name+"_CreateGridAndConvergeLoadBalancing", False
         )
         self.plot_solution = peano4.solversteps.Step(
-            "PlotSolution", False
+            self._project.project_name+"_PlotSolution", False
         )
         self.perform_time_step = peano4.solversteps.Step(
-            "TimeStep", False
+            self._project.project_name+"_TimeStep", False
         )
 
 
