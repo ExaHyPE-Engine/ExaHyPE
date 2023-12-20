@@ -1,7 +1,7 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 template <typename Particle>
-void swift2::statistics::reduceVelocityAndSearchRadius(Particle*  particle) {
+void swift2::statistics::reduceVelocityAndSearchRadius_without_check(Particle*  particle) {
   // @todo Nicht so schoen, weil wir ja schon eigentlich eine Reduktion ueber das lokale set erst mal machen sollten
 /*
   if (not particles.empty()) {

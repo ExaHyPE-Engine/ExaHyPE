@@ -191,15 +191,69 @@ out one by one and to let a profiler guide any changes.
 
 ### Move if checks out of the kernels
 
+Users typically start from a generic usage of the iterators in ParticleSetIterators.h.
+That is, they simply type down swift2::kernels::forAllParticlePairs() and hand
+in their compute kernels of choice. As kernels always should check internally
+if they are supposed to run or not (consult @ref swift_particle_new_solver "how to introduce a new solver"),
+this works in most of the cases.
+
+However, it might make sense to use the "shall I run" predicate ahead of the 
+actual kernel invocation: If a particle is outside of a cell in a cell kernel,
+it might be reasonable not even to start to run over all the (active) particles
+around it. We can skip the iteration right from the start.
+
+For this, the iterators accept guard functions. If you start from 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cell_kernel="::swift2::kernels::forAllParticlePairs(marker, localParticles, activeParticles, ::swift2::kernels::densityKernel<globaldata::{}> );".format(self.name),
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+you can inject the checks manually by switching to 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+cell_kernel="""
+  ::swift2::kernels::forAllParticlePairs(
+    marker, 
+    localParticles, 
+    activeParticles, 
+    ::swift2::kernels::densityKernel<globaldata::{0}>,
+    ::swift2::kernels::localParticleCanBeWorkedOnInCellKernel<globaldata::{0}>
+  );
+""".format(self.name),
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is not always beneficial to move predicates outside, as this introduces 
+additional outer branching. You have to test and see. 
+
 
 ### Switch to vectorised kernels
 
+If kernels consume a lot of compute time, it is reasonable to switch the 
+compute kernels. This again can be done through the iterators. Replace 
+the ::swift2::kernels::forAllParticlePairs() call with a vectorised 
+counterpart. There are at multiple variants in the ParticleSetIterator.h
+file. It is never clear a priori which one yields the best performance.
 
-### Use two-stage vectorisation
+Please note that vectorised kernels have a slightly different call 
+signature. Besides the particle sets and marker, all of them need meta data
+how the particle sets are arranged in memory. In the Python API, they need
+the numberOfAssignedParticles, numberOfLocalParticles, or 
+numberOfActiveParticles, respectively. Obviously, vectorised kernels work
+if and only if you have chosen a vector-friendly memory layout.
 
-
-
-
+A lot of particle kernels vectorise poorly, as they have internal branching.
+Therefore, solver developers might offer them in two variants: The plain one
+where the particle updates are protected with a validation predicate 
+("am I supposed to update the particle") and a variant which works with
+masking, i.e. where the final update is multiplied with either 0 or 1 and 
+therefore either activated or disabled. Masking can be very expensive, as 
+it means that we might do a lot of calculations. However, it can allow 
+vectorisation. To make a long story short: Some kernels come along with a 
+variant that is fast yet does not vectorise and a flavour which is not that
+efficient yet vectorises. You have to test combinations of them with the
+iterators. There is @ref swift_runtime_analysis "a page on runtime analysis" 
+hints which might be useful in this context.
+  
 
 
 # Further References

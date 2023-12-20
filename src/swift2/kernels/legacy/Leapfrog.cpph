@@ -2,38 +2,36 @@
 #include "tarch/la/ScalarOperations.h"
 #include "tarch/la/VectorOperations.h"
 #include "tarch/la/VectorVectorOperations.h"
+#include "equation_of_state.h"
+#include "hydro_dimensions.h"
+#include "kernel_hydro.h"
 
-template <typename ParticleContainer>
-void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
 
-  const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                                .getMinTimeStepSize();
+template <typename Particle>
+void swift2::kernels::legacy::leapfrog_drift_global_time_step_size(
+  Particle* particle
+) {
+  const double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
 
-  for (auto* particle : localParticles) {
+  // Drift the particle (update position for a full time-step). It's important
+  // to take the "V_full" here, not the fluid velocity V. V_full doesn't get
+  // touched outside of kicks. V will be interpolated/integrated in time as the
+  // time step progresses. V_full is the correct choice here.
+  particle->setX(particle->getX() + timeStepSize * particle->getV_full());
 
-    if (swift2::kernels::localParticleCanBeMoved(particle) and not particle->getIsBoundaryParticle()) {
+  assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
 
-      // Drift the particle (update position for a full time-step). It's important
-      // to take the "V_full" here, not the fluid velocity V. V_full doesn't get
-      // touched outside of kicks. V will be interpolated/integrated in time as the
-      // time step progresses. V_full is the correct choice here.
+    // Note that original SWIFT predicts the velocities at this point. We moved that
+    // into computePredictHydro()
 
-      particle->setX(particle->getX() + timeStepSize * particle->getV_full());
-
-      assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
-
-      // Note that original SWIFT predicts the velocities at this point. We moved that
-      // into computePredictHydro()
-
-      /* Flag this particle as Moved */
-      particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
-    }
-  }
+  /* Flag this particle as Moved */
+  particle->setMoveState(Particle::MoveState::Moved);
 }
 
 
+/*
 template <typename ParticleContainer>
-void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
+void swift2::kernels::legacy::computeLeapfrogDriftWithGlobalTimeStepSize(
   const ParticleContainer& particles, int numberOfParticles
 ) {
 
@@ -61,55 +59,36 @@ void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
     particle->setMoveState(newState);
   }
 }
+*/
 
 
+/*
 template <typename ParticleContainer>
-void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
+void swift2::kernels::legacy::computeLeapfrogKickWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
   const double timeStepSizeKick = 0.5
                                   * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                                       .getMinTimeStepSize();
   for (auto* particle : localParticles) {
-    if (swift2::kernels::localParticleCanBeWorkedOnVertexKernel(particle) and not particle->getIsBoundaryParticle()) {
+    if (swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(particle) and not particle->getIsBoundaryParticle()) {
 
       // Kick the particle
       particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
     }
   }
 }
+*/
 
 
-template <typename ParticleContainer>
-void swift2::timestepping::computeSPHLeapfrogKickWithGlobalTimeStepSize(
-  const ParticleContainer& localParticles, const int kickNumber
+template <typename Particle>
+void swift2::kernels::legacy::leapfrog_kick_global_time_step_size(
+  Particle*  particle
 ) {
-  const double timeStepSizeKick = 0.5
-                                  * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                                      .getMinTimeStepSize();
-  for (auto* particle : localParticles) {
-    if (swift2::kernels::localParticleCanBeWorkedOnVertexKernel(particle)) {
+  const double timeStepSizeKick = 0.5 * Particle::getSpecies().getMinTimeStepSize();
 
-      /* Kick the particle */
-      particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
-
-      swift2::kernelPlaceholders::hydro_kick_extra(particle);
-      /* In SWIFT SPH, Kick 1 and Kick 2 are slightly different as Kick 2 does
-       * some extra operations. Not relevant for non-hydro systems */
-      if (kickNumber == 2) {
-        swift2::kernelPlaceholders::hydro_reset_predicted_values(particle);
-      }
-    }
-  }
+  /* Kick the particle */
+  particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
 }
 
-
-template <typename ParticleContainer>
-void swift2::timestepping::computePredictHydro(const ParticleContainer& localParticles) {
-  for (auto* particle : localParticles) {
-    if (swift2::kernels::localParticleCanBeWorkedOnVertexKernel(particle)) {
-      swift2::kernelPlaceholders::hydro_predict_extra(particle);
-    }
-  }
-}
 
 /*
  *
@@ -119,23 +98,70 @@ void swift2::timestepping::computePredictHydro(const ParticleContainer& localPar
  *
  */
 
+/*
 template <typename ParticleContainer>
-void swift2::timestepping::moveParticleIntoCriticalLine(const ParticleContainer& localParticles) {
+void swift2::kernels::legacy::moveParticleIntoCriticalLine(const ParticleContainer& localParticles) {
   double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
                           .getMinTimeStepSize();
   for (auto* particle : localParticles) {
     if (swift2::kernels::localParticleCanBeMoved(particle) and not particle->getIsBoundaryParticle()) {
 
-      /*
+
        * Disappearing particle test.
        * Just move the position to the central axis of a cell and watch it
        * disappear.
-       */
+
       tarch::la::Vector<Dimensions, double> xCritical = {1.0 / 6.0, 0.5};
       particle->setX(xCritical);
 
-      /* Flag this particle as Moved */
+       Flag this particle as Moved
       particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
     }
+  }
+}
+*/
+
+
+template <typename Particle>
+void swift2::kernels::legacy::hydro_reset_predicted_values(Particle* localParticle) {
+
+  /* Re-set the predicted velocities */
+  localParticle->setV(localParticle->getV_full());
+
+  /* Re-set the entropy */
+  localParticle->setU(localParticle->getU_full());
+
+  /* Re-compute the pressure */
+  const double pressure = eos::gas_pressure_from_internal_energy(
+    localParticle->getDensity(), localParticle->getU()
+  );
+
+  /* Compute the new sound speed */
+  const double soundspeed = eos::gas_soundspeed_from_pressure(localParticle->getDensity(), pressure);
+
+  /* Update variables */
+  localParticle->setPressure(pressure);
+  localParticle->setSoundSpeed(soundspeed);
+  localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), 2.0 * soundspeed));
+}
+
+
+template <typename Particle>
+void swift2::kernels::legacy::hydro_kick_extra_global_time_step_size(Particle* localParticle) {
+
+  /* In principle, this time-step could be different than that used for normal kick */
+  double dt_kick_therm = 0.5 * localParticle->getSpecies().getMinTimeStepSize();
+
+  /* Integrate the internal energy forward in time */
+  const double delta_u = localParticle->getUDot() * dt_kick_therm;
+
+  /* Do not decrease the energy by more than a factor of 2 */
+  localParticle->setU_full(std::max(localParticle->getU_full() + delta_u, localParticle->getU_full() * 0.5));
+
+  /* Check against absolute minimum.
+   * Default value is zero. */
+  if (localParticle->getU_full() < 0.0) {
+    localParticle->setU_full(0.0);
+    localParticle->setUDot(0.0);
   }
 }

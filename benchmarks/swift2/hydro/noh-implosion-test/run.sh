@@ -6,14 +6,14 @@ export PYTHONPATH=$PYTHONPATH:../../../../python
 
 # Parameters
 TIMESTEP_SIZE=0.0001
-END_TIME=0.0001
+END_TIME=0.001
 #N_PART=2000
-N_PART=200
-PLOT_DELTA=0
+N_PART=240
+PLOT_DELTA=0.0
 
 # Run python script to generate the experiment
-for REALISATION in domain-decomposition.scattered
+for REALISATION in domain-decomposition.scattered.no-optimisation
 do
-  python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v
+  python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m asserts
 done
 

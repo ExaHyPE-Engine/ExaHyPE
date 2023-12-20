@@ -5,6 +5,8 @@
 #include <list>
 #include <vector>
 
+#include "swift2/kernels/ParticleUpdatePredicates.h"
+
 namespace swift2 {
   namespace statistics {
     /**
@@ -14,9 +16,16 @@ namespace swift2 {
      * This
      */
     template <typename Particle>
-    void reduceVelocityAndSearchRadius(
+    void reduceVelocityAndSearchRadius_without_check(
       Particle*        particle
     );
+
+    template <typename Particle>
+    void reduceVelocityAndSearchRadius(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+      if (::swift2::kernels::localParticleCanBeWorkedOnInVertexKernel(marker,localParticle)) {
+        reduceVelocityAndSearchRadius_without_check(&localParticle);
+      }
+    }
   } // namespace statistics
 } // namespace swift2
 

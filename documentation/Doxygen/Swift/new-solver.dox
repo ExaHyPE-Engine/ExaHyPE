@@ -307,8 +307,8 @@ have to commit to a few basic conventions:
    kernel (unary), it should check that the particle has not been moved 
    meanwhile and hence is updated twice. For a cell (binary) kernel, it should
    check that the particle resides within the cell of interest. For both 
-   checks, Swift provides the generic check routines localParticleCanBeWorkedOnVertexKernel()
-   and localParticleCanBeWorkedOnCellKernel() which usually serve the needs.
+   checks, Swift provides the generic check routines localParticleCanBeWorkedOnInVertexKernel()
+   and localParticleCanBeWorkedOnInCellKernel() which usually serve the needs.
 4. Kernels can be either void or return a value. However, any assumption that
    some data is to be (globally) reduced has to be documented explicitly, and 
    it will become the responsibility of the user to care for this reduction.
@@ -328,7 +328,7 @@ engineers (see remarks below).
 
 
 
-# Tune a solver type
+# Tune a kernel realisation
 
 Tuning a solver can mean various things. First, users can tune
 their code by picking an optimising @ref swift_graph_compiler "graph compiler".
@@ -343,82 +343,16 @@ a longer discussion at @ref page_swift_performance_optimisation.
 
 
 Finally, users can start to use vectorisation over kernels. This section
-here describes how you prepare compute kernels.
+describes how you prepare compute kernels. Vectorisation should always be
+guided by compiler feedback. We have @ref swift_runtime_analysis "collected some guidance"
+how to extract the relevant knowledge from the compiler.
 
-
-Next to this, users can start to vectorise the actual compute kernels. 
-For this, they also have to optimise the memory arrangements, i.e. have to 
-ensure that Swift works with continuous data chunks and uses coalesced 
-memory accesses.
-to write kernels which vectorise properly.
-This page also discusses how to tune compute kernels that have been 
-introduced.
-In this context, it makes sense to read through the description of 
-@ref page_toolbox_particles_mesh_traversal "Peano's optimised memory storage schemes".
-
-
-
-Some of Swift's solvers are already well-prepared to exploit the knowledge about
-optimised memory layouts and proper setups of action sets. Once you have
-followed the steps above, you can now activate this vectorisation. It differs
-from solver to solver how to do this, but most offer a boolean flag in their
-constructor.
 
 ### Step 4.1: Making your kernels vectoriser friendly
 
 While vectorising any non-trivial kernel is as much art as it is engineering, there are common steps most kernels can benefit from.
 
 
-#### Analyse tool feedback 
-
-Start by gathering vectoriser output. If you use LLVM/Clang, recompile the appropriate object file with the flags 
- ~~~~~~~~~~~~~~~~~~~~~~~~~
--Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize`
- ~~~~~~~~~~~~~~~~~~~~~~~~~
- 
-Find the desired loop in the output. For templates, the reported file/line is of the template, not the template instantiation location. When working with nested loops, usually only the innermost loop gets vectorised, so focus on this one.
-Sample expected output:
-
- ~~~~~~~~~~~~~~~~~~~~~~~~~
-../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:481:11: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
-         for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
- ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Sometimes the vectoriser only mentions that the loop isn't vectorised without 
-mentioning why. This is usually the case where the are multiple issues. A safe
-point in this case is it to start to try to inline any major functions called 
-inside the loop. If your kernel consists of a loop that calls a single 
-interaction function, manually inline this function.
-
-
-The Intel toolchain is a little bit more convenient:
-Include '''-O3 -xHost -qopt-report=3''' in the compile call. This make the
-compiler yield a .optrpt text file, which contains the actual optimisation 
-feedback. Often, you don't want to configure with the optimisation report
-and get one optimisation report per file. If you know where your routines
-are used, generate your code plus the Makefile through Python and, afterwards,
-manipulate the Makefile:
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
-	rm observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.o
-	$(CXX) -qopt-report=3 $(CXXFLAGS) -c -o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.cpp
-	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-where the observer file names have to be replaced with the name of the file
-which uses your altered kernel invocation.
-This tweaked makefile builds all object files. After that, it deletes the object
-file behind the action set StephydroPartForceLoop. This is the step where the
-force kernel is actually used. We then retranslate this single object file with
-Intel's -opt-report flag which provides ample evidence which vectorisation
-optimisation has been performed by the compiler.
-
-You should get a file observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.optrpt
-which summarises if the compiler has vectorised your code and even how much
-speedup you might expect. Please note that every rerun of the Python script
-overwrites the Makefile. However, there's no need to do this while you tweak
-the kernels. Just re-invoke make.
 
 
 #### Fix issues
@@ -641,36 +575,6 @@ and replace this kernel invocation by
 Note that the force kernel is now replaced by a rewrite that we will discuss
 next. You might be able to work without such an overwrite in your particular
 case.
-
-
-
-
-
-
-## Python API
-
-Vectorisation can work if and only if the underlying memory over multiple
-particles is continuous and therefore allows for coalescent memory access.
-Likley, it nowadays can work for scattered memory, too, but that is more
-work. You would then have to gather the particles before you invoke the
-actual compute kernel. I discuss here only solutions where this gathering
-is already done within the mesh. If you decide to gather yourself, you can,
-after this is complete, follow the recipes below.
-
-Within the Python API, you simply exchange calls to genereric compute kernels
-over lists of particle pointers with alternative kernel invocations:
-
-1. Delegate the responsibility to use a proper memory pool to the user.
-   This can be done via a comment.
-2. Ensure that the step you want to vectorise can be based upon continuous
-   memory. You can either be sure that this is the case (as you know that
-   previous steps have not altered the memory layout), or you can use a
-   graph compiler which always inserts explicit sorting steps to ensure
-   that all data is continuous.
-3. Replace the cell kernel calls with calls to your new bespoke kernels
-   that we introduce below.
-4. Ensure that the graph compiler uses peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
-   to run through the mesh and build up the local and active sets.
 
 
 

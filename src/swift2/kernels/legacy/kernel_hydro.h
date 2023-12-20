@@ -17,6 +17,7 @@
 
 
 namespace swift2 {
+  namespace kernels {
   namespace legacy {
     namespace kernelHydro {
 
@@ -227,4 +228,5 @@ namespace swift2 {
 
     } // namespace kernelHydro
   }   // namespace legacy
+  }
 } // namespace swift2

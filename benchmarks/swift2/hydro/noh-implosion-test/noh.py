@@ -521,7 +521,7 @@ if __name__ == "__main__":
             initialisation_call=initialisation_snippet,
             distance_between_particles_along_one_axis=1.0 / args.particle_number,
             additional_includes="""
-    #include "swift2/legacy/equation_of_state.h"
+    #include "swift2/kernels/legacy/equation_of_state.h"
     """,
         )
     )

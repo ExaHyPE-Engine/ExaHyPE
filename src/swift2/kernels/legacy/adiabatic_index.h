@@ -8,6 +8,7 @@
  */
 
 namespace swift2 {
+  namespace kernels {
   namespace legacy {
     namespace adiabaticIndex {
 
@@ -505,4 +506,5 @@ namespace swift2 {
 
     } // namespace adiabaticIndex
   }   // namespace legacy
+  }
 } // namespace swift2

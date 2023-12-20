@@ -1,7 +1,8 @@
 #pragma once
 
 #include "cmath"
-#include "swift2/legacy/adiabatic_index.h"
+
+#include "adiabatic_index.h"
 
 
 /**
@@ -12,6 +13,7 @@
  */
 
 namespace swift2 {
+  namespace kernels {
   namespace legacy {
     namespace eos {
 
@@ -153,4 +155,5 @@ namespace swift2 {
 
     } // namespace eos
   }   // namespace legacy
+  }
 } // namespace swift2
