@@ -32,16 +32,18 @@ Sorting_InsertSweeps = "insert-sorts"
 Sorting_OnTheFly = "sort-on-the-fly"
 SortingVariants = [Sorting_InsertSweeps, Sorting_OnTheFly]
 
-Enable_VectorisationOfAllComparisons = "vectorise-all"
-Enable_VectorisationOfDistanceChecks = "vectorise-distance-checks"
+VectorisationOffNoOptimisation = "no-optimisation"
+VectorisationOffOuterGuards    = "outer-guards"
+VectorisationOfAllComparisons  = "vectorise-all"
+VectorisationOfDistanceChecks  = "vectorise-distance-checks"
 VectorisationVariants = [
-    Enable_VectorisationOfAllComparisons,
-    Enable_VectorisationOfDistanceChecks,
+    VectorisationOfAllComparisons,
+    VectorisationOfDistanceChecks,
 ]
 
 
 Choices = (
-    [x + "." + Storage_Scattered for x in ParallelisationVariants]
+    [x + "." + Storage_Scattered + "." + y for x in ParallelisationVariants for y in [VectorisationOffNoOptimisation,VectorisationOffOuterGuards]]
     + [
         x + "." + y + "." + z
         for x in ParallelisationVariants
@@ -74,18 +76,6 @@ def use_globally_continuous_data_layout(realisation):
 
     """
     return realisation.split(".")[1] == Storage_GlobalContinuous
-
-
-def use_vectorised_kernels(realisation):
-    """!
-
-    @param realisation: String from Choices
-
-    """
-    return (
-        len(realisation.split(".")) > 3
-        and realisation.split(".")[3] == Enable_Vectorisation
-    )
 
 
 def use_on_the_fly_sorting(realisation):
@@ -318,17 +308,25 @@ if __name__ == "__main__":
         )
     )
 
-    particle_interaction_kernel_realisation = (
-        swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.DEFAULT
-    )
-    if Enable_VectorisationOfDistanceChecks in args.realisation:
+    if VectorisationOffNoOptimisation in args.realisation:
         particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_DISTANCE_CHECKS_AND_UNARY_OPERATIONS
+            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
         )
-    elif Enable_VectorisationOfAllComparisons in args.realisation:
+    elif VectorisationOffOuterGuards in args.realisation:
+        particle_interaction_kernel_realisation = (
+            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
+        )
+    elif VectorisationOfDistanceChecks in args.realisation:
+        particle_interaction_kernel_realisation = (
+            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS
+        )
+    elif VectorisationOfAllComparisons in args.realisation:
         particle_interaction_kernel_realisation = (
             swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
         )
+    else:
+        raise NotImplemented()
+
 
     particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
         name=name,
