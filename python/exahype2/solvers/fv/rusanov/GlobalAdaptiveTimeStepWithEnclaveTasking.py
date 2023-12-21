@@ -99,14 +99,14 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
       solver_variant         = SolverVariant.Stateless,
-      kernel_variant         = KernelVariant.VolumeWiseAoS
+      kernel_variant         = KernelVariant.VolumeWiseSoA
     )
 
     self._fused_compute_kernel_call_gpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=True, 
       solver_variant         = SolverVariant.AcceleratorWithExplicitCopy,
-      kernel_variant         = KernelVariant.PatchWiseAoSUSM
+      kernel_variant         = KernelVariant.VolumeWiseSoA
     )
 
     solver_code_snippets = AdaptiveTimeSteppingCodeSnippets(self._time_step_relaxation)
