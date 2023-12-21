@@ -24,14 +24,12 @@ void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseStateless(CellData& pat
   const TempDataEnumeratorType                 eigenvalueEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
   const TempDataEnumeratorType                 ncpEnumerator(1, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
 
-  alignas(AlignmentOnHeap) double tempFlux[3][fluxEnumerator.size()]; // TODO: Do we want to use VLA here?
+  alignas(AlignmentOnHeap) double tempFlux[3][fluxEnumerator.size()];
   alignas(AlignmentOnHeap) double tempEigenvalue[3][eigenvalueEnumerator.size()];
   alignas(AlignmentOnHeap) double tempNonconservativeProduct[3][ncpEnumerator.size()];
 
-// TODO: Use loopParallelism.
-// TODO: parallel for: We need to split up the parallel teams/threads depending on the number of spacetrees we have per node.
-#pragma omp simd collapse(3)                                                     // TODO: Where can we apply nowait?
-  for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) { // TODO: Can we play around with the order of the loops here?
+#pragma omp parallel for simd collapse(Dimensions + 1)
+  for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
 #if Dimensions == 3
     for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
 #endif

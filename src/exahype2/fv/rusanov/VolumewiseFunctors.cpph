@@ -34,7 +34,7 @@ void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseFunctors(
   alignas(AlignmentOnHeap) double tempEigenvalue[3][eigenvalueEnumerator.size()];
   alignas(AlignmentOnHeap) double tempNonconservativeProduct[3][ncpEnumerator.size()];
 
-#pragma omp simd collapse(3)
+#pragma omp parallel for simd collapse(Dimensions + 1)
   for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
 #if Dimensions == 3
     for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
