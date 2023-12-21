@@ -616,7 +616,7 @@ if __name__ == "__main__":
             sys.exit(1)
 
         if verbose:
-            print("Comparing against", target_branch, "branch")
+            print("Comparing against", target_branch, "branch.")
         # No file list means we're checking for git diffs
         # So get file list from a git diff now
         gitdiff = subprocess.run(
