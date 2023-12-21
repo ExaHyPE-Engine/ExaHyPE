@@ -9,7 +9,7 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
 
   foreach(dimension IN LISTS WITH_DIMENSIONS)
     add_library(SWIFT2Core${dimension}d_${mode_lower} STATIC)
-    display_header("Creating Makefile of SWIFT2Core${dimension}d_${mode_lower}")
+    #display_header("Creating Makefile of SWIFT2Core${dimension}d_${mode_lower}")
 
     target_sources(SWIFT2Core${dimension}d_${mode_lower} PRIVATE ${SOURCES})
     target_include_directories(SWIFT2Core${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)

@@ -9,7 +9,7 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
 
   foreach(dimension IN LISTS WITH_DIMENSIONS)
     add_executable(UnitTests${dimension}d_${mode_lower})
-    display_header("Creating Makefile of UnitTests${dimension}d_${mode_lower}")
+    #display_header("Creating Makefile of UnitTests${dimension}d_${mode_lower}")
     add_test(NAME UnitTests${dimension}d_${mode_lower} COMMAND UnitTests${dimension}d_${mode_lower})
 
     target_sources(UnitTests${dimension}d_${mode_lower} PRIVATE ${SOURCES})

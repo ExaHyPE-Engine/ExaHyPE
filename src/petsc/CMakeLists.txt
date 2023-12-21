@@ -8,7 +8,7 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
   string(TOUPPER ${mode} mode_upper)
 
   add_library(PETSc_${mode_lower} STATIC)
-  display_header("Creating Makefile of PETSc_${mode_lower}")
+  #display_header("Creating Makefile of PETSc_${mode_lower}")
 
   target_sources(PETSc_${mode_lower} PRIVATE ${SOURCES})
   target_include_directories(PETSc_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
