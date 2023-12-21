@@ -132,12 +132,15 @@ void reportRuntime(const std::string& kernelIdentificator, const ::tarch::timing
   std::stringstream ss;
   ss << std::string(150, '-') << "\n";
   ss << kernelIdentificator << ":\n\t";
-  ss << timingKernelLaunch.getValue() << ",\n\t";
-  ss << (timingKernelLaunch.getValue() / patches / NumberOfFiniteVolumesPerPatch) << ",\n\t";
-  ss << timingComputeKernel.getValue() << ",\n\t";
-  ss << (timingComputeKernel.getValue() / patches / NumberOfFiniteVolumesPerPatch) << ",\n\t";
-  ss << timingKernelLaunch.toString();
-  ss << ",\n\t" << timingComputeKernel.toString();
+
+  ss << timingComputeKernel.getValue() << " |\n\t";
+  ss << (timingComputeKernel.getValue() / patches / NumberOfFiniteVolumesPerPatch) << " |\n\t";
+  ss << timingComputeKernel.toString() << " |\n\t";
+
+  ss << timingKernelLaunch.getValue() << " |\n\t";
+  ss << (timingKernelLaunch.getValue() / patches / NumberOfFiniteVolumesPerPatch);
+  ss << " |\n\t" << timingKernelLaunch.toString();
+
   logInfo("reportRuntime()", ss.str());
 }
 
@@ -453,12 +456,12 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
   ss << std::left;
   ss << std::string(150, '-') << "\n";
   ss << "Kernel ID:\n\t";
-  ss << "Kernel Launch Time,\n\t";
-  ss << "Kernel Launch Time (Normalised),\n\t";
-  ss << "Compute Kernel Time,\n\t";
-  ss << "Compute Kernel Time (Normalised),\n\t";
-  ss << "Kernel Launch String,\n\t";
-  ss << "Compute Kernel String";
+  ss << "Compute Kernel Time |\n\t";
+  ss << "Compute Kernel Time (Normalised) |\n\t";
+  ss << "Compute Kernel String |\n\t";
+  ss << "Kernel Launch Time |\n\t";
+  ss << "Kernel Launch Time (Normalised) |\n\t";
+  ss << "Kernel Launch String";
 
   if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
     logInfo("runBenchmarks()", "Number of patches per rank: " << localPatches);
@@ -1793,7 +1796,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         EvaluateSource,
         EvaluateMaximumEigenvalueAfterTimeStep,
         ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, volume-wise, AoS",
+      "device(s) " + deviceString + ", stateless, volume-wise, AoS, copy",
       launchingThreads,
       device,
       localPatches
@@ -1810,7 +1813,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         EvaluateSource,
         EvaluateMaximumEigenvalueAfterTimeStep,
         ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, volume-wise, SoA",
+      "device(s) " + deviceString + ", stateless, volume-wise, SoA, copy",
       launchingThreads,
       device,
       localPatches
@@ -1827,7 +1830,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         EvaluateSource,
         EvaluateMaximumEigenvalueAfterTimeStep,
         ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, volume-wise, AoSoA",
+      "device(s) " + deviceString + ", stateless, volume-wise, AoSoA, copy",
       launchingThreads,
       device,
       localPatches
@@ -1974,7 +1977,7 @@ int main(int argc, char** argv) {
   if (::tarch::mpi::Rank::getInstance().getRank() == ::tarch::mpi::Rank::getGlobalMasterRank()) {
     logInfo("main()", "Dimensions: " << Dimensions);
     logInfo("main()", "Number of threads launching compute kernels: " << NumberOfLaunchingThreads);
-    logInfo("main()", "Number of total patches per thread/compute kernel launch to study: " << toString(NumberOfPatchesToStudy));
+    logInfo("main()", "Number of patches per thread/compute kernel launch to study: " << toString(NumberOfPatchesToStudy));
     logInfo("main()", "Number of compute threads: " << ::tarch::multicore::Core::getInstance().getNumberOfThreads());
     logInfo("main()", "Number of MPI ranks: " << ::tarch::mpi::Rank::getInstance().getNumberOfRanks());
     logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
