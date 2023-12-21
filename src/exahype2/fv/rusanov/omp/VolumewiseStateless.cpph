@@ -56,7 +56,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
   map(to : \
     tempFluxX[0 : fluxEnumerator.size()], \
     tempFluxY[0 : fluxEnumerator.size()], \
-    tempFluxY[0 : fluxEnumerator.size()], \
+    tempFluxZ[0 : fluxEnumerator.size()], \
     tempEigenvalueX[0 : eigenvalueEnumerator.size()], \
     tempEigenvalueY[0 : eigenvalueEnumerator.size()], \
     tempEigenvalueZ[0 : eigenvalueEnumerator.size()], \
@@ -73,11 +73,9 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless(int targ
     mappedPointersToQOut[0 : numberOfCells * QOutEnumerator.size()])
   // clang-format on
   for (int patchIndex = 0; patchIndex < numberOfCells; patchIndex++) {
+#pragma omp parallel for simd collapse(Dimensions) reduction(max : newMaxEigenvalue) schedule(static, 1)
 #if Dimensions == 3
-#pragma omp parallel for simd collapse(3) reduction(max : newMaxEigenvalue) schedule(static, 1)
     for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
-#else
-#pragma omp parallel for simd collapse(2) reduction(max : newMaxEigenvalue) schedule(static, 1)
 #endif
       for (int y = 0; y < NumberOfVolumesPerAxisInPatch; y++) {
         for (int x = 0; x < NumberOfVolumesPerAxisInPatch; x++) {
