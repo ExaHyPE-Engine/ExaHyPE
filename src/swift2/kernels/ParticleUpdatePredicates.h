@@ -104,7 +104,8 @@ namespace swift2 {
     ) {
       return &localParticle != &activeParticle
          and not localParticle.getCellHasUpdatedParticle()
-         and marker.isContained(localParticle.getX());
+         and marker.isContained(localParticle.getX())
+         and localParticle.getParallelState() == Particle::ParallelState::Local;
     }
 
 
@@ -113,7 +114,8 @@ namespace swift2 {
       const peano4::datamanagement::CellMarker& marker, const Particle& localParticle
     ) {
       return not localParticle.getCellHasUpdatedParticle()
-         and marker.isContained(localParticle.getX());
+         and marker.isContained(localParticle.getX())
+         and localParticle.getParallelState() == Particle::ParallelState::Local;
     }
 
 

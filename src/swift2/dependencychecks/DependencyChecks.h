@@ -50,7 +50,13 @@ namespace swift2 {
        * validation usually is enforced by assertions, but this has to happen
        * outside. The routine here only determines if a state is valid or not.
        */
-      bool isValid(Invariant policy, bool workOnParticle, int numberOfUpdates, int numberOfMaskOuts);
+      bool isValid(
+        Invariant policy,
+        bool      workOnParticle,
+        bool      particleIsLocal,
+        int       numberOfUpdates,
+        int       numberOfMaskOuts
+      );
 
       /**
        * Do all previous steps have to alter state at least once.
@@ -110,7 +116,14 @@ namespace swift2 {
       );
 
       /**
-       * @brief Check that all steps and stages before the current one have been completed.
+       * @brief Check that all previous steps and stages
+       *
+       * If we are given a non-local particle, we can only check the current
+       * stage and see if it has not been touched at all. Particles may change
+       * their state between two steps, so we cannot really say anything about
+       *
+       * If the policy says previousStepsAllHaveToAccessAtLeastOnce(),
+       * Ibefore the current one have been completed.
        *
        * @param currentStep: integer value of the current algorithm step
        * @param currentStage: integer value of the current sweep stage
@@ -121,8 +134,9 @@ namespace swift2 {
        *
        * @return errors: Number of dependency errors detected
        */
-      static int checkPastStages(
+      int checkPastStages(
         Invariant  policy,
+        bool       isLocal,
         const int  currentStep,
         const int  currentStage,
         const int  nsteps,
@@ -143,7 +157,7 @@ namespace swift2 {
        *
        * @return errors: Number of dependency errors detected
        */
-      static int checkFutureStages(
+      int checkFutureStages(
         Invariant  policy,
         const int  currentStep,
         const int  currentStage,

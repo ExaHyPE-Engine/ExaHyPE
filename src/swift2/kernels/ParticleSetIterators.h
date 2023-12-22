@@ -66,15 +66,66 @@ namespace swift2 {
      *  - The 'end' case should be mapped into touchVertexLastTime. Peano
      *    internally ensures that CellHasUpdatedParticle is true in this situation.
      *
+     * This routine does not vectorise over the particles. If any vectorisation
+     * is used, you'll see the vector instructions arise from the actual compute
+     * kernel.
      *
      * @param ParticleContainer A subtype of std::list<Particle *>
      */
     template <typename ParticleContainer>
     void forAllParticles(
-      const peano4::datamanagement::VertexMarker& marker,
-      ParticleContainer& assignedParticles,
-      ParticleUnaryOperator<typename ParticleContainer::DoFType >      f,
-      UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate = ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
+      const peano4::datamanagement::VertexMarker&                  marker,
+      ParticleContainer&                                           assignedParticles,
+      ParticleUnaryOperator<typename ParticleContainer::DoFType >  f,
+      UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate =
+          ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
+    );
+
+
+    /**
+     * Alternative to forAllParticles() which vectorises
+     *
+     * This routine attempts a brute force vectorisation of the function calls.
+     * Therefore, it does not accept a predicate. We simply rely on the fact
+     * that all compute kernels have to realise their validity checks
+     * internally anyway and make the outer loop a for loop which should
+     * vectorise. For this outer loop, we employ @ref peano4_utils_Loop_parallel "Peano's loop macros" from
+     * peano4/utils/Loop.h, which ensure that we use bespoke loop constructs
+     * depending on the multithreading backend chosen.
+     *
+     * @see peano4/utils/Loop.h
+     */
+    template <typename ParticleContainer>
+    void forAllParticles_vectorise(
+      const peano4::datamanagement::VertexMarker&                  marker,
+      ParticleContainer&                                           assignedParticles,
+      int                                                          numberOfAssignedParticles,
+      ParticleUnaryOperator<typename ParticleContainer::DoFType >  f
+    );
+
+
+    /**
+     * Alternative implementation of forAllParticles_vectorise()
+     *
+     * This routine is a variant of the vectorised kernels which works with a
+     * dedicated check preamble: First, it evaluates the predicate for each
+     * particle in the list and memorises the outcome. After that, we split
+     * the sequence of particles into chunks of 8. If more than 5 particles
+     * have to be updated, we do all 8 of the chunk in one block. If not, we
+     * subdivide the block into two chunks of size 4 and continue recursively.
+     *
+     * Logically, it would be nice to work with a bitset here. However, bitsets
+     * are large, and it is not clear if operations on them would map onto
+     * AVX instructions.
+     */
+    template <typename ParticleContainer>
+    void forAllParticles_vectoriseWithCheckPreamble(
+      const peano4::datamanagement::VertexMarker&                  marker,
+      ParticleContainer&                                           assignedParticles,
+      int                                                          numberOfAssignedParticles,
+      ParticleUnaryOperator<typename ParticleContainer::DoFType >  f,
+      UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate =
+          ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
     );
 
 
