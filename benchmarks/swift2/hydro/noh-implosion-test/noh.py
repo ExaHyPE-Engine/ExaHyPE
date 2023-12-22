@@ -245,10 +245,10 @@ if __name__ == "__main__":
         args.realisation
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access
+            swift2.api.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
+            swift2.api.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
         )
     elif args.realisation.split(".")[
         0
@@ -256,30 +256,30 @@ if __name__ == "__main__":
         args.realisation
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_for_coalesced_memory_access
+            swift2.api.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_for_coalesced_memory_access
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
+            swift2.api.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
         )
     elif (
         args.realisation.split(".")[0] == Parallelisation_SpawnTasksPerSweep
         and args.realisation.split(".")[1] == Storage_Scattered
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_particle_steps_onto_task_tree
+            swift2.api.graphcompiler.map_particle_steps_onto_task_tree
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_initialisation_steps_onto_task_tree
+            swift2.api.graphcompiler.map_initialisation_steps_onto_task_tree
         )
     elif (
         args.realisation.split(".")[0] == Parallelisation_TaskGraph
         and args.realisation.split(".")[1] == Storage_Scattered
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_particle_steps_onto_task_graph
+            swift2.api.graphcompiler.map_particle_steps_onto_task_graph
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_initialisation_steps_onto_task_graph
+            swift2.api.graphcompiler.map_initialisation_steps_onto_task_graph
         )
     else:
         assert False, "realisation " + args.realisation + " not supported"
@@ -324,8 +324,6 @@ if __name__ == "__main__":
         particle_interaction_kernel_realisation = (
             swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
         )
-    else:
-        raise NotImplemented()
 
 
     particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
