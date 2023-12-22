@@ -43,7 +43,7 @@ template <typename Particle>
 bool toolbox::particles::particleWillBeDroppedFurther(
   const Particle& particle, const peano4::datamanagement::CellMarker& marker
 ) {
-  return particleWillBeDroppedFurther(particle.getSearchRadius, marker);
+  return particleWillBeDroppedFurther(particle.getSearchRadius(), marker);
 }
 
 
@@ -51,7 +51,7 @@ template <typename Particle>
 bool toolbox::particles::particleWillBeDroppedFurther(
   const Particle& particle, const peano4::datamanagement::VertexMarker& marker
 ) {
-  return particleWillBeDroppedFurther(particle.getSearchRadius, marker);
+  return particleWillBeDroppedFurther(particle.getSearchRadius(), marker);
 }
 
 
