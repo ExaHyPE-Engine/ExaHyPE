@@ -264,8 +264,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
     _Template_Sieve = jinja2.Template(
         """
-  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
-    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker );
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices( vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort ) ) {
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker, vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort );
 
     _numberOfDropsFromSieveSet += sievedParticles.size();
 
