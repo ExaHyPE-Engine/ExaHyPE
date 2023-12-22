@@ -18,7 +18,7 @@ namespace exahype2::fv::rusanov::internal {
     const NonconservativeProductFunctor&           nonconservativeProductFunctor,
     const SourceFunctor&                           sourceFunctor,
     const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
-    peano4::utils::LoopParallelism                 loopParallelism,
+    peano4::utils::LoopPlacement                 loopParallelism,
     const enumerator::AoSLexicographicEnumerator& QInEnumerator,
     const enumerator::AoSLexicographicEnumerator& QOutEnumerator,
     const TempDataEnumeratorType&                  fluxEnumerator,
@@ -43,7 +43,7 @@ namespace exahype2::fv::rusanov::internal {
     // Copy solution over and evaluate source (if required)
     // ====================================================
     if constexpr (EvaluateSource) {
-      parallelDPlusOneForWithDynamicScheduling(volume, internal::rangeOverVolumesTimesPatches(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism) {
+      parallelDPlusOneForWithSchedulerInstructions(volume, internal::rangeOverVolumesTimesPatches(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism) {
         const int patchIndex = volume(Dimensions);
         loopbodies::copySolutionAndAddSourceTerm<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
           patchData.QIn[patchIndex],
@@ -61,7 +61,7 @@ namespace exahype2::fv::rusanov::internal {
       }
       endParallelDfor
     } else {
-      parallelDPlusTwoForWithDynamicScheduling(
+      parallelDPlusTwoForWithSchedulerInstructions(
         volume,
         internal::rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(
           NumberOfVolumesPerAxisInPatch, NumberOfUnknowns, NumberOfAuxiliaryVariables, patchData.numberOfCells
@@ -80,7 +80,7 @@ namespace exahype2::fv::rusanov::internal {
     // ====================================================
     // Compute damping due to max eigenvalue
     // ====================================================
-    parallelDPlusOneForWithDynamicScheduling(
+    parallelDPlusOneForWithSchedulerInstructions(
       volume, internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
     ) {
       volume(0) -= HaloSize;
@@ -102,7 +102,7 @@ namespace exahype2::fv::rusanov::internal {
     }
     endParallelDfor
 
-      parallelDPlusOneForWithDynamicScheduling(
+      parallelDPlusOneForWithSchedulerInstructions(
         volume, internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
       ) {
       volume(1) -= HaloSize;
@@ -125,7 +125,7 @@ namespace exahype2::fv::rusanov::internal {
     endParallelDfor
 
 #if Dimensions == 3
-      parallelDPlusOneForWithDynamicScheduling(
+      parallelDPlusOneForWithSchedulerInstructions(
         volume, internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
       ) {
       volume(2) -= HaloSize;
@@ -148,7 +148,7 @@ namespace exahype2::fv::rusanov::internal {
     endParallelDfor
 #endif
 
-      parallelDPlusTwoForWithDynamicScheduling(
+      parallelDPlusTwoForWithSchedulerInstructions(
         volume,
         internal::rangeOverVolumesTimesUnknownsPlusAuxiliaryVariablesTimesPatches(
           NumberOfVolumesPerAxisInPatch, NumberOfUnknowns, NumberOfAuxiliaryVariables, patchData.numberOfCells
@@ -180,7 +180,7 @@ namespace exahype2::fv::rusanov::internal {
       // Normal (conservative) flux
       // ====================================================
       if constexpr (EvaluateFlux) {
-      parallelDPlusOneForWithDynamicScheduling(
+      parallelDPlusOneForWithSchedulerInstructions(
         volume, internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
       ) {
         volume(0) -= HaloSize;
@@ -202,7 +202,7 @@ namespace exahype2::fv::rusanov::internal {
       }
       endParallelDfor
 
-        parallelDPlusOneForWithDynamicScheduling(
+        parallelDPlusOneForWithSchedulerInstructions(
           volume, internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
         ) {
         volume(1) -= HaloSize;
@@ -225,7 +225,7 @@ namespace exahype2::fv::rusanov::internal {
       endParallelDfor
 
 #if Dimensions == 3
-        parallelDPlusOneForWithDynamicScheduling(
+        parallelDPlusOneForWithSchedulerInstructions(
           volume, internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
         ) {
         volume(2) -= HaloSize;
@@ -248,7 +248,7 @@ namespace exahype2::fv::rusanov::internal {
       endParallelDfor
 #endif
 
-        parallelDPlusTwoForWithDynamicScheduling(
+        parallelDPlusTwoForWithSchedulerInstructions(
           volume, internal::rangeOverVolumesTimesUnknownsTimesPatches(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns, patchData.numberOfCells), loopParallelism
         ) {
         const int unknown    = volume(Dimensions);
@@ -272,7 +272,7 @@ namespace exahype2::fv::rusanov::internal {
     }
 
     if constexpr (EvaluateNonconservativeProduct) {
-      parallelDPlusOneForWithDynamicScheduling(
+      parallelDPlusOneForWithSchedulerInstructions(
         volume, internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
       ) {
         volume(0) -= HaloSize;
@@ -294,7 +294,7 @@ namespace exahype2::fv::rusanov::internal {
       }
       endParallelDfor
 
-        parallelDPlusOneForWithDynamicScheduling(
+        parallelDPlusOneForWithSchedulerInstructions(
           volume, internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
         ) {
         volume(1) -= HaloSize;
@@ -317,7 +317,7 @@ namespace exahype2::fv::rusanov::internal {
       endParallelDfor
 
 #if Dimension == 3
-        parallelDPlusOneForWithDynamicScheduling(
+        parallelDPlusOneForWithSchedulerInstructions(
           volume, internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
         ) {
         volume(2) -= solversHaloSize;
@@ -340,7 +340,7 @@ namespace exahype2::fv::rusanov::internal {
       endParallelDfor
 #endif
 
-        parallelDPlusTwoForWithDynamicScheduling(
+        parallelDPlusTwoForWithSchedulerInstructions(
           volume, internal::rangeOverVolumesTimesUnknownsTimesPatches(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns, patchData.numberOfCells), loopParallelism
         ) {
         const int unknown    = volume(Dimensions);
@@ -364,7 +364,7 @@ namespace exahype2::fv::rusanov::internal {
     }
 
     if constexpr (EvaluateMaximumEigenvalueAfterTimeStep) {
-      parallelForWithDynamicScheduling(patchIndex, patchData.numberOfCells, loopParallelism) {
+      parallelForWithSchedulerInstructions(patchIndex, patchData.numberOfCells, loopParallelism) {
         double newMaxEigenvalue = 0.0;
         dfor(volume, NumberOfVolumesPerAxisInPatch) {
           newMaxEigenvalue = std::max(
@@ -409,7 +409,7 @@ void exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapFunctors(
   const SourceFunctor&                 sourceFunctor,
   const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
   tarch::timing::Measurement&          measurement,
-  peano4::utils::LoopParallelism       loopParallelism
+  peano4::utils::LoopPlacement       loopParallelism
 ) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovBatchedHeapFunctors()");
@@ -515,7 +515,7 @@ void exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapFunctors(
   const NonconservativeProductFunctor& nonconservativeProductFunctor,
   const SourceFunctor&                 sourceFunctor,
   const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
-  peano4::utils::LoopParallelism       loopParallelism
+  peano4::utils::LoopPlacement       loopParallelism
 ) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovBatchedHeapFunctors()");

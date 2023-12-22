@@ -496,6 +496,22 @@ namespace tarch {
        * 3. We store the shared_future returned by the task. If the task number
        *    equals NoDependencies, we know that noone will ever be able to wait
        *    for this task. In this case, we skip the storing.
+       *
+       * ## OpenMP
+       *
+       * In OpenMP, we have less explicit control over the number of alive
+       * tasks compared to C++ for example. However, nothing stops us from
+       * checking if an in-dependency has been fulfilled. If this in-dependency
+       * does not exist, then we have an anti-dependency. But this one does not
+       * matter. It will just be executed sequentially.
+       *
+       * taskwait does not work with an if statement, so we have to explicitly
+       * embed it into an if block which checks if we have to wait at all.
+       *
+       * The iterator syntax of OpenMP works with [int] accessors only.
+       * Therefore, we have to convert the set into an array. Set remains the
+       * correct way to model the dependencies.
+       *
        */
       void spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber);
 

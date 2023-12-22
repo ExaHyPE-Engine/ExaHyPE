@@ -14,6 +14,19 @@
 
 namespace {
   int numberOfSpawnedTasks = 0;
+
+  /**
+   * Dependency tracking in OpenMP is organised via addresses. These addresses
+   * are sole helpers, i.e. the underlying memory region doesn't have to be
+   * owned by the application code. So we basically use an arbitrary address
+   * and then use this as baseline for any dependency, taking into account that
+   * dependencies are all enumerated continuously.
+   *
+   * The pointer has to be an integer pointer (or any built-in type), as we
+   * want to do some pointer arithmetics with it. This would not work with a
+   * void pointer.
+   */
+  int* dependencyTrackingBaseAddress = &numberOfSpawnedTasks;
 } // namespace
 
 
@@ -156,26 +169,77 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
 
 
-void tarch::multicore::native::spawnTask(Task* job, const TaskNumber& in, const TaskNumber& out) {
-  tarch::multicore::native::spawnTask(job);
-}
+void tarch::multicore::native::spawnTask(
+    Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
+) {
+  int* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
 
+  if (taskNumber!=NoDependencies) {
+    #pragma omp taskwait depend(in:*outDependencyPointer)
+  }
 
-void        tarch::multicore::native::spawnTask(Task* job) {
-#pragma omp atomic
+  #pragma omp atomic
   numberOfSpawnedTasks++;
 
-#pragma omp task priority(job->getPriority()) untied
-  {
-    while (job->run()) {
-#pragma omp taskyield
-    }
-    delete job;
+  if (taskNumber==NoDependencies and inDependencies.empty()) {
+    #pragma omp task priority(job->getPriority()) untied
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
 
-#pragma omp atomic
-    numberOfSpawnedTasks--;
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
+  }
+  if (taskNumber!=NoDependencies and inDependencies.empty()) {
+    #pragma omp task priority(job->getPriority()) untied depend(out: *outDependencyPointer)
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
+
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
+  }
+  else if (taskNumber==NoDependencies and not inDependencies.empty()) {
+    int numberOfInDependencies = inDependencies.size();
+    std::vector<int> arrayOfInDependencies(numberOfInDependencies);
+    std::copy( inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin() );
+    #pragma omp task priority(job->getPriority()) untied depend(iterator(j=0:numberOfInDependencies), in: arrayOfInDependencies[j])
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
+
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
+  }
+  else if (taskNumber!=NoDependencies and not inDependencies.empty()) {
+    int numberOfInDependencies = inDependencies.size();
+    std::vector<int> arrayOfInDependencies(numberOfInDependencies);
+    std::copy( inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin() );
+    #pragma omp task priority(job->getPriority()) untied depend(iterator(j=0:numberOfInDependencies), in: arrayOfInDependencies[j]) depend(out: *outDependencyPointer)
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
+
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
+  }
+  else {
+    assertionMsg( false, "should never be called" );
   }
 }
+
 
 /**
  * It is not clear what happens if I use tasksOfSameType directly within the task.
@@ -203,13 +267,13 @@ void tarch::multicore::native::processFusedTask(
   Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
 ) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-#if !defined(__NVCOMPILER)
-#pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
-#endif
+//#if !defined(__NVCOMPILER)
+  #pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
+//#endif
   {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask);
+      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
     } else {
       delete myTask;
     }
@@ -217,26 +281,18 @@ void tarch::multicore::native::processFusedTask(
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(
-  Task* job, const TaskNumber& inDependency, const TaskNumber& taskNumber
-) {
-  tarch::multicore::native::spawnTask(job);
+void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
+  if (not inDependencies.empty()) {
+    int numberOfInDependencies = inDependencies.size();
+    std::vector<int> arrayOfInDependencies(numberOfInDependencies);
+    std::copy( inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin() );
+    #pragma omp taskwait depend(iterator(j=0:numberOfInDependencies), in: arrayOfInDependencies[j])
+  }
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(
-  Task* job, const std::vector<TaskNumber>& inDependencies, const TaskNumber& taskNumber
-) {
-  tarch::multicore::native::spawnTask(job);
+void tarch::multicore::native::waitForAllTasks() {
+  #pragma omp taskwait
 }
-
-
-void tarch::multicore::native::waitForTasks(const std::vector<TaskNumber>& inDependencies) {}
-
-
-void tarch::multicore::native::waitForTask(const TaskNumber& taskNumber) {}
-
-
-void tarch::multicore::native::registerTask(const TaskNumber& number) {}
 
 #endif
