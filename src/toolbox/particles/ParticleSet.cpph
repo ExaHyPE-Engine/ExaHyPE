@@ -394,6 +394,7 @@ typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::Pa
 
 template <typename T>
 bool toolbox::particles::ParticleSet<T>::hasParticlesToBeSievedIntoVertices(int tree) {
+  logDebug( "hasParticlesToBeSievedIntoVertices(int)", "got invoked for tree " << tree );
   return _sieveParticles.hasParticlesToBeSievedIntoVertices(tree);
 }
 

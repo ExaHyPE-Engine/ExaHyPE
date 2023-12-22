@@ -161,6 +161,8 @@ public:
   typedef T             DoFType;
   typedef std::list<T*> ParticleList;
 
+  using SieveParticles = SieveParticles<T>;
+
 #if PeanoDebug >= 1
   void                                  setDebugX(const tarch::la::Vector<Dimensions, double>& data);
   void                                  setDebugH(const tarch::la::Vector<Dimensions, double>& data);
@@ -231,19 +233,27 @@ public:
    * Make routine from SieveParticles public
    *
    * Delegate through. This way, we don't have to expose the actual
-   * sieve object.
+   * sieve object. Usually combined with hasParticlesToBeSievedIntoVertices()
+   * as guard, which makes the querying faster.
+   *
+   * @param originatingTree Either a number associated with a local tree or
+   *                        SieveParticles<T>::GlobalSort.
    */
   static ParticleList getParticlesToBeSievedIntoVertex(
-    const peano4::datamanagement::VertexMarker& marker, int originatingTree = SieveParticles<T>::GlobalSort
+    const peano4::datamanagement::VertexMarker& marker, int originatingTree
   );
 
   /**
    * Make routine from SieveParticles public
    *
    * Delegate through. This way, we don't have to expose the actual
-   * sieve object.
+   * sieve object. This predicate is usually always used as guard before
+   * actually invoking getParticlesToBeSievedIntoVertex().
+   *
+   * @param originatingTree Either a number associated with a local tree or
+   *                        SieveParticles<T>::GlobalSort.
    */
-  static bool hasParticlesToBeSievedIntoVertices(int originatingTree = SieveParticles<T>::GlobalSort);
+  static bool hasParticlesToBeSievedIntoVertices(int originatingTree);
 
 private:
   static tarch::logging::Log _log;
@@ -349,7 +359,7 @@ protected:
   /**
    * Map of persistent particles that have to be sieved
    */
-  static SieveParticles<T> _sieveParticles;
+  static SieveParticles _sieveParticles;
 
 #if PeanoDebug >= 1
   tarch::la::Vector<Dimensions, double> _debugX;
