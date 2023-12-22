@@ -119,14 +119,14 @@ elif args.gpu == "omp" and ("nvc" in args.cc or "nvc++ in args.cc") and "nvc++" 
     cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     if args.asm:
-        cflags += " -gpu=keep"
-        cxxflags += " -gpu=keep"
+        cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
+        cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mpp"
 elif args.gpu == "cpp" and "nvc" in args.cc and "nvc++" in args.cxx:
     cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch + " -stdpar=gpu"
     if args.asm:
-        cflags += " -gpu=keep"
-        cxxflags += " -gpu=keep"
+        cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
+        cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
 elif args.gpu == "omp" and "gcc" in args.cc and "g++" in args.cxx:
     cflags += " -fopenmp -foffload=nvptx-none -march=native"
     cxxflags += " -fopenmp -foffload=nvptx-none -march=native"
