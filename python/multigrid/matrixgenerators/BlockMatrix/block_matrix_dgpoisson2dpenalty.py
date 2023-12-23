@@ -261,7 +261,7 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
             # !!! It should ultimately be two different dictionary entries with different scaling:
             # !!! {gamma1: A_penalty_1, gamma2: A_penalty_2}
             A_k_ell = A_penalty_1 + A_penalty_2
-            print(A_penalty_2)
+            #print(A_penalty_2)
             pass
 
         else:
