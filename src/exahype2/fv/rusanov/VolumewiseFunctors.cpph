@@ -40,8 +40,11 @@ void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseFunctors(
   alignas(AlignmentOnHeap) double tempNonconservativeProductY[ncpEnumerator.size()];
   alignas(AlignmentOnHeap) double tempNonconservativeProductZ[ncpEnumerator.size()];
 
-#pragma omp parallel for simd collapse(Dimensions + 1)
+  double newMaxEigenvalue = 0.0;
+
+#pragma omp      parallel for schedule(static, 1)
   for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
+#pragma omp simd collapse(Dimensions) reduction(max : newMaxEigenvalue)
 #if Dimensions == 3
     for (int z = 0; z < NumberOfVolumesPerAxisInPatch; z++) {
 #endif
@@ -521,8 +524,8 @@ void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseFunctors(
           }
 
           if constexpr (EvaluateMaximumEigenvalueAfterTimeStep) {
-            patchData.maxEigenvalue[patchIndex] = std::max(
-              patchData.maxEigenvalue[patchIndex],
+            newMaxEigenvalue = std::max(
+              newMaxEigenvalue,
               loopbodies::reduceMaxEigenvalue<NumberOfUnknowns, NumberOfAuxiliaryVariables>(
                 patchData.QOut[patchIndex],
                 QOutEnumerator,
@@ -541,6 +544,7 @@ void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseFunctors(
 #if Dimensions == 3
     }
 #endif
+    patchData.maxEigenvalue[patchIndex] = newMaxEigenvalue;
   }
 
   logTraceOut("timeStepWithRusanovVolumewiseFunctors()");
