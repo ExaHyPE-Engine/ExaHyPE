@@ -8,8 +8,5 @@ try:
   from .PlotGridInPeanoBlockFormat             import PlotGridInPeanoBlockFormat
   from .PlotVertexDataInPeanoBlockFormat       import PlotVertexDataInPeanoBlockFormat
   from .PlotCellDataInPeanoBlockFormat         import PlotCellDataInPeanoBlockFormat
-  from .TaskNumbersOnMesh                      import AssignTaskNumbersToMesh
-  from .TaskNumbersOnMesh                      import ClearTaskNumbersOnMesh
-  #import TaskNumbersOnMesh                     # for utility functions therein
 except ImportError as error:
   print(error)
