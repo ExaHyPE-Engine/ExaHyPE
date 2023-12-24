@@ -34,7 +34,7 @@ parser.add_argument(
     help="Enable multithreading support",
 )
 parser.add_argument("--mpi", help="Enable MPI support")
-parser.add_argument("--td", action="store_true", help="Enable targetDART support")
+parser.add_argument("--targetdart", "-td", action="store_true", help="Enable targetDART support")
 parser.add_argument(
     "--gpu", choices=["omp", "cuda", "sycl", "cpp", "hip"], help="Enable GPU support"
 )
