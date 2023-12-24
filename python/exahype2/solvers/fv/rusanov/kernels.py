@@ -37,6 +37,9 @@ class KernelVariant(Enum):
   TaskGraphAoSHeap    = 70
   TaskGraphAoSoAHeap  = 71
   TaskGraphSoAHeap    = 72
+  VolumeWiseAoS       = 80
+  VolumeWiseAoSoA     = 81
+  VolumeWiseSoA       = 82
 
 
 def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
@@ -71,7 +74,10 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     KernelVariant.BatchedSoAUSM:        "timeStepWithRusanovBatchedUSM",
     KernelVariant.TaskGraphAoSHeap:     "timeStepWithRusanovTaskgraphHeap",
     KernelVariant.TaskGraphAoSoAHeap:   "timeStepWithRusanovTaskgraphHeap",
-    KernelVariant.TaskGraphSoAHeap:     "timeStepWithRusanovTaskgraphHeap",
+    KernelVariant.TaskGraphSoAHeap:     "timeStepWithRusanovVolumewise",
+    KernelVariant.VolumeWiseAoS:        "timeStepWithRusanovVolumewise",
+    KernelVariant.VolumeWiseAoSoA:      "timeStepWithRusanovVolumewise",
+    KernelVariant.VolumeWiseSoA:        "timeStepWithRusanovVolumewise",
   }
 
   EnumeratorTemplateTypes = {
@@ -96,6 +102,9 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation,
     KernelVariant.TaskGraphAoSHeap:               "::exahype2::enumerator::AoSLexicographicEnumerator",
     KernelVariant.TaskGraphAoSoAHeap:             "::exahype2::enumerator::AoSoALexicographicEnumerator",
     KernelVariant.TaskGraphSoAHeap:               "::exahype2::enumerator::SoALexicographicEnumerator",
+    KernelVariant.VolumeWiseAoS:                "::exahype2::enumerator::AoSLexicographicEnumerator",
+    KernelVariant.VolumeWiseAoSoA:              "::exahype2::enumerator::AoSoALexicographicEnumerator",
+    KernelVariant.VolumeWiseSoA:                "::exahype2::enumerator::SoALexicographicEnumerator",
   }
 
   template  = KernelCalls[kernel_variant]
