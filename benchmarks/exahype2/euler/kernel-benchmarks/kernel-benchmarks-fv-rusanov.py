@@ -66,7 +66,7 @@ parser.add_argument(
     "--samples",
     dest="samples",
     type=int,
-    default=100,
+    default=10,
     help="Number of samples per measurement",
 )
 parser.add_argument(
