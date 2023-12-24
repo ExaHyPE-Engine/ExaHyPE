@@ -375,7 +375,7 @@ void tarch::mpi::Rank::barrier([[maybe_unused]] std::function<void()> waitor) {
 
 
 bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
-  #if Parallel
+  #ifdef Parallel
   int  flag        = 0;
   MPI_Iprobe(
     MPI_ANY_SOURCE, tag,
