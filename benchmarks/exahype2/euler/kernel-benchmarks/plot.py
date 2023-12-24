@@ -137,7 +137,7 @@ def main():
                     )
                     marker_counter += 1
 
-    plt.title("Measured throughput - higher is better; only best labels are shown")
+    plt.title("Measured throughput - higher is better; only best case labels are shown")
     plt.legend(bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.xlabel("Throughput for one kernel (dofs/s)")
     plt.ylabel("Total throughput (dofs/s)")
