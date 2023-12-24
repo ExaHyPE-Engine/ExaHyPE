@@ -198,7 +198,7 @@ if args.mpi is not None:
     else:
         configure_args.append('--with-mpi="{} {}"'.format(args.mpi, cxxflags))
 
-if args.td:
+if args.targetdart:
     if args.cmake:
         configure_args.append("-DWITH_TARGETDART=ON")
     else:
