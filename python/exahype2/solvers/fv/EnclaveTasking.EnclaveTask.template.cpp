@@ -51,21 +51,20 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double* __restrict__                        reconstructedPatch,
   double* __restrict__                        targetPatch
 ) {
-  ::exahype2::CellData patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
+  ::exahype2::CellData patchData(reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch);
 
   {% if STATELESS_PDE_TERMS %}
-  if ( repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
+  if (repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
       marker.x(),
       marker.h(),
       t,
       dt
   )) {
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
-  }
-  else
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS_CPU}}
+  } else
   {% endif %}
 
-  ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}}
+  ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_CPU}}
 
   ::exahype2::fv::validatePatch(
     targetPatch,
@@ -76,7 +75,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // outcome has to be valid
 
-  tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  tarch::freeMemory(reconstructedPatch, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
 
   {% if COMPUTE_MAX_EIGENVALUE %}
   return patchData.maxEigenvalue[0];
@@ -330,10 +329,10 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
 /**
  * Also merge the current task
  */
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
-  logDebug( "fuse(...)", "asked to fuse " << (otherTasks.size()+1) << " tasks into one large GPU task on device " << targetDevice );
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
+  logDebug("fuse(...)", "asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
-  ::exahype2::CellData patchData(otherTasks.size()+1);
+  ::exahype2::CellData patchData(otherTasks.size() + 1);
   int currentTask = 0;
   for (auto& p: otherTasks) {
     patchData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
@@ -342,7 +341,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
     patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
-    patchData.QOut[currentTask]        = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+    patchData.QOut[currentTask]        = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     delete p;
     currentTask++;
   }
@@ -352,45 +351,46 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   patchData.t[currentTask]           = _t;
   patchData.dt[currentTask]          = _dt;
   patchData.id[currentTask]          = _taskNumber;
-  patchData.QOut[currentTask]        = tarch::allocateMemory<double>( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  patchData.QOut[currentTask]        = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
 
   //
-  // ==============
-  // Invoke kernels
-  // ==============
+  // =========================
+  // Invoke stateless kernels
+  // =========================
   //
   bool foundOffloadingBranch = false;
 
-  #if defined(GPUOffloadingOMP)
-  if (targetDevice>=0) {
+#if defined(GPUOffloadingOMP)
+  if (targetDevice >= 0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::omp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::omp::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
-  #endif
+#endif
 
-  #if defined(GPUOffloadingHIP)
-  if (targetDevice>=0) {
+#if defined(GPUOffloadingHIP)
+  if (targetDevice >= 0) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::hip::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::hip::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
-  #endif
+#endif
 
-  #if defined(GPUOffloadingSYCL)
-  if (targetDevice>=0 or targetDevice==Host) {
+#if defined(GPUOffloadingSYCL)
+  if (targetDevice >= 0 or targetDevice == Host) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::sycl::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
-  #endif
+#endif
 
-  #if defined(GPUOffloadingCPP)
-  if (targetDevice>=0 or targetDevice==Host) {
+#if defined(GPUOffloadingCPP)
+  if (targetDevice >= 0 or targetDevice == Host) {
     foundOffloadingBranch = true;
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{FUSED_COMPUTE_KERNEL_CALL_GPU}}
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
-  #endif
+#endif
 
   if (not foundOffloadingBranch) {
-    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+    logWarning("fuse(...)", "Cannot find offloading branch for device " << targetDevice << ". Reverting back to the CPU.");
+    ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS_CPU}}
   }
 
   //
@@ -399,7 +399,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==================
   //
   for (int i=0; i<patchData.numberOfCells; i++) {
-    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+    tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
   }
 

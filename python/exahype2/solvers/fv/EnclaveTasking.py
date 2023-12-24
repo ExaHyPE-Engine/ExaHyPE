@@ -34,8 +34,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     If this predicate holds, we compute stuff straightaway. Otherwise, we
     span a new enclave task. While this check does the job in almost all
     cases, there are special situations where you might want to label more
-    cells as skeleton cells. @ref benchmarks_exahype2_ccz4_single_black_hole "Peano's single black hole test" provides
-    an example. If so, you
+    cells as skeleton cells.
 
 
     ## Modify templates
@@ -51,7 +50,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     If you want to alter the preamble, you thus should specialise
     create_action_sets() and invoke the supertype's create_action_sets(). After
     that, alter self._action_set_update_cell._Template_TouchCellFirstTime_Preamble.
-    I recommend to add an entry and not to replace the preamble, as the
+    We recommend to add an entry and not to replace the preamble, as the
     preamble already consists meaningful code.
     """
 
@@ -77,7 +76,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
 
-  if ( marker.willBeSkeletonCell() ) {
+  if (marker.willBeSkeletonCell()) {
     const double maxEigenvalue = tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
       timeStamp,
@@ -85,15 +84,14 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       oldQWithHalo,
       newQ
     );
-    
+
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::SkeletonTask );
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
-  }
-  else { // is an enclave cell
+  } else { // is an enclave cell
     assertion( marker.willBeEnclaveCell() );
     assertion( not marker.willBeRefined() );
     auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
@@ -271,7 +269,6 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 class EnclaveTasking(FV):
     """!
-
     Enclave tasking variant of the Finite Volume scheme
 
     The concept of (enclave) tasking within ExaHyPE solvers is described in
@@ -296,11 +293,8 @@ class EnclaveTasking(FV):
     priority or a plain numerical value. I set it to 
 
            self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority-1"
-            
+
     by default.
-
-
-
     """
 
     def __init__(
@@ -321,10 +315,6 @@ class EnclaveTasking(FV):
         which uses this field.
         """
         self._name = name
-        
-        self._fused_compute_kernel_call_cpu = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
-        self._fused_compute_kernel_call_gpu = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
-        self._pde_terms_without_state = pde_terms_without_state
 
         super(EnclaveTasking, self).__init__(
             name,
@@ -335,6 +325,7 @@ class EnclaveTasking(FV):
             min_volume_h,
             max_volume_h,
             plot_grid_properties,
+            pde_terms_without_state,
             kernel_namespace,
         )
         self._solver_template_file_class_name = "EnclaveTasking"
@@ -688,13 +679,6 @@ class EnclaveTasking(FV):
         d: Dictionary of string to string
            in/out argument
         """
-        d["FUSED_COMPUTE_KERNEL_CALL_CPU"] = jinja2.Template(
-            self._fused_compute_kernel_call_cpu, undefined=jinja2.DebugUndefined
-        ).render(**d)
-        d["FUSED_COMPUTE_KERNEL_CALL_GPU"] = jinja2.Template(
-            self._fused_compute_kernel_call_gpu, undefined=jinja2.DebugUndefined
-        ).render(**d)
-
         d["NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D"] = (
             d["NUMBER_OF_VOLUMES_PER_AXIS"]
             * d["NUMBER_OF_VOLUMES_PER_AXIS"]
@@ -722,7 +706,6 @@ class EnclaveTasking(FV):
         d["SEMAPHORE_LABEL"] = exahype2.grid.UpdateCellLabel.get_attribute_name(
             self._name
         )
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
 
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -805,6 +788,3 @@ class EnclaveTasking(FV):
 
     def _enclave_task_name(self):
         return "{}EnclaveTask".format(self._name)
-
-    def set_pde_terms_without_state(self, value):
-        self._pde_terms_without_state = value

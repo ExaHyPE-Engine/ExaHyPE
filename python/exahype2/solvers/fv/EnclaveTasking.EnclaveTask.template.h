@@ -34,7 +34,7 @@
 /**
  * Single task that can also take multiple tasks and deploy them to the GPU
  *
- * @author ExaHyPE's code generator written by Tobias Weinzierl
+ * @author Tobias Weinzierl
  */
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 #ifdef UseSmartMPI
@@ -78,7 +78,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * Simple call to compute kernels.
      *
      * The finite volume solver assumes that _inputValues are reconstructed
-     * values, i.e. a temporary data field. So we don't have to allocate
+     * values, i.e., a temporary data field. So we don't have to allocate
      * anything but we have to free stuff after the run. This is done here in
      * the Finite Volume solver. We assume that the input data has been
      * allocated through tarch::allocateMemory() with the flag
@@ -98,10 +98,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * Task constructor
      *
      * The task construction injects a call to applyKernelToCell() into
-     * the generic enclave superclass. I assuem that reconstructedPatch
+     * the generic enclave superclass. We assume that reconstructedPatch
      * is created on the heap before - typically in the actual action
      * set. As applyKernelToCell() erases the
-     * reconstructedPatch argument, we don't have to call a free in the
+     * reconstructedPatch argument, we don't have to call a free() in the
      * task constructor of the functor that we pass to the enclave
      * task (superclass). Likewisely, the superclass EnclaveTask tasks
      * care of the allocation of the output data.
@@ -126,7 +126,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     #endif
 
     {% if STATELESS_PDE_TERMS %}
-    virtual bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host ) override;
+    virtual bool fuse(const std::list<Task*>& otherTasks, int targetDevice = Host) override;
     virtual bool canFuse() const override;
     {% endif %}
 };

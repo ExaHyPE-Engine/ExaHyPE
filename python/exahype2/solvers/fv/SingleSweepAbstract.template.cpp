@@ -352,6 +352,15 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt
+) const {
+  return true;
+}
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}

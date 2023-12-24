@@ -150,8 +150,6 @@ class FV(object):
          _action_set_postprocess_solution
 
     You can use this attribute to add postprocessing routines to the code.
-
-
     """
 
     def __init__(
@@ -164,11 +162,11 @@ class FV(object):
         min_volume_h,
         max_volume_h,
         plot_grid_properties,
+        pde_terms_without_state: bool,
         kernel_namespace,
         baseline_action_set_descend_invocation_order=0,
     ):
         """!
-
         Create solver
 
         name: string
@@ -301,7 +299,10 @@ class FV(object):
         self._preprocess_reconstructed_patch = ""
         self._postprocess_updated_patch = ""
 
-        self._compute_kernel_call = "#error Not yet defined"
+        self._compute_kernel_call_cpu = "#error Not yet defined"
+        self._compute_kernel_call_stateless_cpu = "#error Not yet defined"
+        self._compute_kernel_call_stateless_gpu = "#error Not yet defined"
+        self._pde_terms_without_state = pde_terms_without_state
 
         self._compute_eigenvalue = False
         self._abstract_solver_user_declarations = ""
@@ -1305,23 +1306,25 @@ The finest mesh width of """
 
         if self._min_volume_h > self._max_volume_h:
             raise Exception("min/max h are inconsistent")
+
         d["MAX_VOLUME_H"] = self._max_volume_h
         d["MIN_VOLUME_H"] = self._min_volume_h
-
         d["SOLVER_CONSTANTS"] = self._solver_constants
-
         d["SOLVER_INCLUDES"] = self.user_solver_includes
-
-        d[
-            "BOUNDARY_CONDITIONS_IMPLEMENTATION"
-        ] = self._boundary_conditions_implementation
-        d[
-            "REFINEMENT_CRITERION_IMPLEMENTATION"
-        ] = self._refinement_criterion_implementation
+        d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
+        d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
         d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
 
-        d["COMPUTE_KERNEL_CALL"] = jinja2.Template(
-            self._compute_kernel_call, undefined=jinja2.DebugUndefined
+        d["COMPUTE_KERNEL_CALL_CPU"] = jinja2.Template(
+            self._compute_kernel_call_cpu, undefined=jinja2.DebugUndefined
+        ).render(**d)
+
+        d["COMPUTE_KERNEL_CALL_STATELESS_CPU"] = jinja2.Template(
+            self._compute_kernel_call_stateless_cpu, undefined=jinja2.DebugUndefined
+        ).render(**d)
+
+        d["COMPUTE_KERNEL_CALL_STATELESS_GPU"] = jinja2.Template(
+            self._compute_kernel_call_stateless_gpu, undefined=jinja2.DebugUndefined
         ).render(**d)
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
@@ -1361,6 +1364,7 @@ The finest mesh width of """
         ).render(**d)
         d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
 
+        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["KERNEL_NAMESPACE"] = self._kernel_namespace
 
         d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
