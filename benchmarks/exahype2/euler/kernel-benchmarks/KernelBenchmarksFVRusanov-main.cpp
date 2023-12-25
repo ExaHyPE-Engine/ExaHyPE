@@ -387,6 +387,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
     timingComputeKernel.erase();
     ::tarch::timing::Measurement timingKernelLaunch;
 
+    // TODO: Does the number of samples change the outcome of the solution?
     for (int j = 0; j < NumberOfSamples; j++) {
       parallelFor(launchingThread, launchingThreads) {
         ::exahype2::CellData patchData(patches);

@@ -36,7 +36,7 @@ void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseStateless(CellData& pat
 
   double newMaxEigenvalue = 0.0;
 
-#pragma omp      parallel for schedule(static, 1)
+// #pragma omp parallel for schedule(static, 1)
   for (int patchIndex = 0; patchIndex < patchData.numberOfCells; patchIndex++) {
 #pragma omp simd collapse(Dimensions) reduction(max : newMaxEigenvalue)
 #if Dimensions == 3
