@@ -1,8 +1,7 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import os.path
-import subprocess
 import os
+import subprocess
 
 from .Overwrite import Overwrite
 
@@ -184,6 +183,7 @@ def get_mpi_implementation(mpicxx):
                 return "OPENMPI"
     return None
 
+
 def parse_cmake_cache_for_mpi_and_gpu_vendor():
   try:
     cmake_build_dir = find_CMake_build_dir()
@@ -192,16 +192,17 @@ def parse_cmake_cache_for_mpi_and_gpu_vendor():
     with open(os.path.join(cmake_build_dir, "CMakeCache.txt"), "r") as f:
       for line in f:
         if "MPI_CXX_COMPILER:FILEPATH" in line:
-          mpicxx = line.split("=")[1] # get pat to mpicxx like /usr/bin/mpicxx
+          mpicxx = line.split("=")[1]  # Get path to mpicxx. E.g., /usr/bin/mpicxx
           mpi_vendor = get_mpi_implementation(mpicxx)
         if "WITH_GPU_ARCH:STRING" in line:
-          gpu_arch = line.split("=")[1] # get gpu arch
+          gpu_arch = line.split("=")[1]  # Get GPU arch
           gpu_vendor = get_gpu_vendor(gpu_arch)
         if mpi_vendor and gpu_vendor:
           break
     return (mpi_vendor, gpu_vendor)
   except:
     return (None, None)
+
 
 def parse_makefile_for_mpi_and_gpu_vendor():
   try:
@@ -222,7 +223,7 @@ def parse_makefile_for_mpi_and_gpu_vendor():
           cxx = line[len("CXX ="):]
         elif line.startswith("CXXFLAGS ="):
           cxxflags = line[len("CXXFLAGS ="):]
-        elif line.startswith("NVCC ="):# for CUDA backend
+        elif line.startswith("NVCC ="):  # For CUDA backend
           nvcc = line[len("NVCC ="):]
         if line.startswith("NVCCFLAGS ="):
           nvccflags = line[len("NVCCFLAGS ="):]
@@ -237,9 +238,8 @@ def parse_makefile_for_mpi_and_gpu_vendor():
     cxxflags = cxx + " " +  cxxflags
     nvccflags = nvcc + " " + nvccflags
 
-    # There various ways to pass gpu archiectures as a part of CXXFLAGS
+    # There various ways to pass the GPU architecture as a part of CXXFLAGS
     # It can be: --offload-arch=<...>, --cuda-gpu-arch=<...>, --arch=<...>, -gpu=<...>
-    # Get GPU vendor
     cxxflags_tokenized = cxxflags.split()
     nvccflags_tokenized = nvccflags.split()
     offload_flags = ["--offload-arch", "--cuda-gpu-arch", "--arch", "-gpu", "-arch"]
