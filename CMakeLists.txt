@@ -55,7 +55,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 # We need to override specific compiler flags initialized by CMake, to
 # match them exactly with the flags defined in Peano Automake build system.
 # More details can be found in the cmake/CustomMakeRules.cmake file.
-# For example, the Peano release flags are -O3 and -O4 for NVHPC compilers (and -DNDEBUG in definitions);
+# For example, the Peano release optimisation flag is -O3. (and -DNDEBUG in definitions);
 # but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/CustomMakeRules.cmake")
 
@@ -98,7 +98,8 @@ if(IPO_SUPPORTED)
   message(STATUS "IPO/LTO enabled")
   set_property(GLOBAL PROPERTY INTERPROCEDURAL_OPTIMIZATION 1)
 else()
-  message(STATUS "IPO/LTO not supported: ${IPO_ERROR}")
+  #message(STATUS "IPO/LTO not supported: ${IPO_ERROR}")
+  message(WARNING "IPO/LTO not supported")
 endif()
 
 add_library(project_warnings INTERFACE)
@@ -247,8 +248,8 @@ endif()
 
 if("${WITH_GPU}" STREQUAL "cuda")
   set(ENABLE_CUDA_COMPILATION_OPTIONS ON)
-  cmake_dependent_option(CUDA_SEPARABLE_COMPILATION "Cuda Separable Compilation" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
-  cmake_dependent_option(CUDA_RESOLVE_DEVICE_SYMBOLS "Cuda Resolve Device Symbols" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
+  cmake_dependent_option(CUDA_SEPARABLE_COMPILATION "CUDA separable compilation" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
+  cmake_dependent_option(CUDA_RESOLVE_DEVICE_SYMBOLS "CUDA resolve device symbols" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
   find_package(CUDAToolkit REQUIRED)
   target_link_libraries(project_options INTERFACE CUDA::toolkit)
 else()
@@ -259,8 +260,8 @@ if(WITH_GPU)
   string(TOUPPER ${WITH_GPU} WITH_GPU_UPPER)
   target_compile_definitions(project_options INTERFACE GPUOffloading${WITH_GPU_UPPER})
   if(WITH_GPU STREQUAL "omp")
-    find_package(OpenMPWithOffloading REQUIRED)
-    target_link_libraries(project_options INTERFACE OpenMP::OpenMP_CXX_with_offloading)
+    find_package(OpenMPTarget REQUIRED)
+    target_link_libraries(project_options INTERFACE OpenMP::OpenMPTarget)
   elseif(WITH_GPU STREQUAL "cpp")
     if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
       string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
@@ -273,12 +274,12 @@ if(WITH_GPU)
     set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
     set(CMAKE_CUDA_STANDARD 17)
     enable_language(CUDA)
-    option(CUDA_SEPARABLE_COMPILATION "CUDA Separable Compilation" ON)
-    option(CUDA_RESOLVE_DEVICE_SYMBOLS "CUDA Resolve Device Symbols" ON)
+    option(CUDA_SEPARABLE_COMPILATION "CUDA separable compilation" ON)
+    option(CUDA_RESOLVE_DEVICE_SYMBOLS "CUDA resolve device symbols" ON)
     find_package(CUDAToolkit REQUIRED)
     target_link_libraries(project_options INTERFACE CUDA::toolkit)
     string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
-    set(CMAKE_CUDA_ARCHITECTURES ${GPU_ARCH_SUFFIX} CACHE INTERNAL "CUDA Architecture" FORCE)
+    set(CMAKE_CUDA_ARCHITECTURES ${GPU_ARCH_SUFFIX} CACHE INTERNAL "CUDA architecture" FORCE)
   endif()
 endif()
 
@@ -313,15 +314,10 @@ if(PEANO_DIMENSIONS)
   endforeach()
 endif()
 
-# Note linkers (ld, lld) ignore the flag -g when passed
+# Note: linkers (ld, lld) ignore the flag -g when passed.
 # Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-  set(PEANO_CXX_FLAGS_RELEASE -O4)
-  set(PEANO_CUDA_FLAGS_RELEASE -O3) # NVCC does not have -O4, if given, it will be forwarded only to host compiler.
-else()
-  set(PEANO_CXX_FLAGS_RELEASE -O3)
-  set(PEANO_CUDA_FLAGS_RELEASE -O3)
-endif()
+set(PEANO_CXX_FLAGS_RELEASE -O3)
+set(PEANO_CUDA_FLAGS_RELEASE -O3)
 set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
 
 #-O2 -fno-omit-frame-pointer
@@ -342,6 +338,7 @@ set(PEANO_CUDA_FLAGS_TRACE ${PEANO_CXX_FLAGS_TRACE})
 set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
 
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
+option(WITH_TARGETDART "Build with targetDART support" OFF)
 option(WITH_OTTER "Build with Otter support" OFF)
 option(WITH_PETSC "Build with PETSc support" OFF)
 option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
@@ -376,6 +373,10 @@ if(WITH_PETSC)
   target_compile_definitions(project_options INTERFACE UsePETSc)
   target_link_libraries(project_options INTERFACE ${PETSc_LIBRARIES})
   target_include_directories(project_options INTERFACE ${PETSc_INCLUDE_DIRS})
+endif()
+
+if (WITH_TARGETDART)
+  target_compile_definitions(project_options INTERFACE UseTargetDART)
 endif()
 
 if(WITH_LIBXSMM)
@@ -440,7 +441,6 @@ endif()
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
     set(DOXYGEN ${CMAKE_CURRENT_BINARY_DIR}/documentation/Doxyfile)
-
     add_custom_target(documentation
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -497,6 +497,7 @@ display_variable(WITH_GPU)
 display_variable(WITH_GPU_ARCH)
 display_variable(WITH_DIMENSIONS)
 display_variable(WITH_MPI)
+display_variable(WITH_TARGETDART)
 display_variable(WITH_OTTER)
 if(DEFINED Otter_DIR)
   display_variable(Otter_DIR)

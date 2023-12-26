@@ -48,7 +48,7 @@ parser.add_argument(
     "-p",
     "--num-patches",
     dest="num_patches",
-    nargs='+',
+    nargs="+",
     default=[32, 64, 128, 256, 512, 1024, 2048],
     type=int,
     help="Number of patches to study",
@@ -66,7 +66,7 @@ parser.add_argument(
     "--samples",
     dest="samples",
     type=int,
-    default=100,
+    default=10,
     help="Number of samples per measurement",
 )
 parser.add_argument(
@@ -85,6 +85,20 @@ parser.add_argument(
     help="Evaluate max. eigenvalue",
 )
 parser.add_argument(
+    "-cpu",
+    "--cpu",
+    dest="eval_cpu",
+    action="store_true",
+    help="Evaluate host kernels",
+)
+parser.add_argument(
+    "-gpu",
+    "--gpu",
+    dest="eval_gpu",
+    action="store_true",
+    help="Evaluate device kernels",
+)
+parser.add_argument(
     "-fpe",
     "--fp-exception",
     dest="enable_fpe",
@@ -92,7 +106,10 @@ parser.add_argument(
     help="Enable a floating-point exception handler",
 )
 parser.add_argument(
-    "--no-make", dest="no_make", action="store_true", help="Do not compile the code after generation"
+    "--no-make",
+    dest="no_make",
+    action="store_true",
+    help="Do not compile the code after generation",
 )
 args = parser.parse_args()
 
@@ -178,18 +195,20 @@ my_project.constants.export_constexpr_with_type("Accuracy", str(accuracy), "doub
 my_project.constants.export_constexpr_with_type(
     "NumberOfSamples", str(args.samples), "int"
 )
-formatted_num_patches = "{{{}}}".format(', '.join(str(val) for val in args.num_patches))
+formatted_num_patches = "{{{}}}".format(", ".join(str(val) for val in args.num_patches))
 my_project.constants.export_const_with_type(
-    "NumberOfPatchesToStudy", str(formatted_num_patches), "::tarch::la::Vector<%s, int>" % len(args.num_patches)
+    "NumberOfPatchesToStudy",
+    str(formatted_num_patches),
+    "::tarch::la::Vector<%s, int>" % len(args.num_patches),
 )
 my_project.constants.export_constexpr_with_type(
     "NumberOfLaunchingThreads", str(args.num_threads), "int"
 )
 
-if (args.enable_fpe):
-  my_project.constants.export_boolean("EnableFPE", True)
+if args.enable_fpe:
+    my_project.constants.export_boolean("EnableFPE", True)
 else:
-  my_project.constants.export_boolean("EnableFPE", False)
+    my_project.constants.export_boolean("EnableFPE", False)
 
 my_project.constants.export_boolean("EvaluateFlux", True)
 my_project.constants.export_boolean("EvaluateNonconservativeProduct", False)
@@ -197,6 +216,17 @@ my_project.constants.export_boolean("EvaluateSource", False)
 my_project.constants.export_boolean(
     "EvaluateMaximumEigenvalueAfterTimeStep", True if args.eval_eig else False
 )  # Reduction
+
+if args.eval_cpu == False and args.eval_gpu == False:
+    my_project.constants.export_boolean("EvaluateHostKernels", True)
+    my_project.constants.export_boolean("EvaluateDeviceKernels", True)
+else:
+    my_project.constants.export_boolean(
+        "EvaluateHostKernels", True if args.eval_cpu else False
+    )
+    my_project.constants.export_boolean(
+        "EvaluateDeviceKernels", True if args.eval_gpu else False
+    )
 
 my_project.constants.define_value("ADVECTION_SPEED", str(1.0))
 

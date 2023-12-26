@@ -226,7 +226,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "--no-make", dest="no_make", action="store_true", help="Do not compile the code after generation"
+    "--no-make",
+    dest="no_make",
+    action="store_true",
+    help="Do not compile the code after generation",
 )
 parser.add_argument(
     "--executable",
@@ -492,12 +495,15 @@ else:
 
 my_project.set_timeout(args.timeout)
 
-my_project.set_multicore_orchestration("::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, ::tarch::mpi::Rank::getInstance().getRank())" % str(args.fused_tasks))
+my_project.set_multicore_orchestration(
+    "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, ::tarch::mpi::Rank::getInstance().getRank())"
+    % str(args.fused_tasks)
+)
 
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
-if (args.enable_fpe):
-  my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+if args.enable_fpe:
+    my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 my_project.constants.define_value("ADVECTION_SPEED", str(advection_speed))
 my_project.constants.export_boolean("UseDynamicAMR", args.dynamic_amr)

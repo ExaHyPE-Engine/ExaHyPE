@@ -264,6 +264,24 @@ Swift also requires you to pass
 
 to vectorisesome particular compute-heavy tasks (gravity).
 
+
+## Grace Hopper
+
+The Grace Hopper build configuration is similar to any other build:
+
+~~~~~~~~~~~~~~~~~~~~~~
+./configure CXX=nvc++ CC=nvc++ CXXFLAGS="-O4 --std=c++17 -mp=gpu -gpu=cc90,cuda12.3" LDFLAGS="-mp=gpu -gpu=cc90,cuda12.3" --with-multithreading=omp  --with-gpu=omp --enable-exahype --enable-blockstructured --enable-loadbalancing
+~~~~~~~~~~~~~~~~~~~~~~
+
+It is important to use cc90 here plus a reasonably new CUDA version. 
+Furthermore, most systems deliver the NC++ pipeline with a rather 
+old GCC/STL version. It might be necessary to load a newer GCC.
+Depending on the SLURM configuration, people might have to request
+GPUs explicitly when they want a Grace Hopper node.
+
+
+
+
  */
  
  

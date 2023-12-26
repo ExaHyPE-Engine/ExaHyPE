@@ -101,7 +101,7 @@ class GlobalFixedTimeStep( SingleSweep ):
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=False,
       solver_variant         = SolverVariant.WithVirtualFunctions,
-      kernel_variant         = KernelVariant.PatchWiseAoSHeap
+      kernel_variant         = KernelVariant.VolumeWiseAoS
     )
 
     solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,False)
