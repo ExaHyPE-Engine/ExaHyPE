@@ -5,6 +5,7 @@ import subprocess
 
 from .Overwrite import Overwrite
 
+
 def write_file(overwrite,overwrite_is_default,full_qualified_filename):
   """
     overwrite is of type Overwrite and is what the user passes in
@@ -25,10 +26,11 @@ def write_file(overwrite,overwrite_is_default,full_qualified_filename):
     print( "Error: undefined overwrite strategy" )
     return True
 
+
 def find_CMake_build_dir():
   """
   This function searches for the CMake build directory by iteratively checking parent directories.
-  Starting from the callers directory (using getcwd), iterating until root directory of peano and
+  Starting from the callers directory (using getcwd), iterating until root directory of Peano and
   this is computed using the location of this file therefore adapt the code if the file is moved
   somewhere else. Using CMake means that it was configured before, and therefore a CMakeCache.txt
   exists.
@@ -47,7 +49,7 @@ def find_CMake_build_dir():
   if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
     return ""
 
-  # We will iterate upwards aka implement "cd .." until we reach the peano4 root, or until we find CMakeCache.txt 
+  # We will iterate upwards aka implement "cd .." until we reach the Peano root, or until we find CMakeCache.txt.
   current_iter_dir = call_directory
   while current_iter_dir != project_root_dir:
     found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt"))
@@ -60,6 +62,7 @@ def find_CMake_build_dir():
 
 find_CMake_build_dir.CMake_build_dir_check_done = False
 find_CMake_build_dir.saved_CMake_build_dir = ""
+
 
 def find_configure_log():
   if find_configure_log.find_configure_log_check_done:
@@ -77,6 +80,7 @@ def find_configure_log():
 
 find_configure_log.find_configure_log_check_done = False
 find_configure_log.configure_log_path = ""
+
 
 def using_cuda_backend():
   """
@@ -122,19 +126,20 @@ def using_cuda_backend():
 using_cuda_backend.using_cuda_backend_check_done = False
 using_cuda_backend.using_cuda_backend_cached_value = False
 
+
 def caller_distance_to_build_root():
   # File dir is under src/
   file_dir = os.path.dirname(os.path.realpath(__file__))
-  # The root dir of the project is: ../../../ -> one more depth because of the out of source build
-  # The caller has to be inside the build directory
+  # The root dir of the project is: ../../../ -> one more depth because of the out-of-source build.
+  # The caller has to be inside the build directory.
   call_directory = os.getcwd()
   project_root_dir = os.path.abspath(os.path.join(file_dir, '../../..', ))
 
-  # Ensure we call the script under Peano4 folder
+  # Ensure we call the script under Peano folder.
   if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
     return -1
 
-  # We will iterate upwards aka implement "cd .." until we reach the peano4 root, or until we find CMakeCache.txt 
+  # We will iterate upwards aka implement "cd .." until we reach the Peano root, or until we find CMakeCache.txt.
   current_iter_dir = call_directory
   dist = 0
   while current_iter_dir != project_root_dir:
@@ -146,7 +151,7 @@ def caller_distance_to_build_root():
 
   return -1
 
-# Find out GPU vendor
+
 def get_gpu_vendor(architecture_string):
   if architecture_string == None:
     return None
@@ -162,18 +167,18 @@ def get_gpu_vendor(architecture_string):
 
 
 def get_mpi_implementation(mpicxx):
-    # Run mpicxx --version and infer which MPI implementation is being used,
-    # MPICH and Intel oneAPI print information including MPICH and Intel(R) MPI Library
-    # OpenMPI doesn't print any information that enables identification,
-    # A workaround be running mpicxx --showme that will also involve openmpi include etc.
+    # Run mpicxx --version and infer which MPI implementation is being used.
+    # MPICH and Intel oneAPI print information including MPICH and Intel(R) MPI Library.
+    # OpenMPI doesn't print any information that enables identification.
+    # A workaround can be running mpicxx --showme.
     bash_command = f"{mpicxx} -v"
     result = subprocess.run(bash_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     result_str = ""
     if result.returncode == 0:
         result_str = result.stdout
-    if "MPICH" in result_str: # MPICH
+    if "MPICH" in result_str:
         return "MPICH"
-    elif "Intel(R) MPI Library" in result_str: # Intel oneAPI
+    elif "Intel(R) MPI Library" in result_str:
         return "INTEL"
     else:
         showme_bash_command = f"{mpicxx} --showme"
@@ -185,8 +190,9 @@ def get_mpi_implementation(mpicxx):
 
 
 def parse_cmake_cache_for_mpi_and_gpu_vendor():
+  cmake_build_dir = find_CMake_build_dir()
+
   try:
-    cmake_build_dir = find_CMake_build_dir()
     mpi_vendor = None
     gpu_vendor = None
     with open(os.path.join(cmake_build_dir, "CMakeCache.txt"), "r") as f:
@@ -238,7 +244,7 @@ def parse_makefile_for_mpi_and_gpu_vendor():
     cxxflags = cxx + " " +  cxxflags
     nvccflags = nvcc + " " + nvccflags
 
-    # There various ways to pass the GPU architecture as a part of CXXFLAGS
+    # There various ways to pass the GPU architecture as a part of CXXFLAGS.
     # It can be: --offload-arch=<...>, --cuda-gpu-arch=<...>, --arch=<...>, -gpu=<...>
     cxxflags_tokenized = cxxflags.split()
     nvccflags_tokenized = nvccflags.split()
