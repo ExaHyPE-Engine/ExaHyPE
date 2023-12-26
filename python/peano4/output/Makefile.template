@@ -161,6 +161,7 @@ distclean:
 	rm -f README-*
 	rm -f .gitignore
 	rm -f Makefile
+	rm -f gpu-launch.sh
 	{% if USING_CMAKE %}rm -f CMakeLists.txt{% endif %}
 
 maintainer-clean: distclean
