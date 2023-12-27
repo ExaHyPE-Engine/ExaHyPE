@@ -11,7 +11,7 @@ class GPULaunch(object):
     def __init__(self):
         template_dir = os.path.dirname(os.path.abspath(__file__))
         env = Environment(loader=FileSystemLoader(template_dir))
-        self.template = env.get_template("GPULaunch.sh.template")
+        self.template = env.get_template("GPULaunch.template")
 
         cmake_build_dir = find_CMake_build_dir()
         if cmake_build_dir == "":
@@ -22,6 +22,6 @@ class GPULaunch(object):
         self.context = {"GPU_VENDOR": gpu_vendor, "MPI_IMPLEMENTATION": mpi_vendor}
 
     def generate(self, directory):
-        output_file_path = os.path.join(directory, "gpu-launch.sh")
+        output_file_path = os.path.join(directory, "gpu-launch")
         with open(output_file_path, "w") as output:
             output.write(self.template.render(self.context))
