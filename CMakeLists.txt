@@ -382,8 +382,7 @@ endif()
 if(WITH_LIBXSMM)
   find_package(LIBXSMM REQUIRED)
   target_compile_definitions(project_options INTERFACE UseLibXSMM)
-  target_link_libraries(project_options INTERFACE ${LIBXSMM_LIBRARIES}) #target_link_system_libraries
-  target_include_directories(project_options INTERFACE ${LIBXSMM_INCLUDE_DIRS}) #target_include_system_directories
+  target_link_libraries(project_options INTERFACE LIBXSMM::LIBXSMM)
 endif()
 
 if(WITH_VTK)
