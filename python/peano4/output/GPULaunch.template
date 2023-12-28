@@ -51,5 +51,5 @@ export OPENCL_VISIBLE_DEVICES="$node_local_mpi_rank"
 {% endif %}
 
 # First input argument is the executable to be run:
-# Usage ./gpu-launch <your_executable>
+# Usage mpirun -n <num_proc> ./gpu-launch <your_executable>
 $1
