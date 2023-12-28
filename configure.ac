@@ -40,10 +40,10 @@ AC_CONFIG_MACRO_DIR([m4])
 # See Automake documentation and the Stack Overflow post:
 # https://stackoverflow.com/questions/3116645/default-compiler-flags-with-autotools
 if test -z "$CXXFLAGS"; then
-  CXXFLAGS=''
+  CXXFLAGS=' '
 fi
 if test -z "$CFLAGS"; then
-  CFLAGS=''
+  CFLAGS=' '
 fi
 
 AM_INIT_AUTOMAKE(foreign -Wall -Werror)
