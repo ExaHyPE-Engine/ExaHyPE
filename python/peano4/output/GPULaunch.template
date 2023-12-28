@@ -13,11 +13,11 @@ unset node_local_mpi_rank
 # export node_local_mpi_rank="$OMPI_COMM_WORLD_LOCAL_RANK"
 # export node_local_mpi_rank="$MPI_LOCALRANKID"
 # export node_local_mpi_rank="$SLURM_LOCALID"
-{% if MPI_IMLEMENTATION=="OPENMPI" %}
+{% if MPI_IMPLEMENTATION=="OPENMPI" %}
 export node_local_mpi_rank="$OMPI_COMM_WORLD_LOCAL_RANK"
-{% elif MPI_IMLEMENTATION=="MPICH" %}
+{% elif MPI_IMPLEMENTATION=="MPICH" %}
 export node_local_mpi_rank="$MPI_LOCALRANKID"
-{% elif MPI_IMLEMENTATION=="INTEL" %}
+{% elif MPI_IMPLEMENTATION=="INTEL" %}
 export node_local_mpi_rank="$MPI_LOCALRANKID"
 {% else %}
 export node_local_mpi_rank="$SLURM_LOCALID"
@@ -28,9 +28,9 @@ export node_local_mpi_rank="$SLURM_LOCALID"
 
 # export I_MPI_GPU_SUPPORT=1
 # export MPICH_GPU_SUPPORT_ENABLED=1
-{% if MPI_IMLEMENTATION=="INTEL" %}
+{% if MPI_IMPLEMENTATION=="INTEL" %}
 export I_MPI_GPU_SUPPORT=1
-{% elif MPI_IMLEMENTATION=="MPICH" %}
+{% elif MPI_IMPLEMENTATION=="MPICH" %}
 export MPICH_GPU_SUPPORT_ENABLED=1
 {% endif %}
 

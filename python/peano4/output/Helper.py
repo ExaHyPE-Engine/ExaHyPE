@@ -86,7 +86,7 @@ def using_cuda_backend():
   """
   This function checks if the CUDA backend. Caches the result, after the first call calling this
   function will have no cost as it returns a cached value. It checks the value for the GPU backend
-  saved in the CMakeCache.txt whether it is set to CUDA
+  saved in the CMakeCache.txt whether it is set to CUDA.
 
   :return: True if the CUDA backend is being used, False otherwise.
   :rtype: bool
@@ -96,7 +96,7 @@ def using_cuda_backend():
 
   using_cuda_backend.using_cuda_backend_check_done = True
   cmake_build_dir_path = find_CMake_build_dir()
-  if cmake_build_dir_path != "": # Check for CUDA while we are using CMake backend
+  if cmake_build_dir_path != "":  # Check for CUDA while we are using CMake backend
     try:
       with open(os.path.join(cmake_build_dir_path,"CMakeCache.txt")) as cache:
         for line in cache:
@@ -106,7 +106,7 @@ def using_cuda_backend():
     except Exception:
       using_cuda_backend.using_cuda_backend_cached_value = False
       return using_cuda_backend.using_cuda_backend_cached_value
-  else: # Check for CUDA while we are using Automake backend
+  else:  # Check for CUDA while we are using Automake backend
     config_log_path = find_configure_log()
 
     if config_log_path == "":
@@ -172,19 +172,21 @@ def get_mpi_implementation(mpicxx):
     # OpenMPI doesn't print any information that enables identification.
     # A workaround can be running mpicxx --showme.
     bash_command = f"{mpicxx} -v"
-    result = subprocess.run(bash_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result = subprocess.run(bash_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     result_str = ""
     if result.returncode == 0:
-        result_str = result.stdout
+        result_str = str(result.stdout) + " " + str(result.stderr)
     if "MPICH" in result_str:
         return "MPICH"
     elif "Intel(R) MPI Library" in result_str:
         return "INTEL"
     else:
         showme_bash_command = f"{mpicxx} --showme"
-        showme_result = subprocess.run(showme_bash_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        showme_result = subprocess.run(showme_bash_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if showme_result.returncode == 0:
-            if "openmpi" in showme_result.stdout:
+            if "openmpi" in str(showme_result.stdout):
+                return "OPENMPI"
+            elif "openmpi" in str(showme_result.stderr):
                 return "OPENMPI"
     return None
 
@@ -192,83 +194,79 @@ def get_mpi_implementation(mpicxx):
 def parse_cmake_cache_for_mpi_and_gpu_vendor():
   cmake_build_dir = find_CMake_build_dir()
 
-  try:
-    mpi_vendor = None
-    gpu_vendor = None
-    with open(os.path.join(cmake_build_dir, "CMakeCache.txt"), "r") as f:
-      for line in f:
-        if "MPI_CXX_COMPILER:FILEPATH" in line:
-          mpicxx = line.split("=")[1]  # Get path to mpicxx. E.g., /usr/bin/mpicxx
-          mpi_vendor = get_mpi_implementation(mpicxx)
-        if "WITH_GPU_ARCH:STRING" in line:
-          gpu_arch = line.split("=")[1]  # Get GPU arch
-          gpu_vendor = get_gpu_vendor(gpu_arch)
-        if mpi_vendor and gpu_vendor:
-          break
-    return (mpi_vendor, gpu_vendor)
-  except:
-    return (None, None)
+  mpi_vendor = None
+  gpu_vendor = None
+  with open(os.path.join(cmake_build_dir, "CMakeCache.txt"), "r") as f:
+    for line in f:
+      if "MPI_CXX_COMPILER:FILEPATH" in line:
+        mpicxx = line.split("=")[1]  # Get path to mpicxx. E.g., /usr/bin/mpicxx
+        mpi_vendor = get_mpi_implementation(mpicxx)
+      if "WITH_GPU_ARCH:STRING" in line:
+        gpu_arch = line.split("=")[1]  # Get GPU arch
+        gpu_vendor = get_gpu_vendor(gpu_arch)
+      if mpi_vendor and gpu_vendor:
+        break
+  return (mpi_vendor, gpu_vendor)
 
 
 def parse_makefile_for_mpi_and_gpu_vendor():
-  try:
-    # Automake does not differentiate between mpicxx and cxx variables
-    cxx = None
-    cxxflags = None
-    nvcc = None
-    nvccflags = None
-    gpu_vendor = None
-    mpi_vendor = None
+  # Automake does not differentiate between mpicxx and cxx variables
+  cxx = None
+  cxxflags = None
+  nvcc = None
+  nvccflags = None
+  gpu_vendor = None
+  mpi_vendor = None
 
-    peano_root_path = os.path.join(os.path.dirname(__file__), "..", "..", "..")
-    makefile_path = os.path.join(peano_root_path, "src", "Makefile")
+  peano_root_path = os.path.join(os.path.dirname(__file__), "..", "..", "..")
+  makefile_path = os.path.join(peano_root_path, "src", "Makefile")
 
-    with open(makefile_path, "r") as makefile:
-      for line in makefile:
-        if line.startswith("CXX ="):
-          cxx = line[len("CXX ="):]
-        elif line.startswith("CXXFLAGS ="):
-          cxxflags = line[len("CXXFLAGS ="):]
-        elif line.startswith("NVCC ="):  # For CUDA backend
-          nvcc = line[len("NVCC ="):]
-        if line.startswith("NVCCFLAGS ="):
-          nvccflags = line[len("NVCCFLAGS ="):]
-        if cxx and cxxflags and nvcc and nvccflags:
-          break
-    if nvcc == None:
-      nvcc = ""
-    if nvccflags == None:
-      nvccflags = ""
+  with open(makefile_path, "r") as makefile:
+    for line in makefile:
+      if line.startswith("CXX ="):
+        cxx = line[len("CXX ="):]
+      elif line.startswith("CXXFLAGS ="):
+        cxxflags = line[len("CXXFLAGS ="):]
+      elif line.startswith("NVCC ="):  # For CUDA backend
+        nvcc = line[len("NVCC ="):]
+      if line.startswith("NVCCFLAGS ="):
+        nvccflags = line[len("NVCCFLAGS ="):]
+      if cxx and cxxflags and nvcc and nvccflags:
+        break
+  if nvcc == None:
+    nvcc = ""
+  if nvccflags == None:
+    nvccflags = ""
 
-    print(cxx, cxxflags, nvcc, nvccflags)
-    cxxflags = cxx + " " +  cxxflags
-    nvccflags = nvcc + " " + nvccflags
+  #print(cxx, cxxflags, nvcc, nvccflags)
 
-    # There various ways to pass the GPU architecture as a part of CXXFLAGS.
-    # It can be: --offload-arch=<...>, --cuda-gpu-arch=<...>, --arch=<...>, -gpu=<...>
-    cxxflags_tokenized = cxxflags.split()
-    nvccflags_tokenized = nvccflags.split()
-    offload_flags = ["--offload-arch", "--cuda-gpu-arch", "--arch", "-gpu", "-arch"]
-    mpi_vendor = get_mpi_implementation(cxx.split()[0])
+  cxxflags = cxx + " " +  cxxflags
+  nvccflags = nvcc + " " + nvccflags
 
-    gpu_arch = None
-    for flags_tokenized in [cxxflags_tokenized, nvccflags_tokenized]:
-      for flag_token in flags_tokenized:
-        for offload_flag in offload_flags:
-          if flag_token.startswith(offload_flag):
-              if "=" in flag_token:
-                gpu_arch = flag_token.split("=")[1]
-              else:
-                gpu_arch = flag_token.split()[1]
-              break
-        if gpu_arch:
-          break
+  # There various ways to pass the GPU architecture as a part of CXXFLAGS.
+  # It can be: --offload-arch=<...>, --cuda-gpu-arch=<...>, --arch=<...>, -gpu=<...>
+  cxxflags_tokenized = cxxflags.split()
+  nvccflags_tokenized = nvccflags.split()
+
+  offload_flags = ["--offload-arch", "--cuda-gpu-arch", "--arch", "-gpu", "-arch"]
+  mpi_vendor = get_mpi_implementation(cxx.split()[0])
+
+  gpu_arch = None
+  for flags_tokenized in [cxxflags_tokenized, nvccflags_tokenized]:
+    for flag_token in flags_tokenized:
+      for offload_flag in offload_flags:
+        if flag_token.startswith(offload_flag):
+            if "=" in flag_token:
+              gpu_arch = flag_token.split("=")[1]
+            else:
+              gpu_arch = flag_token.split()[1]
+            break
       if gpu_arch:
         break
-
     if gpu_arch:
-      gpu_vendor = get_gpu_vendor(architecture_string=gpu_arch)
+      break
 
-    return (mpi_vendor, gpu_vendor)
-  except:
-    return (None, None)
+  if gpu_arch:
+    gpu_vendor = get_gpu_vendor(architecture_string=gpu_arch)
+
+  return (mpi_vendor, gpu_vendor)
