@@ -444,7 +444,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 
   // Kernel launches
   const int rank              = ::tarch::mpi::Rank::getInstance().getRank();
-  const int device            = rank;
+  const int device            = 0; // We use the mpi-gpu-launch script to map each device to the ranks.
   const int numberOfRanks     = ::tarch::mpi::Rank::getInstance().getNumberOfRanks();
   const int patchesPerProcess = numberOfPatches / numberOfRanks;
   const int remainder         = numberOfPatches % numberOfRanks;
