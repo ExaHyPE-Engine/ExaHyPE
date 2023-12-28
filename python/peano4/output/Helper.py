@@ -171,6 +171,7 @@ def get_mpi_implementation(mpicxx):
     # MPICH and Intel oneAPI print information including MPICH and Intel(R) MPI Library.
     # OpenMPI doesn't print any information that enables identification.
     # A workaround can be running mpicxx --showme.
+    mpicxx = mpicxx.strip()  # Remove leading and trailing whitespace, including newline characters
     bash_command = f"{mpicxx} -v"
     result = subprocess.run(bash_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     result_str = ""
