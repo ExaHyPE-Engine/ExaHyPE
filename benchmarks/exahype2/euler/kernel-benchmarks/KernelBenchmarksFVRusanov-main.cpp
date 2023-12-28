@@ -130,7 +130,7 @@ std::tuple<double, int> validateOutcome(double* Q, int patchIndex, const double 
 
 void reportRuntime(const std::string& kernelIdentificator, const ::tarch::timing::Measurement& timingKernelLaunch, int patches) {
   std::stringstream ss;
-  ss << std::string(150, '-') << "\n";
+  ss << "\n";
   ss << kernelIdentificator << ":\n\t";
 
   ss << timingComputeKernel.getValue() << " |\n\t";
@@ -455,7 +455,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
   // Headers
   std::stringstream ss;
   ss << std::left;
-  ss << std::string(150, '-') << "\n";
+  ss << "\n";
   ss << "Kernel ID:\n\t";
   ss << "Compute Kernel Time |\n\t";
   ss << "Compute Kernel Time (Normalised) |\n\t";
@@ -1948,26 +1948,12 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 
 int main(int argc, char** argv) {
   ::peano4::initParallelEnvironment(&argc, &argv);
-  ::exahype2::setDefaultLogStatements();
-  ::tarch::logging::CommandLineLogger::getInstance().setLogFormat(
-    " ",   // const std::string& columnSeparator
-    false, // bool logTimeStamp,
-    true,  // bool logTimeStampHumanReadable,
-    false, // bool logMachineName,
-    false, // bool logThreadName,
-    false, // bool logMessageType,
-    false, // bool logTrace,
-    ""     // const std::string& outputLogFileName
-  );
-  ::tarch::multicore::Core::getInstance().configure(tarch::multicore::Core::UseDefaultNumberOfThreads);
-  ::tarch::accelerator::Device::getInstance().configure();
-  ::exahype2::initNonCritialAssertionEnvironment();
-  ::tarch::multicore::initSmartMPI();
-  ::peano4::fillLookupTables();
-  // if (::tarch::mpi::Rank::getInstance().getNumberOfRanks() > 1 and ::tarch::multicore::Core::getInstance().getNumberOfThreads() <= 1) {
-  //   logError("main()", "MPI runs without multithreading are not supported currently.");
-  //   return EXIT_FAILURE;
-  // }
+  // Do this early, so people can use logInfo properly.
+  repositories::initLogFilters();
+  exahype2::initNonCritialAssertionEnvironment();
+  tarch::multicore::initSmartMPI();
+  peano4::fillLookupTables();
+  repositories::initSharedMemoryAndGPUEnvironment();
   ::peano4::runTestsAndBenchmarks();
   OTTER_INITIALISE();
 
@@ -2012,6 +1998,8 @@ int main(int argc, char** argv) {
 
   OTTER_FINALISE();
   delete[] validOutcome;
-  ::peano4::shutdownParallelEnvironment();
+  tarch::multicore::shutdownSmartMPI();
+  exahype2::shutdownNonCritialAssertionEnvironment();
+  peano4::shutdownParallelEnvironment();
   return EXIT_SUCCESS;
 }
