@@ -24,7 +24,7 @@ class GPULaunch(object):
 
 
     def generate(self, directory):
-        output_file_path = os.path.join(directory, "mpi-gpu-launch")
+        output_file_path = os.path.join(directory, "gpu-mpi-launch")
         with open(output_file_path, "w") as output:
             output.write(self.template.render(self.context))
 
