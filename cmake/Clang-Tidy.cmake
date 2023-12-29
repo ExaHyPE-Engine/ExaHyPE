@@ -1,10 +1,6 @@
-option(WITH_CLANG_TIDY "Build with clang-tidy" OFF)
-include(CMakeDependentOption)
-cmake_dependent_option(WITH_CLANG_TIDY_FIX "Build with clang-tidy to fix" OFF "WITH_CLANG_TIDY" OFF)
+find_program(CLANG_TIDY clang-tidy)
 
-if(WITH_CLANG_TIDY)
-  find_program(CLANG_TIDY clang-tidy REQUIRED)
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
+if(CLANG_TIDY)
   set(EXPORT_COMPILE_COMMANDS ON)
 
   execute_process(
@@ -13,20 +9,25 @@ if(WITH_CLANG_TIDY)
     RESULT_VARIABLE CLANG_TIDY_RESULT
     OUTPUT_VARIABLE CLANG_TIDY_VERSION
     ERROR_VARIABLE CLANG_TIDY_ERROR
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
 
   if(CLANG_TIDY_RESULT EQUAL 0)
+    message(STATUS "Found clang-tidy: " ${CLANG_TIDY})
+
     # Check if clang_html Python module is available
     execute_process(
       COMMAND pip3 show clang_html
-      RESULT_VARIABLE EXIT_CODE
-      OUTPUT_QUIET)
+      RESULT_VARIABLE CLANG_HTML_RESULT
+      OUTPUT_QUIET
+    )
 
     # Making CLANG_HTML optional
-    if(NOT ${EXIT_CODE} EQUAL 0)
+    if(NOT ${CLANG_HTML_RESULT} EQUAL 0)
       message(WARNING "Clang_html not found, it is required for the visualisation. Install with 'pip3 install clang-html'")
       set(CLANG_HTML OFF)
     else()
+      message(STATUS "Found clang_html")
       set(CLANG_HTML ON)
     endif()
 
@@ -39,20 +40,21 @@ if(WITH_CLANG_TIDY)
       "${CMAKE_BINARY_DIR}/*.cpph"
     )
 
-    # If the user asks for the clang-tidy to fix, then we include -fix to the options.
-    if(WITH_CLANG_TIDY_FIX)
-      set(CLANG_TIDY_FIX_OPTIONS -fix)
-    else()
-      set(CLANG_TIDY_FIX_OPTIONS )
-    endif()
-
     set(CLANG_TIDY_CHECKS -*,cppcoreguidelines-*,mpi-*,openmp-*,performance-*,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-cppcoreguidelines-pro-bounds-pointer-arithmetic)
     add_custom_target(
       clang-tidy
-      COMMAND ${CLANG_TIDY} -header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} ${CLANG_TIDY_FIX_OPTIONS} ${CLANG_TIDY_SOURCES} | tee clang-tidy.log
+      COMMAND ${CLANG_TIDY} -header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} ${CLANG_TIDY_SOURCES} | tee clang-tidy.log
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       VERBATIM
-      COMMENT "Running clang-tidy: clang-tidy header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} ${CLANG_TIDY_FIX_OPTIONS} <All sources...>")
+      COMMENT "Running clang-tidy: clang-tidy header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} <All sources...>"
+    )
+    add_custom_target(
+      clang-tidy-fix
+      COMMAND ${CLANG_TIDY} -header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} -fix ${CLANG_TIDY_SOURCES} | tee clang-tidy.log
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      VERBATIM
+      COMMENT "Running clang-tidy: clang-tidy header-filter=${CMAKE_SOURCE_DIR}/** -checks=${CLANG_TIDY_CHECKS} -p=${CMAKE_BINARY_DIR} -fix <All sources...>"
+    )
 
     if(CLANG_HTML)
       add_custom_target(
@@ -79,4 +81,6 @@ if(WITH_CLANG_TIDY)
   else()
     message(SEND_ERROR "clang-tidy found but cannot retrieve version information")
   endif()
+else()
+  message(WARNING "clang-tidy requested but executable not found")
 endif()

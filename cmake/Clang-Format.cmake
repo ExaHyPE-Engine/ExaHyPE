@@ -1,4 +1,4 @@
-find_program(CLANG_FORMAT clang-format NAMES clang-format)
+find_program(CLANG_FORMAT clang-format)
 
 if(CLANG_FORMAT)
   execute_process(COMMAND ${CLANG_FORMAT} --version

@@ -65,6 +65,8 @@ execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jinja2" RESULT_VARIABLE
 # We need Jinja2 for code generation
 if(NOT JINJA2_FOUND EQUAL 0)
   message(WARNING "Jinja2 package (needed for code generation) not found. Please install Jinja2 e.g.: 'pip3 install jinja2'")
+else()
+  message(STATUS "Found Jinja2")
 endif()
 
 include(MessageUtils)
@@ -75,6 +77,7 @@ include(Sanitisers)
 include(IWYU)
 include(Clang-Tidy)
 include(CCache)
+include(Doxygen)
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
 include(ProcessorCount)
@@ -426,7 +429,7 @@ write_basic_package_version_file(
 
 list(APPEND DRIECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications")
 foreach(item IN LISTS DRIECTORIES_TO_LINK_OVER)
-  if (NOT EXISTS "${CMAKE_BINARY_DIR}/${item}")
+  if(NOT EXISTS "${CMAKE_BINARY_DIR}/${item}")
     execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}")
     install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
   endif()
@@ -436,19 +439,9 @@ file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 include(${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 
-if (NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
   execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/documentation" "${CMAKE_BINARY_DIR}/documentation")
 endif()
-
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-    set(DOXYGEN ${CMAKE_CURRENT_BINARY_DIR}/documentation/Doxyfile)
-    add_custom_target(documentation
-        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN}
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMENT "Generating API documentation with Doxygen"
-        VERBATIM)
-endif(DOXYGEN_FOUND)
 
 add_subdirectory(src)
 
@@ -516,13 +509,10 @@ display_variable(ENABLE_LOADBALANCING)
 display_variable(ENABLE_PARTICLES)
 display_variable(ENABLE_BLOCKSTRUCTURED)
 
-display_subseparator("Options for Static Analysis")
-display_variable(WITH_SANITISE_ADDRESS)
-display_variable(WITH_SANITISE_UNDEFINED)
-display_variable(WITH_SANITISE_THREAD)
-display_variable(WITH_INCLUDE_WHAT_YOU_USE)
-display_variable(WITH_CLANG_TIDY)
-display_variable(WITH_CLANG_TIDY_FIX)
+display_subseparator("Options for Sanitisers")
+display_variable(SANITISE_ADDRESS)
+display_variable(SANITISE_UNDEFINED)
+display_variable(SANITISE_THREAD)
 
 display_subseparator("Options to Build")
 display_variable(CMAKE_C_COMPILER)
