@@ -1,0 +1,55 @@
+#!/bin/bash
+
+unset node_local_mpi_rank
+
+# Different MPI implementations use different environment variables to set the node local ranks.
+# Peano assumes 1 MPI rank per 1 GPU within a node.
+# The node local ranks are used to determine the device id.
+# This variable is set to the detected mpicxx used in the configuration.
+# Depending on your needs adjust these variables.
+# OpenMPI uses OMPI_COMM_WORLD_LOCAL_RANK, Intel oneAPI and MPICH use MPI_LOCALRANKID.
+# The SLURM_LOCALID can also be used to derive it.
+
+# export node_local_mpi_rank="$OMPI_COMM_WORLD_LOCAL_RANK"
+# export node_local_mpi_rank="$MPI_LOCALRANKID"
+# export node_local_mpi_rank="$SLURM_LOCALID"
+{% if MPI_IMPLEMENTATION=="OPENMPI" %}
+export node_local_mpi_rank="$OMPI_COMM_WORLD_LOCAL_RANK"
+{% elif MPI_IMPLEMENTATION=="MPICH" %}
+export node_local_mpi_rank="$MPI_LOCALRANKID"
+{% elif MPI_IMPLEMENTATION=="INTEL" %}
+export node_local_mpi_rank="$MPI_LOCALRANKID"
+{% else %}
+export node_local_mpi_rank="$SLURM_LOCALID"
+{% endif %}
+
+# MPICH and Intel oneAPI might additionally need environment variables to enable GPU-aware communication.
+# Change according to your needs.
+
+# export I_MPI_GPU_SUPPORT=1
+# export MPICH_GPU_SUPPORT_ENABLED=1
+{% if MPI_IMPLEMENTATION=="INTEL" %}
+export I_MPI_GPU_SUPPORT=1
+{% elif MPI_IMPLEMENTATION=="MPICH" %}
+export MPICH_GPU_SUPPORT_ENABLED=1
+{% endif %}
+
+# Depending on your needs, other variables might be necessary depending on the backend
+# and the GPU vendor different from the autodetected ones.
+
+# export NVIDIA_VISIBLE_DEVICES="$node_local_mpi_rank"
+# export CUDA_VISIBLE_DEVICES="$node_local_mpi_rank"
+# export ROCR_VISIBLE_DEVICES="$node_local_mpi_rank"
+# export HIP_VISIBLE_DEVICES="$node_local_mpi_rank"
+# export OPENCL_VISIBLE_DEVICES="$node_local_mpi_rank"
+{% if GPU_VENDOR=="NVIDIA" %}
+export CUDA_VISIBLE_DEVICES="$node_local_mpi_rank"
+{% elif GPU_VENDOR=="AMD" %}
+export ROCR_VISIBLE_DEVICES="$node_local_mpi_rank"
+{% elif GPU_VENDOR=="INTEL" %}
+export OPENCL_VISIBLE_DEVICES="$node_local_mpi_rank"
+{% endif %}
+
+# First input argument is the executable to be run:
+# Usage mpirun -n <num_proc> ./gpu-mpi-launch <your_executable>
+$1

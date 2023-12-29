@@ -139,7 +139,6 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/timing/Watch.cpp \
 	tarch/timing/Measurement.cpp \
 	tarch/timing/GlidingAverageMeasurement.cpp \
-	tarch/timing/TPSCalculator.cpp \
 	tarch/services/Service.cpp \
 	tarch/services/ServiceRepository.cpp
 

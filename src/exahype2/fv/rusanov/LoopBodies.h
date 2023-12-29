@@ -71,14 +71,15 @@ namespace exahype2::fv::rusanov::loopbodies {
    * @param volumeIndex: Which volume is to be updated within the target
    *   patch. This index refers to the target index.
    */
+  template <class QInEnumeratorType, class QOutEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void copySolution(
     const double* __restrict__ QIn,
-    const auto&                                 QInEnumerator,
+    const QInEnumeratorType&                    QInEnumerator,
     int                                         patchIndex,
     const ::tarch::la::Vector<Dimensions, int>& volumeIndex,
     int                                         unknown,
     double* __restrict__ QOut,
-    const auto& QOutEnumerator
+    const QOutEnumeratorType& QOutEnumerator
   ) InlineMethod {
     QOut[QOutEnumerator(patchIndex, volumeIndex, unknown)] = QIn[QInEnumerator(patchIndex, volumeIndex, unknown)];
   };
@@ -140,7 +141,7 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void copySolutionAndAddSourceTerm(
     const double* __restrict__ QIn,
-    const enumerator::AoSLexicographicEnumerator& QInEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const SourceFunctor&                           sourceFunctor,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
     const ::tarch::la::Vector<Dimensions, double>& patchSize,
@@ -179,7 +180,7 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <class SolverType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void copySolutionAndAddSourceTerm(
     const double* __restrict__ QIn,
-    const enumerator::AoSLexicographicEnumerator& QInEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
     const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
@@ -232,7 +233,7 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeMaxEigenvalue(
     const double* __restrict__ QIn,
-    const enumerator::AoSLexicographicEnumerator& QInEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
     const ::tarch::la::Vector<Dimensions, double>& patchSize,
@@ -273,7 +274,7 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <class SolverType, class MaxEigenvalueEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeMaxEigenvalue(
     const double* __restrict__ QIn,
-    const enumerator::AoSLexicographicEnumerator& QInEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
     const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
@@ -319,7 +320,7 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions double reduceMaxEigenvalue(
     const double* __restrict__ QOut,
-    const enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
     const MaxEigenvalueFunctor&                    maxEigenvalueFunctor,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
     const ::tarch::la::Vector<Dimensions, double>& patchSize,
@@ -357,7 +358,7 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <class SolverType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double reduceMaxEigenvalue(
     const double* __restrict__ QOut,
-    const enumerator::AoSLexicographicEnumerator& QOutEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QOutEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
     const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
@@ -396,7 +397,7 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <int NumberOfUnknowns, int NumberOfAuxiliaryVariables>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void computeFlux(
     const double* __restrict__ QIn,
-    const enumerator::AoSLexicographicEnumerator& QInEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const FluxFunctor&                             fluxFunctor,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
     const ::tarch::la::Vector<Dimensions, double>& patchSize,
@@ -434,7 +435,7 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <class SolverType, class FluxEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeFlux(
     const double* __restrict__ QIn,
-    const enumerator::AoSLexicographicEnumerator& QInEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
     const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,
@@ -451,7 +452,7 @@ namespace exahype2::fv::rusanov::loopbodies {
   template <class SolverType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void computeFlux(
     const double* __restrict__ QIn,
-    const enumerator::AoSLexicographicEnumerator& QInEnumerator,
+    const enumerator::AoSLexicographicEnumerator&  QInEnumerator,
     const ::tarch::la::Vector<Dimensions, double>& patchCentre,
     const ::tarch::la::Vector<Dimensions, double>& patchSize,
     int                                            patchIndex,

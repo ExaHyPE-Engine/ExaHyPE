@@ -32,12 +32,13 @@ AC_INIT([Peano], [4.0])
 AC_CONFIG_MACRO_DIR([m4])
 
 # Automake sets C++ flags to "-O2 -g" for GNU compilers (and also for other compilers).
-# These flags are appended to every target  (Debug, Release, Trace, Asserts, Stats).
+# These flags are appended to every target (Debug, Release, Trace, Asserts, Stats).
 # To override these defaults, they need to be set between AC_INIT and AC_PROG_CXX for C++
 # and AC_PROG_CC for C.
 # If the flags are empty at this stage (user has not given flags), then we set the flags to none
 # (empty string), so that "-g -O2" is not appended to every target.
-# See Automake documentation and the stackoverflow post: https://stackoverflow.com/questions/3116645/default-compiler-flags-with-autotools
+# See Automake documentation and the Stack Overflow post:
+# https://stackoverflow.com/questions/3116645/default-compiler-flags-with-autotools
 if test -z "$CXXFLAGS"; then
   CXXFLAGS=' '
 fi
@@ -86,7 +87,11 @@ AC_PROG_CXX
 AC_LANG(C++)
 
 #AX_COMPILER_VENDOR
-#AX_CXX_COMPILE_STDCXX_11
+
+AR="ar"
+ARFLAGS="rcD"
+AC_SUBST(AR)
+AC_SUBST(ARFLAGS)
 
 srcdir_full_path=`cd $srcdir && pwd`
 
@@ -107,11 +112,9 @@ CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g "
 CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g "
 CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0 "
 
-# Note: the flag "-g" is essentially a flag for the compiler driver
-# I given as a linker flag, the linker does not complain but it will be ignored.
-# E.g. taken from GNU ld documentaiton https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
-# -g, Ignored. Provided for compatibility with other tools. 
-# Works similarly in other linkers etc. (Libtool's documentation is worse comapred to ld and lld, and the debug flag -g is not mentioned)
+# Note: the flag "-g" is essentially a flag for the compiler driver.
+# Given as a linker flag, the linker does not complain but it will be ignored.
+# Taken from GNU ld documentation: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
 LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
 LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src "
 LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src "
@@ -184,7 +187,7 @@ fi
 
 
 #
-# MPI  Options
+# MPI Options
 #
 # Logic: user provides mpi compiler command
 #        check if that command exists
@@ -200,7 +203,6 @@ AC_ARG_WITH(mpi,
   [ AC_MSG_CHECKING(for mpi); AC_MSG_RESULT(no); mpi=false ])
 
 #AC_DEFUN([AC_PROG_USERMPI], [AC_CHECK_PROG(USERMPI,"${mpi}",yes)])
-
 
 if test "$mpi" != false; then
   CXX=$mpi
@@ -236,7 +238,6 @@ AC_ARG_WITH(
     AC_MSG_RESULT(no); gpu=false
   ]
 )
-
 
 AM_CONDITIONAL([GPUOffloadingOMP],    [test "$gpu" == omp])
 AM_CONDITIONAL([GPUOffloadingSYCL],   [test "$gpu" == sycl])
@@ -370,7 +371,6 @@ AC_ARG_WITH(vtk,
 
 AM_CONDITIONAL([UseVTK],[test "$vtk_include" != false])
 
-
 if test "$vtk_include" != false; then
   AC_DEFINE([UseVTK], [1], [UseVTK])
   AC_CHECK_FILE([$vtk_include/vtkVersion.h], [vtkFound="OK"])
@@ -401,18 +401,16 @@ if test "$vtk_include" != false; then
     fi
   fi
 
-
   AC_ARG_WITH(vtk-suffix,
     AS_HELP_STRING([--with-vtk-suffix],[specify which suffix the vtk libraries carry [default=autodetect, use for no prefix]]),
     [ AC_MSG_CHECKING(for vtk-suffix)
       case "${withval}" in
         yes)   AC_MSG_RESULT(assume VTK libraries have no suffix);    vtk_suffix=""  ;;
-	no)    AC_MSG_RESULT(not set - try to autodetect); vtk_suffix="autodetect";;
+        no)    AC_MSG_RESULT(not set - try to autodetect); vtk_suffix="autodetect";;
         *)     AC_MSG_RESULT(use suffix ${withval});    vtk_suffix=${withval}  ;;
       esac
     ],
     [ AC_MSG_CHECKING(for vtk-suffix); AC_MSG_RESULT(not set - try to autodetect); vtk_suffix="autodetect" ])
-
 
   #
   # So far, every VTK version we had tested had vtkIOCore, so we test this one. On the
@@ -482,28 +480,12 @@ if test "$use_otter" == true; then
   AC_DEFINE([UseOtter], [UseOtter], [UseOtter])
 fi
 
-#
-# libxsmm JIT
-#
-AC_ARG_WITH(libxsmmJIT,
-  AS_HELP_STRING([--with-libxsmmJIT],[enable libxsmmJIT [default=false]]),
-  [ AC_MSG_CHECKING(for libxsmmJIT)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    use_libxsmmJIT=false ;;
-      *)     AC_MSG_RESULT(yes);   use_libxsmmJIT=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for libxsmmJIT); AC_MSG_RESULT(no); use_libxsmmJIT=false ])
-AM_CONDITIONAL([UselibxsmmJIT],[test "x$use_libxsmmJIT" = xtrue])
-
-if test "$use_libxsmmJIT" == true; then
-  AC_DEFINE([UselibxsmmJIT], [UselibxsmmJIT], [UselibxsmmJIT])
-fi
 
 #
-# libxsmm
+# LIBXSMM
 #
 AC_ARG_WITH(libxsmm,
-  AS_HELP_STRING([--with-libxsmm],[enable libxsmm [default=false]]),
+  AS_HELP_STRING([--with-libxsmm],[enable LIBXSMM [default=false]]),
   [ AC_MSG_CHECKING(for libxsmm)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    use_libxsmm=false ;;
@@ -516,22 +498,42 @@ if test "$use_libxsmm" == true; then
   AC_DEFINE([UseLibXSMM], [UseLibXSMM], [UseLibXSMM])
 fi
 
+
+#
+# LIBXSMM JIT
+#
+AC_ARG_WITH(libxsmmjit,
+  AS_HELP_STRING([--with-libxsmmjit],[enable LIBXSMM JIT [default=false]]),
+  [ AC_MSG_CHECKING(for libxsmmjit)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_libxsmmJIT=false ;;
+      *)     AC_MSG_RESULT(yes);   use_libxsmmJIT=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for libxsmmjit); AC_MSG_RESULT(no); use_libxsmmJIT=false ])
+AM_CONDITIONAL([UselibxsmmJIT],[test "x$use_libxsmmJIT" = xtrue])
+
+if test "$use_libxsmmJIT" == true; then
+  AC_DEFINE([UselibxsmmJIT], [UselibxsmmJIT], [UselibxsmmJIT])
+fi
+
+
 #
 # BLIS
 #
-AC_ARG_WITH(BLIS,
-  AS_HELP_STRING([--with-BLIS],[enable BLIS [default=false]]),
-  [ AC_MSG_CHECKING(for BLIS)
+AC_ARG_WITH(blis,
+  AS_HELP_STRING([--with-blis],[enable BLIS [default=false]]),
+  [ AC_MSG_CHECKING(for blis)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    use_BLIS=false ;;
       *)     AC_MSG_RESULT(yes);   use_BLIS=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for BLIS); AC_MSG_RESULT(no); use_BLIS=false ])
+  [ AC_MSG_CHECKING(for blis); AC_MSG_RESULT(no); use_BLIS=false ])
 AM_CONDITIONAL([UseBLIS],[test "x$use_BLIS" = xtrue])
 
 if test "$use_BLIS" == true; then
   AC_DEFINE([UseBLIS], [UseBLIS], [UseBLIS])
 fi
+
 
 #
 # Eigen
@@ -602,7 +604,6 @@ if test "$toolchain" == itac; then
   CXXFLAGS_PEANO_3D_DEBUG+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
 fi
 
-
 if test "$toolchain" == itt; then
   AC_DEFINE([UseITT], [1], [UseITT])
   AC_DEFINE([UseLogService], [ITTLogger], [ITTLogger])
@@ -619,7 +620,6 @@ if test "$toolchain" == itt; then
   CXXFLAGS_PEANO_3D_TRACE+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2"
   CXXFLAGS_PEANO_3D_DEBUG+="   -DTBB_USE_THREADING_TOOLS -parallel-source-info=2 -DTBB_USE_ASSERT"
 fi
-
 
 if test "$toolchain" == scorep; then
   AC_DEFINE([UseLogService], [ScorePLogger], [ScorePLogger])
@@ -653,7 +653,6 @@ fi
 # this choice.
 # ===============================================================
 #
-
 
 #
 # FEM
@@ -712,7 +711,7 @@ AM_CONDITIONAL([UseToolboxParticles],[test "x$toolbox_particles" = xtrue])
 
 
 #
-# ExaHyPE2
+# ExaHyPE 2
 #
 AC_ARG_ENABLE(exahype,
   AS_HELP_STRING([--enable-exahype],[enable ExaHyPE2 [default=false]]),
@@ -726,7 +725,7 @@ AM_CONDITIONAL([UseExaHyPE],[test "x$toolbox_exahype" = xtrue])
 
 
 #
-# SWIFT2
+# SWIFT 2
 #
 AC_ARG_ENABLE(swift,
   AS_HELP_STRING([--enable-swift],[enable SWIFT2 [default=false]]),
@@ -774,7 +773,7 @@ AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 
 #
 # ===============================================================
-#   Setup toolboxes and extensions
+# Setup toolboxes and extensions
 #
 # Run through the set of toolboxes and extensions that are enabled,
 # configure them properly, i.e., augment the Peano compile and
@@ -782,7 +781,6 @@ AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 # dependencies are ok.
 # ===============================================================
 #
-
 
 #
 # FEM
@@ -943,15 +941,15 @@ fi
 
 
 #
-# ExaHyPE2
+# ExaHyPE 2
 #
 if test "$toolbox_exahype" != false; then
   AC_DEFINE([UseExaHyPE], [1], [UseExaHyPE])
   if test "$toolbox_loadbalancing" == false; then
-    AC_MSG_ERROR([ExaHyPE2 requires the load balancing toolbox (run with --help to see the correct enable statement)])
+    AC_MSG_ERROR([ExaHyPE 2 requires the load balancing toolbox (run with --help to see the correct enable statement)])
   fi
   if test "$toolbox_blockstructured" == false; then
-    AC_MSG_ERROR([ExaHyPE2 requires the blockstructured toolbox (run with --help to see the correct enable statement)])
+    AC_MSG_ERROR([ExaHyPE 2 requires the blockstructured toolbox (run with --help to see the correct enable statement)])
   fi
   LDADD_PEANO_2D_RELEASE=" -lExaHyPE2Core2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lExaHyPE2Core2d_stats   $LDADD_PEANO_2D_STATS "
@@ -972,48 +970,92 @@ if test "$toolbox_exahype" != false; then
   LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype2 "
 fi
 
+
+#
+# LIBXSMM
+#
+if test "$use_libxsmm" != false; then
+  echo "Checking whether LIBXSMM needs to be installed or built"
+  LIBXSMM_PATH=$(command -v libxsmm_gemm_generator)
+  if @<:@ "$LIBXSMM_PATH" @:>@; then
+    echo "Found preinstalled LIBXSMM at $LIBXSMM_PATH"
+  else
+    if @<:@ ! -d submodules @:>@; then
+      mkdir submodules
+      echo "Created libxsmm directory in submodules"
+    fi
+    if @<:@ ! -e submodules/libxsmm/.git @:>@; then
+      echo "Initializing LIBXSMM in submodules/libxsmm, this may take a while."
+      cd submodules
+      git clone https://github.com/libxsmm/libxsmm.git
+      cd libxsmm
+      # Cleanup documentation to save space
+      rm -rf samples/ # Over 100M of not needed stuff
+      rm -rf documentation/ # Around 10M of documentation
+      cd ../..
+    fi
+
+    # Build LIBXSMM
+    if @<:@ ! -d submodules/libxsmm/bin @:>@ || @<:@ ! -e submodules/libxsmm/bin/libxsmm_gemm_generator @:>@; then
+      REBUILD_LIBXSMM=true
+    fi
+    if @<:@ "$REBUILD_LIBXSMM" = true @:>@; then
+      echo "Building LIBXSMM GEMM generator"
+      cd submodules/libxsmm
+      git restore samples
+      make realclean --silent
+      make generator --silent
+      rm -rf samples
+      cd ../..
+    fi
+    echo "Finished building LIBXSMM GEMM generator"
+  fi
+fi
+
+
+#
+# LIBXSMM JIT
+#
 if test "$use_libxsmmJIT" != false; then
-  #libxsmm JIT
-  echo "Checking whether libxsmm JIT needs to be installed or built"
+  echo "Checking whether LIBXSMM JIT needs to be installed or built"
   if @<:@ ! -d submodules @:>@; then
     mkdir submodules
     echo "Created libxsmmJIT directory in submodules"
   fi
   if @<:@ ! -e submodules/libxsmmJIT/.git @:>@; then
-    echo "Initializing libxsmm JIT in submodules/libxsmmJIT, this may take a while"
+    echo "Initializing LIBXSMM JIT in submodules/libxsmmJIT, this may take a while."
     cd submodules
     git clone https://github.com/libxsmm/libxsmm.git libxsmmJIT
     cd libxsmmJIT
     cd ../..
   fi
 
-  # build libxsmm JIT
+  # Build LIBXSMM JIT
   if @<:@ ! -d submodules/libxsmmJIT/lib @:>@ || @<:@ ! -e submodules/libxsmmJIT/include @:>@; then
     REBUILD_libxsmmJIT=true
   fi
   if @<:@ "$REBUILD_libxsmmJIT" = true @:>@; then
-    echo "Building libxsmm JIT"
+    echo "Building LIBXSMM JIT"
     cd submodules/libxsmmJIT
     make --silent
     cd ../..
   fi
-  echo "Finished building libxsmm JIT"
+  echo "Finished building LIBXSMM JIT"
 
-  #OpenBLAS
   echo "Checking whether OpenBLAS needs to be installed or built"
   if @<:@ ! -d submodules @:>@; then
     mkdir submodules
     echo "Created OpenBLAS directory in submodules"
   fi
   if @<:@ ! -e submodules/OpenBLAS/.git @:>@; then
-    echo "Initializing OpenBLAS in submodules/OpenBLAS, this may take a long while"
+    echo "Initializing OpenBLAS in submodules/OpenBLAS, this may take a long while."
     cd submodules
     git clone https://github.com/xianyi/OpenBLAS.git
     cd OpenBLAS
     cd ../..
   fi
 
-  # build OpenBLAS
+  # Build OpenBLAS
     REBUILD_OpenBLAS=true
   if @<:@ "$REBUILD_OpenBLAS" = true @:>@; then
     echo "Building OpenBLAS"
@@ -1021,62 +1063,28 @@ if test "$use_libxsmmJIT" != false; then
     make --silent
     cd ../..
   fi
-  echo "Finished building libxsmm JIT"
-
+  echo "Finished building OpenBLAS"
 fi
 
 
-if test "$use_libxsmm" != false; then
-  echo "Checking whether libxsmm needs to be installed or built"
-  if @<:@ ! -d submodules @:>@; then
-    mkdir submodules
-    echo "Created libxsmm directory in submodules"
-  fi
-  if @<:@ ! -e submodules/libxsmm/.git @:>@; then
-    echo "Initializing libxsmm in submodules/libxsmm, this may take a while"
-    cd submodules
-    git clone https://github.com/libxsmm/libxsmm.git
-    cd libxsmm
-    #git checkout 9b7bbb95c
-    # Clean documentation to save space
-    rm -rf samples/ # Over 100M of not needed stuff
-    rm -rf documentation/ # Around 10M of documentation
-    cd ../..
-  fi
-
-  # build libxsmm
-  if @<:@ ! -d submodules/libxsmm/bin @:>@ || @<:@ ! -e submodules/libxsmm/bin/libxsmm_gemm_generator @:>@; then
-    REBUILD_LIBXSMM=true
-  fi
-  if @<:@ "$REBUILD_LIBXSMM" = true @:>@; then
-    echo "Building libxsmm gemm generator"
-    cd submodules/libxsmm
-    git restore samples
-    make realclean --silent
-    make generator --silent
-    rm -rf samples
-    cd ../..
-  fi
-  echo "Finished building libxsmm generator"
-fi
-
-
+#
+# BLIS
+#
 if test "$use_BLIS" != false; then
-  #BLIS
   echo "Checking whether BLIS needs to be installed or built"
   if @<:@ ! -d submodules @:>@; then
     mkdir submodules
     echo "Created BLIS directory in submodules"
   fi
   if @<:@ ! -e submodules/blis/.git @:>@; then
-    echo "Initializing BLIS in submodules/blis, this may take a while"
+    echo "Initializing BLIS in submodules/blis, this may take a while."
     cd submodules
     git clone https://github.com/flame/blis.git
     cd blis
     cd ../..
   fi
-  
-  # build BLIS
+
+  # Build BLIS
   if @<:@ ! -d submodules/blis/lib @:>@ || @<:@ ! -e submodules/blis/include @:>@; then
     REBUILD_BLIS=true
   fi
@@ -1089,19 +1097,20 @@ if test "$use_BLIS" != false; then
     cd ../..
   fi
   echo "Finished building BLIS"
-
-
 fi
 
+
+#
+# Eigen
+#
 if test "$use_Eigen" != false; then
-  #Eigen
   echo "Checking whether Eigen needs to be installed or built"
   if @<:@ ! -d submodules @:>@; then
     mkdir submodules
     echo "Created Eigen directory in submodules"
   fi
   if @<:@ ! -e submodules/Eigen/.git @:>@; then
-    echo "Initializing Eigen in submodules/Eigen, this may take a while"
+    echo "Initializing Eigen in submodules/Eigen, this may take a while."
     cd submodules
     git clone https://gitlab.com/libeigen/eigen.git
     cd eigen
@@ -1110,9 +1119,8 @@ if test "$use_Eigen" != false; then
 fi
 
 
-
 #
-# SWIFT2
+# SWIFT 2
 #
 if test "$toolbox_swift" != false; then
   AC_DEFINE([UseSWIFT], [1], [UseSWIFT])
@@ -1161,6 +1169,23 @@ if test "$smartmpi" == Merged; then
 fi
 if test "$smartmpi" == Alternating; then
   AC_DEFINE([UseSmartMPI], [Alternating], [UseSmartMPI])
+fi
+
+
+#
+# targetDART
+#
+AC_ARG_WITH(targetdart,
+  AS_HELP_STRING([--with-targetdart],[build with targetDART [default=no]]),
+  [ AC_MSG_CHECKING(for targetdart)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    targetdart=false ;;
+      *)     AC_MSG_RESULT(yes);   targetdart=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for targetdart); AC_MSG_RESULT(no); targetdart=false ])
+AM_CONDITIONAL([UseTargetDART],[test "x$targetdart" = xtrue])
+if test "$targetdart" == true; then
+  AC_DEFINE([UseTargetDART], [UseTargetDART], [UseTargetDART])
 fi
 
 

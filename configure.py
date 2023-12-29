@@ -34,6 +34,7 @@ parser.add_argument(
     help="Enable multithreading support",
 )
 parser.add_argument("--mpi", help="Enable MPI support")
+parser.add_argument("--targetdart", "-td", action="store_true", help="Enable targetDART support")
 parser.add_argument(
     "--gpu", choices=["omp", "cuda", "sycl", "cpp", "hip"], help="Enable GPU support"
 )
@@ -58,25 +59,28 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-cflags = "-O3"
-cxxflags = "-w -O3"
-cxxstandard = "-std=c++20" # Needs to passed in varaible CXXFLAGS, as otherwise Automake might pass the default C++ standard (gnu++11)
-# cxxflags = '-W -Wall -Wextra -O3'
-nvccflags = "-O3"
+cflags = "-O3 -march=native"
+cxxflags = "-std=c++20 -w -O3 -march=native"
+# cxxflags = '-std=c++20 -W -Wall -Wextra -O3 -march=native -mtune=native'
+nvccflags = "-O3" #-march=native -mtune=native
+ldflags = ""
 configure_args = []
 
 # Merge in any additional flags needed for the selected multithreading backend
 if args.multithreading == "omp":
     cflags += " -fopenmp"
     cxxflags += " -fopenmp"
+    ldflags += " -fopenmp"
 
 if args.multithreading == "tbb":
     cflags += " -ltbb"
     cxxflags += " -ltbb"
+    ldflags += " -ltbb"
 
 if args.multithreading == "sycl":
     cflags += " -fsycl"
     cxxflags += " -fsycl"
+    ldflags += " -fsycl"
 
 # Merge in any additional flags needed for the selected GPU backend
 if args.gpu and not args.arch:
@@ -90,38 +94,54 @@ Specify compatible C and C++ compilers by using -cc and -cxx or the environment 
     )
     exit(-1)
 
-if "nvc" in args.cc and "nvc++" in args.cxx:
-    cflags = re.sub(r"-O3", "-O4", cflags)
-    cxxflags = re.sub(r"-O3", "-O4", cxxflags)
-
-if args.gpu == "omp" and "clang" in args.cc and "clang++" in args.cxx:
+if (
+    args.gpu == "omp"
+    and ("clang" in args.cc or "clangwrap" in args.cc or "tdclang" in args.cc)
+    and (
+        "clang++" in args.cxx
+        or "clangwrap" in args.cxx
+        or "clangwrap++" in args.cxx
+        or "tdclang++" in args.cxx
+    )
+):
     cflags += (
-        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_" + args.arch
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        + args.arch
     )
     cxxflags += (
-        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_" + args.arch
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        + args.arch
+    )
+    cxxflags = re.sub(r"-std=c\+\+20", "-std=c++17", cxxflags)
+    ldflags += (
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        + args.arch
     )
     if args.asm:
-        cflags += " -save-temps"
-        cxxflags += " -save-temps"
+        cflags += " -save-temps -Xcuda-ptxas -v"
+        cxxflags += " -save-temps -Xcuda-ptxas -v"
 elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
     cflags += " -lstdc++fs --offload-arch=" + args.arch
     cxxflags += " -lstdc++fs --offload-arch=" + args.arch
-elif args.gpu == "omp" and "nvc" in args.cc and "nvc++" in args.cxx:
+    ldflags += " -lstdc++fs --offload-arch=" + args.arch
+elif args.gpu == "omp" and ("nvc" in args.cc or "nvc++ in args.cc") and "nvc++" in args.cxx:
     cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch
+    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     if args.asm:
-        cflags += " -gpu=keep"
-        cxxflags += " -gpu=keep"
+        cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
+        cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mpp"
 elif args.gpu == "cpp" and "nvc" in args.cc and "nvc++" in args.cxx:
     cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch + " -stdpar=gpu"
+    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch + " -stdpar=gpu"
     if args.asm:
-        cflags += " -gpu=keep"
-        cxxflags += " -gpu=keep"
+        cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
+        cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
 elif args.gpu == "omp" and "gcc" in args.cc and "g++" in args.cxx:
     cflags += " -fopenmp -foffload=nvptx-none -march=native"
     cxxflags += " -fopenmp -foffload=nvptx-none -march=native"
+    ldflags += " -fopenmp -foffload=nvptx-none -march=native"
     if args.asm:
         cflags += " -save-temps"
         cxxflags += " -save-temps"
@@ -135,9 +155,14 @@ elif args.gpu == "sycl" and "icx" in args.cc and "icpx" in args.cxx:
             " -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch="
             + args.arch
         )
+        ldflags += (
+            " -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch="
+            + args.arch
+        )
     if "spir" in args.arch:
         cflags += " -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent"
         cxxflags += " -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent"
+        ldflags += " -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent"
     else:
         cflags += (
             " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_"
@@ -147,8 +172,12 @@ elif args.gpu == "sycl" and "icx" in args.cc and "icpx" in args.cxx:
             " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_"
             + args.arch
         )
+        ldflags += (
+            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_"
+            + args.arch
+        )
 elif args.gpu == "cuda":
-    nvccflags += f"-arch=sm_{args.arch}"
+    nvccflags += f" -arch=sm_{args.arch}"
     if args.cuda_path is not None:
         if not args.cmake:
             # CUDA path is only needed with Automake builds
@@ -188,7 +217,13 @@ if args.mpi is not None:
     if args.cmake:
         configure_args.append("-DWITH_MPI=ON")
     else:
-        configure_args.append('--with-mpi="{} {}"'.format(args.mpi, cxxflags))
+        configure_args.append('--with-mpi="{}"'.format(args.mpi))
+
+if args.targetdart:
+    if args.cmake:
+        configure_args.append("-DWITH_TARGETDART=ON")
+    else:
+        configure_args.append("--with-targetdart")
 
 if args.exahype:
     if args.cmake:
@@ -273,13 +308,32 @@ if args.cmake:
 
 else:
     # Prepare the environment variables
-    # Read existing CXXFLAGS to not overwrite them
+    # Read existing C(XX)FLAGS and LDFLAGS to not overwrite them
+    env_cflags = os.environ.get("CFLAGS")
     env_cxxflags = os.environ.get("CXXFLAGS")
+    env_ldflags = os.environ.get("LDFLAGS")
+
+    if env_cflags is not None:
+      env_cflags += " " + cflags
+    else:
+      env_cflags = cflags
+
+    if env_cxxflags is not None:
+      env_cxxflags += " " + cxxflags
+    else:
+      env_cxxflags = cxxflags
+
+    if env_ldflags is not None:
+      env_ldflags += " " + ldflags
+    else:
+      env_ldflags = ldflags
 
     env_vars = {
-        "CC": "{} {}".format(args.cc, cflags),
-        "CXX": "{} {}".format(args.cxx, cxxflags),
-        "CXXFLAGS": "{} {}".format(env_cxxflags, cxxstandard),
+        "CFLAGS": "{}".format(env_cflags),
+        "CC": "{}".format(args.cc),
+        "CXXFLAGS": "{}".format(env_cxxflags),
+        "CXX": "{}".format(args.cxx),
+        "LDFLAGS": "{}".format(env_ldflags),
     }
 
     if args.gpu == "cuda":
