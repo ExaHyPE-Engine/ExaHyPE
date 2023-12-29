@@ -1970,7 +1970,7 @@ int main(int argc, char** argv) {
     logInfo("main()", "Number of GPU devices: " << ::tarch::accelerator::Device::getInstance().getNumberOfDevices());
     logInfo("main()", "Number of finite volumes per axis per patch: " << FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch);
     logInfo("main()", "Number of samples per measurement: " << NumberOfSamples);
-    logInfo("main()", "Evaluate max. eigenvalue (reduction step): " << EvaluateMaximumEigenvalueAfterTimeStep);
+    logInfo("main()", "Evaluate max. eigenvalue (reduction step): " << std::boolalpha << EvaluateMaximumEigenvalueAfterTimeStep);
     if constexpr (EnableFPE) {
       logInfo("main()", "Floating-point exception handler enabled");
     }

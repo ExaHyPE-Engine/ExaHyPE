@@ -528,7 +528,7 @@ else:
 my_project.set_timeout(args.timeout)
 
 my_project.set_multicore_orchestration(
-    "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, ::tarch::mpi::Rank::getInstance().getRank())"
+    "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, ::tarch::accelerator::Device::getInstance().getLocalDeviceId())"
     % str(args.fused_tasks)
 )
 
