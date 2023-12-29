@@ -1,37 +1,38 @@
 cmake_minimum_required(VERSION 3.20.5)
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
-  execute_process(
-    COMMAND git rev-parse --abbrev-ref HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_BRANCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  execute_process(
-    COMMAND git rev-parse HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  execute_process(
-    COMMAND git rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH_SHORT
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-else()
-  set(GIT_BRANCH "")
-  set(GIT_COMMIT_HASH "")
-  set(GIT_COMMIT_HASH_SHORT "")
-endif()
-
 set(META_PROJECT_NAME "Peano")
 set(META_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes")
 set(META_AUTHOR_ORGANIZATION "Durham University and Technische Universitaet Muenchen")
 set(META_AUTHOR_DOMAIN "www.peano-framework.org")
-set(META_VERSION_REVISION "${GIT_COMMIT_HASH_SHORT}")
+
+# This has to be done before the project is created and before any languages are added.
+# Adding a subdirectory does not help here and needs to be explicitly given with the path(cmake/...),
+# Because this file is needed by CMake itself and not by the project.
+# We need to override specific compiler flags initialized by CMake, to
+# match them exactly with the flags defined in Peano Automake build system.
+# More details can be found in the cmake/CustomMakeRules.cmake file.
+# For example, the Peano release optimisation flag is -O3 (and -DNDEBUG in definitions);
+# but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/CustomMakeRules.cmake")
+
+project(${META_PROJECT_NAME}
+  DESCRIPTION ${META_PROJECT_DESCRIPTION}
+  HOMEPAGE_URL ${META_AUTHOR_DOMAIN}
+  LANGUAGES C CXX)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+include(GetGitRevisionDescription)
+get_git_head_revision(GIT_BRANCH GIT_COMMIT_HASH)
+get_git_commit_message(GIT_COMMIT_MESSAGE)
+get_git_commit_timestamp(GIT_COMMIT_TIMESTAMP)
+
+set(META_VERSION_REVISION "${GIT_COMMIT_HASH}")
 set(META_GIT_BRANCH "${GIT_BRANCH}")
 set(META_GIT_HASH "${GIT_COMMIT_HASH}")
-set(META_GIT_BUGREPORT "https://gitlab.lrz.de/hpcsoftware/Peano/-/issues")
+set(META_GIT_COMMIT_MESSAGE "${GIT_COMMIT_MESSAGE}")
 set(META_GIT_URL "https://gitlab.lrz.de/hpcsoftware/Peano")
-message(STATUS "On Git Branch: ${GIT_BRANCH} (${GIT_COMMIT_HASH})")
+message(STATUS "Revision: ${GIT_BRANCH} -m \"${GIT_COMMIT_MESSAGE}\" (${GIT_COMMIT_HASH}) ${GIT_COMMIT_TIMESTAMP}")
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
@@ -49,22 +50,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
-# This has to be done before the project is created and before any languages are added.
-# Adding a subdirectory does not help here and needs to be explicitly given with the path(cmake/...),
-# Because this file is needed by CMake itself and not by the project.
-# We need to override specific compiler flags initialized by CMake, to
-# match them exactly with the flags defined in Peano Automake build system.
-# More details can be found in the cmake/CustomMakeRules.cmake file.
-# For example, the Peano release optimisation flag is -O3. (and -DNDEBUG in definitions);
-# but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
-set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/CustomMakeRules.cmake")
-
-set(LANGUAGES C CXX)
-project(
-  ${META_PROJECT_NAME}
-  DESCRIPTION ${META_PROJECT_DESCRIPTION}
-  HOMEPAGE_URL ${META_AUTHOR_DOMAIN}
-  LANGUAGES ${LANGUAGES})
 file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 set(META_COMPILER_VERSION "${CMAKE_SYSTEM_NAME} ${CMAKE_CXX_COMPILER_ID} (${CMAKE_CXX_COMPILER_VERSION})")
 message(STATUS "Compiler is: ${META_COMPILER_VERSION}")
@@ -75,12 +60,20 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-add_subdirectory(cmake)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jinja2" RESULT_VARIABLE JINJA2_FOUND)
+# We need Jinja2 for code generation
+if(NOT JINJA2_FOUND EQUAL 0)
+  message(WARNING "Jinja2 package (needed for code generation) not found. Please install Jinja2 e.g.: 'pip3 install jinja2'")
+endif()
+
 include(MessageUtils)
 include(Clang-Format)
 #include(Cppcheck)
-#include(Link-What-You-Use)
 #include(Coverage)
+include(Sanitizers)
+include(IWYU)
+include(Clang-Tidy)
 include(CCache)
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
@@ -279,7 +272,7 @@ if(WITH_GPU)
       target_link_options(project_options INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
     endif()
   elseif(WITH_GPU STREQUAL "hip")
-    message(WARNING "Currently the flags for HIP GPU Offloading need to be passed manually")
+    message(WARNING "Currently the flags for HIP need to be passed manually")
   elseif(WITH_GPU STREQUAL "cuda")
     set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
     set(CMAKE_CUDA_STANDARD 17)
@@ -385,7 +378,7 @@ if(WITH_PETSC)
   target_include_directories(project_options INTERFACE ${PETSc_INCLUDE_DIRS})
 endif()
 
-if (WITH_TARGETDART)
+if(WITH_TARGETDART)
   target_compile_definitions(project_options INTERFACE UseTargetDART)
 endif()
 
@@ -497,10 +490,6 @@ add_subdirectory(src)
 #        REPORT_FOR_TARGET
 #    )
 #endif()
-
-include(Sanitizers)
-include(IWYU)
-include(Clang-Tidy)
 
 display_separator("Project Configuration Summary")
 display_variable(AVAILABLE_PROCESSOR_COUNT)
