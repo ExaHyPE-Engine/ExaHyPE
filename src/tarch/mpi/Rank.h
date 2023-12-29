@@ -139,12 +139,6 @@ class tarch::mpi::Rank {
      */
     static int     _tagCounter;
 
-    static int     _localDeviceId;
-
-    void initialiseLocalAcceleratorDeviceId();
-
-    int getLocalDeviceId();
-
     /**
      * The standard constructor assignes the attributes default values and
      * checks whether the program is compiled using the -DParallel option.

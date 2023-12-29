@@ -15,11 +15,6 @@
 #include "tarch/mpi/StringMessage.h"
 #include "tarch/mpi/BooleanSemaphore.h"
 
-#ifdef PeanoDebug>=4
-#include "tarch/accelerator/Device.h"
-#include "tarch/Assertions.h"
-#endif
-
 /**
  * For the machine name. If it doesn't work, switch it off in the file
  * CompilerSpecificSettings.h.
@@ -31,7 +26,6 @@
 tarch::logging::Log tarch::mpi::Rank::_log("tarch::mpi::Rank");
 int     tarch::mpi::Rank::_maxTags       = -1;
 int     tarch::mpi::Rank::_tagCounter    =  0;
-int     tarch::mpi::Rank::_localDeviceId =  0;
 
 tarch::mpi::Rank  tarch::mpi::Rank::_singleton;
 
@@ -259,45 +253,6 @@ std::string tarch::mpi::MPIStatusToString( const MPI_Status& status ) {
 }
 #endif
 
-#ifdef Parallel
-void tarch::mpi::Rank::initialiseLocalAcceleratorDeviceId() {
-#if !defined(GPUOffloadingOff)
-  MPI_Comm nodeLocal;
-  constexpr int splitType = MPI_COMM_TYPE_SHARED;
-  int worldRank = getRank();
-
-  MPI_Comm_split_type(MPI_COMM_WORLD, splitType, worldRank, MPI_INFO_NULL, &nodeLocal);
-
-  // Not using getCommunicator or setCommunicator as this node-local communicator is temporary
-  // It is used to determine the number of ranks in the same node to deduce the number of GPUs
-  int nodeLocalRank;
-  MPI_Comm_rank(nodeLocal, &nodeLocalRank);
-
-  tarch::mpi::Rank::_localDeviceId = nodeLocalRank;
-
-#if PeanoDebug>=4
-  int numberOfAcceleratorDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
-  int nodeLocalSize;
-  MPI_Comm_size(nodeLocal, &nodeLocalSize);
-  if (numberOfAcceleratorDevices != nodeLocalSize){
-    logWarning("tarch::mpi::Rank()", "Number of ranks per node: " << nodeLocalSize << " is not equal to number of accelerator decives: " << numberOfAcceleratorDevices);
-  }
-
-  logInfo("tarch::mpi::Rank()", "Rank " << worldRank << " has node local rank and accelerator device Id: " << tarch::mpi::Rank::_localDeviceId);
-#endif
-
-  MPI_Comm_free(&nodeLocal);
-#endif
-}
-
-#endif
-
-#ifdef Parallel
-int tarch::mpi::Rank::getLocalDeviceId() {
-  assertion(_initIsCalled);
-  return tarch::mpi::Rank::_localDeviceId;
-}
-#endif
 
 #ifdef Parallel
 tarch::mpi::Rank::Rank():
@@ -563,13 +518,10 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
 
   DoubleMessage::initDatatype();
   IntegerMessage::initDatatype();
-
-  initialiseLocalAcceleratorDeviceId();
   #endif
 
   _initIsCalled = true;
-
-  return true;
+  return _initIsCalled;
 }
 
 
