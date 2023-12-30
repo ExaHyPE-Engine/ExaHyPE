@@ -2,14 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
 #include "tarch/tests/TestCase.h"
-
 
 namespace tarch {
   /**
    * Please destroy after usage
    */
   tarch::tests::TestCase* getUnitTests();
-}
-
+} // namespace tarch
