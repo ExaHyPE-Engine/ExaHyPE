@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.fv.SingleSweep import SingleSweep
@@ -116,15 +116,6 @@ class GlobalFixedTimeStep(SingleSweep):
       self._source_term_implementation,
       compute_max_eigenvalue_of_next_time_step = False,
       solver_variant = SolverVariant.Stateless,
-      kernel_variant = KernelVariant.VolumeWiseSoA
-    )
-
-    self._compute_kernel_call_stateless_gpu = create_compute_Riemann_kernel_for_Rusanov(
-      self._flux_implementation,
-      self._ncp_implementation,
-      self._source_term_implementation,
-      compute_max_eigenvalue_of_next_time_step = False,
-      solver_variant = SolverVariant.Accelerator,
       kernel_variant = KernelVariant.VolumeWiseSoA
     )
 
