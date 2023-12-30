@@ -37,7 +37,7 @@ namespace tarch {
   #endif
 
   /**
-   * Delegates to std::abort() if no GPU offloading is active. Otherwise is
+   * Delegates to std::abort() if no GPU offloading is active. Otherwise it
    * degenerates to nop, as there is no abort on an accelerator. The vanilla
    * implementation can be found in accelerator.cpp. The vendor-specific
    * implementations are hold within their accelerator.cpp file.
