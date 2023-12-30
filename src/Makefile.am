@@ -1,3 +1,6 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+
 AUTOMAKE_OPTIONS = subdir-objects
 
 #
@@ -29,8 +32,13 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
 								libPeano4Core2d.a libPeano4Core2d_debug.a libPeano4Core2d_asserts.a libPeano4Core2d_trace.a libPeano4Core2d_stats.a \
 								libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
 
-Tarch_SOURCES = tarch/tarch.cpp \
+Tarch_SOURCES =
+	tarch/tarch.cpp \
 	tarch/UnitTests.cpp \
+	memory/memory.cpp \
+	memory/MemoryLocation.cpp \
+	memory/MemoryManager.cpp \
+	memory/tests/MemoryManagerTest.cpp \
 	tarch/la/tests/DynamicMatrixTest.cpp \
 	tarch/la/tests/MatrixVectorTest.cpp \
 	tarch/la/tests/MatrixTest.cpp \
@@ -55,10 +63,10 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/accelerator/sycl/Device.cpp \
 	tarch/accelerator/sycl/DeviceInfo.cpp \
 	tarch/accelerator/sycl/GPUMemoryManager.cpp \
+	tarch/accelerator/cuda/accelerator.cpp \
 	tarch/accelerator/cuda/ErrorCheck.cpp \
 	tarch/accelerator/cuda/DeviceInfo.cpp \
 	tarch/accelerator/cuda/Device.cpp \
-	tarch/accelerator/cuda/accelerator.cpp \
 	tarch/multicore/BooleanSemaphore.cpp \
 	tarch/multicore/multicore.cpp \
 	tarch/multicore/Core.cpp \
@@ -222,13 +230,12 @@ if GPUOffloadingCUDA
 # CUDA_OBJS_RELEASE = $(addprefix libTarch_a-, $(CUDA_OBJS))
 # $(foreach item,$(ITEMS),libTarch_stats_a-$(item)) is a GNU extension
 # CUDA_OBJS_RELEASE = $(patsubst %.cu,libTarch_a-%.o, $(ITEMS))
-# libTarch_debug_a-%.o: %.cu again a GNU extension (% is a GNU Extension) unless
+# libTarch_debug_a-%.o: %.cu again is a GNU extension (% is a GNU extension) unless
 # $(CUDA_OBJS_RELEASE): libTarch_a-%.o: %.cu (static pattern)
-# also see here:
-# https://stackoverflow.com/questions/27975545/how-to-deal-with-autoconf-warning-style-pattern-rules-are-a-gnu-make-extens
+# Also see here: https://stackoverflow.com/questions/27975545/how-to-deal-with-autoconf-warning-style-pattern-rules-are-a-gnu-make-extens
 
-# The CUDA objects added with LDADD are also tracked as dependencies
-# Therefore adding the sources to the <target>_Sources not necessary
+# The CUDA objects added with LDADD are also tracked as dependencies.
+# Therefore adding the sources to the <target>_SOURCES is not necessary.
 Tarch_CUDA_OBJS					= tarch/accelerator/cuda/libTarch_a-TestKernels.o
 Tarch_stats_CUDA_OBJS		= tarch/accelerator/cuda/libTarch_stats_a-TestKernels.o
 Tarch_trace_CUDA_OBJS		= tarch/accelerator/cuda/libTarch_trace_a-TestKernels.o

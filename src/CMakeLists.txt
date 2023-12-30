@@ -1,3 +1,6 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake.config.h.in
   ${CMAKE_CURRENT_SOURCE_DIR}/config.h
