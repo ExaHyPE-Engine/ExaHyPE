@@ -42,46 +42,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           timeStamp,
           timeStepSize
       )) {
-        //
-        // =========================
-        // Invoke stateless kernels
-        // =========================
-        //
-        bool foundOffloadingBranch = false;
-        int targetDevice = ::tarch::mpi::Rank::getInstance().getRank();
-
-#if defined(GPUOffloadingOMP)
-        if (targetDevice >= 0) {
-          foundOffloadingBranch = true;
-          ::exahype2::fv::{{KERNEL_NAMESPACE}}::omp::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
-        }
-#endif
-
-#if defined(GPUOffloadingHIP)
-        if (targetDevice >= 0) {
-          foundOffloadingBranch = true;
-          ::exahype2::fv::{{KERNEL_NAMESPACE}}::hip::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
-        }
-#endif
-
-#if defined(GPUOffloadingSYCL)
-        if (targetDevice >= 0 or targetDevice == Host) {
-          foundOffloadingBranch = true;
-          ::exahype2::fv::{{KERNEL_NAMESPACE}}::sycl::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
-        }
-#endif
-
-#if defined(GPUOffloadingCPP)
-        if (targetDevice>=0 or targetDevice==Host) {
-          foundOffloadingBranch = true;
-          ::exahype2::fv::{{KERNEL_NAMESPACE}}::cpp::{{COMPUTE_KERNEL_CALL_STATELESS_GPU}}
-        }
-#endif
-
-        if (not foundOffloadingBranch) {
-          logWarning("fuse(...)", "Cannot find offloading branch for device " << targetDevice << ". Reverting back to the CPU.");
-          ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS_CPU}}
-        }
+        ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS_CPU}}
       } else
       {% endif %}
 
@@ -94,9 +55,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        0, // halo
+        0, // Halo size
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-      ); // outcome has to be valid
+      ); // Outcome has to be valid
 
       {% if COMPUTE_MAX_EIGENVALUE %}
       const double maxEigenvalue = patchData.maxEigenvalue[0];

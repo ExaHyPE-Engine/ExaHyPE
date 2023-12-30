@@ -330,7 +330,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
  * Also merge the current task
  */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& otherTasks, int targetDevice) {
-  logDebug("fuse(...)", "asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
+  logDebug("fuse(...)", "Asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
   ::exahype2::CellData patchData(otherTasks.size() + 1);
   int currentTask = 0;
@@ -389,7 +389,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 #endif
 
   if (not foundOffloadingBranch) {
-    logWarning("fuse(...)", "Cannot find offloading branch for device " << targetDevice << ". Reverting back to the CPU.");
+    logDebug("fuse(...)", "Cannot find offloading branch for device " << targetDevice << ". Using the CPU.");
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS_CPU}}
   }
 

@@ -51,7 +51,7 @@ solvers = {}
 solvers.update(fv_rusanov_solvers)
 solvers.update(rkdg_rusanov_solvers)
 solvers.update(aderdg_rusanov_solvers)
-solver = "FVRusanovGlobalAdaptive"
+solver = "ADERDGRusanovGlobalAdaptive"
 
 build_modes = {
     "Release": peano4.output.CompileMode.Release,
@@ -154,20 +154,20 @@ parser.add_argument(
     help="Use dynamic AMR.",
 )
 parser.add_argument(
-    "-gpu",
-    "--gpu",
-    dest="use_gpu",
+    "-stateless",
+    "--stateless",
+    dest="use_stateless_pde_terms",
     action="store_true",
-    default=False,
-    help="Use GPU offloading (requires a GPU enabled Peano build).",
+    default=True,
+    help="Use stateless PDE terms (GPU offloading requires a GPU enabled Peano build and an enclave solver).",
 )
 parser.add_argument(
     "-f",
     "--fuse",
     dest="fused_tasks",
     type=int,
-    default=16384,
-    help="Number of enclave tasks to fuse into one meta task to offload to GPUs.",
+    default=30000,
+    help="Number of enclave tasks to fuse into one meta task.",
 )
 parser.add_argument(
     "-vis",
@@ -301,8 +301,8 @@ else:
     executable_name = (
         "euler-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(args.solver)
     )
-    if args.use_gpu:
-        executable_name += "-GPU"
+    if args.use_stateless_pde_terms:
+        executable_name += "-Stateless"
     executable_name += "-" + str(args.build_mode)
 
 my_project = exahype2.Project(
@@ -331,7 +331,7 @@ if args.solver in fv_rusanov_solvers and "Adaptive" in args.solver:
         max_volume_h=args.max_cell_size,
         min_volume_h=args.max_cell_size * 3.0 ** (-args.amr_levels),
         time_step_relaxation=0.5,
-        pde_terms_without_state=args.use_gpu
+        pde_terms_without_state=args.use_stateless_pde_terms
     )
     # self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
     my_solver.switch_to_heap_storage(
@@ -359,7 +359,7 @@ elif args.solver in fv_rusanov_solvers and "Fixed" in args.solver:
         max_volume_h=args.max_cell_size,
         min_volume_h=min_h,
         normalised_time_step_size=admissible_time_step_size,
-        pde_terms_without_state=args.use_gpu
+        pde_terms_without_state=args.use_stateless_pde_terms
     )
 elif args.solver in rkdg_rusanov_solvers and "Adaptive" in args.solver:
     from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import (
