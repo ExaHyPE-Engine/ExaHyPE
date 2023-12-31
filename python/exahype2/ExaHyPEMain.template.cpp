@@ -516,9 +516,15 @@ int main(int argc, char** argv) {
           step();
           watch.stop();
 
-          const double timestepsPerSecond = double(1 / watch.getCalendarTime()); // Inverse of the time per timestep
-          tpsMeasurement.setValue(timestepsPerSecond);
-          logInfo("main()", "TPS: " << std::fixed << std::setprecision(2) << timestepsPerSecond);
+          const double ticksPerSecond = double(1.0 / watch.getCalendarTime());
+          tpsMeasurement.setValue(ticksPerSecond);
+          logInfo("main()", "Ticks per Second: " << std::fixed << std::setprecision(2) << ticksPerSecond);
+          logInfo("step()", "Memory: " <<
+            tarch::getTotalMemory(tarch::MemoryUsageFormat::MByte) << "/" <<
+            tarch::getFreeMemory(tarch::MemoryUsageFormat::MByte) << "/" <<
+            tarch::getMemoryUsage(tarch::MemoryUsageFormat::MByte) << " MBytes (total/free/used)"
+          );
+          tarch::memory::MemoryManager::dumpStatistics();
         }
 
         logInfo("main()", "terminated successfully");
