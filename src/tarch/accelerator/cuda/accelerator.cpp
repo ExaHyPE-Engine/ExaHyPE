@@ -11,19 +11,19 @@
 
 void tarch::accelerator::gpuAbort() {}
 
-void* tarch::accelerator::allocateRawData(std::size_t size, memory::MemoryLocation location, int device) {
+void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::MemoryLocation location, int device) {
   void* data = nullptr;
 
   switch (location) {
-  case memory::MemoryLocation::Heap:
+  case tarch::memory::MemoryLocation::Heap:
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaMalloc(&data, size));
     break;
-  case memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+  case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaMallocManaged(&data, size));
     break;
-  case memory::MemoryLocation::PinnedMemory:
+  case tarch::memory::MemoryLocation::PinnedMemory:
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaMallocHost(&data, size));
     break;
@@ -34,16 +34,16 @@ void* tarch::accelerator::allocateRawData(std::size_t size, memory::MemoryLocati
 }
 
 
-void tarch::accelerator::freeRawData(void* data, memory::MemoryLocation location, int device) {
+void tarch::accelerator::freeRawData(void* data, tarch::memory::MemoryLocation location, int device) {
   assertion(data);
 
   switch (location) {
-  case memory::MemoryLocation::Heap:
-  case memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+  case tarch::memory::MemoryLocation::Heap:
+  case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaFree(data));
     break;
-  case memory::MemoryLocation::PinnedMemory:
+  case tarch::memory::MemoryLocation::PinnedMemory:
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaFreeHost(data));
     break;

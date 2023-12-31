@@ -71,10 +71,11 @@ int tarch::getTotalMemory(MemoryUsageFormat format) {
 int tarch::getFreeMemory(MemoryUsageFormat format) {
   struct rusage usage {};
   if (0 == getrusage(RUSAGE_SELF, &usage)) {
-    long freeMem = tarch::memory::getTotalMemory(format) - usage.ru_maxrss;
+    long freeMem = getTotalMemory(format) - usage.ru_maxrss;
     return convertMemorySize(freeMem, format);
-  } else
+  } else {
     return 0;
+  }
 }
 
 #endif
@@ -114,7 +115,7 @@ int tarch::getMemoryUsage(MemoryUsageFormat format) {
   return convertMemorySize(rawInput, format);
 }
 
-void tarch::memory::freeMemory(void* pointer, MemoryLocation location, int device) {
+void tarch::freeMemory(void* pointer, MemoryLocation location, int device) {
   // MemoryManager::getInstance().free(pointer, device);
-  accelerator::freeRawData(pointer, location, device);
+  tarch::accelerator::freeRawData(pointer, location, device);
 }

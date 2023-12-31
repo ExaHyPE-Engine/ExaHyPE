@@ -161,7 +161,7 @@ void reportRuntime(const std::string& kernelIdentificator, const ::tarch::timing
  */
 template <class TempDataEnumerator, ::peano4::utils::LoopParallelism loopParallelism>
 void wrapPatchwiseHeapFunctorsHostKernel(int device, ::exahype2::CellData& patchData) {
-  assertionEquals(device, ::tarch::accelerator::Device::HostDevice);
+  assertionEquals(device, ::tarch::accelerator::Device::Host);
 
   ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapFunctors<
     FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
@@ -223,7 +223,7 @@ void wrapPatchwiseHeapFunctorsHostKernel(int device, ::exahype2::CellData& patch
  */
 template <class TempDataEnumerator, ::peano4::utils::LoopParallelism loopParallelism>
 void wrapBatchedHeapFunctorHostKernels(int device, ::exahype2::CellData& patchData) {
-  assertionEquals(device, ::tarch::accelerator::Device::HostDevice);
+  assertionEquals(device, ::tarch::accelerator::Device::Host);
 
   ::exahype2::fv::rusanov::timeStepWithRusanovBatchedHeapFunctors<
     FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
@@ -285,7 +285,7 @@ void wrapBatchedHeapFunctorHostKernels(int device, ::exahype2::CellData& patchDa
  */
 template <class TempDataEnumerator, ::peano4::utils::LoopParallelism loopParallelism>
 void wrapVolumewiseFunctorHostKernels(int device, ::exahype2::CellData& patchData) {
-  assertionEquals(device, ::tarch::accelerator::Device::HostDevice);
+  assertionEquals(device, ::tarch::accelerator::Device::Host);
 
   ::exahype2::fv::rusanov::timeStepWithRusanovVolumewiseFunctors<
     FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
@@ -347,14 +347,14 @@ void wrapVolumewiseFunctorHostKernels(int device, ::exahype2::CellData& patchDat
  */
 template <void (*Function)(::exahype2::CellData&, ::tarch::timing::Measurement&, ::peano4::utils::LoopParallelism), ::peano4::utils::LoopParallelism loopParallelism>
 void wrapStatelessHostKernel(int device, ::exahype2::CellData& patchData) {
-  assertionEquals(device, ::tarch::accelerator::Device::HostDevice);
+  assertionEquals(device, ::tarch::accelerator::Device::Host);
   Function(patchData, timingComputeKernel, loopParallelism);
 }
 
 
 template <void (*Function)(int, ::exahype2::CellData&, ::tarch::timing::Measurement&)>
 void wrapDeviceKernel(int device, ::exahype2::CellData& patchData) {
-  assertion(device != ::tarch::accelerator::Device::HostDevice);
+  assertion(device != ::tarch::accelerator::Device::Host);
   Function(device, patchData, timingComputeKernel);
 }
 
@@ -488,21 +488,21 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::None>,
       "host, functors, batched, AoS, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
       wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, functors, batched, AoS, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
       wrapBatchedHeapFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::Subtasks>,
       "host, functors, batched, AoS, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
 
@@ -510,21 +510,21 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::None>,
       "host, functors, patch-wise, AoS, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
       wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, functors, patch-wise, AoS, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
       wrapPatchwiseHeapFunctorsHostKernel<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::Subtasks>,
       "host, functors, patch-wise, AoS, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
 
@@ -532,21 +532,21 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       wrapVolumewiseFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::None>,
       "host, functors, volume-wise, AoS, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
       wrapVolumewiseFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, functors, volume-wise, AoS, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
       wrapVolumewiseFunctorHostKernels<::exahype2::enumerator::AoSLexicographicEnumerator, ::peano4::utils::LoopParallelism::Subtasks>,
       "host, functors, volume-wise, AoS, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
 
@@ -566,7 +566,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::None>,
       "host, stateless, batched, AoS, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -585,7 +585,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, stateless, batched, AoS, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -604,7 +604,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::Subtasks>,
       "host, stateless, batched, AoS, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -623,7 +623,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::None>,
       "host, stateless, batched, SoA, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -642,7 +642,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, stateless, batched, SoA, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -661,7 +661,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::Subtasks>,
       "host, stateless, batched, SoA, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -680,7 +680,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::None>,
       "host, stateless, batched, AoSoA, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -699,7 +699,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, stateless, batched, AoSoA, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -718,7 +718,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::Subtasks>,
       "host, stateless, batched, AoSoA, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     if constexpr (not Accuracy > 0.0) {
@@ -737,7 +737,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
           ::peano4::utils::LoopParallelism::None>,
         "host, stateless, batched, insitu, sequential",
         launchingThreads,
-        ::tarch::accelerator::Device::HostDevice,
+        ::tarch::accelerator::Device::Host,
         localPatches
       );
     }
@@ -758,7 +758,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::None>,
       "host, stateless, patch-wise, AoS, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -777,7 +777,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, stateless, patch-wise, AoS, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -796,7 +796,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::Subtasks>,
       "host, stateless, patch-wise, AoS, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -815,7 +815,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::None>,
       "host, stateless, patch-wise, SoA, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -834,7 +834,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, stateless, patch-wise, SoA, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -853,7 +853,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::Subtasks>,
       "host, stateless, patch-wise, SoA, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -872,7 +872,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::None>,
       "host, stateless, patch-wise, AoSoA, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -891,7 +891,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, stateless, patch-wise, AoSoA, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -910,7 +910,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::Subtasks>,
       "host, stateless, patch-wise, AoSoA, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     if constexpr (not Accuracy > 0.0) {
@@ -929,7 +929,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
           ::peano4::utils::LoopParallelism::None>,
         "host, stateless, patch-wise, insitu, sequential",
         launchingThreads,
-        ::tarch::accelerator::Device::HostDevice,
+        ::tarch::accelerator::Device::Host,
         localPatches
       );
     }
@@ -950,7 +950,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::None>,
       "host, stateless, volume-wise, AoS, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -969,7 +969,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, stateless, volume-wise, AoS, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -988,7 +988,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::Subtasks>,
       "host, stateless, volume-wise, AoS, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -1007,7 +1007,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::None>,
       "host, stateless, volume-wise, SoA, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -1026,7 +1026,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, stateless, volume-wise, SoA, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -1045,7 +1045,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::Subtasks>,
       "host, stateless, volume-wise, SoA, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -1064,7 +1064,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::None>,
       "host, stateless, volume-wise, AoSoA, sequential",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -1083,7 +1083,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::ParallelFor>,
       "host, stateless, volume-wise, AoSoA, parallel-for",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
     assessKernel(
@@ -1102,7 +1102,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
         ::peano4::utils::LoopParallelism::Subtasks>,
       "host, stateless, volume-wise, AoSoA, subtasks",
       launchingThreads,
-      ::tarch::accelerator::Device::HostDevice,
+      ::tarch::accelerator::Device::Host,
       localPatches
     );
   }

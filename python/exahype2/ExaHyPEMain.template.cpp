@@ -518,8 +518,8 @@ int main(int argc, char** argv) {
 
           const double ticksPerSecond = double(1.0 / watch.getCalendarTime());
           tpsMeasurement.setValue(ticksPerSecond);
-          logInfo("main()", "Ticks per Second: " << std::fixed << std::setprecision(2) << ticksPerSecond);
-          logInfo("step()", "Memory: " <<
+          logInfo("main()", "TPS: " << std::fixed << std::setprecision(2) << ticksPerSecond);
+          logInfo("main()", "Memory: " <<
             tarch::getTotalMemory(tarch::MemoryUsageFormat::MByte) << "/" <<
             tarch::getFreeMemory(tarch::MemoryUsageFormat::MByte) << "/" <<
             tarch::getMemoryUsage(tarch::MemoryUsageFormat::MByte) << " MBytes (total/free/used)"

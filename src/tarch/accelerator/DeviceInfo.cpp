@@ -61,7 +61,6 @@ void tarch::accelerator::printDeviceInformation() {
 #if defined(GPUOffloadingOMP)
   tarch::accelerator::omp::printDeviceInformation(propertyMatrix);
 #endif
-#endif
 }
 
 
@@ -79,35 +78,34 @@ std::string tarch::accelerator::parseMatrix(const std::vector<std::vector<std::s
 
   std::stringstream ss;
 
-  // This size is the padding we need to add the porpety-name column
-  unsigned int maxPropertyLengthWithPadding
+  const unsigned int maxPropertyLengthWithPadding
     = std::max_element(identifiers.begin(), identifiers.end(), [](const std::string& lhs, const std::string& rhs) { return lhs.size() < rhs.size(); })->size() + 1;
 
-  // Get the string entry of a columng with the highest length
+  // Get the string entry of a column with the highest length
   std::vector<unsigned int> columnMaxStringSizes(identifiers.size(), 0);
   for (unsigned int row = 0; row < identifiers.size(); row++) {
-    std::vector<unsigned int> col_sizes;
+    std::vector<unsigned int> colSizes{};
     for (unsigned int col = 0; col < numberOfDevices; col++) {
-      col_sizes.push_back(propertyMatrix[row][col].size());
+      colSizes.push_back(propertyMatrix[row][col].size());
     }
 
     // Device property is also a part of the column
-    col_sizes.push_back(identifiers[row].size());
+    colSizes.push_back(identifiers[row].size());
 
-    unsigned int maxLength    = *std::max_element(col_sizes.begin(), col_sizes.end());
+    const unsigned int maxLength    = *std::max_element(colSizes.begin(), colSizes.end());
     columnMaxStringSizes[row] = maxLength;
   }
 
-  unsigned int maxIdLength = std::max(std::to_string(numberOfDevices).size(), std::string("DeviceId").size());
+  const unsigned int maxIdLength = std::max(std::to_string(numberOfDevices).size(), std::string("DeviceId").size());
 
   // Iterate the matrix and write per row, also while accessing the padding we need to add
-  std::string  propIdPad(maxIdLength + 1 - std::string("DeviceId").size(), ' ');
+  const std::string  propIdPad(maxIdLength + 1 - std::string("DeviceId").size(), ' ');
   unsigned int lineLength = 0;
 
   ss << propIdPad << "DeviceId |";
   lineLength += propIdPad.size() + 10;
   for (unsigned int x = 0; x < identifiers.size(); x++) {
-    std::string propPadding(columnMaxStringSizes[x] + 1 - identifiers[x].size(), ' ');
+    const std::string propPadding(columnMaxStringSizes[x] + 1 - identifiers[x].size(), ' ');
     ss << propPadding << identifiers[x] << " |";
     lineLength += propPadding.size() + identifiers[x].size() + 2;
   }
@@ -115,7 +113,7 @@ std::string tarch::accelerator::parseMatrix(const std::vector<std::vector<std::s
   lineLength -= 1;
   ss << "\n";
 
-  std::string dash(lineLength, '-');
+  const std::string dash(lineLength, '-');
   ss << dash << "\n";
 
   for (unsigned int x = 0; x < numberOfDevices; x++) {
@@ -127,10 +125,9 @@ std::string tarch::accelerator::parseMatrix(const std::vector<std::vector<std::s
     std::string idPad(maxIdLength + 1 - std::to_string(x).size(), ' ');
     ss << idPad << x << " |";
 #endif
-    for (unsigned int y = 0; y < identifiers.size(); y++) //(const auto& row : propertyMatrix)
-    {
-      unsigned int paddingLength = columnMaxStringSizes[y] + 1 - propertyMatrix[y][x].size();
-      std::string  s(paddingLength, ' ');
+    for (unsigned int y = 0; y < identifiers.size(); y++) { //(const auto& row : propertyMatrix)
+      const unsigned int paddingLength = columnMaxStringSizes[y] + 1 - propertyMatrix[y][x].size();
+      const std::string s(paddingLength, ' ');
       // ss << s << el << "  ";
       ss << s << propertyMatrix[y][x] << " |";
     }
@@ -141,7 +138,7 @@ std::string tarch::accelerator::parseMatrix(const std::vector<std::vector<std::s
 }
 
 
-void offloadCapabilityTest() {
+void tarch::accelerator::offloadCapabilityTest() {
   std::vector<bool> testResults;
 #if defined(GPUOffloadingCUDA)
   testResults = tarch::accelerator::cuda::testKernelLaunch();
@@ -196,7 +193,7 @@ void offloadCapabilityTest() {
 }
 
 
-void runBenchmarks(std::vector<std::vector<std::string>>& propertyMatrix) {
+void tarch::accelerator::runBenchmarks(std::vector<std::vector<std::string>>& propertyMatrix) {
   std::vector<BenchmarkResultInNanoSeconds> results;
 #if defined(GPUOffloadingCUDA)
   results = tarch::accelerator::cuda::runBenchmarks();
@@ -217,9 +214,9 @@ void runBenchmarks(std::vector<std::vector<std::string>>& propertyMatrix) {
 }
 
 
-void parseBenchmarkResults(std::vector<BenchmarkResultInNanoSeconds>& benchmarkResults, std::vector<std::vector<std::string>>& benchmarkResultsStringRepresentations) {
+void tarch::accelerator::parseBenchmarkResults(std::vector<BenchmarkResultInNanoSeconds>& benchmarkResults, std::vector<std::vector<std::string>>& benchmarkResultsStringRepresentations) {
   // A * 1e-9 / (B * 1e-9) = A / B but, MB -> B 1024*1024 and for time it is 1e9.
-  for (uint i = 0; i < benchmarkResults.size(); i++) {
+  for (std::size_t i = 0; i < benchmarkResults.size(); i++) {
     // Parse the results, bring nanoseconds to something humans would like more and add the units.
     std::stringstream ss;
     auto&             benchmarkResult = benchmarkResults[i];

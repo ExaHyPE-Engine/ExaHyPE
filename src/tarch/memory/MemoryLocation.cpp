@@ -4,12 +4,12 @@
 
 std::string toString(tarch::memory::MemoryLocation value) {
   switch (value) {
-  case MemoryLocation::Heap:
+  case tarch::memory::MemoryLocation::Heap:
     return "heap";
-  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+  case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
     return "managed-shared-accelerator-device";
-  case MemoryLocation::PinnedMemory:
+  case tarch::memory::MemoryLocation::PinnedMemory:
     return "pinned";
-    return "<undef>";
   }
+  return "<undef>";
 }

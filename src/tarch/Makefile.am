@@ -3,9 +3,9 @@
 
 AUTOMAKE_OPTIONS = subdir-objects
 
-lib_LIBRARIES = libTarch.a  libTarch_debug.a  libTarch_asserts.a  libTarch_trace.a  libTarch_stats.a
+lib_LIBRARIES = libTarch.a libTarch_debug.a libTarch_asserts.a libTarch_trace.a libTarch_stats.a
 
-Tarch_SOURCES =
+Tarch_SOURCES = \
 	tarch.cpp \
 	UnitTests.cpp \
 	memory/memory.cpp \

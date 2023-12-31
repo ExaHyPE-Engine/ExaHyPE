@@ -10,14 +10,14 @@
 GPUCallableMethod void tarch::accelerator::gpuAbort() {}
 
 
-void* tarch::accelerator::allocateRawData(std::size_t size, memory::MemoryLocation location, int device) {
+void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::MemoryLocation location, int device) {
   void* data = nullptr;
 
   switch (location) {
-  case memory::MemoryLocation::Heap:
-  case memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-  case memory::MemoryLocation::PinnedMemory:
-    data = std::aligned_alloc(AlignmentOnHeap, tarch::padSizeToAlignment(size, AlignmentOnHeap));
+  case tarch::memory::MemoryLocation::Heap:
+  case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+  case tarch::memory::MemoryLocation::PinnedMemory:
+    data = std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
     break;
   }
 
@@ -26,13 +26,13 @@ void* tarch::accelerator::allocateRawData(std::size_t size, memory::MemoryLocati
 }
 
 
-void tarch::accelerator::freeRawData(void* data, memory::MemoryLocation location, int device) {
+void tarch::accelerator::freeRawData(void* data, tarch::memory::MemoryLocation location, int device) {
   assertion(data);
 
   switch (location) {
-  case memory::MemoryLocation::Heap:
-  case memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-  case memory::MemoryLocation::PinnedMemory:
+  case tarch::memory::MemoryLocation::Heap:
+  case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+  case tarch::memory::MemoryLocation::PinnedMemory:
     std::free(data);
     break;
   }

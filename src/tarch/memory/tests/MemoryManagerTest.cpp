@@ -168,6 +168,7 @@ void tarch::memory::tests::MemoryManagerTest::testMemoryAllocationsForOneDevice(
   // TODO: Test also memory locations lookups.
 }
 
+
 void tarch::memory::tests::MemoryManagerTest::testMemoryAllocationsForMultipleDevices() {
   static constexpr int NumberOfDataElements = 10000;
 

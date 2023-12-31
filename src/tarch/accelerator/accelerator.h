@@ -53,8 +53,8 @@ namespace tarch::accelerator {
   void gpuAbort();
 #endif
 
-  void* allocateRawData(std::size_t size, memory::MemoryLocation location, int device);
-  void  freeRawData(void* data, memory::MemoryLocation location, int device);
+  void* allocateRawData(std::size_t size, tarch::memory::MemoryLocation location, int device);
+  void  freeRawData(void* data, tarch::memory::MemoryLocation location, int device);
 
   void copyTo(void* dst, const void* src, std::size_t count);
   void copyFrom(void* dst, const void* src, std::size_t count);
