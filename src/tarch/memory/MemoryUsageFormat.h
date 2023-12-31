@@ -5,3 +5,7 @@
 namespace tarch::memory {
   enum class MemoryUsageFormat { MByte, GByte };
 } // namespace tarch::memory
+
+namespace tarch {
+  using MemoryUsageFormat = tarch::memory::MemoryUsageFormat; // TODO: Remove
+} // namespace tarch

@@ -10,7 +10,7 @@
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/accelerator/Device.h"
 
-namespace tarch::memory {
+namespace tarch { // TODO: namespace tarch::memory
   /**
    * Method for getting the application's memory footprint
    *
@@ -24,11 +24,11 @@ namespace tarch::memory {
 
   int convertMemorySize(long long value, tarch::memory::MemoryUsageFormat format);
 
-  template <class T>
+  template <class T = double>
   T* allocateMemory(std::size_t size, MemoryLocation location, int device = accelerator::Device::Host) {
     // return reinterpret_cast<T*>(MemoryManager::getInstance().allocate(size * sizeof(T), location, device));
-    return reinterpret_cast<T*>(accelerator::allocateRawData(size, location, device))
+    return reinterpret_cast<T*>(accelerator::allocateRawData(size, location, device));
   }
 
   void freeMemory(void* pointer, MemoryLocation location, int device = accelerator::Device::Host);
-} // namespace tarch::memory
+} // namespace tarch

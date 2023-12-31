@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include <string>
+
 namespace tarch::memory {
   enum class MemoryLocation {
     /**
@@ -25,4 +27,8 @@ namespace tarch::memory {
   };
 } // namespace tarch::memory
 
-std::string toString(MemoryLocation value);
+namespace tarch {
+  using MemoryLocation = tarch::memory::MemoryLocation; // TODO: Remove
+} // namespace tarch
+
+std::string toString(tarch::memory::MemoryLocation value);

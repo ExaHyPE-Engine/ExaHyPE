@@ -19,7 +19,7 @@
 #include <sys/sysctl.h>
 #endif
 
-int tarch::memory::convertMemorySize(long long value, tarch::memory::MemoryUsageFormat format) {
+int tarch::convertMemorySize(long long value, tarch::memory::MemoryUsageFormat format) {
   static tarch::logging::Log _log("tarch::memory");
   static constexpr int       MegaByte = 1024 * 1024;
   static constexpr int       GigaByte = MegaByte * 1024;
@@ -28,13 +28,13 @@ int tarch::memory::convertMemorySize(long long value, tarch::memory::MemoryUsage
   case tarch::memory::MemoryUsageFormat::MByte:
     result = static_cast<int>((value + (MegaByte / 2)) / MegaByte);
     if (result > std::numeric_limits<int>::max()) {
-      logError("convertMemorySize()", "cannot cast result to return value: " << result);
+      logError("convertMemorySize()", "Cannot cast result to return value: " << result);
     }
     break;
   case tarch::memory::MemoryUsageFormat::GByte:
     result = static_cast<int>((value + (GigaByte / 2)) / GigaByte);
     if (result > std::numeric_limits<int>::max()) {
-      logError("convertMemorySize()", "cannot cast result to return value: " << result);
+      logError("convertMemorySize()", "Cannot cast result to return value: " << result);
     }
     break;
   }
@@ -43,13 +43,13 @@ int tarch::memory::convertMemorySize(long long value, tarch::memory::MemoryUsage
 
 #if defined(CompilerHasSysinfo)
 
-int tarch::memory::getTotalMemory(MemoryUsageFormat format) {
+int tarch::getTotalMemory(MemoryUsageFormat format) {
   struct sysinfo info;
   sysinfo(&info);
   return convertMemorySize(info.totalram, format);
 }
 
-int tarch::memory::getFreeMemory(MemoryUsageFormat format) {
+int tarch::getFreeMemory(MemoryUsageFormat format) {
   struct sysinfo info;
   sysinfo(&info);
   return convertMemorySize(info.freeram, format);
@@ -57,7 +57,7 @@ int tarch::memory::getFreeMemory(MemoryUsageFormat format) {
 
 #else
 
-int tarch::memory::getTotalMemory(MemoryUsageFormat format) {
+int tarch::getTotalMemory(MemoryUsageFormat format) {
   int         mib[]           = {CTL_HW, HW_MEMSIZE};
   int64_t     physical_memory = 0;
   std::size_t length          = 0;
@@ -68,7 +68,7 @@ int tarch::memory::getTotalMemory(MemoryUsageFormat format) {
   return convertMemorySize(physical_memory, format);
 }
 
-int tarch::memory::getFreeMemory(MemoryUsageFormat format) {
+int tarch::getFreeMemory(MemoryUsageFormat format) {
   struct rusage usage {};
   if (0 == getrusage(RUSAGE_SELF, &usage)) {
     long freeMem = tarch::memory::getTotalMemory(format) - usage.ru_maxrss;
@@ -79,7 +79,7 @@ int tarch::memory::getFreeMemory(MemoryUsageFormat format) {
 
 #endif
 
-int tarch::memory::getMemoryUsage(MemoryUsageFormat format) {
+int tarch::getMemoryUsage(MemoryUsageFormat format) {
   static tarch::logging::Log _log("tarch::memory");
 
 #if defined(CompilerHasProcStat)
@@ -93,7 +93,7 @@ int tarch::memory::getMemoryUsage(MemoryUsageFormat format) {
   f = fopen(work, "r");
 
   if (f == NULL) {
-    logError("getMemoryUsage()", "can't open file " << work);
+    logError("getMemoryUsage()", "Cannot open file " << work);
     return (0);
   }
   if (fgets(work, sizeof(work), f) == NULL) {
