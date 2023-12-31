@@ -7,7 +7,7 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/mpi/Rank.h"
 
-#include "peano4/peano.h"
+#include "peano4/peano4.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 #include "peano4/parallel/Node.h"

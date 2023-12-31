@@ -12,7 +12,7 @@
 #include "tarch/logging/LogFilter.h"
 #include "tarch/multicore/multicore.h"
 
-#include "peano4/peano.h"
+#include "peano4/peano4.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 

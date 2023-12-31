@@ -14,7 +14,7 @@
 #include "observers/InitGrid.h"
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
-#include "peano4/peano.h"
+#include "peano4/peano4.h"
 #include "repositories/DataRepository.h"
 #include "repositories/SolverRepository.h"
 #include "repositories/StepRepository.h"

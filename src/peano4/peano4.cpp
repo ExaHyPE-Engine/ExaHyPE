@@ -1,4 +1,4 @@
-#include "peano.h"
+#include "peano4.h"
 #include "../config.h"
 
 #include "peano4/utils/Loop.h"

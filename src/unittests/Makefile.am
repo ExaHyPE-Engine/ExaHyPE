@@ -1,10 +1,13 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+
 bin_PROGRAMS = UnitTests2d UnitTests3d \
                UnitTests2d_debug UnitTests3d_debug \
                UnitTests2d_stats UnitTests3d_stats \
                UnitTests2d_asserts UnitTests3d_asserts \
                UnitTests2d_trace UnitTests3d_trace
 
-UnitTestsSources = main.cpp
+UnitTestsSources = Main.cpp
 
 UnitTests2d_CXXFLAGS            = $(CXXFLAGS_PEANO_2D_RELEASE)
 UnitTests2d_trace_CXXFLAGS      = $(CXXFLAGS_PEANO_2D_TRACE)

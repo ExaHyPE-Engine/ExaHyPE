@@ -1,3 +1,5 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/logging/Log.h"
 #include "tarch/logging/CommandLineLogger.h"
 #include "tarch/logging/ChromeTraceFileLogger.h"
@@ -5,7 +7,7 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/mpi/Rank.h"
 
-#include "peano4/peano.h"
+#include "peano4/peano4.h"
 #include "peano4/parallel/Node.h"
 
 #include "config.h"

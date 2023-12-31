@@ -1,3 +1,5 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 cmake_minimum_required(VERSION 3.20.5)
 
 set(META_PROJECT_NAME "Peano")

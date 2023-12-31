@@ -7,7 +7,7 @@
 #include "observers/Plot.h"
 #include "observers/Solve.h"
 
-#include "peano4/peano.h"
+#include "peano4/peano4.h"
 #include "peano4/UnitTests.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
