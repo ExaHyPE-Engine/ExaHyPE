@@ -3,45 +3,44 @@
 #pragma once
 
 #include "config.h"
-#include "tarch/multicore/multicore.h"
+#include "tarch/memory/MemoryLocation.h"
 
-#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) \
-  and !defined(GPUOffloadingCUDA)
+#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) and !defined(GPUOffloadingCUDA)
 #define GPUOffloadingOff
 #endif
 
 /**
- * Have to include this header, as I need access to the SYCL_EXTERNAL keyword.
+ * Have to include this header, as we need access to the SYCL_EXTERNAL keyword.
  */
-#include "tarch/accelerator/sycl/Device.h"
+#include "tarch/accelerator/sycl/accelerator.h"
 
-namespace tarch {
-  #if defined(GPUOffloadingHIP)
-    #define GPUCallableMethod __host__ __device__
-  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
-    #define GPUCallableMethod SYCL_EXTERNAL
-  #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
-    #define GPUCallableMethod __host__ __device__
-  #else
-    #define GPUCallableMethod
-  #endif
+namespace tarch::accelerator {
+#if defined(GPUOffloadingHIP)
+#define GPUCallableMethod __host__ __device__
+#elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#define GPUCallableMethod SYCL_EXTERNAL
+#elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
+#define GPUCallableMethod __host__ __device__
+#else
+#define GPUCallableMethod
+#endif
 
-  #if defined(GPUOffloadingHIP)
-    #define GPUCallableInlineMethod __host__ __device__ __forceinline__
-  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
-    #define GPUCallableInlineMethod inline
-  #elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
-    #define GPUCallableInlineMethod __host__ __device__ __forceinline__
-  #else
-    #define GPUCallableInlineMethod //inline
-  #endif
+#if defined(GPUOffloadingHIP)
+#define GPUCallableInlineMethod __host__ __device__ __forceinline__
+#elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#define GPUCallableInlineMethod inline
+#elif defined(GPUOffloadingCPP) && defined(_NVHPC_STDPAR_GPU)
+#define GPUCallableInlineMethod __host__ __device__ __forceinline__
+#else
+#define GPUCallableInlineMethod // inline
+#endif
 
-  /**
-   * Delegates to std::abort() if no GPU offloading is active. Otherwise it
-   * degenerates to nop, as there is no abort on an accelerator. The vanilla
-   * implementation can be found in accelerator.cpp. The vendor-specific
-   * implementations are hold within their accelerator.cpp file.
-   */
+/**
+ * Delegates to std::abort() if no GPU offloading is active. Otherwise it
+ * degenerates to nop, as there is no abort on an accelerator. The vanilla
+ * implementation can be found in accelerator.cpp. The vendor-specific
+ * implementations are hold within their accelerator.cpp file.
+ */
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
   void gpuAbort();
@@ -54,36 +53,20 @@ namespace tarch {
   void gpuAbort();
 #endif
 
-  enum class MemoryLocation {
-    /**
-     * Create data on the heap of the local device. That is, if you run
-     * on an accelerator, use the accelerator's heap. If you invoke it
-     * on the host, use the host's accelerator.
-     *
-     * The alignment of this routine can be controlled via the compile
-     * time constant AlignmentOnHeap. It is typically set (to a default)
-     * within the corresponding compiler-specific header-file in
-     * tarch/compiler.
-     */
-    Heap,
-    /**
-     * To be used on host only.
-     */
-    ManagedSharedAcceleratorDeviceMemory
-  };
+  void* allocateRawData(std::size_t size, memory::MemoryLocation location, int device);
+  void  freeRawData(void* data, memory::MemoryLocation location, int device);
 
-  std::string toString(MemoryLocation value);
+  void copyTo(void* dst, const void* src, std::size_t count);
+  void copyFrom(void* dst, const void* src, std::size_t count);
+  void copyBetween(void* dst, const void* src, std::size_t count);
+  void copyToAsync(void* dst, const void* src, std::size_t count, void* stream = nullptr);
+  void copyFromAsync(void* dst, const void* src, std::size_t count, void* stream = nullptr);
+  void copyBetweenAsync(void* dst, const void* src, std::size_t count, void* stream = nullptr);
 
+  void copy2DTo(void* dst, std::size_t dpitch, const void* src, std::size_t spitch, std::size_t width, std::size_t height);
+  void copy2DFrom(void* dst, std::size_t dpitch, const void* src, std::size_t spitch, std::size_t width, std::size_t height);
 
-  namespace internal {
-    void* allocateRawData(int size, MemoryLocation location);
-  } // namespace internal
+  void prefetchUnifiedMemoryTo(const void* devPtr, std::size_t count, void* stream = nullptr);
 
-  template <class T = double>
-  T* allocateMemory(int size, MemoryLocation location, [[maybe_unused]] int device = -1) {
-    return reinterpret_cast<T*>(internal::allocateRawData(size * static_cast<int>(sizeof(T)), location));
-  }
-  void freeMemory(void* data, MemoryLocation location);
-
-  int padSizeToAlignment(int size, int aligment);
-} // namespace tarch
+  int padSizeToAlignment(std::size_t size, int alignment);
+} // namespace tarch::accelerator

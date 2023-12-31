@@ -1,3 +1,5 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/Device.h"
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
@@ -19,21 +21,7 @@ tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
   return instance;
 }
 
-void tarch::accelerator::Device::configure(const std::set<int>& devicesToUse) {
-  (void)devicesToUse;
-  // TODO: Iterate over devicesToUse and check offloading capability for each device.
-  bool canOffload = false;
-#pragma omp target map(tofrom : canOffload)
-  {
-    if (!omp_is_initial_device()) {
-      canOffload = true;
-    }
-  }
-
-  if (not canOffload) {
-    logWarning("configure()", "Peano was built with OpenMP GPU offloading support, but the hardware configuration cannot offload to the GPU.");
-  }
-}
+void tarch::accelerator::Device::configure(const std::set<int>&) {}
 
 void tarch::accelerator::Device::shutdown() {}
 

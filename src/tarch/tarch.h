@@ -5,7 +5,7 @@
 /**
  * @namespace tarch
  *
- * tarch denotes the Technical Architectures. It is used within Peano, but it
+ * tarch denotes the technical architecture layer. It is used within Peano, but it
  * is designed in a way that it is more or less independent of Peano, i.e.,
  * Peano uses the tarch but not the other way round.
  *

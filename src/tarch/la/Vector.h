@@ -102,7 +102,7 @@ std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
  * they can directly go to the GPU:
  * 
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * #include "tarch/accelerator/sycl/Device.h"
+ * #include "tarch/accelerator/sycl/accelerator.h"
  * template<>
  * struct sycl::is_device_copyable< tarch::la::Vector<2,double> >: std::true_type {};
  * 

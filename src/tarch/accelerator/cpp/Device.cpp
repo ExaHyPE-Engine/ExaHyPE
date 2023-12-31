@@ -1,10 +1,10 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/Device.h"
+
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #if defined(GPUOffloadingCPP)
-GPUCallableMethod void tarch::gpuAbort(){
-  std::abort();
-};
 
 tarch::accelerator::Device::Device() {}
 
@@ -19,9 +19,7 @@ void tarch::accelerator::Device::configure(const std::set<int>&) {}
 
 void tarch::accelerator::Device::shutdown() {}
 
-bool tarch::accelerator::Device::isInitialised() const {
-  return true;
-}
+bool tarch::accelerator::Device::isInitialised() const { return true; }
 
 int tarch::accelerator::Device::getNumberOfDevices() const {
   return 1; // @TODO: Ask the API to retrieve the number of GPUs

@@ -1,37 +1,40 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
-#include "tarch/accelerator/cuda/ErrorCheck.h"
+
+#include "tarch/memory/memory.h"
 
 #if defined(GPUOffloadingCPP)
 
-void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
-  void* result = nullptr;
+GPUCallableMethod void tarch::accelerator::gpuAbort() { std::abort(); };
+
+
+void* tarch::accelerator::allocateRawData(std::size_t size, memory::MemoryLocation location, int device) {
+  void* data = nullptr;
+  assertion2(size > 0, size, toString(location));
+
   switch (location) {
     case MemoryLocation::Heap:
-      result = std::aligned_alloc(AlignmentOnHeap, tarch::padSizeToAlignment(size, AlignmentOnHeap)); // Aligned alloc requires size to be a multiple of the aligment
-      break;
     case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-      #if defined(__NVCOMPILER_CUDA__)
-      CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));
-      #else
+    case MemoryLocation::PinnedMemory:
       result = std::aligned_alloc(AlignmentOnHeap, tarch::padSizeToAlignment(size, AlignmentOnHeap));
-      #endif
       break;
   }
-  return result;
+
+  assertion(data);
+  return data;
 }
 
-void tarch::freeMemory(void* data, MemoryLocation location) {
+
+void tarch::accelerator::freeRawData(void* data, memory::MemoryLocation location, int device) {
+  assertion(data);
+
   switch (location) {
-    case MemoryLocation::Heap:
-      std::free(data);
-      break;
-    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-      #if defined(__NVCOMPILER_CUDA__)
-      CHECK_CUDA_ERROR(cudaFree(data));
-      #else
-      std::free(data);
-      #endif
-      break;
+  case memory::MemoryLocation::Heap:
+  case memory::MemoryLocation::UnifiedSharedMemory:
+  case memory::MemoryLocation::PinnedMemory:
+    std::free(data);
+    break;
   }
 }
 
