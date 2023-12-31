@@ -234,6 +234,8 @@ void finishTimeStep() {
   ::exahype2::RefinementControlService::getInstance().finishStep();
   loadBalancer.finishStep();
 
+  ::tarch::memory::MemoryManager::dumpStatistics();
+
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif

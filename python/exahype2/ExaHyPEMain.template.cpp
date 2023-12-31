@@ -503,11 +503,11 @@ int main(int argc, char** argv) {
 #endif
 
 #if defined(UseSmartMPI)
-  const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+      const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
 #else
-  const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
-  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
+      const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
+      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
 #endif
 
       if (isGlobalMaster) {
@@ -519,12 +519,6 @@ int main(int argc, char** argv) {
           const double ticksPerSecond = double(1.0 / watch.getCalendarTime());
           tpsMeasurement.setValue(ticksPerSecond);
           logInfo("main()", "TPS: " << std::fixed << std::setprecision(2) << ticksPerSecond);
-          logInfo("main()", "Memory: " <<
-            tarch::getTotalMemory(tarch::MemoryUsageFormat::MByte) << "/" <<
-            tarch::getFreeMemory(tarch::MemoryUsageFormat::MByte) << "/" <<
-            tarch::getMemoryUsage(tarch::MemoryUsageFormat::MByte) << " MBytes (total/free/used)"
-          );
-          tarch::memory::MemoryManager::dumpStatistics();
         }
 
         logInfo("main()", "terminated successfully");

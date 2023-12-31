@@ -172,16 +172,19 @@ std::size_t tarch::memory::MemoryManager::getUsedAllocatedMemoryInBytes(int devi
 void tarch::memory::MemoryManager::dumpStatistics() {
   std::ostringstream msg;
 
-  msg << MemoryManager::getInstance().getNumberOfUsedPages() + MemoryManager::getInstance().getNumberOfFreePages() << " pages: ";
+  msg << MemoryManager::getInstance().getNumberOfUsedPages() + MemoryManager::getInstance().getNumberOfFreePages() << " Pages: ";
   for (auto& memoryPage : MemoryManager::getInstance()._memoryPages) {
     msg << "(#" << memoryPage.first << ":";
     msg << MemoryManager::getInstance().getNumberOfUsedPages(memoryPage.first) << "/" << MemoryManager::getInstance().getNumberOfFreePages(memoryPage.first) << ")";
   }
 
   msg
-    << ", heap: " << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte) + MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte)
-    << "/" << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte) << "/" << MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte)
-    << " MBytes (total/free/used)";
+    << ", Heap: " << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::GByte) + MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::GByte)
+    << "/" << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::GByte) << "/" << MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::GByte)
+    << " GBytes (Total/Free/Used)"
+    << ", System: " << getTotalMemory(tarch::MemoryUsageFormat::GByte) << "/" << tarch::getFreeMemory(tarch::MemoryUsageFormat::GByte)
+    << "/" << tarch::getMemoryUsage(tarch::MemoryUsageFormat::GByte)
+    << " GBytes (Total/Free/Used)";
 
   logInfo("dumpStatistics()", msg.str());
 }

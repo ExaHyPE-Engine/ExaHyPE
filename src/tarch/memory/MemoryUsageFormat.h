@@ -3,7 +3,7 @@
 #pragma once
 
 namespace tarch::memory {
-  enum class MemoryUsageFormat { MByte, GByte };
+  enum class MemoryUsageFormat { MByte, GByte, Auto };
 } // namespace tarch::memory
 
 namespace tarch {
