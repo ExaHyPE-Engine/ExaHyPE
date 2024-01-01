@@ -23,8 +23,8 @@ void tarch::la::slice(
   int                                       fromIndexInToVector,
   int                                       strideInToVector
 ) {
-  assertion6(fromIndexInToVector>=0, SizeLhs, SizeRhs, toString(toVector), toString(fromVector), fromIndexInToVector, strideInToVector);
-  assertion6(fromIndexInToVector+(SizeRhs-1)*strideInToVector<SizeLhs, SizeLhs, SizeRhs, toString(toVector), toString(fromVector), fromIndexInToVector, strideInToVector);
+  assertion6(fromIndexInToVector>=0, SizeLhs, SizeRhs, ::toString(toVector), ::toString(fromVector), fromIndexInToVector, strideInToVector);
+  assertion6(fromIndexInToVector+(SizeRhs-1)*strideInToVector<SizeLhs, SizeLhs, SizeRhs, ::toString(toVector), ::toString(fromVector), fromIndexInToVector, strideInToVector);
 
   #ifdef CompilerICC
   #pragma ivdep

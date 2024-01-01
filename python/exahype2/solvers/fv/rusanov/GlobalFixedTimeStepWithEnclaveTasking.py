@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
+from exahype2.solvers.PDETerms       import PDETerms
 from exahype2.solvers.fv.EnclaveTasking import EnclaveTasking
-from exahype2.solvers.fv.PDETerms       import PDETerms
 
 import jinja2
 
@@ -110,7 +110,7 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step = False, 
       solver_variant                           = SolverVariant.AcceleratorWithExplicitCopy,
-      kernel_variant         = KernelVariant.GenericAoS
+      kernel_variant         = KernelVariant.PatchWiseAoSUSM
     )
 
     solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,True)

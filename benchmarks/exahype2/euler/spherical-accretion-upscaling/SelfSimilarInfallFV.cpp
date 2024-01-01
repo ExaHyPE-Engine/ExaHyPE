@@ -64,9 +64,9 @@ void benchmarks::exahype2::euler::sphericalaccretionupscaling::SelfSimilarInfall
   double * __restrict__                        Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeX, volumeH, gridIsConstructred );
+  logTraceInWith3Arguments( "initialCondition(...)", volumeX, volumeH, gridIsConstructed );
 
   for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
     Q[i] = 0.0;
