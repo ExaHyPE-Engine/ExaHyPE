@@ -60,8 +60,8 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      cell_cell_lhs_matrix   = matrices.get_cell_system_matrix_for_laplacian(),
                                                                      cell_cell_lhs_matrix_scaling = args.dimensions-2,
                                                                      cell_cell_rhs_matrix_scaling = args.dimensions,
-                                                                     cell_to_face_matrix     = matrices.get_cell_to_face_matrix(),       
-                                                                     face_to_cell_matrix     = matrices.get_face_to_cell_matrix(), 
+                                                                     cell_to_face_matrix    = matrices.get_cell_to_face_matrix(),       
+                                                                     face_to_cell_matrix    = matrices.get_face_to_cell_matrix(), 
                                                                      
                                                                      # removing scaling for debugging
                                                                      cell_to_face_matrix_scaling  = None,

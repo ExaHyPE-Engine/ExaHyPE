@@ -27,9 +27,9 @@ void applications::exahype2::euler::selfgravitation::Euler::initialCondition(
   double* __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& volumeCentre,
   const tarch::la::Vector<Dimensions, double>& volumeH,
-  bool                                         gridIsConstructred
+  bool                                         gridIsConstructed
 ) {
-  logTraceInWith3Arguments("initialCondition(...)", volumeCentre, volumeH, gridIsConstructred);
+  logTraceInWith3Arguments("initialCondition(...)", volumeCentre, volumeH, gridIsConstructed);
 
 // Manual offset to make the wave originate slightly to the left of the center --- helps
 // to detect if wave is moving to the left or right

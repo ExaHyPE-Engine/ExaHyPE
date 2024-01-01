@@ -1,3 +1,5 @@
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "PostprocessingKernels.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
 #include "peano4/utils/Loop.h"

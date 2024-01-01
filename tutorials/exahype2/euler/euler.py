@@ -1,5 +1,9 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import sys
+import sympy
+import subprocess
 
 #
 # We use our code Python generator to generate additional glue code.
@@ -41,28 +45,29 @@ end_time = 1
 #
 # Choose domain size and offset.
 #
-if dimensions == 2:
-    size = [1.0, 1.0]
-    offset = [0.0, 0.0]
-else:
-    size = [1.0, 1.0, 1.0]
-    offset = [0.0, 0.0, 0.0]
+size = [1.0, 1.0, 1.0]
+offset = [0.0, 0.0, 0.0]
 
 #
 # If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
 #
-use_make = True
+use_make = False
+
+#
+# Set to true, to visualise/convert the output data using a postprocessor.
+#
+visualise = False
 
 #
 # Choose how often a snapshot is written.
 #
-time_in_between_two_snapshots = end_time/100
-#time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
+time_in_between_two_snapshots = end_time / 100
+# time_in_between_two_snapshots = 0 # Set to 0 to disable I/O
 
 #
 # Switch between 'Release', 'Debug', 'Asserts', 'Trace', 'Stats'.
 #
-compile_mode=peano4.output.CompileMode.Release
+compile_mode = peano4.output.CompileMode.Release
 
 #
 # We first create a new ExaHyPE 2 project.
@@ -85,8 +90,8 @@ my_project = exahype2.Project(
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     name="EulerSolver",
     patch_size=patch_size,
-    unknowns=dimensions + 2, # [rho, u, v, (w), e]
-    auxiliary_variables=0, # This could be something alike material parameters. Not required for Euler.
+    unknowns=dimensions + 2,  # [rho, u, v, (w), e]
+    auxiliary_variables=0,  # This could be something alike material parameters. Not required for Euler.
     min_volume_h=volume_size,
     max_volume_h=volume_size,
     time_step_relaxation=0.5,
@@ -95,34 +100,78 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 #
 # We want to define our PDE symbolically.
 # For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
-# For reusability in other applications we implement the PDE model in the Python script pde.py.
 #
-from pde import PDE
-my_pde = PDE(unknowns=dimensions + 2, auxiliary_variables=0, dimensions=dimensions)
+my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(
+    unknowns=dimensions + 2, auxiliary_variables=0, dimensions=dimensions
+)
+
+#
+# Give entries in input vector symbolic names. We first declare the constant
+# gamma. Then we tell the solver how we would like to name the Q entries.
+#
+gamma = sympy.symbols("gamma")
+# First scalar is density
+rho = my_pde.name_Q_entry(0, "rho")
+# Momentum: Entries 1-dimensions (C counting style) holds j vector
+# (Note: To get the velocities we need to divide with the density)
+j = my_pde.name_Q_entries(1, dimensions, "j")
+# Energy
+E = my_pde.name_Q_entry(dimensions + 1, "E")
+# Pressure
+p = (gamma - 1) * (E - 1 / 2 * exahype2.symhype.dot(j, j) / rho)
+
+#
+# Define the equation system
+#
+# Flux [unknowns, dimensions]
+my_pde.F[0, :] = j
+my_pde.F[1 : dimensions + 1, :] = 1 / rho * exahype2.symhype.outer(
+    j, j
+) + p * sympy.eye(dimensions)
+my_pde.F[dimensions + 1, :] = 1 / rho * j * (E + p)
+
+# Eigenvalues [unknowns, dimensions]
+c = sympy.sqrt(gamma * p / rho)
+u = j / rho  # Velocities
+if dimensions == 3:
+    my_pde.eigenvalues[0] = [u[0] - c, u[1] - c, u[2] - c]
+    my_pde.eigenvalues[1] = [u[0], u[1], u[2]]
+    my_pde.eigenvalues[2] = [u[0], u[1], u[2]]
+    my_pde.eigenvalues[3] = [u[0], u[1], u[2]]
+    my_pde.eigenvalues[4] = [u[0] + c, u[1] + c, u[2] + c]
+else:
+    my_pde.eigenvalues[0] = [u[0] - c, u[1] - c]
+    my_pde.eigenvalues[1] = [u[0], u[1]]
+    my_pde.eigenvalues[2] = [u[0], u[1]]
+    my_pde.eigenvalues[3] = [u[0] + c, u[1] + c]
+
+my_pde.substitute_expression(gamma, 1.4)
 
 #
 # Since 'my_pde' only holds the PDE for the Euler equations without initial- or boundary conditions,
 # we still need to properly define initial- and boundary conditions.
 # This gives us then a complete description of a 'scenario'.
 #
-import sympy
-
 #
 # Initial conditions as specified in the README.md.
 #
-my_pde.initial_values[0] = 1 # rho
-my_pde.initial_values[1] = 0 # u
-my_pde.initial_values[2] = 0 # v
+my_pde.initial_values[0] = 1  # rho
+my_pde.initial_values[1] = 0  # u
+my_pde.initial_values[2] = 0  # v
 
 if dimensions == 2:
-  volume_centre = sympy.sqrt((0.5 - my_pde.x[0])**2 + (0.5 - my_pde.x[1])**2)
-  my_pde.initial_values[3] = sympy.Piecewise((1.0, volume_centre < 0.2), (1.01, True)) # e
+    volume_centre = sympy.sqrt((0.5 - my_pde.x[0]) ** 2 + (0.5 - my_pde.x[1]) ** 2)
+    my_pde.initial_values[3] = sympy.Piecewise(
+        (1.0, volume_centre < 0.2), (1.01, True)
+    )  # e
 else:
-  volume_centre = sympy.sqrt((0.5 - my_pde.x[0])**2 + (0.5 - my_pde.x[1])**2 + (0.5 - my_pde.x[2])**2)
-  my_pde.initial_values[3] = 0 # w
-  my_pde.initial_values[4] = sympy.Piecewise((1.0, volume_centre < 0.2), (1.01, True)) # e
-
-my_pde.substitute_expression(my_pde.gamma, 1.4)
+    volume_centre = sympy.sqrt(
+        (0.5 - my_pde.x[0]) ** 2 + (0.5 - my_pde.x[1]) ** 2 + (0.5 - my_pde.x[2]) ** 2
+    )
+    my_pde.initial_values[3] = 0  # w
+    my_pde.initial_values[4] = sympy.Piecewise(
+        (1.0, volume_centre < 0.2), (1.01, True)
+    )  # e
 
 #
 # Specify which implementation our solvers uses.
@@ -152,8 +201,8 @@ my_project.add_solver(my_solver)
 #
 my_project.set_global_simulation_parameters(
     dimensions=dimensions,
-    size=size,
-    offset=offset,
+    size=size[0:dimensions],
+    offset=offset[0:dimensions],
     min_end_time=end_time,
     max_end_time=end_time,
     first_plot_time_stamp=0.0,
@@ -168,6 +217,18 @@ my_project.set_global_simulation_parameters(
 my_project.set_output_path("solution")
 if not os.path.exists("solution"):
     os.makedirs("solution")
+
+if visualise:
+    output_patch_file = "solution/solution-EulerSolver.peano-patch-file"
+    if os.path.isfile(output_patch_file):
+        subprocess.call(
+            [
+                "python3",
+                "../../../python/peano4/visualisation/render.py",
+                str(output_patch_file),
+            ]
+        )
+    sys.exit(0)
 
 #
 # If you only target a sequential execution, you can omit the load balancing.
@@ -208,24 +269,6 @@ my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 #
 my_project.build(make=use_make, make_clean_first=True, throw_away_data_after_build=True)
 
-#
-# Create a postprocessing script which converts the output patch files of the simulation
-# to VTU files which can be read by ParaView e.g.
-#
-with open("postprocess.py", "w") as file:
-    file.write('''
-import os
-import sys
-import subprocess
-
-output_patch_file = "solution/solution-EulerSolver.peano-patch-file"
-if os.path.isfile(output_patch_file):
-    subprocess.call([
-        "python3", "../../../python/peano4/visualisation/render.py",
-        str(output_patch_file),
-    ])
-''')
-
 print("\nPDE is: ")
 print(my_pde.__str__())
 print("Executable is euler-" + str(dimensions) + "d")
@@ -233,4 +276,3 @@ print("Clean object files via 'make clean'")
 print("(Re)compile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
 print("Regenerate all code by running 'python3 euler.py' again")
-print("Generate (and convert) any postprocessing data by calling 'python3 postprocess.py'")
