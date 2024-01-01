@@ -285,7 +285,7 @@ class GaussLobatto(MatrixGenerator):
   
     # def get_face_to_face_matrix(self):
   #   """ Face-face coupling block.
-  #   I provede here the entire block includind identities and zeros, not only the averaging part,
+  #   I provide here the entire block includind identities and zeros, not only the averaging part,
   #   because later we may want to
   #   1) use more general definition of the flux,
   #   2) keep the face-face mass matrices, resulting from L-2 projections, in this block.
