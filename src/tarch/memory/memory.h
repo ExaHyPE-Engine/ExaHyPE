@@ -25,10 +25,11 @@ namespace tarch { // TODO: namespace tarch::memory
   int convertMemorySize(long long value, tarch::memory::MemoryUsageFormat format);
 
   template <class T = double>
-  T* allocateMemory(std::size_t size, MemoryLocation location, int device = tarch::accelerator::Device::Host) {
+  T* allocateMemory(std::size_t size, MemoryLocation location, int device = tarch::accelerator::Host) {
+    device = tarch::accelerator::Device::getInstance().getRankLocalDeviceId();
     // return reinterpret_cast<T*>(MemoryManager::getInstance().allocate(size * sizeof(T), location, device));
     return reinterpret_cast<T*>(tarch::accelerator::allocateRawData(size * sizeof(T), location, device));
   }
 
-  void freeMemory(void* pointer, MemoryLocation location, int device = tarch::accelerator::Device::Host);
+  void freeMemory(void* pointer, MemoryLocation location, int device = tarch::accelerator::Host);
 } // namespace tarch

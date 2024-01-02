@@ -8,31 +8,31 @@
 #include <iostream>
 #include <omp.h>
 
-#include "Device.h"
-
+#include "tarch/accelerator/Device.h"
+#include "tarch/accelerator/DeviceInfo.h"
 
 void tarch::accelerator::omp::queryDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix) {
-  unsigned int                          propertyCount   = tarch::accelerator::properties.size();
-  unsigned int                          numberOfDevices = omp_get_num_devices();
-  std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(numberOfDevices, "X"));
+  const unsigned int                          propertyCount   = tarch::accelerator::Properties.size();
+  const unsigned int                          numberOfDevices = omp_get_num_devices();
+  const std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(numberOfDevices, "X"));
   propertyMatrix = std::move(_propertyMatrix);
 }
 
 
 void tarch::accelerator::omp::printDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix) {
-  int numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
+  const int numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
   if (numberOfDevices == 0) {
-    std::string deviceInfoStr = "No offloading capable GPUs were found";
+    const std::string deviceInfoStr = "No offloading capable GPUs were found";
     logInfo("printDeviceInformation()", "" << deviceInfoStr);
   } else {
-    deviceInfoStr = tarch::accelerator::parseMatrix(propertyMatrix, numberOfDevices);
+    const std::string deviceInfoStr = tarch::accelerator::parseMatrix(propertyMatrix, numberOfDevices);
     logInfo("printDeviceInformation()", "\n" << deviceInfoStr);
   }
 }
 
 
 std::vector<bool> tarch::accelerator::omp::testKernelLaunch() {
-  int               numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
+  const int         numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
   std::vector<bool> testResults(numberOfDevices, false);
 
   for (int i = 0; i < numberOfDevices; i++) {
@@ -51,7 +51,7 @@ std::vector<bool> tarch::accelerator::omp::testKernelLaunch() {
 
 
 std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> tarch::accelerator::omp::runBenchmarks() {
-  int                                                           numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
+  const int                                                     numberOfDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
   std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
 
   constexpr auto NumberOfRepeats = tarch::accelerator::NumberOfRepeats;
@@ -60,8 +60,8 @@ std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> tarch::accelerator
     tarch::accelerator::BenchmarkResultInNanoSeconds& benchmarkResult = benchmarkResults[deviceId];
     benchmarkResult.repeats                                           = NumberOfRepeats;
 
-    std::size_t AllocSize             = tarch::accelerator::AllocSize;
-    std::size_t N                     = tarch::accelerator::N;
+    constexpr auto AllocSize          = tarch::accelerator::AllocSize;
+    constexpr auto N                  = tarch::accelerator::N;
     benchmarkResult.readWriteSize     = AllocSize * 2;
     benchmarkResult.allocatedDataSize = AllocSize * 2;
 

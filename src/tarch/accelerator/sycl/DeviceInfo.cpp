@@ -7,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "tarch/accelerator/DeviceInfo.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #pragma push_macro("Dimensions")
@@ -17,13 +18,12 @@
 #pragma pop_macro("Dimensions")
 #pragma pop_macro("assertion")
 
-
 void tarch::accelerator::sycl::queryDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix) {
   constexpr unsigned int      kb      = 1024;
   constexpr unsigned int      mb      = kb * kb;
   std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
 
-  unsigned int                          propertyCount = tarch::accelerator::properties.size();
+  unsigned int                          propertyCount = tarch::accelerator::Properties.size();
   std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(devices.size(), "X"));
   propertyMatrix = std::move(_propertyMatrix);
 
@@ -69,26 +69,25 @@ void tarch::accelerator::sycl::queryDeviceInformation(std::vector<std::vector<st
 
 
 void tarch::accelerator::sycl::printDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix) {
-  int         numberOfDevices = ::sycl::device::get_devices(::sycl::info::device_type::gpu).size();
-  std::string deviceInfoStr   = "";
+  const int numberOfDevices = ::sycl::device::get_devices(::sycl::info::device_type::gpu).size();
   if (numberOfDevices == 0) {
-    deviceInfoStr = "No offloading capable GPUs were found";
+    const std::string deviceInfoStr = "No offloading capable GPUs were found";
     logInfo("printDeviceInformation()", "" << deviceInfoStr);
   } else {
-    deviceInfoStr = tarch::accelerator::parseMatrix(propertyMatrix, numberOfDevices);
+    const std::string deviceInfoStr = tarch::accelerator::parseMatrix(propertyMatrix, numberOfDevices);
     logInfo("printDeviceInformation()", "\n" << deviceInfoStr);
   }
 }
 
 
 std::vector<bool> tarch::accelerator::sycl::testKernelLaunch() {
-  std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
-  std::vector<bool>           offloadResults(devices.size(), false);
-  bool                        a = false;
+  const std::vector<::sycl::device> devices = ::sycl::device::get_devices(::sycl::info::device_type::gpu);
+  std::vector<bool>                 offloadResults(devices.size(), false);
+  bool                              a = false;
 
   for (unsigned int i = 0; i < devices.size(); i++) {
-    ::sycl::device& device = devices[i];
-    ::sycl::queue   queue(device);
+    const ::sycl::device& device = devices[i];
+    ::sycl::queue         queue(device);
     std::cout << device.get_info<::sycl::info::device::name>() << std::endl;
     {
       ::sycl::buffer<bool, 1> a_sycl(&a, ::sycl::range<1>(1));
@@ -96,7 +95,7 @@ std::vector<bool> tarch::accelerator::sycl::testKernelLaunch() {
       queue.submit([&](::sycl::handler& cgh) {
         ::sycl::stream   out(1024, 256, cgh);
         ::sycl::accessor a_acc = a_sycl.get_access<::sycl::access::mode::read_write>(cgh);
-        // same as::sycl::accessor a_acc{a_sycl, cgh,::sycl::read_write};
+        // Same as::sycl::accessor a_acc{a_sycl, cgh,::sycl::read_write};
 
         cgh.parallel_for(1, [=](::sycl::id<1> idx) { a_acc[0] = true; });
       });
@@ -134,7 +133,7 @@ std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> tarch::accelerator
   std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> benchmarkResults(numberOfDevices, {0});
   for (int deviceId = 0; deviceId < numberOfDevices; deviceId++) {
     tarch::accelerator::BenchmarkResultInNanoSeconds& benchmarkResult = benchmarkResults[deviceId];
-    benchmarkResult.repeats                                           = repeats;
+    benchmarkResult.repeats                                           = NumberOfRepeats;
     benchmarkResult.allocatedDataSize                                 = 2 * N * sizeof(double);
     ::sycl::device dev                                                = devices[deviceId];
     ::sycl::queue  queue                                              = ::sycl::queue(dev, propList);

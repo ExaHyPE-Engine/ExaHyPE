@@ -7,6 +7,7 @@
 #include "Functors.h"
 #include "LoopBodies.h"
 #include "peano4/utils/Loop.h"
+#include "tarch/memory/MemoryManager.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
 

@@ -72,7 +72,7 @@ void tarch::memory::MemoryManager::clear() {
 
   for (auto& memoryPage : _memoryPages) {
     int device = memoryPage.first;
-    logDebug("clear()", "free data of device " << device);
+    logDebug("clear()", "Free data of device " << device);
 
     if (not memoryPage.second.usedPages.empty()) {
       logError(
@@ -181,10 +181,9 @@ void tarch::memory::MemoryManager::dumpStatistics() {
   msg
     << ", Heap: " << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::GByte) + MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::GByte)
     << "/" << MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::GByte) << "/" << MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::GByte)
-    << " GBytes (Total/Free/Used)"
-    << ", System: " << getTotalMemory(tarch::MemoryUsageFormat::GByte) << "/" << tarch::getFreeMemory(tarch::MemoryUsageFormat::GByte)
-    << "/" << tarch::getMemoryUsage(tarch::MemoryUsageFormat::GByte)
-    << " GBytes (Total/Free/Used)";
+    << " GB (Total/Free/Used)"
+    << ", System: " << getTotalMemory(MemoryUsageFormat::GByte) << "/" << getFreeMemory(MemoryUsageFormat::GByte) << "/" << getMemoryUsage(MemoryUsageFormat::GByte)
+    << " GB (Total/Free/Used)";
 
   logInfo("dumpStatistics()", msg.str());
 }

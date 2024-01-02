@@ -8,7 +8,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
+#if defined(GPUOffloadingCUDA) or defined(_NVHPC_CUDA)
 #include "cuda/DeviceInfo.h"
 #endif
 
@@ -27,28 +27,28 @@
 
 std::vector<std::vector<std::string>> tarch::accelerator::queryDeviceInformation() {
   std::vector<std::vector<std::string>> devInfo;
+
 #if defined(GPUOffloadingCPP)
   tarch::accelerator::cpp::queryDeviceInformation(devInfo);
-  tarch::accelerator::runBenchmarks(devInfo);
 #endif
-#if defined(_NVHPC_CUDA) or defined(GPUOffloadingCUDA)
+#if defined(GPUOffloadingCUDA) or defined(_NVHPC_CUDA)
   tarch::accelerator::cuda::queryDeviceInformation(devInfo);
-  tarch::accelerator::runBenchmarks(devInfo);
 #endif
 #if defined(GPUOffloadingSYCL)
   tarch::accelerator::sycl::queryDeviceInformation(devInfo);
-  tarch::accelerator::runBenchmarks(devInfo);
 #endif
-#if defined(GPUOffloadingOMP)
+#if defined(GPUOffloadingOMP) and not defined(_NVHPC_CUDA)
   tarch::accelerator::omp::queryDeviceInformation(devInfo);
-  tarch::accelerator::runBenchmarks(devInfo);
 #endif
+
+  tarch::accelerator::runBenchmarks(devInfo);
   return devInfo;
 }
 
 
 void tarch::accelerator::printDeviceInformation() {
   auto propertyMatrix = queryDeviceInformation();
+
 #if defined(GPUOffloadingCPP)
   tarch::accelerator::cpp::printDeviceInformation(propertyMatrix);
 #endif
@@ -58,7 +58,7 @@ void tarch::accelerator::printDeviceInformation() {
 #if defined(GPUOffloadingSYCL)
   tarch::accelerator::sycl::printDeviceInformation(propertyMatrix);
 #endif
-#if defined(GPUOffloadingOMP)
+#if defined(GPUOffloadingOMP) and not defined(_NVHPC_CUDA)
   tarch::accelerator::omp::printDeviceInformation(propertyMatrix);
 #endif
 }
@@ -118,18 +118,18 @@ std::string tarch::accelerator::parseMatrix(const std::vector<std::vector<std::s
 
   for (unsigned int x = 0; x < numberOfDevices; x++) {
 #if defined(GPUOffloadingCPP)
-    std::string idPad(maxIdLength, ' ');
+    const std::string idPad(maxIdLength, ' ');
     ss << idPad << "X"
        << " |";
 #else
-    std::string idPad(maxIdLength + 1 - std::to_string(x).size(), ' ');
+    const std::string idPad(maxIdLength + 1 - std::to_string(x).size(), ' ');
     ss << idPad << x << " |";
 #endif
     for (unsigned int y = 0; y < identifiers.size(); y++) { //(const auto& row : propertyMatrix)
       const unsigned int paddingLength = columnMaxStringSizes[y] + 1 - propertyMatrix[y][x].size();
-      const std::string s(paddingLength, ' ');
-      // ss << s << el << "  ";
-      ss << s << propertyMatrix[y][x] << " |";
+      const std::string string(paddingLength, ' ');
+      // ss << string << el << "  ";
+      ss << string << propertyMatrix[y][x] << " |";
     }
     ss.seekp(-1, ss.cur);
     ss << "\n";
@@ -140,6 +140,7 @@ std::string tarch::accelerator::parseMatrix(const std::vector<std::vector<std::s
 
 void tarch::accelerator::offloadCapabilityTest() {
   std::vector<bool> testResults;
+
 #if defined(GPUOffloadingCUDA)
   testResults = tarch::accelerator::cuda::testKernelLaunch();
 #endif
@@ -181,8 +182,6 @@ void tarch::accelerator::offloadCapabilityTest() {
       } else {
         throw std::runtime_error(failMessage);
       }
-    } else {
-      logInfo("offloadCapabiltiyTest()", "Kernel launch test successful");
     }
   } else {
     throw std::runtime_error("Peano was configured to run on accelerators, but no offload capable devices were found.");
@@ -219,7 +218,7 @@ void tarch::accelerator::parseBenchmarkResults(std::vector<BenchmarkResultInNano
   for (std::size_t i = 0; i < benchmarkResults.size(); i++) {
     // Parse the results, bring nanoseconds to something humans would like more and add the units.
     std::stringstream ss;
-    auto&             benchmarkResult = benchmarkResults[i];
+    const auto&             benchmarkResult = benchmarkResults[i];
     constexpr double  byteToGB        = (1.0 / (1000.0 * 1000.0 * 1000.0));
     ss << (static_cast<double>(benchmarkResult.allocatedDataSize) * static_cast<double>(benchmarkResult.repeats) * byteToGB
           ) * (1.0 / (static_cast<double>(benchmarkResult.GPUtoGPUCopy) * 1e-9))

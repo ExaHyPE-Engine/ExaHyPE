@@ -67,7 +67,7 @@ namespace exahype2 {
    * 
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    * #if defined(SharedSYCL)
-   * #include "tarch/accelerator/sycl/accelerator.h"
+   * #include "tarch/accelerator/sycl/Device.h"
    * template<>
    * struct sycl::is_device_copyable<exahype2::CellData>: std::true_type {};
    * #endif

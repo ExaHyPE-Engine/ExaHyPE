@@ -14,7 +14,7 @@ namespace tarch::accelerator {
    * This variable is a constant vector of strings that stores the
    * names of various properties used to identify the properties of the accelerators.
    */
-  const std::vector<std::string> properties = {"Device Name", "Global Memory", "Free Memory", "Clock Frequency", "Compute Units", "Bandwidth"};
+  const static std::vector<std::string> Properties = {"Device Name", "Global Memory", "Free Memory", "Clock Frequency", "Compute Units", "Bandwidth"};
 
   /**
    * @brief Struct representing benchmark results in nanoseconds.
@@ -71,7 +71,7 @@ namespace tarch::accelerator {
    * @return The offset (index) of the property in the vector of identifiers.
    * @throws std::runtime_error If the property name is not found in the vector of identifiers.
    */
-  std::size_t getPropertyOffset(const char name[], const std::vector<std::string>& identifiers = properties);
+  std::size_t getPropertyOffset(const char name[], const std::vector<std::string>& identifiers = Properties);
 
   /**
    * Parses a matrix of properties into a formatted string representation.
@@ -79,7 +79,7 @@ namespace tarch::accelerator {
    * This function takes a matrix of properties, the number of devices, and a vector of identifiers.
    * It formats the properties into a string representation, including headers and proper padding.
    * In the matrix, each column should have the properties from a device, the order should be same as the
-   * tarch::accelerator::properties.
+   * tarch::accelerator::Properties.
    *
    * @note The function is intended to use with `queryDeviceInformation()`and `parseBenchmarkResults(...)`
    *
@@ -88,7 +88,7 @@ namespace tarch::accelerator {
    * @param identifiers The vector of identifiers containing property names.
    * @return The formatted string representation of the property matrix.
    */
-  std::string parseMatrix(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices, const std::vector<std::string>& identifiers = properties);
+  std::string parseMatrix(const std::vector<std::vector<std::string>>& propertyMatrix, int numberOfDevices, const std::vector<std::string>& identifiers = Properties);
 
   /**
    * Performs offload capability tests for the selected accelerator implementation.

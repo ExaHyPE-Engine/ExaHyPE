@@ -699,15 +699,15 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless(int targ
   const TempDataEnumeratorType                 ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
   const TempDataEnumeratorType                 eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
-  double* tempFluxX                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(fluxEnumerator.size(), targetDevice);
-  double* tempFluxY                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(fluxEnumerator.size(), targetDevice);
-  double* tempFluxZ                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? fluxEnumerator.size() : 1, targetDevice);
-  double* tempNonconservativeProductX = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(ncpEnumerator.size(), targetDevice);
-  double* tempNonconservativeProductY = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(ncpEnumerator.size(), targetDevice);
-  double* tempNonconservativeProductZ = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? ncpEnumerator.size() : 1, targetDevice);
-  double* tempEigenvalueX             = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(eigenvalueEnumerator.size(), targetDevice);
-  double* tempEigenvalueY             = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(eigenvalueEnumerator.size(), targetDevice);
-  double* tempEigenvalueZ = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? eigenvalueEnumerator.size() : 1, targetDevice);
+  double* tempFluxX                   = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(fluxEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempFluxY                   = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(fluxEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempFluxZ                   = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(Dimensions == 3 ? fluxEnumerator.size() * sizeof(double) : 1, ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempNonconservativeProductX = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(ncpEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempNonconservativeProductY = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(ncpEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempNonconservativeProductZ = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(Dimensions == 3 ? ncpEnumerator.size() * sizeof(double) : 1, ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempEigenvalueX             = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(eigenvalueEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempEigenvalueY             = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(eigenvalueEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempEigenvalueZ             = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(Dimensions == 3 ? eigenvalueEnumerator.size() * sizeof(double) : 1, ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
 
   const int numberOfCells          = patchData.numberOfCells;
   double**  mappedPointersToQIn    = patchData.QIn;
@@ -752,15 +752,15 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless(int targ
   watch.stop();
   measurement.setValue(watch.getCalendarTime());
 
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxX, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxY, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxZ, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductX, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductY, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductZ, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueX, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueY, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueZ, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempFluxX, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempFluxY, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempFluxZ, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempNonconservativeProductX, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempNonconservativeProductY, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempNonconservativeProductZ, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempEigenvalueX, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempEigenvalueY, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempEigenvalueZ, targetDevice);
 
   logTraceOut("timeStepWithRusanovBatchedUSMStateless()");
 }
@@ -789,15 +789,15 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless(int targ
   const TempDataEnumeratorType                 ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
   const TempDataEnumeratorType                 eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
-  double* tempFluxX                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(fluxEnumerator.size(), targetDevice);
-  double* tempFluxY                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(fluxEnumerator.size(), targetDevice);
-  double* tempFluxZ                   = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? fluxEnumerator.size() : 1, targetDevice);
-  double* tempNonconservativeProductX = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(ncpEnumerator.size(), targetDevice);
-  double* tempNonconservativeProductY = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(ncpEnumerator.size(), targetDevice);
-  double* tempNonconservativeProductZ = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? ncpEnumerator.size() : 1, targetDevice);
-  double* tempEigenvalueX             = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(eigenvalueEnumerator.size(), targetDevice);
-  double* tempEigenvalueY             = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(eigenvalueEnumerator.size(), targetDevice);
-  double* tempEigenvalueZ = ::tarch::accelerator::omp::GPUMemoryManager::getInstance().allocate<double>(Dimensions == 3 ? eigenvalueEnumerator.size() : 1, targetDevice);
+  double* tempFluxX                   = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(fluxEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempFluxY                   = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(fluxEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempFluxZ                   = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(Dimensions == 3 ? fluxEnumerator.size() * sizeof(double) : 1, ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempNonconservativeProductX = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(ncpEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempNonconservativeProductY = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(ncpEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempNonconservativeProductZ = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(Dimensions == 3 ? ncpEnumerator.size() * sizeof(double) : 1, ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempEigenvalueX             = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(eigenvalueEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempEigenvalueY             = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(eigenvalueEnumerator.size() * sizeof(double), ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
+  double* tempEigenvalueZ             = static_cast<double*>(::tarch::memory::MemoryManager::getInstance().allocate(Dimensions == 3 ? eigenvalueEnumerator.size() * sizeof(double) : 1, ::tarch::memory::MemoryLocation::HeapDeviceMemory, targetDevice));
 
   const int numberOfCells          = patchData.numberOfCells;
   double**  mappedPointersToQIn    = patchData.QIn;
@@ -839,15 +839,15 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless(int targ
     tempEigenvalueZ
   );
 
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxX, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxY, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempFluxZ, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductX, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductY, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempNonconservativeProductZ, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueX, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueY, targetDevice);
-  ::tarch::accelerator::omp::GPUMemoryManager::getInstance().free(tempEigenvalueZ, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempFluxX, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempFluxY, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempFluxZ, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempNonconservativeProductX, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempNonconservativeProductY, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempNonconservativeProductZ, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempEigenvalueX, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempEigenvalueY, targetDevice);
+  ::tarch::memory::MemoryManager::getInstance().free(tempEigenvalueZ, targetDevice);
 
   logTraceOut("timeStepWithRusanovBatchedUSMStateless()");
 }

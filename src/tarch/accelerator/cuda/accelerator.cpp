@@ -3,6 +3,7 @@
 #include "tarch/accelerator/accelerator.h"
 
 #include "ErrorCheck.h"
+#include "tarch/Assertions.h"
 #include "tarch/memory/memory.h"
 
 #if defined(GPUOffloadingCUDA)
@@ -16,6 +17,9 @@ void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::Memor
 
   switch (location) {
   case tarch::memory::MemoryLocation::Heap:
+    data = std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
+    break;
+  case tarch::memory::MemoryLocation::HeapDeviceMemory:
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaMalloc(&data, size));
     break;
@@ -39,6 +43,9 @@ void tarch::accelerator::freeRawData(void* data, tarch::memory::MemoryLocation l
 
   switch (location) {
   case tarch::memory::MemoryLocation::Heap:
+    std::free(data);
+    break;
+  case tarch::memory::MemoryLocation::HeapDeviceMemory:
   case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaFree(data));

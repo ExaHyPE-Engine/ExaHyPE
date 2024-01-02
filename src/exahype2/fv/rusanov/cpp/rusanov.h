@@ -22,7 +22,7 @@ namespace exahype2::fv::rusanov::cpp {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseUSMStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement)
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement)
     InlineMethod;
 
 
@@ -37,7 +37,7 @@ namespace exahype2::fv::rusanov::cpp {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseUSMStateless(int targetDevice, CellData& patchData) InlineMethod;
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseStateless(int targetDevice, CellData& patchData) InlineMethod;
 
 
   template <
@@ -51,7 +51,7 @@ namespace exahype2::fv::rusanov::cpp {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement)
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement)
     InlineMethod;
 
 
@@ -66,7 +66,7 @@ namespace exahype2::fv::rusanov::cpp {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedUSMStateless(int targetDevice, CellData& patchData) InlineMethod;
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedStateless(int targetDevice, CellData& patchData) InlineMethod;
 } // namespace exahype2::fv::rusanov::cpp
 
 #include "BatchedStateless.cpph"

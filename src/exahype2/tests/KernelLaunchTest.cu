@@ -1,6 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "KernelLaunchTest.h"
+
 #include "tarch/accelerator/cuda/ErrorCheck.h"
 #include "tarch/tests/TestMacros.h"
 

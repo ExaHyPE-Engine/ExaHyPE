@@ -7,8 +7,6 @@
 
 tarch::logging::Log tarch::accelerator::Device::_log("tarch::accelerator::Device");
 
-int tarch::accelerator::Device::_localDeviceId = 0;
-
 #if defined(GPUOffloadingOff)
 
 tarch::accelerator::Device::Device() {}
@@ -30,7 +28,7 @@ int tarch::accelerator::Device::getNumberOfDevices() const { return 0; }
 
 #endif
 
-int tarch::accelerator::Device::getLocalDeviceId() const {
+int tarch::accelerator::Device::getRankLocalDeviceId() const {
   /*#ifdef Parallel
     MPI_Comm nodeLocalComm;
     int worldRank = tarch::mpi::Rank::getInstance().getRank();
@@ -40,19 +38,18 @@ int tarch::accelerator::Device::getLocalDeviceId() const {
     int nodeLocalRank = -1;
     MPI_Comm_rank(nodeLocalComm, &nodeLocalRank);
 
-    _localDeviceId = nodeLocalRank;
-
     int numberOfAcceleratorDevices = tarch::accelerator::Device::getInstance().getNumberOfDevices();
     int nodeLocalSize = -1;
     MPI_Comm_size(nodeLocalComm, &nodeLocalSize);
     if (numberOfAcceleratorDevices != nodeLocalSize) {
-      logWarning("tarch::accelerator::Device::getLocalDeviceId()",
+      logWarning("tarch::accelerator::Device::getRankLocalDeviceId()",
         "Number of ranks per node " << nodeLocalSize << " is not equal to number of accelerator devices available per node "
         << numberOfAcceleratorDevices);
     }
 
     MPI_Comm_free(&nodeLocalComm);
+    return nodeLocalRank;
   #endif*/
 
-  return _localDeviceId;
+  return 0;
 }

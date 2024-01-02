@@ -31,18 +31,9 @@ class tarch::accelerator::Device {
 private:
   static tarch::logging::Log _log;
 
-  static int _localDeviceId;
-
   Device();
 
 public:
-  /**
-   * Accelerator devices (GPUs) are enumerated starting from 0. If you argue
-   * where to offload tasks and want to pick the host, then pass in this
-   * constant instead.
-   */
-  static constexpr int Host = -1;
-
   /**
    * Destructor
    */
@@ -98,5 +89,5 @@ public:
    */
   int getNumberOfDevices() const;
 
-  int getLocalDeviceId() const;
+  int getRankLocalDeviceId() const;
 };

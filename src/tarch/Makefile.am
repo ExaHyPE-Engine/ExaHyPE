@@ -149,11 +149,11 @@ if GPUOffloadingCUDA
 
 # The CUDA objects added with LDADD are also tracked as dependencies.
 # Therefore adding the sources to the <target>_SOURCES is not necessary.
-Tarch_CUDA_OBJS					= tarch/accelerator/cuda/libTarch_a-TestKernels.o
-Tarch_stats_CUDA_OBJS		= tarch/accelerator/cuda/libTarch_stats_a-TestKernels.o
-Tarch_trace_CUDA_OBJS		= tarch/accelerator/cuda/libTarch_trace_a-TestKernels.o
-Tarch_asserts_CUDA_OBJS	= tarch/accelerator/cuda/libTarch_asserts_a-TestKernels.o
-Tarch_debug_CUDA_OBJS		= tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
+Tarch_CUDA_OBJS					= accelerator/cuda/libTarch_a-TestKernels.o
+Tarch_stats_CUDA_OBJS		= accelerator/cuda/libTarch_stats_a-TestKernels.o
+Tarch_trace_CUDA_OBJS		= accelerator/cuda/libTarch_trace_a-TestKernels.o
+Tarch_asserts_CUDA_OBJS	= accelerator/cuda/libTarch_asserts_a-TestKernels.o
+Tarch_debug_CUDA_OBJS		= accelerator/cuda/libTarch_debug_a-TestKernels.o
 
 # Common flags given to nvcc is used in both device and host code.
 # These should be optimisation flags (e.g., -O3), warning flags (e.g. -Wall),
@@ -162,19 +162,19 @@ Tarch_debug_CUDA_OBJS		= tarch/accelerator/cuda/libTarch_debug_a-TestKernels.o
 # In case these do not work, you might need to do $(FLAGS) -Xcompiler="$(FLAGS)" but then also
 # split the $(CXX) to compiler=CXX[0] and args=CXX[1:] and to $(args) -Xcompiler="$(args) if not
 # using a common flag that needs to be replicated.
-$(Tarch_CUDA_OBJS): tarch/accelerator/cuda/libTarch_a-%.o: tarch/accelerator/cuda/%.cu
+$(Tarch_CUDA_OBJS): accelerator/cuda/libTarch_a-%.o: accelerator/cuda/%.cu
 	$(NVCC) $(NVCC_FLAGS_RELEASE) $(CXXFLAGS_PEANO_2D_RELEASE) -c $< -o $@
 
-$(Tarch_stats_CUDA_OBJS): tarch/accelerator/cuda/libTarch_stats_a-%.o: tarch/accelerator/cuda/%.cu
+$(Tarch_stats_CUDA_OBJS): accelerator/cuda/libTarch_stats_a-%.o: accelerator/cuda/%.cu
 	$(NVCC) $(NVCC_FLAGS_STATS) $(CXXFLAGS_PEANO_2D_STATS) -c $< -o $@
 
-$(Tarch_trace_CUDA_OBJS): tarch/accelerator/cuda/libTarch_trace_a-%.o: tarch/accelerator/cuda/%.cu
+$(Tarch_trace_CUDA_OBJS): accelerator/cuda/libTarch_trace_a-%.o: accelerator/cuda/%.cu
 	$(NVCC) $(NVCC_FLAGS_TRACE) $(CXXFLAGS_PEANO_2D_TRACE) -c $< -o $@
 
-$(Tarch_asserts_CUDA_OBJS): tarch/accelerator/cuda/libTarch_asserts_a-%.o: tarch/accelerator/cuda/%.cu
+$(Tarch_asserts_CUDA_OBJS): accelerator/cuda/libTarch_asserts_a-%.o: accelerator/cuda/%.cu
 	$(NVCC) $(NVCC_FLAGS_ASSERTS) $(CXXFLAGS_PEANO_2D_ASSERTS) -c $< -o $@
 
-$(Tarch_debug_CUDA_OBJS): tarch/accelerator/cuda/libTarch_debug_a-%.o: tarch/accelerator/cuda/%.cu
+$(Tarch_debug_CUDA_OBJS): accelerator/cuda/libTarch_debug_a-%.o: accelerator/cuda/%.cu
 	$(NVCC) $(NVCC_FLAGS_DEBUG) $(CXXFLAGS_PEANO_2D_DEBUG) -c $< -o $@
 
 # Adding $(CUDA_LIBS) to libTarch is not necessary as it is only needed for executables and it is already added

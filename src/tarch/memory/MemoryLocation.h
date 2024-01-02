@@ -18,6 +18,8 @@ namespace tarch::memory {
      */
     Heap,
 
+    HeapDeviceMemory,
+
     /**
      * Create data using USM managed memory.
      */

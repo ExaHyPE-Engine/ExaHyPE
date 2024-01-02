@@ -41,7 +41,7 @@
  *
  * ## Dependencies
  *
- * Don't include any other Peano header in the file tarch/accelerator/sycl/accelerator.h,
+ * Don't include any other Peano header in the file tarch/accelerator/sycl/Device.h,
  * as all Peano headers might
  * indirectly include this one via multicore.h (as they need the macro
  * SYCL_EXTERNAL, e.g.). The only header that this file in turn needs
@@ -118,7 +118,7 @@
  * find out which core wrote the error message. So we have to circumnavigate
  * Peano's logging.
  */
-#if defined(GPUOffloadingSYCL)
+#if defined(GPUOffloadingSYCL) or defined(SharedSYCL)
 
 #pragma push_macro("Dimensions")
 #pragma push_macro("assertion")

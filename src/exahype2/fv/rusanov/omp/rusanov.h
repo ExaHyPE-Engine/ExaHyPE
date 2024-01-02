@@ -4,8 +4,6 @@
 
 #include <cstring>
 
-#include "tarch/accelerator/omp/GPUMemoryManager.h"
-
 namespace exahype2::fv::rusanov::omp {
   /**
    * The name patchwise is a little bit irritating in a GPU context.

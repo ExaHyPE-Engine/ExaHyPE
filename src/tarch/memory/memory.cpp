@@ -116,6 +116,7 @@ int tarch::getMemoryUsage(MemoryUsageFormat format) {
 }
 
 void tarch::freeMemory(void* pointer, MemoryLocation location, int device) {
+  device = tarch::accelerator::Device::getInstance().getRankLocalDeviceId();
   // MemoryManager::getInstance().free(pointer, device);
   tarch::accelerator::freeRawData(pointer, location, device);
 }

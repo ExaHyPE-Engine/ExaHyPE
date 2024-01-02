@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/accelerator/cuda/ErrorCheck.h"
 #include "tarch/memory/memory.h"
 
@@ -11,15 +12,16 @@
 void                    tarch::accelerator::gpuAbort() {}
 #pragma omp end declare target
 
-
 void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::MemoryLocation location, int device) {
   void* data = nullptr;
   assertion2(size > 0, size, toString(location));
 
   switch (location) {
   case tarch::memory::MemoryLocation::Heap:
+    data = std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
+    break;
+  case tarch::memory::MemoryLocation::HeapDeviceMemory:
     data = omp_target_alloc(size, device);
-    // data = std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
     break;
   case tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
 #if defined(__NVCOMPILER_CUDA__) // __NVCC__
@@ -48,8 +50,10 @@ void tarch::accelerator::freeRawData(void* data, tarch::memory::MemoryLocation l
 
   switch (location) {
   case tarch::memory::MemoryLocation::Heap:
-    // omp_target_free(data, device);
     std::free(data);
+    break;
+  case tarch::memory::MemoryLocation::HeapDeviceMemory:
+    omp_target_free(data, device);
     break;
   case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
 #if defined(__NVCOMPILER_CUDA__)

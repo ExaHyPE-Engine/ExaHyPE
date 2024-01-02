@@ -2,12 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/memory/memory.h"
 
 #if defined(GPUOffloadingCPP)
 
 GPUCallableMethod void tarch::accelerator::gpuAbort() { std::abort(); };
-
 
 void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::MemoryLocation location, int device) {
   void* data = nullptr;
@@ -17,7 +17,7 @@ void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::Memor
     case tarch::MemoryLocation::Heap:
     case tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
     case tarch::MemoryLocation::PinnedMemory:
-      result = std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
+      data = std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
       break;
   }
 
@@ -31,7 +31,7 @@ void tarch::accelerator::freeRawData(void* data, tarch::memory::MemoryLocation l
 
   switch (location) {
   case tarch::memory::MemoryLocation::Heap:
-  case tarch::memory::MemoryLocation::UnifiedSharedMemory:
+  case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
   case tarch::memory::MemoryLocation::PinnedMemory:
     std::free(data);
     break;

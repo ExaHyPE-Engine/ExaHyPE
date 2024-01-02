@@ -251,6 +251,7 @@ if test "$gpu" == omp; then
 fi
 
 if test "$gpu" == sycl; then
+  AC_CHECK_HEADERS([CL/sycl.hpp],[],[AC_MSG_WARN([header <CL/sycl.hpp> not found])])
   AC_DEFINE([GPUOffloadingSYCL], [1], [GPUOffloadingSYCL])
 fi
 
@@ -299,7 +300,7 @@ if test "$gpu" == cuda; then
     AC_SUBST(NVCC)
     AC_SUBST(CUDA_PATH)
   else
-    AC_MSG_ERROR([If the argument --with-gpu=cuda is given, --with-cuda=<CUDA_PATH> argument is required with the path to the CUDA toolkit])
+    AC_MSG_ERROR([If the argument --with-gpu=cuda is given, --with-cuda=<CUDA_PATH> argument is required with the path to the CUDA toolkit.])
   fi
 
   CXXFLAGS_PEANO_2D_RELEASE=" $CXXFLAGS_PEANO_2D_RELEASE $CUDA_INCLUDE_FLAGS"
@@ -714,7 +715,7 @@ AM_CONDITIONAL([UseToolboxParticles],[test "x$toolbox_particles" = xtrue])
 # ExaHyPE 2
 #
 AC_ARG_ENABLE(exahype,
-  AS_HELP_STRING([--enable-exahype],[enable ExaHyPE2 [default=false]]),
+  AS_HELP_STRING([--enable-exahype],[enable ExaHyPE 2 [default=false]]),
   [ AC_MSG_CHECKING(for exahype)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_exahype=false ;;
@@ -728,7 +729,7 @@ AM_CONDITIONAL([UseExaHyPE],[test "x$toolbox_exahype" = xtrue])
 # SWIFT 2
 #
 AC_ARG_ENABLE(swift,
-  AS_HELP_STRING([--enable-swift],[enable SWIFT2 [default=false]]),
+  AS_HELP_STRING([--enable-swift],[enable SWIFT 2 [default=false]]),
   [ AC_MSG_CHECKING(for swift)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    toolbox_swift=false ;;

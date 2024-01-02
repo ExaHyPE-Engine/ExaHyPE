@@ -2,9 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ErrorCheck.h"
 
-#if defined(__NVCOMPILER_CUDA__) || defined(__CUDACC__) || defined(NVCC)
+#if defined(GPUOffloadingCUDA) or defined(__NVCOMPILER_CUDA__) or defined(__CUDACC__) or defined(NVCC) or defined(_NVHPC_CUDA)
 
-#include <cuda_runtime.h>
 #include <sstream>
 
 #include "tarch/Assertions.h"

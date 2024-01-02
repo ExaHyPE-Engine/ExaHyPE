@@ -10,22 +10,23 @@
 #include <sstream>
 
 #include "ErrorCheck.h"
+#include "tarch/accelerator/DeviceInfo.h"
 #include "tarch/Assertions.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-
 #if defined(GPUOffloadingCUDA)
-std::vector<bool> testKernelLauncher();
-void              copyKernelLauncher(const double* a, double* b, size_t N, int gridSize, int blockSize);
-void              maxPotentialBlockSize(int* minGridSize, int* blockSize);
+namespace tarch::accelerator::cuda {
+  std::vector<bool> testKernelLauncher();
+  void              copyKernelLauncher(const double* a, double* b, size_t N, int gridSize, int blockSize);
+  void              maxPotentialBlockSize(int* minGridSize, int* blockSize);
+} // namespace tarch::accelerator::cuda
 #endif
-
 
 void tarch::accelerator::cuda::queryDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix) {
   std::stringstream ss;
   int               numberOfDevices = 0;
   cudaGetDeviceCount(&numberOfDevices);
-  unsigned int                          propertyCount = tarch::accelerator::properties.size();
+  unsigned int                          propertyCount = tarch::accelerator::Properties.size();
   std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(numberOfDevices, "X"));
   propertyMatrix = std::move(_propertyMatrix);
 
@@ -62,9 +63,9 @@ void tarch::accelerator::cuda::printDeviceInformation(std::vector<std::vector<st
 }
 
 
-std::vector<bool> testKernelLaunch() {
+std::vector<bool> tarch::accelerator::cuda::testKernelLaunch() {
 #if defined(GPUOffloadingCUDA)
-  return testKernelLauncher();
+  return tarch::accelerator::cuda::testKernelLauncher();
 #else
   int numberOfDevices;
   cudaGetDeviceCount(&numberOfDevices);
@@ -119,14 +120,14 @@ std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> tarch::accelerator
     double* b = new double[N];
     std::fill(a, a + N, 0.0);
     std::fill(b, b + N, 0.0);
-    assert(alloc_size == N * sizeof(double));
+    static_assert(AllocSize == N * sizeof(double));
 
     // Malloc memory in GPU
     cudaEventRecord(startGPUMalloc, 0);
     double* a_dev;
     double* b_dev;
-    CHECK_CUDA_ERROR(cudaMalloc((void**)&a_dev, alloc_size));
-    CHECK_CUDA_ERROR(cudaMalloc((void**)&b_dev, alloc_size));
+    CHECK_CUDA_ERROR(cudaMalloc((void**)&a_dev, AllocSize));
+    CHECK_CUDA_ERROR(cudaMalloc((void**)&b_dev, AllocSize));
     cudaEventRecord(stopGPUMalloc, 0);
     cudaEventSynchronize(stopGPUMalloc);
     cudaEventElapsedTime(&executionTimeGPUMalloc, startGPUMalloc, stopGPUMalloc);
@@ -134,8 +135,8 @@ std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> tarch::accelerator
 
     // Copy from CPU to GPU
     cudaEventRecord(startCPUGPU, 0);
-    cudaMemcpy(a_dev, a, alloc_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(b_dev, b, alloc_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(a_dev, a, AllocSize, cudaMemcpyHostToDevice);
+    cudaMemcpy(b_dev, b, AllocSize, cudaMemcpyHostToDevice);
     cudaEventRecord(stopCPUGPU, 0);
     cudaEventSynchronize(stopCPUGPU);
     cudaEventElapsedTime(&executionTimeCPUGPU, startCPUGPU, stopCPUGPU);
@@ -167,8 +168,8 @@ std::vector<tarch::accelerator::BenchmarkResultInNanoSeconds> tarch::accelerator
 
     // Copy from GPU to CPU
     cudaEventRecord(startGPUCPU, 0);
-    cudaMemcpy(a, a_dev, alloc_size, cudaMemcpyDeviceToHost);
-    cudaMemcpy(b, b_dev, alloc_size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(a, a_dev, AllocSize, cudaMemcpyDeviceToHost);
+    cudaMemcpy(b, b_dev, AllocSize, cudaMemcpyDeviceToHost);
     cudaEventRecord(stopGPUCPU, 0);
     cudaEventSynchronize(stopGPUCPU);
     cudaEventElapsedTime(&executionTimeGPUCPU, startGPUCPU, stopGPUCPU);

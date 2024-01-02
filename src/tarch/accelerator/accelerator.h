@@ -12,7 +12,7 @@
 /**
  * Have to include this header, as we need access to the SYCL_EXTERNAL keyword.
  */
-#include "tarch/accelerator/sycl/accelerator.h"
+#include "tarch/accelerator/sycl/Device.h"
 
 namespace tarch::accelerator {
 #if defined(GPUOffloadingHIP)
@@ -52,6 +52,13 @@ namespace tarch::accelerator {
 #else
   void gpuAbort();
 #endif
+
+  /**
+   * Accelerator devices (GPUs) are enumerated starting from 0. If you argue
+   * where to offload tasks and want to pick the host, then pass in this
+   * constant instead.
+   */
+  static constexpr int Host = -1;
 
   void* allocateRawData(std::size_t size, tarch::memory::MemoryLocation location, int device);
   void  freeRawData(void* data, tarch::memory::MemoryLocation location, int device);

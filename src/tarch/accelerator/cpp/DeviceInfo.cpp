@@ -10,9 +10,10 @@
 #include <iostream>
 #include <ranges>
 
+#include "tarch/accelerator/DeviceInfo.h"
 
 void tarch::accelerator::cpp::queryDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix) {
-  unsigned int                          propertyCount = tarch::accelerator::properties.size();
+  unsigned int                          propertyCount = tarch::accelerator::Properties.size();
   std::vector<std::vector<std::string>> _propertyMatrix(propertyCount, std::vector<std::string>(1, "X"));
   propertyMatrix = std::move(_propertyMatrix);
 }
@@ -24,7 +25,7 @@ void tarch::accelerator::cpp::printDeviceInformation(std::vector<std::vector<std
 }
 
 
-std::vector<bool> testKernelLaunch() {
+std::vector<bool> tarch::accelerator::cpp::testKernelLaunch() {
 #if !defined(_NVHPC_STDPAR_GPU)
   return std::vector<bool>(1, false);
 #else

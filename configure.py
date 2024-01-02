@@ -39,7 +39,7 @@ parser.add_argument(
     "--gpu", choices=["omp", "cuda", "sycl", "cpp", "hip"], help="Enable GPU support"
 )
 parser.add_argument("--asm", action="store_true", help="Dump generated assembly code")
-parser.add_argument("--cuda-path", type=str, help="Path to the CUDA toolkit")
+parser.add_argument("--with-cuda", type=str, help="Path to the CUDA toolkit")
 parser.add_argument(
     "--arch",
     choices=[
@@ -134,7 +134,7 @@ elif args.gpu == "omp" and ("nvc" in args.cc or "nvc++ in args.cc") and "nvc++" 
 elif args.gpu == "cpp" and "nvc" in args.cc and "nvc++" in args.cxx:
     cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch + " -stdpar=gpu"
-    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch + " -stdpar=gpu"
+    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     if args.asm:
         cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
         cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
@@ -178,14 +178,14 @@ elif args.gpu == "sycl" and "icx" in args.cc and "icpx" in args.cxx:
         )
 elif args.gpu == "cuda":
     nvccflags += f" -arch=sm_{args.arch}"
-    if args.cuda_path is not None:
+    if args.with_cuda is not None:
         if not args.cmake:
             # CUDA path is only needed with Automake builds
             # CMake automatically finds it
-            configure_args.append(f"--with-cuda={args.cuda_path}")
+            configure_args.append(f"--with-cuda={args.with_cuda}")
     else:
         print(
-            "Error: You need to specify the path to the CUDA toolkit when compiling with CUDA."
+            "Error: You need to specify the path to the CUDA toolkit when compiling with CUDA. Use --with-cuda=<CUDA_PATH>."
         )
         exit(-1)
 else:
@@ -337,8 +337,8 @@ else:
     }
 
     if args.gpu == "cuda":
-        if args.cuda_path:
-            env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.cuda_path, nvccflags)
+        if args.with_cuda:
+            env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.with_cuda, nvccflags)
 
     # Create a string to display environment variables like in a terminal
     env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
