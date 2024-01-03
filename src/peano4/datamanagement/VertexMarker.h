@@ -245,6 +245,30 @@ public:
    * (0,1,2,3)^d and denotes the vertex position within a 3x3 or 3x3x3
    * respectively mesh.
    *
+   * You can reconstruct the left bottom vertex of the coarser cell through
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * marker.x() - tarch::la::multiplyComponents(
+   *   tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+   *   marker.h()
+   * )
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * If you want to know a particular position of a coarse grid vertex
+   * identified through the bitset target, you can do through
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * marker.x()
+   * -
+   * tarch::la::multiplyComponents(
+   *   tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+   *   marker.h()
+   * )
+   * +
+   * tarch::la::multiplyComponents(
+   *   tarch::la::Vector<Dimensions,double>(target),
+   *   3.0*marker.h()
+   * )
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
    * @see coincidesWithCoarseGridVertex()
    */
   tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell() const;
