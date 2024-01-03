@@ -17,11 +17,11 @@ namespace tarch::accelerator {
  * Device
  *
  * Any accelerator implementation has to provide a singleton Device. Its full
- * qualified name is tarch::multicore::Device. If no accelerator variant is
+ * qualified name is tarch::accelerator::Device. If no accelerator variant is
  * switched on, Peano provides a default Device implementation that does nothing.
  *
  * If you don't configure the Device explicitly, it will try to use some
- * meaningful default.
+ * meaningful defaults.
  *
  * @see configure()
  *

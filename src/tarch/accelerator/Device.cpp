@@ -18,7 +18,7 @@ tarch::accelerator::Device& tarch::accelerator::Device::getInstance() {
   return instance;
 }
 
-void tarch::accelerator::Device::configure([[maybe_unused]] const std::set<int>& devicesToUse) {}
+void tarch::accelerator::Device::configure(const std::set<int>&) {}
 
 void tarch::accelerator::Device::shutdown() {}
 
