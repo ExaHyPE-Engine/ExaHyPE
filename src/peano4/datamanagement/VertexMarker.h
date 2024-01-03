@@ -84,11 +84,12 @@ private:
 
   int _select;
 
-  std::bitset<TwoPowerD> _hasBeenRefined;
-  std::bitset<TwoPowerD> _willBeRefined;
-  std::bitset<TwoPowerD> _isLocal;
-  std::bitset<TwoPowerD> _isHanging;
-  std::bitset<TwoPowerD> _isParentVertexLocal;
+  [[clang::pack]] std::bitset<TwoPowerD>    _hasBeenRefined;
+  [[clang::pack]] std::bitset<TwoPowerD>    _willBeRefined;
+  [[clang::pack]] std::bitset<TwoPowerD>    _isLocal;
+  [[clang::pack]] std::bitset<TwoPowerD>    _isHanging;
+  [[clang::pack]] std::bitset<TwoPowerD>    _isParentVertexLocal;
+  [[clang::pack]] std::bitset<ThreePowerD>  _isAdjacentCellLocal;
 
   bool _isParentCellLocal;
 
@@ -329,4 +330,9 @@ public:
    * parent cell.
    */
   tarch::la::Vector<Dimensions, double> getInvokingCellsFatherCentre() const;
+
+  /**
+   * Are adjacent cells of selected vertex local
+   */
+  std::bitset<TwoPowerD> areAdjacentCellsLocal() const;
 };
