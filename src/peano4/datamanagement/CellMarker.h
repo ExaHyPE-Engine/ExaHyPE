@@ -140,6 +140,13 @@ public:
     const tarch::la::Vector<Dimensions, double>& x, double tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
   ) const;
 
+  static bool isContained(
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& cellCentre,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double tolerance
+  );
+
   bool overlaps(const tarch::la::Vector<Dimensions, double>& offset, const tarch::la::Vector<Dimensions, double>& size)
     const;
 
