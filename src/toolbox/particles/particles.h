@@ -97,6 +97,12 @@ namespace toolbox {
       Particle*                                              newParticles,
       peano4::datamanagement::VertexEnumerator<ParticleSet>& fineGridVertices
     );
+
+
+    bool particleAssignedToVertexWillBeLocal(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const peano4::datamanagement::VertexMarker&   marker
+    );
   } // namespace particles
 } // namespace toolbox
 
