@@ -366,6 +366,29 @@ namespace toolbox {
       int numberOfVertexWithinCell
     );
 
+    /**
+     * Find out which adjacent cell will hold a particle.
+     *
+     * Let the routine find out which of the neighbouring cells will try to
+     * claim ownership of a particle. In exact arithmetics, this routine would
+     * be the same as internal::getParticleAssociationWithinCell(). However, we
+     * work with floating point precision and cells with a slight overlap.
+     * Therefore, multiple adjacent cells might try to claim ownership of the
+     * particle potentially, and this is important to find out a priori whether
+     * a particle will be labelled as inside or not.
+     *
+     * For the floating point reason, i.e. the fact that the particle ownership
+     * is not unique, VertexMarker::getRelativeAdjacentCell() is a more strict
+     * version of this routine and cannot be used in some cases.
+     *
+     * @param particle The particle of interest to be studied.
+     * @param x        Vertex centre.
+     */
+    std::bitset<TwoPowerD> getAdjacentCellsOwningParticle(
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const peano4::datamanagement::VertexMarker&  marker
+    );
+
     namespace internal {
       double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
       double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
@@ -379,8 +402,7 @@ namespace toolbox {
        * Find out which vertex should hold a particle.
        *
        * @param particle The particle of interest to be studied.
-       * @param marker   A description of the cell into which the particle is
-       *                 currently inserted or shall be inserted.
+       * @param cellCentre   Results from CellMarker::x().
        * @return         The number of the vertex within the cell identified by
        *                 marker to which you should assign particle. Use
        *                 to_ulong() to convert the result, as the result

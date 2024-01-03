@@ -3,6 +3,8 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 
+#include "peano4/utils/Loop.h"
+
 
 namespace {
   tarch::logging::Log _log("toolbox::particles");
@@ -186,4 +188,30 @@ bool toolbox::particles::particleWillBeDroppedFurther(
 ) {
   return (marker.hasBeenRefined() or marker.willBeRefined())
      and internal::fitsIntoLevel(searchRadius*3.0, marker);
+}
+
+
+std::bitset<TwoPowerD> toolbox::particles::getAdjacentCellsOwningParticle(
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const peano4::datamanagement::VertexMarker&  marker
+) {
+  std::bitset<TwoPowerD> result = 0;
+
+  dfor2(k) {
+    tarch::la::Vector<Dimensions,int>    adjacentCell(k);
+    tarch::la::Vector<Dimensions,double> adjacentCellCentre =
+      marker.x() +
+      tarch::la::multiplyComponents(
+        tarch::la::convertScalar<double>(adjacentCell) + tarch::la::Vector<Dimensions,double>(-0.5),
+        marker.h()
+      );
+    result[kScalar] = peano4::datamanagement::CellMarker::isContained(
+      x,
+      adjacentCellCentre,
+      marker.h(),
+      internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE
+    );
+  } enddforx
+
+  return result;
 }
