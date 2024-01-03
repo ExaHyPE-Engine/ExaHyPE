@@ -79,6 +79,11 @@ class Project(object):
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
 
 
+    @property
+    def executable_name(self):
+        return self._executable_name
+
+
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments=""):
         """
         load_balancer_name: string
