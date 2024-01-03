@@ -6,6 +6,8 @@ std::string toString(tarch::memory::MemoryLocation value) {
   switch (value) {
   case tarch::memory::MemoryLocation::Heap:
     return "heap";
+  case tarch::memory::MemoryLocation::HeapDeviceMemory:
+    return "heap-device-memory";
   case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
     return "managed-shared-accelerator-device";
   case tarch::memory::MemoryLocation::PinnedMemory:
