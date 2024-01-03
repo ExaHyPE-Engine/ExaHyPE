@@ -392,10 +392,10 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       parallelFor(launchingThread, launchingThreads) {
         ::exahype2::CellData patchData(patches);
         for (int i = 0; i < patches; i++) {
-          patchData.QIn[i]           = ::tarch::allocateMemory(NumberOfInputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+          patchData.QIn[i]           = ::tarch::allocateMemory<double>(NumberOfInputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
           patchData.t[i]             = TimeStamp;
           patchData.dt[i]            = TimeStepSize;
-          patchData.QOut[i]          = ::tarch::allocateMemory(NumberOfOutputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+          patchData.QOut[i]          = ::tarch::allocateMemory<double>(NumberOfOutputEntries, ::tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
           patchData.cellCentre[i]    = ::tarch::la::Vector<Dimensions, double>(CellOffset + 0.5 * CellSize);
           patchData.cellSize[i]      = ::tarch::la::Vector<Dimensions, double>(CellSize);
           patchData.maxEigenvalue[i] = 0.0;
@@ -1978,7 +1978,7 @@ int main(int argc, char** argv) {
       logInfo("main()", "Performing accuracy checks with precision: " << Accuracy);
     }
 #if defined(GPUOffloadingSYCL)
-    logInfo("main()", "Set SYCL_DEVICE_FILTER=gpu when using SYCL on the device");
+    logInfo("main()", "Set SYCL_DEVICE_FILTER=gpu or ONEAPI_DEVICE_SELECTOR=cuda:0 when using SYCL on the device");
     logInfo("main()", "Set SYCL_PI_TRACE=2 in case of runtime errors");
 #endif
   }

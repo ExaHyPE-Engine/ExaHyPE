@@ -38,6 +38,7 @@ void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::Memor
 #else
     data = omp_target_alloc(size, device);
 #endif
+    break;
   }
 
   assertion(data);

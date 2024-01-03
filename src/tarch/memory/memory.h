@@ -16,7 +16,7 @@ namespace tarch { // TODO: namespace tarch::memory
    *
    * We use the exact version of KiloByte with 1024 bytes.
    *
-   * The implementation is based on C-version of Michael Moltenbrey.
+   * The implementation is based on the C-version of Michael Moltenbrey.
    */
   int getMemoryUsage(MemoryUsageFormat format);
   int getTotalMemory(MemoryUsageFormat format);

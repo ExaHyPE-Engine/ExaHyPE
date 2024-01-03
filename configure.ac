@@ -172,6 +172,7 @@ if test "$multithreading" == cpp; then
 fi
 
 if test "$multithreading" == tbb; then
+  AC_CHECK_HEADERS([tbb/tbb.h],[],[AC_MSG_WARN([header <tbb/tbb.h> not found])])
   AC_DEFINE([SharedTBB], [1], [SharedTBB])
 fi
 

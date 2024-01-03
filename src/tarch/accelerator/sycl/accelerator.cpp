@@ -17,8 +17,10 @@ void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::Memor
   switch (location) {
   case tarch::memory::MemoryLocation::HeapDeviceMemory:
     data = ::sycl::malloc_device<void*>(size, queue);
+    break;
   case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
     data = ::sycl::malloc_shared<void*>(size, queue);
+    break;
   case tarch::memory::MemoryLocation::Heap:
   case tarch::memory::MemoryLocation::PinnedMemory:
     data = std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
@@ -39,6 +41,7 @@ void tarch::accelerator::freeRawData(void* data, tarch::memory::MemoryLocation l
   case tarch::memory::MemoryLocation::HeapDeviceMemory:
   case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
     ::sycl::free(data, queue);
+    break;
   case tarch::memory::MemoryLocation::Heap:
   case tarch::memory::MemoryLocation::PinnedMemory:
     std::free(data);
