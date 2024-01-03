@@ -545,7 +545,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     ):
         if verbose:
             print(
-                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} alters particle state and hence uses the peano4.toolbox.ClearTaskNumbersOnMesh action set".format(
+                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} alters particle state and hence uses the peano4.toolbox.api.AssignNumbersToMesh action set".format(
                     len(mesh_traversals),
                     step.name,
                     current_species_set.particle_model.name,
