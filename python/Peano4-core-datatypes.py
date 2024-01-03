@@ -172,6 +172,9 @@ grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray(
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray(
     "isFaceAdjacentToParallelDomainBoundary", "TwoTimesD"  , compress=True ) )
 
+grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray(
+    "isAdjacentCellLocal", "ThreePowerD", compress=True ) )
+
 # @todo Should be char array likely with -4 to 9 per entry
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "vertexDataFrom", "TwoPowerD" ) )
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "vertexDataTo", "TwoPowerD" ) )
