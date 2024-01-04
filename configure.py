@@ -1,3 +1,6 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+
 import os
 import re
 import shlex
@@ -34,7 +37,9 @@ parser.add_argument(
     help="Enable multithreading support",
 )
 parser.add_argument("--mpi", help="Enable MPI support")
-parser.add_argument("--targetdart", "-td", action="store_true", help="Enable targetDART support")
+parser.add_argument(
+    "--targetdart", "-td", action="store_true", help="Enable targetDART support"
+)
 parser.add_argument(
     "--gpu", choices=["omp", "cuda", "sycl", "cpp", "hip"], help="Enable GPU support"
 )
@@ -62,7 +67,7 @@ args = parser.parse_args()
 cflags = "-O3 -march=native"
 cxxflags = "-std=c++20 -w -O3 -march=native"
 # cxxflags = '-std=c++20 -W -Wall -Wextra -O3 -march=native -mtune=native'
-nvccflags = "-O3" #-march=native -mtune=native
+nvccflags = "-O3"  # -march=native -mtune=native
 ldflags = "-march=native"
 configure_args = []
 
@@ -84,15 +89,13 @@ if args.multithreading == "sycl":
 
 # Merge in any additional flags needed for the selected GPU backend
 if args.gpu and not args.arch:
-    print("Error: You need to specify a GPU architecture when using GPU support.")
-    exit(-1)
+    raise Exception("You need to specify a GPU architecture when using GPU support.")
 
 if args.cc is None or args.cxx is None:
-    print(
-        "Error: Invalid C and C++ compilers provided. \
-Specify compatible C and C++ compilers by using -cc and -cxx or the environment flags CC and CXX."
+    raise Exception(
+        "Invalid C and C++ compilers provided. \
+Specify compatible C and C++ compilers by using --cc and --cxx or the environment flags CC and CXX."
     )
-    exit(-1)
 
 if (
     args.gpu == "omp"
@@ -124,7 +127,11 @@ elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
     cflags += " -lstdc++fs --offload-arch=" + args.arch
     cxxflags += " -lstdc++fs --offload-arch=" + args.arch
     ldflags += " -lstdc++fs --offload-arch=" + args.arch
-elif args.gpu == "omp" and ("nvc" in args.cc or "nvc++ in args.cc") and "nvc++" in args.cxx:
+elif (
+    args.gpu == "omp"
+    and ("nvc" in args.cc or "nvc++ in args.cc")
+    and "nvc++" in args.cxx
+):
     cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch
@@ -184,21 +191,19 @@ elif args.gpu == "cuda":
             # CMake automatically finds it
             configure_args.append(f"--with-cuda={args.with_cuda}")
     else:
-        print(
-            "Error: You need to specify the path to the CUDA toolkit when compiling with CUDA. Use --with-cuda=<CUDA_PATH>."
+        raise Exception(
+            "You need to specify the path to the CUDA toolkit when compiling with CUDA. Use --with-cuda=<CUDA_PATH>."
         )
-        exit(-1)
 else:
     if args.gpu is not None:
-        print(
-            "Error: Unsupported GPU compiler and flag combination requested: CC="
+        raise Exception(
+            "Unsupported GPU compiler and flag combination requested: CC="
             + args.cc
             + " CXX="
             + args.cxx
             + " --gpu="
             + args.gpu
         )
-        exit(-1)
 
 if args.multithreading is not None:
     if args.cmake:
@@ -314,19 +319,19 @@ else:
     env_ldflags = os.environ.get("LDFLAGS")
 
     if env_cflags is not None:
-      env_cflags += " " + cflags
+        env_cflags += " " + cflags
     else:
-      env_cflags = cflags
+        env_cflags = cflags
 
     if env_cxxflags is not None:
-      env_cxxflags += " " + cxxflags
+        env_cxxflags += " " + cxxflags
     else:
-      env_cxxflags = cxxflags
+        env_cxxflags = cxxflags
 
     if env_ldflags is not None:
-      env_ldflags += " " + ldflags
+        env_ldflags += " " + ldflags
     else:
-      env_ldflags = ldflags
+        env_ldflags = ldflags
 
     env_vars = {
         "CFLAGS": "{}".format(env_cflags),
@@ -337,8 +342,7 @@ else:
     }
 
     if args.gpu == "cuda":
-        if args.with_cuda:
-            env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.with_cuda, nvccflags)
+        env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.with_cuda, nvccflags)
 
     # Create a string to display environment variables like in a terminal
     env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())

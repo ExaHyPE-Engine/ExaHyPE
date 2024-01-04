@@ -139,12 +139,12 @@ if GPUOffloadingCUDA
 # Therefore, we need to statistically list all of the object files.
 # Any kind of for-loops are GNU extensions too, therefore one has to do it per hand and
 # due to the limitations of the pattern rule, the rules have to be defined per directory.
-# I will give some examples for GNU extensions, as one will surely ask, why do not use a for loop?
+# I will give some examples for GNU extensions, as one will surely ask, why do you not use a for loop?
 # CUDA_OBJS_RELEASE = $(addprefix libTarch_a-, $(CUDA_OBJS))
 # $(foreach item,$(ITEMS),libTarch_stats_a-$(item)) is a GNU extension
 # CUDA_OBJS_RELEASE = $(patsubst %.cu,libTarch_a-%.o, $(ITEMS))
 # libTarch_debug_a-%.o: %.cu again is a GNU extension (% is a GNU extension) unless
-# $(CUDA_OBJS_RELEASE): libTarch_a-%.o: %.cu (static pattern)
+# $(CUDA_OBJS_RELEASE): libTarch_a-%.o: %.cu (static pattern).
 # Also see here: https://stackoverflow.com/questions/27975545/how-to-deal-with-autoconf-warning-style-pattern-rules-are-a-gnu-make-extens
 
 # The CUDA objects added with LDADD are also tracked as dependencies.
@@ -156,7 +156,7 @@ Tarch_asserts_CUDA_OBJS	= accelerator/cuda/libTarch_asserts_a-TestKernels.o
 Tarch_debug_CUDA_OBJS		= accelerator/cuda/libTarch_debug_a-TestKernels.o
 
 # Common flags given to nvcc is used in both device and host code.
-# These should be optimisation flags (e.g., -O3), warning flags (e.g. -Wall),
+# These should be optimisation flags (e.g., -O3), warning flags (e.g., -Wall),
 # debugging flags (e.g., -g), std flags (e.g., -std=c++20), definitions (e.g., -DPEANO_DEBUG=4),
 # include paths (e.g., -I/path/...) or linker flags (e.g., -L/path/...).
 # In case these do not work, you might need to do $(FLAGS) -Xcompiler="$(FLAGS)" but then also

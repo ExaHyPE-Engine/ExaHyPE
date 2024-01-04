@@ -1,3 +1,6 @@
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
+
 AUTOMAKE_OPTIONS = subdir-objects
 
 if UseExaHyPE
@@ -6,6 +9,9 @@ if UseExaHyPE
 endif
 
 ExaHyPE2Sources = \
+  exahype2.cpp \
+  UserInterface.cpp \
+  UnitTests.cpp \
   CellData.cpp \
   CellAccess.cpp \
   EnclaveBookkeeping.cpp \
@@ -17,8 +23,11 @@ ExaHyPE2Sources = \
   PrecisionControl.cpp \
   RefinementControlService.cpp \
   TimeStepping.cpp \
-  UserInterface.cpp \
-  UnitTests.cpp \
+  enumerator/AoSLexicographicEnumerator.cpp \
+  enumerator/SoALexicographicEnumerator.cpp \
+  enumerator/SingleDoFEnumerator.cpp \
+  enumerator/AoSoALexicographicEnumerator.cpp \
+  enumerator/FaceAoSLexicographicEnumerator.cpp \
   aderdg/kernels/Basis/GaussLegendreBasis.cpp \
   aderdg/kernels/Basis/GaussLobattoBasis.cpp \
   aderdg/kernels/AderUtils.cpp \
@@ -34,22 +43,17 @@ ExaHyPE2Sources = \
   dg/tests/DGUtilsTest.cpp \
   dg/tests/RiemannTest.cpp \
   dg/tests/TestUtils.cpp \
-  enumerator/AoSLexicographicEnumerator.cpp \
-  enumerator/SoALexicographicEnumerator.cpp \
-  enumerator/SingleDoFEnumerator.cpp \
-  enumerator/AoSoALexicographicEnumerator.cpp \
-  enumerator/FaceAoSLexicographicEnumerator.cpp \
   fd/BoundaryConditions.cpp \
   fd/PatchUtils.cpp \
   fd/LoopBody.cpp \
+  fd/fd4/LoopBody.cpp \
+  fd/fd4/FD4_patchwise_functors.cpp \
+  fd/tests/SommerfeldBCTest.cpp\
   fv/BoundaryConditions.cpp \
   fv/PatchUtils.cpp \
   fv/PostprocessingKernels.cpp \
   fv/Tracer.cpp \
-  fd/tests/SommerfeldBCTest.cpp\
   fv/tests/InterpolationRestrictionTest.cpp \
-  fd/fd4/LoopBody.cpp \
-  fd/fd4/FD4_patchwise_functors.cpp \
   fv/rusanov/rusanov.cpp \
   fv/rusanov/sycl/GPUCellData.cpp \
   fv/rusanov/tests/CopyPatchTest.cpp \

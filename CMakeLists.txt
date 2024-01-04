@@ -1,5 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
 cmake_minimum_required(VERSION 3.20.5)
 
 set(META_PROJECT_NAME "Peano")
@@ -353,8 +354,8 @@ option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
 option(WITH_VTK "Build with VTK support" OFF)
 option(WITH_HDF5 "Build with HDF5 support" OFF)
 option(WITH_NETCDF "Build with NetCDF support" OFF)
-option(ENABLE_EXAHYPE "Enable ExaHyPE2" OFF)
-option(ENABLE_SWIFT "Enable Swift2" OFF)
+option(ENABLE_EXAHYPE "Enable ExaHyPE 2" OFF)
+option(ENABLE_SWIFT "Enable Swift 2" OFF)
 option(ENABLE_FINITEELEMENTS "Enable the finite elements toolbox" OFF)
 option(ENABLE_MULTIPRECISION "Enable the multi-precision toolbox" OFF)
 option(ENABLE_LOADBALANCING "Enable the loadbalancing toolbox" OFF)
