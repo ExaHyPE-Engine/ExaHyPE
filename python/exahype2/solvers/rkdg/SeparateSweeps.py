@@ -32,7 +32,8 @@ class SeparateSweeps( RungeKuttaDG ):
                auxiliary_variables,
                min_cell_h,
                max_cell_h,
-               plot_grid_properties):
+               plot_grid_properties,
+               pde_terms_without_state):
     """
     The super call invokes the creation of the data sets, where the guards have
     to be known already. So I bring those guys forward and then call the superclass
@@ -77,6 +78,7 @@ class SeparateSweeps( RungeKuttaDG ):
                                          auxiliary_variables,
                                          min_cell_h,
                                          max_cell_h,
+                                         pde_terms_without_state,
                                          plot_grid_properties)
 
     self._solver_template_file_class_name     = "SeparateSweeps"

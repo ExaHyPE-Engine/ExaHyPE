@@ -119,6 +119,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             auxiliary_variables,
             min_cell_h,
             max_cell_h,
+            #pde_terms_without_state,
             plot_grid_properties,
         )
 

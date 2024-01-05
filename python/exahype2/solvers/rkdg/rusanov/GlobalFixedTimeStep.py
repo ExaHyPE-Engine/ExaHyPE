@@ -40,6 +40,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
         refinement_criterion=PDETerms.Empty_Implementation,
         initial_conditions=PDETerms.User_Defined_Implementation,
         source_term=PDETerms.None_Implementation,
+        pde_terms_without_state=False,
         plot_grid_properties=False,
     ):
         super(GlobalFixedTimeStep, self).__init__(
@@ -52,6 +53,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
             min_cell_h,
             max_cell_h,
             plot_grid_properties,
+            pde_terms_without_state
         )
 
         self._normalised_time_step_size = time_step_size

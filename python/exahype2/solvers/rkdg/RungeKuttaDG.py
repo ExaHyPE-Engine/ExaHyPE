@@ -174,6 +174,7 @@ class RungeKuttaDG(object):
         auxiliary_variables,
         min_cell_h,
         max_cell_h,
+        pde_terms_without_state: bool,
         plot_grid_properties,
         baseline_action_set_descend_invocation_order=0,
     ):
