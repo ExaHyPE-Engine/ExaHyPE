@@ -6,7 +6,7 @@
 #include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 
-namespace applications::exahype2::acousticwave {
+namespace applications::exahype2::acoustics {
   static double maxEigenvalue() InlineMethod { return WAVE_SPEED; }
 
   static void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
@@ -34,17 +34,8 @@ namespace applications::exahype2::acousticwave {
     S[3] = 0.0;
 #endif
 
-#if Dimensions == 2
-    const bool pointSource = tarch::la::norm2(x - tarch::la::Vector<Dimensions, double>({5, 5})) <= 1.0;
-#else
-    const bool pointSource = tarch::la::norm2(x - tarch::la::Vector<Dimensions, double>({5, 5, 5})) <= 1.0;
-#endif
-
-    if (pointSource) {
-      static constexpr double t0 = 0.7;
-      static constexpr double M0 = 1000.0;
-      const double force = M0 * std::exp(-((t - t0) * (t - t0)) / (2.0 * SIGMA * SIGMA));
-      S[0]               = force;
+    if (tarch::la::norm2(x - SOURCE_LOCATION) < SOURCE_RADIUS) {
+      S[0] = SOURCE_M0 * std::exp(-((t - SOURCE_t0) * (t - SOURCE_t0)) / (2.0 * SIGMA * SIGMA));
     }
   }
-} // namespace applications::exahype2::acousticwave
+} // namespace applications::exahype2::acoustics

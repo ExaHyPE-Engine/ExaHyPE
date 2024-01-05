@@ -162,16 +162,16 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 my_solver.set_implementation(
     initial_conditions="",
     boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
-    flux="::applications::exahype2::acousticwave::flux(Q, normal, F);",
-    eigenvalues="return ::applications::exahype2::acousticwave::maxEigenvalue();",
+    flux="::applications::exahype2::acoustics::flux(Q, normal, F);",
+    eigenvalues="return ::applications::exahype2::acoustics::maxEigenvalue();",
     refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
-    source_term="::applications::exahype2::acousticwave::sourceTerm(Q, volumeCentre, t, S);",
+    source_term="::applications::exahype2::acoustics::sourceTerm(Q, x, t, S);",
     ncp="",
 )
 
 my_solver.add_user_solver_includes(
     """
-#include "../../../../applications/exahype2/acoustic-wave/AcousticWaveKernels.h"
+#include "../../../../applications/exahype2/acoustics/AcousticWaveKernels.h"
 """
 )
 
@@ -212,9 +212,7 @@ else:
 
 my_project.constants.export_boolean("EvaluateFlux", True)
 my_project.constants.export_boolean("EvaluateNonconservativeProduct", False)
-my_project.constants.export_boolean(
-    "EvaluateSource", False
-)  # TODO: Should be set to True once the correctness has been validated.
+my_project.constants.export_boolean("EvaluateSource", False)
 my_project.constants.export_boolean(
     "EvaluateMaximumEigenvalueAfterTimeStep", True if args.eval_eig else False
 )  # Reduction
@@ -233,6 +231,13 @@ else:
 my_project.constants.define_value("RHO", str(1.0))
 my_project.constants.define_value("WAVE_SPEED", str(1.0))
 my_project.constants.define_value("SIGMA", str(1.0))
+my_project.constants.define_value("SOURCE_t0", str(1.0))
+my_project.constants.define_value("SOURCE_M0", str(1.0))
+my_project.constants.define_value("SOURCE_RADIUS", str(1.0))
+if args.dim == 2:
+    my_project.constants.define_value("SOURCE_LOCATION", "tarch::la::Vector<2, double>({5, 5})")
+else:
+    my_project.constants.define_value("SOURCE_LOCATION", "tarch::la::Vector<3, double>({5, 5, 5})")
 
 os.system(
     "cp {} KernelBenchmarksFVRusanov-main.cpp".format(
@@ -243,9 +248,3 @@ os.system(
 my_project.build(
     make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True
 )
-
-print("Executable is ", executable_name)
-print("Clean object files via 'make clean'")
-print("Recompile the generated code via 'make -j'")
-print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 kernel-benchmarks-fv-rusanov.py' again")
