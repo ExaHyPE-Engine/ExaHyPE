@@ -3,11 +3,8 @@
 #include "kernel_hydro.h"
 
 
-
 template <typename Particle>
-void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_required(
-  Particle* localParticle
-) {
+void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_required(Particle* localParticle) {
 
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::kernels::legacy::kernelHydro;
@@ -18,8 +15,8 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
   const int hydro_dimensions = localParticle->getHydroDimensions();
 
   /* Initialize some variables */
-  double       hydro_h_max = std::min(localParticle->getSmlMax(), localParticle->getSearchRadius() / kernel_gamma);
-  const double hydro_h_min = localParticle->getSmlMin();
+  double       hydro_h_max           = std::min(localParticle->getSmlMax(), localParticle->getSearchRadius() / kernel_gamma);
+  const double hydro_h_min           = localParticle->getSmlMin();
   const double sml_tolerance_epsilon = localParticle->getSmlTolerance();
   const double eta                   = localParticle->getEtaFactor();
   const double eta_dim               = ::swift2::kernels::legacy::hydroDimensions::pow_dimension(eta);
@@ -73,8 +70,7 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
         logWarning(
           "hydro_update_smoothing_length_and_rerun_if_required",
           "Aborting unsuccessful smoothing length computation"
-            << " partID " << localParticle->getPartid() << " h_old " << h_old << " h_min " << hydro_h_min << " h_max "
-            << hydro_h_max << " f " << f
+            << " partID " << localParticle->getPartid() << " h_old " << h_old << " h_min " << hydro_h_min << " h_max " << hydro_h_max << " f " << f
         );
       }
       // We have a particle whose smoothing length is already set (wants
@@ -86,10 +82,12 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
 
     // TODO MLaden: check this condition here.
     assertion3(
-    //     localParticle->getIsBoundaryParticle()
-    //     or
-        (left < right),
-        left, right, localParticle->toString()
+      //     localParticle->getIsBoundaryParticle()
+      //     or
+      (left < right),
+      left,
+      right,
+      localParticle->toString()
     );
 
     // Normal case: Use Newton-Raphson to get a better value of h
@@ -104,15 +102,15 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
       logWarning(
         "hydro_update_smoothing_length_and_rerun_if_required",
         "Smoothing length convergence problem: iteration"
-          << iteration << " part ID " << localParticle->getPartid() << " h_old " << h_old << " h_new " << h_new << " f "
-          << f << "f_prime" << f_prime << " n_sum " << n_sum << " n_target " << n_target << " left " << left << "right "
-          << right
+          << iteration << " part ID " << localParticle->getPartid() << " h_old " << h_old << " h_new " << h_new << " f " << f << "f_prime" << f_prime << " n_sum " << n_sum
+          << " n_target " << n_target << " left " << left << "right " << right
       );
     }
 
-    assertion1(
-      not (((f > 0. && h_new > h_old) || (f < 0. && h_new < h_old)) && (h_old < 0.999 * hydro_h_max)),
-      "Smoothing length correction not going in the right direction"
+    assertion2(
+      not(((f > 0. && h_new > h_old) || (f < 0. && h_new < h_old)) && (h_old < 0.999 * hydro_h_max)),
+      "Smoothing length correction not going in the right direction",
+      localParticle->toString()
     );
 
     // Safety check: truncate to the range [ h_old/2 , 2h_old ].
@@ -127,9 +125,7 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
 
   // Check whether the particle has an appropriate smoothing length
   // @todo Mladen, Tobias: This criterion seems never to hold.
-  if (
-    std::abs(h_new - h_old) < sml_tolerance_epsilon * h_old
-  ) {
+  if (std::abs(h_new - h_old) < sml_tolerance_epsilon * h_old) {
     // we're done. Note that in SWIFT, they check the other way around.
     localParticle->setSmoothingLength(h_new);
     return;
@@ -148,7 +144,6 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
 
     // Normal case
     localParticle->setSmoothingLength(h_new);
-
   }
 
 
@@ -163,10 +158,7 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
 
     // Ok, this particle is a lost cause...
     localParticle->setSmoothingLength(hydro_h_max);
-    logWarning(
-      "hydro_update_smoothing_length_and_rerun_if_required",
-      "Got a particle that is lost cause. Setting h = h_max , id=" << localParticle->getPartid()
-    );
+    logWarning("hydro_update_smoothing_length_and_rerun_if_required", "Got a particle that is lost cause. Setting h = h_max , id=" << localParticle->getPartid());
     // Do some damage control if no neighbours at all were found
     // if (has_no_neighbours) {
     //   ...
@@ -174,16 +166,10 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
   } else if (localParticle->getSmoothingLength() <= hydro_h_min) {
     // Ok, this particle is a lost cause...
     localParticle->setSmoothingLength(hydro_h_max);
-    logWarning(
-      "hydro_update_smoothing_length_and_rerun_if_required",
-      "Got a particle that is lost cause. Setting h = h_max , id=" << localParticle->getPartid()
-    );
+    logWarning("hydro_update_smoothing_length_and_rerun_if_required", "Got a particle that is lost cause. Setting h = h_max , id=" << localParticle->getPartid());
 
   } else {
-    logError(
-      "hydro_update_smoothing_length_and_rerun_if_required",
-      "Fundamental problem with the smoothing length iteration logic."
-    );
+    logError("hydro_update_smoothing_length_and_rerun_if_required", "Fundamental problem with the smoothing length iteration logic.");
   }
 }
 
