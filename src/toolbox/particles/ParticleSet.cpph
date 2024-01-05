@@ -316,6 +316,12 @@ void toolbox::particles::ParticleSet<T>::updateLiftDropStatistics(
 
 
 template <typename T>
+int toolbox::particles::ParticleSet<T>::getTotalNumberOfLocalParticles() {
+  assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
+  return _numberOfRemainingLocalParticles;
+}
+
+template <typename T>
 void toolbox::particles::ParticleSet<T>::updateNumberOfLocalAndExpiredParticles(
   int numberOfRemainingLocalParticles, int numberOfExpiredHaloParticles, int numberOfLeavingLocalParticles
 ) {

@@ -250,6 +250,12 @@ public:
    */
   static bool hasParticlesToBeSievedIntoVertices(int originatingTree);
 
+  /**
+   * Return total number of remaining particles
+   *
+   * Should be invoked on the global master rank only.
+   */
+  static int getTotalNumberOfLocalParticles();
 private:
   static tarch::logging::Log _log;
 
