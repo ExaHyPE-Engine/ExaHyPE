@@ -8,7 +8,7 @@ debug  tarch                               -1     black always-on
 debug  peano4                              -1     black always-on
 debug  tests                               -1     black always-on
 debug  swift2                              -1     black always-on
-debug  toolbox                             -1     white always-on
+debug  toolbox                             -1     black always-on
 
 info  tarch                                -1     white always-on
 info  peano4                               -1     white always-on
