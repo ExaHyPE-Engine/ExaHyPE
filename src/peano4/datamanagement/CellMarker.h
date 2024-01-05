@@ -98,6 +98,17 @@ public:
   bool willBeRefined() const;
 
   /**
+   * Centre of a cell
+   *
+   * If you want to know the position of one of the cell's vertices, you have
+   * to reconstruct this one manually. It is particularly simple if you already
+   * know the number of the vertex as a bitset:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~
+   * marker.x() - 0.5 * marker.h() + tarch::la::multiplyComponents(tarch::la::Vector<Dimensions,double>(targetVertex),marker.h())
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   *
    * @return Centre of cell.
    */
   tarch::la::Vector<Dimensions, double> x() const;
@@ -136,19 +147,13 @@ public:
    * @param tolerance Absolute tolerance when we compare two values.
    *
    */
-  bool isContained(
-    const tarch::la::Vector<Dimensions, double>& x, double tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
-  ) const;
+  bool isContained(const tarch::la::Vector<Dimensions, double>& x, double tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE) const;
 
   static bool isContained(
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& cellCentre,
-    const tarch::la::Vector<Dimensions, double>& h,
-    double tolerance
+    const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& h, double tolerance
   );
 
-  bool overlaps(const tarch::la::Vector<Dimensions, double>& offset, const tarch::la::Vector<Dimensions, double>& size)
-    const;
+  bool overlaps(const tarch::la::Vector<Dimensions, double>& offset, const tarch::la::Vector<Dimensions, double>& size) const;
 
   /**
    * @return Size of cell
@@ -254,22 +259,8 @@ public:
    * the message went through. In systems with heavy MPI usage, this can
    * help to avoid deadlocks.
    */
-  static void send(
-    const CellMarker&     buffer,
-    int                   destination,
-    int                   tag,
-    std::function<void()> startCommunicationFunctor,
-    std::function<void()> waitFunctor,
-    MPI_Comm              communicator
-  );
-  static void receive(
-    CellMarker&           buffer,
-    int                   source,
-    int                   tag,
-    std::function<void()> startCommunicationFunctor,
-    std::function<void()> waitFunctor,
-    MPI_Comm              communicator
-  );
+  static void send(const CellMarker& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator);
+  static void receive(CellMarker& buffer, int source, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator);
 
   static void sendAndPollDanglingMessages(const CellMarker& message, int destination, int tag, MPI_Comm communicator);
   static void receiveAndPollDanglingMessages(CellMarker& message, int source, int tag, MPI_Comm communicator);
