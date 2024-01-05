@@ -116,7 +116,7 @@ bool selectNextAlgorithmicStep() {
       );
       addGridSweepWithoutGridRefinementNext = true;
     } else if (repositories::loadBalancer.getGlobalNumberOfTrees() > globalNumberOfTrees) {
-      logInfo("selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement)");
+      logInfo("selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement");
       addGridSweepWithoutGridRefinementNext = true;
       globalNumberOfTrees                   = repositories::loadBalancer.getGlobalNumberOfTrees();
     }
