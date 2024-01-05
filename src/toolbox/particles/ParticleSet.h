@@ -208,15 +208,12 @@ public:
     int numberOfDropsInThisTree,
     int numberOfReassignmentsInThisTree,
     int numberOfLiftsIntoSieveSetInThisTree,
-    int numberOfDropsFromSieveSetInThisTree
+    int numberOfDropsFromSieveSetInThisTree,
+    int numberOfSkippedDropsFromSieveSetInThisTree
   );
 
-  static void updateNumberOfLocalParticleStatistics(
-    int numberOfRemainingLocalParticles,
-    int numberOfIncomingLocalParticles,
-    int numberOfLeavingLocalParticles,
-    int numberOfExpiredHaloParticles
-  );
+  static void updateNumberOfLocalAndExpiredParticles(int numberOfRemainingLocalParticles, int numberOfExpiredHaloParticles, int numberOfLeavingLocalParticles);
+
 
 #ifdef Parallel
   static void initDatatype();
@@ -236,12 +233,10 @@ public:
    * sieve object. Usually combined with hasParticlesToBeSievedIntoVertices()
    * as guard, which makes the querying faster.
    *
-   * @param originatingTree Either a number associated with a local tree or
-   *                        SieveParticles<T>::GlobalSort.
+   * @see SieveParticles::getParticlesToBeSievedIntoVertex() for parameter
+   *   descriptions.
    */
-  static ParticleList getParticlesToBeSievedIntoVertex(
-    const peano4::datamanagement::VertexMarker& marker, int originatingTree
-  );
+  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree, int callingTree);
 
   /**
    * Make routine from SieveParticles public
@@ -318,6 +313,7 @@ protected:
   static int _numberOfLiftsIntoSieveSet;
 
   static int _numberOfDropsFromSieveSet;
+  static int _numberOfSkippedDropsFromSieveSet;
 
   /**
    * Set by parallel state analysis
@@ -326,9 +322,8 @@ protected:
    * an overview of the statistics tracked.
    */
   static int _numberOfRemainingLocalParticles;
-  static int _numberOfIncomingLocalParticles;
-  static int _numberOfLeavingLocalParticles;
   static int _numberOfExpiredHaloParticles;
+  static int _numberOfLeavingLocalParticles;
 
   /**
    * Number of updated halo particles
@@ -340,15 +335,18 @@ protected:
    * See class documentation of toolbox::particles::ParticleSet for
    * an overview of the statistics tracked.
    */
-  static int _numberOfAddedVirtualParticles;
+  static int _numberOfDroppedIncomingVirtualParticles;
+  static int _numberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual;
+  static int _numberOfRedundantlySharedLocalParticles;
+  static int _numberOfNewIncomingLocalParticles;
   static int _numberOfReplacedVirtualParticles;
-  static int _numberOfDroppedVirtualParticles;
+  static int _numberOfAddedVirtualParticles;
 
   /**
    * Stats on duplicate elimination
    *
-   * This one is updated internally by eliminateSpatialDuplicates() which you
-   * might call or you might not call. It is never updated anywhere else.
+   * This one is updated internally by addParticles() which you
+   * might call with duplicate detection or not.
    *
    * See class documentation of toolbox::particles::ParticleSet for
    * an overview of the statistics tracked.
@@ -366,7 +364,7 @@ protected:
   tarch::la::Vector<Dimensions, double> _debugH;
 #endif
 
-  #if PeanoDebug >= 1 and !defined(Parallel) and !defined(SharedMemoryParallelisation)
+#if PeanoDebug >= 1 and !defined(Parallel) and !defined(SharedMemoryParallelisation)
   /**
    * Counter to ensure no particles get lost
    *
@@ -378,7 +376,7 @@ protected:
    * particles is not that trivial anymore.
    */
   static int _numberOfParticlesInLastClear;
-  #endif
+#endif
 };
 
 
