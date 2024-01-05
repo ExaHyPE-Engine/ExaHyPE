@@ -26,10 +26,14 @@ namespace tarch { // TODO: namespace tarch::memory
 
   template <class T = double>
   T* allocateMemory(std::size_t size, MemoryLocation location, int device = tarch::accelerator::Host) {
-    device = tarch::accelerator::Device::getInstance().getRankLocalDeviceId();
-    // return reinterpret_cast<T*>(MemoryManager::getInstance().allocate(size * sizeof(T), location, device));
-    return reinterpret_cast<T*>(tarch::accelerator::allocateRawData(size * sizeof(T), location, device));
+    device = tarch::accelerator::Device::getInstance().getRankLocalDeviceId(); // TODO: Pass device as argument.
+    return reinterpret_cast<T*>(memory::MemoryManager::getInstance().allocate(size * sizeof(T), location, device));
+    //return reinterpret_cast<T*>(tarch::accelerator::allocateRawData(size * sizeof(T), location, device));
   }
 
   void freeMemory(void* pointer, MemoryLocation location, int device = tarch::accelerator::Host);
+
+  namespace memory {
+    void dumpStatistics();
+  } // namespace memory
 } // namespace tarch

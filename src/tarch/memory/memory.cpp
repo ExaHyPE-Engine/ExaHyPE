@@ -19,11 +19,14 @@
 #include <sys/sysctl.h>
 #endif
 
+namespace {
+  tarch::logging::Log _log("tarch::memory");
+} // namespace
+
 int tarch::convertMemorySize(long long value, tarch::memory::MemoryUsageFormat format) {
-  static tarch::logging::Log _log("tarch::memory");
-  static constexpr int       MegaByte = 1024 * 1024;
-  static constexpr int       GigaByte = MegaByte * 1024;
-  int                        result   = 0;
+  static constexpr int MegaByte = 1024 * 1024;
+  static constexpr int GigaByte = MegaByte * 1024;
+  int                  result   = 0;
   switch (format) {
   case tarch::memory::MemoryUsageFormat::MByte:
     result = static_cast<int>((value + (MegaByte / 2)) / MegaByte);
@@ -81,8 +84,6 @@ int tarch::getFreeMemory(MemoryUsageFormat format) {
 #endif
 
 int tarch::getMemoryUsage(MemoryUsageFormat format) {
-  static tarch::logging::Log _log("tarch::memory");
-
 #if defined(CompilerHasProcStat)
   char  work[4096]{};
   FILE* f;
@@ -117,6 +118,32 @@ int tarch::getMemoryUsage(MemoryUsageFormat format) {
 
 void tarch::freeMemory(void* pointer, MemoryLocation location, int device) {
   device = tarch::accelerator::Device::getInstance().getRankLocalDeviceId();
-  // MemoryManager::getInstance().free(pointer, device);
-  tarch::accelerator::freeRawData(pointer, location, device);
+  tarch::memory::MemoryManager::getInstance().free(pointer, device);
+  // tarch::accelerator::freeRawData(pointer, location, device);
+}
+
+void tarch::memory::dumpStatistics() {
+  std::ostringstream msg;
+
+  if (not tarch::memory::MemoryManager::getInstance().getMemoryPages().empty()) {
+    msg << tarch::memory::MemoryManager::getInstance().getNumberOfUsedPages() + tarch::memory::MemoryManager::getInstance().getNumberOfFreePages() << " Page(s): ";
+    for (const auto& memoryPage : tarch::memory::MemoryManager::getInstance().getMemoryPages()) {
+      msg << "(#" << memoryPage.first << ":";
+      msg
+        << MemoryManager::getInstance().getNumberOfUsedPages(memoryPage.first) << "/" << tarch::memory::MemoryManager::getInstance().getNumberOfFreePages(memoryPage.first) << ")";
+    }
+    msg
+      << ", Managed: "
+      << tarch::memory::MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::GByte
+         ) + tarch::memory::MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::GByte);
+    msg << "/" << tarch::memory::MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::GByte) << "/"
+        << tarch::memory::MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::GByte);
+    msg << " GB, ";
+    // TODO: Use memory locations to report device and host memory.
+  }
+
+  msg << "System: " << getTotalMemory(MemoryUsageFormat::GByte) << "/" << getFreeMemory(MemoryUsageFormat::GByte) << "/" << getMemoryUsage(MemoryUsageFormat::GByte);
+  msg << " GB (Total/Free/Used)";
+
+  logInfo("dumpStatistics()", msg.str());
 }

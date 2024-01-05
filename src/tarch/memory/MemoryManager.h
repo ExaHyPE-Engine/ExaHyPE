@@ -107,6 +107,8 @@ public:
    */
   void clear();
 
+  const std::map<int, MemoryPages>& getMemoryPages() const;
+
   int getNumberOfFreePages() const;
   int getNumberOfUsedPages() const;
 
@@ -124,6 +126,4 @@ public:
 
   std::size_t getFreeAllocatedMemoryInBytes(int device) const;
   std::size_t getUsedAllocatedMemoryInBytes(int device) const;
-
-  static void dumpStatistics();
 };
