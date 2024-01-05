@@ -282,39 +282,72 @@ project.set_load_balancing(
 #
 ###############################################################################
 particle_force = """
-  #if Dimensions==2
-  tarch::la::Vector<Dimensions,double> pos_sun = {SUN_X_COORD,SUN_Y_COORD};
-  #else
-  tarch::la::Vector<Dimensions,double> pos_sun = {SUN_X_COORD,SUN_Y_COORD,0.0};
-  #endif
-
-   /* G_NEWTON in internal units */
-  double const L3 = LENGTH_UNIT * LENGTH_UNIT * LENGTH_UNIT;
-  double const T2 = PERIOD * PERIOD;
-  double const GN = G_NEWTON * M_SUN * T2 / L3;
-  //double GN = 1.0;
-
-  tarch::la::Vector<Dimensions,double> earthSunDistance = localParticle->getX() - pos_sun;
-  const double r = tarch::la::norm2(earthSunDistance);
-  if (tarch::la::greater(r,0.0)) {
-    const double r_inv =  1.0 / r;
-    localParticle->setA( - GN * earthSunDistance * (r_inv * r_inv * r_inv) );
-
-    /* Update Energy */
-    const double vel = tarch::la::norm2( localParticle->getV() );
-    const double E_kin = 0.5 * vel * vel;
-    const double E_pot = - GN * r_inv;
-
-    /* Update total energy (overall minus sign) */
-    localParticle->setEnergyKin( E_kin );
-    localParticle->setEnergyPot(-E_pot );
-    localParticle->setEnergyTot( - ( E_kin + E_pot ) );
-
-
-  }
+[=](
+  const peano4::datamanagement::CellMarker& marker,
+  globaldata::Planet&                       localParticle,
+  globaldata::Planet&                       activeParticle
+) -> void {
+  if ( ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
+    marker,
+    localParticle,
+    activeParticle
+  )) {
+      #if Dimensions==2
+      tarch::la::Vector<Dimensions,double> pos_sun = {SUN_X_COORD,SUN_Y_COORD};
+      #else
+      tarch::la::Vector<Dimensions,double> pos_sun = {SUN_X_COORD,SUN_Y_COORD,0.0};
+      #endif
+    
+       /* G_NEWTON in internal units */
+      double const L3 = LENGTH_UNIT * LENGTH_UNIT * LENGTH_UNIT;
+      double const T2 = PERIOD * PERIOD;
+      double const GN = G_NEWTON * M_SUN * T2 / L3;
+      //double GN = 1.0;
+    
+      tarch::la::Vector<Dimensions,double> earthSunDistance = localParticle.getX() - pos_sun;
+      const double r = tarch::la::norm2(earthSunDistance);
+      if (tarch::la::greater(r,0.0)) {
+        const double r_inv =  1.0 / r;
+        localParticle.setA( - GN * earthSunDistance * (r_inv * r_inv * r_inv) );
+    
+        /* Update Energy */
+        const double vel = tarch::la::norm2( localParticle.getV() );
+        const double E_kin = 0.5 * vel * vel;
+        const double E_pot = - GN * r_inv;
+    
+        /* Update total energy (overall minus sign) */
+        localParticle.setEnergyKin( E_kin );
+        localParticle.setEnergyPot(-E_pot );
+        localParticle.setEnergyTot( - ( E_kin + E_pot ) );
+      } // end of radius check
+  } // end of "may I update" check
+} // end of functor
 """
 # particle.particle_acceleration = particle_force
 particle.particle_particle_interaction_over_particle_sets_kernel = particle_force
+global_invariants = """
+assertion4( 
+  (
+    toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLocalParticles()
+    +
+    toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLeavingParticles()==1
+  )
+  and 
+  (
+    toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfNewIncomingParticles()
+    +
+    toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLeavingParticles()
+    <= 2
+  ),
+  toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLocalParticles(),
+  toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLeavingParticles(),
+  toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfExpiredHaloParticles(),
+  toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfNewIncomingParticles()
+);
+"""
+particle.touch_particles_of_set_first_time_kernel += global_invariants
+particle.touch_particles_of_set_last_time_kernel  += global_invariants
+
 
 # Add particle to the SWIFT project
 particle_set = project.add_particle_species(particle)
