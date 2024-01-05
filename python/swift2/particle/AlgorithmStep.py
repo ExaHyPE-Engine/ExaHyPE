@@ -54,9 +54,9 @@ class AlgorithmStep(object):
 
         Please note that any update of a particle position should happen within
         touch vertex last time. Otherwise, we'd destroy the particle topology.
-        
-        By default, any algorithm step runs only once. However, there are 
-        variants of each step which can rerun. But the user has to flag this 
+
+        By default, any algorithm step runs only once. However, there are
+        variants of each step which can rerun. But the user has to flag this
         possibility explicitly.
 
         """
@@ -67,20 +67,21 @@ class AlgorithmStep(object):
         ALTER_LOCAL_STATE_AND_MIGHT_RERUN = 3
         CHANGE_POSITION_OR_INTERACTION_RADIUS = 4
         CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN = 5
-        
-    def may_trigger_rerun(effect: Effect):    
+
+    def may_trigger_rerun(effect: Effect):
         """!
-        
+
         Return True if the effect object may trigger a rerun
-        
+
         """
-        if effect in [AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN,
-                      AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
-                      AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN]:
+        if effect in [
+            AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN,
+            AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
+            AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN,
+        ]:
             return True
         else:
             return False
-        
 
     class PeanoEventUsedBySwift(IntEnum):
         """!
@@ -190,7 +191,7 @@ class AlgorithmStep(object):
           If it is a string, it should identify one of the variants of
           swift2::dependencychecks::Invariant. If you pick None, Swift 2
           will add default dependencies. They might be too strict.
-          
+
         @param touch_vertex_last_time_dependency_policy: String or None
           If it is a string, it should identify one of the variants of
           swift2::dependencychecks::Invariant. If you pick None, Swift 2
@@ -208,11 +209,14 @@ class AlgorithmStep(object):
         self.unprepare_traversal_kernel = unprepare_traversal_kernel
 
         self.input_particles = input_particles
-        self.includes = includes + """
+        self.includes = (
+            includes
+            + """
 #include "Constants.h"
 #include "swift2/kernels/ParticleUpdatePredicates.h"
 #include "swift2/kernels/ParticleSetIterators.h"
         """
+        )
 
         self.cell_kernel_dependency_policy = cell_kernel_dependency_policy
         self.touch_vertex_first_time_dependency_policy = (

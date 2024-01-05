@@ -208,18 +208,18 @@ Particle properties:
         Besides the name of interest, we also require a list of algorithmic
         steps through which the code runs through.
 
-        
+
         ## Default settings
-        
+
         If the user does not define bespoke default settings, this routine adds
-        default ones. 
-        
+        default ones.
+
         - For vertices, this is touch-at-most-once-mask-out-otherwise-all-previous-steps-update-at-least-once.
-        - For cells, this is 
+        - For cells, this is
 
         ## Additional attributes
 
-        First, the particle is added two counters which count up how often a 
+        First, the particle is added two counters which count up how often a
         particle is touched or masked out.
 
         @param Steplist:       list
@@ -273,7 +273,8 @@ Particle properties:
                   marker,
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
                   globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
-                  {CHECK_FUNCTION}
+                  {CHECK_FUNCTION},
+                  _spacetreeId
   );
 """
 
@@ -284,7 +285,8 @@ Particle properties:
                   marker,
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
                   globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
-                  {CHECK_FUNCTION}
+                  {CHECK_FUNCTION},
+                  _spacetreeId
   );
 """
 
@@ -296,7 +298,8 @@ Particle properties:
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
                   globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
                   ::swift2::dependencychecks::Invariant::{INVARIANT},
-                  {CHECK_FUNCTION}
+                  {CHECK_FUNCTION},
+                  _spacetreeId
   );
 """
 
@@ -307,7 +310,8 @@ Particle properties:
                   globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
                   globaldata::{NAME}::{PEANO4_EVENT_TYPE}::{EVENT},
                   ::swift2::dependencychecks::Invariant::{INVARIANT},
-                  {CHECK_FUNCTION}
+                  {CHECK_FUNCTION},
+                  _spacetreeId
   );
 """
 
@@ -315,7 +319,8 @@ Particle properties:
   ::swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastTime{STEP_TYPE}(
     ::swift2::dependencychecks::Invariant::{INVARIANT},
     assignedParticles,
-    globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME}
+    globaldata::{NAME}::DependencyChecks{STEP_TYPE}LastUpdated::{STEP_NAME},
+                  _spacetreeId
   );
 """
 
@@ -332,9 +337,8 @@ Particle properties:
 
             if (
                 step.touch_vertex_first_time_dependency_policy == None
-                and 
-                AlgorithmStep.may_trigger_rerun(step.effect)
-                ):
+                and AlgorithmStep.may_trigger_rerun(step.effect)
+            ):
                 d[
                     "INVARIANT"
                 ] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce_SweepMayRerun"
@@ -350,7 +354,11 @@ Particle properties:
             d["EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_FIRST_TIME
             )
-            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<globaldata::{}>".format( self.name )
+            d[
+                "CHECK_FUNCTION"
+            ] = "::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<globaldata::{}>".format(
+                self.name
+            )
 
             if step.touch_vertex_first_time_kernel is None:
                 step.touch_vertex_first_time_kernel = ""
@@ -363,7 +371,7 @@ Particle properties:
                     + step_type_name
                     + "(assignedParticles);\n"
                     + mark_template_vertex_operation.format(**d)
-                    + step.touch_vertex_last_time_kernel
+                    + step.touch_vertex_first_time_kernel
                 )
             else:
                 step.touch_vertex_first_time_kernel = (
@@ -381,13 +389,16 @@ Particle properties:
             d["EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.CELL_KERNEL
             )
-            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::{}>".format( self.name )
-            
+            d[
+                "CHECK_FUNCTION"
+            ] = "::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<globaldata::{}>".format(
+                self.name
+            )
+
             if (
                 step.cell_kernel_dependency_policy == None
-                and 
-                AlgorithmStep.may_trigger_rerun(step.effect)
-                ):
+                and AlgorithmStep.may_trigger_rerun(step.effect)
+            ):
                 d[
                     "INVARIANT"
                 ] = "TouchAtMostOnce_MaskOutOtherwise_AllPreviousStepsUpdateAtLeastOnce_SweepMayRerun"
@@ -413,13 +424,16 @@ Particle properties:
             d["EVENT"] = AlgorithmStep.get_event_name(
                 AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_LAST_TIME
             )
-            d["CHECK_FUNCTION"] = "::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<globaldata::{}>".format( self.name )
+            d[
+                "CHECK_FUNCTION"
+            ] = "::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<globaldata::{}>".format(
+                self.name
+            )
 
             if (
                 step.touch_vertex_last_time_dependency_policy == None
-                and 
-                AlgorithmStep.may_trigger_rerun(step.effect)
-                ):
+                and AlgorithmStep.may_trigger_rerun(step.effect)
+            ):
                 d[
                     "INVARIANT"
                 ] = "TouchFirstUsage_MaskOutAfterwards_AllPreviousStepsUpdateAtLeastOnce_SweepMayRerun"
@@ -489,7 +503,7 @@ Particle properties:
 
         This is done both for the main algorithm steps as well as for the
         initialisation steps individually.
-        
+
 
         """
 
