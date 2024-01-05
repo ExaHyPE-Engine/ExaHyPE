@@ -235,8 +235,6 @@ std::bitset<TwoPowerD> peano4::datamanagement::VertexMarker::areAdjacentCellsLoc
     result[ jScalar ] = _isAdjacentCellLocal[ peano4::utils::dLinearised(entryIn3x3Patch,3) ];
   } enddforx
 
-  assertion2( result.all() or isAdjacentToParallelDomainBoundary(), result, toString() );
-
   return result;
 }
 

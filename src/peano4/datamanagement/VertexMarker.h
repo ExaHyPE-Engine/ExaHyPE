@@ -357,6 +357,18 @@ public:
 
   /**
    * Are adjacent cells of selected vertex local
+   *
+   * ## Correctness
+   *
+   * I originally thought I could add the assertion
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *   assertion2( result.all() or isAdjacentToParallelDomainBoundary(), result, toString() );
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * However, this assertion fails at the global domain boundary, where some
+   * adjacent cells are not local (they are outside) and the vertices
+   * nevertheless are not parallel boundary vertices either.
    */
   std::bitset<TwoPowerD> areAdjacentCellsLocal() const;
 };
