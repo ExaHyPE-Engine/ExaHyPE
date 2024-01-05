@@ -74,6 +74,7 @@ class ADERDG(object):
         min_cell_h,
         max_cell_h,
         plot_grid_properties,
+        pde_terms_without_state: bool,
         # Kernel optimisations
         is_linear,
         polynomials,

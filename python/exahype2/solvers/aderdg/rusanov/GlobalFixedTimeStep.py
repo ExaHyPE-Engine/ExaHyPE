@@ -40,6 +40,7 @@ class GlobalFixedTimeStep(SingleSweep):
         max_cell_h,
         time_step_size,
         plot_grid_properties=False,
+        pde_terms_without_state=False,
         # Kernel optimisations
         is_linear=False,
         polynomials=Polynomials.Gauss_Legendre,
@@ -70,6 +71,7 @@ class GlobalFixedTimeStep(SingleSweep):
             min_cell_h,
             max_cell_h,
             plot_grid_properties,
+            pde_terms_without_state,
             is_linear,
             polynomials,
             use_kernel_generator,

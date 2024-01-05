@@ -17,6 +17,7 @@ class SingleSweep(ADERDG):
         min_cell_h,
         max_cell_h,
         plot_grid_properties,
+        pde_terms_without_state,
         # Kernel optimisations
         is_linear,
         polynomials,
@@ -47,6 +48,7 @@ class SingleSweep(ADERDG):
             min_cell_h,
             max_cell_h,
             plot_grid_properties,
+            pde_terms_without_state,
             is_linear,
             polynomials,
             use_kernel_generator,
