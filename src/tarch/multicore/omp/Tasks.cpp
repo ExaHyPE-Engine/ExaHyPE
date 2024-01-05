@@ -96,8 +96,7 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
                                         // we have in the system
 
 #if defined(OpenMPTaskGroup)
-#pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority \
-) shared(numberOfLoopTasks) untied
+#pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks) untied
 #endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
 #if !defined(OpenMPTaskGroup)
@@ -169,74 +168,69 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
 
 
-void tarch::multicore::native::spawnTask(
-    Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
-) {
+void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
   int* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
 
-  if (taskNumber!=NoDependencies) {
-    #pragma omp taskwait depend(in:*outDependencyPointer)
+  if (taskNumber != NoDependencies) {
+#pragma omp taskwait depend(in : *outDependencyPointer)
   }
 
-  #pragma omp atomic
+#pragma omp atomic
   numberOfSpawnedTasks++;
 
-  if (taskNumber==NoDependencies and inDependencies.empty()) {
-    #pragma omp task priority(job->getPriority()) untied
+  if (taskNumber == NoDependencies and inDependencies.empty()) {
+#pragma omp task priority(job->getPriority()) untied
     {
       while (job->run()) {
-        #pragma omp taskyield
+#pragma omp taskyield
       }
       delete job;
 
-      #pragma omp atomic
+#pragma omp atomic
       numberOfSpawnedTasks--;
     }
   }
-  if (taskNumber!=NoDependencies and inDependencies.empty()) {
-    #pragma omp task priority(job->getPriority()) untied depend(out: *outDependencyPointer)
+  if (taskNumber != NoDependencies and inDependencies.empty()) {
+#pragma omp task priority(job->getPriority()) untied depend(out : *outDependencyPointer)
     {
       while (job->run()) {
-        #pragma omp taskyield
+#pragma omp taskyield
       }
       delete job;
 
-      #pragma omp atomic
+#pragma omp atomic
       numberOfSpawnedTasks--;
     }
-  }
-  else if (taskNumber==NoDependencies and not inDependencies.empty()) {
-    int numberOfInDependencies = inDependencies.size();
+  } else if (taskNumber == NoDependencies and not inDependencies.empty()) {
+    int              numberOfInDependencies = inDependencies.size();
     std::vector<int> arrayOfInDependencies(numberOfInDependencies);
-    std::copy( inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin() );
-    #pragma omp task priority(job->getPriority()) untied depend(iterator(j=0:numberOfInDependencies), in: arrayOfInDependencies[j])
+    std::copy(inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin());
+#pragma omp task priority(job->getPriority()) untied depend(iterator(j = 0 : numberOfInDependencies), in : arrayOfInDependencies[j])
     {
       while (job->run()) {
-        #pragma omp taskyield
+#pragma omp taskyield
       }
       delete job;
 
-      #pragma omp atomic
+#pragma omp atomic
       numberOfSpawnedTasks--;
     }
-  }
-  else if (taskNumber!=NoDependencies and not inDependencies.empty()) {
-    int numberOfInDependencies = inDependencies.size();
+  } else if (taskNumber != NoDependencies and not inDependencies.empty()) {
+    int              numberOfInDependencies = inDependencies.size();
     std::vector<int> arrayOfInDependencies(numberOfInDependencies);
-    std::copy( inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin() );
-    #pragma omp task priority(job->getPriority()) untied depend(iterator(j=0:numberOfInDependencies), in: arrayOfInDependencies[j]) depend(out: *outDependencyPointer)
+    std::copy(inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin());
+#pragma omp task priority(job->getPriority()) untied depend(iterator(j = 0 : numberOfInDependencies), in : arrayOfInDependencies[j]) depend(out : *outDependencyPointer)
     {
       while (job->run()) {
-        #pragma omp taskyield
+#pragma omp taskyield
       }
       delete job;
 
-      #pragma omp atomic
+#pragma omp atomic
       numberOfSpawnedTasks--;
     }
-  }
-  else {
-    assertionMsg( false, "should never be called" );
+  } else {
+    assertionMsg(false, "should never be called");
   }
 }
 
@@ -263,13 +257,11 @@ NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variab
  * if I try to map fuse onto a task of its own.
  *
  */
-void tarch::multicore::native::processFusedTask(
-  Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
-) {
+void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-//#if !defined(__NVCOMPILER)
-  #pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
-//#endif
+  // #if !defined(__NVCOMPILER)
+#pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
+  // #endif
   {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
@@ -283,16 +275,16 @@ void tarch::multicore::native::processFusedTask(
 
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
   if (not inDependencies.empty()) {
-    int numberOfInDependencies = inDependencies.size();
+    int              numberOfInDependencies = inDependencies.size();
     std::vector<int> arrayOfInDependencies(numberOfInDependencies);
-    std::copy( inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin() );
-    #pragma omp taskwait depend(iterator(j=0:numberOfInDependencies), in: arrayOfInDependencies[j])
+    std::copy(inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin());
+#pragma omp taskwait depend(iterator(j = 0 : numberOfInDependencies), in : arrayOfInDependencies[j])
   }
 }
 
 
-void tarch::multicore::native::waitForAllTasks() {
-  #pragma omp taskwait
+void        tarch::multicore::native::waitForAllTasks() {
+#pragma omp taskwait
 }
 
 #endif

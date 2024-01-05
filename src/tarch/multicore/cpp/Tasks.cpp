@@ -91,9 +91,7 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 #endif
 
 
-void tarch::multicore::native::spawnTask(
-  Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber
-) {
+void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
   {
     tarch::multicore::Lock lock(spawnedTasksSemaphore);
 
@@ -102,9 +100,7 @@ void tarch::multicore::native::spawnTask(
     if (spawnedTasks.count(taskNumber) > 0 and spawnedTasks.at(taskNumber)->wait_until(std::chrono::system_clock::time_point::min()) != std::future_status::ready) {
       logWarning(
         "spawnTaskWithDependencies(...)",
-        "task "
-          << taskNumber
-          << " is already among submitted tasks, i.e. noone ever waited for it although we now submit new task with this number. Wait before spawning. "
+        "task " << taskNumber << " is already among submitted tasks, i.e. noone ever waited for it although we now submit new task with this number. Wait before spawning. "
       );
       lock.free(); // if task recursively locks table
       waitForTask(taskNumber);
@@ -130,11 +126,9 @@ void tarch::multicore::native::spawnTask(
 }
 
 
-void tarch::multicore::native::processFusedTask(
-  Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
-) {
+void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-  std::future<void> dontWait = std::async(std::launch::async, [myTask, copyOfTasksOfSameType, device]() -> void {
+  std::future<void>                  dontWait              = std::async(std::launch::async, [myTask, copyOfTasksOfSameType, device]() -> void {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
       tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
