@@ -227,7 +227,7 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::RecursiveBipartition",
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new toolbox::loadbalancing::DefaultConfiguration()",
 )
 
@@ -245,8 +245,7 @@ project.algorithm_step_initial_conditions.add_action_set(
 
 project.additional_action_sets_per_solver_step.append(
     swift2.boundaryconditions.Fixed(particle_set=particle_set)
-    )
-
+)
 
 
 ###############################################################################
