@@ -11,8 +11,8 @@
 #include <vector>
 
 #include "multicore.h"
-#include "tarch/multicore/otter.h"
 #include "tarch/multicore/orchestration/Strategy.h"
+#include "tarch/multicore/otter.h"
 
 namespace tarch {
   namespace multicore {
@@ -29,8 +29,7 @@ namespace tarch {
      * the current orchestration. It swaps them, so you can use setOrchestration()
      * with the result afterwards and re-obtain the original strategy.
      */
-    tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation
-    );
+    tarch::multicore::orchestration::Strategy* swapOrchestration(tarch::multicore::orchestration::Strategy* realisation);
 
     /**
      * Abstract super class for a job.
@@ -275,11 +274,7 @@ namespace tarch {
      * @see processPendingTasks(int) describing how we handle pending tasks.
      *
      */
-    void spawnTask(
-      Task*                       job,
-      const std::set<TaskNumber>& inDependencies = std::set<TaskNumber>(),
-      const TaskNumber&           taskNumber     = NoDependencies
-    );
+    void spawnTask(Task* job, const std::set<TaskNumber>& inDependencies = std::set<TaskNumber>(), const TaskNumber& taskNumber = NoDependencies);
 
     /**
      * Wait for all tasks which have been spawned by spawnTask. This routine
