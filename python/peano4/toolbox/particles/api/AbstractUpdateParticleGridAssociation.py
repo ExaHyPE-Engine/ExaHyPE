@@ -184,6 +184,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   _numberOfDrops  = 0;
   _numberOfLiftsIntoSieveSet = 0;
   _numberOfDropsFromSieveSet = 0;
+  _numberOfSkippedDropsFromSieveSet = 0;
 """
     )
 
@@ -194,7 +195,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfDrops,
     _numberOfParticleReassignmentsOnCurrentLevel,
     _numberOfLiftsIntoSieveSet,
-    _numberOfDropsFromSieveSet
+    _numberOfDropsFromSieveSet,
+    _numberOfSkippedDropsFromSieveSet
   );
 """
     )
@@ -239,20 +241,38 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
         if ( ::toolbox::particles::dropParticle(**p,marker) ) {
           _numberOfDrops++;
-//          logInfo( "touchVertexFirstTime(...)", "I did drop " << (*p)->toString() );
           (*p)->setCellH(marker.h());
+          // @todo introduce new function in vertex marker
+          toolbox::particles::assignmentchecks::removeParticleFromVertex( 
+            "{{PARTICLE}}", 
+            (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, 
+            marker.x()
+            -
+            tarch::la::multiplyComponents(
+              tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+              marker.h()
+            )
+            +
+            tarch::la::multiplyComponents(
+              tarch::la::Vector<Dimensions,double>( std::bitset<Dimensions>(i) ),
+              3.0*marker.h()
+            ),
+            marker.h()*3.0, _spacetreeId 
+          );
+          toolbox::particles::assignmentchecks::assignParticleToVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId );
           assertion3(
             fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),
             fineGridVertex{{PARTICLES_CONTAINER}}.toString(),
             coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString(),
-            _treeNumber
+            _spacetreeId
           );
           assertion3(
             coarseGridVertices{{PARTICLES_CONTAINER}}(i).isValid(),
             fineGridVertex{{PARTICLES_CONTAINER}}.toString(),
             coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString(),
-            _treeNumber
+            _spacetreeId
           );
+          logDebug( "touchVertexFirstTime(...)", "drop particle " << (*p)->toString() << " from " << coarseGridVertices{{PARTICLES_CONTAINER}}(i).toString() << " into " << marker.toString() );
           p = fineGridVertex{{PARTICLES_CONTAINER}}.grabParticle( p, coarseGridVertices{{PARTICLES_CONTAINER}}(i) );
         }
         else p++;
@@ -265,16 +285,35 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _Template_Sieve = jinja2.Template(
         """
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices( vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort ) ) {
-    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( marker, vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort );
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( 
+      marker, 
+      vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort,
+      _spacetreeId
+    );
 
-    _numberOfDropsFromSieveSet += sievedParticles.size();
-
-    for (auto& p: sievedParticles) {
-      p->setCellH(marker.h());
+    for (auto& newParticle: sievedParticles) {
+      if ( ::toolbox::particles::particleIsDuplicate(
+        newParticle, 
+        fineGridVertex{{PARTICLES_CONTAINER}}.begin(), 
+        fineGridVertex{{PARTICLES_CONTAINER}}.end() 
+      ) != fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
+        _numberOfSkippedDropsFromSieveSet++;
+        delete newParticle;
+      }
+      else {
+        fineGridVertex{{PARTICLES_CONTAINER}}.addParticle( newParticle );
+        _numberOfDropsFromSieveSet++;
+        toolbox::particles::assignmentchecks::assignParticleToVertex(
+          "{{PARTICLE}}",
+          newParticle->getX(),
+          newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+          marker.x(),
+          marker.h(),
+          _spacetreeId
+        );
+      }
     }
 
-    fineGridVertex{{PARTICLES_CONTAINER}}.addParticles( sievedParticles );
-    fineGridVertex{{PARTICLES_CONTAINER}}.eliminateSpatialDuplicates();
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
   }
 """
@@ -309,20 +348,38 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}}) {
       p->setCellH(3.0 * marker.h());
     }
+    for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
+      toolbox::particles::assignmentchecks::removeParticleFromVertex( "{{PARTICLE}}", p->getX(), p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId );
+      toolbox::particles::assignmentchecks::assignParticleToVertex( 
+        "{{PARTICLE}}",
+        p->getX(), 
+        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, 
+        marker.x() 
+        - 
+        tarch::la::multiplyComponents( 
+          tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+          marker.h()
+        )
+        +
+        tarch::la::multiplyComponents( 
+          tarch::la::Vector<Dimensions,double>(target),
+          3.0*marker.h()
+        ),
+        3.0*marker.h(), _spacetreeId
+      );
+    }
     coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).grabParticles( fineGridVertex{{PARTICLES_CONTAINER}} );
   }
   else {
     _numberOfLiftsIntoSieveSet += fineGridVertex{{PARTICLES_CONTAINER}}.size();
+    for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
+      toolbox::particles::assignmentchecks::assignParticleToVertex( "{{PARTICLE}}", p->getX(), p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId );
+    }
     fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
   }
 """
     )
-
-    def get_constructor_body(self):
-        return """
-  _treeNumber  = treeNumber;
-"""
 
     def get_body_of_getGridControlEvents(self):
         return "  return std::vector< peano4::grid::GridControlEvent >();\n"
@@ -335,20 +392,35 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             """
 #include "tarch/multicore/Lock.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
+#include "toolbox/particles/assignmentchecks/TracingAPI.h"        
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 """
         )
         return result.render(**self.d)
 
+    def get_constructor_body(self):
+        return (
+            super(AbstractUpdateParticleGridAssociation, self).get_constructor_body()
+            + """
+            _spacetreeId              = treeNumber;
+          """
+        )
+
     def get_attributes(self):
         return jinja2.Template(
             """
-  int  _treeNumber;
+  int  _spacetreeId;
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
   int  _numberOfDrops;
   int  _numberOfLiftsIntoSieveSet;
   int  _numberOfDropsFromSieveSet;
+  int  _numberOfSkippedDropsFromSieveSet;
 """
         ).render(**self.d)
+
+    def get_body_of_unprepareTraversal(self):
+        return """
+toolbox::particles::assignmentchecks::endMeshSweep();
+"""

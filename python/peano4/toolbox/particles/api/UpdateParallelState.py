@@ -2,7 +2,9 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
-from peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation import AbstractUpdateParticleGridAssociation
+from peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation import (
+    AbstractUpdateParticleGridAssociation,
+)
 
 import jinja2
 
@@ -14,13 +16,13 @@ class UpdateParallelState(ActionSet):
 
     Particles within a parallel code hold a boolean flags ParallelState.
     peano4.toolbox.Particle. It is this action set's responsibility to maintain
-    this property. Users' codes may use the ParallelState, but as read-only 
+    this property. Users' codes may use the ParallelState, but as read-only
     only.
 
     We have two options per particle (held within ParallelState): local and virtual. In our data model,
     particles are either local or virtual throughout
     the mesh traversal, but they might change their position and
-    consequently alter their state. Virtual particles can only fly in through
+    consequently alter their state. Virtual particles can fly in through
     the boundary, while particles can leave the local domain (and hence become
     virtual) by moving through the boundary. Virtual particles (another
     word would be halo particles) are mere copies of particles somewhere
@@ -29,6 +31,9 @@ class UpdateParallelState(ActionSet):
     boundary will re-introduce them. We can also keep them as long as
     we know that their position doesn't change. In this case, the merger
     will update the copies in-situ.
+
+    To accommodate the fact that a particle moves and switches from local
+    to virtual, we update its state in touchVertexFirstTime().
 
     When we hit a vertex and its particles for the last time, we can
     analyse the particles' parallel state. If the new state still is
@@ -49,6 +54,15 @@ class UpdateParallelState(ActionSet):
     or after this one is called. At the time you do something within
     touchVertexLastTime(), this action has already set the state markers
     accordingly and hence can make a decision.
+
+    As a consequence, we can check that a particle can never switch from
+    virtual to local here. Virtual particles should not move and therefore
+    should not "enter" the domain. Local particles in contrast can move and
+    hence leave the domain. That is, on a a neighbouring rank, a particle
+    might be moved into "our" area. In this case, we eliminate our local
+    virtual copy and then add the incoming particle as new local one.
+    This merger however is the resonsibility of the actual particle set,
+    and not of the actions here.
 
 
     ## Usage
@@ -104,6 +118,7 @@ class UpdateParallelState(ActionSet):
         """
   _numberOfRemainingLocalParticles = 0;
   _numberOfExpiredHaloParticles    = 0;
+  _numberOfLeavingParticles        = 0;
 """
     )
 
@@ -111,8 +126,33 @@ class UpdateParallelState(ActionSet):
         """
   vertexdata::{{PARTICLES_CONTAINER}}::updateNumberOfLocalAndExpiredParticles(
     _numberOfRemainingLocalParticles,
-    _numberOfExpiredHaloParticles
+    _numberOfExpiredHaloParticles,
+    _numberOfLeavingParticles
   );
+"""
+    )
+
+    __Template_TouchVertexFirstTime = jinja2.Template(
+        """
+for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
+  const bool particleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
+  assertion2( 
+    not particleWillBeLocal 
+    or
+    p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+    p->toString(),
+    marker.toString()
+  );
+  // Has just left the domain. So we set it to virtual now. Next iteration, 
+  // the neighbour who has received this particle due to the movement will
+  // send us an update, i.e. after this iteration we can throw it away.
+  if (not particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local ) {
+    p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
+    _numberOfLeavingParticles++;
+    toolbox::particles::assignmentchecks::removeParticleFromVertex( "{{PARTICLE}}", p->getX(), true, marker.x(), marker.h(), _treeNumber );
+    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber );
+  }
+}
 """
     )
 
@@ -131,7 +171,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   }
   else {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
-    toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), _treeNumber );
+    toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), false, _treeNumber );
     _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
     #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
@@ -151,6 +191,8 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
         result = "\n"
         if operation_name == ActionSet.OPERATION_BEGIN_TRAVERSAL:
             result = self.__Template_BeginTraversal.render(**self.d)
+        if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+            result = self.__Template_TouchVertexFirstTime.render(**self.d)
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
             result = self.__Template_TouchVertexLastTime.render(**self.d)
         if operation_name == ActionSet.OPERATION_END_TRAVERSAL:
@@ -186,6 +228,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
 
   int  _numberOfRemainingLocalParticles;
   int  _numberOfExpiredHaloParticles;
+  int  _numberOfLeavingParticles;
 """
 
     def get_body_of_prepareTraversal(self):

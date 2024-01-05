@@ -6,14 +6,14 @@ import jinja2
 
 
 class Inflow(ActionSet):
-    def __init__(self, 
-                 particle_set, 
-                 ):
+    def __init__(
+        self,
+        particle_set,
+    ):
         """!
 
         Add inflow boundary conditions
-        
-        
-        """
-        super( Inflow, self ).__init__()
 
+
+        """
+        super(Inflow, self).__init__()

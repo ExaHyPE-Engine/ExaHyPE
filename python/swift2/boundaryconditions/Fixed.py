@@ -7,51 +7,51 @@ import jinja2
 
 class Fixed(ActionSet):
     """!
-    
+
     Fixed boundary conditions
-    
-    This is a very primitive implementation of the fixed boundary conditions. 
-    We shrink the computational domain by domain_halo. Every particle which 
-    approaches the domain boundary closer than domain_halo will effectively 
-    be put back on the boundary of the shrinked domain. We do not allow 
+
+    This is a very primitive implementation of the fixed boundary conditions.
+    We shrink the computational domain by domain_halo. Every particle which
+    approaches the domain boundary closer than domain_halo will effectively
+    be put back on the boundary of the shrinked domain. We do not allow
     particles to leave the shrinked domain and, hence, they should not leave
     the computational domain, which is bigger, either.
-    
+
     This concept alone does not ensure that particles never leave their domain.
     Their velocity might be so big that they effectively could be pressed out
     of the domain. So we need to create another buffer within the domain which
-    ensures that the particles cannot tunnel through the buffer within one 
+    ensures that the particles cannot tunnel through the buffer within one
     time step. For this, we have to take the maximum velocity into account, and
-    we have to damp the velocities as they run risk to approach our domain 
+    we have to damp the velocities as they run risk to approach our domain
     boundaries way too fast.
-    
+
     """
-    def __init__(self, 
-                 particle_set, 
-                 domain_halo = 0.001
-                 ):
+
+    def __init__(self, particle_set, domain_halo=0.001):
         """!
 
         Fixed boundary condition
-        
+
         Fixed boundary conditions are very difficult to impose within SPH. This
-        is a very simplistic realisation of fixed boundary conditions, where 
-        particles are forced to come to rest once they approach the domain 
+        is a very simplistic realisation of fixed boundary conditions, where
+        particles are forced to come to rest once they approach the domain
         boundary.
-                
+
         """
-        super( Fixed, self ).__init__()
+        super(Fixed, self).__init__()
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
         self.d["PARTICLES_CONTAINER"] = particle_set.name
-        self.d["VELOCITY_ATTRIBUTE"]  = particle_set.particle_model.velocity.get_accessor_name()
-        self.d["DOMAIN_HALO"]         = domain_halo
+        self.d[
+            "VELOCITY_ATTRIBUTE"
+        ] = particle_set.particle_model.velocity.get_accessor_name()
+        self.d["DOMAIN_HALO"] = domain_halo
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
-
-    __Template_TouchVertexLastTime = jinja2.Template( """
+    __Template_TouchVertexLastTime = jinja2.Template(
+        """
     constexpr double DomainHalo     = {{DOMAIN_HALO}};
     // check only boundary vertices
     if ( 
@@ -106,9 +106,9 @@ class Fixed(ActionSet):
         } // for loop over dimensions
       } // for loop over particles
     } // if on marker
-    """)
-    
-    
+    """
+    )
+
     def get_body_of_operation(self, operation_name):
         result = "\n"
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:

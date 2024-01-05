@@ -2,7 +2,9 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
-from peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation import AbstractUpdateParticleGridAssociation
+from peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation import (
+    AbstractUpdateParticleGridAssociation,
+)
 
 import jinja2
 
@@ -11,37 +13,39 @@ class GatherParticlesInMemoryPool(ActionSet):
     """!
 
     Simplistic action set which invokes gather() on the particle set
-    
-    Plugs into touchVertexFirstTime(). Should be called prior to any use of 
+
+    Plugs into touchVertexFirstTime(). Should be called prior to any use of
     vertex data, but after all rearrangements have completed.
 
     """
 
-    DefaultDescendInvocationOrder = AbstractUpdateParticleGridAssociation.DefaultDescendInvocationOrder - 1
+    DefaultDescendInvocationOrder = (
+        AbstractUpdateParticleGridAssociation.DefaultDescendInvocationOrder - 1
+    )
 
-    def __init__(self, 
-                 particle_set,
-                 ):
+    def __init__(
+        self,
+        particle_set,
+    ):
         super(GatherParticlesInMemoryPool, self).__init__(
             descend_invocation_order=self.DefaultDescendInvocationOrder, parallel=False
         )
         self._particle_set = particle_set
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
-        self.d["PARTICLES_CONTAINER"] = particle_set.name    
-        
+        self.d["PARTICLES_CONTAINER"] = particle_set.name
+
     __Template_TouchVertexFirstTime = jinja2.Template(
         """
   fineGridVertex{{PARTICLES_CONTAINER}}.gather();
 """
     )
-    
+
     __Template_TouchVertexLastTime = jinja2.Template(
         """
   assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isGathered(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
 """
     )
-
 
     def get_body_of_operation(self, operation_name):
         result = "\n"

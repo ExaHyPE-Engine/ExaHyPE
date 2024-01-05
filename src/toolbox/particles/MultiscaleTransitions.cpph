@@ -8,11 +8,7 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
   const Particle& particle, const ::peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
 ) {
   return getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-    particle.getParallelState()==Particle::ParallelState::Local,
-    particle.getSearchRadius(),
-    particle.getX(),
-    marker,
-    numberOfVertexWithinCell
+    particle.getParallelState() == Particle::ParallelState::Local, particle.getSearchRadius(), particle.getX(), marker, numberOfVertexWithinCell
   );
 }
 
@@ -20,46 +16,29 @@ template <typename Particle>
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftParticleAssociatedWithVertex(
   const Particle& particle, const peano4::datamanagement::VertexMarker marker
 ) {
-  return liftParticleAssociatedWithVertex(
-    particle.getParallelState() == Particle::ParallelState::Local,
-    particle.getSearchRadius(),
-    particle.getX(),
-    marker
-  );
+  return liftParticleAssociatedWithVertex(particle.getParallelState() == Particle::ParallelState::Local, particle.getSearchRadius(), particle.getX(), marker);
 }
 
 
 template <typename Particle>
 bool toolbox::particles::sieveParticle(const Particle& particle, const ::peano4::datamanagement::VertexMarker& marker) {
-  return sieveParticle(
-    particle.getSearchRadius(),
-    particle.getX(),
-    marker
-  );
+  return sieveParticle(particle.getSearchRadius(), particle.getX(), marker);
 }
 
 
 template <typename Particle>
-bool toolbox::particles::particleWillBeDroppedFurther(
-  const Particle& particle, const peano4::datamanagement::CellMarker& marker
-) {
+bool toolbox::particles::particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::CellMarker& marker) {
   return particleWillBeDroppedFurther(particle.getSearchRadius(), marker);
 }
 
 
 template <typename Particle>
-bool toolbox::particles::particleWillBeDroppedFurther(
-  const Particle& particle, const peano4::datamanagement::VertexMarker& marker
-) {
+bool toolbox::particles::particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::VertexMarker& marker) {
   return particleWillBeDroppedFurther(particle.getSearchRadius(), marker);
 }
 
 
 template <typename Particle>
 bool toolbox::particles::dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker) {
-  return dropParticle(
-    particle.getSearchRadius(),
-    particle.getX(),
-    marker
-  );
+  return dropParticle(particle.getSearchRadius(), particle.getX(), marker);
 }

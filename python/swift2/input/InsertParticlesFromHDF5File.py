@@ -163,7 +163,8 @@ class InsertParticlesFromHDF5File(ActionSet):
       toolbox::particles::insertParticleIntoCell(
         marker,
         newParticle,
-        fineGridVerticeshydroPartSet
+        fineGridVerticeshydroPartSet,
+        _spacetreeId
       );
     }
 
@@ -254,10 +255,6 @@ toolbox::particles::FileReaderHDF5 """
             + """\" );
 """
         )
-
-    # def get_destructor_body(self):
-    #  return """
-    # """
 
     def get_attributes(self):
         return """

@@ -525,10 +525,8 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
 
             if global_steps_to_update_particle_grid_assocation[i]:
                 if sort_with_lifts_and_drops:
-                    action_set_update_particle_grid_association = (
-                        peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
-                            current_species_set
-                        )
+                    action_set_update_particle_grid_association = peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
+                        current_species_set
                     )
                 else:
                     action_set_update_particle_grid_association = peano4.toolbox.particles.api.UpdateParticleGridAssociation_BucketSort(

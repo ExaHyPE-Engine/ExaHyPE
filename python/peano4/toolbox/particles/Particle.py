@@ -53,7 +53,7 @@ class Particle(DaStGen2):
       a tree knows about the particles which are associated to a vertex that's
       adjacent to a local mesh. The latter particles are virtual. We effectively
       work with a halo of h/2 per mesh level. Details can be found in
-      UpdateParallelState. 
+      UpdateParallelState.
 
     """
 

@@ -120,18 +120,13 @@ namespace toolbox {
      * @see LiftingTolerance
      */
     template <typename Particle>
-    ParticleReassociationInstruction liftParticleAssociatedWithVertex(
-      const Particle& p, const peano4::datamanagement::VertexMarker marker
-    );
+    ParticleReassociationInstruction liftParticleAssociatedWithVertex(const Particle& p, const peano4::datamanagement::VertexMarker marker);
 
     /**
      * Implementation of liftParticleAssociatedWithVertex() without the template
      */
     ParticleReassociationInstruction liftParticleAssociatedWithVertex(
-      bool                                         isLocal,
-      double                                       searchRadius,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const peano4::datamanagement::VertexMarker   marker
+      bool isLocal, double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker marker
     );
 
     /**
@@ -217,11 +212,7 @@ namespace toolbox {
     template <typename Particle>
     bool sieveParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
-    bool sieveParticle(
-      double                                       searchRadius,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const peano4::datamanagement::VertexMarker&  marker
-    );
+    bool sieveParticle(double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
 
     template <typename Particle>
     bool dropParticle(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
@@ -232,11 +223,7 @@ namespace toolbox {
      * This is the actual implementation, i.e. the template delegates to this
      * one. Through the method, we can unittest the drop logic.
      */
-    bool dropParticle(
-      double                                       searchRadius,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const peano4::datamanagement::VertexMarker& marker
-    );
+    bool dropParticle(double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
 
     /**
      * Will the particle be dropped further throughout the traversal
@@ -293,10 +280,7 @@ namespace toolbox {
     template <typename Particle>
     bool particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::CellMarker& marker);
 
-    bool particleWillBeDroppedFurther(
-      double      searchRadius,
-      const peano4::datamanagement::CellMarker& marker
-    );
+    bool particleWillBeDroppedFurther(double searchRadius, const peano4::datamanagement::CellMarker& marker);
 
     /**
      * Will a particle be dropped further
@@ -312,10 +296,7 @@ namespace toolbox {
     template <typename Particle>
     bool particleWillBeDroppedFurther(const Particle& particle, const peano4::datamanagement::VertexMarker& marker);
 
-    bool particleWillBeDroppedFurther(
-      double searchRadius,
-      const peano4::datamanagement::VertexMarker& marker
-    );
+    bool particleWillBeDroppedFurther(double searchRadius, const peano4::datamanagement::VertexMarker& marker);
 
     /**
      * Ownership tolerance
@@ -359,11 +340,7 @@ namespace toolbox {
     );
 
     ParticleReassociationInstruction getParticleReassociationInstructionWithinCellWithIntraCellReassignment(
-      bool                                         isLocal,
-      double                                       searchRadius,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const peano4::datamanagement::CellMarker&    marker,
-      int numberOfVertexWithinCell
+      bool isLocal, double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::CellMarker& marker, int numberOfVertexWithinCell
     );
 
     /**
@@ -384,10 +361,7 @@ namespace toolbox {
      * @param particle The particle of interest to be studied.
      * @param x        Vertex centre.
      */
-    std::bitset<TwoPowerD> getAdjacentCellsOwningParticle(
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const peano4::datamanagement::VertexMarker&  marker
-    );
+    std::bitset<TwoPowerD> getAdjacentCellsOwningParticle(const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
 
     namespace internal {
       double relativeReleaseOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
@@ -395,8 +369,8 @@ namespace toolbox {
       double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::VertexMarker& marker);
       double relativeGrabOwnershipSpatialSortingTolerance(const ::peano4::datamanagement::CellMarker& marker);
 
-      bool fitsIntoLevel( double searchRadius, const ::peano4::datamanagement::CellMarker& marker );
-      bool fitsIntoLevel( double searchRadius, const ::peano4::datamanagement::VertexMarker& marker );
+      bool fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::CellMarker& marker);
+      bool fitsIntoLevel(double searchRadius, const ::peano4::datamanagement::VertexMarker& marker);
 
       /**
        * Find out which vertex should hold a particle.
@@ -410,12 +384,9 @@ namespace toolbox {
        *                 it is the left bottom vertex, 10 is the right bottom
        *                 one, and so forth.
        */
-      std::bitset<Dimensions> getParticleAssociationWithinCell(
-        const tarch::la::Vector<Dimensions,double>&  x,
-        const tarch::la::Vector<Dimensions,double>&  cellCentre
-      );
-    }
-  } // namespace particles
+      std::bitset<Dimensions> getParticleAssociationWithinCell(const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& cellCentre);
+    } // namespace internal
+  }   // namespace particles
 } // namespace toolbox
 
 #include "MultiscaleTransitions.cpph"

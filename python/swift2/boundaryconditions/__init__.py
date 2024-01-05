@@ -10,4 +10,3 @@ Peano's particle toolbox.
 """
 from .Fixed import Fixed
 from .Inflow import Inflow
-

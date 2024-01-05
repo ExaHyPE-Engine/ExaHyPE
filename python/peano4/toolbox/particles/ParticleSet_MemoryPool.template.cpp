@@ -4,6 +4,7 @@
 #include "tarch/multicore/Lock.h"
 
 #include "toolbox/particles/MultiscaleTransitions.h"
+#include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
 
 tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
@@ -12,7 +13,8 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPAC
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
   ::peano4::grid::TraversalObserver::SendReceiveContext  context,
   {{CLASSNAME}}&                                         neighbour,
-  const peano4::datamanagement::VertexMarker&            marker
+  const peano4::datamanagement::VertexMarker&            marker,
+  int                                                    spacetreeId
 ) {
   assertion( not neighbour._memoryPool.isGathered() );
   switch (context) {
@@ -28,39 +30,60 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
       {
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
         for (auto p: neighbour._memoryPool.container) {
-          if (
-            p->getParallelState()==DoFType::ParallelState::Local
-          ) {
+          const bool incomingParticleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
+          if (not incomingParticleWillBeLocal and p->getParallelState()==DoFType::ParallelState::Virtual){
+            logDebug(
+              "merge(...)",
+              "incoming particle " << p->toString() << " is virtual on neighbour. Such a copy is not relevant as it is a copy of the halo of another rank."
+            );
+            delete p;
+            tarch::multicore::Lock lock( _statisticsSemaphore );
+            _numberOfDroppedIncomingVirtualParticles++;
+          }
+          else if (incomingParticleWillBeLocal) {
+            p->setParallelState( DoFType::ParallelState::Local );
+            Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _memoryPool.container.begin(), _memoryPool.container.end());
+            if ( iteratorToExistingCopy!=end() and (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Virtual ) {
+              logDebug( "merge(...)", "incoming particle " << p->toString() << " will be local and replaces previous virtual copy of " << (*iteratorToExistingCopy)->toString() << ", i.e. particle enters domain" );
+              _memoryPool.replace( iteratorToExistingCopy, p );
+              tarch::multicore::Lock lock( _statisticsSemaphore );
+              _numberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual++;
+            }
+            else if ( iteratorToExistingCopy!=end() ) {
+              logDebug( "merge(...)", "incoming particle " << p->toString() << " would be local, but we already have a local particle copy here. Drop" );
+              delete p;
+              tarch::multicore::Lock lock( _statisticsSemaphore );
+              _numberOfRedundantlySharedLocalParticles++;
+            }
+            else {
+              _memoryPool.scatter();
+              _container.push_back(p);
+              logDebug( "merge(...)", "incoming particle " << p->toString() << " is a new local particle (will be counted by UpdateParticle action set)" );
+              tarch::multicore::Lock lock( _statisticsSemaphore );
+              _numberOfNewIncomingLocalParticles++;
+              toolbox::particles::assignmentchecks::assignParticleToVertex(
+                toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+                p->getX(), true, marker.x(), marker.h(), spacetreeId );
+            }
+          }
+          else {
+            logDebug( "merge(...)", "incoming particle " << p->toString() << " will be virtual, i.e. will be halo copy" );
             p->setParallelState( DoFType::ParallelState::Virtual );
-
             Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _memoryPool.container.begin(), _memoryPool.container.end());
             if ( iteratorToExistingCopy!=end() ) {
-              logDebug( "merge(...)", "incoming particle " << p->toString() << " is local on other rank and will be virtual here. It replaces existing copy" );
               _memoryPool.replace( iteratorToExistingCopy, p );
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfReplacedVirtualParticles++;
             }
             else {
-              logDebug( "merge(...)", "assume incoming particle " << p->toString() << " is local on other rank and will be virtual here. It is not yet stored here. Scatter prior to insertion" );
               _memoryPool.scatter();
               _memoryPool.container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfAddedVirtualParticles++;
+              toolbox::particles::assignmentchecks::assignParticleToVertex(
+                toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+                p->getX(), false, marker.x(), marker.h(), spacetreeId );
             }
-          }
-          else if (
-            p->getParallelState()==DoFType::ParallelState::Virtual
-          ) {
-            logDebug(
-              "merge(...)",
-              "incoming particle " << p->toString() << " is virtual on neighbour. Such a copy is not relevant here."
-            );
-            delete p;
-            tarch::multicore::Lock lock( _statisticsSemaphore );
-            _numberOfDroppedVirtualParticles++;
-          }
-          else {
-            assertion3(false,p->toString(),size(),marker.x());
           }
         }
 
@@ -86,81 +109,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
       break;
 
   }
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::eliminateSpatialDuplicates() {
-  int numberOfLocalEliminatedSpatialDuplicates   = 0;
-  int numberOfVirtualEliminatedSpatialDuplicates = 0;
-
-  auto p = _memoryPool.container.begin();
-  while (p != _memoryPool.container.end()) {
-    bool foundDuplicate = false;
-
-    // data consistency check
-    assertion2(
-      (*p)->getParallelState()==DoFType::ParallelState::Local
-      or
-      (*p)->getParallelState()==DoFType::ParallelState::Virtual,
-      (*p)->toString(),
-      toString()
-    );
-
-    auto pp = p;
-    pp++;
-    while (pp != _memoryPool.container.end() and not foundDuplicate) {
-      if (tarch::la::equals((*p)->getX(), (*pp)->getX(), ::toolbox::particles::SpatialDuplicateTolerance)) {
-        logDebug(
-          "eliminateSpatialDuplicates()", "found duplicates p=" << (*p)->toString() << " and pp=" << (*pp)->toString()
-        );
-        foundDuplicate = true;
-      } else {
-        pp++;
-      }
-    }
-
-    if (foundDuplicate and _memoryPool.isGathered()) {
-      _memoryPool.scatter();
-      p = _memoryPool.container.begin();
-    }
-    else if (foundDuplicate) {
-      assertion3((*p) != (*pp), (*p)->toString(), (*pp)->toString(), toString() );
-
-      // bias to eliminate virtual particles
-      if (
-        (*p)->getParallelState()==DoFType::ParallelState::Local
-        and
-        (*pp)->getParallelState()==DoFType::ParallelState::Local
-      ) {
-        logDebug("eliminateSpatialDuplicates()", "particle " << (*pp)->toString() << " found twice as local in domain");
-
-        delete *p;
-        _memoryPool.container.erase(p);
-
-        numberOfLocalEliminatedSpatialDuplicates++;
-      } else if ((*p)->getParallelState() == DoFType::ParallelState::Virtual) {
-        delete *p;
-        _memoryPool.container.erase(p);
-
-        numberOfVirtualEliminatedSpatialDuplicates++;
-      } else {
-        delete *pp;
-        _memoryPool.container.erase(pp);
-
-        numberOfVirtualEliminatedSpatialDuplicates++;
-      }
-
-      p = _memoryPool.container.begin(); // if we delete something, we might corrupt the whole container, so
-                                         // better start from scratch.
-    }
-    else {
-      p++;
-    }
-  }
-
-  tarch::multicore::Lock lock( _statisticsSemaphore );
-  _numberOfLocalEliminatedSpatialDuplicates   += numberOfLocalEliminatedSpatialDuplicates;
-  _numberOfVirtualEliminatedSpatialDuplicates += numberOfVirtualEliminatedSpatialDuplicates;
 }
 
 
@@ -293,17 +241,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticle(DoFType*  particle) 
   );
 
   _memoryPool.container.push_back(particle);
-}
-
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::addParticles(const ParticleList&  particles) {
-  _memoryPool.scatter();
-
-  _memoryPool.container.insert(
-    _memoryPool.container.end(),
-    particles.begin(),
-    particles.end()
-  );
 }
 
 
