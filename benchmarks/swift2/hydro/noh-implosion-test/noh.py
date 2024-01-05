@@ -33,9 +33,9 @@ Sorting_OnTheFly = "sort-on-the-fly"
 SortingVariants = [Sorting_InsertSweeps, Sorting_OnTheFly]
 
 VectorisationOffNoOptimisation = "no-optimisation"
-VectorisationOffOuterGuards    = "outer-guards"
-VectorisationOfAllComparisons  = "vectorise-all"
-VectorisationOfDistanceChecks  = "vectorise-distance-checks"
+VectorisationOffOuterGuards = "outer-guards"
+VectorisationOfAllComparisons = "vectorise-all"
+VectorisationOfDistanceChecks = "vectorise-distance-checks"
 VectorisationVariants = [
     VectorisationOfAllComparisons,
     VectorisationOfDistanceChecks,
@@ -43,7 +43,11 @@ VectorisationVariants = [
 
 
 Choices = (
-    [x + "." + Storage_Scattered + "." + y for x in ParallelisationVariants for y in [VectorisationOffNoOptimisation,VectorisationOffOuterGuards]]
+    [
+        x + "." + Storage_Scattered + "." + y
+        for x in ParallelisationVariants
+        for y in [VectorisationOffNoOptimisation, VectorisationOffOuterGuards]
+    ]
     + [
         x + "." + y + "." + z
         for x in ParallelisationVariants
@@ -311,7 +315,7 @@ if __name__ == "__main__":
     particle_interaction_kernel_realisation = (
         swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
     )
-    
+
     if VectorisationOffNoOptimisation in args.realisation:
         particle_interaction_kernel_realisation = (
             swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
@@ -324,7 +328,6 @@ if __name__ == "__main__":
         particle_interaction_kernel_realisation = (
             swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
         )
-
 
     particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
         name=name,

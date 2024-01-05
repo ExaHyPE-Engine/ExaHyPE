@@ -5,15 +5,15 @@ from .Attribute import Attribute
 
 class UserDefinedType(Attribute):
     """!
-    
+
     Wrapper around user-defined attribute
 
     Wrapper around user-defined object, i.e. an instance of a proper class that
-    is not built into C++. At the moment, we support this only for static 
+    is not built into C++. At the moment, we support this only for static
     attributes. On the one hand, having real object attributes which stem from
     user code is tricky (are there appropriate to string methods, appropriate
-    constructors) for a "normal", serial code. It becomes close to impossible 
-    to map complex nested classes onto MPI. Therefore, this constraint to 
+    constructors) for a "normal", serial code. It becomes close to impossible
+    to map complex nested classes onto MPI. Therefore, this constraint to
     class attributes.
 
     """
@@ -165,7 +165,7 @@ class UserDefinedType(Attribute):
         actually works. At the moment, we do not use the MPI data
         implicitly, as we support user-defined attributes if and only
         if they are static. That is, we never exchange them as part of
-        an object. That is, at the moment this routine is kind of 
+        an object. That is, at the moment this routine is kind of
         deprecated.
 
         """
