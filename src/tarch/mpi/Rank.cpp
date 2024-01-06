@@ -341,6 +341,75 @@ void tarch::mpi::Rank::reduce(
 
   logTraceOut( "reduce()" );
 }
+
+
+void tarch::mpi::Rank::allGather(
+  const void* sendbuf, int sendcount,
+  MPI_Datatype sendtype,
+  void* recvbuf, int recvcount,
+  MPI_Datatype recvtype,
+  std::function<void()> waitor
+) {
+  logTraceIn( "allGather()" );
+
+//  if (getNumberOfRanks()>1) {
+    MPI_Request* request = new MPI_Request();
+    MPI_Iallgather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, getCommunicator(), request);
+
+    tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+    tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    int flag                     = 0;
+    while (not flag) {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::Rank", "allGather()", -1, -1 );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::Rank", "allGather()", -1, -1 );
+
+      waitor();
+
+      // leads to deadlock/starve situations
+      //tarch::multicore::yield();
+      MPI_Test( request, &flag, MPI_STATUS_IGNORE );
+    }
+
+    delete request;
+//  }
+
+  logTraceOut( "allGather()" );
+}
+
+
+void tarch::mpi::Rank::gather(
+  const void* sendbuf, int sendcount,
+  MPI_Datatype sendtype,
+  void* recvbuf, int recvcount,
+  MPI_Datatype recvtype,
+  int root,
+  std::function<void()> waitor
+) {
+  logTraceIn( "gather()" );
+
+//  if (getNumberOfRanks()>1) {
+    MPI_Request* request = new MPI_Request();
+    MPI_Igather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, getCommunicator(), request);
+
+    tarch::mpi::Rank::getInstance().setDeadlockWarningTimeStamp();
+    tarch::mpi::Rank::getInstance().setDeadlockTimeOutTimeStamp();
+    int flag                     = 0;
+    while (not flag) {
+      tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::Rank", "gather()", -1, -1 );
+      tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::Rank", "gather()", -1, -1 );
+
+      waitor();
+
+      // leads to deadlock/starve situations
+      //tarch::multicore::yield();
+      MPI_Test( request, &flag, MPI_STATUS_IGNORE );
+    }
+
+    delete request;
+//  }
+
+  logTraceOut( "gather()" );
+}
 #endif
 
 

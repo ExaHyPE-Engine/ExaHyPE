@@ -304,7 +304,6 @@ class tarch::mpi::Rank {
       std::function<void()> waitor = []() -> void {}
     );
 
-
     /**
      * @see allReduce
      */
@@ -312,6 +311,29 @@ class tarch::mpi::Rank {
       const void *sendbuf, void *recvbuf, int count,
       MPI_Datatype datatype,
       MPI_Op op, int root,
+      std::function<void()> waitor = []() -> void {}
+    );
+
+    /**
+     * @see allReduce
+     */
+    void allGather(
+      const void* sendbuf, int sendcount,
+      MPI_Datatype sendtype,
+      void* recvbuf, int recvcount,
+      MPI_Datatype recvtype,
+      std::function<void()> waitor = []() -> void {}
+    );
+
+    /**
+     * @see allReduce
+     */
+    void gather(
+      const void* sendbuf, int sendcount,
+      MPI_Datatype sendtype,
+      void* recvbuf, int recvcount,
+      MPI_Datatype recvtype,
+      int root,
       std::function<void()> waitor = []() -> void {}
     );
     #endif
