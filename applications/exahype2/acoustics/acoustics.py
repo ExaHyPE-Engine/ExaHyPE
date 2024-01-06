@@ -64,7 +64,7 @@ def parse_arguments():
         "-s",
         "--solver",
         choices=available_solver_types.keys(),
-        required=True,
+        default="ADERDGRusanovGlobalAdaptive",
         help="|".join(available_solver_types.keys()),
     )
     parser.add_argument(
@@ -108,7 +108,7 @@ def parse_arguments():
         "--amr-levels",
         type=int,
         default=default_values["amr_levels"],
-        help="Number of AMR grid levels on top of max. size of a finite volume cell.",
+        help="Number of AMR grid levels on top of max. size of a cell.",
     )
     parser.add_argument(
         "-damr",
@@ -168,7 +168,7 @@ def parse_arguments():
         "--max-cell-size",
         type=float,
         default=default_values["cell_size"],
-        help="Maximum size of a single finite volume cell on each axis.",
+        help="Maximum size of a single cell on each axis.",
     )
     parser.add_argument(
         "-ps",
@@ -182,7 +182,7 @@ def parse_arguments():
         "--rk-order",
         type=int,
         default=default_values["rk_order"],
-        help="Order of time discretisation for Runge-Kutta scheme.",
+        help="Order of time discretisation for Runge-Kutta solvers.",
     )
     parser.add_argument(
         "-dg-order",
