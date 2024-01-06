@@ -7,9 +7,9 @@
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::acoustics {
-  static double maxEigenvalue() InlineMethod { return WAVE_SPEED; }
+  static inline double maxEigenvalue() InlineMethod { return WAVE_SPEED; }
 
-  static void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
+  static inline void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
 #ifdef GPUOffloadingOff
     assertion(normal >= 0);
     assertion(normal < Dimensions);
@@ -26,7 +26,7 @@ namespace applications::exahype2::acoustics {
     F[normal + 1] = (1.0 / RHO) * Q[0];
   }
 
-  static void sourceTerm(const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, double t, double* __restrict__ S) InlineMethod {
+  static inline void sourceTerm(const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, double t, double* __restrict__ S) InlineMethod {
     S[0] = 0.0;
     S[1] = 0.0;
     S[2] = 0.0;
