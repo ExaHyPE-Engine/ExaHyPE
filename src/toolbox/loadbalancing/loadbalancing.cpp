@@ -55,7 +55,7 @@ void toolbox::loadbalancing::dumpStatistics() {
     msg << ", Total=" << localSumOfUnrefinedCells << "/" << localSumOfRemoteUnrefinedCells << " (Local/Remote)";
   }
 
-  logInfo("dumpStatistics()", msg.str());
+  logDebug("dumpStatistics()", msg.str());
 
   int globalMinOfUnrefinedCells = std::numeric_limits<int>::max();
   int globalMaxOfUnrefinedCells = 0;
@@ -123,13 +123,13 @@ void toolbox::loadbalancing::dumpStatistics() {
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::stringstream msg;
-    msg << globalSumOfSpacetrees << " Global Tree(s):";
+    msg << globalSumOfSpacetrees << " Global Tree(s): ";
     if (globalSumOfRemoteUnrefinedCells > 0) {
       double granularity = static_cast<double>(globalSumOfUnrefinedCells) / static_cast<double>(globalSumOfRemoteUnrefinedCells);
-      msg << " Granularity=" << granularity;
+      msg << "Granularity=" << granularity;
       msg << ", ";
     }
-    msg << " Ratio=" << globalMinOfUnrefinedCells << "/" << globalMaxOfUnrefinedCells << " (Min/Max)";
+    msg << "Ratio=" << globalMinOfUnrefinedCells << "/" << globalMaxOfUnrefinedCells << " (Min/Max)";
     msg << ", Total=" << globalSumOfUnrefinedCells << "/" << globalSumOfRemoteUnrefinedCells << " (Local/Remote)";
     logInfo("dumpStatistics()", msg.str());
   }
