@@ -21,29 +21,118 @@ namespace {
 void toolbox::loadbalancing::dumpStatistics() {
   std::ostringstream msg;
 
-  int sumLocal  = 0;
-  int sumRemote = 0;
   std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
 
-  msg << idsOfLocalSpacetrees.size() << " tree(s): ";
+  int localMinOfUnrefinedCells = std::numeric_limits<int>::max();
+  int localMaxOfUnrefinedCells = 0;
+  int localSumOfUnrefinedCells  = 0;
+  int localSumOfRemoteUnrefinedCells = 0;
+  int localSumOfSpacetrees = idsOfLocalSpacetrees.size();
 
-  for (auto p: idsOfLocalSpacetrees) {
-    msg << "(#" << p << ":"
-        << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()
-		<< "/"
-		<< peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteUnrefinedCells()
-		<< ")";
-    sumLocal  += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
-    sumRemote += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteUnrefinedCells();
+  msg << localSumOfSpacetrees << " Local Tree(s): ";
+
+  for (const auto& p: idsOfLocalSpacetrees) {
+    msg << "(#" << p << ":";
+    msg << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
+    msg << "/";
+    msg << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteUnrefinedCells();
+    msg << ")";
+
+    localMinOfUnrefinedCells = std::min(localMinOfUnrefinedCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells());
+    localMaxOfUnrefinedCells = std::max(localMaxOfUnrefinedCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells());
+    localSumOfUnrefinedCells += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
+    localSumOfRemoteUnrefinedCells += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteUnrefinedCells();
   }
+
   if (idsOfLocalSpacetrees.empty()) {
-    msg << "no trees hosted on this node - therefore no load";
-  }
-  else {
-    msg << " total=" << sumLocal << "/" << sumRemote << " (local/remote)";
+    msg << "No trees hosted on this node - therefore no load.";
+  } else {
+    if (localSumOfRemoteUnrefinedCells > 0) {
+      double granularity = static_cast<double>(localSumOfUnrefinedCells) / static_cast<double>(localSumOfRemoteUnrefinedCells);
+      msg << ", Granularity=" << granularity; // Higher is better
+    }
+    msg << ", Ratio=" << localMinOfUnrefinedCells << "/" << localMaxOfUnrefinedCells << " (Min/Max)";
+    msg << ", Total=" << localSumOfUnrefinedCells << "/" << localSumOfRemoteUnrefinedCells << " (Local/Remote)";
   }
 
-  logInfo( "dumpStatistics()", msg.str() );
+  logInfo("dumpStatistics()", msg.str());
+
+  int globalMinOfUnrefinedCells = std::numeric_limits<int>::max();
+  int globalMaxOfUnrefinedCells = 0;
+  int globalSumOfUnrefinedCells  = 0;
+  int globalSumOfRemoteUnrefinedCells = 0;
+  int globalSumOfSpacetrees = 0;
+
+#ifdef Parallel
+  tarch::mpi::Rank::getInstance().reduce(
+    &localSumOfSpacetrees,
+    &globalSumOfSpacetrees,
+    1,
+    MPI_INT,
+    MPI_SUM,
+    tarch::mpi::Rank::getGlobalMasterRank(),
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+
+  tarch::mpi::Rank::getInstance().reduce(
+    &localSumOfUnrefinedCells,
+    &globalSumOfUnrefinedCells,
+    1,
+    MPI_INT,
+    MPI_SUM,
+    tarch::mpi::Rank::getGlobalMasterRank(),
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+
+  tarch::mpi::Rank::getInstance().reduce(
+    &localSumOfRemoteUnrefinedCells,
+    &globalSumOfRemoteUnrefinedCells,
+    1,
+    MPI_INT,
+    MPI_SUM,
+    tarch::mpi::Rank::getGlobalMasterRank(),
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+
+  tarch::mpi::Rank::getInstance().reduce(
+    &localMinOfUnrefinedCells,
+    &globalMinOfUnrefinedCells,
+    1,
+    MPI_INT,
+    MPI_MIN,
+    tarch::mpi::Rank::getGlobalMasterRank(),
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+
+  tarch::mpi::Rank::getInstance().reduce(
+    &localMaxOfUnrefinedCells,
+    &globalMaxOfUnrefinedCells,
+    1,
+    MPI_INT,
+    MPI_MAX,
+    tarch::mpi::Rank::getGlobalMasterRank(),
+    [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+  );
+#else
+  globalMinOfUnrefinedCells = localMinOfUnrefinedCells;
+  globalMaxOfUnrefinedCells = localMaxOfUnrefinedCells;
+  globalSumOfUnrefinedCells  = localSumOfUnrefinedCells;
+  globalSumOfRemoteUnrefinedCells = localSumOfRemoteUnrefinedCells;
+  globalSumOfSpacetrees = localSumOfSpacetrees;
+#endif
+
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    std::stringstream msg;
+    msg << globalSumOfSpacetrees << " Global Tree(s):";
+    if (globalSumOfRemoteUnrefinedCells > 0) {
+      double granularity = static_cast<double>(globalSumOfUnrefinedCells) / static_cast<double>(globalSumOfRemoteUnrefinedCells);
+      msg << " Granularity=" << granularity;
+      msg << ", ";
+    }
+    msg << " Ratio=" << globalMinOfUnrefinedCells << "/" << globalMaxOfUnrefinedCells << " (Min/Max)";
+    msg << ", Total=" << globalSumOfUnrefinedCells << "/" << globalSumOfRemoteUnrefinedCells << " (Local/Remote)";
+    logInfo("dumpStatistics()", msg.str());
+  }
 }
 
 
