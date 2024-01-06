@@ -29,7 +29,9 @@
  * typically expensive and slow down the code considerably.
  *
  */
-namespace tarch {}
+namespace tarch {
+  void dumpStatistics();
+} // namespace tarch
 
 /**
  * This is the marker that is to be used after the argument list of a
