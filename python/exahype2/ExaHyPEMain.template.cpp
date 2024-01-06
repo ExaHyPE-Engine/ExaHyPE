@@ -428,6 +428,12 @@ void step() {
     watch.stop();
     timeStepMeasurement.setValue(watch.getCalendarTime());
 
+    const double ticksPerSecond = double(1.0 / watch.getCalendarTime());
+    tpsMeasurement.setValue(ticksPerSecond);
+    if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      logInfo("step()", "TPS: " << std::fixed << std::setprecision(2) << ticksPerSecond);
+    }
+
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
     OTTER_POOL_POP(step_task, otter::label::step);
@@ -512,13 +518,7 @@ int main(int argc, char** argv) {
 
       if (isGlobalMaster) {
         while (selectNextAlgorithmicStep()) {
-          watch.start();
           step();
-          watch.stop();
-
-          const double ticksPerSecond = double(1.0 / watch.getCalendarTime());
-          tpsMeasurement.setValue(ticksPerSecond);
-          logInfo("main()", "TPS: " << std::fixed << std::setprecision(2) << ticksPerSecond);
         }
 
         logInfo("main()", "terminated successfully");
