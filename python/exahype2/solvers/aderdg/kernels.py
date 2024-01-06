@@ -840,24 +840,23 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(
 
 def create_start_time_step_implementation_for_fixed_time_stepping():
     """
-
     The outcome is used before we actually roll over the accumulation variables
     and other stuff.
-
     """
     return """
   if (
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    tarch::mpi::Rank::getInstance().isGlobalMaster()
     and
     _maxCellH>0.0
     and
     isLastGridSweepOfTimeStep()
   ) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t       = " << globalMinTimeStamp );
-    logInfo( "step()", "dt      = " << getTimeStepSize() );
-    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
-    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
+    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:");
+    logInfo("startTimeStep()", "Phase     " << toString(_solverState));
+    logInfo("startTimeStep()", "t       = " << globalMinTimeStamp);
+    logInfo("startTimeStep()", "dt      = " << getTimeStepSize());
+    logInfo("startTimeStep()", "h_{min} = " << _minCellHThisTimeStep);
+    logInfo("startTimeStep()", "h_{max} = " << _maxCellHThisTimeStep);
   }
 """
 
@@ -981,7 +980,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setError(double* err){
 
 def create_finish_time_step_implementation_for_error_measurement():
     return """
-
   if ( 
     _solverState==SolverState::Correction 
     and _minTimeStampThisTimeStep+getAdmissibleTimeStepSize()>=MinTerminalTime
@@ -1020,20 +1018,18 @@ def create_finish_time_step_implementation_for_error_measurement():
     );
     #endif
 
-
     if (
-      tarch::mpi::Rank::getInstance().isGlobalMaster() 
+      tarch::mpi::Rank::getInstance().isGlobalMaster()
       and
       _maxCellH>0.0
     ) {
-      logInfo( "FinalTimeStep()", "Solver {{SOLVER_NAME}}:" );
-      logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
-      logInfo( "FinalTimeStep()", "l1_error     = " << _errors[0] );
-      logInfo( "FinalTimeStep()", "l2_error     = " << _errors[1] );
-      logInfo( "FinalTimeStep()", "linf_error   = " << _errors[2] );
-      logInfo( "FinalTimeStep(...)", "phase " + toString(_solverState) );
+      logInfo("finishTimeStep()", "Solver {{SOLVER_NAME}}:");
+      logInfo("finishTimeStep()", "Phase          " << toString(_solverState));
+      logInfo("finishTimeStep()", "t            = " << _minTimeStampThisTimeStep);
+      logInfo("finishTimeStep()", "l1_error     = " << _errors[0]);
+      logInfo("finishTimeStep()", "l2_error     = " << _errors[1]);
+      logInfo("finishTimeStep()", "linf_error   = " << _errors[2]);
     }
-
   }
 """
 

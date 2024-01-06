@@ -30,10 +30,8 @@ def create_compute_time_step_size_for_fixed_time_stepping(_time_step_size):
 
 def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_tasking):
     """
-
     The outcome is used before we actually roll over the accumulation variables
     and other stuff.
-
     """
     predicate = """
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
@@ -49,11 +47,12 @@ def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_ta
   if ("""
         + predicate
         + """) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
-    logInfo( "step()", "dt      = " << getTimeStepSize() );
-    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep << " (volume size)");
-    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep<< " (volume size)" );
+    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:");
+    logInfo("startTimeStep()", "Phase     " << toString(_solverState));
+    logInfo("startTimeStep()", "t       = " << _minTimeStampThisTimeStep);
+    logInfo("startTimeStep()", "dt      = " << getTimeStepSize());
+    logInfo("startTimeStep()", "h_{min} = " << _minCellHThisTimeStep << " (volume size)");
+    logInfo("startTimeStep()", "h_{max} = " << _maxCellHThisTimeStep << " (volume size)");
   }
 """
     )
@@ -156,12 +155,13 @@ def create_start_time_step_implementation_for_adaptive_time_stepping():
   if ("""
         + predicate
         + """) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "startTimeStep()", "t            = " << _minTimeStamp );
-    logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
-    logInfo( "startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep << " (volume size)");
-    logInfo( "startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep << " (volume size)" );
-    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
+    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:" );
+    logInfo("startTimeStep()", "Phase          " << toString(_solverState));
+    logInfo("startTimeStep()", "t            = " << _minTimeStamp);
+    logInfo("startTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
+    logInfo("startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep << " (volume size)");
+    logInfo("startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep << " (volume size)");
+    logInfo("startTimeStep()", "lambda_{max} = " << _maxEigenvalue);
   }
 """
     )
