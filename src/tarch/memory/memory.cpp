@@ -5,6 +5,7 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/logging/Log.h"
 #include "tarch/memory/MemoryManager.h"
+#include "tarch/mpi/Rank.h"
 
 #if defined(CompilerHasProcStat)
 #include <unistd.h>
@@ -145,5 +146,7 @@ void tarch::memory::dumpStatistics() {
   msg << "System: " << getTotalMemory(MemoryUsageFormat::GByte) << "/" << getFreeMemory(MemoryUsageFormat::GByte) << "/" << getMemoryUsage(MemoryUsageFormat::GByte);
   msg << " GB (Total/Free/Used)";
 
-  logInfo("dumpStatistics()", msg.str());
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("dumpStatistics()", msg.str());
+  }
 }
