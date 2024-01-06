@@ -119,6 +119,12 @@ class ExplicitEulerFixedSearchRadius(Particle):
         pass
 
     def __setup_algorithm_steps(self):
+        """!
+        
+        Create a repository of algorithmic steps which are then 
+        ordered into the actual time stepping sequence.
+        
+        """
         self._algorithm_steps = {
             "ForceCalculation":
             AlgorithmStep(
