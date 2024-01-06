@@ -59,7 +59,6 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="ExaHyPE 2 - Acoustics Application Script"
     )
-
     parser.add_argument(
         "-s",
         "--solver",

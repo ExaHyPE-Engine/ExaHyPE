@@ -13,13 +13,15 @@ import exahype2
 default_values = {
     "dimensions": 2,
     "cell_size": 0.1,
-    "amr_levels": 2,
+    "amr_levels": 6,
     "patch_size": 4,
     "rk_order": 2,
     "dg_order": 5,
     "end_time": 3.0,
     "plot_interval": 0.1,
     "advection_speed": 1.0,
+    "domain_size": [1.0, 1.0, 1.0],
+    "domain_offset": [0.0, 0.0, 0.0],
 }
 
 # Define solver types and their corresponding classes
@@ -356,8 +358,8 @@ def setup_project(args, solver):
 
     project.set_global_simulation_parameters(
         dimensions=args.dim,
-        size=[1.0, 1.0, 1.0][: args.dim],
-        offset=[0.0, 0.0, 0.0][: args.dim],
+        size=default_values["domain_size"][0 : args.dim],
+        offset=default_values["domain_offset"][0 : args.dim],
         min_end_time=args.end_time,
         max_end_time=args.end_time,
         first_plot_time_stamp=0.0,
