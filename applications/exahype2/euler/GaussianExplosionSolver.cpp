@@ -6,7 +6,6 @@ tarch::logging::Log applications::exahype2::euler::GaussianExplosionSolver::_log
 
 using Vars = applications::exahype2::euler::VariableShortcuts;
 
-static constexpr double CIRCLE_RADIUS = 0.2;
 #if Dimensions == 3
 // Manual offset to make the wave originate slightly to the left of the center --- helps
 // to detect if wave is moving to the left or right.
@@ -20,7 +19,7 @@ void applications::exahype2::euler::GaussianExplosionSolver::initialCondition(
   double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>&, const tarch::la::Vector<Dimensions, int>&, bool
 ) {
   const double peakDeviation = MaxAdmissibleCellH;
-  double       distance      = tarch::la::norm2(x - circleCentre);
+  double       distance      = tarch::la::norm2(x - CIRCLE_CENTER);
   double       exponent      = -(distance * distance) / 2.0 / peakDeviation / peakDeviation;
 
   Q[Vars::rho] = 0.1;
@@ -48,6 +47,8 @@ void applications::exahype2::euler::GaussianExplosionSolver::boundaryConditions(
 ::exahype2::RefinementCommand applications::exahype2::euler::GaussianExplosionSolver::refinementCriterion(
   const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t
 ) {
+  auto result = ::exahype2::RefinementCommand::Keep;
+
   if (tarch::la::equals(t, 0.0)) {
     if (tarch::la::norm2(x - CIRCLE_CENTER) < MaxAdmissibleCellH) {
       result = ::exahype2::RefinementCommand::Refine;
