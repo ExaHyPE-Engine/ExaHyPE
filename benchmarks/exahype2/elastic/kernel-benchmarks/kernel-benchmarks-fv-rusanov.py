@@ -151,7 +151,19 @@ my_project = exahype2.Project(
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
     name="FVRusanovSolver",
     patch_size=args.patch_size,
-    unknowns={"v": args.dim, "sigma": 3},
+    unknowns={
+        "vx": 1,
+        "vy": 1,
+        "vz": 1,
+        "sxx": 1,
+        "syy": 1,
+        "szz": 1,
+        "sxy": 1,
+        "sxz": 1,
+        "xyz": 1,
+    }
+    if args.dim == 3
+    else {"vx": 1, "vy": 1, "sxx": 1, "syy": 1, "sxy": 1},
     auxiliary_variables=0,
     min_volume_h=0.001,  # max_cell_size -> arbitrary value
     max_volume_h=0.001,  # min_cell_size -> arbitrary value
@@ -162,16 +174,16 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 my_solver.set_implementation(
     initial_conditions="",
     boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
-    flux="::applications::exahype2::elasticwave::flux(Q, normal, F);",
-    eigenvalues="return ::applications::exahype2::elasticwave::maxEigenvalue();",
+    flux="::applications::exahype2::elastic::flux(Q, x, h, t, dt, normal, F);",
+    eigenvalues="return ::applications::exahype2::elastic::maxEigenvalue(Q, x, h, t, dt, normal);",
     refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
-    source_term="::applications::exahype2::elasticwave::sourceTerm(Q, volumeCentre, t, S);",
+    source_term="::applications::exahype2::elastic::sourceTerm(Q, x, h, t, dt, S);",
     ncp="",
 )
 
 my_solver.add_user_solver_includes(
     """
-#include "../../../../applications/exahype2/elastic-wave/ElasticWaveKernels.h"
+#include "../../../../applications/exahype2/elastic/ElasticWaveKernels.h"
 """
 )
 
@@ -212,9 +224,7 @@ else:
 
 my_project.constants.export_boolean("EvaluateFlux", True)
 my_project.constants.export_boolean("EvaluateNonconservativeProduct", False)
-my_project.constants.export_boolean(
-    "EvaluateSource", False
-)  # TODO: Should be set to True once the correctness has been validated.
+my_project.constants.export_boolean("EvaluateSource", False)
 my_project.constants.export_boolean(
     "EvaluateMaximumEigenvalueAfterTimeStep", True if args.eval_eig else False
 )  # Reduction
@@ -233,6 +243,13 @@ else:
 my_project.constants.define_value("RHO", str(1.0))
 my_project.constants.define_value("P_WAVE_SPEED", str(1.0))
 my_project.constants.define_value("S_WAVE_SPEED", str(1.0))
+my_project.constants.define_value("SOURCE_t0", str(1.0))
+my_project.constants.define_value("SOURCE_M0", str(1.0))
+my_project.constants.define_value("SOURCE_RADIUS", str(1.0))
+if args.dim == 2:
+    my_project.constants.define_value("SOURCE_LOCATION", "tarch::la::Vector<2, double>({0.5, 0.5})")
+else:
+    my_project.constants.define_value("SOURCE_LOCATION", "tarch::la::Vector<3, double>({0.5, 0.5, 0.5})")
 
 os.system(
     "cp {} KernelBenchmarksFVRusanov-main.cpp".format(
@@ -243,9 +260,3 @@ os.system(
 my_project.build(
     make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True
 )
-
-print("Executable is ", executable_name)
-print("Clean object files via 'make clean'")
-print("Recompile the generated code via 'make -j'")
-print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 kernel-benchmarks-fv-rusanov.py' again")
