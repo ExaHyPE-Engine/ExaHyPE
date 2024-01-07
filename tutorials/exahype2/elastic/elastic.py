@@ -283,8 +283,8 @@ my_project.build(make=use_make, make_clean_first=True, throw_away_data_after_bui
 
 print("\nPDE is: ")
 print(my_pde.__str__())
-print("Executable is elastic-wave-" + str(dimensions) + "d")
+print("Executable is elastic-" + str(dimensions) + "d")
 print("Clean object files via 'make clean'")
 print("(Re)compile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 elastic-wave.py' again")
+print("Regenerate all code by running 'python3 elastic.py' again")

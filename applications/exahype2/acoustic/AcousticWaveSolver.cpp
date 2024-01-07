@@ -2,12 +2,12 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "AcousticWaveSolver.h"
 
-tarch::logging::Log applications::exahype2::acoustics::AcousticWaveSolver::_log("applications::exahype2::acoustics::AcousticWaveSolver");
+tarch::logging::Log applications::exahype2::acoustic::AcousticWaveSolver::_log("applications::exahype2::acoustic::AcousticWaveSolver");
 
-using Vars = applications::exahype2::acoustics::VariableShortcuts;
+using Vars = applications::exahype2::acoustic::VariableShortcuts;
 
 
-void applications::exahype2::acoustics::AcousticWaveSolver::initialCondition(
+void applications::exahype2::acoustic::AcousticWaveSolver::initialCondition(
   double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>&, const tarch::la::Vector<Dimensions, double>&, const tarch::la::Vector<Dimensions, int>&, bool
 ) {
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
@@ -16,7 +16,7 @@ void applications::exahype2::acoustics::AcousticWaveSolver::initialCondition(
 }
 
 
-void applications::exahype2::acoustics::AcousticWaveSolver::boundaryConditions(
+void applications::exahype2::acoustic::AcousticWaveSolver::boundaryConditions(
   const double* __restrict__, double* __restrict__ Qoutside, const tarch::la::Vector<Dimensions, double>&, const tarch::la::Vector<Dimensions, double>&, double, int
 ) {
   for (int i = 0; i < NumberOfUnknowns + NumberOfAuxiliaryVariables; i++) {
@@ -26,7 +26,7 @@ void applications::exahype2::acoustics::AcousticWaveSolver::boundaryConditions(
 
 
 #ifdef USE_POINT_SOURCES
-void applications::exahype2::acoustics::AcousticWaveSolver::pointSource(
+void applications::exahype2::acoustic::AcousticWaveSolver::pointSource(
   const double* const Q, const double* const x, const double t, const double dt, double* const forceVector, int n
 ) {
   for (int i = 0; i < NumberOfUnknowns; i++) {
@@ -37,7 +37,7 @@ void applications::exahype2::acoustics::AcousticWaveSolver::pointSource(
 }
 
 
-void applications::exahype2::acoustics::AcousticWaveSolver::initPointSourceLocations(double sourceLocations[NumberOfPointSources][Dimensions]) {
+void applications::exahype2::acoustic::AcousticWaveSolver::initPointSourceLocations(double sourceLocations[NumberOfPointSources][Dimensions]) {
   sourceLocations[0][0] = SOURCE_LOCATION(0);
   sourceLocations[0][1] = SOURCE_LOCATION(1);
   sourceLocations[0][2] = SOURCE_LOCATION(2);
@@ -45,7 +45,7 @@ void applications::exahype2::acoustics::AcousticWaveSolver::initPointSourceLocat
 #endif
 
 
-::exahype2::RefinementCommand applications::exahype2::acoustics::AcousticWaveSolver::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::acoustic::AcousticWaveSolver::refinementCriterion(
   const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t
 ) {
   auto result = ::exahype2::RefinementCommand::Keep;

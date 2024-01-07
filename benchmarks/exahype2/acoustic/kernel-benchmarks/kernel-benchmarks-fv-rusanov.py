@@ -162,16 +162,16 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 my_solver.set_implementation(
     initial_conditions="",
     boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
-    flux="::applications::exahype2::acoustics::flux(Q, normal, F);",
-    eigenvalues="return ::applications::exahype2::acoustics::maxEigenvalue();",
+    flux="::applications::exahype2::acoustic::flux(Q, x, h, t, dt, normal, F);",
+    eigenvalues="return ::applications::exahype2::acoustic::maxEigenvalue(Q, x, h, t, dt, normal);",
     refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
-    source_term="::applications::exahype2::acoustics::sourceTerm(Q, x, t, S);",
+    source_term="::applications::exahype2::acoustic::sourceTerm(Q, x, h, t, dt, S);",
     ncp="",
 )
 
 my_solver.add_user_solver_includes(
     """
-#include "../../../../applications/exahype2/acoustics/AcousticWaveKernels.h"
+#include "../../../../applications/exahype2/acoustic/AcousticWaveKernels.h"
 """
 )
 
@@ -179,7 +179,7 @@ my_project.add_solver(my_solver)
 
 my_project.set_global_simulation_parameters(
     dimensions=args.dim,
-    size=[10.0, 10.0, 10.0][0 : args.dim],
+    size=[1.0, 1.0, 1.0][0 : args.dim],
     offset=[0.0, 0.0, 0.0][0 : args.dim],
     min_end_time=0.1,
     max_end_time=0.1,
@@ -235,9 +235,9 @@ my_project.constants.define_value("SOURCE_t0", str(1.0))
 my_project.constants.define_value("SOURCE_M0", str(1.0))
 my_project.constants.define_value("SOURCE_RADIUS", str(1.0))
 if args.dim == 2:
-    my_project.constants.define_value("SOURCE_LOCATION", "tarch::la::Vector<2, double>({5, 5})")
+    my_project.constants.define_value("SOURCE_LOCATION", "tarch::la::Vector<2, double>({0.5, 0.5})")
 else:
-    my_project.constants.define_value("SOURCE_LOCATION", "tarch::la::Vector<3, double>({5, 5, 5})")
+    my_project.constants.define_value("SOURCE_LOCATION", "tarch::la::Vector<3, double>({0.5, 0.5, 0.5})")
 
 os.system(
     "cp {} KernelBenchmarksFVRusanov-main.cpp".format(

@@ -5,11 +5,25 @@
 #include "Constants.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
+#include "VariableShortcuts.h"
 
 namespace applications::exahype2::advection {
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double maxEigenvalue() InlineMethod { return ADVECTION_SPEED; }
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double maxEigenvalue(
+    const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t, double dt, int normal
+  ) InlineMethod {
+    return ADVECTION_SPEED;
+  }
 
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
+
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void flux(
+    const double* __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double* __restrict__ F
+  ) InlineMethod {
 #ifdef GPUOffloadingOff
     assertion(normal >= 0);
     assertion(normal < Dimensions);

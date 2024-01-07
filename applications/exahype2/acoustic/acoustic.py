@@ -27,7 +27,7 @@ default_values = {
     # If set to false, an algebraic source is used instead.
     "use_point_sources": True,
     "source_location": [5, 5, 5],
-    "source_radius": 1.0,  # For algebraic source
+    "source_radius": 1.0,  # For algebraic source and AMR
     "domain_size": [10.0, 10.0, 10.0],
     "domain_offset": [0.0, 0.0, 0.0],
 }
@@ -57,7 +57,7 @@ def main():
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="ExaHyPE 2 - Acoustics Application Script"
+        description="ExaHyPE 2 - Acoustic Application Script"
     )
     parser.add_argument(
         "-s",
@@ -279,7 +279,9 @@ def parse_arguments():
 def setup_solver(args):
     solver_params = {
         "name": "AcousticWaveSolver",
-        "unknowns": {"p": 1, "u": 1, "v": 1, "w": 1} if args.dim == 3 else {"p": 1, "u": 1, "v": 1},
+        "unknowns": {"p": 1, "u": 1, "v": 1, "w": 1}
+        if args.dim == 3
+        else {"p": 1, "u": 1, "v": 1},
         "auxiliary_variables": 0,
     }
 
@@ -343,8 +345,8 @@ def setup_solver(args):
     implementation_params = {
         "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
         "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
-        "flux": "::applications::exahype2::acoustics::flux(Q, normal, F);",
-        "eigenvalues": "return ::applications::exahype2::acoustics::maxEigenvalue();",
+        "flux": "::applications::exahype2::acoustic::flux(Q, x, h, t, dt, normal, F);",
+        "eigenvalues": "return ::applications::exahype2::acoustic::maxEigenvalue(Q, x, h, t, dt, normal);",
         "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
         "ncp": exahype2.solvers.PDETerms.None_Implementation,
     }
@@ -353,7 +355,7 @@ def setup_solver(args):
     else:
         implementation_params.update(
             {
-                "source_term": "::applications::exahype2::acoustics::sourceTerm(Q, x, t, S);"
+                "source_term": "::applications::exahype2::acoustic::sourceTerm(Q, x, h, t, dt, S);"
             }
         )
     solver.set_implementation(**implementation_params)
@@ -368,10 +370,10 @@ def setup_solver(args):
 
 def setup_project(args, solver):
     project = exahype2.Project(
-        namespace=["applications", "exahype2", "acoustics"],
-        project_name="Acoustics",
+        namespace=["applications", "exahype2", "acoustic"],
+        project_name="Acoustic",
         directory=".",
-        executable=f"acoustics-{args.dim}d-{args.solver}{'-Stateless' if args.stateless else ''}-{args.build_mode}",
+        executable=f"acoustic-{args.dim}d-{args.solver}{'-Stateless' if args.stateless else ''}-{args.build_mode}",
     )
 
     project.add_solver(solver)
@@ -433,12 +435,24 @@ def setup_project(args, solver):
     if args.fpe:
         project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
-    project.constants.export_constexpr_with_type("RHO", str(default_values["rho"]), "double")
-    project.constants.export_constexpr_with_type("WAVE_SPEED", str(default_values["wave_speed"]), "double")
-    project.constants.export_constexpr_with_type("SIGMA", str(default_values["sigma"]), "double")
-    project.constants.export_constexpr_with_type("SOURCE_t0", str(default_values["t0"]), "double")
-    project.constants.export_constexpr_with_type("SOURCE_M0", str(default_values["M0"]), "double")
-    project.constants.export_constexpr_with_type("SOURCE_RADIUS", str(default_values["source_radius"]), "double")
+    project.constants.export_constexpr_with_type(
+        "RHO", str(default_values["rho"]), "double"
+    )
+    project.constants.export_constexpr_with_type(
+        "WAVE_SPEED", str(default_values["wave_speed"]), "double"
+    )
+    project.constants.export_constexpr_with_type(
+        "SIGMA", str(default_values["sigma"]), "double"
+    )
+    project.constants.export_constexpr_with_type(
+        "SOURCE_t0", str(default_values["t0"]), "double"
+    )
+    project.constants.export_constexpr_with_type(
+        "SOURCE_M0", str(default_values["M0"]), "double"
+    )
+    project.constants.export_constexpr_with_type(
+        "SOURCE_RADIUS", str(default_values["source_radius"]), "double"
+    )
     if args.point_sources:
         project.constants.define("USE_POINT_SOURCES")
     project.constants.export_boolean("USE_DYNAMIC_AMR", args.dynamic_amr)

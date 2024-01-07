@@ -162,8 +162,8 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 my_solver.set_implementation(
     initial_conditions="",
     boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
-    flux="::applications::exahype2::euler::flux(Q, normal, F);",
-    eigenvalues="return ::applications::exahype2::euler::maxEigenvalue(Q, normal);",
+    flux="::applications::exahype2::euler::flux(Q, x, h, t, dt, normal, F);",
+    eigenvalues="return ::applications::exahype2::euler::maxEigenvalue(Q, x, h, t, dt, normal);",
     refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
     # There is a bug in the code generator: When set to 'None_Implementation', an offloadable function is still generated, also 'Empty_Implementation' does not work.
     # TODO: What is the difference between 'None_Implementation' and 'Empty_Implementation'?

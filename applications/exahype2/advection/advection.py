@@ -327,8 +327,8 @@ def setup_solver(args):
     solver.set_implementation(
         initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
         boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-        flux="::applications::exahype2::advection::flux(Q, normal, F);",
-        eigenvalues="return ::applications::exahype2::advection::maxEigenvalue();",
+        flux="::applications::exahype2::advection::flux(Q, x, h, t, dt, normal, F);",
+        eigenvalues="return ::applications::exahype2::advection::maxEigenvalue(Q, x, h, t, dt, normal);",
         refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
         source_term=exahype2.solvers.PDETerms.None_Implementation,
         ncp=exahype2.solvers.PDETerms.None_Implementation,

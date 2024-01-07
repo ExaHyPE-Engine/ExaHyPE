@@ -162,8 +162,8 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 my_solver.set_implementation(
     initial_conditions="",
     boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
-    flux="::applications::exahype2::advection::flux(Q, normal, F);",
-    eigenvalues="return ::applications::exahype2::advection::maxEigenvalue();",
+    flux="::applications::exahype2::advection::flux(Q, x, h, t, dt, normal, F);",
+    eigenvalues="return ::applications::exahype2::advection::maxEigenvalue(Q, x, h, t, dt, normal);",
     refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
     source_term="",
     ncp="",

@@ -278,7 +278,9 @@ def parse_arguments():
 def setup_solver(args):
     solver_params = {
         "name": f"{args.scenario}Solver",
-        "unknowns": {"rho": 1, "u": 1, "v": 1, "w": 1, "e": 1} if args.dim == 3 else {"rho": 1, "u": 1, "v": 1, "e": 1},
+        "unknowns": {"rho": 1, "u": 1, "v": 1, "w": 1, "e": 1}
+        if args.dim == 3
+        else {"rho": 1, "u": 1, "v": 1, "e": 1},
         "auxiliary_variables": 0,
     }
 
@@ -340,8 +342,8 @@ def setup_solver(args):
     solver.set_implementation(
         initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
         boundary_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
-        flux="::applications::exahype2::euler::flux(Q, normal, F);",
-        eigenvalues="return ::applications::exahype2::euler::maxEigenvalue(Q, normal);",
+        flux="::applications::exahype2::euler::flux(Q, x, h, t, dt, normal, F);",
+        eigenvalues="return ::applications::exahype2::euler::maxEigenvalue(Q, x, h, t, dt, normal);",
         refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
         source_term=exahype2.solvers.PDETerms.None_Implementation,
         ncp=exahype2.solvers.PDETerms.None_Implementation,

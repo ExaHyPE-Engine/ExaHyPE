@@ -8,7 +8,9 @@
 #include "VariableShortcuts.h"
 
 namespace applications::exahype2::euler {
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double maxEigenvalue(const double* __restrict__ Q, int normal) InlineMethod {
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double maxEigenvalue(
+    const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t, double dt, int normal
+  ) InlineMethod {
 #ifdef GPUOffloadingOff
     assertion(normal >= 0);
     assertion(normal < Dimensions);
@@ -17,7 +19,7 @@ namespace applications::exahype2::euler {
 #endif
 
     const double irho = 1.0 / std::abs(Q[VARS_rho]);
-    const double p = (GAMMA - 1) * (Q[VARS_e] - 0.5 * irho * (Q[VARS_u] * Q[VARS_u] + Q[VARS_v] * Q[VARS_v]
+    const double p = (GAMMA - 1.0) * (Q[VARS_e] - 0.5 * irho * (Q[VARS_u] * Q[VARS_u] + Q[VARS_v] * Q[VARS_v]
 #if Dimensions == 3
       + Q[VARS_w] * Q[VARS_w]
 #endif
@@ -38,7 +40,16 @@ namespace applications::exahype2::euler {
     return result;
   }
 
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
+
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void flux(
+    const double* __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double* __restrict__ F
+  ) InlineMethod {
 #ifdef GPUOffloadingOff
     assertion(normal >= 0);
     assertion(normal < Dimensions);
@@ -60,8 +71,8 @@ namespace applications::exahype2::euler {
     const double coeff = irho * Q[normal + 1];
 
     F[VARS_rho] = coeff * Q[VARS_rho];
-    F[VARS_u] = coeff * Q[VARS_u];
-    F[VARS_v] = coeff * Q[VARS_v];
+    F[VARS_u]   = coeff * Q[VARS_u];
+    F[VARS_v]   = coeff * Q[VARS_v];
 #if Dimensions == 3
     F[VARS_w] = coeff * Q[VARS_w];
     F[VARS_e] = coeff * Q[VARS_e] + coeff * p;

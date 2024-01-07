@@ -58,7 +58,7 @@ exahype2-applications-cmake-llvm:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      application: [acoustics, euler, elastic-wave]
+      application: [acoustic, euler, elastic]
       solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd build/applications/exahype2/$application; python3 $application.py -s $solver_type -d $dimensions -m $build_type --no-make"
@@ -74,7 +74,7 @@ exahype2-benchmarks-cmake-llvm:
     - job: build-cmake-llvm
   parallel:
     matrix:
-    - benchmark: [euler, acoustic-wave, elastic-wave, advection]
+    - benchmark: [euler, acoustic, elastic, advection]
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$benchmark/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -s 1 -e -fpe -m Release --no-make"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LLVM_IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$benchmark/kernel-benchmarks; make -j $(nproc --all)"
