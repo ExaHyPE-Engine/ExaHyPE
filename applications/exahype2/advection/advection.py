@@ -265,11 +265,7 @@ def parse_arguments():
 def setup_solver(args):
     solver_params = {
         "name": "AdvectionSolver",
-        "unknowns": {"u": 1, "v": 1, "w": 1}
-        if args.dim == 3
-        else {"u": 1, "v": 1}
-        if args.dim == 2
-        else None,
+        "unknowns": {"u": 1, "v": 1, "w": 1} if args.dim == 3 else {"u": 1, "v": 1},
         "auxiliary_variables": 0,
     }
 

@@ -151,7 +151,7 @@ my_project = exahype2.Project(
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
     name="FVRusanovSolver",
     patch_size=args.patch_size,
-    unknowns={"p": 1, "v": args.dim},
+    unknowns={"p": 1, "u": 1, "v": 1, "w": 1} if args.dim == 3 else {"p": 1, "u": 1, "v": 1},
     auxiliary_variables=0,
     min_volume_h=0.001,  # max_cell_size -> arbitrary value
     max_volume_h=0.001,  # min_cell_size -> arbitrary value

@@ -279,11 +279,7 @@ def parse_arguments():
 def setup_solver(args):
     solver_params = {
         "name": "AcousticWaveSolver",
-        "unknowns": {"p": 1, "u": 1, "v": 1, "w": 1}
-        if args.dim == 3
-        else {"p": 1, "u": 1, "v": 1}
-        if args.dim == 2
-        else None,
+        "unknowns": {"p": 1, "u": 1, "v": 1, "w": 1} if args.dim == 3 else {"p": 1, "u": 1, "v": 1},
         "auxiliary_variables": 0,
     }
 

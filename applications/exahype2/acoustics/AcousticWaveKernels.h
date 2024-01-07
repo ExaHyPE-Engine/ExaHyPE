@@ -17,11 +17,11 @@ namespace applications::exahype2::acoustics {
 
     static constexpr double K0 = RHO * WAVE_SPEED * WAVE_SPEED;
 
-    F[0] = K0 * Q[normal + 1];
-    F[1] = 0.0;
-    F[2] = 0.0;
+    F[VARS_p] = K0 * Q[normal + 1];
+    F[VARS_u] = 0.0;
+    F[VARS_v] = 0.0;
 #if Dimensions == 3
-    F[3] = 0.0;
+    F[VARS_w] = 0.0;
 #endif
     F[normal + 1] = (1.0 / RHO) * Q[0];
   }
@@ -29,15 +29,15 @@ namespace applications::exahype2::acoustics {
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void sourceTerm(
     const double* __restrict__ Q, const tarch::la::Vector<Dimensions, double>& x, double t, double* __restrict__ S
   ) InlineMethod {
-    S[0] = 0.0;
-    S[1] = 0.0;
-    S[2] = 0.0;
+    S[VARS_p] = 0.0;
+    S[VARS_u] = 0.0;
+    S[VARS_v] = 0.0;
 #if Dimensions == 3
-    S[3] = 0.0;
+    S[VARS_w] = 0.0;
 #endif
 
     if (tarch::la::norm2(x - SOURCE_LOCATION) < SOURCE_RADIUS) {
-      S[0] = SOURCE_M0 * std::exp(-((t - SOURCE_t0) * (t - SOURCE_t0)) / (2.0 * SIGMA * SIGMA));
+      S[VARS_p] = SOURCE_M0 * std::exp(-((t - SOURCE_t0) * (t - SOURCE_t0)) / (2.0 * SIGMA * SIGMA));
     }
   }
 } // namespace applications::exahype2::acoustics

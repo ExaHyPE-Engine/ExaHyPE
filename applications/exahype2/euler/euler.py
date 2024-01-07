@@ -278,11 +278,7 @@ def parse_arguments():
 def setup_solver(args):
     solver_params = {
         "name": f"{args.scenario}Solver",
-        "unknowns": {"rho": 1, "u": 1, "v": 1, "w": 1, "e": 1}
-        if args.dim == 3
-        else {"rho": 1, "u": 1, "v": 1, "e": 1}
-        if args.dim == 2
-        else None,
+        "unknowns": {"rho": 1, "u": 1, "v": 1, "w": 1, "e": 1} if args.dim == 3 else {"rho": 1, "u": 1, "v": 1, "e": 1},
         "auxiliary_variables": 0,
     }
 

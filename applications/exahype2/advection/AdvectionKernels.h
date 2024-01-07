@@ -15,10 +15,10 @@ namespace applications::exahype2::advection {
     assertion(normal < Dimensions);
 #endif
 
-    F[0] = 0.0;
-    F[1] = 0.0;
+    F[VARS_u] = 0.0;
+    F[VARS_v] = 0.0;
 #if Dimensions == 3
-    F[2] = 0.0;
+    F[VARS_w] = 0.0;
 #endif
 
     F[normal] = Q[normal];
