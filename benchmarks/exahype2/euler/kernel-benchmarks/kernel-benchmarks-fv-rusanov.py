@@ -237,9 +237,3 @@ my_project.constants.define_value("GAMMA", str(1.0))
 my_project.build(
     make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True
 )
-
-print("Executable is ", executable_name)
-print("Clean object files via 'make clean'")
-print("Recompile the generated code via 'make -j'")
-print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 kernel-benchmarks-fv-rusanov.py' again")
