@@ -221,6 +221,9 @@ void startPlottingStep(
 
 
 void finishTimeStep() {
+  ::tarch::dumpStatistics();
+  ::tarch::memory::dumpStatistics();
+
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishTimeStep();
   {# Comment to ensure that jinja2 adds a new line#}
@@ -234,13 +237,10 @@ void finishTimeStep() {
   ::exahype2::RefinementControlService::getInstance().finishStep();
   loadBalancer.finishStep();
 
-  ::tarch::dumpStatistics();
-  ::tarch::memory::dumpStatistics();
-
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
-  logTraceOut( "TimeStep()" );
+  logTraceOut("TimeStep()");
 }
 
 
