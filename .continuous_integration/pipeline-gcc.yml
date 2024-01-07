@@ -44,7 +44,7 @@ exahype2-tutorials-gcc:
     - job: build-gcc
   parallel:
     matrix:
-    - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
+    - tutorial: [euler, acoustic, elastic-wave, advection, swe]
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< "cd tutorials/exahype2/$tutorial; python3 $tutorial.py"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${GCC_IMAGE_TAG} bash <<< "cd tutorials/exahype2/$tutorial; make -j $(nproc --all)"

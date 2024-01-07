@@ -45,8 +45,8 @@ end_time = 1
 #
 # Choose domain size and offset.
 #
-size = [20.0, 20.0, 20.0]
-offset = [-5.0, 0.0, 0.0]
+size = [10.0, 10.0, 10.0]
+offset = [0.0, 0.0, 0.0]
 
 #
 # If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
@@ -75,10 +75,10 @@ compile_mode = peano4.output.CompileMode.Release
 # We amend the executable name by the space dimensions.
 #
 my_project = exahype2.Project(
-    namespace=["tutorials", "exahype2", "elasticwave"],
-    project_name="ElasticWaveTutorial",
+    namespace=["tutorials", "exahype2", "acoustic"],
+    project_name="AcousticTutorial",
     directory=".",
-    executable="elastic-wave-" + str(dimensions) + "d",
+    executable="acoustic-" + str(dimensions) + "d",
 )
 
 #
@@ -88,9 +88,9 @@ my_project = exahype2.Project(
 # Rusanov is the type of flux that is used to solve the Riemann problem at boundaries between cells.
 #
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-    name="ElasticWaveSolver",
+    name="AcousticWaveSolver",
     patch_size=patch_size,
-    unknowns=dimensions + 3,  # [u, v, sxx, syy, sxy]
+    unknowns=dimensions + 1,  # [p, u, v, (w)]
     auxiliary_variables=0,
     min_volume_h=volume_size,
     max_volume_h=volume_size,
@@ -102,44 +102,56 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
 # For this we use the 'symhype' package (not to be confused with 'sympy') from 'ExaHyPE'.
 #
 my_pde = exahype2.symhype.FirstOrderConservativePDEFormulation(
-    unknowns=dimensions + 3, auxiliary_variables=0, dimensions=dimensions
+    unknowns=dimensions + 1, auxiliary_variables=0, dimensions=dimensions
 )
-v = my_pde.name_Q_entries(0, dimensions, "v")
-sigma = my_pde.name_Q_entries(dimensions, 3, "sigma")
+p = my_pde.name_Q_entry(0, "p")
+v = my_pde.name_Q_entries(1, dimensions, "v")
 
 rho = sympy.symbols("rho")
-cp = sympy.symbols("cp")
-cs = sympy.symbols("cs")
-
-# Lamé parameters
-mu = rho * cs * cs
-lamb = rho * cp * cp - 2.0 * mu
+c = sympy.symbols("c")
+K0 = rho * c * c
 
 #
 # Define the equation system
 #
 # Flux [unknowns, dimensions]
-my_pde.F[0, 0] = -1.0 / rho * sigma[0]
-my_pde.F[1, 0] = -1.0 / rho * sigma[2]
-my_pde.F[2, 0] = -(2.0 * mu + lamb) * v[0]
-my_pde.F[3, 0] = -lamb * v[0]
-my_pde.F[4, 0] = -mu * v[1]
+if dimensions == 2:
+    my_pde.F[0, 0] = K0 * v[0]
+    my_pde.F[1, 0] = 1.0 / rho * p
+    my_pde.F[2, 0] = 0
 
-my_pde.F[0, 1] = -1.0 / rho * sigma[2]
-my_pde.F[1, 1] = -1.0 / rho * sigma[1]
-my_pde.F[2, 1] = -lamb * v[1]
-my_pde.F[3, 1] = -(2.0 * mu + lamb) * v[1]
-my_pde.F[4, 1] = -mu * v[0]
+    my_pde.F[0, 1] = K0 * v[1]
+    my_pde.F[1, 1] = 0
+    my_pde.F[2, 1] = 1.0 / rho * p
+else:
+    my_pde.F[0, 0] = K0 * v[0]
+    my_pde.F[1, 0] = 1.0 / rho * p
+    my_pde.F[2, 0] = 0
+    my_pde.F[3, 0] = 0
+
+    my_pde.F[0, 1] = K0 * v[1]
+    my_pde.F[1, 1] = 0
+    my_pde.F[2, 1] = 1.0 / rho * p
+    my_pde.F[3, 1] = 0
+
+    my_pde.F[0, 2] = K0 * v[2]
+    my_pde.F[1, 2] = 0
+    my_pde.F[2, 2] = 0
+    my_pde.F[3, 2] = 1.0 / rho * p
 
 # Eigenvalues [unknowns, dimensions]
-my_pde.eigenvalues[0] = cp
-my_pde.eigenvalues[1] = cs
-my_pde.eigenvalues[2] = 0
-my_pde.eigenvalues[3] = -cs
-my_pde.eigenvalues[4] = -cp
+if dimensions == 2:
+    my_pde.eigenvalues[0] = -c
+    my_pde.eigenvalues[1] = 0
+    my_pde.eigenvalues[2] = c
+else:
+    my_pde.eigenvalues[0] = -c
+    my_pde.eigenvalues[1] = 0
+    my_pde.eigenvalues[2] = 0
+    my_pde.eigenvalues[3] = c
 
 #
-# Since 'my_pde' only holds the PDE for the advection equation without initial- or boundary conditions,
+# Since 'my_pde' only holds the PDE without initial- or boundary conditions,
 # we still need to properly define initial- and boundary conditions.
 # This gives us then a complete description of a 'scenario'.
 #
@@ -149,8 +161,8 @@ my_pde.eigenvalues[4] = -cp
 my_pde.initial_values[0] = 0
 my_pde.initial_values[1] = 0
 my_pde.initial_values[2] = 0
-my_pde.initial_values[3] = 0
-my_pde.initial_values[4] = 0
+if dimensions == 3:
+    my_pde.initial_values[3] = 0
 
 #
 # Boundary conditions
@@ -158,30 +170,38 @@ my_pde.initial_values[4] = 0
 my_pde.boundary_values[0] = 0
 my_pde.boundary_values[1] = 0
 my_pde.boundary_values[2] = 0
-my_pde.boundary_values[3] = 0
-my_pde.boundary_values[4] = 0
+if dimensions == 3:
+    my_pde.boundary_values[3] = 0
 
 #
 # Source term
 #
+sigma = sympy.symbols("sigma")
 t0 = sympy.symbols("t0")
 M0 = sympy.symbols("M0")
 t = sympy.symbols("t")
-force = M0 * t / (t0 * t0) * (sympy.exp(-t / t0))
 
 max_h = sympy.symbols("MaxAdmissibleVolumeH")
-point_source = sympy.sqrt((10 - my_pde.x[0]) ** 2 + (10 - my_pde.x[1]) ** 2)
+force = M0 * sympy.exp(-((t - t0) * (t - t0)) / (2.0 * sigma * sigma))
 
-my_pde.sources[0] = 0
+if dimensions == 2:
+    point_source = sympy.sqrt((5 - my_pde.x[0]) ** 2 + (5 - my_pde.x[1]) ** 2)
+    my_pde.sources[0] = sympy.Piecewise((force, point_source <= max_h), (0, True))  # p
+else:
+    point_source = sympy.sqrt(
+        (5 - my_pde.x[0]) ** 2 + (5 - my_pde.x[1]) ** 2 + (5 - my_pde.x[2]) ** 2
+    )
+    my_pde.sources[0] = sympy.Piecewise((force, point_source <= max_h), (0, True))  # p
+
 my_pde.sources[1] = 0
 my_pde.sources[2] = 0
-my_pde.sources[3] = 0
-my_pde.sources[4] = sympy.Piecewise((force, point_source <= max_h), (0, True))
+if dimensions == 3:
+    my_pde.sources[3] = 0
 
 my_pde.substitute_expression(rho, 2.7)
-my_pde.substitute_expression(cp, 6.0)
-my_pde.substitute_expression(cs, 3.464)
-my_pde.substitute_expression(t0, 0.1)
+my_pde.substitute_expression(c, 6.0)
+my_pde.substitute_expression(sigma, 0.1149)
+my_pde.substitute_expression(t0, 0.7)
 my_pde.substitute_expression(M0, 1000.0)
 
 #
@@ -231,7 +251,7 @@ if not os.path.exists("solution"):
     os.makedirs("solution")
 
 if visualise:
-    output_patch_file = "solution/solution-ElasticWaveSolver.peano-patch-file"
+    output_patch_file = "solution/solution-AcousticWaveSolver.peano-patch-file"
     if os.path.isfile(output_patch_file):
         subprocess.call(
             [
@@ -250,7 +270,7 @@ if visualise:
 # For an overview of available load balancer refer to the documentation.
 #
 my_project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 
@@ -283,8 +303,8 @@ my_project.build(make=use_make, make_clean_first=True, throw_away_data_after_bui
 
 print("\nPDE is: ")
 print(my_pde.__str__())
-print("Executable is elastic-wave-" + str(dimensions) + "d")
+print("Executable is acoustic-wave-" + str(dimensions) + "d")
 print("Clean object files via 'make clean'")
 print("(Re)compile the generated code via 'make -j'")
 print("Remove all generated code via 'make distclean'")
-print("Regenerate all code by running 'python3 elastic-wave.py' again")
+print("Regenerate all code by running 'python3 acoustic-wave.py' again")

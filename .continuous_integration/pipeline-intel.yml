@@ -44,7 +44,7 @@ exahype2-tutorials-intel:
     - job: build-intel
   parallel:
     matrix:
-    - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
+    - tutorial: [euler, acoustic, elastic, advection, swe]
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd tutorials/exahype2/$tutorial; python3 $tutorial.py"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd tutorials/exahype2/$tutorial; make -j $(nproc --all)"

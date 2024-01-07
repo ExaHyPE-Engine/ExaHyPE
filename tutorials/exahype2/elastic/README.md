@@ -1,23 +1,23 @@
 # Tutorial: The Elastic Wave Equation
 
 ## Define and Build the Project
-Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the Elastic Wave project:
+Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the elastic project:
 
-    python3 elastic-wave.py
+    python3 elastic.py
 
 Assuming this was successful, you should see several files have appeared in your working directory.
 We will ignore most of these for now but know that these contain the implementation of the ExaHyPE 2 project.
-One file, in particular, is of interest to us now: the file simply named elastic-wave-* is the executable for our implementation.
+One file, in particular, is of interest to us now: the file simply named elastic-* is the executable for our implementation.
 We will therefore run this executable file by using the following command:
 
-    ./elastic-wave-<dimensions>d
+    ./elastic-<dimensions>d
 
 The solution folder contains the solution to our problem,
 which we will take a look at as soon as we have an understanding of how our problem is defined.
 
 To understand what it is that we have executed, let us take a look at the file which defined this project:
 
-    elastic-wave.py
+    elastic.py
 
 As this is a Python script, it should surprise no one that we start with the following:
 
@@ -95,6 +95,6 @@ $$
 
 t=0.0             |  t=1.0
 :-------------------------:|:-------------------------:
-![](ElasticWave_2D_start.png)  |  ![](ElasticWave_2D_end.png)
+![](Elastic_2D_start.png)  |  ![](Elastic_2D_end.png)
 
 -------------------------*The computed stress of the 2D elastic wave equation at times t=0.0 and t=1.0*-------------------------

@@ -148,7 +148,7 @@ else:
 my_pde.substitute_expression(gamma, 1.4)
 
 #
-# Since 'my_pde' only holds the PDE for the Euler equations without initial- or boundary conditions,
+# Since 'my_pde' only holds the PDE without initial- or boundary conditions,
 # we still need to properly define initial- and boundary conditions.
 # This gives us then a complete description of a 'scenario'.
 #
@@ -238,7 +238,7 @@ if visualise:
 # For an overview of available load balancer refer to the documentation.
 #
 my_project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 

@@ -153,7 +153,7 @@ my_pde.ncp[1, 1] = 0.0
 my_pde.ncp[2, 1] = sympy.Piecewise((g * h * grad_b, h > 0.0), (0.0, True))
 
 #
-# Since 'my_pde' only holds the PDE for the Euler equations without initial- or boundary conditions,
+# Since 'my_pde' only holds the PDE without initial- or boundary conditions,
 # we still need to properly define initial- and boundary conditions.
 # This gives us then a complete description of a 'scenario'.
 #
@@ -242,7 +242,7 @@ if visualise:
 # For an overview of available load balancer refer to the documentation.
 #
 my_project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 

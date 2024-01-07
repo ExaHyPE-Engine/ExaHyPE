@@ -1,23 +1,23 @@
 # Tutorial: The Acoustic Wave Equation
 
 ## Define and Build the Project
-Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the Acoustic Wave project:
+Assuming we have built the ExaHyPE 2 engine and the core libraries successfully, we can build the acoustic project:
 
-    python3 acoustic-wave.py
+    python3 acoustic.py
 
 Assuming this was successful, you should see several files have appeared in your working directory.
 We will ignore most of these for now but know that these contain the implementation of the ExaHyPE 2 project.
-One file, in particular, is of interest to us now: the file simply named acoustic-wave-* is the executable for our implementation.
+One file, in particular, is of interest to us now: the file simply named acoustic-* is the executable for our implementation.
 We will therefore run this executable file by using the following command:
 
-    ./acoustic-wave-<dimensions>d
+    ./acoustic-<dimensions>d
 
 The solution folder contains the solution to our problem,
 which we will take a look at as soon as we have an understanding of how our problem is defined.
 
 To understand what it is that we have executed, let us take a look at the file which defined this project:
 
-    acoustic-wave.py
+    acoustic.py
 
 As this is a Python script, it should surprise no one that we start with the following:
 
@@ -69,13 +69,13 @@ These equations are telling us that the change in time of the velocity is propor
 
 t=0.5             |  t=1.0
 :-------------------------:|:-------------------------:
-![](AcousticWave_2D_start.png)  |  ![](AcousticWave_2D_end.png)
+![](Acoustic_2D_start.png)  |  ![](Acoustic_2D_end.png)
 
 -------------------------*The computed pressure of the 2D acoustic wave equation at times t=0.5 and t=1.0*-------------------------
 
 ## Three-dimensional Acoustic Wave Equation
 t=0.5             |  t=1.0
 :-------------------------:|:-------------------------:
-![](AcousticWave_3D_start.png)  |  ![](AcousticWave_3D_end.png)
+![](Acoustic_3D_start.png)  |  ![](Acoustic_3D_end.png)
 
 -------------------------*The computed pressure of the 3D acoustic wave equation at times t=0.5 and t=1.0*-------------------------
