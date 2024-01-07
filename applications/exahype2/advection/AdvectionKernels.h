@@ -7,9 +7,9 @@
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::advection {
-  static inline double maxEigenvalue() InlineMethod { return ADVECTION_SPEED; }
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double maxEigenvalue() InlineMethod { return ADVECTION_SPEED; }
 
-  static inline void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
 #ifdef GPUOffloadingOff
     assertion(normal >= 0);
     assertion(normal < Dimensions);

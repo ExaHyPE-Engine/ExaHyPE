@@ -7,7 +7,7 @@
 #include "tarch/la/Vector.h"
 
 namespace applications::exahype2::euler {
-  static inline double maxEigenvalue(const double* __restrict__ Q, int normal) InlineMethod {
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double maxEigenvalue(const double* __restrict__ Q, int normal) InlineMethod {
     const double rho = Q[0];
     const double u   = Q[1];
     const double v   = Q[2];
@@ -47,7 +47,7 @@ namespace applications::exahype2::euler {
     return result;
   }
 
-  static inline void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void flux(const double* __restrict__ Q, int normal, double* __restrict__ F) InlineMethod {
     const double rho = Q[0];
     const double u   = Q[1];
     const double v   = Q[2];
