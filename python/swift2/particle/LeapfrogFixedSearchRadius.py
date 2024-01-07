@@ -12,6 +12,8 @@ from abc import ABC
 
 class LeapfrogFixedSearchRadius(Particle):
     """
+    
+    Leapfrog ODE integrator
 
     Simple particle with a fixed interaction radius h which moves according
     to leapfrog KDK scheme.
@@ -31,40 +33,9 @@ class LeapfrogFixedSearchRadius(Particle):
     after it has called the baseline constructor.
 
     You will need to add further properties for any SPH project.
-
-    ## Force calculation
-
-    particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
-    particles. It has access to three important objects:
-
-    - localParticles is a container (list) over pointers to local particles
-    - activeParticles is a container (list) over pointers to active particles
-    - marker is a cell marker which identifies the current cell.
-
-    Please consult the guidebook for a definition of local and active particles
-    but take into account that the local particles always are a subset of the
-    active particles.
-
-    Besides the actual particle-to-particle calculation, i.e. a force
-    calculation, users can also provide kernels that kick in when you touch
-    particles for the first time before you actually compute any
-    particle-particle interaction, and there is a plug-in point what you do
-    just once the particle-particle interaction has terminated. The latter
-    point is reached before we do the actual time stepping. In both plug-in
-    points, you have a vertex marker which gives you the position of the
-    vertex to which a particular is associated, and you have the localParticles.
-    This is a vector of pointers in this particular case.
-
-
-    ## Attributes
-
-    name: String
-      To be in line with other conventions, I recommend you start with an
-      uppercase letter. This has to be a valid C++ identifier, i.e. don't
-      use any special symbols besides an underscore.
-
-    @see peano4::datamanagement::CellMarker
-    @see peano4::datamanagement::VertexMarker
+    
+    Study swift2.particle.ExplicitEulerFixedSearchRadius for further 
+    information including all parameter documentation.
 
     """
 
@@ -73,10 +44,10 @@ class LeapfrogFixedSearchRadius(Particle):
         name,
         cfl_factor,
         initial_time_step_size,
-        particle_particle_interaction_over_particle_sets_kernel="",
+        enter_cell_kernel="",
         touch_particles_of_set_first_time_kernel="",
         touch_particles_of_set_last_time_kernel="",
-        particles_per_cell=0,  # makes no sense, and should likely be forbidden
+        particles_per_cell=0,
         min_h=0.005,
         max_h=0.3,
     ):
@@ -95,34 +66,9 @@ class LeapfrogFixedSearchRadius(Particle):
         self.accelerator = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions")
         self.data.add_attribute(self.velocity)
         self.data.add_attribute(self.accelerator)
-
-
-# @todo remove
-
-        # Dummy SPH arrays for compilation. Not relevant for non-SPH
-        # Required by the Kick2 SPH compute kernel
-        # Altrnatively, we might want to introduce a separate version of this compute kernel
         
-        
-#        self.v_full = peano4.dastgen2.Peano4DoubleArray("v_full", "Dimensions")
-#        self.u_full = dastgen2.attributes.Double("u_full")
-#        self.u = dastgen2.attributes.Double("u")
-#        self.density = dastgen2.attributes.Double("density")
-#        self.pressure = dastgen2.attributes.Double("pressure")
-#        self.soundSpeed = dastgen2.attributes.Double("soundSpeed")
-#        self.v_sig_AV = dastgen2.attributes.Double("v_sig_AV")
-#        self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
-#        self.data.add_attribute(self.u)
-#        self.data.add_attribute(self.density)
-#        self.data.add_attribute(self.pressure)
-#        self.data.add_attribute(self.v_full)
-#        self.data.add_attribute(self.u_full)
-#        self.data.add_attribute(self.soundSpeed)
-#        self.data.add_attribute(self.v_sig_AV)
-#        self.data.add_attribute(self.is_boundary_part)#
-
-        self.particle_particle_interaction_over_particle_sets_kernel = (
-            particle_particle_interaction_over_particle_sets_kernel
+        self.enter_cell_kernel = (
+            enter_cell_kernel
         )
         self.touch_particles_of_set_first_time_kernel = (
             touch_particles_of_set_first_time_kernel
@@ -147,9 +93,7 @@ class LeapfrogFixedSearchRadius(Particle):
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
-                cell_kernel="::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0});".format(
-                    self.particle_particle_interaction_over_particle_sets_kernel,
-                ),
+                cell_kernel=self.enter_cell_kernel,
                 touch_vertex_last_time_kernel=self.touch_particles_of_set_last_time_kernel,
             ),
             "Kick":

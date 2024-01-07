@@ -73,7 +73,7 @@ template <typename T>
 int toolbox::particles::ParticleSet<T>::_globalNumberOfLeavingLocalParticles;
 
 template <typename T>
-int toolbox::particles::ParticleSet<T>::_globalNumberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual;
+int toolbox::particles::ParticleSet<T>::_globalNumberOfNewIncomingParticles;
 
 
 #if PeanoDebug >= 1 and !defined(Parallel) and !defined(SharedMemoryParallelisation)
@@ -293,7 +293,7 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
     logInfo(
       "reduceAndPrintStatistics()",
       "boundary merge statistics"
-        << ": #incoming particles (previously known as halos)=" << _globalNumberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual << ", #incoming particles (previously unseen)="
+        << ": #incoming particles (previously known as halos)=" << _globalNumberOfNewIncomingParticles << ", #incoming particles (previously unseen)="
         << globalNumberOfNewIncomingLocalParticles << ", #redundantly shared particles (local on multiple trees)=" << globalNumberOfRedundantlySharedLocalParticles
         << ", #added virtual particles (flying into halo)=" << globalNumberOfAddedVirtualParticles << ", #replaced virtual particles (halo updates)="
         << globalNumberOfReplacedVirtualParticles << ", #dropped virtual particles=" << globalNumberOfDroppedIncomingVirtualParticles
@@ -308,7 +308,7 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
     _globalNumberOfRemainingLocalParticles = globalNumberOfRemainingLocalParticles;
     _globalNumberOfExpiredHaloParticles    = globalNumberOfExpiredHaloParticles;
     _globalNumberOfLeavingLocalParticles   = globalNumberOfLeavingLocalParticles;
-    _globalNumberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual = globalNumberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual;
+    _globalNumberOfNewIncomingParticles = globalNumberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual + globalNumberOfNewIncomingLocalParticles;
   }
 }
 
@@ -356,7 +356,7 @@ int toolbox::particles::ParticleSet<T>::getGlobalNumberOfLeavingParticles() {
 template <typename T>
 int toolbox::particles::ParticleSet<T>::getGlobalNumberOfNewIncomingParticles() {
   assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
-  return _globalNumberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual;
+  return _globalNumberOfNewIncomingParticles;
 }
 
 

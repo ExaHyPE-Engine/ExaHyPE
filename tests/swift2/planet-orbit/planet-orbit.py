@@ -99,11 +99,14 @@ args = parser.parse_args()
 
 dimensions = args.dimensions
 
+
+#! [tutorials swift2 planet-orbit Create project]
 project = swift2.Project(
-    namespace=["benchmarks", "swift2", "planetorbit"],
+    namespace=["tests", "swift2", "planetorbit"],
     project_name="planetorbit",
     executable="orbit-" + str(args.cell_size),
 )
+#! [tutorials swift2 planet-orbit create project]
 
 
 """
@@ -114,13 +117,10 @@ this particle. Current choices include:
   - Explicit Euler with fixed search radius
   - Explicit Euler with variable search radius
 
-These take the same input parameters as shown below. If you switch between
-these, do not forget to remove the previous main
-
-@TODO implement set methods for input parameters to use a single call below.
 """
 
 if args.time_integrator == "leapfrog":
+    #! [tutorials swift2 planet-orbit Instantiate particle with leapfrog ODE integrator]
     particle = swift2.particle.LeapfrogFixedSearchRadius(
         name="Planet",
         cfl_factor=0.2,
@@ -129,6 +129,8 @@ if args.time_integrator == "leapfrog":
         min_h=args.cell_size,
         max_h=0.3,
     )
+    particle_set = project.add_particle_species(particle)
+    #! [tutorials swift2 planet-orbit Instantiate particle with leapfrog ODE integrator]
 elif args.time_integrator == "euler" or "Euler":
     particle = swift2.particle.ExplicitEulerFixedSearchRadius(
         name="Planet",
@@ -138,7 +140,7 @@ elif args.time_integrator == "euler" or "Euler":
         min_h=args.cell_size,
         max_h=0.3,
     )
-
+    particle_set = project.add_particle_species(particle)
 elif args.time_integrator == "euler-dynamic" or "Euler-dynamic":
     particle = swift2.particle.ExplicitEulerDynamicSearchRadius(
         name="Planet",
@@ -148,18 +150,22 @@ elif args.time_integrator == "euler-dynamic" or "Euler-dynamic":
         min_h=args.cell_size,
         max_h=0.3,
     )
+    particle_set = project.add_particle_species(particle)
 else:
     print("Time integrator not supported. Please check the list of options.")
 
 
-# Declare some particle attributes useful for this test
+#! [tutorials swift2 planet-orbit Declare additional attributes]
 energy_kin_attr = dastgen2.attributes.Double("energyKin")
 energy_pot_attr = dastgen2.attributes.Double("energyPot")
 energy_tot_attr = dastgen2.attributes.Double("energyTot")
 particle.data.add_attribute(energy_kin_attr)
 particle.data.add_attribute(energy_pot_attr)
 particle.data.add_attribute(energy_tot_attr)
+#! [tutorials swift2 planet-orbit Declare additional attributes]
 
+
+#! [tutorials swift2 planet-orbit Configure project]
 if args.asserts:
     build_mode = peano4.output.CompileMode.Asserts
 else:
@@ -181,14 +187,17 @@ project.set_global_simulation_parameters(
     plotter_precision=8,  # plotter precision
 )
 
+project.set_load_balancing(
+    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+    "new toolbox::loadbalancing::DefaultConfiguration()",
+)
 
-# additional global constants (to be exported down below)
+project.set_Peano4_installation(args.peanodir, build_mode)
+#! [tutorials swift2 planet-orbit Configure project]
 
-# In order to make quantities dimensionless, we will use
-# T: Period of orbit [s]
-# L=4*R_MAX: 4 * maximum distance
-# M_SUN: Sun mass [kg]
 
+
+#! [tutorials swift2 planet-orbit Define constants]
 # Orbital parameters
 N_orbits = 8
 # Number of orbits
@@ -234,16 +243,12 @@ GLOBAL_TIME_STEP_SIZE = str(dt)
 # Initial velocity in internal units
 EARTH_V_INI_X = str(0.0)
 EARTH_V_INI_Y = str(V_MAX / LENGTH_UNIT * T)
+#! [tutorials swift2 planet-orbit Define constants]
 
 
-project.set_Peano4_installation(args.peanodir, build_mode)
-
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
-    "new toolbox::loadbalancing::DefaultConfiguration()",
-)
 
 
+#! [tutorials swift2 planet-orbit Particle force]
 ###############################################################################
 # Declare the force acting on the particle
 ###############################################################################
@@ -282,16 +287,17 @@ project.set_load_balancing(
 #
 ###############################################################################
 particle_force = """
-[=](
-  const peano4::datamanagement::CellMarker& marker,
-  globaldata::Planet&                       localParticle,
-  globaldata::Planet&                       activeParticle
-) -> void {
-  if ( ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
-    marker,
-    localParticle,
-    activeParticle
-  )) {
+::swift2::kernels::forAllLocalParticles(
+  marker,
+  localParticles,
+  [=](
+    const peano4::datamanagement::CellMarker& marker,
+    globaldata::Planet&                       localParticle
+  ) -> void {
+    if ( ::swift2::kernels::localParticleCanBeUpdatedInCellKernel(
+      marker,
+      localParticle
+    )) {
       #if Dimensions==2
       tarch::la::Vector<Dimensions,double> pos_sun = {SUN_X_COORD,SUN_Y_COORD};
       #else
@@ -320,24 +326,24 @@ particle_force = """
         localParticle.setEnergyPot(-E_pot );
         localParticle.setEnergyTot( - ( E_kin + E_pot ) );
       } // end of radius check
-  } // end of "may I update" check
-} // end of functor
+    } // end of "may I update" check
+  } // end of functor
+);
 """
-# particle.particle_acceleration = particle_force
-particle.particle_particle_interaction_over_particle_sets_kernel = particle_force
+
+particle.enter_cell_kernel = particle_force
+
 global_invariants = """
 assertion4( 
   (
-    toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLocalParticles()
-    +
-    toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLeavingParticles()==1
+    toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLocalParticles()==1
   )
   and 
   (
     toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfNewIncomingParticles()
-    +
+    -
     toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLeavingParticles()
-    <= 2
+    ==0
   ),
   toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLocalParticles(),
   toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLeavingParticles(),
@@ -347,12 +353,12 @@ assertion4(
 """
 particle.touch_particles_of_set_first_time_kernel += global_invariants
 particle.touch_particles_of_set_last_time_kernel  += global_invariants
+#! [tutorials swift2 planet-orbit Particle force]
 
 
-# Add particle to the SWIFT project
-particle_set = project.add_particle_species(particle)
 
 
+#! [tutorials swift2 planet-orbit Initial conditions]
 ###############################################################################
 # Initialisation snippet for the particle
 ###############################################################################
@@ -432,9 +438,11 @@ project.algorithm_step_initial_conditions.add_action_set(
         initialisation_call=initialisation_snippet,
         coordinates=[(EARTH_X_INI, EARTH_Y_INI, 0)],
     )
-    # coordinates          = [ (EARTH_X_INI,EARTH_Y_INI,0), (SUN_X_COORD,SUN_Y_COORD,0) ] )
 )
+#! [tutorials swift2 planet-orbit Initial conditions]
 
+
+#! [tutorials swift2 planet-orbit Plot]
 ###############################################################################
 # Set up the plotter
 ###############################################################################
@@ -469,6 +477,7 @@ particle_plotter.add_attribute_to_plot(energy_kin_attr, 1)
 particle_plotter.add_attribute_to_plot(energy_pot_attr, 1)
 particle_plotter.add_attribute_to_plot(energy_tot_attr, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
+#! [tutorials swift2 planet-orbit Plot]
 
 
 ###############################################################################
@@ -480,7 +489,11 @@ project.algorithm_step_plot.add_action_set(particle_plotter)
 # that's generated.
 #
 ###############################################################################
+#! [tutorials swift2 planet-orbit Create Peano project]
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
+#! [tutorials swift2 planet-orbit Create Peano project]
+
+#! [tutorials swift2 planet-orbit Export constants]
 
 # Export symbols and values for compilation (e.g. for SPH kernel)
 # Dummy values for non SPH
@@ -510,6 +523,7 @@ peano4_project.constants.export_const_with_type("ECCENTRICITY", str(e), "double"
 peano4_project.constants.export_const_with_type("PERIOD", str(T), "double")
 peano4_project.constants.export_const_with_type("R_MIN", str(R_MIN), "double")
 peano4_project.constants.export_const_with_type("R_MAX", str(R_MAX), "double")
+#! [tutorials swift2 planet-orbit Export constants]
 
 # If we want to start a project from scratch, we may want to remove some of the generated code
 if args.clean_temporary_directories:

@@ -50,7 +50,10 @@ namespace swift2 {
      *
      */
     template <typename Particle>
-    using ParticleUnaryOperator = std::function<void(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle)>;
+    using ParticleUnaryOperatorOnVertex = std::function<void(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle)>;
+
+    template <typename Particle>
+    using ParticleUnaryOperatorOnCell = std::function<void(const peano4::datamanagement::CellMarker& marker, Particle& localParticle)>;
 
     /**
      * Definition of particle-particle interaction
@@ -183,9 +186,22 @@ namespace swift2 {
     void forAllParticles(
       const peano4::datamanagement::VertexMarker&                  marker,
       ParticleContainer&                                           assignedParticles,
-      ParticleUnaryOperator<typename ParticleContainer::DoFType >  f,
+      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType >  f,
       UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate =
           ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
+    );
+
+
+    /**
+     * Loop over all particles within a cell
+     */
+    template <typename ParticleContainer>
+    void forAllLocalParticles(
+      const peano4::datamanagement::CellMarker&                    marker,
+      ParticleContainer&                                           localParticles,
+      ParticleUnaryOperatorOnCell<typename std::remove_pointer<typename ParticleContainer::value_type>::type >  f,
+      UpdateParticleAssignedToCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+          predicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
     );
 
 
@@ -207,7 +223,7 @@ namespace swift2 {
       const peano4::datamanagement::VertexMarker&                  marker,
       ParticleContainer&                                           assignedParticles,
       int                                                          numberOfAssignedParticles,
-      ParticleUnaryOperator<typename ParticleContainer::DoFType >  f
+      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType >  f
     );
 
 
@@ -230,7 +246,7 @@ namespace swift2 {
       const peano4::datamanagement::VertexMarker&                  marker,
       ParticleContainer&                                           assignedParticles,
       int                                                          numberOfAssignedParticles,
-      ParticleUnaryOperator<typename ParticleContainer::DoFType >  f,
+      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType >  f,
       UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate =
           ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
     );

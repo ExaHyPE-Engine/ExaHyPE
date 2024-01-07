@@ -38,31 +38,31 @@ class ExplicitEulerFixedSearchRadius(Particle):
 
     ## Force calculation
 
-     particle_particle_interaction_over_particle_sets_kernel is a C++ function 
-     that computes and applies the force between two particles. We hand it into
-     swift2::kernels::forAllParticlePairs as defined in 
-     swift2/kernels/ParticleSetIterators.h. Consequently, the routine has to 
-     fit to swift2::kernels::ParticleBinaryOperator.
-     
-     It has access to three important objects:
+    There is a dedicated algorithmic step to do all the force calculation. This
+    step can be tailored to your needs by setting the strings
+    
+    - enter_cell_kernel
+    - touch_particles_of_set_first_time_kernel
+    - touch_particles_of_set_last_time_kernel
+    
+    Each of these is unset (None) by default, but you can make it hold any 
+    reasonable C++ string. The Swift2ish way to use them is ot use the 
+    iterators from ParticleSetIterators.h to run over the relevant particles.
+    
+    For the two vertex kernels, this would look similar to
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    touch_vertex_first_time_kernel = "::swift2::kernels::forAllParticles( marker, assignedParticles, myFunctor );"
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-     - localParticles is a container (list) over pointers to local particles
-     - activeParticles is a container (list) over pointers to active particles
-     - marker is a cell marker which identifies the current cell.
-
-     Please consult the guidebook for a definition of local and active particles
-     but take into account that the local particles always are a subset of the
-     active particles.
-
-     Besides the actual particle-to-particle calculation, i.e. a force
-     calculation, users can also provide kernels that kick in when you touch
-     particles for the first time before you actually compute any
-     particle-particle interaction, and there is a plug-in point what you do
-     just once the particle-particle interaction has terminated. The latter
-     point is reached before we do the actual time stepping. In both plug-in
-     points, you have a vertex marker which gives you the position of the
-     vertex to which a particular is associated, and you have the localParticles.
-     This is a vector of pointers in this particular case.
+    For the cell, it resembles
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    ::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, myFunction);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    The documentation of the actual operators ParticleBinaryOperator and
+    ParticleUnaryOperatorOnVertex for more documentation. 
 
 
      ## Attributes
@@ -72,6 +72,19 @@ class ExplicitEulerFixedSearchRadius(Particle):
        uppercase letter. This has to be a valid C++ identifier, i.e. don't
        use any special symbols besides an underscore.
 
+
+
+
+
+    ## Attributes
+
+    name: String
+      To be in line with other conventions, I recommend you start with an
+      uppercase letter. This has to be a valid C++ identifier, i.e. don't
+      use any special symbols besides an underscore.
+
+    @see peano4::datamanagement::CellMarker
+    @see peano4::datamanagement::VertexMarker
 
 
      @see peano4::datamanagement::CellMarker
@@ -84,10 +97,10 @@ class ExplicitEulerFixedSearchRadius(Particle):
         name,
         cfl_factor,
         initial_time_step_size,
-        particle_particle_interaction_over_particle_sets_kernel="",
+        enter_cell_kernel="",
         touch_particles_of_set_first_time_kernel="",
         touch_particles_of_set_last_time_kernel="",
-        particles_per_cell=0,  # makes no sense, and should likely be forbidden
+        particles_per_cell=0,  
         min_h=0.005,
         max_h=0.3,
     ):
@@ -106,8 +119,8 @@ class ExplicitEulerFixedSearchRadius(Particle):
         self.cfl_factor = cfl_factor
         self.initial_time_step_size = initial_time_step_size
 
-        self.particle_particle_interaction_over_particle_sets_kernel = (
-            particle_particle_interaction_over_particle_sets_kernel
+        self.enter_cell_kernel = (
+            enter_cell_kernel
         )
         self.touch_particles_of_set_first_time_kernel = (
             touch_particles_of_set_first_time_kernel
@@ -132,9 +145,7 @@ class ExplicitEulerFixedSearchRadius(Particle):
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
                 touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
-                cell_kernel="::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0});".format(
-                    self.particle_particle_interaction_over_particle_sets_kernel,
-                ),
+                cell_kernel=self.enter_cell_kernel,
                 touch_vertex_last_time_kernel=self.touch_particles_of_set_last_time_kernel,
             ),
             "UpdatePositionAndVelocity":

@@ -2,7 +2,6 @@
 
 @page swift_benchmarks Benchmarks
 
-\li \subpage benchmarks_swift2_planet_orbit
 \li \subpage benchmarks_swift2_hydro_noh_imposion_test
 
 

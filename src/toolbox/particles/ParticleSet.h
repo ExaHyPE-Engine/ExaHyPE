@@ -392,7 +392,7 @@ protected:
   static int _globalNumberOfRemainingLocalParticles;
   static int _globalNumberOfExpiredHaloParticles;
   static int _globalNumberOfLeavingLocalParticles;
-  static int _globalNumberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual;
+  static int _globalNumberOfNewIncomingParticles;
 
 };
 
