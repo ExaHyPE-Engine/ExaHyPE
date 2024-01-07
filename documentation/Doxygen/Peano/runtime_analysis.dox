@@ -1,6 +1,6 @@
 /**
 
- @page page_peano_runtime_analysis Runtime analysis
+ @page page_peano_runtime_analysis Runtime analysis and statistics
 
  Peano and its core toolboxes dump certain information to the terminal after each and 
  every time step. 
@@ -18,10 +18,13 @@
  analysis tool. In this context, it is worth studying @ref compiler_specific_settings "the vendor-specific settings"
  that are supported for various tools.
  
+ Beyond the data that's dumped by the core routines, you can also activate Peano's 
  
  
- ## Load balancing toolbox
  
+ # Load balancing toolbox
+ 
+ @todo This section belongs somewhere else, but I'm not sure yet where.
  
  In the toolbox.loadbalancing toolbox, you find a script plot-load-distribution.py which creates 
  plots over the data distribution.

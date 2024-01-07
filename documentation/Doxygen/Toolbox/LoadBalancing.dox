@@ -1,0 +1,94 @@
+/**
+
+@page page_toolbox_load_balancing Load Balancing
+
+\li \subpage toolbox_blockstructured_interpolation
+
+@todo This docu should move closer to the source code
+
+Peano's block-structured output format {#capter:blockstructured-output-format}
+======================================
+
+Peano has introduced its own block-structured output format. Its idea is
+that a mesh is dumped as an unstructured set of cell where each cell is
+uniquely identified through its offset and its size. The mesh data
+format lacks any topological information (connectivity). A cell always
+is a patch, i.e. holds a (topological) Cartesian mesh of dimensions
+$k \times k$ or $k \times k \times k$, respectively. If you work without
+patches, $k=2$. In this case, the block format obviously can yield a
+significant overhead.
+
+A minimal ASCII example file
+----------------------------
+
+\# \# Peano output file \# Version 0.1 \# format ascii dimensions 3
+patch-size 6 6 6
+
+begin vertex-metadata \"identifier A\" number-of-unknowns 58 meta-data
+\"This is some fancy meta data\" end vertex-values
+
+begin vertex-metadata \"time\" number-of-unknowns 1 meta-data \"This is
+some fancy meta data\" end vertex-values
+
+begin patch offset 0.0 0.0 0.0 size 0.5 0.5 0.5 begin vertex-values
+\"identifier A\" 18.0 123.0 \... end vertex-values begin vertex-values
+\"time\" 1.0 1.0 \... end vertex-values end patch
+
+begin patch offset 0.5 0.0 0.0 size 0.25 0.25 0.25 \... end patch
+
+This spec file specifies a simple grid that
+
+-   The actual grid plotted consists of two patches (boxes discretised
+    with a small regular grid).
+
+-   Both small grids consist of $6 \times 6 \times 6$ cells. They all
+    have the same size, i.e. are equally spaced.
+
+-   Each vertex holds two sets of unknowns. The first set is called
+    `identifier A` and each entry (per vertex) comprises 58 double
+    unknowns. The second set of unknowns per vertex is called `time` and
+    is a scalar quantity.
+
+-   The data per cube is ordered lexicographically, i.e. we run along
+    the x-axis first, then along the y-axis, and finally along the
+    z-axis.
+
+-   All data is held as SoA, i.e. we first give all the 58 unknowns of
+    the first vertex within the cube, then the 58 unknowns of the right
+    neighbour vertex, and so forth.
+
+-   All output data is ASCII.
+
+-   Patches may overlap in both space and time.
+
+More sophiciated dumps
+----------------------
+
+-   The file format supports `cell-values`.
+
+-   Each `vertex-values` or `cell-values` section in the header of the
+    file, i.e. not embedded into a patch, may have a section
+
+    begin mapping 0.0 0.0 0.0 0.1 0.1 0.1 0.4 0.4 0.4 \... end mapping
+
+    If no mapping is present, our code dumps a regular subgrid (patch)
+    per `patch` region. If a mapping is present, the mapping has exactly
+    $(6+1)
+      \cdot (6+1) \cdot (6+1)$ entries in the example from the previous
+    section. Each entry is a 3d coordinate relative to the unit cube and
+    specifies how the topologially regular grid prescribed within a
+    patch is to be mapped. You might for example plot points of the
+    topologically regular grid with Gauß-Legendre spacing.
+
+-   The plotter by default always creates two types of files: The actual
+    data files as described above and one meta file. The meta file
+    solely links to the actual data:
+
+    \# \# Peano patch file \# Version 0.1 \# format ASCII begin dataset
+    include \"conserved-1-rank-0.peano-patch-file\" end dataset begin
+    dataset include \"conserved-2-rank-0.peano-patch-file\" end dataset
+
+    Per snapshot (typically time step), the plotter adds on `dataset`
+    entry. Each data set holds one data file per active rank. Each rank
+    writes its actual data into a separate file.
+*/
