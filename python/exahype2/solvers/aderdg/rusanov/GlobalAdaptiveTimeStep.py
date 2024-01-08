@@ -60,7 +60,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         corrector_computation_precision="double",
         solution_persistent_storage_precision="double",
         precision_criterion_implementation=PDETerms.None_Implementation,
-        riemann_solver_implementation=PDETerms.None_Implementation,
         hold_cell_data_on_heap_with_smart_pointer = False,
         hold_face_data_on_heap_with_smart_pointer = False,
         use_vectorized_PDE=False,
@@ -90,7 +89,6 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             corrector_computation_precision,
             solution_persistent_storage_precision,
             precision_criterion_implementation,
-            riemann_solver_implementation,
             hold_cell_data_on_heap_with_smart_pointer,
             hold_face_data_on_heap_with_smart_pointer,
             use_vectorized_PDE,
@@ -114,6 +112,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
         initial_conditions=None,
         source_term=None,
         material_parameters=None,
+        riemann_solver=None,
         point_source=0,
         additional_action_set_includes="",
         additional_user_includes="",
@@ -129,6 +128,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             eigenvalues=eigenvalues,
             source_term=source_term,
             material_parameters=material_parameters,
+            riemann_solver=riemann_solver,
             point_source=point_source,
         )
 

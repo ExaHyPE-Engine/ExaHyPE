@@ -87,7 +87,6 @@ class ADERDG(object):
         corrector_computation_precision,
         solution_persistent_storage_precision,
         precision_criterion_implementation,
-        riemann_solver_implementation,
         hold_cell_data_on_heap_with_smart_pointer,
         hold_face_data_on_heap_with_smart_pointer,
         use_vectorized_PDE,
@@ -225,10 +224,7 @@ class ADERDG(object):
                 PDETerms.User_Defined_Implementation
             )
 
-        if riemann_solver_implementation is not PDETerms.None_Implementation:
-            self._riemann_solver_implementation = riemann_solver_implementation
-
-        #move data to heap if requested
+        # Move data to heap if requested.
         self._hold_cell_data_on_heap_with_smart_pointer = hold_cell_data_on_heap_with_smart_pointer
         self._hold_face_data_on_heap_with_smart_pointer = hold_face_data_on_heap_with_smart_pointer
 
@@ -265,24 +261,24 @@ class ADERDG(object):
         self.user_solver_includes = ""
 
         """
-    these specify the time step, they must be set by child classes in order to advance the timestepping
-    these are the main difference between child classes as they all use the same underlying routines
-    """
+        These specify the time step, they must be set by child classes in order to advance the timestepping.
+        These are the main difference between child classes as they all use the same underlying routines.
+        """
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = None
 
         """
-    These are all the optional and mandatory plugins that can be specified by the user.
-    eigenvalues, boundary conditions, refinement criteria and initial conditions must
-    all be specified, all others are optional but can be added via the set_implementation() function.
-    There are four choices for these, three of which are specified in PDETerms:
-    User_Defined_Implementation creates empty stubs that the user must then manually fill.
-    None_implementation leaves out this optional stub and ensures the kernels don't use this function.
-    Empty_implementation does... the same thing as user_defined I think?
-    The final option is to fill these with a string, in which case this string is directly taken as 
-    c++ code and used as the implementation of this function. The user is trusted to provide code that
-    compiles and runs properly, it is never checked.
-    """
+        These are all the optional and mandatory plugins that can be specified by the user.
+        eigenvalues, boundary conditions, refinement criteria and initial conditions must
+        all be specified, all others are optional but can be added via the set_implementation() function.
+        There are four choices for these, three of which are specified in PDETerms:
+        User_Defined_Implementation creates empty stubs that the user must then manually fill.
+        None_implementation leaves out this optional stub and ensures the kernels don't use this function.
+        Empty_implementation does... the same thing as user_defined I think?
+        The final option is to fill these with a string, in which case this string is directly taken as 
+        c++ code and used as the implementation of this function. The user is trusted to provide code that
+        compiles and runs properly, it is never checked.
+        """
         self._flux_implementation = PDETerms.None_Implementation
         self._ncp_implementation = PDETerms.None_Implementation
         self._eigenvalues_implementation = PDETerms.None_Implementation
@@ -297,32 +293,32 @@ class ADERDG(object):
         self._riemann_solver_implementation = PDETerms.None_Implementation
 
         """
-    These will be used by children of this class to fill them with the declaration and definition of the
-    above mandatory and optional functions.
-    """
+        These will be used by children of this class to fill them with the declaration and definition of the
+        above mandatory and optional functions.
+        """
         self._abstract_solver_user_declarations = ""
         self._abstract_solver_user_definitions = ""
         self._solver_user_declarations = ""
         self._solver_user_definitions = ""
 
         """
-    Used by child classes, will contain code to be executed at the start and end respectively of the
-    time step. Typically specifies some timestep variable and advances the overall timestamp of the
-    entire solver. 
-    """
+        Used by child classes, will contain code to be executed at the start and end respectively of the
+        time step. Typically specifies some timestep variable and advances the overall timestamp of the
+        entire solver.
+        """
         self._start_time_step_implementation = ""
         self._finish_time_step_implementation = ""
 
         self._constructor_implementation = ""
 
         """
-    These are ADER-DG CFL factors        
-    Up to order 4, computed via von Neumann analysis [1]; above, determined empirically by M. Dumbser)
-    [1] M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz, 
-    ‘A unified framework for the construction of one-step finite volume and discontinuous Galerkin schemes on unstructured meshes’, Journal of Computational Physics, vol. 227, no. 18, pp. 8209–8253, Sep. 2008.
-    they are necessary to compute stable timestep sizes as dt <= c*dx / (lambda_max*(2N+1)
-    with c the CFL for given order, lambda_max the maximal eigenvalue, N the order and dx the minimal mesh distance.
-    """
+        These are ADER-DG CFL factors
+        Up to order 4, computed via von Neumann analysis [1]; above, determined empirically by M. Dumbser)
+        [1] M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz,
+        ‘A unified framework for the construction of one-step finite volume and discontinuous Galerkin schemes on unstructured meshes’, Journal of Computational Physics, vol. 227, no. 18, pp. 8209–8253, Sep. 2008.
+        they are necessary to compute stable timestep sizes as dt <= c*dx / (lambda_max*(2N+1)
+        with c the CFL for given order, lambda_max the maximal eigenvalue, N the order and dx the minimal mesh distance.
+        """
         self._cflAder = [
             1.0,
             0.33,
@@ -360,7 +356,6 @@ class ADERDG(object):
   These are defined as peano patches which have given sizes to contain persistent data as well as 
   conditions for when they should be merged, sent, received, stored, loaded, etc.
   """
-
     @abstractmethod
     def create_data_structures(self):
         self._number_of_face_projections = 1
@@ -1275,22 +1270,23 @@ class ADERDG(object):
 
     def set_implementation(
         self,
-        flux=None,
-        ncp=None,
-        eigenvalues=None,
-        boundary_conditions=None,
-        refinement_criterion=None,
-        initial_conditions=None,
-        source_term=None,
-        material_parameters=None,
-        point_source=0,
-        additional_action_set_includes="",
-        additional_user_includes="",
+        flux,
+        ncp,
+        eigenvalues,
+        boundary_conditions,
+        refinement_criterion,
+        initial_conditions,
+        source_term,
+        material_parameters,
+        riemann_solver,
+        point_source,
+        additional_action_set_includes,
+        additional_user_includes,
     ):
         """
         If you pass in User_Defined, then the generator will create C++ stubs
         that you have to befill manually. If you pass in None_Implementation, it
-        will create nop, i.e. no implementation or defaults. Any other string
+        will create nop, i.e., no implementation or defaults. Any other string
         is copied 1:1 into the implementation. If you pass in None, then the
         set value so far won't be overwritten.
         """
@@ -1311,6 +1307,8 @@ class ADERDG(object):
             self._source_term_implementation = source_term
         if material_parameters is not None:
             self._material_param_implementation = material_parameters
+        if riemann_solver is not None:
+            self._riemann_solver_implementation = riemann_solver
 
         if type(point_source) != int:
             raise Exception(
