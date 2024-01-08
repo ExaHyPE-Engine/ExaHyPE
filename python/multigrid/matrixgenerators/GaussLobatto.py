@@ -97,6 +97,13 @@ class GaussLobatto(MatrixGenerator):
 
     output.append(firstWeight)
     return output
+
+  def get_weights1d_legendre(self):
+    return super( GaussLobatto, self ).get_weights1d()
+
+  def get_points1d_legendre(self):
+    return super( GaussLobatto, self ).get_points1d()
+
   
   def get_points_unit_interval(self):
     scale = lambda x: 0.5*(x+1)

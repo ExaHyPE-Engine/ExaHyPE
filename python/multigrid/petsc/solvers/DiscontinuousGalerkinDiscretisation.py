@@ -593,6 +593,8 @@ class DiscontinuousGalerkinDiscretisation(Solver):
                face_to_cell_matrix_scaling,
                face_face_Riemann_problem_matrix,
                quadrature_points_in_unit_interval,
+               gaussian_integration_points,
+               gaussian_integration_weights
                ):
     """!
    
@@ -681,6 +683,10 @@ the matrix is applied to
     self.face_to_cell_matrix_scaling  = face_to_cell_matrix_scaling
     
     self.quadrature_points_in_unit_interval = quadrature_points_in_unit_interval
+    self.gaussian_integration_points        = gaussian_integration_points
+    self.gaussian_integration_weights       = gaussian_integration_weights
+
+    assert( len( quadrature_points_in_unit_interval ) == len( gaussian_integration_points ) == len( gaussian_integration_weights ), "Something has gone wrong. These should all be same length for fixed polynomial degree" )
     
     self._cell_pde_data   = peano4.datamodel.DaStGen2( name )
     self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self.number_of_matrix_entries_per_cell) ) )
@@ -801,6 +807,8 @@ the matrix is applied to
         "CELL_TO_FACE_MATRIX":       self.cell_to_face_matrix,
         "FACE_TO_CELL_MATRIX":                   self.face_to_cell_matrix,
         "QUADRATURE_POINTS_IN_UNIT_INTERVAL":    self.quadrature_points_in_unit_interval,
+        "GAUSSIAN_INTEGRATION_POINTS"       :    self.gaussian_integration_points,
+        "GAUSSIAN_INTEGRATION_WEIGHTS"       :    self.gaussian_integration_weights,
         "CELL_CELL_LHS_MATRIX_SCALING": self.cell_cell_lhs_matrix_scaling,
         "CELL_CELL_RHS_MATRIX_SCALING": self.cell_cell_rhs_matrix_scaling,
         "CELL_TO_FACE_MATRIX_SCALING":           self.cell_to_face_matrix_scaling,

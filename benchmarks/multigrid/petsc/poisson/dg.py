@@ -47,7 +47,7 @@ matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args
                                                    # this attribute is not used by code written by Alex
                                                    unknowns_per_face_node = args.upfn,
                                                    )
-                        
+
 #! [Create solver]
 solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
@@ -67,7 +67,9 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      cell_to_face_matrix_scaling  = None,
                                                                      face_to_cell_matrix_scaling  = None, 
                                                                      face_face_Riemann_problem_matrix=matrices.get_face_face_riemann_problem_matrix(),
-                                                                     quadrature_points_in_unit_interval = matrices.get_points_unit_interval()
+                                                                     quadrature_points_in_unit_interval = matrices.get_points_unit_interval(),
+                                                                     gaussian_integration_points= matrices.get_points1d_legendre(),
+                                                                     gaussian_integration_weights=matrices.get_weights1d_legendre()
                                                                      )
 
 project.add_solver( solver )
