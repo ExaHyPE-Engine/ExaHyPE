@@ -18,6 +18,7 @@ void applications::exahype2::exaseis::LOH1Solver::initialCondition(
     Q[i] = 0.0;
   }
 
+  // Isotropic
   Q[Vars::rho] = x[1] < 1.0 ? 2.6 : RHO;
   Q[Vars::cp]  = x[1] < 1.0 ? 4.0 : P_WAVE_SPEED;
   Q[Vars::cs]  = x[1] < 1.0 ? 2.0 : S_WAVE_SPEED;

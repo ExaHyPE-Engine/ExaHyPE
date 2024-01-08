@@ -11,23 +11,23 @@ import exahype2
 
 # Define default values
 default_values = {
-    "cell_size": 0.5,
+    "cell_size": 0.75,
     "amr_levels": 3,
     "patch_size": 4,
     "rk_order": 2,
-    "dg_order": 3,
+    "dg_order": 5,
     "end_time": 3.0,
     "plot_interval": 0.1,
     "rho": 2.7,
     "p_wave_speed": 6.0,
     "s_wave_speed": 3.464,
-    "t0": 0.7,
+    "t0": 0.1,
     "M0": 1000.0,
     "use_riemann": True,  # Use custom Riemann solver
     "use_material_parameters": True,
     "use_point_sources": True,  # If set to false, an algebraic source is used instead.
     "source_location": [0, 2.0, 0],
-    "source_radius": 0.1,  # For algebraic source and AMR
+    "source_radius": 0.75,  # For algebraic source and AMR
     "domain_size": [18, 18, 18],  # [km]
     #"domain_size": [20.0, 20.0, 20.0],
     #"domain_size": [58.0, 58.0, 2.0],
@@ -208,6 +208,9 @@ def parse_arguments():
         "SpreadOutHierarchically",
         "SpreadOutOnceGridStagnates",
         "RecursiveBipartition",
+        "SplitOversizedTree",
+        "cascade::SpreadOut_RecursiveBipartition",
+        "cascade::SpreadOut_SplitOversizedTree",
     ]
     parser.add_argument(
         "-lb",
