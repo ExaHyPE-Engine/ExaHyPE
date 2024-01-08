@@ -270,7 +270,7 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
     logInfo(
       "reduceAndPrintStatistics()",
       "subdomain-local sorting statistics"
-        << ": #lifts=" << globalNumberOfLifts << ", #drops=" << globalNumberOfDrops << ", #lift-into-sieve-set=" << globalNumberOfLiftsIntoSieveSet << ", #drops-from-sieve-set="
+        << ": #lifts=" << globalNumberOfLifts << ", #drops=" << globalNumberOfDrops << ", #lifts-into-sieve-set=" << globalNumberOfLiftsIntoSieveSet << ", #drops-from-sieve-set="
         << globalNumberOfDropsFromSieveSet << ", #skipped-drops-from-sieve-set=" << globalNumberOfSkippedDropsFromSieveSet << ", #reassignments=" << globalNumberOfReassignments
     );
     logInfo(
@@ -284,7 +284,7 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
         << ": #incoming particles (previously known as halos)=" << globalNumberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual << ", #incoming particles (previously unseen)="
         << globalNumberOfNewIncomingLocalParticles << ", #redundantly shared particles (local on multiple trees)=" << globalNumberOfRedundantlySharedLocalParticles
         << ", #added virtual particles (flying into halo)=" << globalNumberOfAddedVirtualParticles << ", #replaced virtual particles (halo updates)="
-        << globalNumberOfReplacedVirtualParticles << ": #dropped virtual particles=" << globalNumberOfDroppedIncomingVirtualParticles
+        << globalNumberOfReplacedVirtualParticles << ", #dropped virtual particles=" << globalNumberOfDroppedIncomingVirtualParticles
     );
     logInfo(
       "reduceAndPrintStatistics()",
