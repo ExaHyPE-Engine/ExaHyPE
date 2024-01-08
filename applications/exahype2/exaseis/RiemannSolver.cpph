@@ -99,7 +99,7 @@ void applications::exahype2::exaseis::RiemannSolver<T, Order>::solve(
       }
 #endif
 
-      // Generate interface data preserving the amplitude of the outgoing charactertritics
+      // Generate interface data preserving the amplitude of the outgoing characteristics
       // and satisfying interface conditions exactly.
       T vn_hat_p, vm_hat_p, vl_hat_p, Tn_hat_p, Tm_hat_p, Tl_hat_p;
       T vn_hat_m, vm_hat_m, vl_hat_m, Tn_hat_m, Tm_hat_m, Tl_hat_m;
@@ -149,7 +149,7 @@ void applications::exahype2::exaseis::RiemannSolver<T, Order>::solve(
       rotateIntoPhysicalBasis(n_m, m_m, l_m, FL_n, FL_m, FL_l, FL_x, FL_y, FL_z);
       rotateIntoPhysicalBasis(n_p, m_p, l_p, FR_n, FR_m, FR_l, FR_x, FR_y, FR_z);
 
-      // Construct flux fluctuation vectors obeying the eigen structure of the PDE
+      // Construct flux fluctuation vectors obeying the Eigen-structure of the PDE
       // and choose physically motivated penalties such that we can prove
       // numerical stability.
 
