@@ -74,7 +74,7 @@ def create_abstract_solver_declarations(
     double t,
     double dt,
     int normal,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ) = 0;
+    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ) = 0;
 {% elif NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<empty>" %}
     virtual void nonconservativeProduct(
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
@@ -84,7 +84,7 @@ def create_abstract_solver_declarations(
     double t,
     double dt,
     int normal,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ);
+    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ);
 {% endif %}
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
@@ -196,7 +196,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ)
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ)
 {
     {{NCP_IMPLEMENTATION}}
 }
@@ -297,7 +297,7 @@ def create_solver_declarations(
       double t,
       double dt,
       int normal,
-      {{COMPUTATION_PRECISIONS[0]}}*__restrict__ BgradQ) override;
+      {{COMPUTATION_PRECISIONS[0]}}*__restrict__ BTimesDeltaQ) override;
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
   void algebraicSource(
@@ -365,7 +365,7 @@ def create_solver_declarations(
       double t,
       double dt,
       int normal,
-      T*__restrict__ BgradQ);
+      T*__restrict__ BTimesDeltaQ);
 
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
@@ -436,11 +436,8 @@ def create_solver_declarations(
       double t,
       double dt,
       int normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ BgradQ) override 
-    {
-      
-      nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, x, h, t, dt, normal, BgradQ);
-
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ BTimesDeltaQ) override {
+      nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
     }
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
@@ -553,7 +550,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[0]}} *__restrict__ BgradQ //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+  {{COMPUTATION_PRECISIONS[0]}} *__restrict__ BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ){
   logTraceInWith3Arguments( "nonconservativeProduct(...)", x, t, normal );
   // @todo implement
@@ -689,7 +686,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   double t,
   double dt,
   int normal,
-  T*__restrict__ BgradQ //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+  T*__restrict__ BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ){
   logTraceInWith3Arguments( "nonconservativeProduct(...)", x, t, normal );
   // @todo implement
@@ -705,7 +702,7 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduc
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ
 );
 {% endfor%}
 

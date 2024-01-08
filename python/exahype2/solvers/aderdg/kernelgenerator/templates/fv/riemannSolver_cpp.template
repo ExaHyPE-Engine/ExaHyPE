@@ -85,7 +85,7 @@ double {{codeNamespace}}::riemannSolver(
 {% endif %}
 
 
-  // determine BgradQ from ncp
+  // determine BTimesDeltaQ from ncp
 {% if useNCP or useViscousFlux %}
     {{m.allocateArray("ncp",   nDataPad,   setToZero=True, forceStack=True) | indent(2)}}{##}
     {{m.allocateArray("gradQ", nData*nDim, setToZero=True, forceStack=True) | indent(2)}}{##}

@@ -65,7 +65,7 @@ public:
     double                                       t,
     double                                       dt,
     int                                          normal,
-    double* __restrict__ BgradQ
+    double* __restrict__ BTimesDeltaQ
   ) {
     // should not be called
     exit(1);
