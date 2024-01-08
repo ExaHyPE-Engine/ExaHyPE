@@ -3,7 +3,7 @@ import argparse
 import peano4
 import numpy as np
 
-import multigrid.matrixfree
+import src.multigrid.matrixfree as matrixfree
 
 print( """
 
@@ -23,9 +23,9 @@ parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       defau
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
-project = multigrid.matrixfree.Project( project_name = "CollocatedFEM", 
-                                        namespace = [ "benchmarks", "multigrid", "matrixfree", "poisson" ]
-                                         )
+project = matrixfree.Project( project_name = "CollocatedFEM", 
+                              namespace = [ "benchmarks", "multigrid", "matrixfree", "poisson" ]
+                                )
 
 local_assembly_matrix = np.array([
         0.6666666666666667, -0.16666666666666669, -0.16666666666666663, -0.33333333333333337
@@ -39,16 +39,16 @@ local_assembly_matrix = np.array([
 
 mass_matrix = np.eye( 2**args.dimensions )
 
-solver = multigrid.matrixfree.solvers.CollocatedLowOrderDiscretisation("CollocatedPoisson",
-                                                                       args.upv,
-                                                                       args.dimensions,
-                                                                       args.meshsize,
-                                                                       args.meshsize,
-                                                                       local_assembly_matrix,
-                                                                       local_assembly_matrix_scaling=0,
-                                                                       mass_matrix = mass_matrix,
-                                                                       mass_matrix_scaling = 0
-                                                                       )
+solver = matrixfree.solvers.api.CollocatedLowOrderDiscretisation("CollocatedPoisson",
+                                                              args.upv,
+                                                              args.dimensions,
+                                                              args.meshsize,
+                                                              args.meshsize,
+                                                              local_assembly_matrix,
+                                                              local_assembly_matrix_scaling=0,
+                                                              mass_matrix = mass_matrix,
+                                                              mass_matrix_scaling = 0
+                                                            )
 
 project.add_solver(solver)
 

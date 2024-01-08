@@ -8,7 +8,7 @@ import dastgen2
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver:
     """!
        
-    Discontinuous Galerking Solver
+    Discontinuous Galerkin Solver
     
     This solver holds @f$ N(p+1)^d @f$ unknowns (doubles) per cell for the
     solution, @f$ N(p+1)^d @f$ per cell for the right-hand side, and it 
