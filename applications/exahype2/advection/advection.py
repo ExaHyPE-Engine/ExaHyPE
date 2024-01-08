@@ -14,7 +14,7 @@ default_values = {
     "dimensions": 2,
     "cell_size": 0.1,
     "amr_levels": 4,
-    "patch_size": 16,
+    "patch_size": 4,
     "rk_order": 2,
     "dg_order": 5,
     "end_time": 3.0,

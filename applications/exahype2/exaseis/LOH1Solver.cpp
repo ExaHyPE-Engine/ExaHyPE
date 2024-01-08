@@ -70,6 +70,7 @@ void applications::exahype2::exaseis::LOH1Solver::initPointSourceLocations(doubl
   return result;
 }
 
+
 #ifdef USE_RIEMANN
 void applications::exahype2::exaseis::LOH1Solver::riemannSolver(
   double* const                                FL,
