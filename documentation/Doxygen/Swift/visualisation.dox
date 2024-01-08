@@ -137,7 +137,7 @@ certain thresholds.
 There is a script 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 ~/git/Peano/python/peano4/toolbox/particles/postprocessing/plot-lift-drop-statistics.py output.txt  -v
+python3 ~/git/Peano/python/swift2/postprocessing/plot-lift-drop-statistics.py output.txt  -v
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 which allows you to visualise the mesh rearrangement statistics once you dump the 
