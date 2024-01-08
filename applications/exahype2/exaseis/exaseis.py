@@ -9,13 +9,39 @@ sys.path.insert(0, os.path.abspath("../../../python"))
 import peano4
 import exahype2
 
+# Some example configurations are given below:
+
+# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 1 --amr-levels 0
+    # -> yields 27 patches.
+
+# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 2 --amr-levels 0
+    # -> yields 729 patches.
+
+# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 3 --amr-levels 0 --dg-order 5
+    # -> yields 19683 patches and needs ~3 GB memory.
+
+# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 3 --amr-levels 0 --dg-order 7
+    # -> yields 19683 patches and needs ~6 GB memory.
+
+# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 3
+    # -> yields 531441 patches and needs ~25 GB memory.
+
+# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 4
+    # -> yields 531441 patches and needs ~42 GB memory.
+
+# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 5
+    # -> yields 531441 patches and needs ~62 GB memory.
+
+# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 5 --amr-levels 0 --dg-order 3
+    # -> yields 14348907 patches and needs >>250 GB memory.
+
 # Define default values
 default_values = {
-    "cell_size": 0.75,
-    "amr_levels": 3,
-    "patch_size": 4,
+    "min_levels": 4,  # Determines the max. cell size.
+    "amr_levels": 0,  # TODO: Load balancing is bad for higher AMR levels at the moment.
+    "patch_size": 4,  # Dofs for FV
     "rk_order": 2,
-    "dg_order": 5,
+    "dg_order": 5,  # Dofs for DG
     "end_time": 3.0,
     "plot_interval": 0.1,
     "rho": 2.7,
@@ -101,20 +127,6 @@ def parse_arguments():
         help="Time between plots and also between database entries when probes are used.",
     )
     parser.add_argument(
-        "-amr",
-        "--amr-levels",
-        type=int,
-        default=default_values["amr_levels"],
-        help="Number of AMR grid levels on top of max. size of a cell.",
-    )
-    parser.add_argument(
-        "-damr",
-        "--dynamic-amr",
-        action="store_true",
-        default=False,
-        help="Use dynamic AMR.",
-    )
-    parser.add_argument(
         "-stateless",
         "--stateless",
         action="store_true",
@@ -175,11 +187,25 @@ def parse_arguments():
         help="Use periodic boundary conditions in the z-axis.",
     )
     parser.add_argument(
-        "-maxh",
-        "--max-cell-size",
+        "-min",
+        "--min-levels",
         type=float,
-        default=default_values["cell_size"],
-        help="Maximum size of a single cell on each axis.",
+        default=default_values["min_levels"],
+        help="Determines maximum size of a single cell on each axis.",
+    )
+    parser.add_argument(
+        "-amr",
+        "--amr-levels",
+        type=int,
+        default=default_values["amr_levels"],
+        help="Number of AMR grid levels on top of max. size of a cell.",
+    )
+    parser.add_argument(
+        "-damr",
+        "--dynamic-amr",
+        action="store_true",
+        default=False,
+        help="Use dynamic AMR.",
     )
     parser.add_argument(
         "-ps",
@@ -317,12 +343,15 @@ def setup_solver(args):
             }
         )
 
+    max_h = 1.1 * min(default_values["domain_size"]) / (3.0 ** args.min_levels)
+    min_h = max_h / (3.0 ** args.amr_levels)
+
     if "FV" in args.solver:
         solver_params.update(
             {
                 "patch_size": args.patch_size,
-                "max_volume_h": args.max_cell_size,
-                "min_volume_h": args.max_cell_size * 3.0 ** (-args.amr_levels),
+                "max_volume_h": max_h,
+                "min_volume_h": min_h,
             }
         )
         args.riemann = False
@@ -331,8 +360,8 @@ def setup_solver(args):
     elif "RKDG" in args.solver:
         solver_params.update(
             {
-                "max_cell_h": args.max_cell_size,
-                "min_cell_h": args.max_cell_size * 3.0 ** (-args.amr_levels),
+                "max_cell_h": max_h,
+                "min_cell_h": min_h,
                 "rk_order": args.rk_order,
                 "polynomials": exahype2.solvers.GaussLegendreBasis(args.dg_order),
                 "face_projections": exahype2.solvers.rkdg.FaceProjections.Solution,
@@ -344,8 +373,8 @@ def setup_solver(args):
     elif "ADERDG" in args.solver:
         solver_params.update(
             {
-                "max_cell_h": args.max_cell_size,
-                "min_cell_h": args.max_cell_size * 3.0 ** (-args.amr_levels),
+                "max_cell_h": max_h,
+                "min_cell_h": min_h,
                 "order": args.dg_order,
                 "is_linear": True,
                 "use_kernel_generator": True,
