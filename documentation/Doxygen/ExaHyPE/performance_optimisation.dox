@@ -126,7 +126,7 @@ in @ref page_peano_performance_optimisation "recommendation for Peano":
    quality (use the @ref page_peano_runtime_analysis "analysis scripts"). 
    In this case, switch to 
    ~~~~~~~~~~~~~~~~~~~~~~~~
-   project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0,16))" )
+   project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0,16))" )
    ~~~~~~~~~~~~~~~~~~~~~~~~
    It typically is advantageous to restrict the number of initial trees per node to 
    1/4 or 1/8 of the cores available. That's the magic 16 here.
@@ -136,7 +136,7 @@ in @ref page_peano_performance_optimisation "recommendation for Peano":
    is an additional argument after the 16, but consult the constructor
    docu), we calculate what partition size we want to have and switch to
    ~~~~~~~~~~~~~~~~~~~~~~~~
-   project.set_load_balancing("toolbox::loadbalancing::cascade::SpreadOut_SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.98,1000,16))" )
+   project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree","(new ::exahype2::LoadBalancingConfiguration(0.98,1000,16))" )
    ~~~~~~~~~~~~~~~~~~~~~~~~
    where the 1000 here is an appropriate indicative tree size.
 

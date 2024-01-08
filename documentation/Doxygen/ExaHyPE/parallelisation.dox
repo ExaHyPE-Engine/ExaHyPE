@@ -83,7 +83,7 @@ ExaHyPE configuration offers:
 - Once MPI+X is up and running, study the @ref exahype_runtime_analysis "ExaHyPE/Peano performance analysis remarks" so
   you obtain an understanding of your code's behaviour.
 - Once you are reasonably satisfied with the MPI behaviour, try out other 
-  parallelisation schemes. toolbox::loadbalancing::cascade::SpreadOut_RecursiveBipartition
+  parallelisation schemes. toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition
   for example seems to give reasonable result.
 
 
