@@ -1,5 +1,7 @@
 #include "GridTraversalEvent.h"
 
+
+
 #include <sstream>
 #include <algorithm>
 
@@ -27,6 +29,8 @@ setInvokingSpacetree( __invokingSpacetree);
 setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
 }
 
+
+
 peano4::grid::GridTraversalEvent::GridTraversalEvent( const GridTraversalEvent& copy ) {
   setX( copy.getX() );
   setH( copy.getH() );
@@ -48,6 +52,10 @@ peano4::grid::GridTraversalEvent::GridTraversalEvent( const GridTraversalEvent& 
   setInvokingSpacetree( copy.getInvokingSpacetree() );
   setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( copy.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() );
 }
+
+
+
+
 
 std::string peano4::grid::GridTraversalEvent::toString() const {
   std::ostringstream out;
@@ -92,6 +100,10 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << ")";
   return out.str();
 }
+
+
+
+
 
 tarch::la::Vector<Dimensions,double>   peano4::grid::GridTraversalEvent::getX() const {
 
@@ -517,7 +529,7 @@ void   peano4::grid::GridTraversalEvent::setInvokingSpacetreeIsNotInvolvedInAnyD
 #ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-MPI_Datatype peano4::grid::GridTraversalEvent::Datatype;
+MPI_Datatype peano4::grid::GridTraversalEvent::Datatype = MPI_DATATYPE_NULL;
 #endif
 
 
@@ -551,9 +563,55 @@ MPI_Datatype peano4::grid::GridTraversalEvent::getMultiscaleDataExchangeDatatype
 }
 
 
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridTraversalEvent::freeForkDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridTraversalEvent::freeGlobalCommunciationDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridTraversalEvent::freeJoinDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridTraversalEvent::freeBoundaryExchangeDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridTraversalEvent::freeMultiscaleDataExchangeDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
 int peano4::grid::GridTraversalEvent::getSenderRank() const {
   return _senderDestinationRank;
 }
+
 
 
 void peano4::grid::GridTraversalEvent::initDatatype() {
@@ -720,17 +778,11 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
 
 void peano4::grid::GridTraversalEvent::shutdownDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  MPI_Datatype type;
-  type = getForkDatatype();
-  MPI_Type_free( &type );
-  type = getJoinDatatype();
-  MPI_Type_free( &type );
-  type = getBoundaryExchangeDatatype();
-  MPI_Type_free( &type );
-  type = getMultiscaleDataExchangeDatatype();
-  MPI_Type_free( &type );
-  type = getGlobalCommunciationDatatype();
-  MPI_Type_free( &type );
+  freeForkDatatype();
+  freeJoinDatatype();
+  freeBoundaryExchangeDatatype();
+  freeMultiscaleDataExchangeDatatype();
+  freeGlobalCommunciationDatatype();
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );

@@ -1,33 +1,28 @@
 #include "GridVertex.h"
 
+
+
 #include <sstream>
 #include <algorithm>
 
-peano4::grid::GridVertex::GridVertex(
-  [[maybe_unused]] State __state,
-  [[maybe_unused]] tarch::la::Vector<TwoPowerD, int> __adjacentRanks,
-  [[maybe_unused]] tarch::la::Vector<TwoPowerD, int> __backupOfAdjacentRanks,
-  [[maybe_unused]] bool __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep,
-  [[maybe_unused]] bool __isAntecessorOfRefinedVertexInCurrentTreeSweep,
-  [[maybe_unused]] bool __hasBeenParentOfSubtreeVertexInPreviousTreeSweep,
-  [[maybe_unused]] bool __isParentOfSubtreeVertexInCurrentTreeSweep,
-  [[maybe_unused]] int __numberOfAdjacentRefinedLocalCells,
-  [[maybe_unused]] tarch::la::Vector<Dimensions, double> __x,
-  [[maybe_unused]] int __level
-) {
-  setState( __state);
-  setAdjacentRanks( __adjacentRanks);
-  setBackupOfAdjacentRanks( __backupOfAdjacentRanks);
-  setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep( __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
-  setIsAntecessorOfRefinedVertexInCurrentTreeSweep( __isAntecessorOfRefinedVertexInCurrentTreeSweep);
-  setHasBeenParentOfSubtreeVertexInPreviousTreeSweep( __hasBeenParentOfSubtreeVertexInPreviousTreeSweep);
-  setIsParentOfSubtreeVertexInCurrentTreeSweep( __isParentOfSubtreeVertexInCurrentTreeSweep);
-  setNumberOfAdjacentRefinedLocalCells( __numberOfAdjacentRefinedLocalCells);
-  #if PeanoDebug>0
-  setX( __x);
-  #endif 
-  setLevel( __level);
+
+
+peano4::grid::GridVertex::GridVertex(State  __state, tarch::la::Vector<TwoPowerD,int>  __adjacentRanks, tarch::la::Vector<TwoPowerD,int>  __backupOfAdjacentRanks, bool  __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep, bool  __isAntecessorOfRefinedVertexInCurrentTreeSweep, bool  __hasBeenParentOfSubtreeVertexInPreviousTreeSweep, bool  __isParentOfSubtreeVertexInCurrentTreeSweep, int  __numberOfAdjacentRefinedLocalCells, tarch::la::Vector<Dimensions,double>  __x, int  __level){
+setState( __state);
+setAdjacentRanks( __adjacentRanks);
+setBackupOfAdjacentRanks( __backupOfAdjacentRanks);
+setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep( __hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep);
+setIsAntecessorOfRefinedVertexInCurrentTreeSweep( __isAntecessorOfRefinedVertexInCurrentTreeSweep);
+setHasBeenParentOfSubtreeVertexInPreviousTreeSweep( __hasBeenParentOfSubtreeVertexInPreviousTreeSweep);
+setIsParentOfSubtreeVertexInCurrentTreeSweep( __isParentOfSubtreeVertexInCurrentTreeSweep);
+setNumberOfAdjacentRefinedLocalCells( __numberOfAdjacentRefinedLocalCells);
+#if PeanoDebug>0
+setX( __x);
+#endif 
+setLevel( __level);
 }
+
+
 
 peano4::grid::GridVertex::GridVertex( const GridVertex& copy ) {
   setState( copy.getState() );
@@ -40,35 +35,18 @@ peano4::grid::GridVertex::GridVertex( const GridVertex& copy ) {
   setNumberOfAdjacentRefinedLocalCells( copy.getNumberOfAdjacentRefinedLocalCells() );
 #if PeanoDebug>0
   setX( copy.getX() );
-#endif
+#endif 
   setLevel( copy.getLevel() );
 }
 
-peano4::grid::GridVertex& peano4::grid::GridVertex::operator = (const GridVertex& other) {
-  if (this == &other) {
-    return *this; // Self-assignment check
-  }
 
-  setState(other.getState());
-  setAdjacentRanks(other.getAdjacentRanks());
-  setBackupOfAdjacentRanks(other.getBackupOfAdjacentRanks());
-  setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(other.getHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep());
-  setIsAntecessorOfRefinedVertexInCurrentTreeSweep(other.getIsAntecessorOfRefinedVertexInCurrentTreeSweep());
-  setHasBeenParentOfSubtreeVertexInPreviousTreeSweep(other.getHasBeenParentOfSubtreeVertexInPreviousTreeSweep());
-  setIsParentOfSubtreeVertexInCurrentTreeSweep(other.getIsParentOfSubtreeVertexInCurrentTreeSweep());
-  setNumberOfAdjacentRefinedLocalCells(other.getNumberOfAdjacentRefinedLocalCells());
-#if PeanoDebug>0
-  setX(other.getX());
-#endif
-  setLevel(other.getLevel());
 
-  return *this;
-}
+
 
 std::string peano4::grid::GridVertex::toString() const {
   std::ostringstream out;
   out << "(";
-  out << "state=" << (_state==State::HangingVertex? "HangingVertex" : "")  << (_state==State::New? "New" : "")  << (_state==State::Unrefined? "Unrefined" : "")  << (_state==State::Refined? "Refined" : "")  << (_state==State::RefinementTriggered? "RefinementTriggered" : "")  << (_state==State::Refining? "Refining" : "")  << (_state==State::EraseTriggered? "EraseTriggered" : "")  << (_state==State::Erasing? "Erasing" : "")  << (_state==State::Delete? "Delete" : "") ;
+  out << "state=" << castStateToString(_state);
   out << ","; 
   out << "adjacentRanks=" << getAdjacentRanks();
   out << ","; 
@@ -104,6 +82,13 @@ peano4::grid::GridVertex::State   peano4::grid::GridVertex::getState() const {
 
 void   peano4::grid::GridVertex::setState(State value) {
   _state = value;
+}
+
+
+const std::string   peano4::grid::GridVertex::castStateToString(State value) {
+  std::ostringstream out;
+  out  << (value ==State::HangingVertex? "HangingVertex" : "")  << (value ==State::New? "New" : "")  << (value ==State::Unrefined? "Unrefined" : "")  << (value ==State::Refined? "Refined" : "")  << (value ==State::RefinementTriggered? "RefinementTriggered" : "")  << (value ==State::Refining? "Refining" : "")  << (value ==State::EraseTriggered? "EraseTriggered" : "")  << (value ==State::Erasing? "Erasing" : "")  << (value ==State::Delete? "Delete" : "") ;
+  return out.str();
 }
 
 
@@ -254,7 +239,7 @@ void   peano4::grid::GridVertex::setLevel(int value) {
 #ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-MPI_Datatype peano4::grid::GridVertex::Datatype;
+MPI_Datatype peano4::grid::GridVertex::Datatype = MPI_DATATYPE_NULL;
 #endif
 
 
@@ -288,9 +273,55 @@ MPI_Datatype peano4::grid::GridVertex::getMultiscaleDataExchangeDatatype() {
 }
 
 
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridVertex::freeForkDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridVertex::freeGlobalCommunciationDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridVertex::freeJoinDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridVertex::freeBoundaryExchangeDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridVertex::freeMultiscaleDataExchangeDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
 int peano4::grid::GridVertex::getSenderRank() const {
   return _senderDestinationRank;
 }
+
 
 
 void peano4::grid::GridVertex::initDatatype() {
@@ -410,17 +441,11 @@ void peano4::grid::GridVertex::initDatatype() {
 
 void peano4::grid::GridVertex::shutdownDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  MPI_Datatype type;
-  type = getForkDatatype();
-  MPI_Type_free( &type );
-  type = getJoinDatatype();
-  MPI_Type_free( &type );
-  type = getBoundaryExchangeDatatype();
-  MPI_Type_free( &type );
-  type = getMultiscaleDataExchangeDatatype();
-  MPI_Type_free( &type );
-  type = getGlobalCommunciationDatatype();
-  MPI_Type_free( &type );
+  freeForkDatatype();
+  freeJoinDatatype();
+  freeBoundaryExchangeDatatype();
+  freeMultiscaleDataExchangeDatatype();
+  freeGlobalCommunciationDatatype();
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );
