@@ -11,7 +11,7 @@ import exahype2
 
 # Define default values
 default_values = {
-    "cell_size": 0.2,
+    "cell_size": 0.5,
     "amr_levels": 3,
     "patch_size": 4,
     "rk_order": 2,
@@ -27,7 +27,7 @@ default_values = {
     "use_material_parameters": True,
     "use_point_sources": True,  # If set to false, an algebraic source is used instead.
     "source_location": [0, 2.0, 0],
-    "source_radius": 0.2,  # For algebraic source and AMR
+    "source_radius": 0.1,  # For algebraic source and AMR
     "domain_size": [18, 18, 18],  # [km]
     #"domain_size": [20.0, 20.0, 20.0],
     #"domain_size": [58.0, 58.0, 2.0],
@@ -213,7 +213,7 @@ def parse_arguments():
         "-lb",
         "--load-balancing-strategy",
         choices=available_load_balancing_strategies,
-        default="SpreadOutOnceGridStagnates",
+        default="SpreadOutHierarchically",
         help="|".join(available_load_balancing_strategies),
     )
     parser.add_argument(
