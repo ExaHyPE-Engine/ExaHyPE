@@ -7,7 +7,6 @@ For now everything C++ and Python ends up in this folder.
 
 '''
 
-print("hersefnfsfs")
 from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 from .CollocatedLowOrderDiscretisation import CollocatedLowOrderDiscretisation
 
