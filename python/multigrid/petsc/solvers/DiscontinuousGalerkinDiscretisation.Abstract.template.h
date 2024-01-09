@@ -49,6 +49,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     static const double         QuadraturePointsInUnitInterval[];
 
+    static const double         GaussianIntegrationPoints[];
+    static const double         GaussianIntegrationWeights[];
+
     static constexpr int        Order    = {{POLYNOMIAL_DEGREE}};
     static constexpr int        CellUnknowns = {{CELL_UNKNOWNS}};
     static constexpr int        FaceUnknowns = {{FACE_UNKNOWNS}};
@@ -83,6 +86,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       {% endif %}
     ) = 0;
 
+    double EvalGaussianIntegral( double val );
 
     /**
      * In the DG case, there is no data tied to the vertices. Hence, this
