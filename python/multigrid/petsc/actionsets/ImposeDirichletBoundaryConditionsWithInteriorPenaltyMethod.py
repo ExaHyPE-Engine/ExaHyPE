@@ -134,6 +134,7 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
           - write -0.5 in column associated with u^+
         The effect being we have u^f - 0.5 * u^+ - 0.5 * u^-
         */
+        /*
         if ( row >= repositories::{{SOLVER_INSTANCE}}.FaceUnknowns  )
         {
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
@@ -147,7 +148,26 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
             -0.5
           );
         }
+        */
 
+        /*
+        Alternative behaviour for u unknown. Same as for q: If u^- projection is on the inside of the cell,
+        then we want the equation to read u^f - u^- = 0
+        */
+        if ( row >= repositories::{{SOLVER_INSTANCE}}.FaceUnknowns  )
+        {
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalMatrixRow,
+            globalFaceIndex + row, // u^-
+            writeToNegativeProjection ? -1 : 0
+          );
+
+          repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
+            globalMatrixRow,
+            globalFaceIndex + row + repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns, // u^+
+            writeToNegativeProjection ? 0 : -1
+          );
+        }
 
         row++;
 
