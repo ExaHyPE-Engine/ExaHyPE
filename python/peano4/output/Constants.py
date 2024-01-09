@@ -171,6 +171,15 @@ class Constants(object):
     pass
 
 
+  def export_array(self, name, dim, type, values):
+    new_entry = "const " + str(type) + " " + str(name) + "[" + str(dim) + "]" + " = {"
+    for value in values[:-1]:
+      new_entry += str(value) + ", "
+    new_entry += str(values[-1]) + "}"
+    self.d["ADD_CONSTANTS"] += "  " + new_entry + ";\n"
+    pass
+
+
   def generate(self, overwrite, directory):
     filename = directory + "/Constants.h"
     if write_file(overwrite,self.default_overwrite,filename):
