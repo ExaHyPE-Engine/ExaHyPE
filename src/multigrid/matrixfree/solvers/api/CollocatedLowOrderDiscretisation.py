@@ -4,9 +4,9 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
 import os
 
-from .Solver                                   import Solver
-from multigrid.matrixfree.actionsets.InitDofs  import InitDofs
-from multigrid.matrixfree.actionsets.Solve     import Solve
+from .Solver               import Solver
+from .actionsets.InitDofs  import InitDofs
+from .actionsets.Solve     import Solve
 
 from abc import abstractmethod
 from peano4.solversteps.ActionSet import ActionSet

@@ -1,0 +1,5 @@
+
+class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver:
+  """!
+  Empty body!
+  """
