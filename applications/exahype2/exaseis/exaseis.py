@@ -137,7 +137,7 @@ def parse_arguments():
         "-f",
         "--fuse-tasks",
         type=int,
-        default=16384,
+        default=131072,
         help="Number of enclave tasks to fuse into one meta task.",
     )
     parser.add_argument(
@@ -242,7 +242,7 @@ def parse_arguments():
         "-lb",
         "--load-balancing-strategy",
         choices=available_load_balancing_strategies,
-        default="SpreadOutHierarchically",
+        default="SpreadOutOnceGridStagnates",
         help="|".join(available_load_balancing_strategies),
     )
     parser.add_argument(
