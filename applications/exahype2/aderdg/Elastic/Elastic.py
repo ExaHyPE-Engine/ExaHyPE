@@ -12,14 +12,7 @@ from exahype2.solvers.aderdg.SingleSweep import SingleSweep
 from exahype2.solvers.aderdg.ADERDG import Polynomials
 
 
-parser = argparse.ArgumentParser(description="ExaHyPE 2 - ADER testing script")
-parser.add_argument(
-    "-cs", "--cell-size", dest="h", type=float, default=0.3, help="Mesh size"
-)
-parser.add_argument("-d", "--dim", dest="dim", type=int, default=2, help="Dimensions")
-args = parser.parse_args()
-
-dimensions = args.dim
+dimensions = 3
 
 project = exahype2.Project(
     ["examples", "exahype2", "elastic"],
@@ -27,31 +20,31 @@ project = exahype2.Project(
     executable="ELASTIC" + str(dimensions) + "D",
 )
 
-# stability condition: CFL for Ader-DG
-# dt <= c*dx / (lambda_max*(2N+1)
-# cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
 
 unknowns = {"sigma": 6, "v": 3}
 auxiliary_variables = {"rho": 1, "cp": 1, "cs": 1}
 
-max_h = args.h
-min_h = 0.9 * max_h / 3.0
+order               = 3
+min_level           = 2
+max_depth           = 0
+max_h               = 1.1 / (3.0**min_level)
+min_h               = max_h / (3.0**max_depth)
 
 theSolver = GlobalAdaptiveTimeStep(
-    name="elastic",
-    order=5,
-    unknowns=unknowns,
-    auxiliary_variables=auxiliary_variables,
-    min_cell_h=min_h,
-    max_cell_h=max_h,
-    time_step_relaxation=0.9,
-    refinement_criterion=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-    flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-    ncp=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+    name                  = "elastic",
+    order                 = order,
+    unknowns              = unknowns,
+    auxiliary_variables   = auxiliary_variables,
+    min_cell_h            = min_h,
+    max_cell_h            = max_h,
+    time_step_relaxation  = 0.5,
+    flux  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+    # ncp   = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
 )
 
 theSolver.add_kernel_optimizations(
-    is_linear=True, use_kernel_generator=True, architecture="noarch"
+  is_linear=True,
+  # riemann_solver_implementation=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
 )
 
 
@@ -59,8 +52,8 @@ project.add_solver(theSolver)
 
 build_mode = peano4.output.CompileMode.Release
 
-offset = [0.0, 0.0, 0.0]
-size = [1.0, 1.0, 1.0]
+offset  = [0.0, 0.0, 0.0]
+size    = [1.0, 1.0, 1.0]
 
 project.set_global_simulation_parameters(
     dimensions=dimensions,
@@ -85,4 +78,6 @@ project.set_load_balancing(
 project.set_Peano4_installation("../../../../", build_mode)
 peano4_project = project.generate_Peano4_project("False")
 
-peano4_project.build(make_clean_first=True, number_of_parallel_builds=4)
+peano4_project.output.makefile.add_cpp_file("riemannSolver.cpp")
+
+peano4_project.build(make_clean_first=True, number_of_parallel_builds=32)
