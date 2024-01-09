@@ -31,8 +31,9 @@ template <typename T> T* {{codeNamespace}}::Quadrature<T>::fv2dg;
 template class {{codeNamespace}}::Quadrature<{{computePrecisions[precision_number]}}>;
 {% endfor %}
 
-template<typename T>
-void {{codeNamespace}}::Quadrature<T>::freeQuadratureNodesAndWeights() {
+{% for precision_number in range(0,computePrecisions|length) %}
+template <>
+void {{codeNamespace}}::Quadrature<{{computePrecisions[precision_number]}}>::freeQuadratureNodesAndWeights() {
   _mm_free(weights1);
   _mm_free(weights2);
   _mm_free(weights3);
@@ -47,21 +48,21 @@ void {{codeNamespace}}::Quadrature<T>::freeQuadratureNodesAndWeights() {
 {% endif %}
 }
 
-template<typename T>
-void {{codeNamespace}}::Quadrature<T>::initQuadratureNodesAndWeights() {
-  weights1  = (T *) _mm_malloc(sizeof(T)*{{w1Size }}, {{alignmentSize}}); //nDofPad
-  weights2  = (T *) _mm_malloc(sizeof(T)*{{w2Size }}, {{alignmentSize}}); //2D: nDofPad (==weight1), 3D: (nDof*nDof)Pad (== w1[i]*w1[j])
-  weights3  = (T *) _mm_malloc(sizeof(T)*{{w3Size }}, {{alignmentSize}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
-  weights4  = (T *) _mm_malloc(sizeof(T)*{{w4Size }}, {{alignmentSize}}); //2D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]), 3D: (nDof*nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]*w1[l])
-  iweights1 = (T *) _mm_malloc(sizeof(T)*{{w1Size }}, {{alignmentSize}}); //nDofPad
-  iweights3 = (T *) _mm_malloc(sizeof(T)*{{w3Size }}, {{alignmentSize}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
-  nodes     = (T *) _mm_malloc(sizeof(T)*{{nDofPad}}, {{alignmentSize}});
+template <>
+void {{codeNamespace}}::Quadrature<{{computePrecisions[precision_number]}}>::initQuadratureNodesAndWeights() {
+  weights1  = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w1Size }}, {{alignmentSize}}); //nDofPad
+  weights2  = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w2Size }}, {{alignmentSize}}); //2D: nDofPad (==weight1), 3D: (nDof*nDof)Pad (== w1[i]*w1[j])
+  weights3  = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w3Size }}, {{alignmentSize}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
+  weights4  = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w4Size }}, {{alignmentSize}}); //2D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]), 3D: (nDof*nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k]*w1[l])
+  iweights1 = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w1Size }}, {{alignmentSize}}); //nDofPad
+  iweights3 = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{w3Size }}, {{alignmentSize}}); //2D: (nDof*nDof)Pad (== w1[i]*w1[j]), 3D: (nDof*nDof*nDof)Pad (== w1[i]*w1[j]*w1[k])
+  nodes     = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{nDofPad}}, {{alignmentSize}});
 {% if kernelType=="limiter" %}
-  uh2lob    = (T *) _mm_malloc(sizeof(T)*{{uh2lobSize}}, {{alignmentSize}}); //nDof*nDofPad
-  dg2fv     = (T *) _mm_malloc(sizeof(T)*{{dg2fvSize }}, {{alignmentSize}}); //nDof*nDofLimPad
-  fv2dg     = (T *) _mm_malloc(sizeof(T)*{{fv2dgSize }}, {{alignmentSize}}); //nDofLim*nDofPad
+  uh2lob    = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{uh2lobSize}}, {{alignmentSize}}); //nDof*nDofPad
+  dg2fv     = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{dg2fvSize }}, {{alignmentSize}}); //nDof*nDofLimPad
+  fv2dg     = ({{computePrecisions[precision_number]}} *) _mm_malloc(sizeof({{computePrecisions[precision_number]}})*{{fv2dgSize }}, {{alignmentSize}}); //nDofLim*nDofPad
 {% endif %}
-  
+
 {% for i in w1_seq %}
   weights1[{{i}}]  = (T) {{"{:.15e}".format(weights1[i])}};
 {% endfor %}
@@ -103,5 +104,5 @@ void {{codeNamespace}}::Quadrature<T>::initQuadratureNodesAndWeights() {
   fv2dg[{{i}}]    = (T) {{"{:.15e}".format(fv2dg[i])}};
 {% endfor %}
 {% endif %}
-
 }
+{% endfor %}

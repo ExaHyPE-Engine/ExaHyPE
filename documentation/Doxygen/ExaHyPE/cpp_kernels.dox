@@ -6,8 +6,6 @@
 \li \subpage exahype2_enumerator
 \li \subpage exahype2_dg
 \li \subpage exahype2_dg_DG_AMD
-\li \subpage exahype2_fv_Rusanov
+\li \subpage exahype2_fv_rusanov
 
-
- */
- 
+*/

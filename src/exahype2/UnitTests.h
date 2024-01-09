@@ -1,4 +1,4 @@
-// This file is part of the Peano project. For conditions of distribution and
+// This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
@@ -9,4 +9,4 @@ namespace exahype2 {
    * Please destroy after usage
    */
   tarch::tests::TestCase* getUnitTests();
-}
+} // namespace exahype2

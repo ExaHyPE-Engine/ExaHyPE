@@ -4,6 +4,7 @@
 
 #include "tarch/la/la.h"
 #include "tarch/Assertions.h"
+#include "tarch/accelerator/accelerator.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 #include <string>
@@ -192,11 +193,11 @@ struct tarch::la::Vector {
      *   calls, i.e. vector element accesses, as function calls and does not vectorise
      *   loops containing vector element accesses.
      */
-    inline const Scalar & operator[] (int index) const InlineMethod {
-        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
+    inline const Scalar& operator[] (int index) const InlineMethod {
+#if defined(GPUOffloadingOff)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a vector with only Size components" );
-        #endif
+#endif
         return _values[index];
     }
 
@@ -205,11 +206,11 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline Scalar & operator[] (int index) InlineMethod {
-        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
+    inline Scalar& operator[] (int index) InlineMethod {
+#if defined(GPUOffloadingOff)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion3 ( index < Size, index, Size, ::toString(*this) );
-        #endif
+#endif
         return _values[index];
     }
 
@@ -224,11 +225,11 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline const Scalar & operator() (int index) const InlineMethod {
-        #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
+    inline const Scalar& operator() (int index) const InlineMethod {
+#if defined(GPUOffloadingOff)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion3 ( index < Size, index, Size, ::toString(*this) );
-        #endif
+#endif
         return _values[index];
     }
 
@@ -237,11 +238,11 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline Scalar & operator() (int index) InlineMethod {
-       #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(SharedSYCL)
+    inline Scalar& operator() (int index) InlineMethod {
+#if defined(GPUOffloadingOff)
         assertion3 ( index >= 0, index, Size, ::toString(*this) );
         assertion3 ( index < Size, index, Size, ::toString(*this) );
-       #endif
+#endif
        return _values[index];
      }
 

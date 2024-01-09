@@ -1,8 +1,5 @@
 #include "StrategyFactory.h"
 
-#include "AllOnGPU.h"
-#include "BackfillAndDeployRoundRobin.h"
-#include "Hardcoded.h"
 #include "tarch/Assertions.h"
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/Tasks.h"
@@ -55,6 +52,5 @@ std::string tarch::multicore::orchestration::getListOfRealisations() {
 }
 
 tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::createDefaultStrategy() {
-  return new BackfillAndDeployRoundRobin(16);
-  //  return Hardcoded::createNative();
+  return Hardcoded::createNative();
 }

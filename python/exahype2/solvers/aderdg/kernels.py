@@ -1,6 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.fv.PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 import jinja2
 
@@ -34,7 +34,7 @@ def create_abstract_solver_declarations(
       int                                          normal
     ) = 0;
 {% else %}
-    double maxEigenvalue(
+    virtual double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeX,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -186,9 +186,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" and SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>"%}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& volumeCentre, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
   {{SOURCE_TERM_IMPLEMENTATION}}
-}  
+}
 {% endif %}
 
 {% if MATERIAL_PARAM_IMPLEMENTATION!="<empty>" and MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>"%}
@@ -634,7 +634,6 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const T*__restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]

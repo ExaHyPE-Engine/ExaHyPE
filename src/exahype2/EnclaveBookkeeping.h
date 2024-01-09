@@ -99,7 +99,7 @@ class exahype2::EnclaveBookkeeping {
      * later via 
      * 
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     * tarch::freeMemory( result, tarch::MemoryLocation::Heap );
+     * tarch::freeMemory( result, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
      * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      *
      * @return Entry

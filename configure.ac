@@ -31,13 +31,13 @@
 AC_INIT([Peano], [4.0])
 AC_CONFIG_MACRO_DIR([m4])
 
-# Automake sets C++ flags to "-O2 -g" for GNU compilers (and also for other compilers)
-# These flags are appended to every target. (To all 5, Debug, Release, Trace, Asserts, Stats)
+# Automake sets C++ flags to "-O2 -g" for GNU compilers (and also for other compilers).
+# These flags are appended to every target  (Debug, Release, Trace, Asserts, Stats).
 # To override these defaults, they need to be set between AC_INIT and AC_PROG_CXX for C++
 # and AC_PROG_CC for C.
-# If the flags are empty at this stage (user has not given flags), then we set the floags to none 
-# (empty string), so that "-g -O2" is not appended to every target
-# See Automake documentation and the stackoverflow post: https://stackoverflow.com/questions/3116645/default-compiler-flags-with-autotools
+# If the flags are empty at this stage (user has not given flags), then we set the flags to none
+# (empty string), so that "-g -O2" is not appended to every target.
+# See Automake documentation and the Stack Overflow post: https://stackoverflow.com/questions/3116645/default-compiler-flags-with-autotools
 if test -z "$CXXFLAGS"; then
   CXXFLAGS=''
 fi
@@ -86,7 +86,11 @@ AC_PROG_CXX
 AC_LANG(C++)
 
 #AX_COMPILER_VENDOR
-#AX_CXX_COMPILE_STDCXX_11
+
+AR="ar"
+ARFLAGS="rcD"
+AC_SUBST(AR)
+AC_SUBST(ARFLAGS)
 
 srcdir_full_path=`cd $srcdir && pwd`
 
@@ -107,11 +111,9 @@ CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g "
 CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g "
 CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g -O0 "
 
-# Note: the flag "-g" is essentially a flag for the compiler driver
-# I given as a linker flag, the linker does not complain but it will be ignored.
-# E.g. taken from GNU ld documentaiton https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
-# -g, Ignored. Provided for compatibility with other tools. 
-# Works similarly in other linkers etc. (Libtool's documentation is worse comapred to ld and lld, and the debug flag -g is not mentioned)
+# Note: the flag "-g" is essentially a flag for the compiler driver.
+# Given as a linker flag, the linker does not complain but it will be ignored.
+# Taken from GNU ld documentation: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
 LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
 LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src "
 LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src "
@@ -1161,6 +1163,23 @@ if test "$smartmpi" == Merged; then
 fi
 if test "$smartmpi" == Alternating; then
   AC_DEFINE([UseSmartMPI], [Alternating], [UseSmartMPI])
+fi
+
+
+#
+# targetDART
+#
+AC_ARG_WITH(targetdart,
+  AS_HELP_STRING([--with-targetdart],[build with targetDART [default=no]]),
+  [ AC_MSG_CHECKING(for targetdart)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    targetdart=false ;;
+      *)     AC_MSG_RESULT(yes);   targetdart=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for targetdart); AC_MSG_RESULT(no); targetdart=false ])
+AM_CONDITIONAL([UseTargetDART],[test "x$targetdart" = xtrue])
+if test "$targetdart" == true; then
+  AC_DEFINE([UseTargetDART], [UseTargetDART], [UseTargetDART])
 fi
 
 

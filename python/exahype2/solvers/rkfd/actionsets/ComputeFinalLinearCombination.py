@@ -143,4 +143,4 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
     return super(ComputeFinalLinearCombination,self).get_includes() + """
 #include "exahype2/fd/LoopBody.h"
 #include "exahype2/enumerator/AoSLexicographicEnumerator.h"
-"""    
+"""

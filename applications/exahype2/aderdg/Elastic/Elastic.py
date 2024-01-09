@@ -42,10 +42,7 @@ theSolver = GlobalAdaptiveTimeStep(
     # ncp   = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
 )
 
-theSolver.add_kernel_optimizations(
-  is_linear=True,
-  # riemann_solver_implementation=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
-)
+theSolver.add_kernel_optimizations(is_linear=True)
 
 
 project.add_solver(theSolver)

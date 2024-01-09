@@ -375,7 +375,7 @@ void tarch::mpi::Rank::barrier([[maybe_unused]] std::function<void()> waitor) {
 
 
 bool tarch::mpi::Rank::isMessageInQueue([[maybe_unused]] int tag) const {
-  #if Parallel
+  #ifdef Parallel
   int  flag        = 0;
   MPI_Iprobe(
     MPI_ANY_SOURCE, tag,
@@ -393,6 +393,10 @@ void tarch::mpi::Rank::shutdown() {
   assertion( _rank!=-1 );
 
   IntegerMessage::shutdownDatatype();
+
+#ifdef UseTargetDART
+  finalizeTargetDART();
+#endif
 
   int errorCode = MPI_Finalize();
   if (errorCode) {
@@ -460,6 +464,9 @@ bool tarch::mpi::Rank::validateMaxTagIsSupported() {
   }
 }
 
+#ifdef UseTargetDART
+static void targetDartTextPointer() {}
+#endif
 
 bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char*** argv) {
   #ifdef Parallel
@@ -476,6 +483,10 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
   #else
   result = MPI_Init( argc, argv );
   #endif
+
+#ifdef UseTargetDART
+  initTargetDART(reinterpret_cast<void*>(&targetDartTextPointer));
+#endif
 
   if (result!=MPI_SUCCESS) {
     std::cerr << "init(int*,char***)\t initialisation failed: " + MPIReturnValueToString(result) + " (no logging available yet)" << std::endl;
@@ -580,7 +591,7 @@ void tarch::mpi::Rank::setCommunicator( MPI_Comm communicator, [[maybe_unused]] 
 void tarch::mpi::Rank::abort([[maybe_unused]] int errorCode) {
   std::cout.flush();
   std::cerr.flush();
-  #if Parallel
+  #ifdef Parallel
   MPI_Abort(MPI_COMM_WORLD,errorCode);
   #else
   std::abort();
