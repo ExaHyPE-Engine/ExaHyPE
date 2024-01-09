@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AbstractAderDGActionSet import AbstractAderDGActionSet
-from exahype2.solvers.aderdg.PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 from .kernels import (
   create_predictor_allocations, create_fstpvi_call,
   create_solution_update, compute_local_min_and_max_and_project,

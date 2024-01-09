@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.aderdg.ADERDG import PrecisionType
 from exahype2.solvers.aderdg.FVLimiting import FVLimiting
-from exahype2.solvers.aderdg.PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 from exahype2.solvers.aderdg.kernels import (
     create_abstract_solver_declarations, create_abstract_solver_definitions, create_solver_declarations, create_solver_definitions

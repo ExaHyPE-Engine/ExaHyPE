@@ -31,8 +31,8 @@ theSolver=FVLimitingGlobalAdaptiveTimeStep(
   number_of_dmp_observables=5,
   dmp_relaxationParameter = 0.02,
   dmp_differences_scaling = 0.04,
-  physical_admissibility_criterion=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
-  flux=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+  physical_admissibility_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation,
+  flux=exahype2.solvers.PDETerms.User_Defined_Implementation
 )
 
 # theSolver.set_implementation( refinement_criterion="return ::exahype2::RefinementCommand::Keep;")
