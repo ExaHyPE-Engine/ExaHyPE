@@ -7,7 +7,7 @@ import src.multigrid.matrixfree as matrixfree
 
 print( """
 
-Peano 4 multigrid solver using Discontinuous Galerkin
+Peano 4 multigrid solver using Continuous Galerkin
 
 @author 2022 Sean Baccas, Dmitry Nikolaenko, Tobias Weinzierl
 

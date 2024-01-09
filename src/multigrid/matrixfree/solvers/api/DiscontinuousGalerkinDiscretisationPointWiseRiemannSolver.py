@@ -3,6 +3,7 @@
 import peano4
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
+import os
 
 from .Solver import Solver
 
@@ -178,10 +179,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solutionAndProjection",      str(self._unknowns_per_cell) ))
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
-    super( CollocatedLowOrderDiscretisation, self ).add_to_Peano4_datamodel(datamodel,verbose)
+    super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_to_Peano4_datamodel(datamodel,verbose)
 
   def add_use_statements(self, observer):
-    super( CollocatedLowOrderDiscretisation, self ).add_use_statements(observer)
+    super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_use_statements(observer)
 
   def add_to_plot(self, observer):
     """!
