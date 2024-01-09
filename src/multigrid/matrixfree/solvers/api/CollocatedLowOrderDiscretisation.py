@@ -58,13 +58,8 @@ class CollocatedLowOrderDiscretisation(Solver):
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( CollocatedLowOrderDiscretisation, self ).add_to_Peano4_datamodel(datamodel,verbose)
 
-    # handled in super!
-    # datamodel.add_vertex(self._vertex_data)
-
   def add_use_statements(self, observer):
     super( CollocatedLowOrderDiscretisation, self ).add_use_statements(observer)
-    # handled in super!
-    # observer.use_vertex( self._vertex_data )
 
   def add_to_plot(self, observer):
     """!
