@@ -130,6 +130,9 @@ std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * 
  */
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
 template <int Size, typename Scalar>
 struct tarch::la::Vector {
   private:
@@ -139,9 +142,9 @@ struct tarch::la::Vector {
     /**
      * Clang requires the always_inline attribute, as it otherwise makes weird decisions.
      */
-    Vector() InlineMethod = default;
+    GPUCallableInlineMethod Vector() InlineMethod = default;
 
-    Vector( const Scalar* values ) InlineMethod;
+    GPUCallableInlineMethod Vector( const Scalar* values ) InlineMethod;
 
     /**
      * Initialisation via initialisation list.
@@ -150,14 +153,14 @@ struct tarch::la::Vector {
      * routine relies on an iterator and the iterator within the C++ std lib
      * won't be inlined.
      */
-    Vector( std::initializer_list<Scalar> values );
+    GPUCallableInlineMethod Vector( std::initializer_list<Scalar> values ) InlineMethod;
 
-    Vector( const std::bitset<Size>& values ) InlineMethod;
+    GPUCallableInlineMethod Vector( const std::bitset<Size>& values ) InlineMethod;
 
     /**
      * Construct new vector and initialize all components with initialValue.
      */
-    Vector(const Scalar& initialValue);
+    GPUCallableInlineMethod Vector(const Scalar& initialValue) InlineMethod;
 
     /**
      * Assignment operator for any vector type.
@@ -167,7 +170,7 @@ struct tarch::la::Vector {
      * We do not allow assignment of a vector this itself. Consequently, we can
      * insert an ivdep statement and thus allow the compiler to optimise.
      */
-    inline Vector<Size,Scalar>& operator= (const Vector<Size,Scalar>& toAssign) InlineMethod;
+    GPUCallableInlineMethod Vector<Size,Scalar>& operator= (const Vector<Size,Scalar>& toAssign) InlineMethod;
 
     /**
      * Copy constructor to copy from any vector type.
@@ -177,7 +180,7 @@ struct tarch::la::Vector {
      *
      * @see operator= for a discussion of SSE optimisation.
      */
-    Vector(const Vector<Size,Scalar>&  toCopy);
+    GPUCallableInlineMethod Vector(const Vector<Size,Scalar>& toCopy) InlineMethod;
 
     /**
      * Returns the number of components of the vector.
@@ -193,7 +196,7 @@ struct tarch::la::Vector {
      *   calls, i.e. vector element accesses, as function calls and does not vectorise
      *   loops containing vector element accesses.
      */
-    inline const Scalar& operator[] (int index) const InlineMethod {
+    GPUCallableInlineMethod const Scalar& operator[] (int index) const InlineMethod {
 #if defined(GPUOffloadingOff)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a vector with only Size components" );
@@ -206,7 +209,7 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline Scalar& operator[] (int index) InlineMethod {
+    GPUCallableInlineMethod Scalar& operator[] (int index) InlineMethod {
 #if defined(GPUOffloadingOff)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion3 ( index < Size, index, Size, ::toString(*this) );
@@ -225,7 +228,7 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline const Scalar& operator() (int index) const InlineMethod {
+    GPUCallableInlineMethod const Scalar& operator() (int index) const InlineMethod {
 #if defined(GPUOffloadingOff)
           assertion3 ( index >= 0, index, Size, ::toString(*this) );
           assertion3 ( index < Size, index, Size, ::toString(*this) );
@@ -238,7 +241,7 @@ struct tarch::la::Vector {
      *
      * @see operator[] for remarks on SSE
      */
-    inline Scalar& operator() (int index) InlineMethod {
+    GPUCallableInlineMethod Scalar& operator() (int index) InlineMethod {
 #if defined(GPUOffloadingOff)
         assertion3 ( index >= 0, index, Size, ::toString(*this) );
         assertion3 ( index < Size, index, Size, ::toString(*this) );
@@ -259,6 +262,9 @@ struct tarch::la::Vector {
       return _values;
     }
 };
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
 #include "tarch/la/Vector.cpph"
 #include "tarch/la/VectorOperations.h"

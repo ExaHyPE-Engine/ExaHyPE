@@ -35,20 +35,20 @@ namespace tarch {
      * summed up squared component values.
      */
     template <int Size, typename Scalar>
-    Scalar norm2(const Vector<Size, Scalar>& vector);
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod Scalar norm2(const Vector<Size, Scalar>& vector) InlineMethod;
 
     template <int Size, typename Scalar>
-    Scalar norm2Squared(const Vector<Size, Scalar>& vector);
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod Scalar norm2Squared(const Vector<Size, Scalar>& vector) InlineMethod;
 
     /**
      * Specialisation that is different to standard definition. Works as result
      * type is not part of the signature
      */
     template <int Size>
-    double norm2(const Vector<Size, std::complex<double>>& vector);
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double norm2(const Vector<Size, std::complex<double>>& vector) InlineMethod;
 
     template <int Size>
-    double norm2Squared(const Vector<Size, std::complex<double>>& vector);
+    KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod double norm2Squared(const Vector<Size, std::complex<double>>& vector) InlineMethod;
 
     /**
      * Computes the max-norm of the vector.
