@@ -32,7 +32,7 @@ namespace exahype2::enumerator {
    *   of the first cell, before we continue with any value of the second
    *   cell.
    *
-   * @see enumerators.h for a generic description of attribute semantics.
+   * @see enumerator.h for a generic description of attribute semantics.
    *
    *
    * @param numberOfCells The cells are enumerated one after another, i.e.,
