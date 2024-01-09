@@ -4,9 +4,9 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
 import os
 
-from .Solver               import Solver
-from .actionsets.InitDofs  import InitDofs
-from .actionsets.Solve     import Solve
+from .Solver                      import Solver
+from .actionsets.InitDofs         import InitDofs
+from .actionsets.CollocatedSolver import CollocatedSolver
 
 from abc import abstractmethod
 from peano4.solversteps.ActionSet import ActionSet
@@ -104,7 +104,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     pass
 
   def add_to_solve(self, observer):
-    observer.add_action_set( Solve(self) )
+    observer.add_action_set( CollocatedSolver(self) )
     pass
   
   def add_implementation_files_to_project(self, namespace, output):
