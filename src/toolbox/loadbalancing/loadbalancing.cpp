@@ -29,7 +29,7 @@ void toolbox::loadbalancing::dumpStatistics() {
   int localSumOfRemoteUnrefinedCells = 0;
   int localSumOfSpacetrees = idsOfLocalSpacetrees.size();
 
-  msg << localSumOfSpacetrees << " Local Tree(s): ";
+  msg << localSumOfSpacetrees << " Tree(s): ";
 
   for (const auto& p: idsOfLocalSpacetrees) {
     msg << "(#" << p << ":";
@@ -123,7 +123,7 @@ void toolbox::loadbalancing::dumpStatistics() {
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     std::stringstream msg;
-    msg << globalSumOfSpacetrees << " Global Tree(s): ";
+    msg << globalSumOfSpacetrees << " Tree(s): ";
     if (globalSumOfRemoteUnrefinedCells > 0) {
       double granularity = static_cast<double>(globalSumOfUnrefinedCells) / static_cast<double>(globalSumOfRemoteUnrefinedCells);
       msg << "Granularity=" << granularity;
