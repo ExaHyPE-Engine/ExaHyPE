@@ -497,6 +497,9 @@ def setup_project(args, solver):
     project.constants.export_constexpr_with_type("SOURCE_t0", str(default_values["t0"]), "double")
     project.constants.export_constexpr_with_type("SOURCE_M0", str(default_values["M0"]), "double")
     project.constants.export_constexpr_with_type("SOURCE_RADIUS", str(default_values["source_radius"]), "double")
+    project.constants.export_constexpr_with_type("SOURCE_LOCATION_X", str(default_values["source_location"][0]), "double")
+    project.constants.export_constexpr_with_type("SOURCE_LOCATION_Y", str(default_values["source_location"][1]), "double")
+    project.constants.export_constexpr_with_type("SOURCE_LOCATION_Z", str(default_values["source_location"][2]), "double")
     if args.riemann:
       project.constants.define("USE_RIEMANN")
     if args.material_parameters:
@@ -504,9 +507,6 @@ def setup_project(args, solver):
     if args.point_sources:
         project.constants.define("USE_POINT_SOURCES")
     project.constants.export_boolean("USE_DYNAMIC_AMR", args.dynamic_amr)
-    project.constants.export_vector(
-        "SOURCE_LOCATION", 3, "double", default_values["source_location"],
-    )
 
     project.output.makefile.add_cpp_file("LOH1Solver.cpp")
 

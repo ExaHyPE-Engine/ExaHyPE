@@ -50,9 +50,9 @@ void applications::exahype2::exaseis::LOH1Solver::pointSource(const double* cons
 
 
 void applications::exahype2::exaseis::LOH1Solver::initPointSourceLocations(double sourceLocations[NumberOfPointSources][Dimensions]) {
-  sourceLocations[0][0] = SOURCE_LOCATION(0);
-  sourceLocations[0][1] = SOURCE_LOCATION(1);
-  sourceLocations[0][2] = SOURCE_LOCATION(2);
+  sourceLocations[0][0] = SOURCE_LOCATION_X;
+  sourceLocations[0][1] = SOURCE_LOCATION_Y;
+  sourceLocations[0][2] = SOURCE_LOCATION_Z;
 }
 #endif
 
@@ -63,7 +63,8 @@ void applications::exahype2::exaseis::LOH1Solver::initPointSourceLocations(doubl
   auto result = ::exahype2::RefinementCommand::Keep;
 
   if (tarch::la::equals(t, 0.0)) {
-    if (tarch::la::norm2(x - SOURCE_LOCATION) < SOURCE_RADIUS) {
+    tarch::la::Vector<Dimensions, double> sourceLocation({SOURCE_LOCATION_X, SOURCE_LOCATION_Y, SOURCE_LOCATION_Z});
+    if (tarch::la::norm2(x - sourceLocation) < SOURCE_RADIUS) {
       result = ::exahype2::RefinementCommand::Refine;
     }
   }

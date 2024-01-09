@@ -73,7 +73,8 @@ namespace applications::exahype2::exaseis {
     S[VARS_sxz] = 0.0;
     S[VARS_syz] = 0.0;
 
-    if (tarch::la::norm2(x - SOURCE_LOCATION) < SOURCE_RADIUS) {
+    tarch::la::Vector<Dimensions, double> sourceLocation({SOURCE_LOCATION_X, SOURCE_LOCATION_Y, SOURCE_LOCATION_Z});
+    if (tarch::la::norm2(x - sourceLocation) < SOURCE_RADIUS) {
       S[VARS_sxz] = SOURCE_M0 * t / (SOURCE_t0 * SOURCE_t0) * std::exp(-t / SOURCE_t0);
     }
   }
