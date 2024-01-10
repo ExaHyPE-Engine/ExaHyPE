@@ -28,9 +28,9 @@ ExaHyPE2Sources = \
   enumerator/SingleDoFEnumerator.cpp \
   enumerator/AoSoALexicographicEnumerator.cpp \
   enumerator/FaceAoSLexicographicEnumerator.cpp \
-  aderdg/kernels/Basis/GaussLegendreBasis.cpp \
-  aderdg/kernels/Basis/GaussLobattoBasis.cpp \
-  aderdg/kernels/AderUtils.cpp \
+  aderdg/ADERUtils.cpp \
+  aderdg/basis/GaussLegendreBasis.cpp \
+  aderdg/basis/GaussLobattoBasis.cpp \
   dg/BoundaryConditions.cpp \
   dg/DGUtils.cpp \
   dg/CellIntegral.cpp \
