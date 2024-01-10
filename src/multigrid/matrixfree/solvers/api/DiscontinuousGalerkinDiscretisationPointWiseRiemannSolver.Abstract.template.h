@@ -37,6 +37,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr int        FaceUnknownsSolution   = {{FACE_CARDINALITY_SOLUTION}};
     static constexpr int        FaceUnknownsProjection = {{FACE_CARDINALITY_PROJECTION}};
 
+    static constexpr int        NodesPerCell           = {{NODES_PER_CELL}};
+    static constexpr int        NodesPerFace           = {{NODES_PER_FACE}};
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
 

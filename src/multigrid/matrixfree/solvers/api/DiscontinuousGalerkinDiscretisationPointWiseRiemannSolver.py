@@ -233,6 +233,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "FACE_CARDINALITY_SOLUTION"   : self._unknowns_per_face_solution,
         "FACE_CARDINALITY_PROJECTION" : self._unknowns_per_face_projection,
         "VERTEX_CARDINALITY"          : 1,
+        "NODES_PER_CELL"              : (self.poly_degree + 1) ** self.dimensions,
+        "NODES_PER_FACE"              : (self.poly_degree + 1) ** (self.dimensions-1)
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
