@@ -167,16 +167,18 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     # K^c * (p+1)^d
     self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree ) ** dimensions
     #(K^f +  2K^c) * (p+1)^(d-1)
-    self._unknowns_per_face = (unknowns_per_face_node + 2 * unknowns_per_cell_node) * ( poly_degree ) ** (dimensions-1)
+    self._unknowns_per_face_solution   = (    unknowns_per_face_node) * ( poly_degree ) ** (dimensions-1)
+    self._unknowns_per_face_projection = (2 * unknowns_per_cell_node) * ( poly_degree ) ** (dimensions-1)
 
     # ignore vertex data
 
     # cell stuff
-    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_cell) ))
+    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._unknowns_per_cell) ))
     self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell) ))
 
     # face stuff
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solutionAndProjection",      str(self._unknowns_per_cell) ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution) ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "projection",    str(self._unknowns_per_face_projection) ))
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_to_Peano4_datamodel(datamodel,verbose)
@@ -227,8 +229,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "MIN_H": self.min_h,
         "MAX_H": self.max_h,
         "SOLVER_NAME":             self.typename(),
-        "CELL_CARDINALITY" : self._unknowns_per_cell,
-        "FACE_CARDINALITY" : self._unknowns_per_face,
+        "CELL_CARDINALITY"            : self._unknowns_per_cell,
+        "FACE_CARDINALITY_SOLUTION"   : self._unknowns_per_face_solution,
+        "FACE_CARDINALITY_PROJECTION" : self._unknowns_per_face_projection,
+        "VERTEX_CARDINALITY"          : 1,
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

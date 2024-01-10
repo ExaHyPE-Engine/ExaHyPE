@@ -32,7 +32,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr double     MaxH = {{MAX_H}};
 
     static constexpr double     Omega = 0.6;
-    // static constexpr int        VertexUnknowns = {{VERTEX_CARDINALITY}};
+    static constexpr int        VertexUnknowns         = {{VERTEX_CARDINALITY}};
+    static constexpr int        CellUnknowns           = {{CELL_CARDINALITY}};
+    static constexpr int        FaceUnknownsSolution   = {{FACE_CARDINALITY_SOLUTION}};
+    static constexpr int        FaceUnknownsProjection = {{FACE_CARDINALITY_PROJECTION}};
 
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
@@ -50,11 +53,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     /**
      * Initialise a face degree of freedom
      */
-    virtual void initCell(
+    virtual void initFace(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< {{FACE_CARDINALITY}}, double >&  solution,
-      tarch::la::Vector< {{FACE_CARDINALITY}}, double >&  rhs
+      tarch::la::Vector< {{FACE_CARDINALITY_SOLUTION}}  ,double >&  solution,
+      tarch::la::Vector< {{FACE_CARDINALITY_PROJECTION}},double >& projection
+    ) = 0;
+
+    virtual void initVertex(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h,
+      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  solution,
+      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
     ) = 0;
 
     virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(
@@ -63,6 +73,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     ) final;
 
     virtual celldata::{{SOLVER_NAME}}::Type getCellDoFType(
+      const tarch::la::Vector<Dimensions, double>&  x,
+      const tarch::la::Vector<Dimensions, double>&  h
+    );
+
+    virtual facedata::{{SOLVER_NAME}}::Type getFaceDoFType(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h
     );
