@@ -11,23 +11,6 @@ examples::exahype2::elastic::VariableShortcuts s;
 
 
 
-::exahype2::RefinementCommand examples::exahype2::elastic::elastic::refinementCriterion(
-  const double * __restrict__ Q,               // Q[9+3]
-  const tarch::la::Vector<Dimensions,double>&  x,
-	const tarch::la::Vector<Dimensions,double>&  h,
-  double                                       t
-) {
-	logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  // see comments in header file
-
-  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
-  return result;
-}
-
-
-
 
 void examples::exahype2::elastic::elastic::initialCondition(
   double * __restrict__ Q, //Q[9+3]

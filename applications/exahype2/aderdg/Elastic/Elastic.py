@@ -37,9 +37,9 @@ theSolver = GlobalAdaptiveTimeStep(
     auxiliary_variables   = auxiliary_variables,
     min_cell_h            = min_h,
     max_cell_h            = max_h,
-    time_step_relaxation  = 0.5,
+    time_step_relaxation  = 0.9,
     flux  = exahype2.solvers.PDETerms.User_Defined_Implementation,
-    # ncp   = exahype2.solvers.PDETerms.User_Defined_Implementation
+    ncp   = exahype2.solvers.PDETerms.User_Defined_Implementation
 )
 
 theSolver.add_kernel_optimizations(is_linear=True)
@@ -74,7 +74,5 @@ project.set_load_balancing(
 )
 project.set_Peano4_installation("../../../../", build_mode)
 peano4_project = project.generate_Peano4_project("False")
-
-peano4_project.output.makefile.add_cpp_file("riemannSolver.cpp")
 
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=32)
