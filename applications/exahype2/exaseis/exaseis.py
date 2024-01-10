@@ -13,9 +13,9 @@ import exahype2
 default_values = {
     "min_levels": 4,  # Determines the max. cell size.
     "amr_levels": 0,  # TODO: Load balancing is bad for higher AMR levels at the moment.
-    "patch_size": 4,  # Dofs for FV
+    "patch_size": 5,  # Dofs for FV
     "rk_order": 2,
-    "dg_order": 5,  # Dofs for DG
+    "dg_order": 7,  # Dofs for DG
     "end_time": 3.0,
     "plot_interval": 0.1,
     "rho": 2.7,
@@ -23,12 +23,12 @@ default_values = {
     "s_wave_speed": 3.464,
     "t0": 0.1,
     "M0": 1000.0,
-    "use_kernel_generator": True,  # Use ADER-DG kernel generator. Currently we only support GPU offloading for the generic kernels, i.e., set to false.
+    "use_kernel_generator": False,  # Use ADER-DG kernel generator. Currently we only support GPU offloading for the generic kernels, i.e., set to false.
     "use_riemann": True,  # Use custom Riemann solver
-    "use_material_parameters": True,
-    "use_point_source": True,  # If set to false, an algebraic source is used instead.
+    "use_material_parameters": False,
+    "use_point_source": False,  # If set to false, an algebraic source is used instead.
     "source_location": [0, 2.0, 0],
-    "source_radius": 0.75,  # For algebraic source and AMR
+    "source_radius": 0.1,  # For algebraic source and AMR
     "domain_size": [18, 18, 18],  # [km]
     #"domain_size": [20.0, 20.0, 20.0],
     #"domain_size": [58.0, 58.0, 2.0],
@@ -352,10 +352,14 @@ def setup_solver(args):
                 "min_cell_h": min_h,
                 "order": args.dg_order,
                 "is_linear": True,
+                "polynomials": exahype2.solvers.aderdg.ADERDG.Polynomials.Gauss_Legendre,
                 "use_kernel_generator": default_values["use_kernel_generator"],
                 "architecture": "noarch",
             }
         )
+
+    if default_values["use_kernel_generator"] == False:
+        args.point_source = False
 
     solver = available_solver_types[args.solver](**solver_params)
     solver.plot_description = ", ".join(solver_params["unknowns"].keys())

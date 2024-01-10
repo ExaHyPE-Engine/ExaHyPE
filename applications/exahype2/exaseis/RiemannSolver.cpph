@@ -24,8 +24,8 @@ void applications::exahype2::exaseis::RiemannSolver<T, Order>::solve(
   static constexpr int NumberOfAuxiliaryVariables = applications::exahype2::exaseis::VariableMetrics::NumberOfAuxiliaryVariables;
   static constexpr int BasisSize                  = Order + 1;
 
-  kernels::idx3 idx_FLR(BasisSize, BasisSize, NumberOfUnknowns);
-  kernels::idx3 idx_QLR(BasisSize, BasisSize, NumberOfUnknowns + NumberOfAuxiliaryVariables);
+  ::exahype2::aderdg::idx3 idx_FLR(BasisSize, BasisSize, NumberOfUnknowns);
+  ::exahype2::aderdg::idx3 idx_QLR(BasisSize, BasisSize, NumberOfUnknowns + NumberOfAuxiliaryVariables);
 
   T n[3]                = {0, 0, 0};
   n[normalNonZeroIndex] = 1;
@@ -216,10 +216,10 @@ void applications::exahype2::exaseis::RiemannSolver<T, Order>::localBasis(T* con
     m[1] = 1.;
     m[2] = 0.;
 
-    diff_norm1 = kernels::pow2(n[0] - m[0]) + kernels::pow2(n[1] - m[1]) + kernels::pow2(n[2] - m[2]);
-    diff_norm2 = kernels::pow2(n[0] + m[0]) + kernels::pow2(n[1] + m[1]) + kernels::pow2(n[2] + m[2]);
+    diff_norm1 = ::exahype2::aderdg::pow2(n[0] - m[0]) + ::exahype2::aderdg::pow2(n[1] - m[1]) + ::exahype2::aderdg::pow2(n[2] - m[2]);
+    diff_norm2 = ::exahype2::aderdg::pow2(n[0] + m[0]) + ::exahype2::aderdg::pow2(n[1] + m[1]) + ::exahype2::aderdg::pow2(n[2] + m[2]);
 
-    if (diff_norm1 >= kernels::pow2(tol) && diff_norm2 >= kernels::pow2(tol)) {
+    if (diff_norm1 >= ::exahype2::aderdg::pow2(tol) && diff_norm2 >= ::exahype2::aderdg::pow2(tol)) {
       gramSchmidt(n, m);
     } else {
       m[0] = 0.;
