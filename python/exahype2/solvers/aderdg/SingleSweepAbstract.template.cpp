@@ -18,17 +18,17 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
-double**   exahype2::solvers::aderdg::ADERDGSolver::weights                                 = kernels::{{POLYNOMIAL_TYPE}}::weights;
-double**   exahype2::solvers::aderdg::ADERDGSolver::nodes                                   = kernels::{{POLYNOMIAL_TYPE}}::nodes;
-double***  exahype2::solvers::aderdg::ADERDGSolver::Kxi                                     = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
-double***  exahype2::solvers::aderdg::ADERDGSolver::dudx                                    = kernels::{{POLYNOMIAL_TYPE}}::dudx;
-double***  exahype2::solvers::aderdg::ADERDGSolver::iK1                                     = kernels::{{POLYNOMIAL_TYPE}}::iK1;
-double***  exahype2::solvers::aderdg::ADERDGSolver::equidistantGridProjector                = kernels::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
-double***  exahype2::solvers::aderdg::ADERDGSolver::FCoeff                                  = kernels::{{POLYNOMIAL_TYPE}}::FCoeff;
-double**** exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector                       = kernels::{{POLYNOMIAL_TYPE}}::fineGridProjector;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunction                 = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionFirstDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionSecondDerivative = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
+double**   exahype2::aderdg::ADERDGSolver::weights                                 = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::weights;
+double**   exahype2::aderdg::ADERDGSolver::nodes                                   = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::nodes;
+double***  exahype2::aderdg::ADERDGSolver::Kxi                                     = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::Kxi;
+double***  exahype2::aderdg::ADERDGSolver::dudx                                    = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::dudx;
+double***  exahype2::aderdg::ADERDGSolver::iK1                                     = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::iK1;
+double***  exahype2::aderdg::ADERDGSolver::equidistantGridProjector                = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
+double***  exahype2::aderdg::ADERDGSolver::FCoeff                                  = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::FCoeff;
+double**** exahype2::aderdg::ADERDGSolver::fineGridProjector                       = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::fineGridProjector;
+::exahype2::aderdg::UnivariateFunction** exahype2::aderdg::ADERDGSolver::basisFunction                 = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::basisFunction;
+::exahype2::aderdg::UnivariateFunction** exahype2::aderdg::ADERDGSolver::basisFunctionFirstDerivative  = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
+::exahype2::aderdg::UnivariateFunction** exahype2::aderdg::ADERDGSolver::basisFunctionSecondDerivative = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():

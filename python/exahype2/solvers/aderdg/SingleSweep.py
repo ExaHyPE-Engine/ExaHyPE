@@ -1,5 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
 from .ADERDG import ADERDG, PrecisionType
 
 from exahype2.solvers.PDETerms import PDETerms
@@ -74,6 +75,7 @@ class SingleSweep(ADERDG):
         self.create_action_sets()
         self.create_data_structures()
 
+
     def create_data_structures(self):
         super(SingleSweep, self).create_data_structures()
 
@@ -101,7 +103,7 @@ class SingleSweep(ADERDG):
             + ")"
         )
 
-        # face estimates from the space-time predictor should be sent in predictor step and received and used in the correction step
+        # Face estimates from the space-time predictor should be sent in predictor step and received and used in the correction step.
         self._rhs_estimates_projection.generator.send_condition = (
             "repositories::"
             + self.get_name_of_global_instance()
@@ -125,7 +127,6 @@ class SingleSweep(ADERDG):
             + ".getSolverState()=="
             + self._name + "::SolverState::Correction"
         )
-
 
         self._flux_estimates_projection.generator.send_condition = (
             "repositories::"
@@ -154,10 +155,9 @@ class SingleSweep(ADERDG):
 
         self._preprocess_reconstructed_patch = ""
         self._postprocess_updated_patch = ""
+       #self._riemann_estimates.generator.send_condition                        = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
+       #self._riemann_estimates.generator.receive_and_merge_condition           = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
 
-
-    #    self._riemann_estimates.generator.send_condition                        = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
-    #    self._riemann_estimates.generator.receive_and_merge_condition           = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
 
     def create_action_sets(self):
         super(SingleSweep, self).create_action_sets()
@@ -169,17 +169,11 @@ class SingleSweep(ADERDG):
                 self._name
             )
         )
-        self._action_set_prediction_on_hanging_cells.guard = (
-            self._store_cell_data_default_guard() +
-            " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells and isHangingCell".format(
-                self.get_name_of_global_instance(),
-                self._name
-            )
-        )
 
         self._action_set_correction.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(
             self.get_name_of_global_instance(), self._name
         )
+
         if(self._use_kernel_generator):
             self._action_set_correction.riemann_guard = (
                 self._store_cell_data_default_guard()
@@ -190,6 +184,13 @@ class SingleSweep(ADERDG):
                 + self._name
                 + "FaceLabel.getAboveHanging()"
             )
+            self._action_set_prediction_on_hanging_cells.guard = (
+              self._store_cell_data_default_guard() +
+              " and repositories::{}.getSolverState()=={}::SolverState::PredictionOnHangingCells and isHangingCell".format(
+                  self.get_name_of_global_instance(),
+                  self._name
+            )
+        )
         else:
             self._action_set_correction.riemann_guard = (
                 self._store_cell_data_default_guard()
@@ -245,7 +246,7 @@ class SingleSweep(ADERDG):
     def set_preprocess_reconstructed_patch_kernel(self, kernel):
         """
         Most subclasses will redefine/overwrite this operation as they have
-        to incorporate the kernel into their generated stuff
+        to incorporate the kernel into their generated stuff.
         """
         self._preprocess_reconstructed_patch += kernel
         self.create_data_structures()

@@ -59,7 +59,7 @@ class Handle_boundary(AbstractAderDGActionSet):
         tarch::la::Vector<Dimensions,double> nodePosition = bottomLeftPosition;
 
         #if Dimensions==2
-          nodePosition[1-normal] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[i]*marker.h()[1-normal];
+        nodePosition[1-normal] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[i]*marker.h()[1-normal];
         #else
           /*
           * These access the first and second components that are not in the normal direction
@@ -101,7 +101,6 @@ class Handle_boundary(AbstractAderDGActionSet):
       }
       #endif
     }
-   
   }
 """
 
@@ -140,6 +139,6 @@ class Handle_boundary(AbstractAderDGActionSet):
         return (
             super(Handle_boundary, self).get_includes()
             + """
-#include "exahype2/aderdg/kernels/Kernels.h"
+#include "exahype2/aderdg/generic/generic.h"
       """
         )

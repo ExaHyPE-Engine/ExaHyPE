@@ -10,7 +10,7 @@
 #include "exahype2/PrecisionControl.h"
 #include "exahype2/NonCriticalAssertions.h"
 
-#include "exahype2/aderdg/solvers/ADERDGSolver.h"
+#include "exahype2/aderdg/ADERDGSolver.h"
 
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
@@ -19,7 +19,8 @@
 
 #include "Constants.h"
 
-#include "exahype2/aderdg/kernels/Kernels.h"
+#include "exahype2/aderdg/generic/generic.h"
+
 {% if USE_KERNEL_GENERATOR==True %}
 #include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
@@ -45,7 +46,7 @@
   }
 {%- endfor %}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::aderdg::ADERDGSolver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADERDGSolver {
   public:
     /**
      * This is a "fake" enum, i.e. we do not use it to distinguish different

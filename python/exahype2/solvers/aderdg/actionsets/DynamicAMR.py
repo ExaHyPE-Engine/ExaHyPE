@@ -1,5 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
 import peano4
 import exahype2
 import jinja2
@@ -10,10 +11,9 @@ from .AbstractAderDGActionSet import AbstractAderDGActionSet
 
 class DynamicAMR(AbstractAderDGActionSet):
     """
-
-    The ExaHyPE 2 AderDG handling of adaptive meshes.
-    Despite the name this currently only handles static AMR, so this probably desperately needs to be renamed.
-
+    The ExaHyPE 2 ADER-DG handling of adaptive meshes.
+    Despite the name this currently only handles static AMR,
+    so this probably desperately needs to be renamed.
     """
 
     def __init__(
@@ -29,14 +29,12 @@ class DynamicAMR(AbstractAderDGActionSet):
         self._restrict_guard = restrict_guard
 
         self._Template_TouchFaceFirstTime = """
-
     if ( {{CLEAR_GUARD}} ) {
-
       const int Order = {{ORDER}};
       const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
       const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
       const int strideQ = NumberOfVariables+NumberOfParameters;
-      
+
       #if Dimensions==2
       constexpr int spaceFaceSize      = (Order+1);
       #else
@@ -48,25 +46,21 @@ class DynamicAMR(AbstractAderDGActionSet):
 
       //std::fill_n(fineGridFace{{SOLVER_NAME}}QEstimates.value, 2*basisElementsPerFace, 0.0);
       std::fill_n(fineGridFace{{SOLVER_NAME}}QFluxEstimates.value, 2*fluxElementsPerFace, 0.0);
-
     }
-
     """
 
         self._Template_CreateHangingFace = """
-
-  if ( {{INTERPOLATE_GUARD}} ) {
-  
+  if ({{INTERPOLATE_GUARD}}) {
     const double timeStamp = fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0);
-  
+
     // needs to declare and define timeStepSize
     {{COMPUTE_TIME_STEP_SIZE}}
 
-    const int Order = {{ORDER}};
-    const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
-    const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    const int NumberOfData = NumberOfVariables+NumberOfParameters;
-    
+    constexpr int Order = {{ORDER}};
+    constexpr int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
+    constexpr int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    constexpr int NumberOfData = NumberOfVariables+NumberOfParameters;
+
     #if Dimensions==2
     constexpr int spaceFaceSize      = (Order+1);
     #else
@@ -76,10 +70,9 @@ class DynamicAMR(AbstractAderDGActionSet):
     const int normal = marker.getSelectedFaceNumber()%Dimensions;
     int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : spaceFaceSize;
 
-    if(!marker.isInteriorFaceWithinPatch()){
-
-      //Prolongate estimations, then compute flux on the fine face using these estimations
-      kernels::aderdg::generic::c::singleLevelFaceUnknownsProlongation<
+    if (!marker.isInteriorFaceWithinPatch()) {
+      // Prolongate estimations, then compute flux on the fine face using these estimations
+      ::exahype2::aderdg::generic::singleLevelFaceUnknownsProlongation<
         {{SOLVER_NAME}},
         {{CORRECTOR_COMPUTATION_PRECISION}},
         NumberOfData,
@@ -106,27 +99,22 @@ class DynamicAMR(AbstractAderDGActionSet):
         nodeValuesFine  += NumberOfData;
         nodeFluxesFine  += NumberOfVariables;
       }
-
     }
 
   fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(0, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(0), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(0)) );
   fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(1, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getNewTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(1)) );
   fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(0, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getOldTimeStamp(0), fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(0)) );
   fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(1, std::max( coarseGridFaces{{SOLVER_NAME}}FaceLabel(marker.getSelectedFaceNumber()).getOldTimeStamp(1), fineGridFace{{SOLVER_NAME}}FaceLabel.getOldTimeStamp(1)) );
-
   }
-
     """
 
         self._Template_DestroyHangingFace = """
-
   if({{RESTRICT_GUARD}}){
-
     const int Order = {{ORDER}};
     const int NumberOfVariables = {{NUMBER_OF_UNKNOWNS}};
     const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     const int strideQ = NumberOfVariables+NumberOfParameters;
-    
+
     #if Dimensions==2
     constexpr int spaceFaceSize      = (Order+1);
     #else
@@ -139,22 +127,22 @@ class DynamicAMR(AbstractAderDGActionSet):
     int facePosition = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
 
     //fluxes
-    kernels::aderdg::generic::c::singleLevelFaceUnknownsRestriction<
+    ::exahype2::aderdg::generic::singleLevelFaceUnknownsRestriction<
       {{SOLVER_NAME}}, //SolverType
-      {{CORRECTOR_COMPUTATION_PRECISION}}, //pStoreType      
+      {{CORRECTOR_COMPUTATION_PRECISION}}, //pStoreType
       NumberOfVariables,      //numberOfVariables
       Order+1>(
         coarseGridFaces{{SOLVER_NAME}}QFluxEstimates(marker.getSelectedFaceNumber()).value+facePosition*fluxElementsPerFace, //const double* lQhbndCoarse
-        fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*fluxElementsPerFace, //double* lQhbndFine          
+        fineGridFace{{SOLVER_NAME}}QFluxEstimates.value+facePosition*fluxElementsPerFace, //double* lQhbndFine
         marker.getRelativePositionWithinFatherFace() //const tarch::la::Vector<Dimensions-1, int>& subfaceIndex
     );
-
   }
-
     """
+
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
+
 
     def get_body_of_operation(self, operation_name):
         result = "\n"
@@ -174,6 +162,7 @@ class DynamicAMR(AbstractAderDGActionSet):
             result = jinja2.Template(self._Template_DestroyHangingFace).render(**d)
             pass
         return result
+
 
     def get_includes(self):
         return (

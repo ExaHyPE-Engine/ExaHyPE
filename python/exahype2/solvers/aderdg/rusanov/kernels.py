@@ -1,6 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.PDETerms  import PDETerms
+
+from exahype2.solvers.PDETerms import PDETerms
 import jinja2
 
 
@@ -119,8 +120,7 @@ def create_compute_time_step_size_for_adaptive_time_stepping():
 
 def create_compute_new_time_step_size_for_adaptive_time_stepping():
     return """
-  
-    double maxEigenvalue = kernels::aderdg::generic::c::maxScaledEigenvalue<
+    const double maxEigenvalue = ::exahype2::aderdg::generic::maxScaledEigenvalue<
       {{SOLVER_NAME}}
       >(
         repositories::{{SOLVER_INSTANCE}},
@@ -131,21 +131,20 @@ def create_compute_new_time_step_size_for_adaptive_time_stepping():
         timeStepSize
       );
 
-    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
-    
-    // This is a value set for stats reasons. We'll ignore it later as we 
+    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue(maxEigenvalue);
+
+    // This is a value set for stats reasons. We'll ignore it later as we
     // ask for a new valid time step size from getAdmissibleTimeStepSize().
     //const double newTimeStepSize = 0.0;
     const double newTimeStepSize =  repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false)>0.0 ?
       repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinCellSize(false) :
       0.0;
-
 """
 
 
 def create_start_time_step_implementation_for_adaptive_time_stepping():
     predicate = """
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    tarch::mpi::Rank::getInstance().isGlobalMaster()
     and
     _maxCellH>0.0
   """

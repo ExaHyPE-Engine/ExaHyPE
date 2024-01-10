@@ -1,10 +1,12 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
 from .AbstractAderDGActionSet import AbstractAderDGActionSet
 
 import peano4.solversteps
 import jinja2
+
+
 class InitialCondition(AbstractAderDGActionSet):
   TemplateInitialCondition = """
   if ({{PREDICATE}}) { 
