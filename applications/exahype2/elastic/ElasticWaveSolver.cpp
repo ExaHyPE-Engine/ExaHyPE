@@ -34,7 +34,7 @@ void applications::exahype2::elastic::ElasticWaveSolver::boundaryConditions(
 }
 
 
-#ifdef USE_POINT_SOURCES
+#ifdef USE_POINT_SOURCE
 void applications::exahype2::elastic::ElasticWaveSolver::pointSource(
   const double* const Q, const double* const x, const double t, const double dt, double* const forceVector, int n
 ) {

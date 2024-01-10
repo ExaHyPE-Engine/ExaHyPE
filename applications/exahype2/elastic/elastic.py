@@ -25,7 +25,7 @@ default_values = {
     "t0": 0.7,
     "M0": 1000.0,
     # If set to false, an algebraic source is used instead.
-    "use_point_sources": True,
+    "use_point_source": True,
     "source_location": [10, 10, 10],
     "source_radius": 1.0,  # For algebraic source and AMR
     "domain_size": [20.0, 20.0, 20.0],
@@ -131,10 +131,10 @@ def parse_arguments():
         help="Number of enclave tasks to fuse into one meta task.",
     )
     parser.add_argument(
-        "-point-sources",
-        "--point-sources",
+        "-point-source",
+        "--point-source",
         action="store_true",
-        default=default_values["use_point_sources"],
+        default=default_values["use_point_source"],
         help="Use point sources (currently only supported for DG solvers).",
     )
     parser.add_argument(
@@ -325,7 +325,7 @@ def setup_solver(args):
                 "min_volume_h": args.max_cell_size * 3.0 ** (-args.amr_levels),
             }
         )
-        args.point_sources = False
+        args.point_source = False
     elif "RKDG" in args.solver:
         solver_params.update(
             {
@@ -336,7 +336,7 @@ def setup_solver(args):
                 "face_projections": exahype2.solvers.rkdg.FaceProjections.Solution,
             }
         )
-        args.point_sources = False
+        args.point_source = False
     elif "ADERDG" in args.solver:
         solver_params.update(
             {
@@ -360,7 +360,7 @@ def setup_solver(args):
         "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
         "ncp": exahype2.solvers.PDETerms.None_Implementation,
     }
-    if args.point_sources:
+    if args.point_source:
         implementation_params.update({"point_source": 1})
     else:
         implementation_params.update(
@@ -463,8 +463,8 @@ def setup_project(args, solver):
     project.constants.export_constexpr_with_type(
         "SOURCE_RADIUS", str(default_values["source_radius"]), "double"
     )
-    if args.point_sources:
-        project.constants.define("USE_POINT_SOURCES")
+    if args.point_source:
+        project.constants.define("USE_POINT_SOURCE")
     project.constants.export_boolean("USE_DYNAMIC_AMR", args.dynamic_amr)
     project.constants.export_vector(
         "SOURCE_LOCATION",

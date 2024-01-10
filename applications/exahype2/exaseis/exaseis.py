@@ -9,32 +9,6 @@ sys.path.insert(0, os.path.abspath("../../../python"))
 import peano4
 import exahype2
 
-# Some example configurations are given below:
-
-# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 1 --amr-levels 0
-    # -> yields 27 patches.
-
-# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 2 --amr-levels 0
-    # -> yields 729 patches.
-
-# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 3 --amr-levels 0 --dg-order 5
-    # -> yields 19683 patches and needs ~3 GB memory.
-
-# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 3 --amr-levels 0 --dg-order 7
-    # -> yields 19683 patches and needs ~6 GB memory.
-
-# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 3
-    # -> yields 531441 patches and needs ~25 GB memory.
-
-# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 4
-    # -> yields 531441 patches and needs ~42 GB memory.
-
-# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 5
-    # -> yields 531441 patches and needs ~62 GB memory.
-
-# python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 5 --amr-levels 0 --dg-order 3
-    # -> yields 14348907 patches and needs >>250 GB memory.
-
 # Define default values
 default_values = {
     "min_levels": 4,  # Determines the max. cell size.
@@ -49,9 +23,10 @@ default_values = {
     "s_wave_speed": 3.464,
     "t0": 0.1,
     "M0": 1000.0,
+    "use_kernel_generator": True,  # Use ADER-DG kernel generator. Currently we only support GPU offloading for the generic kernels, i.e., set to false.
     "use_riemann": True,  # Use custom Riemann solver
     "use_material_parameters": True,
-    "use_point_sources": True,  # If set to false, an algebraic source is used instead.
+    "use_point_source": True,  # If set to false, an algebraic source is used instead.
     "source_location": [0, 2.0, 0],
     "source_radius": 0.75,  # For algebraic source and AMR
     "domain_size": [18, 18, 18],  # [km]
@@ -155,10 +130,10 @@ def parse_arguments():
         help="Use material parameters.",
     )
     parser.add_argument(
-        "-point-sources",
-        "--point-sources",
+        "-point-source",
+        "--point-source",
         action="store_true",
-        default=default_values["use_point_sources"],
+        default=default_values["use_point_source"],
         help="Use point sources (currently only supported for DG solvers).",
     )
     parser.add_argument(
@@ -356,7 +331,7 @@ def setup_solver(args):
         )
         args.riemann = False
         args.material_parameters = False
-        args.point_sources = False
+        args.point_source = False
     elif "RKDG" in args.solver:
         solver_params.update(
             {
@@ -369,7 +344,7 @@ def setup_solver(args):
         )
         args.riemann = False
         args.material_parameters = False
-        args.point_sources = False
+        args.point_source = False
     elif "ADERDG" in args.solver:
         solver_params.update(
             {
@@ -377,7 +352,7 @@ def setup_solver(args):
                 "min_cell_h": min_h,
                 "order": args.dg_order,
                 "is_linear": True,
-                "use_kernel_generator": True,
+                "use_kernel_generator": default_values["use_kernel_generator"],
                 "architecture": "noarch",
             }
         )
@@ -405,7 +380,7 @@ def setup_solver(args):
     if args.material_parameters:
       implementation_params.update({"material_parameters": exahype2.solvers.PDETerms.User_Defined_Implementation})
 
-    if args.point_sources:
+    if args.point_source:
         implementation_params.update({"point_source": 1})
     else:
         implementation_params.update(
@@ -504,8 +479,8 @@ def setup_project(args, solver):
       project.constants.define("USE_RIEMANN")
     if args.material_parameters:
       project.constants.define("USE_MATERIAL_PARAMETERS")
-    if args.point_sources:
-        project.constants.define("USE_POINT_SOURCES")
+    if args.point_source:
+        project.constants.define("USE_POINT_SOURCE")
     project.constants.export_boolean("USE_DYNAMIC_AMR", args.dynamic_amr)
 
     project.output.makefile.add_cpp_file("LOH1Solver.cpp")
