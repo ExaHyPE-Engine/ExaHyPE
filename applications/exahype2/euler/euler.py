@@ -166,7 +166,7 @@ parser.add_argument(
     "--fuse",
     dest="fused_tasks",
     type=int,
-    default=128,
+    default=16384,
     help="Number of enclave tasks to fuse into one meta task to offload to GPUs.",
 )
 parser.add_argument(
@@ -506,14 +506,14 @@ if args.visualise:
 
 if args.trees > 0:
     my_project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+        "toolbox::loadbalancing::strategies::SpreadOut",
         "new ::exahype2::LoadBalancingConfiguration(0.98, 100, "
         + str(args.trees)
         + ")",
     )
 else:
     my_project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+        "toolbox::loadbalancing::strategies::SpreadOut",
         "new ::exahype2::LoadBalancingConfiguration(0.98)",
     )
 if args.threads > 0:
@@ -526,7 +526,7 @@ else:
 my_project.set_timeout(args.timeout)
 
 my_project.set_multicore_orchestration(
-    "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, ::tarch::mpi::Rank::getInstance().getRank())"
+    "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, ::tarch::accelerator::Device::getInstance().getLocalDeviceId())"
     % str(args.fused_tasks)
 )
 
