@@ -174,6 +174,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree + 1) ** dimensions
     #(K^f +  2K^c) * (p+1)^(d-1)
     self._unknowns_per_face_solution   = (    unknowns_per_face_node) * ( poly_degree + 1) ** (dimensions-1)
+
+    # to each node we leave one copy of each of the cell unknowns from left and right
     self._unknowns_per_face_projection = (2 * unknowns_per_cell_node) * ( poly_degree + 1) ** (dimensions-1)
 
     # ignore vertex data
@@ -190,7 +192,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
     assert assembly_matrix.shape == mass_matrix.shape
 
-    assert  cell_to_face_projection.shape    == (self._unknowns_per_face_projection, self._unknowns_per_cell)
+    assert  cell_to_face_projection.shape    == (self._unknowns_per_face_solution, self._unknowns_per_cell)
     assert (cell_to_face_projection.T).shape ==  self._face_to_cell_projection.shape
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
@@ -256,6 +258,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "MASS_MATRIX_SCALING"         : self._mass_matrix_scaling,
         "ASSEMBLY_MATRIX"             : self._assembly_matrix,
         "ASSEMBLY_MATRIX_SCALING"     : self._assembly_matrix_scaling,
+        "CELL_TO_FACE_PROJECTION"     : self._cell_to_face_projection,
+        "FACE_TO_CELL_PROJECTION"     : self._face_to_cell_projection,
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

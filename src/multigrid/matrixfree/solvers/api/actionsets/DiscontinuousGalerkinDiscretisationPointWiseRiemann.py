@@ -17,7 +17,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemann(ActionSet):
     // write Mb into it, i.e. mass matrix * rhs
     *r =  repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
 
-
+    // next, we need to project solution on face onto the cell and add it on 
     delete r;
     logTraceOut("Solver");
   }

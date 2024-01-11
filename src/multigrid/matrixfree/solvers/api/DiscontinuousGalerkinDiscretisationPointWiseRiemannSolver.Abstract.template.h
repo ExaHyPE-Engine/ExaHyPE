@@ -98,13 +98,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions, double>&  cellSize
     );
 
-    // // no arguments needed
-    // virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsProjection, double > getFaceToCellMatrix(
-    // );
+    // no arguments needed
+    virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution, double > getFaceToCellMatrix(
+    );
 
-    // // no arguments needed
-    // virtual tarch::la::Matrix< FaceUnknownsProjection, CellUnknowns, double > getCellToFaceMatrix(
-    // );
+    // no arguments needed
+    virtual tarch::la::Matrix< FaceUnknownsSolution, CellUnknowns, double > getCellToFaceMatrix(
+    );
 
   protected:
     static tarch::logging::Log  _log;
