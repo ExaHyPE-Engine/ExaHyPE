@@ -1099,11 +1099,18 @@ if __name__ == "__main__":
                                                                                        my_solver._store_face_data_default_guard(),
                                                                                        )
 
+      dynamic_AMR = exahype2.solvers.rkfd.actionsets.DynamicAMR(
+            solver=my_solver,
+            interpolation=my_solver.interpolation,
+            restriction=my_solver.restriction,
+        )
+
       additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
                                                                              is_enclave_solver = False,
                                                                              ))
       additional_mesh_traversal.add_action_set( project_patch_onto_faces )
       additional_mesh_traversal.add_action_set( roll_over_projected_faces )
+      additional_mesh_traversal.add_action_set( dynamic_AMR )
       
       project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
       peano4_project.solversteps.add_step( additional_mesh_traversal )
