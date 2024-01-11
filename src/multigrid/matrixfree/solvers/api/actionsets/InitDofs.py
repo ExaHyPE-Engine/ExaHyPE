@@ -196,7 +196,7 @@ class InitDofsDG(ActionSet):
   """
   templateTVFT = """
 
-  logTraceInWith3Arguments("InitDofsDG::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
+  //logTraceInWith3Arguments("InitDofsDG::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
   vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
 
@@ -227,11 +227,11 @@ class InitDofsDG(ActionSet):
   }
 
 
-  logTraceOutWith2Arguments("InitDofsDG::TVFT", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
+  //logTraceOutWith2Arguments("InitDofsDG::TVFT", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
    """
 
   templateTCFT = """
-  logTraceInWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  //logTraceInWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
   celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
 
@@ -259,17 +259,28 @@ class InitDofsDG(ActionSet):
       else 
       {
         fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
+
+        logTraceInWith2Arguments("TCFT::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs());
+
+        // adding junk data to the solution and rhs for development purposes
+        for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++)
+        {
+          fineGridCell{{SOLVER_NAME}}.setSolution(i,i);
+          fineGridCell{{SOLVER_NAME}}.setRhs(i,i);
+        }
+
+        logTraceOutWith2Arguments("TCFT::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs());
       }
     }
     break;
 
   }
   
-  logTraceOutWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  //logTraceOutWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
    """
 
   templateTFFT = """
-  logTraceInWith2Arguments("InitDofs::TFFT", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
+  //logTraceInWith2Arguments("InitDofs::TFFT", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
 
   facedata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceDoFType(marker.x(),marker.h());
 
@@ -303,7 +314,7 @@ class InitDofsDG(ActionSet):
 
   }
   
-  logTraceOutWith2Arguments("InitDofs::TFFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  //logTraceOutWith2Arguments("InitDofs::TFFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
    """
   
   def __init__(self,
@@ -361,5 +372,6 @@ class InitDofsDG(ActionSet):
     return """
 #include "repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
+#include<numeric> // for std::iota
 """
 

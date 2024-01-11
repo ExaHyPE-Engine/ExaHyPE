@@ -32,7 +32,7 @@ class CollocatedSolver(ActionSet):
     for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
     {
       logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(dof), fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof), fineGridVertex{{SOLVER_NAME}}.getResidual(dof));
-      assertion( repositories::{{SOLVER_NAME}}.getFieldDiag(dof) > 0 );
+      assertion( fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof) > 0 );
       double val = fineGridVertex{{SOLVER_NAME}}.getValue(dof) 
                   + repositories::{{SOLVER_INSTANCE}}.Omega 
                     * ( 1.0 / fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof) )

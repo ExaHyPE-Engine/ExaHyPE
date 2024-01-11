@@ -11,9 +11,15 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemann(ActionSet):
   if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
   {
     // add logging
-
+    logTraceIn("Solver");
     // create a temporary array r on the heap
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double >* r = new tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double >();
     // write Mb into it, i.e. mass matrix * rhs
+    *r =  repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
+
+
+    delete r;
+    logTraceOut("Solver");
   }
   """
 
