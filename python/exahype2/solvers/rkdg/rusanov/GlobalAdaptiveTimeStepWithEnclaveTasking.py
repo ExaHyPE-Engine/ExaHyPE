@@ -36,8 +36,8 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking
     refinement_criterion=PDETerms.Empty_Implementation,
     initial_conditions=PDETerms.User_Defined_Implementation,
     source_term=PDETerms.None_Implementation,
+    plot_grid_properties=False,
     pde_terms_without_state=False,
-    plot_grid_properties=False
   ):
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name,
                                                 rk_order,

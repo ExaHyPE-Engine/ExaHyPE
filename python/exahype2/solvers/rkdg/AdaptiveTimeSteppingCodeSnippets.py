@@ -2,28 +2,30 @@
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2.solvers.AdaptiveTimeSteppingCodeSnippets
 
-class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCodeSnippets ):
+
+class AdaptiveTimeSteppingCodeSnippets(exahype2.solvers.AdaptiveTimeSteppingCodeSnippets):
   """
   Code snippet generator for fixed time stepping in the Runge-Kutta schemes
   """
   def __init__(self, time_step_relaxation):
     self._time_step_relaxation = time_step_relaxation
 
+
   def create_start_time_step_implementation(self):
     return """
   if (
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    tarch::mpi::Rank::getInstance().isGlobalMaster()
     and
     _maxCellHThisTimeStep>0.0
     and
     isFirstGridSweepOfTimeStep()
   ) {
-    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
-    logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
-    logInfo( "startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep );
-    logInfo( "startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep );
-    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
+    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:");
+    logInfo("startTimeStep()", "t            = " << _minTimeStampThisTimeStep);
+    logInfo("startTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
+    logInfo("startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep);
+    logInfo("startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep);
+    logInfo("startTimeStep()", "lambda_{max} = " << _maxEigenvalue);
   }
 
   if (isFirstGridSweepOfTimeStep()) {
@@ -31,17 +33,18 @@ class AdaptiveTimeSteppingCodeSnippets( exahype2.solvers.AdaptiveTimeSteppingCod
   }
 """
 
+
   def create_finish_time_step_implementation(self):
     """
     The superclass takes the admissible cell size and divides it by the
     maximum eigenvalue. The Finite Volume solvers however operate with
-    patches, i.e. we have to devide by the volume count per axis.
+    patches, i.e., we have to devide by the volume count per axis.
     """
     return super( AdaptiveTimeSteppingCodeSnippets, self ).create_finish_time_step_implementation() + """
   if ( 
-    isLastGridSweepOfTimeStep() 
+    isLastGridSweepOfTimeStep()
     and 
-    tarch::la::greater(_maxEigenvalue, 0.0 ) 
+    tarch::la::greater(_maxEigenvalue, 0.0 )
   ) {
     const     double waveSpeedDamping   = 1.0 / _maxEigenvalue;
     constexpr double CockburnShuDamping = 1.0 / (2.0*{{RK_ORDER}}-1.0);

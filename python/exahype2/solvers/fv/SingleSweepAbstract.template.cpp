@@ -178,12 +178,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   [[maybe_unused]] double globalMinTimeStepSize,
   [[maybe_unused]] double globalMaxTimeStepSize
 ) {
-  if ( _solverState==SolverState::GridInitialisation ) {
-    _solverState     = SolverState::TimeStepAfterGridInitialisation;
-  }
-  else {
-    assertion( _solverState!=SolverState::GridConstruction );
-    _solverState     = SolverState::TimeStep;
+  if (_solverState == SolverState::GridInitialisation) {
+    _solverState = SolverState::TimeStepAfterGridInitialisation;
+  } else {
+    assertion(_solverState!=SolverState::GridConstruction);
+    _solverState = SolverState::TimeStep;
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
@@ -210,6 +209,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
   _patchUpdates    = 0;
+
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("startTimeStep()", "Phase " + toString(_solverState));
+  }
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {

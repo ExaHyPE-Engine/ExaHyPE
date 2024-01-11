@@ -78,8 +78,8 @@ class SeparateSweeps( RungeKuttaDG ):
                                          auxiliary_variables,
                                          min_cell_h,
                                          max_cell_h,
-                                         pde_terms_without_state,
-                                         plot_grid_properties)
+                                         plot_grid_properties,
+                                         pde_terms_without_state)
 
     self._solver_template_file_class_name     = "SeparateSweeps"
 

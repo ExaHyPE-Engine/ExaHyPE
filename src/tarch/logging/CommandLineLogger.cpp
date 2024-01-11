@@ -170,11 +170,11 @@ std::string tarch::logging::CommandLineLogger::constructMessageString(
   }
 
   if ( getLogMachineName() ) {
-    result += addSeparators(NumberOfStandardColumnSpaces,"rank:" + std::to_string(rank));
+    result += addSeparators(NumberOfStandardColumnSpaces,"Rank:" + std::to_string(rank));
   }
 
   if ( getLogThreadName() ) {
-    result += addSeparators(NumberOfStandardColumnSpaces,"core:" + std::to_string(threadId));
+    result += addSeparators(NumberOfStandardColumnSpaces,"Core:" + std::to_string(threadId));
   }
 
   if ( getLogMessageType() ) {

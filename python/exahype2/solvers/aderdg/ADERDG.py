@@ -279,6 +279,12 @@ class ADERDG(object):
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = None
 
+        self._compute_kernel_call_cpu = "#error Not yet defined"
+        self._compute_kernel_call_stateless_cpu = "#error Not yet defined"
+        self._compute_kernel_call_fused_cpu = "#error Not yet defined"
+        self._compute_kernel_call_fused_gpu = "#error Not yet defined"
+        self._pde_terms_without_state = pde_terms_without_state
+
         """
         These are all the optional and mandatory plugins that can be specified by the user.
         eigenvalues, boundary conditions, refinement criteria and initial conditions must
@@ -362,6 +368,49 @@ class ADERDG(object):
         # Create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified.
         self.create_data_structures()
         self.create_action_sets()
+
+
+    def __str__(self):
+        result = (
+            """
+Name:                   """
+            + self._name
+            + """
+Type:                   """
+            + self.__class__.__module__
+            + """
+Stateless PDE terms:    """
+            + str(self._pde_terms_without_state)
+            + """
+DG order:               """
+            + str(self._order)
+            + """
+Linear:                 """
+            + str(self._is_linear)
+            + """
+Kernel generator:       """
+            + str(self._use_kernel_generator)
+            + """
+Architecture:           """
+            + str(self._architecture)
+            + """
+Unknowns:               """
+            + str(self._unknowns)
+            + """
+Auxiliary variables:    """
+            + str(self._auxiliary_variables)
+            + """
+h_cell_min:             """
+            + str(self._min_cell_h)
+            + """
+h_cell_max:             """
+            + str(self._max_cell_h)
+            + """
+"""
+        )
+        return result
+
+    __repr__ = __str__
 
 
     """

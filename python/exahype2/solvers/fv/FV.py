@@ -25,7 +25,6 @@ class Storage(Enum):
 
 class FV(object):
     """!
-
     Abstract finite volume solver step sizes that works on patch-based AMR with a halo layer of one.
 
     FV is the base class of all FV solvers. It defines what kind of action sets do
@@ -331,6 +330,7 @@ class FV(object):
         self.create_data_structures()
         self.create_action_sets()
 
+
     def __str__(self):
         result = (
             """
@@ -338,7 +338,10 @@ Name:                   """
             + self._name
             + """
 Type:                   """
-            + self.__class__.__name__
+            + self.__class__.__module__
+            + """
+Stateless PDE terms:    """
+            + str(self._pde_terms_without_state)
             + """
 Patch size:             """
             + str(self._patch_size)
@@ -363,6 +366,7 @@ h_volume_max:           """
         return result
 
     __repr__ = __str__
+
 
     def get_min_number_of_spacetree_levels(self, domain_size):
         coarsest_tree_level = 0

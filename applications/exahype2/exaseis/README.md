@@ -67,13 +67,10 @@ If these requirements are met, the solver will automatically fuse patches and pu
 If your mesh is too small, the GPU will likely be never used as you do have not enough patches that can be fused into one meta task. For this, you can adjust (reduce) the number of fused tasks (or patches) in the configuration of ExaSeis. The same holds for very large meshes, here you might want to increase the number of fused patches.
 
 ```shell
-python3 exaseis.py -s FVRusanovGlobalAdaptiveEnclave --min-levels 5 --amr-levels 0 -ps 8 -f 10000
+python3 exaseis.py -s FVRusanovGlobalAdaptiveEnclave --min-levels 5 --amr-levels 0 -ps 8 --stateless -f 10000
 ```
 Yields 531441 patches and requires ~160 GB of memory. We fuse and
 offload batches of 10000 patches the GPUs which requires ~5-10 GB of GPU memory.
-
-### Running on Leonardo
-A job script for Leonardo can be found in this application's directory.
 
 ### Results
 ![](LOH1Initial.png)
@@ -90,8 +87,11 @@ A job script for Leonardo can be found in this application's directory.
 
 ![](LOH1.png)
 
-### Scaling Results
+### Running on Leonardo
+A job script for Leonardo can be found in this application's directory.
+
+#### Scaling Results with GPUs
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 6
+python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 6 --stateless
 ```

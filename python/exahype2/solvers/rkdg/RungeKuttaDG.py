@@ -174,8 +174,8 @@ class RungeKuttaDG(object):
         auxiliary_variables,
         min_cell_h,
         max_cell_h,
-        pde_terms_without_state: bool,
         plot_grid_properties,
+        pde_terms_without_state: bool,
         baseline_action_set_descend_invocation_order=0,
     ):
         """
@@ -321,7 +321,7 @@ class RungeKuttaDG(object):
 
         if min_cell_h > max_cell_h:
             raise Exception(
-                "Error: min_cell_h ("
+                "min_cell_h ("
                 + str(min_cell_h)
                 + ") is bigger than max_cell_h ("
                 + str(max_cell_h)
@@ -357,6 +357,12 @@ class RungeKuttaDG(object):
 
         self._compute_time_step_size = "#error Not yet defined"
 
+        self._compute_kernel_call_cpu = "#error Not yet defined"
+        self._compute_kernel_call_stateless_cpu = "#error Not yet defined"
+        self._compute_kernel_call_fused_cpu = "#error Not yet defined"
+        self._compute_kernel_call_fused_gpu = "#error Not yet defined"
+        self._pde_terms_without_state = pde_terms_without_state
+
         self._abstract_solver_user_declarations = ""
         self._abstract_solver_user_definitions = ""
         self._solver_user_declarations = ""
@@ -375,6 +381,7 @@ class RungeKuttaDG(object):
         self.create_data_structures()
         self.create_action_sets()
 
+
     def __str__(self):
         result = (
             """
@@ -382,7 +389,10 @@ Name:                   """
             + self._name
             + """
 Type:                   """
-            + self.__class__.__name__
+            + self.__class__.__module__
+            + """
+Stateless PDE terms:    """
+            + str(self._pde_terms_without_state)
             + """
 RK/DG order:            """
             + str(self._rk_order)
@@ -406,6 +416,7 @@ h_cell_max:             """
         return result
 
     __repr__ = __str__
+
 
     def get_min_number_of_spacetree_levels(self, domain_size):
         coarsest_tree_level = 0

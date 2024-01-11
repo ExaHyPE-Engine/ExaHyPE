@@ -182,21 +182,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   [[maybe_unused]] double globalMinTimeStepSize,
   [[maybe_unused]] double globalMaxTimeStepSize
 ) {
-  logDebug( "startTimeStep(...)", "old state is " << toString(_solverState) );
+  logDebug("startTimeStep(...)", "old state is " << toString(_solverState));
 
   if (
     _solverState == SolverState::GridInitialisation
   ) {
     _solverState = SolverState::PrimaryAfterGridInitialisation;
-  }
-  else if (
+  } else if (
     _solverState == SolverState::Primary
     or
     _solverState == SolverState::PrimaryAfterGridInitialisation
   ) {
     _solverState = SolverState::Secondary;
-  }
-  else { // plot initial condition, e.g.
+  } else { // Plot initial condition, e.g.
     _solverState = SolverState::Primary;
   }
 
@@ -207,7 +205,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     or
     _solverState == SolverState::PrimaryAfterGridInitialisation
   ) {
-    logDebug( "startTimeStep(...)", "reset t and dt as state had been " << toString(_solverState) );
+    logDebug("startTimeStep(...)", "Reset t and dt as state had been " << toString(_solverState));
 
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
@@ -231,6 +229,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
     _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
     _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+  }
+
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("startTimeStep()", "Phase " + toString(_solverState));
   }
 }
 

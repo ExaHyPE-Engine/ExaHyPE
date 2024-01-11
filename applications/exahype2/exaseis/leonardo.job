@@ -22,14 +22,14 @@ ulimit -s unlimited
 # TODO: With CMake this should not be necessary, as we can just use 'FindSlurm'.
 #srun nvidia-smi
 
-srun --cpu-bind=cores ./gpu-mpi-launch ./exaseis-ADERDGRusanovGlobalAdaptive-Stateless-Release
+srun --cpu-bind=cores ./gpu-mpi-launch ./ExaSeis-ADERDGRusanovGlobalAdaptive-Stateless-Release
 
 # For reading the SLURM output in realtime:
 # tail -f
 
 # For interactive runs:
 # salloc -N 1 --ntasks-per-node=4  --cpus-per-task=4 --gres=gpu:4 --time=0:30:00 --partition boost_usr_prod --account EUHPC_D03_043
-# OMP_NUM_THREADS=4 srun -N 1 -n 4 ./gpu-mpi-launch ./exaseis-ADERDGRusanovGlobalAdaptive-Stateless-Release
+# OMP_NUM_THREADS=4 srun -N 1 -n 4 ./gpu-mpi-launch ./ExaSeis-ADERDGRusanovGlobalAdaptive-Stateless-Release
 
 # To watch used cores and memory:
 # htop

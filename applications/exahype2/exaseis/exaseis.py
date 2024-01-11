@@ -29,6 +29,7 @@ default_values = {
     "use_point_source": False,  # If set to false, an algebraic source is used instead.
     "source_location": [0, 2.0, 0],
     "source_radius": 1.0,  # For algebraic source and AMR
+    "stateless": False,  # Use stateless PDE terms (For GPU execution this needs to be set to true).
     "domain_size": [18, 18, 18],  # [km]
     #"domain_size": [20.0, 20.0, 20.0],
     #"domain_size": [58.0, 58.0, 2.0],
@@ -105,7 +106,7 @@ def parse_arguments():
         "-stateless",
         "--stateless",
         action="store_true",
-        default=True,
+        default=default_values["stateless"],
         help="Use stateless PDE terms (GPU offloading requires a GPU enabled Peano build and an enclave solver).",
     )
     parser.add_argument(
@@ -221,27 +222,27 @@ def parse_arguments():
         help="|".join(available_load_balancing_strategies),
     )
     parser.add_argument(
-        "-lb-q",
+        "-lbq",
         "--load-balancing-quality",
         type=float,
         default=0.99,
         help="The quality of the load balancing.",
     )
     parser.add_argument(
-        "-lb-min",
+        "-lbmin",
         "--lb-min-size",
         type=int,
         default=0,
         help="If a tree (partition) is smaller than the given number of cells, we do not split it up further.",
     )
     parser.add_argument(
-        "--lb-trees-init",
+        "--lbtrees-init",
         type=int,
         default=-1,
         help="Number of trees (partitions) per rank during initial decomposition.",
     )
     parser.add_argument(
-        "--lb-trees",
+        "--lbtrees",
         type=int,
         default=-2,
         help="Number of trees (partitions) per rank after initial decomposition.",
@@ -408,7 +409,7 @@ def setup_project(args, solver):
         namespace=["applications", "exahype2", "exaseis"],
         project_name="ExaSeis",
         directory=".",
-        executable=f"exaseis-{args.solver}{'-Stateless' if args.stateless else ''}-{args.build_mode}",
+        executable=f"ExaSeis-{args.solver}{'-Stateless' if args.stateless else ''}-{args.build_mode}",
     )
 
     project.add_solver(solver)
@@ -450,7 +451,7 @@ def setup_project(args, solver):
     if args.load_balancing_strategy != "None":
         project.set_load_balancing(
             f"toolbox::loadbalancing::strategies::{args.load_balancing_strategy}",
-            f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, {args.lb_min_size}, {args.lb_trees_init}, {args.lb_trees})",
+            f"new ::exahype2::LoadBalancingConfiguration({args.load_balancing_quality}, {args.lb_min_size}, {args.lbtrees_init}, {args.lbtrees})",
         )
 
     project.set_number_of_threads(args.threads)

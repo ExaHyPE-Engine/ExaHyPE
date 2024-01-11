@@ -24,11 +24,9 @@
 {% if USE_KERNEL_GENERATOR %}
 #include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
-
 {% if USE_LIMITER %}
 #include "generated/kernels/limiter/fv/Quadrature.h"
 {% endif %}
-
 {% endif %}
 
 {% if USE_HALF_PRECISION==True %}

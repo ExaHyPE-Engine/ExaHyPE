@@ -34,6 +34,7 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _minTimeStepSizeThisTimeStep(0.0),
   _maxTimeStepSizeThisTimeStep(0.0),
   _cellUpdates(0) {
+
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
@@ -221,7 +222,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
-  if ( isFirstGridSweepOfTimeStep() ) {
+  if (isFirstGridSweepOfTimeStep()) {
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
 
@@ -246,7 +247,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _cellUpdates    = 0;
   }
 
-  logInfo( "startTimeStep(...)", "phase " + toString(_solverState) );
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("startTimeStep()", "Phase " + toString(_solverState));
+  }
 }
 
 
