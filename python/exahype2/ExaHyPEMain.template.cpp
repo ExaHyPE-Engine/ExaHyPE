@@ -431,7 +431,7 @@ void step() {
     const double ticksPerSecond = double(1.0 / watch.getCalendarTime());
     tpsMeasurement.setValue(ticksPerSecond);
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      logInfo("step()", "TPS: " << std::fixed << std::setprecision(2) << ticksPerSecond);
+      logInfo("step()", "TPS: " << std::fixed << std::setprecision(4) << ticksPerSecond);
     }
 
     OTTER_TASK_WAIT_FOR(step_task, children);
