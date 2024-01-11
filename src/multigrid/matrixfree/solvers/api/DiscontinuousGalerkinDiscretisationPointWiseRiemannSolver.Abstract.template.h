@@ -31,7 +31,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
-    static constexpr double     Omega = 0.6;
+    static constexpr double     Omega_C = 0.6;
+    static constexpr double     Omega_F = 0.6;
     static constexpr int        VertexUnknowns         = {{VERTEX_CARDINALITY}};
     static constexpr int        CellUnknowns           = {{CELL_CARDINALITY}};
     static constexpr int        FaceUnknownsSolution   = {{FACE_CARDINALITY_SOLUTION}};

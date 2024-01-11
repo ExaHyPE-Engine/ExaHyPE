@@ -3,13 +3,23 @@ from peano4.solversteps.ActionSet import ActionSet
 import peano4
 import jinja2
 
-class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(ActionSet):
+class DiscontinuousGalerkinDiscretisationPointWiseRiemann(ActionSet):
   """!
   Empty body!
   """
+  templateTCFT="""
+  if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
+  {
+    // add logging
+
+    // create a temporary array r on the heap
+    // write Mb into it, i.e. mass matrix * rhs
+  }
+  """
+
   def __init__(self,
                solver):
-    super( CollocatedSolver, self ).__init__()
+    super( DiscontinuousGalerkinDiscretisationPointWiseRiemann, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
@@ -20,9 +30,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(ActionSet):
     # if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
     #   result = jinja2.Template(self.templateTVFT).render(**self.d)
     #   pass 
-    # if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-    #   result = jinja2.Template(self.templateTCFT).render(**self.d)
-    #   pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      pass
     # if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
     #   result = jinja2.Template(self.templateTVLT).render(**self.d)
     #   pass

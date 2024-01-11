@@ -7,6 +7,7 @@ import os
 
 from .Solver import Solver
 from .actionsets.InitDofs         import InitDofsDG
+from .actionsets.DiscontinuousGalerkinDiscretisationPointWiseRiemann         import DiscontinuousGalerkinDiscretisationPointWiseRiemann
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   """!
@@ -223,6 +224,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     pass
 
   def add_to_solve(self, observer):
+    observer.add_action_set( DiscontinuousGalerkinDiscretisationPointWiseRiemann(self) ) 
     pass
   
   def add_implementation_files_to_project(self, namespace, output):
