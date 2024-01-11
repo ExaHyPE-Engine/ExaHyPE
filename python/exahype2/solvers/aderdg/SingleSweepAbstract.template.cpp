@@ -403,9 +403,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
-
-  logInfo( "startTimeStep(...)", "phase " + toString(_solverState) );
-
 }
 
 
