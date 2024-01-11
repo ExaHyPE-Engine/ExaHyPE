@@ -25,8 +25,8 @@ default_values = {
     "M0": 1000.0,
     "use_kernel_generator": False,  # Use ADER-DG kernel generator. Currently we only support GPU offloading for the generic kernels, i.e., set to false.
     "use_riemann": True,  # Use custom Riemann solver
-    "use_material_parameters": False,
-    "use_point_source": False,  # If set to false, an algebraic source is used instead.
+    "use_material_parameters": True,
+    "use_point_source": True,  # If set to false, an algebraic source is used instead.
     "source_location": [0, 2.0, 0],
     "source_radius": 0.1,  # For algebraic source and AMR
     "domain_size": [18, 18, 18],  # [km]
