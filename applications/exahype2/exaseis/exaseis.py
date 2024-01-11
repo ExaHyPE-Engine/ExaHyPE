@@ -11,12 +11,12 @@ import exahype2
 
 # Define default values
 default_values = {
-    "min_levels": 4,  # Determines the max. cell size.
+    "min_levels": 3,  # Determines the max. cell size.
     "amr_levels": 0,  # TODO: Load balancing is bad for higher AMR levels at the moment.
     "patch_size": 5,  # Dofs for FV
     "rk_order": 2,
-    "dg_order": 7,  # Dofs for DG
-    "end_time": 3.0,
+    "dg_order": 3,  # Dofs for DG
+    "end_time": 0.1,
     "plot_interval": 0.1,
     "rho": 2.7,
     "p_wave_speed": 6.0,
@@ -26,9 +26,9 @@ default_values = {
     "use_kernel_generator": False,  # Use ADER-DG kernel generator. Currently we only support GPU offloading for the generic kernels, i.e., set to false.
     "use_riemann": True,  # Use custom Riemann solver
     "use_material_parameters": True,
-    "use_point_source": True,  # If set to false, an algebraic source is used instead.
+    "use_point_source": False,  # If set to false, an algebraic source is used instead.
     "source_location": [0, 2.0, 0],
-    "source_radius": 0.1,  # For algebraic source and AMR
+    "source_radius": 1.0,  # For algebraic source and AMR
     "domain_size": [18, 18, 18],  # [km]
     #"domain_size": [20.0, 20.0, 20.0],
     #"domain_size": [58.0, 58.0, 2.0],

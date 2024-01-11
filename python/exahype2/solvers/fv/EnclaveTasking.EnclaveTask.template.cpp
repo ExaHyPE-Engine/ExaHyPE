@@ -390,7 +390,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 #endif
 
   if (not foundOffloadingBranch) {
-    logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+    logInfo("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
      << " cannot find offloading branch for device " << targetDevice << ". Using the CPU.");
     ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS_CPU}}
   }

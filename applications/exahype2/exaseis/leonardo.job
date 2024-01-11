@@ -1,0 +1,39 @@
+#!/bin/bash
+# chmod +x leonardo.job
+
+#SBATCH -A EUHPC_D03_043
+#SBATCH -p boost_usr_prod
+#SBATCH --time 00:10:00
+#SBATCH -N 4 # Number of nodes
+#SBATCH --ntasks-per-node=4 # Out of 32 -> Should match --gres=gpu:N for multi-GPU runs.
+#SBATCH --cpus-per-task=4 # Out of (32 / ntasks-per-node)
+#SBATCH --gres=gpu:0 # GPUs per node out of 4
+#SBATCH --job-name=ExaHyPE2-ExaSeis
+
+export OMP_PLACES="cores($SLURM_CPUS_PER_TASK)"
+export OMP_BIND="spread"
+export OMP_PROC_BIND=close
+export SRUN_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
+export SLURM_CPU_BIND_TYPE="cores"
+ulimit -c unlimited
+ulimit -s unlimited
+
+# In 'gpu-mpi-launch', make sure to set 'node_local_mpi_rank=$SLURM_LOCALID'
+# TODO: With CMake this should not be necessary, as we can just use 'FindSlurm'.
+#srun nvidia-smi
+
+srun --cpu-bind=cores ./gpu-mpi-launch ./exaseis-ADERDGRusanovGlobalAdaptive-Stateless-Release
+
+# For reading the SLURM output in realtime:
+# tail -f
+
+# For interactive runs:
+# salloc -N 1 --ntasks-per-node=4  --cpus-per-task=4 --gres=gpu:4 --time=0:30:00 --partition boost_usr_prod --account EUHPC_D03_043
+# OMP_NUM_THREADS=4 srun -N 1 -n 4 ./gpu-mpi-launch ./exaseis-ADERDGRusanovGlobalAdaptive-Stateless-Release
+
+# To watch used cores and memory:
+# htop
+# watch -n 0.1 nvidia-smi
+
+# For checking the spent core-hours:
+# saldo -b

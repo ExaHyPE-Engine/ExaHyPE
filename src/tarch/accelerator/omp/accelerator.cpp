@@ -28,7 +28,8 @@ void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::Memor
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaMallocManaged(&data, size));
 #else
-    data = omp_target_alloc(size, device);
+    //data = omp_target_alloc(size, device);
+    data = std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
 #endif
     break;
   case tarch::memory::MemoryLocation::PinnedMemory:
@@ -61,7 +62,8 @@ void tarch::accelerator::freeRawData(void* data, tarch::memory::MemoryLocation l
     CHECK_CUDA_ERROR(cudaSetDevice(device));
     CHECK_CUDA_ERROR(cudaFree(data));
 #else
-    omp_target_free(data, device);
+    //omp_target_free(data, device);
+    std::free(data);
 #endif
     break;
   case tarch::memory::MemoryLocation::PinnedMemory:
