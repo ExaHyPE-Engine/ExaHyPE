@@ -59,7 +59,7 @@ void swift2::kernels::forAllParticles_vectoriseWithCheckPreamble(
     simtFor(particleInChunkNumber,currentChunkSize) {
       const bool evaluate    = predicate(marker,*(pFirstParticle+currentFirstParticleInChunk+particleInChunkNumber));
       int        evaluateBit = evaluate ? 1: 0;
-      evaluatedPredicates   |= (evaluateBit<particleInChunkNumber);
+      evaluatedPredicates   |= (evaluateBit << particleInChunkNumber);
     } endSimtFor
 
     auto update2 = [&]( unsigned int evaluatedPredicates, int indexOfFirstParticle) -> void {
@@ -96,7 +96,7 @@ void swift2::kernels::forAllParticles_vectoriseWithCheckPreamble(
         constexpr int LeftMask   = 0b0011;
         constexpr int RightMask  = 0b1100;
         int leftEvaluatedPredicates  = evaluatedPredicates & LeftMask;
-        int rightEvaluatedPredicates = (evaluatedPredicates & RightMask) > 2;
+        int rightEvaluatedPredicates = (evaluatedPredicates & RightMask) >> 2;
         update2( leftEvaluatedPredicates,  indexOfFirstParticle);
         update2( rightEvaluatedPredicates, indexOfFirstParticle+4);
       }
@@ -116,7 +116,7 @@ void swift2::kernels::forAllParticles_vectoriseWithCheckPreamble(
         constexpr int LeftMask   = 0b00001111;
         constexpr int RightMask  = 0b11110000;
         int leftEvaluatedPredicates  = evaluatedPredicates & LeftMask;
-        int rightEvaluatedPredicates = (evaluatedPredicates & RightMask) > 4;
+        int rightEvaluatedPredicates = (evaluatedPredicates & RightMask) >> 4;
         update4( leftEvaluatedPredicates,  indexOfFirstParticle);
         update4( rightEvaluatedPredicates, indexOfFirstParticle+4);
       }
