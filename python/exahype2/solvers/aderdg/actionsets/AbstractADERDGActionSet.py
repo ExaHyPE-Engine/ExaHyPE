@@ -1,30 +1,24 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 
-
 from peano4.solversteps.ActionSet import ActionSet
 
 
-
-class AbstractAderDGActionSet( ActionSet ):
+class AbstractADERDGActionSet(ActionSet):
   def __init__(self,solver):
     """
-   
-    solver: Ader-DG
-      Reference to creating class 
-   
+    solver: ADER-DG
+      Reference to creating class
     """
     self._solver = solver
     pass
-  
-  
+
+
   def get_action_set_name(self):
     """
-     
-     You should replicate this function in each subclass, so you get 
-     meaningful action set names (otherwise, it will be 
-     AbstractFVActionSet0,1,2,...).
-     
+     You should replicate this function in each subclass, so you get
+     meaningful action set names (otherwise, it will be
+     AbstractADERDGActionSet0,1,2,...).
     """
     return __name__.replace(".py", "").replace(".", "_")
 
@@ -32,9 +26,10 @@ class AbstractAderDGActionSet( ActionSet ):
   def user_should_modify_template(self):
     return False
 
+
 #TODO: duplicate DGUtils into aderdg?
   def get_includes(self):
     return """
 #include <functional>
 #include "exahype2/aderdg/ADERUtils.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes() 
+""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()

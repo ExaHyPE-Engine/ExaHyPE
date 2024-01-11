@@ -1,13 +1,13 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-from .AbstractAderDGActionSet import AbstractAderDGActionSet
+from .AbstractADERDGActionSet import AbstractADERDGActionSet
 
 import peano4.solversteps
 import jinja2
 
 
-class InitialCondition(AbstractAderDGActionSet):
+class InitialCondition(AbstractADERDGActionSet):
   TemplateInitialCondition = """
   if ({{PREDICATE}}) { 
     logTraceIn( "touchCellFirstTime(...)---InitialCondition" );

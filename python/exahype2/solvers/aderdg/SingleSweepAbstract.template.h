@@ -21,9 +21,14 @@
 
 #include "exahype2/aderdg/generic/generic.h"
 
-{% if USE_KERNEL_GENERATOR==True %}
+{% if USE_KERNEL_GENERATOR %}
 #include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
+
+{% if USE_LIMITER %}
+#include "generated/kernels/limiter/fv/Quadrature.h"
+{% endif %}
+
 {% endif %}
 
 {% if USE_HALF_PRECISION==True %}
@@ -75,6 +80,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
       Prediction,
       PredictionOnHangingCells,
       Correction,
+      LimiterStatusSpreadingToNeighbours,
+      LimiterStatusSpreadingToSecondNeighbours,
+      FVRecomputation,
       Plotting,
       Suspended
     };
@@ -89,7 +97,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
     static constexpr bool UseLobattoBasis           = {{USE_GAUSS_LOBATTO}};
     static constexpr double CFL                     = {{CFL_SAFETY_FACTOR}};
     static constexpr double PNPM                    = {{CFL_ADER}};
-    
+
     {% if USE_POINT_SOURCE!="<none>" %}
     static constexpr int NumberOfPointSources     = {{NUMBER_OF_POINT_SOURCES}};
     double pointSourceLocation[NumberOfPointSources][Dimensions];
@@ -111,8 +119,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      * coarser MinH.
      */
     static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
-    
-    
+
     /*
      * Maximal mesh size that can actually be reached, this is the greatest size
      * that can be reached by 3-subdivision of the domain size but is still lower
@@ -124,7 +131,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
     double realCoarsestMeshSize;
     double coarsestMeshLevel;
     double maxAdaptiveMeshLevel;
-    
 
     /**
      * Quadrature points, derivative operators, and various projectors for (1D) unit interval.
@@ -144,7 +150,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
-
     /**
      * Evaluate refinement criterion over cell
      *
@@ -159,7 +164,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
       const tarch::la::Vector<Dimensions,double>&  h,
       double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
 
     /**
      *
@@ -178,13 +182,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      *
      */
     virtual void initialCondition(
-      {{SOLUTION_STORAGE_PRECISION}}* __restrict__                        Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{SOLUTION_STORAGE_PRECISION}}* __restrict__                          Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
 			const tarch::la::Vector<Dimensions,double>&  h,
 			const tarch::la::Vector<Dimensions,int>&     index,
       bool                                         gridIsConstructed
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
 
     /**
      * Apply boundary conditions. You can overwrite both the inside and
@@ -288,8 +291,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      */
     virtual void finishGridConstructionStep() override;
 
-
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -302,9 +303,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      */
     virtual void finishGridInitialisationStep() override;
 
-
     virtual void suspendSolversForOneGridSweep() override;
-
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -323,7 +322,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      */
     virtual void finishTimeStep() override;
 
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -340,7 +338,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      * operation is still invoked.
      */
     virtual void finishPlottingStep() override;
-
 
     /**
      * @param currentTimeStep If you set this to false, you'll get the
@@ -372,7 +369,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
     virtual int getCoarsestMeshLevel()                              const override final;
     virtual int getMaximumAdaptiveMeshLevel()                       const override final;
     virtual int getMaximumAdaptiveMeshDepth()                       const override final;
-    
 
     /**
      * Update the global solver state, i.e. inform the solver about some
@@ -408,8 +404,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      */
     virtual void finishSimulation() override;
 
-
-
   protected:
     static tarch::logging::Log  _log;
 
@@ -438,10 +432,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
 
     int        _cellUpdates;
 
-    tarch::multicore::BooleanSemaphore  _semaphore;
+    int        _numberOfTroubledCellsThisTimeStep;
 
+    tarch::multicore::BooleanSemaphore  _semaphore;
 
   {{ABSTRACT_SOLVER_USER_DECLARATIONS}}
 };
-
-

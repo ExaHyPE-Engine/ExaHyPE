@@ -1,6 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
+import dastgen2
 import peano4.toolbox.blockstructured
 import peano4.datamodel
 import peano4.output
@@ -18,17 +19,6 @@ from abc import abstractmethod
 
 from enum import IntEnum
 import jinja2
-from exahype2.solvers.aderdg.actionsets.Prediction_generic import Prediction_generic
-from exahype2.solvers.aderdg.actionsets.Prediction_kernelgenerator import (
-    Prediction_kernelgenerator
-)
-from exahype2.solvers.aderdg.actionsets.PredictionOnHangingCell_kernelgenerator import (
-    PredictionOnHangingCell_kernelgenerator
-)
-from exahype2.solvers.aderdg.actionsets.Correction_generic import Correction_generic
-from exahype2.solvers.aderdg.actionsets.Correction_kernelgenerator import (
-    Correction_kernelgenerator
-)
 
 
 """
@@ -238,6 +228,29 @@ class ADERDG(object):
         self._use_split_CK = use_split_CK
         self._predictor_recompute = predictor_recompute
         self._initialize_patches = initialize_patches
+
+        """
+        All of the following are mostly used for limiting, they are set of but some classes that inherit from this
+        may turn them on.
+          Hold previous time step: if this is specified as true, the previous time step will be stored persistently.
+            The old value gets overwritten with the new value at the beginning of the predictor step. 
+            This allows rollback of the solution to a previous state if for some reason the computations
+            yield incorrect results.
+            Used for limiting, where troubled cells are rolled back and recomputed with a more robust
+            scheme and neighbouring cells need their old solution to project values with.
+          PMC: if not none, a user-defined physical admissibility criterion should be checked at the end of
+            the correction step which verifies whether or not the produced solution is physically sensible.
+          number_of_pac_observables: number of variables which the physical admisibility criterion should consider
+          number_of_dmp_observables: if greater than zero, a discrete maximum principle should be checked at the
+            end of the corrector step. This essentially verifies whether shocks have formed.
+          use_troubled_markers: use markers to communicate whether cells are troubled, these are then
+            copied to faces to communicate this status to the neighbours.
+        """
+        self._hold_previous_time_step           = False
+        self._use_troubled_marker               = False
+        self._use_limiting                      = False
+        self._number_of_dmp_observables         = 0
+        self._physical_admissibility_criterion  = PDETerms.None_Implementation
 
         """
         If this is turned to true, the solver will provide the user with a function to compute the exact solution
@@ -504,7 +517,7 @@ class ADERDG(object):
         self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = 1
 
         self._action_set_handle_boundary = (
-            exahype2.solvers.aderdg.actionsets.Handle_boundary(
+            exahype2.solvers.aderdg.actionsets.HandleDGBoundary(
                 self, self._store_boundary_data_default_guard()
             )
         )
@@ -557,28 +570,18 @@ class ADERDG(object):
         # extrapolated solution to the faces.
         # Correction uses the extrapolated face solutions from the predictor and the neighboring
         # cells to compute a solution at the next timestep.
-        if self._use_kernel_generator:
-            self._action_set_prediction                   = Prediction_kernelgenerator(
-                self, self._store_cell_data_default_guard()
-            )
-            self._action_set_prediction.descend_invocation_order = 1
-            self._action_set_prediction_on_hanging_cells  = PredictionOnHangingCell_kernelgenerator(
-                self, self._store_cell_data_default_guard()
-            )
-            self._action_set_prediction_on_hanging_cells.descend_invocation_order = 1
-            self._action_set_correction                   = Correction_kernelgenerator(
-                self, self._store_cell_data_default_guard()
-            )
-            self._action_set_correction.descend_invocation_order = 1  # Needs to happen after handle_boundary but this is done on faces anyway
-        else:
-            self._action_set_prediction = Prediction_generic(
-                self, self._store_cell_data_default_guard()
-            )
-            self._action_set_prediction.descend_invocation_order = 1
-            self._action_set_correction = Correction_generic(
-                self, self._store_cell_data_default_guard()
-            )
-            self._action_set_correction.descend_invocation_order = 1
+        self._action_set_prediction                   = exahype2.solvers.aderdg.actionsets.Prediction(
+            self, self._store_cell_data_default_guard(), on_hanging_cells=False)
+        self._action_set_prediction_on_hanging_cells  = exahype2.solvers.aderdg.actionsets.Prediction(
+            self, self._store_cell_data_default_guard(), on_hanging_cells=True)
+        self._action_set_correction                   = exahype2.solvers.aderdg.actionsets.Correction(
+            self, self._store_cell_data_default_guard())
+
+        self._action_set_prediction.descend_invocation_order = 1
+        self._action_set_prediction_on_hanging_cells.descend_invocation_order = 1
+        self._action_set_correction.descend_invocation_order = (
+            1  # Needs to happen after handle_boundary but this is done on faces anyway
+        )
 
         self._action_set_AMR.descend_invocation_order = 2
         self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 2
@@ -867,8 +870,7 @@ class ADERDG(object):
         step.add_action_set(self._action_set_handle_boundary)
 
         step.add_action_set(self._action_set_prediction)
-        if self._use_kernel_generator:  # TODO:
-          step.add_action_set(self._action_set_prediction_on_hanging_cells)
+        step.add_action_set(self._action_set_prediction_on_hanging_cells)
         step.add_action_set(self._action_set_correction)
 
         step.add_action_set(self._action_set_AMR)

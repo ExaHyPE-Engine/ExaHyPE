@@ -1,24 +1,21 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-from .AbstractAderDGActionSet import AbstractAderDGActionSet
+from .AbstractADERDGActionSet import AbstractADERDGActionSet
 
 # import peano4
 import peano4.solversteps
 import jinja2
 
 
-class Handle_boundary(AbstractAderDGActionSet):
+class HandleDGBoundary(AbstractADERDGActionSet):
     """
-
     The linear combination of the Runge Kutta trials has to be projected onto
     the faces, so we can then solve the Riemann problems. So the projection
     happens in one grid sweep, the corresponding Riemann solve in the next one.
-
-
     """
 
-    TemplateProject = """
+    TemplateHandleDGBoundary = """
   if ({{PREDICATE}}) {
   
     const double timeStamp = fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0);
@@ -48,59 +45,48 @@ class Handle_boundary(AbstractAderDGActionSet):
     {{CORRECTOR_COMPUTATION_PRECISION}}* QIn  = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? 0 : basisElementsByFace);
     {{CORRECTOR_COMPUTATION_PRECISION}}* QOut = fineGridFace{{UNKNOWN_IDENTIFIER}}Estimates.value + (!isLeftFace ? basisElementsByFace : 0);    
 
-    tarch::la::Vector<Dimensions,double> bottomLeftPosition = marker.x()-marker.h();
-    bottomLeftPosition[normal] += marker.h()[normal];
+    tarch::la::Vector<Dimensions,double> faceOffset = marker.x() - 0.5 * marker.h();
+    faceOffset(normal) += 0.5 * marker.h()(normal);
 
-    for(int i=0; i<(Order+1); i++){
-      #if Dimensions==3
-      for(int j=0; j<(Order+1); j++){
-      #endif
-
-        tarch::la::Vector<Dimensions,double> nodePosition = bottomLeftPosition;
-
-        #if Dimensions==2
-        nodePosition[1-normal] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[i]*marker.h()[1-normal];
-        #else
-          /*
-          * These access the first and second components that are not in the normal direction
-          * i.e. if normal = 0, they access components 1 and 2,
-          *      if normal = 1, they access components 0 and 2,
-          *      if normal = 2, they access components 0 and 1,
-          */
-          nodePosition[std::max((1-normal), 0)] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[i]
-                                                   *marker.h()[std::max((1-normal), 0)];
-          nodePosition[std::min(2, (3-normal))] += repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[j]
-                                                   *marker.h()[std::min(2, (3-normal))];
-        #endif
+    dfore(dof,Order+1,normal,0) {
+        tarch::la::Vector<Dimensions,double> nodePosition;
+        int dofSerialised = 0;
+        int basis         = 1;
+        for (int d=0; d<Dimensions; d++) {
+          nodePosition(d)  = faceOffset(d);
+          nodePosition(d) += (d==normal) ? 0.0 : repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d[dof(d)] * marker.h()(d);
+          dofSerialised += (d==normal) ? 0 : dof(d)*basis;
+          basis *= (d==normal) ? 1 : (Order+1);
+        }
 
         repositories::{{SOLVER_INSTANCE}}.boundaryConditions(
-          QIn,
-          QOut,
-          marker.x(),
+          QIn  + dofSerialised*NumberOfData,
+          QOut + dofSerialised*NumberOfData,
+          nodePosition,
           marker.h(),
           timeStamp,
           normal
         );
 
+        {% if USE_FLUX!="<none>" %}
         repositories::{{SOLVER_INSTANCE}}.flux(
-          QOut,
-          marker.x(),
+          QOut + dofSerialised*NumberOfData,
+          nodePosition,
           marker.h(),
           timeStamp,
           timeStepSize,
           normal,
-          FOut
+          FOut + dofSerialised*NumberOfVariables
         );
-
-        FIn   += NumberOfVariables;
-        QIn   += NumberOfData;
-        FOut  += NumberOfVariables;
-        QOut  += NumberOfData;
-
-      #if Dimensions==3
-      }
-      #endif
+        {% else %}
+        /*
+         * Not formally correct, should still be able to contain contributions from things such as sources, point sources etc.
+         * These must now be handled through the boundary conditions.
+        */
+        std::fill_n(FOut + dofSerialised*NumberOfVariables, NumberOfVariables, 0.0);
+        {% endif %}
     }
+   
   }
 """
 
@@ -115,7 +101,7 @@ class Handle_boundary(AbstractAderDGActionSet):
           the old solution and the time step should also be moved over
 
         """
-        super(Handle_boundary, self).__init__(solver)
+        super(HandleDGBoundary, self).__init__(solver)
         self.guard = guard
 
     def get_body_of_operation(self, operation_name):
@@ -128,7 +114,7 @@ class Handle_boundary(AbstractAderDGActionSet):
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
             d["PREDICATE"] = self.guard
-            result = jinja2.Template(self.TemplateProject).render(**d)
+            result += jinja2.Template(self.TemplateHandleDGBoundary).render(**d)
             pass
         return result
 
@@ -137,7 +123,7 @@ class Handle_boundary(AbstractAderDGActionSet):
 
     def get_includes(self):
         return (
-            super(Handle_boundary, self).get_includes()
+            super(HandleDGBoundary, self).get_includes()
             + """
 #include "exahype2/aderdg/generic/generic.h"
       """
