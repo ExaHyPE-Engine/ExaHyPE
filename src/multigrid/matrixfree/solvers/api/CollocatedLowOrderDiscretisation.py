@@ -5,7 +5,7 @@ import dastgen2
 import os
 
 from .Solver                      import Solver
-from .actionsets.InitDofs         import InitDofs
+from .actionsets.InitDofs         import InitDofsCollocated
 from .actionsets.CollocatedSolver import CollocatedSolver
 
 from abc import abstractmethod
@@ -100,7 +100,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     Solution initialisation
     
     """
-    observer.add_action_set( InitDofs(self) ) 
+    observer.add_action_set( InitDofsCollocated(self) ) 
     pass
 
   def add_to_solve(self, observer):

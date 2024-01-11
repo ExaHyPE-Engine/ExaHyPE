@@ -6,6 +6,7 @@ import dastgen2
 import os
 
 from .Solver import Solver
+from .actionsets.InitDofs         import InitDofsDG
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   """!
@@ -131,7 +132,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         Riemann solver themself.
     2. We take the result and update the value on the face according to
         \f$
-        q|_f gets (1-\omega _f) q|_f + \omega _f \mathcal{R}(u^-, u^+).
+        q|_f \gets (1-\omega _f) q|_f + \omega _f \mathcal{R}(u^-, u^+).
         \f$
 
         
@@ -207,6 +208,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     Solution initialisation
     
     """
+    observer.add_action_set( InitDofsDG(self) ) 
     pass
 
   def add_to_solve(self, observer):
@@ -233,8 +235,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "FACE_CARDINALITY_SOLUTION"   : self._unknowns_per_face_solution,
         "FACE_CARDINALITY_PROJECTION" : self._unknowns_per_face_projection,
         "VERTEX_CARDINALITY"          : 1,
-        "NODES_PER_CELL"              : (self.poly_degree + 1) ** self.dimensions,
-        "NODES_PER_FACE"              : (self.poly_degree + 1) ** (self.dimensions-1)
+        "NODES_PER_CELL"              : (self._poly_degree + 1) **  self._dimensions,
+        "NODES_PER_FACE"              : (self._poly_degree + 1) ** (self._dimensions-1)
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
