@@ -152,6 +152,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               assembly_matrix_scaling,
               mass_matrix,
               mass_matrix_scaling,
+              cell_to_face_projection,
+              face_to_cell_projection,
               ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).__init__(name, min_h, max_h)
 
@@ -164,12 +166,14 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._assembly_matrix_scaling = assembly_matrix_scaling
     self._mass_matrix             = mass_matrix
     self._mass_matrix_scaling     = mass_matrix_scaling
+    self._cell_to_face_projection = cell_to_face_projection
+    self._face_to_cell_projection = face_to_cell_projection
 
     # K^c * (p+1)^d
-    self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree ) ** dimensions
+    self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree + 1) ** dimensions
     #(K^f +  2K^c) * (p+1)^(d-1)
-    self._unknowns_per_face_solution   = (    unknowns_per_face_node) * ( poly_degree ) ** (dimensions-1)
-    self._unknowns_per_face_projection = (2 * unknowns_per_cell_node) * ( poly_degree ) ** (dimensions-1)
+    self._unknowns_per_face_solution   = (    unknowns_per_face_node) * ( poly_degree + 1) ** (dimensions-1)
+    self._unknowns_per_face_projection = (2 * unknowns_per_cell_node) * ( poly_degree + 1) ** (dimensions-1)
 
     # ignore vertex data
 
@@ -180,6 +184,13 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     # face stuff
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution) ))
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "projection",    str(self._unknowns_per_face_projection) ))
+
+    # assertions for matrix shapes
+    assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
+    assert assembly_matrix.shape == mass_matrix.shape
+
+    assert  cell_to_face_projection.shape    == (self._unknowns_per_face_projection, self._unknowns_per_cell)
+    assert (cell_to_face_projection.T).shape ==  self._face_to_cell_projection.shape
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_to_Peano4_datamodel(datamodel,verbose)
@@ -236,7 +247,13 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "FACE_CARDINALITY_PROJECTION" : self._unknowns_per_face_projection,
         "VERTEX_CARDINALITY"          : 1,
         "NODES_PER_CELL"              : (self._poly_degree + 1) **  self._dimensions,
-        "NODES_PER_FACE"              : (self._poly_degree + 1) ** (self._dimensions-1)
+        "NODES_PER_FACE"              : (self._poly_degree + 1) ** (self._dimensions-1),
+        "UNKNOWNS_PER_CELL_NODE"      : self._unknowns_per_cell_node,
+        "UNKNOWNS_PER_FACE_NODE"      : self._unknowns_per_face_node,
+        "MASS_MATRIX"                 : self._mass_matrix,
+        "MASS_MATRIX_SCALING"         : self._mass_matrix_scaling,
+        "ASSEMBLY_MATRIX"             : self._assembly_matrix,
+        "ASSEMBLY_MATRIX_SCALING"     : self._assembly_matrix_scaling,
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

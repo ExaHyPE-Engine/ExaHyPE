@@ -39,6 +39,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     static constexpr int        NodesPerCell           = {{NODES_PER_CELL}};
     static constexpr int        NodesPerFace           = {{NODES_PER_FACE}};
+
+    static constexpr int        UnknownsPerCellNode    = {{UNKNOWNS_PER_CELL_NODE}};
+    static constexpr int        UnknownsPerFaceNode    = {{UNKNOWNS_PER_FACE_NODE}};
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
 
@@ -48,8 +51,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     virtual void initCell(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  solution,
-      tarch::la::Vector< {{CELL_CARDINALITY}}, double >&  rhs
+      tarch::la::Vector< CellUnknowns, double >&  solution,
+      tarch::la::Vector< CellUnknowns, double >&  rhs
     ) = 0;
 
     /**
@@ -58,15 +61,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     virtual void initFace(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< {{FACE_CARDINALITY_SOLUTION}}  ,double >&  solution,
-      tarch::la::Vector< {{FACE_CARDINALITY_PROJECTION}},double >& projection
+      tarch::la::Vector< FaceUnknownsSolution  ,double >&  solution,
+      tarch::la::Vector< FaceUnknownsProjection,double >& projection
     ) = 0;
 
     virtual void initVertex(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  solution,
-      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
+      tarch::la::Vector< VertexUnknowns, double >&  solution,
+      tarch::la::Vector< VertexUnknowns, double >&  rhs
     ) = 0;
 
     virtual vertexdata::{{SOLVER_NAME}}::Type getVertexDoFType(
@@ -84,14 +87,22 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions, double>&  h
     );
 
-    // virtual tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > getLocalAssemblyMatrix(
-    //   const tarch::la::Vector<Dimensions, double>&  cellCentre,
-    //   const tarch::la::Vector<Dimensions, double>&  cellSize
+    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getLocalAssemblyMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    );
+
+    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getMassMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    );
+
+    // // no arguments needed
+    // virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsProjection, double > getFaceToCellMatrix(
     // );
 
-    // virtual tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoPowerD, double > getMassMatrix(
-    //   const tarch::la::Vector<Dimensions, double>&  cellCentre,
-    //   const tarch::la::Vector<Dimensions, double>&  cellSize
+    // // no arguments needed
+    // virtual tarch::la::Matrix< FaceUnknownsProjection, CellUnknowns, double > getCellToFaceMatrix(
     // );
 
   protected:

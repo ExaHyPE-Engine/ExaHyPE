@@ -36,22 +36,22 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
     virtual void initVertex(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
-      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
+      tarch::la::Vector< VertexUnknowns, double >&  value,
+      tarch::la::Vector< VertexUnknowns, double >&  rhs
     ) override;
 
     virtual void initCell(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  value,
-      tarch::la::Vector< {{VERTEX_CARDINALITY}}, double >&  rhs
+      tarch::la::Vector< CellUnknowns, double >&  value,
+      tarch::la::Vector< CellUnknowns, double >&  rhs
     ) override;
 
     virtual void initFace(
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
-      tarch::la::Vector< {{FACE_CARDINALITY_SOLUTION}}  , double >&  solution,
-      tarch::la::Vector< {{FACE_CARDINALITY_PROJECTION}}, double >&  projection
+      tarch::la::Vector< FaceUnknownsSolution  , double >&  solution,
+      tarch::la::Vector< FaceUnknownsProjection, double >&  projection
     ) override;
 
 };

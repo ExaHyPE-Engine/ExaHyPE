@@ -32,3 +32,39 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
   return facedata::{{SOLVER_NAME}}::Type::Interior;
 }
 
+
+{% if MASS_MATRIX!=[] %}
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMassMatrix(
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize
+) {
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = {
+      {{MASS_MATRIX[0]| join(", ")}}
+      {% for ROW in MASS_MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+  };
+
+  // @todo add in scaling
+
+  return result;
+}
+{% endif %}
+
+{% if ASSEMBLY_MATRIX!=[] %}
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLocalAssemblyMatrix(
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize
+) {
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = {
+      {{ASSEMBLY_MATRIX[0]| join(", ")}}
+      {% for ROW in ASSEMBLY_MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+  };
+
+  // @todo add in scaling
+
+  return result;
+}
+{% endif %}

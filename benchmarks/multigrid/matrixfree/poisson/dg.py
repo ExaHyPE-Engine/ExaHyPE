@@ -13,14 +13,15 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 
 """)
 
+
 parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
 parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=int, default=-1, help="Parallel builds" )
 parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
-parser.add_argument("-upcn", "--unknowns_per_cell",dest="upcn",            type=int, default=1, help="Unknowns per cell node")
-parser.add_argument("-upfn", "--unknowns_per_face",dest="upfn",            type=int, default=1, help="Unknowns per face node")
+parser.add_argument("-upcn", "--unknowns_per_cell", dest="upcn",            type=int, default=1, help="Unknowns per cell node")
+parser.add_argument("-upfn", "--unknowns_per_face", dest="upfn",            type=int, default=1, help="Unknowns per face node")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
@@ -28,6 +29,13 @@ args = parser.parse_args()
 project = matrixfree.Project( project_name = "DGPointwise", 
                               namespace = [ "benchmarks", "multigrid", "matrixfree", "poisson" ]
                             )
+
+# matrices
+assembly_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
+mass_matrix     = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
+cell_to_face    = np.zeros(( 2*args.upcn * (args.poly_degree + 1) ** (args.dimensions-1),   args.upcn * (args.poly_degree + 1) ** (args.dimensions) ))
+face_to_cell    = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     2*args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) ))
+
 
 solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
   "DGPoisson",
@@ -37,10 +45,12 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   args.upfn,
   args.meshsize,
   args.meshsize,
-  0, # assembly matrix
+  assembly_matrix, # assembly matrix
   0, # assembly matrix scaling
-  0, # mass matrix
+  mass_matrix, # mass matrix
   0, # mass matrix scaling
+  cell_to_face, # cell to face
+  face_to_cell, # face to cell
 )
 
 project.add_solver(solver)
