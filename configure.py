@@ -296,8 +296,8 @@ if args.cmake:
     # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
     if args.scorep:
         env_vars = {
-            "CC": "scorep --user {}".format(args.cc),
-            "CXX": "scorep --user {}".format(args.cxx),
+            "CC": "scorep-{}".format(args.cc),
+            "CXX": "scorep-{}".format(args.cxx),
         }
     else:
         env_vars = {
@@ -306,7 +306,7 @@ if args.cmake:
         }
 
     # Create a string to display environment variables like in a terminal
-    env_vars_str = "SCOREP_WRAPPER=OFF " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+    env_vars_str = "SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
     print(f"Running: {env_vars_str} cmake .. {' '.join(configure_args)}")
 
     # Update the current environment with the specified variables
@@ -346,9 +346,9 @@ else:
     if args.scorep:
         env_vars = {
             "CFLAGS": "{}".format(env_cflags),
-            "CC": "scorep --user {}".format(args.cc),
+            "CC": "scorep-{}".format(args.cc),
             "CXXFLAGS": "{}".format(env_cxxflags),
-            "CXX": "scorep --user {}".format(args.cxx),
+            "CXX": "scorep-{}".format(args.cxx),
             "LDFLAGS": "{}".format(env_ldflags),
         }
     else:
@@ -364,7 +364,7 @@ else:
         env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.with_cuda, nvccflags)
 
     # Create a string to display environment variables like in a terminal
-    env_vars_str = "SCOREP_WRAPPER=OFF " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+    env_vars_str = "SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
     print(f"Running: {env_vars_str} ./configure {' '.join(configure_args)}")
 
     # Update the current environment with the specified variables
