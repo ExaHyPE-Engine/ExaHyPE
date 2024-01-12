@@ -184,13 +184,13 @@ typename toolbox::particles::SieveParticles<T>::ParticleList toolbox::particles:
       logDebug("getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString());
 
       if (particleAssignedToVertexWillBeLocal((*p)->getX(), marker)) {
-        logInfo(
+        logDebug(
           "getParticlesToBeSievedIntoVertex(...)",
           "sieved particle " << (*p)->toString() << " is local as we dump it into vertex " << marker.toString() << " on tree " << callingTree
         );
         (*p)->setParallelState(T::ParallelState::Local);
       } else {
-        logInfo(
+        logDebug(
           "getParticlesToBeSievedIntoVertex(...)",
           "sieved particle " << (*p)->toString() << " is virtual as we dump it into vertex " << marker.toString() << " on tree " << callingTree
         );
