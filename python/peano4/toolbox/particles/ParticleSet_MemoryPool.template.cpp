@@ -296,7 +296,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
 }
 
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticle( Container::iterator  particle ) {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::deleteParticle( 
+  Container::iterator  particle
+) {
   // data consistency check
   assertion2(
     (*particle)->getParallelState()==DoFType::ParallelState::Local

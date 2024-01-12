@@ -11,10 +11,14 @@ END_TIME=0.001
 N_PART=240
 PLOT_DELTA=0.0
 
-for REALISATION in domain-decomposition.scattered.no-optimisation domain-decomposition.scattered.outer-guards domain-decomposition.continuous-per-vertex.insert-sorts domain-decomposition.continuous-per-vertex.sort-on-the-fly domain-decomposition.global-continuous.insert-sorts domain-decomposition.global-continuous.sort-on-the-fly
+for REALISATION in domain-decomposition.scattered.no-optimisation domain-decomposition.scattered.outer-guards \
+                   domain-decomposition.continuous-per-vertex.insert-sorts  domain-decomposition.continuous-per-vertex.sort-on-the-fly \
+                   domain-decomposition.global-continuous.insert-sorts domain-decomposition.global-continuous.sort-on-the-fly
 do
   python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION
   python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m asserts -o noh2D.$REALISATION-asserts
 done
+
+
 
 

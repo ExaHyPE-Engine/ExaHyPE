@@ -205,7 +205,7 @@
        * @param eliminateDuplicates If particleSet contains a duplicate that's
        *   already assigned to the vertex, ignore this duplicate.
        */
-      void addParticle(DoFType* particle, bool eliminateDuplicates = true);
+      void addParticle(DoFType* particle);
 
       /**
        * Some simple validation
@@ -226,7 +226,9 @@
       /**
        * Move particle from one container to the other one
        *
-       * I need a copy of the particle, as I might have to scatter
+       * ## Difference to particles on heap
+       *
+       * I need a copy of the particle iterator, as I might have to scatter
        * sourceParticleSet and then redirect particle to an entry within a
        * scattered set.
        *
@@ -234,8 +236,8 @@
        *   erasing it from this set.
        */
       Container::iterator grabParticle(
-        Container::iterator         particle,
-        {{CLASSNAME}}&              sourceParticleSet
+        Container::iterator  particle,
+        {{CLASSNAME}}&       sourceParticleSet
       );
 
       /**
@@ -245,6 +247,14 @@
        * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
        * 
+       *
+       * ## Difference to particles on heap
+       *
+       * I need a copy of the particle iterator, as I might have to scatter
+       * sourceParticleSet and then redirect particle to an entry within a
+       * scattered set.
+       *
+       *
        * @return an iterator to the particle. This iterator is robust, i.e. even 
        *   if we have altered the underlying data, this one is still valid. It is
        *   however not efficient, i.e. it might point to begin() and any outer
