@@ -49,7 +49,6 @@ class UpdateCell(ActionSet):
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
-    # self.d["VERTEX_CARDINALITY"] = solver._unknowns_per_vertex
 
   def get_body_of_operation(self,operation_name):
     result = ""
