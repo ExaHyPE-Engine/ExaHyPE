@@ -3,10 +3,10 @@
 #pragma once
 
 #include <string>
+
+#include "config.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/BooleanSemaphore.h"
-
-
 
 #if defined(SharedSYCL)
 #include <mutex>

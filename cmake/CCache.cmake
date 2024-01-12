@@ -1,9 +1,9 @@
-find_program(CCACHE_PROGRAM ccache)
+find_program(CCACHE ccache)
 
-if(CCACHE_PROGRAM)
+if(CCACHE)
    # Set up wrapper scripts
-  set(C_LAUNCHER   "${CCACHE_PROGRAM}")
-  set(CXX_LAUNCHER "${CCACHE_PROGRAM}")
+  set(C_LAUNCHER   "${CCACHE}")
+  set(CXX_LAUNCHER "${CCACHE}")
   configure_file(cmake/launch-c.in launch-c)
   configure_file(cmake/launch-cxx.in launch-cxx)
   #execute_process(COMMAND chmod a+rx
@@ -27,7 +27,7 @@ if(CCACHE_PROGRAM)
     set(CMAKE_CXX_COMPILER_LAUNCHER "${CMAKE_BINARY_DIR}/launch-cxx")
   endif()
 
-  message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+  message(STATUS "Found ccache: ${CCACHE}")
 else()
-  message(WARNING "Could not enable ccache: could not find program")
+  message(WARNING "ccache requested but executable not found")
 endif()

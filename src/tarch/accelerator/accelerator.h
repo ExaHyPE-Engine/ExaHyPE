@@ -2,9 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "config.h"
 #include "tarch/multicore/multicore.h"
 
-#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) and !defined(GPUOffloadingCUDA)
+#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) \
+  and !defined(GPUOffloadingCUDA)
 #define GPUOffloadingOff
 #endif
 
@@ -40,17 +42,17 @@ namespace tarch {
    * implementation can be found in accelerator.cpp. The vendor-specific
    * implementations are hold within their accelerator.cpp file.
    */
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
   void gpuAbort();
-  #pragma omp end declare target
-  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#pragma omp end declare target
+#elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
   GPUCallableMethod void gpuAbort();
-  #elif defined(GPUOffloadingCPP)
+#elif defined(GPUOffloadingCPP)
   GPUCallableMethod void gpuAbort();
-  #else
+#else
   void gpuAbort();
-  #endif
+#endif
 
   enum class MemoryLocation {
     /**
@@ -70,16 +72,18 @@ namespace tarch {
     ManagedSharedAcceleratorDeviceMemory
   };
 
-  std::string toString( MemoryLocation value );
+  std::string toString(MemoryLocation value);
 
 
   namespace internal {
     void* allocateRawData(int size, MemoryLocation location);
-  }
+  } // namespace internal
 
-  template <class T=double>
-  T* allocateMemory( int size, MemoryLocation location, [[maybe_unused]] int device = -1 ) {
-     return reinterpret_cast<T*>( internal::allocateRawData(size * static_cast<int>(sizeof(T)), location ) );
+  template <class T = double>
+  T* allocateMemory(int size, MemoryLocation location, [[maybe_unused]] int device = -1) {
+    return reinterpret_cast<T*>(internal::allocateRawData(size * static_cast<int>(sizeof(T)), location));
   }
   void freeMemory(void* data, MemoryLocation location);
-}
+
+  int padSizeToAlignment(int size, int aligment);
+} // namespace tarch
