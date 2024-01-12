@@ -428,6 +428,27 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 #  + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
                 #  + self.name
             )
+        elif (
+            self._particle_interaction_kernel_realisation
+            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
+        ):
+            iterate_over_particles_assigned_to_vertex = (
+                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
+                + self.name
+                + ">);"
+            )
+            iterate_over_particles_assigned_to_cell = (
+                "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0}<globaldata::"
+                + self.name
+                + ">, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::"
+                + self.name
+                + ">);"
+            )
+            iterate_over_particles_assigned_to_vertex_for_move = (
+                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
+                + self.name
+                + ">);"
+            )
         else:
             raise NotImplemented()
 
@@ -475,7 +496,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="Drift",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex.format(
+            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex_for_move.format(
                 "::swift2::timestepping::resetMovedParticleMarker"
             ),
             touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex_for_move.format(
