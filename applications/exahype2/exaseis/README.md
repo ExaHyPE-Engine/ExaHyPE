@@ -1,9 +1,9 @@
 # ExaSeis: A Computational Seismology Framework
 
-ExaSeis is a framework for dynamic rupture earthquake simulations with the ExaHyPE 2 Engine on dynamically refined curvilinear meshes.
+ExaSeis is a framework to solve seismic wave propagation with kinematic and dynamic rupture earthquake sources on dynamically refined curvilinear meshes. ExaSeis is used in Pilot Demonstrators PD1 (Extreme-scale modeling of seismic hazards) and PD4 (Complex multi-source tsunami modeling) within the [ChEESE-2P](https://cheese2.eu/) project.
 
 ## LOH.1
-Currently, the ExaSeis framework implements LOH.1 as seen below.
+Currently, the ExaSeis framework implements LOH.1 similar to as seen below.
 
 <div align="center">
 <img src="./LOH1Geometry.png"/>
