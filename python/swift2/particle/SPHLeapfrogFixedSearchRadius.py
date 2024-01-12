@@ -417,12 +417,13 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             iterate_over_particles_assigned_to_cell = (
                 "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0}<globaldata::"
                 + self.name
-                + ">, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::"
-                + self.name
                 + ">);"
             )
             iterate_over_particles_assigned_to_vertex_for_move = (
                 "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
+                + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
+                + self.name
+                + ">, ::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel<globaldata::"
                 + self.name
                 + ">);"
             )

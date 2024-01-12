@@ -49,11 +49,18 @@ namespace swift2 {
     /**
      * @brief Can we move (drift) this particle?
      *
-     * @param localParticle: particle to check for
-     * @param marker: dummy parameter so this function can be passed on as a parameter
+     * This is a more restrictive version compared to
+     * localParticleCanBeUpdatedInVertexKernel(), as it allows the underlying
+     * kernel to move a particle, too. Hence, the particle has to be local, and
+     * we have to check if it has not been moved yet. It is important that we
+     * distinguish this more restrictive version from its counterpart, as not
+     * each and every mesh traversal might reset the moved marker.
+     *
+     * @param localParticle: Particle to check for
+     * @param marker: Identifier for this vertex
      */
     template <typename Particle>
-    bool localParticleCanBeMoved(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
+    bool localParticleCanBeUpdatedAndMovedInVertexKernel(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
       return (
         (localParticle.getMoveState() == Particle::MoveState::NotMovedYet)
         & particleIsLocal(marker, localParticle)
@@ -122,7 +129,14 @@ namespace swift2 {
     /**
      * @brief Can we do work on this particle during a vertex kernel sweep stage?
      *
-     * @param localParticle: particle to check for
+     * This predicate filters out all halo (virtual) particle. It implicitly
+     * assumes that the particle-vertex association is correct. Therefore, we
+     * really only have to mask out virtual particles. The predicate breaks
+     * down if the association is not correct, which means it does not work
+     * if particles move.
+     *
+     * @param localParticle: Particle to check for
+     * @param marker: Identifier for this vertex
      */
     template <typename Particle>
     bool localParticleCanBeUpdatedInVertexKernel(const peano4::datamanagement::VertexMarker& marker, const Particle& localParticle) {
