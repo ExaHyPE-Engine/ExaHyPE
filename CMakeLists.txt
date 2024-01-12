@@ -325,12 +325,12 @@ endif()
 
 # Note: linkers (ld, lld) ignore the flag -g when passed.
 # Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
-set(PEANO_CXX_FLAGS_RELEASE -O3)
+set(PEANO_CXX_FLAGS_RELEASE -O3 -march=native) # -Ofast # add_compile_options
 set(PEANO_CUDA_FLAGS_RELEASE -O3)
 set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
 
 #-O2 -fno-omit-frame-pointer
-set(PEANO_CXX_FLAGS_DEBUG -g -O0)
+set(PEANO_CXX_FLAGS_DEBUG -g -O0 -march=native)
 set(PEANO_CUDA_FLAGS_DEBUG -g -O0)
 set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4)
 
@@ -342,7 +342,7 @@ set(PEANO_CXX_FLAGS_ASSERTS ${PEANO_CXX_FLAGS_DEBUG})
 set(PEANO_CUDA_FLAGS_ASSERTS ${PEANO_CUDA_FLAGS_DEBUG})
 set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2)
 
-set(PEANO_CXX_FLAGS_TRACE -g -O2)
+set(PEANO_CXX_FLAGS_TRACE -g -O2 -march=native)
 set(PEANO_CUDA_FLAGS_TRACE ${PEANO_CXX_FLAGS_TRACE})
 set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
 
