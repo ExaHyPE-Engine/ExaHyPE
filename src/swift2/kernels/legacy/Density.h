@@ -13,6 +13,14 @@ namespace swift2 {
     namespace legacy {
 
       /**
+       * @todo No masking yet
+       */
+      template <typename Particle>
+      void hydroPredictExtraWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        hydroPredictExtra(marker, localParticle);
+      }
+
+      /**
        * @brief Prepares a particle for the density calculation.
        *
        * Zeroes all the relevant arrays in preparation for the sums taking place in
@@ -27,6 +35,14 @@ namespace swift2 {
         if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_prepare_density(&localParticle);
         }
+      }
+
+      /**
+       * @todo No masking yet
+       */
+      template <typename Particle>
+      void prepareDensityWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        prepareDensity(marker, localParticle);
       }
 
 
@@ -65,6 +81,14 @@ namespace swift2 {
         }
       }
 
+      /**
+       * @todo No masking yet
+       */
+      template <typename Particle>
+      void densityKernelWithMasking(const peano4::datamanagement::CellMarker& marker, Particle& localParticle, const Particle& activeParticle) {
+        densityKernel( marker, localParticle, activeParticle );
+      }
+
 
       /**
        * @brief Finishes the calculations from the density loop
@@ -84,6 +108,11 @@ namespace swift2 {
         if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
           end_density_calculation(&localParticle);
         }
+      }
+
+      template <typename Particle>
+      void endDensityCalculationWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        endDensityCalculation(marker, localParticle);
       }
 
       /**

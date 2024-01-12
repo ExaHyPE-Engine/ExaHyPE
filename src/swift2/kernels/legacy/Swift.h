@@ -49,11 +49,22 @@ namespace swift2 {
      * as a varying search radius.
      */
     namespace legacy {
+      /**
+       * @todo Is this one at the right place, or should it rather be in SmoothingLength?
+       */
       template <typename Particle>
       void resetSmoothingLengthIterationCounter(const peano4::datamanagement::VertexMarker& marker, Particle& particle) {
         if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle)) {
           particle.setSmoothingLengthIterCount(0);
         }
+      }
+
+      /**
+       * @todo Mladen This one works without the check. Is this correct?
+       */
+      template <typename Particle>
+      void resetSmoothingLengthIterationCounterWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& particle) {
+        particle.setSmoothingLengthIterCount(0);
       }
 
 
@@ -66,11 +77,19 @@ namespace swift2 {
       template <typename Particle>
       void hydro_reset_acceleration(Particle* localParticle);
 
+      /**
+       * @todo Is this the correct place? Might belong to the leapfrog maybe?
+       */
       template <typename Particle>
       void resetAcceleration(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
         if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_reset_acceleration(&localParticle);
         }
+      }
+
+      template <typename Particle>
+      void resetAccelerationWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        resetAcceleration(marker, localParticle);
       }
     }
   }

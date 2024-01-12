@@ -34,6 +34,14 @@ namespace swift2 {
       }
 
       /**
+       * @todo No masking yet
+       */
+      template <typename Particle>
+      void prepareHydroForceWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        prepareHydroForce(marker, localParticle);
+      }
+
+      /**
        * @brief Finishes the force calculation.
        *
        * Multiplies the force and accelerations by the appropiate constants
@@ -52,6 +60,14 @@ namespace swift2 {
         if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_end_force(&localParticle);
         }
+      }
+
+      /**
+       * @todo No masking yet
+       */
+      template <typename Particle>
+      void endHydroForceCalculationWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        endHydroForceCalculation(marker, localParticle);
       }
 
       /**
@@ -90,6 +106,13 @@ namespace swift2 {
       /**
        * Vectorised alternative implementation of forceKernel()
        *
+       * The file names here are wrong. This is, to the best of my knowledge,
+       * not a legacy code, but new one.
+       *
+       * @todo This assumption is not correct atm (as the iterator is programmed).
+       * We either have to alter the iterator (and then can remove this additional
+       * check) or we have to update the docu.
+       *
        * This routine is a vectorised variant of forceKernel() which you can use
        * if and only if you know that localParticle and activeParticle never ever
        * can point to the same object, i.e. if you know that there is no aliasing.
@@ -114,7 +137,25 @@ namespace swift2 {
        *   remove this flag anyway.
        */
       template <typename Particle>
-      void forceKernelVectorised(Particle* __restrict__ localParticle, const Particle* __restrict__ activeParticle);
+      void forceKernelWithMasking(const peano4::datamanagement::CellMarker& marker, Particle& localParticle, const Particle& activeParticle);
+
+      /**
+       * Predict hydro terms (SWIFT)
+       * Relevant for inactive particles when using local-timestepping, but always
+       * used.
+       */
+      template <typename Particle>
+      void predict_hyrdro(Particle* particle);
+
+
+      template <typename Particle>
+      void predictHydro(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
+          predict_hyrdro(&localParticle);
+        }
+      }
+
+
 
       /**
        * Check distance between two particles
