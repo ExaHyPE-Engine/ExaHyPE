@@ -31,8 +31,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
-    static constexpr double     Omega_C = 0.6;
-    static constexpr double     Omega_F = 0.6;
+    static constexpr double     OmegaCell = 0.6;
+    static constexpr double     OmegaFace = 0.6;
     static constexpr int        VertexUnknowns         = {{VERTEX_CARDINALITY}};
     static constexpr int        CellUnknowns           = {{CELL_CARDINALITY}};
     static constexpr int        FaceUnknownsSolution   = {{FACE_CARDINALITY_SOLUTION}};
@@ -92,6 +92,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     );
+
+    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getInvertedAssemblyMatrix(
+      // const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      // const tarch::la::Vector<Dimensions, double>&  cellSize
+    );
+
+    // virtual void updateAssemblyMatrix();
 
     virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getMassMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,

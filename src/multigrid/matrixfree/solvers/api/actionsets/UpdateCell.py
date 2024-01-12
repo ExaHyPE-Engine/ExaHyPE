@@ -3,29 +3,49 @@ from peano4.solversteps.ActionSet import ActionSet
 import peano4
 import jinja2
 
-class DiscontinuousGalerkinDiscretisationPointWiseRiemann(ActionSet):
+class UpdateCell(ActionSet):
   """!
-  Empty body!
+  This is for DG solver.
   """
   templateTCFT="""
   if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
   {
-    // add logging
-    logTraceIn("Solver");
+    logTraceIn("UpdateCell");
+
     // create a temporary array r on the heap
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double >* r = new tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double >();
     // write Mb into it, i.e. mass matrix * rhs
     *r =  repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
 
     // next, we need to project solution on face onto the cell and add it on 
+    // loop over each face
+    for (int f=0; f<TwoTimesD; f++)
+    {
+      // project the face solution onto the cell; add to r
+      *r += repositories::{{SOLVER_INSTANCE}}.getFaceToCellMatrix() * fineGridFaces{{SOLVER_NAME}}(f).getSolution();
+    }
+
+    // fetch inverted assembly matrix from abstract solver class. left-multiply r.
+    *r = repositories::{{SOLVER_INSTANCE}}.getInvertedAssemblyMatrix() * ( *r );
+
+    // scale current entries in solution vector by (1-OmegaCell)
+    for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++)
+    {
+      double sol = fineGridCell{{SOLVER_NAME}}.getSolution(i) * (1-repositories::{{SOLVER_INSTANCE}}.OmegaCell);
+
+      // add on r values whilst we are here
+      fineGridCell{{SOLVER_NAME}}.setSolution(i, sol + (*r)(i) );
+    }
+
+
     delete r;
-    logTraceOut("Solver");
+    logTraceOut("UpdateCell");
   }
   """
 
   def __init__(self,
                solver):
-    super( DiscontinuousGalerkinDiscretisationPointWiseRiemann, self ).__init__()
+    super( UpdateCell, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()

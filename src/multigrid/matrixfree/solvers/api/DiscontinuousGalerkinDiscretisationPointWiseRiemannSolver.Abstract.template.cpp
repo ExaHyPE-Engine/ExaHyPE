@@ -76,6 +76,31 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 }
 {% endif %}
 
+/*
+Warning: this will become a variable matrix one day.
+  Will need to become a class member
+
+  Whilst in development, we just make this the same as 
+  the un-inverted assembly matrix.
+*/
+{% if ASSEMBLY_MATRIX!=[] %}
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getInvertedAssemblyMatrix(
+  // const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  // const tarch::la::Vector<Dimensions, double>&  cellSize
+) {
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = {
+      {{ASSEMBLY_MATRIX[0]| join(", ")}}
+      {% for ROW in ASSEMBLY_MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+  };
+
+  // @todo add in scaling
+
+  return result;
+}
+{% endif %}
+
 
 {% if CELL_TO_FACE_PROJECTION!=[] %}
 tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellToFaceMatrix()
