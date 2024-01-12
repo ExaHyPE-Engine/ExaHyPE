@@ -25,7 +25,7 @@ trace  tarch                               -1     black always-on
 trace  peano4                              -1     black always-on
 trace  benchmarks                          -1     black always-on
 trace  benchmarks::multigrid::matrixfree::poisson::observers::InitSolution2multigrid_matrixfree_actionsets_InitDofs0  -1     white always-on
-trace  benchmarks::multigrid::matrixfree::poisson::observers::Solve2multigrid_matrixfree_actionsets_Solve0            -1     white always-on
+trace  benchmarks::multigrid::matrixfree::poisson::observers::Solve2src_multigrid_matrixfree_solvers_api_actionsets_CollocatedSolver0  -1     white always-on
 trace  exahype2                            -1     black always-on
 trace  toolbox                             -1     black always-on
 

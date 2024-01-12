@@ -226,8 +226,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     pass
 
   def add_to_solve(self, observer):
-    observer.add_action_set( UpdateCell(self) ) 
-    # observer.add_action_set( ProjectOntoFaces(self) ) 
+    # 1st priority, run sequentially
+    observer.add_action_set( UpdateCell(self), 0, False ) 
+    # 2nd priority, run sequentially
+    observer.add_action_set( ProjectOntoFaces(self), 1, False ) 
     pass
   
   def add_implementation_files_to_project(self, namespace, output):
