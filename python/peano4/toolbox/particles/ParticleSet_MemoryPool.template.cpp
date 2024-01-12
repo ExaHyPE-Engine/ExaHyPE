@@ -57,7 +57,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
             }
             else {
               _memoryPool.scatter();
-              _container.push_back(p);
+              _memoryPool.container.push_back(p);
               logDebug( "merge(...)", "incoming particle " << p->toString() << " is a new local particle (will be counted by UpdateParticle action set)" );
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfNewIncomingLocalParticles++;
