@@ -18,6 +18,12 @@ export SLURM_CPU_BIND_TYPE="cores"
 ulimit -c unlimited
 ulimit -s unlimited
 
+# Score-P: Enable if desired.
+export SCOREP_CUDA_ENABLE=runtime,kernel,idle
+export SCOREP_TOTAL_MEMORY=4000M
+export SCOREP_ENABLE_TRACING=true
+export SCOREP_EXPERIMENT_DIRECTORY=ExaSeis-ScoreP
+
 # In 'gpu-mpi-launch', make sure to set 'node_local_mpi_rank=$SLURM_LOCALID'
 # TODO: With CMake this should not be necessary, as we can just use 'FindSlurm'.
 #srun nvidia-smi

@@ -16,7 +16,7 @@ default_values = {
     "patch_size": 5,  # Dofs for FV
     "rk_order": 2,
     "dg_order": 3,  # Dofs for DG
-    "end_time": 0.1,
+    "end_time": 0.002,
     "plot_interval": 0.1,
     "rho": 2.7,
     "p_wave_speed": 6.0,

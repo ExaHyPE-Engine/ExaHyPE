@@ -41,6 +41,9 @@ parser.add_argument(
     "--targetdart", "-td", action="store_true", help="Enable targetDART support"
 )
 parser.add_argument(
+    "--scorep", "-scorep", action="store_true", help="Enable Score-P support"
+)
+parser.add_argument(
     "--gpu", choices=["omp", "cuda", "sycl", "cpp", "hip"], help="Enable GPU support"
 )
 parser.add_argument("--asm", action="store_true", help="Dump generated assembly code")
@@ -222,7 +225,10 @@ if args.mpi is not None:
     if args.cmake:
         configure_args.append("-DWITH_MPI=ON")
     else:
-        configure_args.append('--with-mpi="{}"'.format(args.mpi))
+        if args.scorep:
+            configure_args.append('--with-mpi="scorep {}"'.format(args.mpi))
+        else:
+            configure_args.append('--with-mpi="{}"'.format(args.mpi))
 
 if args.targetdart:
     if args.cmake:
@@ -235,12 +241,10 @@ if args.exahype:
         configure_args.append("-DENABLE_EXAHYPE=ON")
         configure_args.append("-DENABLE_LOADBALANCING=ON")
         configure_args.append("-DENABLE_BLOCKSTRUCTURED=ON")
-        #configure_args.append("-DWITH_LIBXSMM=ON")
     else:
         configure_args.append("--enable-exahype")
         configure_args.append("--enable-loadbalancing")
         configure_args.append("--enable-blockstructured")
-        configure_args.append("--with-libxsmm")
 
 if args.loadbalancing:
     if args.cmake:
@@ -290,13 +294,19 @@ if args.libxsmm:
 
 if args.cmake:
     # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
-    env_vars = {
-        "CC": "{}".format(args.cc),
-        "CXX": "{}".format(args.cxx),
-    }
+    if args.scorep:
+        env_vars = {
+            "CC": "scorep --user {}".format(args.cc),
+            "CXX": "scorep --user {}".format(args.cxx),
+        }
+    else:
+        env_vars = {
+            "CC": "{}".format(args.cc),
+            "CXX": "{}".format(args.cxx),
+        }
 
     # Create a string to display environment variables like in a terminal
-    env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+    env_vars_str = "SCOREP_WRAPPER=OFF " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
     print(f"Running: {env_vars_str} cmake .. {' '.join(configure_args)}")
 
     # Update the current environment with the specified variables
@@ -333,19 +343,28 @@ else:
     else:
         env_ldflags = ldflags
 
-    env_vars = {
-        "CFLAGS": "{}".format(env_cflags),
-        "CC": "{}".format(args.cc),
-        "CXXFLAGS": "{}".format(env_cxxflags),
-        "CXX": "{}".format(args.cxx),
-        "LDFLAGS": "{}".format(env_ldflags),
-    }
+    if args.scorep:
+        env_vars = {
+            "CFLAGS": "{}".format(env_cflags),
+            "CC": "scorep --user {}".format(args.cc),
+            "CXXFLAGS": "{}".format(env_cxxflags),
+            "CXX": "scorep --user {}".format(args.cxx),
+            "LDFLAGS": "{}".format(env_ldflags),
+        }
+    else:
+        env_vars = {
+            "CFLAGS": "{}".format(env_cflags),
+            "CC": "{}".format(args.cc),
+            "CXXFLAGS": "{}".format(env_cxxflags),
+            "CXX": "{}".format(args.cxx),
+            "LDFLAGS": "{}".format(env_ldflags),
+        }
 
     if args.gpu == "cuda":
         env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.with_cuda, nvccflags)
 
     # Create a string to display environment variables like in a terminal
-    env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+    env_vars_str = "SCOREP_WRAPPER=OFF " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
     print(f"Running: {env_vars_str} ./configure {' '.join(configure_args)}")
 
     # Update the current environment with the specified variables
