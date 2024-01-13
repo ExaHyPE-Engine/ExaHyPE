@@ -117,11 +117,27 @@ def create_abstract_solver_declarations(
       double dt,
       int normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs
-      ) = 0;
+    ) = 0;
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    virtual void pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n) = 0;
+    virtual void pointSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+      const double* const x,
+      const double t,
+      const double dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,
+      int n
+    ) = 0;
+{% elif POINT_SOURCE_IMPLEMENTATION!="<none>" and POINT_SOURCE_IMPLEMENTATION!="<empty>" %}
+    virtual void pointSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+      const double* const x,
+      const double t,
+      const double dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,
+      int n
+    );
 {% endif %}
 
 {% endfor %}
@@ -392,7 +408,7 @@ def create_solver_declarations(
       T* const rhs);
 {% endif %}
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    template<typename T>
+    template <typename T>
     void pointSource(const T* const Q, const double* const x, const double t, const double dt, T* const forceVector, int n);
 {% endif %}
 {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
@@ -766,7 +782,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::initPointSourceLocations(doubl
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-template<typename T>
+template <typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
   const T* const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const double* const x, 

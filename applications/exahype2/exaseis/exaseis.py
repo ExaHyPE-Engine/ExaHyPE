@@ -23,10 +23,10 @@ default_values = {
     "s_wave_speed": 3.464,
     "t0": 0.1,
     "M0": 1000.0,
-    "use_kernel_generator": False,  # Use ADER-DG kernel generator. Currently we only support GPU offloading for the generic kernels, i.e., set to false.
+    "use_kernel_generator": True,  # Use ADER-DG kernel generator. Currently we only support GPU offloading for the generic kernels, i.e., set to false.
     "use_riemann": True,  # Use custom Riemann solver
     "use_material_parameters": True,
-    "use_point_source": False,  # If set to false, an algebraic source is used instead.
+    "use_point_source": True,  # If set to false, an algebraic source is used instead.
     "source_location": [0, 2.0, 0],
     "source_radius": 1.0,  # For algebraic source and AMR
     "stateless": False,  # Use stateless PDE terms (For GPU execution this needs to be set to true).
@@ -135,7 +135,7 @@ def parse_arguments():
         "--point-source",
         action="store_true",
         default=default_values["use_point_source"],
-        help="Use point sources (currently only supported for DG solvers).",
+        help="Use point source (currently only supported for DG solvers).",
     )
     parser.add_argument(
         "-vis",
@@ -368,9 +368,9 @@ def setup_solver(args):
     implementation_params = {
         "initial_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
         "boundary_conditions": exahype2.solvers.PDETerms.User_Defined_Implementation,
+        "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
         "flux": "::applications::exahype2::exaseis::flux(Q, x, h, t, dt, normal, F);",
         "eigenvalues": "return ::applications::exahype2::exaseis::maxEigenvalue(Q, x, h, t, dt, normal);",
-        "refinement_criterion": exahype2.solvers.PDETerms.User_Defined_Implementation,
         "ncp": "::applications::exahype2::exaseis::nonconservativeProduct(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);",
     }
 
@@ -386,7 +386,8 @@ def setup_solver(args):
       implementation_params.update({"material_parameters": exahype2.solvers.PDETerms.User_Defined_Implementation})
 
     if args.point_source:
-        implementation_params.update({"point_source": 1})
+        implementation_params.update({"number_of_point_sources": 1})
+        implementation_params.update({"point_source": "::applications::exahype2::exaseis::pointSource(Q, x, t, dt, forceVector, n);"})
     else:
         implementation_params.update(
             {

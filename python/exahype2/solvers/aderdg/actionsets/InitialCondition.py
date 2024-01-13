@@ -35,11 +35,10 @@ class InitialCondition(AbstractADERDGActionSet):
       linearisedIndex += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
     {% endif %}
-    
+
     {% if USE_POINT_SOURCE!="<none>" %}
     repositories::{{SOLVER_INSTANCE}}.initPointSourceLocations(repositories::{{SOLVER_INSTANCE}}.pointSourceLocation);
     {% endif %}
-
 
     const double timeStamp = 0.0;
     const double timeStepSize = 0.0;

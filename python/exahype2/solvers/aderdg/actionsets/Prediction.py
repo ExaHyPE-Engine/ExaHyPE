@@ -88,7 +88,7 @@ class Prediction(AbstractADERDGActionSet):
         self.use_kernelgenerator        = solver._use_kernel_generator
         self.is_linear                  = solver._is_linear
         self.use_custom_riemann_solver  = solver._riemann_solver_implementation!=PDETerms.None_Implementation
-        self.usePointSource             = solver._point_sources_implementation!=PDETerms.None_Implementation
+        self.usePointSource             = solver._point_source_implementation!=PDETerms.None_Implementation
         self.use_DMP                    = solver._number_of_dmp_observables>0
         self.useTroubledMarker          = solver._use_troubled_marker
         self.use_limiting               = solver._use_limiting

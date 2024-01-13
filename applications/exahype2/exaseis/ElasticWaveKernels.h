@@ -80,6 +80,23 @@ namespace applications::exahype2::exaseis {
   }
 
 
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void pointSource(
+    const double* const Q, const double* const x, const double t, const double dt, double* const forceVector, int n
+  ) InlineMethod {
+    forceVector[VARS_vx]  = 0.0;
+    forceVector[VARS_vy]  = 0.0;
+    forceVector[VARS_vz]  = 0.0;
+    forceVector[VARS_sxx] = 0.0;
+    forceVector[VARS_syy] = 0.0;
+    forceVector[VARS_szz] = 0.0;
+    forceVector[VARS_sxy] = 0.0;
+    forceVector[VARS_sxz] = 0.0;
+    forceVector[VARS_syz] = 0.0;
+
+    forceVector[VARS_sxz] = SOURCE_M0 * t / (SOURCE_t0 * SOURCE_t0) * std::exp(-t / SOURCE_t0);
+}
+
+
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void nonconservativeProduct(
     const double* __restrict__ Q,
     const double* __restrict__ deltaQ,

@@ -301,7 +301,7 @@ class ADERDG(object):
         self._ncp_implementation = PDETerms.None_Implementation
         self._eigenvalues_implementation = PDETerms.None_Implementation
         self._source_term_implementation = PDETerms.None_Implementation
-        self._point_sources_implementation = PDETerms.None_Implementation
+        self._point_source_implementation = PDETerms.None_Implementation
         self._number_of_point_sources = 0
         self._boundary_conditions_implementation = PDETerms.None_Implementation
         self._refinement_criterion_implementation = PDETerms.None_Implementation
@@ -424,9 +424,11 @@ NCP:                    """
 Source term:            """
             + str(self._source_term_implementation)
             + """
-Point sources:          """
-            + str(self._point_sources_implementation)
-            + " (" + str(self._number_of_point_sources) + ")"
+Point source:           """
+            + str(self._point_source_implementation)
+            + """
+Number point sources:   """
+            + str(self._number_of_point_sources)
             + """
 Riemann solver:         """
             + str(self._riemann_solver_implementation)
@@ -964,7 +966,7 @@ Material parameters:    """
     def generate_kernels(self, namespace, output, dimensions):
         if (not self._is_linear) and (
             self._material_param_implementation != PDETerms.None_Implementation
-            or self._point_sources_implementation != PDETerms.None_Implementation
+            or self._point_source_implementation != PDETerms.None_Implementation
         ):
             raise Exception(
                 "Material parameters and point sources are currently only available for linear generated kernels."
@@ -1004,7 +1006,7 @@ Material parameters:    """
             useSourceVect=False,
             usePointSources=(
                 self._number_of_point_sources
-                if self._point_sources_implementation != PDETerms.None_Implementation
+                if self._point_source_implementation != PDETerms.None_Implementation
                 else False
             ),
             useMaterialParam=(
@@ -1071,7 +1073,7 @@ Material parameters:    """
             + "/fusedSpaceTimePredictorVolumeIntegral.cpp",
             generated=True,
         )
-        if self._point_sources_implementation != PDETerms.None_Implementation:
+        if self._point_source_implementation != PDETerms.None_Implementation:
             output.makefile.add_cpp_file(
                 "generated/kernels/aderdg/"
                 + is_linear
@@ -1190,8 +1192,6 @@ Material parameters:    """
 
         if self._use_kernel_generator:
             self.generate_kernels(namespace, output, dimensions)
-        elif self._point_sources_implementation != PDETerms.None_Implementation:
-            raise Exception("Point sources are only available with linear generated kernels.")
 
 
     def set_solver_constants(self, datastring):
@@ -1367,7 +1367,7 @@ Material parameters:    """
         d["USE_NCP"] = self._ncp_implementation
         d["USE_SOURCE"] = self._source_term_implementation
         d["USE_MATERIAL_PARAMETERS"] = self._material_param_implementation
-        d["USE_POINT_SOURCE"] = self._point_sources_implementation
+        d["USE_POINT_SOURCE"] = self._point_source_implementation
         d["NUMBER_OF_POINT_SOURCES"] = self._number_of_point_sources
 
         d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
@@ -1388,6 +1388,7 @@ Material parameters:    """
         source_term,
         material_parameters,
         riemann_solver,
+        number_of_point_sources,
         point_source,
         additional_action_set_includes,
         additional_user_includes,
@@ -1419,14 +1420,14 @@ Material parameters:    """
         if riemann_solver is not None:
             self._riemann_solver_implementation = riemann_solver
 
-        if type(point_source) != int:
+        if type(number_of_point_sources) != int:
             raise Exception(
-                "point_source needs to be an integer, this determines the number of point sources that will be used."
+                "number_of_point_sources needs to be an integer, this determines the number of point sources that will be used."
             )
 
-        if point_source > 0:
-            self._point_sources_implementation = PDETerms.User_Defined_Implementation
-            self._number_of_point_sources = point_source
+        if number_of_point_sources > 0:
+            self._point_source_implementation = point_source
+            self._number_of_point_sources = number_of_point_sources
 
         self.user_action_set_includes += additional_action_set_includes
         self.user_solver_includes += additional_user_includes

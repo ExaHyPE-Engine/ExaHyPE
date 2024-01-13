@@ -40,15 +40,6 @@ void applications::exahype2::exaseis::LOH1Solver::boundaryConditions(
 
 
 #ifdef USE_POINT_SOURCE
-void applications::exahype2::exaseis::LOH1Solver::pointSource(const double* const Q, const double* const x, const double t, const double dt, double* const forceVector, int n) {
-  for (int i = 0; i < NumberOfUnknowns; i++) {
-    forceVector[i] = 0.0;
-  }
-
-  forceVector[Vars::sxz] = SOURCE_M0 * t / (SOURCE_t0 * SOURCE_t0) * std::exp(-t / SOURCE_t0);
-}
-
-
 void applications::exahype2::exaseis::LOH1Solver::initPointSourceLocations(double sourceLocations[NumberOfPointSources][Dimensions]) {
   sourceLocations[0][0] = SOURCE_LOCATION_X;
   sourceLocations[0][1] = SOURCE_LOCATION_Y;
