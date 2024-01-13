@@ -52,7 +52,18 @@ class Particle(DaStGen2):
       particles that are contained within its local tree cells. Furthermore,
       a tree knows about the particles which are associated to a vertex that's
       adjacent to a local mesh. The latter particles are virtual. We effectively
-      work with a halo of h/2 per mesh level. Details can be found in
+      work with a halo of h/2 per mesh level. 
+      
+    The only action set that should alter the state is UpdateParallelState. 
+    However,   
+      
+    ## State updates  
+    
+    If a particle moves, we have to update its state, and we might have to 
+    update its vertex association. This discussion focuses on the state 
+    update. 
+    
+    Details can be found in
       UpdateParallelState.
 
     """
@@ -80,7 +91,7 @@ class Particle(DaStGen2):
         self.data.add_attribute(dastgen2.attributes.Double("searchRadius"))
 
         #
-        # Both states are not to be used by algorithms. They are for the grid management.
+        # Never manipulate as user
         #
         self.data.add_attribute(
             dastgen2.attributes.Enumeration("ParallelState", ["Local", "Virtual"])
