@@ -226,7 +226,7 @@ if args.mpi is not None:
         configure_args.append("-DWITH_MPI=ON")
     else:
         if args.scorep:
-            configure_args.append('--with-mpi="scorep {}"'.format(args.mpi))
+            configure_args.append('--with-mpi="scorep-{}"'.format(args.mpi))
         else:
             configure_args.append('--with-mpi="{}"'.format(args.mpi))
 
@@ -306,7 +306,7 @@ if args.cmake:
         }
 
     # Create a string to display environment variables like in a terminal
-    env_vars_str = "SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+    env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler --thread=omp:ompt\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
     print(f"Running: {env_vars_str} cmake .. {' '.join(configure_args)}")
 
     # Update the current environment with the specified variables

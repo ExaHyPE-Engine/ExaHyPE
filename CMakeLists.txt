@@ -190,6 +190,7 @@ if(WITH_MULTITHREADING STREQUAL "omp")
     # Workaround for Score-P. TODO: Fix this:
     target_compile_options(project_options INTERFACE -fopenmp)
     target_link_libraries(project_options INTERFACE -fopenmp)
+    target_link_libraries(project_options INTERFACE "-Wl,--copy-dt-needed-entries")
     #target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
   endif()
 elseif(WITH_MULTITHREADING STREQUAL "tbb")

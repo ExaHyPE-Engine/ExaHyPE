@@ -38,6 +38,9 @@
 #include "toolbox/blockstructured/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
+//#include <scorep/SCOREP_User.h>
+//SCOREP_USER_REGION_DEFINE(timeStepHandle)
+
 {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
 #include <fenv.h>
 #pragma float_control(precise, on)
@@ -420,7 +423,10 @@ void step() {
 
     observers::TimeStep observer;
     watch.start();
+
+    //SCOREP_USER_REGION_BEGIN(timeStepHandle, "timeStep", SCOREP_USER_REGION_TYPE_FUNCTION)
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    //SCOREP_USER_REGION_END(timeStepHandle)
     watch.stop();
     timeStepMeasurement.setValue(watch.getCalendarTime());
 
