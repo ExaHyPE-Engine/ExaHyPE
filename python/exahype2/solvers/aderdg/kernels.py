@@ -118,6 +118,16 @@ def create_abstract_solver_declarations(
       int normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs
     ) = 0;
+{% elif MATERIAL_PARAMETER_IMPLEMENTATION!="<none>" and MATERIAL_PARAMETER_IMPLEMENTATION!="<empty>" %}
+    virtual void multiplyMaterialParameterMatrix(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+      const tarch::la::Vector<Dimensions, double> &x,
+      const tarch::la::Vector<Dimensions, double> &h,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs
+    );
 {% endif %}
 
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}

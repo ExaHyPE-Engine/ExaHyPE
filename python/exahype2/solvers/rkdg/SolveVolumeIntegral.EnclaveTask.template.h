@@ -15,8 +15,6 @@
 #include "exahype2/NonCriticalAssertions.h"
 #include "repositories/SolverRepository.h"
 
-{{SOLVER_INCLUDES}}
-
 #include <vector>
 
 #ifdef UseSmartMPI

@@ -6,11 +6,9 @@
 // **********************************************************************************************
 #include "{{CLASSNAME}}.h"
 
-// user includes
 {{SOLVER_INCLUDES}}
 
 #include "config.h"
-
 
 #if GPUOffloadingSYCL>0
 #include "tarch/multicore/sycl/SYCL.h"

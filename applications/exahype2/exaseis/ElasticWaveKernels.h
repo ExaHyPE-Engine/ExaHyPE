@@ -94,7 +94,96 @@ namespace applications::exahype2::exaseis {
     forceVector[VARS_syz] = 0.0;
 
     forceVector[VARS_sxz] = SOURCE_M0 * t / (SOURCE_t0 * SOURCE_t0) * std::exp(-t / SOURCE_t0);
-}
+  }
+
+
+#ifdef USE_RIEMANN
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void riemannSolver(
+    double* const                                FL,
+    double* const                                FR,
+    const double* const                          QL,
+    const double* const                          QR,
+    const double                                 t,
+    const double                                 dt,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& h,
+    const int                                    direction,
+    bool                                         isBoundaryFace,
+    int                                          faceIndex
+  ) InlineMethod {
+    // Local Lax-Friedrich
+    // generated::kernels::AderDG::linear::riemannSolver(
+    //   *this,
+    //   FL,
+    //   FR,
+    //   QL,
+    //   QR,
+    //   t,
+    //   dt,
+    //   x,
+    //   h,
+    //   direction
+    // );
+
+    if (isBoundaryFace) {
+      double* FIn  = faceIndex < Dimensions ? FR : FL;
+      double* FOut = faceIndex < Dimensions ? FL : FR;
+      std::copy_n(FIn, AbstractElasticWaveSolver::NumberOfUnknowns, FOut);
+    }
+
+    int myFaceIndex = 0;
+    switch (faceIndex) {
+    case 0:
+      myFaceIndex = 0;
+      break;
+    case 1:
+      myFaceIndex = 2;
+      break;
+    case 2:
+      myFaceIndex = 4;
+      break;
+    case 3:
+      myFaceIndex = 1;
+      break;
+    case 4:
+      myFaceIndex = 3;
+      break;
+    case 5:
+      myFaceIndex = 5;
+      break;
+    }
+
+    // if (isBoundaryFace) {
+    //   std::cout << "RiemannSolver at boundary, position: " << x << ", faceIndex: " << faceIndex << ", myFaceIndex: " << myFaceIndex << std::endl;
+    // }
+
+    RiemannSolver<double>::solve(FL, FR, QL, QR, t, dt, h, direction, isBoundaryFace, myFaceIndex);
+  }
+#endif
+
+
+#ifdef USE_MATERIAL_PARAMETERS
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void multiplyMaterialParameterMatrix(
+    const double* const Q, const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& h, double t, double dt, int normal, double* const rhs
+  ) InlineMethod {
+    const double mu     = Q[VARS_rho] * Q[VARS_cs] * Q[VARS_cs];
+    const double lambda = Q[VARS_rho] * Q[VARS_cp] * Q[VARS_cp] - 2.0 * mu;
+    const double rhoInv = 1.0 / Q[VARS_rho];
+
+    rhs[VARS_vx] = rhoInv * rhs[VARS_vx];
+    rhs[VARS_vy] = rhoInv * rhs[VARS_vy];
+    rhs[VARS_vz] = rhoInv * rhs[VARS_vz];
+
+    const double lamTemp = lambda * (rhs[VARS_sxx] + rhs[VARS_syy] + rhs[VARS_szz]);
+    rhs[VARS_sxx]       = (2.0 * mu) * rhs[VARS_sxx] + lamTemp;
+    rhs[VARS_syy]       = (2.0 * mu) * rhs[VARS_syy] + lamTemp;
+    rhs[VARS_szz]       = (2.0 * mu) * rhs[VARS_szz] + lamTemp;
+
+    rhs[VARS_sxy] = mu * rhs[VARS_sxy];
+    rhs[VARS_sxz] = mu * rhs[VARS_sxz];
+    rhs[VARS_syz] = mu * rhs[VARS_syz];
+  }
+#endif
 
 
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions GPUCallableInlineMethod void nonconservativeProduct(

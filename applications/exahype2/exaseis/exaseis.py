@@ -292,7 +292,7 @@ def parse_arguments():
 
 def setup_solver(args):
     solver_params = {
-        "name": "LOH1Solver",
+        "name": "ElasticWaveSolver",
         "unknowns": {"vx": 1, "vy": 1, "vz": 1, "sxx": 1, "syy": 1, "szz": 1, "sxy": 1, "sxz": 1, "syz": 1},
         "auxiliary_variables": {"rho": 1, "cp": 1, "cs": 1},
     }
@@ -375,15 +375,15 @@ def setup_solver(args):
     }
 
     if args.riemann:
-      implementation_params.update({"riemann_solver": exahype2.solvers.PDETerms.User_Defined_Implementation})
-      solver.add_user_solver_includes(
-        """
+        implementation_params.update({"riemann_solver": "::applications::exahype2::exaseis::riemannSolver(FL, FR, QL, QR, t, dt, x, h, direction, isBoundaryFace, faceIndex);"})
+        solver.add_user_solver_includes(
+            """
 #include "RiemannSolver.h"
 """
     )
 
     if args.material_parameters:
-      implementation_params.update({"material_parameters": exahype2.solvers.PDETerms.User_Defined_Implementation})
+      implementation_params.update({"material_parameters": "::applications::exahype2::exaseis::multiplyMaterialParameterMatrix(Q, x, h, t, dt, normal, rhs);"})
 
     if args.point_source:
         implementation_params.update({"number_of_point_sources": 1})
@@ -437,7 +437,7 @@ def setup_project(args, solver):
 
     if args.visualise:
         output_patch_file = (
-            f"{solution_dir}/solution-LOH1Solver.peano-patch-file"
+            f"{solution_dir}/solution-ElasticWaveSolver.peano-patch-file"
         )
         if os.path.isfile(output_patch_file):
             subprocess.call(
@@ -472,6 +472,7 @@ def setup_project(args, solver):
     if args.fpe:
         project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
+    project.constants.export_boolean("USE_DYNAMIC_AMR", args.dynamic_amr)
     project.constants.export_constexpr_with_type("RHO", str(default_values["rho"]), "double")
     project.constants.export_constexpr_with_type("P_WAVE_SPEED", str(default_values["p_wave_speed"]), "double")
     project.constants.export_constexpr_with_type("S_WAVE_SPEED", str(default_values["s_wave_speed"]), "double")
@@ -481,15 +482,15 @@ def setup_project(args, solver):
     project.constants.export_constexpr_with_type("SOURCE_LOCATION_X", str(default_values["source_location"][0]), "double")
     project.constants.export_constexpr_with_type("SOURCE_LOCATION_Y", str(default_values["source_location"][1]), "double")
     project.constants.export_constexpr_with_type("SOURCE_LOCATION_Z", str(default_values["source_location"][2]), "double")
+
     if args.riemann:
-      project.constants.define("USE_RIEMANN")
+        project.constants.define("USE_RIEMANN")
     if args.material_parameters:
-      project.constants.define("USE_MATERIAL_PARAMETERS")
+        project.constants.define("USE_MATERIAL_PARAMETERS")
     if args.point_source:
         project.constants.define("USE_POINT_SOURCE")
-    project.constants.export_boolean("USE_DYNAMIC_AMR", args.dynamic_amr)
 
-    project.output.makefile.add_cpp_file("LOH1Solver.cpp")
+    project.output.makefile.add_cpp_file("ElasticWaveSolver.cpp")
 
     project.build(
         make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True

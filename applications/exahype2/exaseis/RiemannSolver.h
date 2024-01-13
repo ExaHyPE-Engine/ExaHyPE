@@ -2,10 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "AbstractElasticWaveSolver.h"
 #include "VariableShortcuts.h"
 
 namespace applications::exahype2::exaseis {
-  template <class T, int Order>
+  template <class T>
   class RiemannSolver {
   public:
     static GPUCallableInlineMethod void solve(

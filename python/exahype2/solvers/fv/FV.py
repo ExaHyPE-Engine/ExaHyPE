@@ -367,6 +367,9 @@ Initial conditions:     """
 Boundary conditions:    """
             + str(self._boundary_conditions_implementation)
             + """
+Refinement criterion:   """
+            + str(self._refinement_criterion_implementation)
+            + """
 Eigenvalues:            """
             + str(self._eigenvalues_implementation)
             + """

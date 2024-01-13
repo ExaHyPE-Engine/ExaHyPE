@@ -86,8 +86,6 @@ NVCCFLAGS += {{NVCC_FLAGS_DEBUG}}
 
 FCFLAGS+={{FCFLAGS}}
 
-GPU_OBJS={{GPUOBJS}}
-
 H_HEADERS={% for item in H_HEADERS -%} {{item+" "}} {%- endfor %}
 CXX_SOURCES={% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %}
 FORTRAN_SOURCES={% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}

@@ -21,8 +21,6 @@
 #include "VariableShortcuts.h"
 {% endif %}
 
-{{SOLVER_INCLUDES}}
-
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
