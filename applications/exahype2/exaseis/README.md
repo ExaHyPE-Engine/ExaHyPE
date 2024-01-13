@@ -96,10 +96,10 @@ A job script for Leonardo can be found in this application's directory.
 python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 6
 ```
 
-![](Plot_ADERDG_CPUs_Leonardo_1.png)
+![](plot_ADERDG_CPUs_Leonardo_1.png)
 
-![](Plot_ADERDG_CPUs_Leonardo_2.png)
+![](plot_ADERDG_CPUs_Leonardo_2.png)
 
-![](Plot_ADERDG_CPUs_Leonardo_3.png)
+![](plot_ADERDG_CPUs_Leonardo_3.png)
 
 ### Score-P Tracing
