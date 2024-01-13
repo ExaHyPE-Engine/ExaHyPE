@@ -136,7 +136,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
 
     - touchVertexFirstTime():
       - Sort in the particles from coarser meshes or the global sieve list.
-      - Set their new parallel state to virtual.
+      - Set their new parallel state.
       - Then the user-defined stuff.
     - touchCellFirstTime():
       - Mark local particles as local, but it doesn't really matter when
@@ -147,40 +147,7 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
     - touchVertexLastTime():
       - User-defined stuff.
       - Resort particles (to coarser levels, e.g.).
-      - Throw away virtual (remote) particles and make a note that we've
-        lost a particle to another domain.
-
-    We finally reiterate that action sets always append, but the order
-    of the action sets refers to the steps down within the tree traversal.
-    When we do the backtracing in the tree, i.e. touch mesh elements for
-    the last time or walk from fine to coarse, the action set order is
-    inverted.
-
-    So we want to have
-
-    - update state (we only reset a flag which we can do multiple times)
-      before
-    - update association before
-    - update AMR state (also reset of some helper variables)
-    - user routines
-
-    throughout the steps dowmn of the mesh traversal and
-
-    - user routines before
-    - update AMR state
-    - update assocation before
-    - update state
-
-    throughout the steps up.
-
-
-    ## Order
-
-    It is important that we first evaluate globally which states are subject
-    to an update and then update them. We can do this on a species per species
-    base. But we may not do it on a step-by-step base. If you have three steps,
-    and the first step adds actions to 0 and 1, and the second to 1 and 2, then
-    this species-specific action set may only be added once to 1.
+      - Throw away virtual (remote) particles.
 
 
     ## Arguments
@@ -312,24 +279,6 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                         )
                     )
 
-            if global_steps_to_update_particle_grid_assocation[i]:
-                action_set_update_particle_grid_association = (
-                    peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
-                        current_species_set
-                    )
-                )
-                action_set_update_particle_grid_association.descend_invocation_order = (
-                    steps[i].lowest_descend_invocation_order() - 1
-                )
-                action_set_update_particle_grid_association.parallel = True
-                steps[i].add_action_set(action_set_update_particle_grid_association)
-                if verbose:
-                    print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: add peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop for species {} to step {}".format(
-                            current_species_set.name, i
-                        )
-                    )
-
             if global_steps_to_update_parallel_state[i]:
                 action_set_update_parallel_state = (
                     peano4.toolbox.particles.api.UpdateParallelState(
@@ -361,6 +310,24 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 if verbose:
                     print(
                         "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: add swift2.actionsets.DynamicMeshRefinementTrigger for species {} to step {}".format(
+                            current_species_set.name, i
+                        )
+                    )
+
+            if global_steps_to_update_particle_grid_assocation[i]:
+                action_set_update_particle_grid_association = (
+                    peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
+                        current_species_set
+                    )
+                )
+                action_set_update_particle_grid_association.descend_invocation_order = (
+                    steps[i].lowest_descend_invocation_order() - 1
+                )
+                action_set_update_particle_grid_association.parallel = True
+                steps[i].add_action_set(action_set_update_particle_grid_association)
+                if verbose:
+                    print(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption]: add peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop for species {} to step {}".format(
                             current_species_set.name, i
                         )
                     )
@@ -523,29 +490,6 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                         )
                     )
 
-            if global_steps_to_update_particle_grid_assocation[i]:
-                if sort_with_lifts_and_drops:
-                    action_set_update_particle_grid_association = peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
-                        current_species_set
-                    )
-                else:
-                    action_set_update_particle_grid_association = peano4.toolbox.particles.api.UpdateParticleGridAssociation_BucketSort(
-                        current_species_set
-                    )
-                action_set_update_particle_grid_association.descend_invocation_order = (
-                    steps[i].lowest_descend_invocation_order() - 1
-                )
-                action_set_update_particle_grid_association.parallel = True
-                steps[i].add_action_set(action_set_update_particle_grid_association)
-                if verbose:
-                    print(
-                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: add {} for species {} to step {}".format(
-                            type(action_set_update_particle_grid_association),
-                            current_species_set.name,
-                            i,
-                        )
-                    )
-
             if global_steps_to_update_parallel_state[i]:
                 action_set_update_parallel_state = (
                     peano4.toolbox.particles.api.UpdateParallelState(
@@ -595,3 +539,27 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                             current_species_set.name, i
                         )
                     )
+
+            if global_steps_to_update_particle_grid_assocation[i]:
+                if sort_with_lifts_and_drops:
+                    action_set_update_particle_grid_association = peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(
+                        current_species_set
+                    )
+                else:
+                    action_set_update_particle_grid_association = peano4.toolbox.particles.api.UpdateParticleGridAssociation_BucketSort(
+                        current_species_set
+                    )
+                action_set_update_particle_grid_association.descend_invocation_order = (
+                    steps[i].lowest_descend_invocation_order() - 1
+                )
+                action_set_update_particle_grid_association.parallel = True
+                steps[i].add_action_set(action_set_update_particle_grid_association)
+                if verbose:
+                    print(
+                        "GRAPH COMPILER DEBUG [add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers]: add {} for species {} to step {}".format(
+                            type(action_set_update_particle_grid_association),
+                            current_species_set.name,
+                            i,
+                        )
+                    )
+
