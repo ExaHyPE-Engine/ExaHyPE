@@ -70,7 +70,7 @@ If your mesh is too small, the GPU will likely be never used as you do have not 
 python3 exaseis.py -s FVRusanovGlobalAdaptiveEnclave --min-levels 5 --amr-levels 0 -ps 8 --stateless -f 10000
 ```
 Yields 531441 patches and requires ~160 GB of memory. We fuse and
-offload batches of 10000 patches the GPUs which requires ~5-10 GB of GPU memory.
+offload batches of 10000 patches to the GPUs which requires ~5-10 GB of GPU memory.
 
 ### Results
 ![](LOH1Initial.png)
