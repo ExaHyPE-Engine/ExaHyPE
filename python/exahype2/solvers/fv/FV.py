@@ -263,7 +263,7 @@ class FV(object):
 
         if min_volume_h > max_volume_h:
             raise Exception(
-                "Error: min_volume_h ("
+                "min_volume_h ("
                 + str(min_volume_h)
                 + ") is bigger than max_volume_h ("
                 + str(max_volume_h)
@@ -360,6 +360,24 @@ h_volume_min:           """
             + """
 h_volume_max:           """
             + str(self._max_volume_h)
+            + """
+Initial conditions:     """
+            + str(self._initial_conditions_implementation)
+            + """
+Boundary conditions:    """
+            + str(self._boundary_conditions_implementation)
+            + """
+Eigenvalues:            """
+            + str(self._eigenvalues_implementation)
+            + """
+Flux:                   """
+            + str(self._flux_implementation)
+            + """
+NCP:                    """
+            + str(self._ncp_implementation)
+            + """
+Source term:            """
+            + str(self._source_term_implementation)
             + """
 """
         )

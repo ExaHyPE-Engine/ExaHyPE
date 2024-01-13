@@ -406,6 +406,34 @@ h_cell_min:             """
 h_cell_max:             """
             + str(self._max_cell_h)
             + """
+Initial conditions:     """
+            + str(self._initial_conditions_implementation)
+            + """
+Boundary conditions:    """
+            + str(self._boundary_conditions_implementation)
+            + """
+Eigenvalues:            """
+            + str(self._eigenvalues_implementation)
+            + """
+Flux:                   """
+            + str(self._flux_implementation)
+            + """
+NCP:                    """
+            + str(self._ncp_implementation)
+            + """
+Source term:            """
+            + str(self._source_term_implementation)
+            + """
+Point sources:          """
+            + str(self._point_sources_implementation)
+            + " (" + str(self._number_of_point_sources) + ")"
+            + """
+Riemann solver:         """
+            + str(self._riemann_solver_implementation)
+            + """
+Material parameters:    """
+            + str(self._material_param_implementation)
+            + """
 """
         )
         return result

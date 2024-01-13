@@ -411,6 +411,27 @@ h_cell_min:             """
 h_cell_max:             """
             + str(self._max_cell_h)
             + """
+Initial conditions:     """
+            + str(self._initial_conditions_implementation)
+            + """
+Boundary conditions:    """
+            + str(self._boundary_conditions_implementation)
+            + """
+Eigenvalues:            """
+            + str(self._eigenvalues_implementation)
+            + """
+Flux:                   """
+            + str(self._flux_implementation)
+            + """
+NCP:                    """
+            + str(self._ncp_implementation)
+            + """
+Source term:            """
+            + str(self._source_term_implementation)
+            + """
+Point source:           """
+            + str(self._point_sources_implementation)
+            + """
 """
         )
         return result
@@ -424,23 +445,26 @@ h_cell_max:             """
             coarsest_tree_level += 1
         return coarsest_tree_level
 
+
     def get_max_number_of_spacetree_levels(self, domain_size):
         finest_tree_level = 0
         while domain_size * 3 ** (-finest_tree_level) > self._min_cell_h:
             finest_tree_level += 1
         return finest_tree_level
 
+
     def get_coarsest_number_of_cells(self, domain_size):
         return 3 ** self.get_min_number_of_spacetree_levels(domain_size)
 
+
     def get_finest_number_of_cells(self, domain_size):
         return 3 ** self.get_max_number_of_spacetree_levels(domain_size)
+
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
             """
 ### ExaHyPE 2 solver
-
 """
             + str(self)
             + """
@@ -1494,13 +1518,16 @@ We use RK("""
             undefined=jinja2.DebugUndefined,
         ).render(**d)
 
+
     @property
     def unknowns(self):
         return self._unknowns
 
+
     @property
     def auxiliary_variables(self):
         return self._auxiliary_variables
+
 
     @unknowns.setter
     def unknowns(self, value):
@@ -1508,14 +1535,17 @@ We use RK("""
         self.create_data_structures()
         self.create_action_sets()
 
+
     @auxiliary_variables.setter
     def auxiliary_variables(self, value):
         self._auxiliary_variables = value
         self.create_data_structures()
         self.create_action_sets()
 
+
     def number_of_Runge_Kutta_steps(self):
         return RungeKutta_steps(self._rk_order)
+
 
     def set_implementation(
         self,
