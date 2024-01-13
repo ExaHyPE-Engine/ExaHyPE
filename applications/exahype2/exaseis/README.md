@@ -62,7 +62,7 @@ To run ExaSeis on GPUs we need to fulfill the following requirements:
 * Stateless PDE terms.
 * Usage of the generic ADER-DG kernels, i.e., not the generated kernels.
 
-If these requirements are met, the solver will automatically fuse patches and push them to one or multiple GPUs. For (multi)-GPU runs with MPI use the `gpu-mpi-launch` script which you can find in the application's directory (after you have generated the glue code) so that every GPU is mapped correctly to a rank.
+If these requirements are met, the solver will automatically fuse patches and push them to one or multiple GPUs. For (multi)-GPU runs use the `gpu-launch` script which you can find in the application's directory (after you have generated the glue code) so that every GPU is mapped correctly to a rank.
 
 If your mesh is too small, the GPU will likely be never used as you do have not enough patches that can be fused into one meta task. For this, you can adjust (reduce) the number of fused tasks (or patches) in the configuration of ExaSeis. The same holds for very large meshes, here you might want to increase the number of fused patches.
 
