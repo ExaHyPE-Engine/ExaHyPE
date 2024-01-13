@@ -50,7 +50,7 @@ void tarch::dumpStatistics() {
 #endif
 
   msg << numberOfRanks << " Rank(s), ";
-  msg << globalNumberOfThreads << " Thread(s), ";
+  msg << globalNumberOfThreads << " Cores(s), ";
   msg << globalNumberOfDevices << " Device(s)";
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
