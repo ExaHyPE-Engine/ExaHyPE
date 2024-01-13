@@ -27,7 +27,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     access to the reconstructed data including a halo layer of one. Furthermore,
     the superclass provides us with a guard which we should use, as this guard
     ensures that we reconstruct the patch plus halo if and only if certain
-    conditions are met. By default, we compuate only on unrefined octants.
+    conditions are met. By default, we compute only on unrefined octants.
 
     Our condition whether to spawn a task or to compute the new time step
     data immediately depends on peano4::datamanagement::CellMarker::willBeSkeletonCell().
@@ -58,12 +58,12 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         """
   double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-  // Set the following two paramters
+  // Set the following two parameters
   // double timeStepSize
   {{COMPUTE_TIME_STEP_SIZE}}
-    
+
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
-    
+
   assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStepSize, timeStamp );
   assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStepSize, timeStamp );
 
@@ -87,7 +87,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
-    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::SkeletonTask );
+    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(::exahype2::EnclaveBookkeeping::SkeletonTask);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
@@ -107,6 +107,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   }
   """
     )
+
 
     def __init__(self, solver):
         ReconstructPatchAndApplyFunctor.__init__(
@@ -139,7 +140,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             + solver.get_name_of_global_instance()
             + """.getSolverState()=="""
             + solver._name
-            + """::SolverState::Primary or 
+            + """::SolverState::Primary or
     repositories::"""
             + solver.get_name_of_global_instance()
             + """.getSolverState()=="""
@@ -156,6 +157,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
         self._solver = solver
 
+
     def get_includes(self):
         return (
             ReconstructPatchAndApplyFunctor.get_includes(self)
@@ -170,17 +172,17 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             + self._solver.user_action_set_includes
         )
 
+
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
+
     def _add_action_set_entries_to_dictionary(self, d):
         """
-
         First ask the solver to add its symbols, and then re-construct the
         functor which should not contain any symbols after that anymore.
         Next, we call the superclass routine which supplements all those
         instructions that any reconstruction wants to have.
-
         """
 
         self._solver._init_dictionary_with_default_parameters(d)
@@ -193,9 +195,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     Template = """
-  if ( 
+  if (
     not marker.hasBeenRefined()
-    and 
+    and
     {{GUARD}}
     and
     repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
@@ -213,17 +215,17 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
         0,
         std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
       );
-      
+
       {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
       fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
       fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     }
-    
+
     if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
       double*  newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-      
+
       {{POSTPROCESS_UPDATED_PATCH}}
 
       repositories::{{SOLVER_INSTANCE}}.update(
@@ -242,11 +244,13 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   }
 """
 
+
     def __init__(self, solver):
         super(MergeEnclaveTaskOutcome, self).__init__(solver)
         self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
         self.guard = "true"
         self.descend_invocation_order = solver._baseline_action_set_descend_invocation_order
+
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -262,6 +266,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
             result = jinja2.Template(self.Template).render(**d)
             pass
         return result
+
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
@@ -288,9 +293,9 @@ class EnclaveTasking(FV):
 
     ## Task priorities
 
-    Use the attributes self.enclave_task_priority to change the priority of the 
-    task. This value can either be a string that C++ can evaluate into a 
-    priority or a plain numerical value. I set it to 
+    Use the attributes self.enclave_task_priority to change the priority of the
+    task. This value can either be a string that C++ can evaluate into a
+    priority or a plain numerical value. I set it to
 
            self.enclave_task_priority  = "tarch::multicore::Task::DefaultPriority-1"
 
@@ -341,11 +346,9 @@ class EnclaveTasking(FV):
 
     def _create_guards(self):
         """!
-        
-        All the internal logic depends on guards, i.e. boolean predicates. We 
-        want to be able to alter them in subclasses, but we need a certain 
+        All the internal logic depends on guards, i.e. boolean predicates. We
+        want to be able to alter them in subclasses, but we need a certain
         baseline. It is defined in this routine.
-        
         """
         self._initialisation_sweep_guard = (
             "("
@@ -401,10 +404,9 @@ class EnclaveTasking(FV):
             self.get_name_of_global_instance(), self._name,
         )
 
-
         self._primary_or_initialisation_sweep_guard = """(
-             repositories::{}.getSolverState()=={}::SolverState::GridInitialisation 
-          or repositories::{}.getSolverState()=={}::SolverState::Primary 
+             repositories::{}.getSolverState()=={}::SolverState::GridInitialisation
+          or repositories::{}.getSolverState()=={}::SolverState::Primary
           or repositories::{}.getSolverState()=={}::SolverState::PrimaryAfterGridInitialisation
         )""".format(
             self.get_name_of_global_instance(), self._name,
@@ -413,9 +415,9 @@ class EnclaveTasking(FV):
         )
 
         self._primary_or_grid_construction_or_initialisation_sweep_guard = """(
-            repositories::{}.getSolverState()=={}::SolverState::GridInitialisation 
+            repositories::{}.getSolverState()=={}::SolverState::GridInitialisation
          or repositories::{}.getSolverState()=={}::SolverState::Primary
-         or repositories::{}.getSolverState()=={}::SolverState::PrimaryAfterGridInitialisation 
+         or repositories::{}.getSolverState()=={}::SolverState::PrimaryAfterGridInitialisation
          or repositories::{}.getSolverState()=={}::SolverState::GridConstruction
         )""".format(
             self.get_name_of_global_instance(), self._name,
@@ -465,9 +467,9 @@ class EnclaveTasking(FV):
         )
 
         self._secondary_sweep_or_grid_initialisation_or_plot_guard = """(
-            repositories::{}.getSolverState()=={}::SolverState::Secondary 
-         or repositories::{}.getSolverState()=={}::SolverState::GridInitialisation 
-         or repositories::{}.getSolverState()=={}::SolverState::PlottingInitialCondition 
+            repositories::{}.getSolverState()=={}::SolverState::Secondary
+         or repositories::{}.getSolverState()=={}::SolverState::GridInitialisation
+         or repositories::{}.getSolverState()=={}::SolverState::PlottingInitialCondition
          or repositories::{}.getSolverState()=={}::SolverState::Plotting
          or repositories::{}.getSolverState()=={}::SolverState::Suspended
         )""".format(
@@ -477,7 +479,6 @@ class EnclaveTasking(FV):
             self.get_name_of_global_instance(), self._name,
             self.get_name_of_global_instance(), self._name,
             )
-        
 
 
     def create_data_structures(self):
@@ -489,7 +490,7 @@ class EnclaveTasking(FV):
         further, you have to alter them before you invoke this class' create_data_structures().
         """
         super(EnclaveTasking, self).create_data_structures()
-        
+
         self._create_guards()
 
         self._patch_overlap_new.generator.send_condition = (
@@ -506,9 +507,9 @@ class EnclaveTasking(FV):
             self._first_iteration_after_initialisation_guard
         )
 
+
     def _optimise_patch_storage_for_global_time_stepping(self):
         """!
-
         Make storage and loading more restrictive such that enclave data are not held in-between primary and secondary sweep
 
         If you work with global time stepping, you know that each enclave cell will
@@ -525,7 +526,6 @@ class EnclaveTasking(FV):
         patches all the time.
 
         @todo There's no equivalent routine for FD4 and RKDG yet
-
         """
         self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
             self._provide_cell_data_to_compute_kernels_default_guard(),
@@ -538,6 +538,7 @@ class EnclaveTasking(FV):
             + self._secondary_sweep_or_grid_initialisation_or_plot_guard
             + " or marker.willBeSkeletonCell())",
         )
+
 
     def create_action_sets(self):
         """
@@ -629,6 +630,7 @@ class EnclaveTasking(FV):
             + self._secondary_sweep_or_grid_initialisation_guard
         )
 
+
     def set_implementation(
         self,
         boundary_conditions,
@@ -658,9 +660,9 @@ class EnclaveTasking(FV):
             self._use_split_loop = use_split_loop
 
         if refinement_criterion == exahype2.solvers.PDETerms.None_Implementation:
-            assert False, "refinement criterion cannot be none"
+            assert False, "Refinement criterion cannot be none"
         if initial_conditions == exahype2.solvers.PDETerms.None_Implementation:
-            assert False, "initial conditions cannot be none"
+            assert False, "Initial conditions cannot be none"
 
         if (
             memory_location
@@ -668,11 +670,12 @@ class EnclaveTasking(FV):
             and memory_location != None
         ):
             raise Exception(
-                "only valid memory mode for enclave tasking is heap without a delete, as enclave tasks delete memory themselves through the tarch. Selected mode="
+                "Only valid memory mode for enclave tasking is heap without a delete, as enclave tasks delete memory themselves through the tarch. Selected mode="
                 + str(solver._reconstructed_array_memory_location)
             )
 
         self.create_action_sets()
+
 
     def add_entries_to_text_replacement_dictionary(self, d):
         """
@@ -708,15 +711,18 @@ class EnclaveTasking(FV):
         )
         d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
 
+
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
         super(EnclaveTasking, self).add_actions_to_create_grid(
             step, evaluate_refinement_criterion
         )
         step.add_action_set(exahype2.grid.UpdateCellLabel(self._name))
 
+
     def add_actions_to_init_grid(self, step):
         super(EnclaveTasking, self).add_actions_to_init_grid(step)
         step.add_action_set(exahype2.grid.UpdateCellLabel(self._name))
+
 
     def add_actions_to_perform_time_step(self, step):
         """!
@@ -738,11 +744,10 @@ class EnclaveTasking(FV):
         super(EnclaveTasking, self).add_actions_to_perform_time_step(step)
         step.add_action_set(self._action_set_merge_enclave_task_outcome)
 
+
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         """!
-
         Add the enclave task for the GPU
-
         """
 
         super(EnclaveTasking, self).add_implementation_files_to_project(
@@ -779,12 +784,6 @@ class EnclaveTasking(FV):
         output.makefile.add_h_file("tasks/" + task_name + ".h", generated=True)
         output.makefile.add_cpp_file("tasks/" + task_name + ".cpp", generated=True)
 
-        if self._pde_terms_without_state:
-            # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
-            # this hack has to suffice
-            peanodir = templatefile_prefix.split("python/exahype2", 1)[0]
-            output.makefile.d["PEANODIR"] = peanodir
-            exahype2.gpu.add_exahype_objects(output.makefile)
 
     def _enclave_task_name(self):
         return "{}EnclaveTask".format(self._name)

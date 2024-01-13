@@ -41,9 +41,11 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   {% endfor %}
 """
 
+
     def __init__(self, solver):
         super(MergeEnclaveTaskOutcome, self).__init__(solver)
         self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
+
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -60,10 +62,12 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
             pass
         return result
 
+
     def get_action_set_name(self):
         return (
             __name__.replace(".py", "").replace(".", "_") + "_MergeEnclaveTaskOutcome"
         )
+
 
     def get_includes(self):
         return (
@@ -90,6 +94,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
     by default.
     """
+
 
     def __init__(
         self,
@@ -134,6 +139,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self.create_action_sets()
         self.create_data_structures()
 
+
     def create_data_structures(self):
         """
         First, call the superclass' create_data_structures() to ensure that all
@@ -142,6 +148,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         The linear combination is to be computed if and only if
         """
         super(SeparateSweepsWithEnclaveTasking, self).create_data_structures()
+
 
     def create_action_sets(self):
         """
@@ -161,6 +168,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self._action_set_merge_enclave_task_outcome.priority = (
             self._baseline_action_set_descend_invocation_order + 1
         )
+
 
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         """
@@ -200,15 +208,10 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         output.add(generated_solver_files)
         output.makefile.add_cpp_file("tasks/" + task_name + ".cpp", generated=True)
 
-        if self._pde_terms_without_state:
-            # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
-            # this hack has to suffice
-            peanodir = templatefile_prefix.split("python/exahype2", 1)[0]
-            output.makefile.d["PEANODIR"] = peanodir
-            exahype2.gpu.add_exahype_objects(output.makefile)
 
     def _volumetric_solver_enclave_task_name(self):
         return "{}_VolumetricSolverEnclaveTask".format(self._name)
+
 
     def add_actions_to_perform_time_step(self, step):
         """
@@ -225,6 +228,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             step
         )
         step.add_action_set(self._action_set_merge_enclave_task_outcome)
+
 
     def add_entries_to_text_replacement_dictionary(self, d):
         super(
