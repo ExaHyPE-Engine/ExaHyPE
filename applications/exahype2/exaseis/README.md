@@ -90,8 +90,16 @@ offload batches of 10000 patches the GPUs which requires ~5-10 GB of GPU memory.
 ### Running on Leonardo
 A job script for Leonardo can be found in this application's directory.
 
-#### Scaling Results with GPUs
+#### Scaling Results
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 6 --stateless
+python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 6
 ```
+
+![](Plot_ADERDG_CPUs_Leonardo_1.png)
+
+![](Plot_ADERDG_CPUs_Leonardo_2.png)
+
+![](Plot_ADERDG_CPUs_Leonardo_3.png)
+
+### Score-P Tracing

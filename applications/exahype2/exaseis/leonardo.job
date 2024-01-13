@@ -3,10 +3,10 @@
 
 #SBATCH -A EUHPC_D03_043
 #SBATCH -p boost_usr_prod
-#SBATCH --time 00:10:00
-#SBATCH -N 4 # Number of nodes
-#SBATCH --ntasks-per-node=4 # Out of 32 -> Should match --gres=gpu:N for multi-GPU runs.
-#SBATCH --cpus-per-task=4 # Out of (32 / ntasks-per-node)
+#SBATCH --time 00:15:00
+#SBATCH -N 8 # Number of nodes
+#SBATCH --ntasks-per-node=1 # Out of 32 -> Should match --gres=gpu:N for multi-GPU runs.
+#SBATCH --cpus-per-task=16 # Out of (32 / ntasks-per-node)
 #SBATCH --gres=gpu:0 # GPUs per node out of 4
 #SBATCH --job-name=ExaHyPE2-ExaSeis
 
@@ -28,7 +28,8 @@ export SCOREP_EXPERIMENT_DIRECTORY=ExaSeis-ScoreP
 # TODO: With CMake this should not be necessary, as we can just use 'FindSlurm'.
 #srun nvidia-smi
 
-srun --cpu-bind=cores ./gpu-mpi-launch ./ExaSeis-ADERDGRusanovGlobalAdaptive-Stateless-Release
+srun --cpu-bind=cores ./gpu-mpi-launch ./ExaSeis-ADERDGRusanovGlobalAdaptive-Release
+#srun --cpu-bind=cores ./gpu-mpi-launch ./ExaSeis-ADERDGRusanovGlobalAdaptive-Stateless-Release
 
 # For reading the SLURM output in realtime:
 # tail -f
