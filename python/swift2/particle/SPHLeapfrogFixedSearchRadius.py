@@ -479,12 +479,14 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             iterate_over_particles_assigned_to_vertex_for_move = (
                 """
                 auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-                """ +
-                iterate_over_particles_assigned_to_vertex + """
+                ::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"""
+                + self.name
+                + """>);
                 ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, _spacetreeId);
                 """
                 )
-        if iterate_over_particles_assigned_to_vertex_with_global_reduction==None:
+            ## @todo This is not nice. We should still use the vectorised version if the vertex is gathered.
+        if iterate_over_particles_assigned_to_vertex_with_global_reduction is None:
             iterate_over_particles_assigned_to_vertex_with_global_reduction = (
                 "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
                 + self.name
