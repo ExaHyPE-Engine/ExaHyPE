@@ -37,6 +37,43 @@ namespace toolbox {
          * We assume that a particle is unique due to its name (species) and
          * its position. Particle information will be stored in a (hash) map
          * and therefore needs a smaller operator.
+         *
+         * ## Sorting
+         *
+         * As the keys work with floating point data, we have to take
+         * truncation errors into account. However, we have to be careful
+         * with this: We still need a total order if particles are not
+         * exactly the same. Originally, I did attempt to realise the
+         * routine as follows:
+         *
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         * if (particleName < rhs.particleName) {
+         *   assertion2( *this!=rhs, toString(), rhs.toString() );
+         *   return true;
+         * }
+         * if (particleName > rhs.particleName) {
+         *   assertion2( *this!=rhs, toString(), rhs.toString() );
+         *   return false;
+         * }
+         * for (int d = 0; d < Dimensions; d++) {
+         *   if (tarch::la::smaller(particleX(d), rhs.particleX(d))) {
+         *     assertion2( *this!=rhs, toString(), rhs.toString() );
+         *     return true;
+         *   }
+         *   if (tarch::la::greater(particleX(d), rhs.particleX(d))) {
+         *     assertion2( *this!=rhs, toString(), rhs.toString() );
+         *     return false;
+         *   }
+         * }
+         * assertion2( *this==rhs, toString(), rhs.toString() );
+         * return false;
+         * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         *
+         * This variant does not work, as it is too fuzzy. Indeed, we have
+         * to check first if two particles are equal (including the floating
+         * point precision). If they are, then the comparison operator <
+         * has to return false. If they are not, we fall back to bit-wise
+         * comparisons.
          */
         struct ParticleIdentifier {
           std::string                           particleName;
@@ -107,6 +144,13 @@ namespace toolbox {
 
         using ParticleEvents = std::vector<Event>;
 
+        /**
+         * Mesh sweep data set
+         *
+         * All the traces bookkept for one single mesh sweep. This is a plain
+         * extension of the std::map which simply adds a unique name on top.
+         * So all the original semantics of a map are preserved.
+         */
         class MeshSweepData: public std::map<ParticleIdentifier, ParticleEvents> {
           public:
             MeshSweepData(const std::string& meshSweepName);
@@ -162,7 +206,17 @@ namespace toolbox {
            */
           std::string particleHistory(const ParticleIdentifier& identifier) const;
 
+          /**
+           * Count total number of entries for a particle
+           */
+          int totalEntries(const ParticleIdentifier& identifier) const;
+
           void addEvent(const ParticleIdentifier& identifier, const Event& event);
+
+          /**
+           * Dump the whole database
+           */
+          std::string toString() const;
         };
       } // namespace internal
 
@@ -299,3 +353,6 @@ namespace toolbox {
     } // namespace assignmentchecks
   }   // namespace particles
 } // namespace toolbox
+
+
+
