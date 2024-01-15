@@ -17,15 +17,21 @@ class UpdateCell(ActionSet):
     // write Mb into it, i.e. mass matrix * rhs
     *r =  repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
 
-    // accumulate the solution on each of the faces into one vector. Do this in the stack
-
-
-    // next, we need to project solution on face onto the cell and add it on 
-    // loop over each face
+    // accumulate the solution on each of the faces into one vector. Do this in the heap
+    // This vector will contain: soln on face 0 | soln on face 1 | soln on face 2 | .....
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double >* faceSol = new tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double >();
     for (int f=0; f<TwoTimesD; f++)
+    for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
+      (*faceSol)( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
+  
+
+    // next, we need to project solution on face onto the cell...
+    auto projection = repositories::{{SOLVER_INSTANCE}}.getFaceToCellMatrix() * (*faceSol);
+    // loop over each face
+    for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
     {
       // project the face solution onto the cell; add to r
-      //*r += repositories::{{SOLVER_INSTANCE}}.getFaceToCellMatrix() * fineGridFaces{{SOLVER_NAME}}(f).getSolution();
+      *r += projection(f);
     }
 
     // fetch inverted assembly matrix from abstract solver class. left-multiply r.
