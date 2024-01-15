@@ -118,9 +118,9 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProject
 
 {% if FACE_TO_CELL_PROJECTION!=[] %}
 
-tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection * TwoTimesD, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceToCellMatrix()
+tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution * TwoTimesD, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceToCellMatrix()
 {
-  static tarch::la::Matrix<  CellUnknowns, FaceUnknownsProjection * TwoTimesD, double > result = {
+  static tarch::la::Matrix<  CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > result = {
       {{FACE_TO_CELL_PROJECTION[0]| join(", ")}}
       {% for ROW in FACE_TO_CELL_PROJECTION[1:] %}
         ,{{ROW | join(", ")}}

@@ -34,7 +34,26 @@ project = matrixfree.Project( project_name = "DGPointwise",
 assembly_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 mass_matrix     = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 cell_to_face    = np.zeros(( 2* args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions,   args.upcn * (args.poly_degree + 1) ** (args.dimensions) ))
-face_to_cell    = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     2*args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
+
+# we are projecting the face solution onto the cell here.
+face_to_cell    = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
+
+# fill out face_to_cell; move this to its own file soon
+assert(args.poly_degree == 1)
+# working from a sketch
+# this is NOT how it should work....
+# this is just a placeholder...
+face_to_cell[0,0] = 1
+face_to_cell[0,2] = 1
+
+face_to_cell[1,3] = 1
+face_to_cell[1,4] = 1
+
+face_to_cell[2,1] = 1
+face_to_cell[2,6] = 1
+
+face_to_cell[3,5] = 1
+face_to_cell[3,7] = 1
 
 
 solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(

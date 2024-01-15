@@ -17,6 +17,9 @@ class UpdateCell(ActionSet):
     // write Mb into it, i.e. mass matrix * rhs
     *r =  repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
 
+    // accumulate the solution on each of the faces into one vector. Do this in the stack
+
+
     // next, we need to project solution on face onto the cell and add it on 
     // loop over each face
     for (int f=0; f<TwoTimesD; f++)

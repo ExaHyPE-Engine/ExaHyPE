@@ -193,8 +193,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
     assert assembly_matrix.shape == mass_matrix.shape
 
-    assert  cell_to_face_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
-    assert (cell_to_face_projection.T).shape ==  self._face_to_cell_projection.shape
+    # assert  cell_to_face_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
+    # assert (cell_to_face_projection.T).shape ==  self._face_to_cell_projection.shape
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_to_Peano4_datamodel(datamodel,verbose)

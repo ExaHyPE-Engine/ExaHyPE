@@ -106,7 +106,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     );
 
     // no arguments needed
-    virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsProjection * TwoTimesD, double > getFaceToCellMatrix(
+    virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > getFaceToCellMatrix(
     );
 
     // no arguments needed
