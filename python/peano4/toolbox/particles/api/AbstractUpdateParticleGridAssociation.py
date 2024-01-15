@@ -243,7 +243,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
           _numberOfDrops++;
           (*p)->setCellH(marker.h());
           // @todo introduce new function in vertex marker
-          toolbox::particles::assignmentchecks::removeParticleFromVertex(
+          toolbox::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",
             (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
             marker.x()
@@ -257,9 +257,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
               tarch::la::Vector<Dimensions,double>( std::bitset<Dimensions>(i) ),
               3.0*marker.h()
             ),
-            marker.h()*3.0, _spacetreeId
+            marker.h()*3.0, _spacetreeId, "AbstractUpdateParticleGridAssociation::touchVertexFirstTime()"
           );
-          toolbox::particles::assignmentchecks::assignParticleToVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId );
+          toolbox::particles::assignmentchecks::assignParticleToVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "AbstractUpdateParticleGridAssociation::touchVertexFirstTime()" );
           assertion3(
             fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),
             fineGridVertex{{PARTICLES_CONTAINER}}.toString(),
@@ -309,7 +309,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
           newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
           marker.x(),
           marker.h(),
-          _spacetreeId
+          _spacetreeId, "AbstractUpdateParticleGridAssociation::touchVertexFirstTime()"
         );
       }
     }
@@ -349,7 +349,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       p->setCellH(3.0 * marker.h());
     }
     for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
-      toolbox::particles::assignmentchecks::removeParticleFromVertex( "{{PARTICLE}}", p->getX(), p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId );
+      toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "AbstractUpdateParticleGridAssociation::destroyPersistentVertex()" );
       toolbox::particles::assignmentchecks::assignParticleToVertex(
         "{{PARTICLE}}",
         p->getX(),
@@ -365,7 +365,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
           tarch::la::Vector<Dimensions,double>(target),
           3.0*marker.h()
         ),
-        3.0*marker.h(), _spacetreeId
+        3.0*marker.h(), _spacetreeId, "AbstractUpdateParticleGridAssociation::destroyPersistentVertex()"
       );
     }
     coarseGridVertices{{PARTICLES_CONTAINER}}( target.to_ulong() ).grabParticles( fineGridVertex{{PARTICLES_CONTAINER}} );
@@ -373,7 +373,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   else {
     _numberOfLiftsIntoSieveSet += fineGridVertex{{PARTICLES_CONTAINER}}.size();
     for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
-      toolbox::particles::assignmentchecks::assignParticleToVertex( "{{PARTICLE}}", p->getX(), p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId );
+      toolbox::particles::assignmentchecks::assignParticleToVertex( "{{PARTICLE}}", p->getX(), p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "AbstractUpdateParticleGridAssociation::destroyPersistentVertex()" );
     }
     fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeLiftedLocally();
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
@@ -420,7 +420,3 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 """
         ).render(**self.d)
 
-    def get_body_of_unprepareTraversal(self):
-        return """
-toolbox::particles::assignmentchecks::endMeshSweep();
-"""

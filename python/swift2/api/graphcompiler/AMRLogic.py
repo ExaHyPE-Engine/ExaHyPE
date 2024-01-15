@@ -224,8 +224,9 @@ def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
                 #   State
                 # =========
                 #
-                # See discussion in peano4.toolbox.UpdateParallelState why it is insufficient
-                # to only plug into i+1 and i+4.
+                # Action set peano4.toolbox.UpdateParallelState also eliminates 
+                # halo values and therefore has to be invoked within each drift, 
+                # too
                 #
                 steps_to_update_parallel_state = {
                     (i + 0) % len(steps),
@@ -437,11 +438,11 @@ def add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_ad
                 #   State
                 # =========
                 #
-                # See discussion in peano4.toolbox.UpdateParallelState why it is sufficient
-                # to only plug into i+1 here.
+                # See other routine in this file
                 #
                 #
                 steps_to_update_parallel_state = {
+                    (i + 0) % len(steps),
                     (i + 1) % len(steps),
                 }
                 if verbose:

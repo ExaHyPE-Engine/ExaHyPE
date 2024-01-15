@@ -30,7 +30,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
         for (auto p: neighbour) {
           const bool incomingParticleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
-          if (not incomingParticleWillBeLocal and p->getParallelState()==DoFType::ParallelState::Virtual){
+//          if (not incomingParticleWillBeLocal and p->getParallelState()==DoFType::ParallelState::Virtual){
+          if (p->getParallelState()==DoFType::ParallelState::Virtual) {
             logDebug(
               "merge(...)",
               "incoming particle " << p->toString() << " is virtual on neighbour. Such a copy is not relevant as it is a copy of the halo of another rank."
@@ -39,7 +40,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
             tarch::multicore::Lock lock( _statisticsSemaphore );
             _numberOfDroppedIncomingVirtualParticles++;
           }
-          else if (incomingParticleWillBeLocal) {
+/*          else if (incomingParticleWillBeLocal) {
             p->setParallelState( DoFType::ParallelState::Local );
             Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _container.begin(), _container.end());
             if ( iteratorToExistingCopy!=end() and (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Virtual ) {
@@ -66,11 +67,27 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
                 p->getX(), true, marker.x(), marker.h(), spacetreeId );
             }
           }
+          */
           else {
-            logDebug( "merge(...)", "incoming particle " << p->toString() << " will be virtual, i.e. will be halo copy" );
-            p->setParallelState( DoFType::ParallelState::Virtual );
+            p->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
             Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _container.begin(), _container.end());
             if ( iteratorToExistingCopy!=end() ) {
+              if ( (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local ) {
+                tarch::multicore::Lock lock( _statisticsSemaphore );
+                _numberOfRedundantlySharedLocalParticles++;
+              }
+              toolbox::particles::assignmentchecks::detachParticleFromVertex(
+                toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+                p->getX(), (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
+                marker.x(), marker.h(), spacetreeId,
+                "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()"
+              );
+              toolbox::particles::assignmentchecks::eraseParticle(
+                toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+                p->getX(), (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
+                spacetreeId,
+                "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()"
+              );
               delete *iteratorToExistingCopy;
               _container.erase(iteratorToExistingCopy);
               _container.push_back(p);
@@ -81,10 +98,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
               _container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfAddedVirtualParticles++;
-              toolbox::particles::assignmentchecks::assignParticleToVertex(
-                toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
-                p->getX(), false, marker.x(), marker.h(), spacetreeId );
             }
+            toolbox::particles::assignmentchecks::assignParticleToVertex(
+              toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+              p->getX(), p->getParallelState()==DoFType::ParallelState::Local,
+              marker.x(), marker.h(), spacetreeId,
+              "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()"
+            );
           }
         }
 

@@ -21,6 +21,13 @@ namespace toolbox {
      * assignments and validate them against the recorded history. All the tracing
      * degenerates to empty routines if we work in release mode, so there should not
      * be any overhead.
+     *
+     * Most toolbox routines do automatically report against this API. However, to
+     * make the checks work, you have to report particle movements manually.
+     *
+     * Furthermore, you might want to invoke toolbox::particles::assignmentchecks::startMeshSweep()
+     * prior to your traversals to ensure that you get a nice break-down of all
+     * mesh transitions.
      */
     namespace assignmentchecks {
       namespace internal {
@@ -49,23 +56,45 @@ namespace toolbox {
          * vertex.
          */
         struct Event {
-          enum class Type { NotFound, AssignToSieveSet, AssignToVertex, Erase, RemoveFromVertex };
+          enum class Type { NotFound, AssignToSieveSet, AssignToVertex, Erase, DetachFromVertex, MoveWhileAssociatedToVertex };
 
           Type                                  type;
           bool                                  isLocal;
           tarch::la::Vector<Dimensions, double> vertexX;
+          tarch::la::Vector<Dimensions, double> previousParticleX;
           tarch::la::Vector<Dimensions, double> vertexH;
           int                                   treeId;
+          std::string                           trace;
 
           /**
            * Construct an event which identifies a vertex assignment or the removal from a vertex.
            */
-          Event(Type type_, bool isLocal_, const tarch::la::Vector<Dimensions, double>& vertexX_, const tarch::la::Vector<Dimensions, double>& vertexH_, int treeId_);
+          Event(
+            Type                                          type_,
+            bool                                          isLocal_,
+            const tarch::la::Vector<Dimensions, double>&  vertexX_,
+            const tarch::la::Vector<Dimensions, double>&  vertexH_,
+            int                                           treeId_,
+            const std::string&                            trace_
+          );
+
+          /**
+           * Construct a move event
+           *
+           * This event should always be tied to an identifier in the global map
+           * which uses the new position as key.
+           */
+          Event(
+            Type                                          type_,
+            const tarch::la::Vector<Dimensions, double>&  previousParticleX,
+            int                                           treeId_,
+            const std::string&                            trace_
+          );
 
           /**
            * Construct an event that identifies the association to the sieve set or an erase.
            */
-          Event(Type type_, bool isLocal_, int treeId_);
+          Event(Type type_, bool isLocal_, int treeId_,             const std::string& trace_);
 
           /**
            * Construct an invalid event. Is used as return value if no data is
@@ -77,19 +106,39 @@ namespace toolbox {
         };
 
         using ParticleEvents = std::vector<Event>;
-        using MeshSweepData  = std::map<ParticleIdentifier, ParticleEvents>;
+
+        class MeshSweepData: public std::map<ParticleIdentifier, ParticleEvents> {
+          public:
+            MeshSweepData(const std::string& meshSweepName);
+
+            std::string getName() const;
+
+          private:
+            const std::string _meshSweepName;
+        };
 
         class Database {
         private:
           std::vector<MeshSweepData> _data;
 
         public:
+          static constexpr int AnyTree = -1;
+
           Database();
 
           /**
            * Add a new snapshot for a new mesh sweep
            */
-          void addMeshSweep();
+          void startMeshSweep(const std::string&  meshSweepName);
+
+          /**
+           * We enumerate the mesh sweeps. This routine returns the number of
+           * the current one.
+           */
+          int getCurrentMeshSweep() const;
+
+          static constexpr int SearchWholeDatabase = 0;
+          static constexpr int DoNotFollowParticleMovementsInDatabase = -1;
 
           /**
            * Has a fitting entry
@@ -99,16 +148,14 @@ namespace toolbox {
            * position and name. If there's none or the last logged entry for
            * this particle is an erase event, then the routine returns an
            * invalid event.
-           */
-          Event getEntry(const ParticleIdentifier& identifier, int spactreeId, bool hasToBeLocal) const;
-
-          /**
-           * Has fitting entry
            *
-           * Search backwards through history and return latest event that
-           * matches the species (name) and position handed in.
+           * @param spacetreeId Either a valid spacetree or AnyTree if you don't care
            */
-          Event getEntry(const ParticleIdentifier& identifier) const;
+          Event getEntry(
+            const ParticleIdentifier&  identifier,
+            int                        spacetreeId,
+            int                        firstNRecentEntriesToSkip = SearchWholeDatabase
+          ) const;
 
           /**
            * Print history of one particle
@@ -124,7 +171,7 @@ namespace toolbox {
        *
        * Delegates to the corresponding method in the database.
        */
-      void endMeshSweep();
+      void startMeshSweep(const std::string& meshSweepName);
 
       /**
        * Log that a particle is erased
@@ -133,15 +180,52 @@ namespace toolbox {
        * Before this function is called, the corresponding particle has to be
        * removed from its associated vertex.
        */
-      void eraseParticle(const std::string& particleName, const tarch::la::Vector<Dimensions, double>& particleX, bool isLocal, int treeId);
+      void eraseParticle(
+        const std::string&                            particleName,
+        const tarch::la::Vector<Dimensions, double>&  particleX,
+        bool                                          isLocal,
+        int                                           treeId,
+        const std::string&                            trace
+      );
+
+      /**
+       * Record the movement of a particle
+       *
+       * If oldParticleX equals newParticleX, the function degenerates to nop
+       * and nothing is traced. Otherwise, we run some consistency checks and
+       * then put a move event into our database.
+       */
+      void moveParticle(
+         const std::string&                            particleName,
+         const tarch::la::Vector<Dimensions, double>&  oldParticleX,
+         const tarch::la::Vector<Dimensions, double>&  newParticleX,
+         int                                           treeId,
+         const std::string&                            trace
+      );
 
       /**
        * Assign a particle to a vertex
        *
-       * To make this a valid operation, the particle has to be "free", i.e. it
-       * may not be assigned to any other vertex yet. Consequently, the particle
-       * is either new (created or flying in from somewhere else), or we have
-       * triggered removeParticleFromVertex() before.
+       * Take the particle, perform some consistency checks, and then add the
+       * particle event to our history database. The consistency checks differ
+       * for local from virtual particles.
+       *
+       * ## Consistency checks for local particles
+       *
+       * - If we have
+       * - The particle has to be "free", i.e. it may not be assigned to any
+       *   other vertex yet. Consequently, the particle is either new (created or flying in from somewhere else), or we have
+       * triggered detachParticleFromVertex() before.
+       *
+       * ## Consistency check for virtual particles
+       *
+       * - The particle has to be "free", i.e. it may not be assigned to any
+       *   other vertex yet. The particle has to be new. If it is an update of
+       *   a halo copy, we would expect the corresponing merge() to replace
+       *   this copy. A replacement manifests in an event sequence of
+       *   detach->erase->assign.
+       *
+       * To make this a valid operation,
        *
        * Alternatively, we might have a virtual particle here. In this case,
        * we can ensure that all vertices are associated to the same vertex on
@@ -153,7 +237,8 @@ namespace toolbox {
         bool                                         isLocal,
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
-        int                                          treeId
+        int                                          treeId,
+        const std::string&                           trace
       );
 
       /**
@@ -161,32 +246,32 @@ namespace toolbox {
        *
        * To make this API call valid, the particle has to be assigned to a
        * vertex beforehand. So there has to be a assignParticleToVertex()
-       * before this one. However, we might run into a situation where a
-       * code updates a particle's position and then removes this particle
-       * (with the new position) from its vertex, as it now has moved. In
-       * this case, we cannot match the particle anymore to a previous
-       * entry, as we do not use global particle ids. So, it is possible
-       * that a code removes a particle from a vertex which we haven't
-       * "seen" yet before. Basically, the only thing left for us is to ensure
-       * that particles are not removed from a vertex twice.
+       * before this one.
        */
-      void removeParticleFromVertex(
+      void detachParticleFromVertex(
         const std::string&                           particleName,
         const tarch::la::Vector<Dimensions, double>& particleX,
         bool                                         isLocal,
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
-        int                                          treeId
+        int                                          treeId,
+        const std::string&                           trace
       );
 
       /**
        * Assign a particle to a sieve set
        *
        * To make this routine valid, the particle may not be assigned to a
-       * vertex anymore, i.e. removeParticleFromVertex() has to be called
+       * vertex anymore, i.e. detachParticleFromVertex() has to be called
        * before.
        */
-      void assignParticleToSieveSet(const std::string& particleName, const tarch::la::Vector<Dimensions, double>& particleX, bool isLocal, int treeId);
+      void assignParticleToSieveSet(
+        const std::string&                            particleName,
+        const tarch::la::Vector<Dimensions, double>&  particleX,
+        bool                                          isLocal,
+        int                                           treeId,
+        const std::string&                            trace
+      );
 
       /**
        * Find out particle name

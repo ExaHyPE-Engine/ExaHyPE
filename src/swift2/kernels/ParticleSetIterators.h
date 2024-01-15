@@ -216,7 +216,8 @@ namespace swift2 {
      * peano4/utils/Loop.h, which ensure that we use bespoke loop constructs
      * depending on the multithreading backend chosen.
      *
-     * @see peano4/utils/Loop.h
+     * This routine is not be used/does not work if f alters the global state,
+     * i.e. if f performs a global reduction.
      */
     template <typename ParticleContainer>
     void forAllParticlesVectorised(
@@ -240,6 +241,9 @@ namespace swift2 {
      * Logically, it would be nice to work with a bitset here. However, bitsets
      * are large, and it is not clear if operations on them would map onto
      * AVX instructions.
+     *
+     * This routine is not be used/does not work if f alters the global state,
+     * i.e. if f performs a global reduction.
      */
     template <typename ParticleContainer>
     void forAllParticlesVectoriseWithCheckPreamble(

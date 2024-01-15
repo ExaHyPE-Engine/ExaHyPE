@@ -346,6 +346,7 @@ def map_onto_separate_mesh_traversals(
                 ),
                 add_user_defined_actions=False,
             )
+            new_step.add_action_set(swift2.actionsets.DummyStep())
             mesh_traversals.append(new_step)
             alter_particle_position.append(True)
 
@@ -376,6 +377,7 @@ def map_onto_separate_mesh_traversals(
                 ),
                 add_user_defined_actions=False,
             )
+            new_step.add_action_set(swift2.actionsets.DummyStep())
             mesh_traversals.append(new_step)
             alter_particle_position.append(True)
 

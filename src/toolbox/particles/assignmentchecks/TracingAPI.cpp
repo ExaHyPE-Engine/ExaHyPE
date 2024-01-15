@@ -40,22 +40,37 @@ std::string toolbox::particles::assignmentchecks::internal::ParticleIdentifier::
 
 
 toolbox::particles::assignmentchecks::internal::Event::Event(
-  Type type_, bool isLocal_, const tarch::la::Vector<Dimensions, double>& vertexX_, const tarch::la::Vector<Dimensions, double>& vertexH_, int treeId_
+  Type type_,
+  bool isLocal_,
+  const tarch::la::Vector<Dimensions,
+  double>& vertexX_,
+  const tarch::la::Vector<Dimensions, double>& vertexH_,
+  int treeId_,
+  const std::string& trace_
 ):
   type(type_),
   isLocal(isLocal_),
   vertexX(vertexX_),
+  previousParticleX(0.0),
   vertexH(vertexH_),
-  treeId(treeId_) {
-  assertion(type == Type::AssignToVertex or type == Type::RemoveFromVertex);
+  treeId(treeId_),
+  trace(trace_) {
+  assertion(type == Type::AssignToVertex or type == Type::DetachFromVertex);
 }
 
-toolbox::particles::assignmentchecks::internal::Event::Event(Type type_, bool isLocal_, int treeId_):
+toolbox::particles::assignmentchecks::internal::Event::Event(
+  Type                type_,
+  bool                isLocal_,
+  int                 treeId_,
+  const std::string&  trace_
+):
   type(type_),
   isLocal(isLocal_),
   vertexX(tarch::la::Vector<Dimensions, double>(0.0)),
+  previousParticleX(0.0),
   vertexH(tarch::la::Vector<Dimensions, double>(0.0)),
-  treeId(treeId_) {
+  treeId(treeId_),
+  trace(trace_) {
   assertion(type == Type::AssignToSieveSet or type == Type::Erase);
 }
 
@@ -63,107 +78,195 @@ toolbox::particles::assignmentchecks::internal::Event::Event(Type type_):
   type(type_),
   isLocal(false),
   vertexX(tarch::la::Vector<Dimensions, double>(0.0)),
+  previousParticleX(0.0),
   vertexH(tarch::la::Vector<Dimensions, double>(0.0)),
-  treeId(-1) {
+  treeId(-1),
+  trace( "no-trace" ){
   assertion(type == Type::NotFound);
+}
+
+toolbox::particles::assignmentchecks::internal::Event::Event(
+  Type                                          type_,
+  const tarch::la::Vector<Dimensions, double>&  previousVertexX_,
+  int                                           treeId_,
+  const std::string&                            trace_
+):
+  type(type_),
+  isLocal(true),
+  vertexX(tarch::la::Vector<Dimensions, double>(0.0)),
+  previousParticleX(previousVertexX_),
+  vertexH(tarch::la::Vector<Dimensions, double>(0.0)),
+  treeId(treeId_),
+  trace(trace_) {
+  assertion(type == Type::MoveWhileAssociatedToVertex);
 }
 
 std::string toolbox::particles::assignmentchecks::internal::Event::toString() const {
   std::ostringstream msg;
+
+  auto reportErase =[&]() -> void {
+    msg << ",local=" << isLocal << ",tree=" << treeId << ",trace=" << trace;
+  };
+
+  auto reportDetach =[&]() -> void {
+    msg << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH << ",tree=" << treeId << ",trace=" << trace;
+  };
+
+  auto reportOthers = [&]() -> void {
+    msg << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH << ",tree=" << treeId << ",trace=" << trace;
+  };
+
+  auto reportMove = [&]() -> void {
+    msg << ",x(particle)->" << previousParticleX << ",tree=" << treeId << ",trace=" << trace;
+  };
+
   msg << "(";
   switch (type) {
   case Type::AssignToSieveSet:
     msg << "assign-to-sieve-set";
+    reportOthers();
     break;
   case Type::AssignToVertex:
     msg << "assign-to-vertex";
+    reportOthers();
     break;
   case Type::Erase:
     msg << "erase";
+    reportErase();
     break;
-  case Type::RemoveFromVertex:
-    msg << "remove-from-vertex";
+  case Type::DetachFromVertex:
+    msg << "detach-from-vertex";
+    reportDetach();
     break;
   case Type::NotFound:
     msg << "not-found";
     break;
+  case Type::MoveWhileAssociatedToVertex:
+    msg << "moved-while-associated-to-vertex";
+    reportMove();
+    break;
   };
-  msg << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH << ",tree=" << treeId << ")";
+
+  msg << ")";
+
   return msg.str();
 }
 
 
-toolbox::particles::assignmentchecks::internal::Database::Database() { _data.push_back(MeshSweepData()); };
+toolbox::particles::assignmentchecks::internal::MeshSweepData::MeshSweepData(const std::string& meshSweepName):
+  _meshSweepName(meshSweepName) {}
 
-void toolbox::particles::assignmentchecks::internal::Database::addMeshSweep() {
-  logInfo("addMeshSweep()", "end mesh sweep with " << _data.rbegin()->size() << " event(s)");
-  _data.push_back(MeshSweepData());
+
+std::string toolbox::particles::assignmentchecks::internal::MeshSweepData::getName() const {
+  return _meshSweepName;
+}
+
+
+toolbox::particles::assignmentchecks::internal::Database::Database() { _data.push_back(MeshSweepData("initial")); };
+
+void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(const std::string& meshSweepName) {
+  tarch::multicore::Lock lock(_semaphore);
+  logDebug("addMeshSweep()", "end mesh sweep with " << _data.rbegin()->size() << " event(s)");
+  _data.push_back(MeshSweepData(meshSweepName));
 };
 
+
+int toolbox::particles::assignmentchecks::internal::Database::getCurrentMeshSweep() const {
+  return _data.size()-1;
+}
+
+
 toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assignmentchecks::internal::Database::getEntry(
-  const ParticleIdentifier& identifier, int spacetreeId, bool hasToBeLocal
+  const ParticleIdentifier&  identifier,
+  int                        spacetreeId,
+  int                        firstNRecentEntriesToSkip
 ) const {
   auto currentSnapshot = _data.crbegin();
 
+  std::advance( currentSnapshot, firstNRecentEntriesToSkip );
+
+  int countSnapshotsBackwards = 0;
   while (currentSnapshot != _data.crend()) {
     const MeshSweepData& meshSweepData = *currentSnapshot;
     if (meshSweepData.count(identifier) > 0) {
       auto event = meshSweepData.at(identifier).crbegin();
       while (event != meshSweepData.at(identifier).crend()) {
-        if ((event->isLocal or not hasToBeLocal) and event->type == Event::Type::Erase and event->treeId == spacetreeId) {
+        bool treeIsAFit = event->treeId == spacetreeId
+                       or spacetreeId==AnyTree;
+        if (
+          event->type == Event::Type::Erase
+          and
+          treeIsAFit
+        ) {
           return Event(Event::Type::NotFound);
         }
-        if ((event->isLocal or not hasToBeLocal) and event->type == Event::Type::RemoveFromVertex and event->treeId == spacetreeId) {
-          return Event(Event::Type::NotFound);
+        else if (
+          event->type == Event::Type::MoveWhileAssociatedToVertex
+          and
+          firstNRecentEntriesToSkip!=DoNotFollowParticleMovementsInDatabase
+        ) {
+          ParticleIdentifier previousIdentifier{identifier};
+          previousIdentifier.particleX = event->previousParticleX;
+          assertion3(
+            previousIdentifier!=identifier,
+            previousIdentifier.toString(),
+            identifier.toString(),
+            event->toString()
+          );
+          logDebug( "getEntry()", "rerun with " << previousIdentifier.toString() << " distilled from " << identifier.toString() );
+          return getEntry(previousIdentifier, spacetreeId, countSnapshotsBackwards);
         }
-        if ((event->isLocal or not hasToBeLocal) and event->type == Event::Type::AssignToVertex and event->treeId == spacetreeId) {
+        else if (event->type != Event::Type::Erase and treeIsAFit) {
           return *event;
         }
         event++;
       }
     }
     currentSnapshot++;
+    countSnapshotsBackwards++;
   }
 
   return Event(Event::Type::NotFound);
 }
 
-toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assignmentchecks::internal::Database::getEntry(const ParticleIdentifier& identifier) const {
-  auto currentSnapshot = _data.crbegin();
-
-  while (currentSnapshot != _data.crend()) {
-    const MeshSweepData& meshSweepData = *currentSnapshot;
-    if (meshSweepData.count(identifier) > 0) {
-      assertion(meshSweepData.at(identifier).size() > 0);
-      return *meshSweepData.at(identifier).rbegin();
-    }
-    currentSnapshot++;
-  }
-
-  return Event(Event::Type::NotFound);
-}
 
 std::string toolbox::particles::assignmentchecks::internal::Database::particleHistory(const ParticleIdentifier& identifier) const {
   std::ostringstream msg;
-  msg << identifier.toString() << ":";
-  bool firstEntry = false;
-  int  snapshot   = 0;
-  for (const auto& p : _data) {
-    if (p.count(identifier) > 0) {
-      if (not firstEntry) {
-        firstEntry = true;
-      } else {
-        msg << "->";
-      }
-      msg << "#" << snapshot << ":{";
-      for (const auto& event : p.at(identifier)) {
+  msg << std::endl
+      << "============================" << std::endl
+      << identifier.toString() << std::endl
+      << "============================";
+  int  snapshot   = _data.size()-1;
+
+  bool                hasPredecessor = false;
+  ParticleIdentifier  predecessor(identifier);
+  auto                p = _data.crbegin();
+
+  while (p!=_data.crend()) {
+    if ((*p).count(identifier) > 0) {
+      msg << std::endl << "sweep #" << snapshot << " (" << p->getName() << "):";
+      bool firstEntry = false;
+      for (const auto& event : p->at(identifier)) {
+        if (not firstEntry) {
+          firstEntry = true;
+        } else {
+          msg << "->";
+        }
         msg << event.toString();
+        if (event.type==Event::Type::MoveWhileAssociatedToVertex) {
+          hasPredecessor = true;
+          predecessor.particleX = event.previousParticleX;
+        }
       }
-      msg << "}";
     }
-    snapshot++;
+    snapshot--;
+    p++;
   }
-  return msg.str();
+
+  if (hasPredecessor) {
+    return msg.str() + particleHistory(predecessor);
+  }
+  else return msg.str();
 }
 
 void toolbox::particles::assignmentchecks::internal::Database::addEvent(const ParticleIdentifier& identifier, const Event& event) {
@@ -178,24 +281,29 @@ void toolbox::particles::assignmentchecks::internal::Database::addEvent(const Pa
 
 #if PeanoDebug > 0
 
-void toolbox::particles::assignmentchecks::endMeshSweep() { _database.addMeshSweep(); }
+void toolbox::particles::assignmentchecks::startMeshSweep(
+  const std::string&  meshSweepName
+) {
+  _database.startMeshSweep( meshSweepName );
+}
 
 
-void toolbox::particles::assignmentchecks::eraseParticle(const std::string& particleName, const tarch::la::Vector<Dimensions, double>& particleX, bool isLocal, int treeId) {
-  logDebug("eraseParticle()", "erase " << particleName << " particle at " << particleX << " on tree " << treeId);
-
+void toolbox::particles::assignmentchecks::eraseParticle(
+  const std::string&                           particleName,
+  const tarch::la::Vector<Dimensions, double>& particleX,
+  bool                                         isLocal,
+  int                                          treeId,
+  const std::string&                           trace
+) {
+  logTraceInWith4Arguments("eraseParticle(...)", particleName, particleX, isLocal, treeId );
   tarch::multicore::Lock lock(_semaphore);
 
   internal::ParticleIdentifier identifier(particleName, particleX);
-  internal::Event              event(internal::Event::Type::Erase, isLocal, treeId);
+  internal::Event              event(internal::Event::Type::Erase, isLocal, treeId, trace);
 
-  internal::Event previousLocalParticle = _database.getEntry(identifier, treeId, true);
-  // @todo Comment: Kann sich halt bewegt haben?
+  internal::Event previousLocalParticle = _database.getEntry(identifier, treeId);
   assertion5(
-    previousLocalParticle.type == internal::Event::Type::NotFound
-    //    or
-    //    _database.getEntry( identifier, treeId, false ).type == internal::Event::Type::NotFound
-    ,
+    previousLocalParticle.type==internal::Event::Type::DetachFromVertex,
     identifier.toString(),
     event.toString(),
     previousLocalParticle.toString(),
@@ -204,6 +312,7 @@ void toolbox::particles::assignmentchecks::eraseParticle(const std::string& part
   );
 
   _database.addEvent(identifier, event);
+  logTraceOut("eraseParticle(...)" );
 }
 
 void toolbox::particles::assignmentchecks::assignParticleToVertex(
@@ -212,124 +321,201 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   bool                                         isLocal,
   const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
-  int                                          treeId
+  int                                          treeId,
+  const std::string&                           trace
 ) {
+  logTraceInWith6Arguments( "assignParticleToVertex(...)", particleName, particleX, isLocal, vertexX, vertexH, treeId );
   tarch::multicore::Lock lock(_semaphore);
 
   internal::ParticleIdentifier identifier(particleName, particleX);
-  internal::Event              event(internal::Event::Type::AssignToVertex, isLocal, vertexX, vertexH, treeId);
+  internal::Event              event(internal::Event::Type::AssignToVertex, isLocal, vertexX, vertexH, treeId, trace);
 
-  assertion5(
-    _database.getEntry(identifier, treeId, true).type == internal::Event::Type::NotFound,
-    identifier.toString(),
-    event.toString(),
-    _database.getEntry(identifier, treeId, true).toString(),
-    treeId,
-    _database.particleHistory(identifier)
-  );
+  if (isLocal) {
+    internal::Event              previousEvent = _database.getEntry(identifier, treeId);
 
-  internal::Event previousEvent = _database.getEntry(identifier);
-  logDebug(
-    "assignParticleToVertex()",
-    "assign "
-      << particleName << " particle at " << particleX << " to vertex " << vertexX << " on mesh level " << vertexH << " on tree " << treeId
-      << ". Previous event=" << previousEvent.toString()
-  );
+    assertion7(
+      previousEvent.type == internal::Event::Type::NotFound
+      or
+      previousEvent.type == internal::Event::Type::AssignToSieveSet
+      or
+      previousEvent.type == internal::Event::Type::DetachFromVertex,
+      identifier.toString(),
+      event.toString(),
+      previousEvent.toString(),
+      treeId,
+      _database.getCurrentMeshSweep(),
+      trace,
+      _database.particleHistory(identifier)
+    );
+    assertion5(
+      _database.getEntry(identifier, treeId).type == internal::Event::Type::NotFound
+      or
+      previousEvent.type == internal::Event::Type::AssignToSieveSet
+      or
+      previousEvent.type == internal::Event::Type::DetachFromVertex
+      or
+      tarch::la::equals(previousEvent.vertexX, vertexX),
+      identifier.toString(),
+      event.toString(),
+      previousEvent.toString(),
+      trace,
+      _database.particleHistory(identifier)
+    );
+    assertion5(
+      _database.getEntry(identifier, treeId).type == internal::Event::Type::NotFound
+      or
+      previousEvent.type == internal::Event::Type::AssignToSieveSet
+      or
+      previousEvent.type == internal::Event::Type::DetachFromVertex
+      or
+      tarch::la::equals(previousEvent.vertexH, vertexH),
+      identifier.toString(),
+      event.toString(),
+      previousEvent.toString(),
+      trace,
+      _database.particleHistory(identifier)
+    );
+  }
+  else {
+    internal::Event              previousEvent = _database.getEntry(identifier, treeId);
 
-  assertion4(
-    _database.getEntry(identifier, treeId, true).type == internal::Event::Type::NotFound or tarch::la::equals(previousEvent.vertexX, vertexX),
-    identifier.toString(),
-    event.toString(),
-    previousEvent.toString(),
-    _database.particleHistory(identifier)
-  );
-  assertion4(
-    _database.getEntry(identifier, treeId, true).type == internal::Event::Type::NotFound or tarch::la::equals(previousEvent.vertexH, vertexH),
-    identifier.toString(),
-    event.toString(),
-    previousEvent.toString(),
-    _database.particleHistory(identifier)
-  );
+    assertion7(
+      previousEvent.type == internal::Event::Type::NotFound,
+      identifier.toString(),
+      event.toString(),
+      previousEvent.toString(),
+      treeId,
+      _database.getCurrentMeshSweep(),
+      trace,
+      _database.particleHistory(identifier)
+    );
+  }
 
   _database.addEvent(identifier, event);
+  logTraceOut( "assignParticleToVertex(...)" );
 }
 
-void toolbox::particles::assignmentchecks::removeParticleFromVertex(
+void toolbox::particles::assignmentchecks::moveParticle(
+  const std::string&                            particleName,
+  const tarch::la::Vector<Dimensions, double>&  oldParticleX,
+  const tarch::la::Vector<Dimensions, double>&  newParticleX,
+  int                                           treeId,
+  const std::string&                            trace
+) {
+  logTraceInWith3Arguments( "moveParticle(...)", particleName, oldParticleX, newParticleX );
+  if (not tarch::la::equals(oldParticleX,newParticleX)) {
+    tarch::multicore::Lock lock(_semaphore);
+
+    internal::ParticleIdentifier newIdentifier(particleName, newParticleX);
+    internal::Event              newEvent(internal::Event::Type::MoveWhileAssociatedToVertex, oldParticleX, treeId, trace );
+    internal::ParticleIdentifier oldIdentifier(particleName, oldParticleX);
+    internal::Event              previousEvent = _database.getEntry(oldIdentifier, treeId );
+
+    assertion7(
+      previousEvent.type == internal::Event::Type::AssignToVertex,
+      oldIdentifier.toString(),
+      previousEvent.toString(),
+      newIdentifier.toString(),
+      newEvent.toString(),
+      _database.getCurrentMeshSweep(),
+      trace,
+      _database.particleHistory(oldIdentifier)
+    );
+
+    _database.addEvent(newIdentifier, newEvent);
+    logDebug( "moveParticle(...)", "add " << newEvent.toString() << " with identifier " << newIdentifier.toString() << " (presumably on tree " << previousEvent.treeId << ")" );
+    logDebug( "moveParticle(...)", _database.particleHistory(newIdentifier) );
+  }
+
+  logTraceOut( "moveParticle(...)" );
+}
+
+void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           particleName,
   const tarch::la::Vector<Dimensions, double>& particleX,
   bool                                         isLocal,
   const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
-  int                                          treeId
+  int                                          treeId,
+  const std::string&                           trace
 ) {
+  logTraceInWith6Arguments( "detachParticleFromVertex(...)", particleName, particleX, isLocal, vertexX, vertexH, treeId );
   tarch::multicore::Lock lock(_semaphore);
 
   internal::ParticleIdentifier identifier(particleName, particleX);
-  internal::Event              event{internal::Event::Type::RemoveFromVertex, isLocal, vertexX, vertexH, treeId};
+  internal::Event              event{internal::Event::Type::DetachFromVertex, isLocal, vertexX, vertexH, treeId, trace};
 
-  internal::Event previousEvent = _database.getEntry(identifier, treeId, true);
+  internal::Event previousEvent = _database.getEntry(identifier, treeId);
 
-  assertion5(
-    previousEvent.type == internal::Event::Type::AssignToVertex or previousEvent.type == internal::Event::Type::NotFound,
+  assertion7(
+    previousEvent.type == internal::Event::Type::AssignToVertex,
     identifier.toString(),
     event.toString(),
-    _database.getEntry(identifier, treeId, true).toString(),
+    previousEvent.toString(),
     treeId,
+    _database.getCurrentMeshSweep(),
+    trace,
     _database.particleHistory(identifier)
   );
-
-  logDebug(
-    "removeParticleFromVertex()",
-    "remove "
-      << particleName << " particle at " << particleX << " from vertex " << vertexX << " on mesh level " << vertexH << " on tree " << treeId
-      << ". Previous entry=" << previousEvent.toString()
-  );
-
-  assertion6(
-    previousEvent.type == internal::Event::Type::NotFound or tarch::la::equals(previousEvent.vertexX, vertexX),
+  assertion7(
+    tarch::la::equals(previousEvent.vertexX, vertexX),
     identifier.toString(),
     event.toString(),
     treeId,
-    _database.getEntry(identifier, treeId, true).toString(),
+    _database.getEntry(identifier, treeId).toString(),
     previousEvent.toString(),
+    trace,
     _database.particleHistory(identifier)
   );
-  assertion6(
-    previousEvent.type == internal::Event::Type::NotFound or tarch::la::equals(previousEvent.vertexH, vertexH),
+  assertion7(
+    tarch::la::equals(previousEvent.vertexH, vertexH),
     identifier.toString(),
     event.toString(),
     treeId,
-    _database.getEntry(identifier, treeId, true).toString(),
+    _database.getEntry(identifier, treeId).toString(),
     previousEvent.toString(),
+    trace,
     _database.particleHistory(identifier)
   );
 
   _database.addEvent(identifier, event);
+  logTraceOut( "detachParticleFromVertex(...)" );
 }
 
 void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
-  const std::string& particleName, const tarch::la::Vector<Dimensions, double>& particleX, bool isLocal, int treeId
+  const std::string& particleName, const tarch::la::Vector<Dimensions, double>& particleX, bool isLocal,
+  int treeId,
+  const std::string&                           trace
 ) {
+  logTraceInWith4Arguments( "assignParticleToSieveSet(...)", particleName, particleX, isLocal, treeId );
   tarch::multicore::Lock lock(_semaphore);
 
   logDebug("assignParticleToSieveSet()", "assign " << particleName << " particle at " << particleX << " to global sieve set on tree " << treeId);
 
   internal::ParticleIdentifier identifier(particleName, particleX);
-  internal::Event              event{internal::Event::Type::AssignToSieveSet, isLocal, treeId};
+  internal::Event              event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
+  internal::Event              previousEvent = _database.getEntry(identifier, treeId);
 
-  assertion4(
-    _database.getEntry(identifier, treeId, true).type == internal::Event::Type::NotFound, identifier.toString(), event.toString(), treeId, _database.particleHistory(identifier)
+  assertion5(
+    previousEvent.type == internal::Event::Type::DetachFromVertex,
+    identifier.toString(),
+    event.toString(), previousEvent.toString(),
+    treeId, _database.particleHistory(identifier)
   );
 
   _database.addEvent(identifier, event);
+  logTraceOut( "assignParticleToSieveSet(...)" );
 }
 
 
 #else
 
-void toolbox::particles::assignmentchecks::endMeshSweep() {}
+void toolbox::particles::assignmentchecks::startMeshSweep(const std::string& meshSweepName) {}
 
-void toolbox::particles::assignmentchecks::eraseParticle(const std::string& particleName, const tarch::la::Vector<Dimensions, double>& particleX, bool isLocal, int treeId) {}
+void toolbox::particles::assignmentchecks::eraseParticle(
+  const std::string& particleName, const tarch::la::Vector<Dimensions, double>& particleX, bool isLocal, int treeId,
+  const std::string&                           trace
+) {}
 
 void toolbox::particles::assignmentchecks::assignParticleToVertex(
   const std::string&                           particleName,
@@ -337,21 +523,30 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   bool                                         isLocal,
   const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
-  int                                          treeId
+  int                                          treeId,
+  const std::string&                           trace
 ) {}
 
-void toolbox::particles::assignmentchecks::removeParticleFromVertex(
+void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           particleName,
   const tarch::la::Vector<Dimensions, double>& particleX,
   bool                                         isLocal,
   const tarch::la::Vector<Dimensions, double>& vertexX,
   const tarch::la::Vector<Dimensions, double>& vertexH,
-  int                                          treeId
+  int                                          treeId,
+  const std::string&                           trace
 ) {}
 
 void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
-  const std::string& particleName, const tarch::la::Vector<Dimensions, double>& particleX, bool isLocal, int treeId
+  const std::string& particleName, const tarch::la::Vector<Dimensions, double>& particleX, bool isLocal, int treeId,   const std::string& trace
 ) {}
 
+void toolbox::particles::assignmentchecks::moveParticle(
+    const std::string&                            particleName,
+    const tarch::la::Vector<Dimensions, double>&  oldParticleX,
+    const tarch::la::Vector<Dimensions, double>&  newParticleX,
+    int                                           treeId,
+    const std::string&                            trace
+) {}
 
 #endif
