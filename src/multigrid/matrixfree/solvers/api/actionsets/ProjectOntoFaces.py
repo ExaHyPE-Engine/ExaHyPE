@@ -8,6 +8,29 @@ class ProjectOntoFaces(ActionSet):
   This is for DG solver.
   """
 
+  templateTCFT="""
+  /*
+  all we need to do here is project updated solution u^c onto the faces
+  */
+
+  // what to do about boundary faces?
+  if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
+  {
+    // create a vector to hold all of the values for the faces
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection * TwoTimesD, double >* faceProjections = new tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection * TwoTimesD, double >();
+
+    // apply cell to face projection, store it in faceProjections
+    (*faceProjections) = repositories::{{SOLVER_INSTANCE}}. getCellToFaceMatrix() * fineGridCell{{SOLVER_NAME}}.getSolution();
+
+    // write these values into the faces themselves
+    for (int f=0; f<TwoTimesD; f++)
+    for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection; p++)
+      fineGridFaces{{SOLVER_NAME}}(f).setProjection(
+        p,
+        (*faceProjections)( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p )
+      );
+  }
+"""
 
   def __init__(self,
                solver,
