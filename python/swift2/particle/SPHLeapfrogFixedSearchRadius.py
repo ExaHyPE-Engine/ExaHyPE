@@ -537,7 +537,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="Drift",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex_for_move.format(
+            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex.format(
                 "::swift2::timestepping::resetMovedParticleMarker"
             ),
             touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex_for_move.format(
