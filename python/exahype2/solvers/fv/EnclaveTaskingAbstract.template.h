@@ -260,8 +260,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     {% endif %}
     virtual bool patchCanUseStatelessPDETerms(
-      const tarch::la::Vector<Dimensions, double>& patchCentre,
-      const tarch::la::Vector<Dimensions, double>& patchH,
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
       double                                       t,
       double                                       dt
     ) const;

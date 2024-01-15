@@ -16,7 +16,7 @@
 {{SOLVER_INCLUDES}}
 
 
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
+tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
@@ -32,9 +32,9 @@ double**** exahype2::aderdg::ADERDGSolver::fineGridProjector                    
 ::exahype2::aderdg::UnivariateFunction** exahype2::aderdg::ADERDGSolver::basisFunctionFirstDerivative  = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
 ::exahype2::aderdg::UnivariateFunction** exahype2::aderdg::ADERDGSolver::basisFunctionSecondDerivative = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
 
+{{BASIS_INITIALIZERS | indent(2,True) }}
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-{{BASIS_INITIALIZERS | indent(2,True) }}
   _solverState(SolverState::GridConstruction),
   _minTimeStamp(0.0),
   _maxTimeStamp(0.0),
@@ -572,14 +572,20 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
-
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt
+) const {
+  return true;
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
 
-}
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
 
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

@@ -90,7 +90,7 @@ public:
    *         return _admissibleTimeStepSize. This value always refers
    *         to the minimum mesh volume size. If you use subcycling,
    *         you have to scale it for cells that are not on the finest
-   *         mesh resolution. 
+   *         mesh resolution.
    */
   virtual double getAdmissibleTimeStepSize() const;
 """
@@ -123,7 +123,6 @@ def create_compute_new_time_step_size_for_adaptive_time_stepping():
     const double maxEigenvalue = ::exahype2::aderdg::generic::maxScaledEigenvalue<
       {{SOLVER_NAME}}
       >(
-        repositories::{{SOLVER_INSTANCE}},
         luh,
         marker.x(),
         marker.h(),

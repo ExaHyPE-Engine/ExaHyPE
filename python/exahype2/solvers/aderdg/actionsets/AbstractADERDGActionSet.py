@@ -5,11 +5,8 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 class AbstractADERDGActionSet(ActionSet):
-  def __init__(self,solver):
-    """
-    solver: ADER-DG
-      Reference to creating class
-    """
+  def __init__(self, solver):
+    super(AbstractADERDGActionSet,self).__init__(descend_invocation_order=1, parallel=False)
     self._solver = solver
     pass
 

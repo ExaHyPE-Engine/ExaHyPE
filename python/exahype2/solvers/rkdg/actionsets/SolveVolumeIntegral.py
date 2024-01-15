@@ -59,7 +59,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       #elif Dimensions==3
       double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
       #endif
-    
+
       ::exahype2::CellData cellData(
         QIn,
         marker.x(),
@@ -68,8 +68,8 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         timeStepSize,
         QOut
       );
-      
-      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}    
+
+      ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}
     }
     else {
       assertion( marker.willBeEnclaveCell() );
@@ -80,7 +80,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         timeStepSize,
         QIn
       );
-      fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+      fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber(newEnclaveTask->getTaskId());
       tarch::multicore::spawnTask( newEnclaveTask );
     }
     {% else %}

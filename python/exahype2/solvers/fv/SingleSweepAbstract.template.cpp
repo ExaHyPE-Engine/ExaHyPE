@@ -352,21 +352,26 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
   return true;
 }
 
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return true;
 }
 
-{{ABSTRACT_SOLVER_USER_DEFINITIONS}}
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchCentre,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchH,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt
 ) const {
   return true;
 }
 
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
 
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
+
+
+{{ABSTRACT_SOLVER_USER_DEFINITIONS}}

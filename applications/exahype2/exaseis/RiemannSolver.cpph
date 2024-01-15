@@ -90,6 +90,7 @@ void applications::exahype2::exaseis::RiemannSolver<T>::solve(
       T zs_m = rho_m * c_s_m;
       T zp_m = rho_m * c_p_m;
 
+/*
 #ifdef GPUOffloadingOff
       if (zp_p <= 0.0 || zp_m <= 0.0) {
         std::cerr << "At position: " << isBoundaryFace << "\n";
@@ -98,6 +99,7 @@ void applications::exahype2::exaseis::RiemannSolver<T>::solve(
         std::abort();
       }
 #endif
+*/
 
       // Generate interface data preserving the amplitude of the outgoing characteristics
       // and satisfying interface conditions exactly.

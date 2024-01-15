@@ -5,36 +5,65 @@ import jinja2
 
 def create_predictor_allocations(use_kernelgenerator=True):
     Template_generic = """
-    const int basisElementsPerFace  = spaceFaceSize*(NumberOfVariables+NumberOfParameters);
-    const int fluxElementsPerFace   = spaceFaceSize*NumberOfVariables;
+    static constexpr int basisElementsPerFace  = spaceFaceSize * (NumberOfVariables + NumberOfParameters);
+    static constexpr int fluxElementsPerFace   = spaceFaceSize * NumberOfVariables;
 
-    constexpr int sizeLQi   = (NumberOfVariables+NumberOfParameters)*spaceTimeBasisSize;
-    constexpr int sizeRhs   = sizeLQi;
-    constexpr int sizeLFi   = (Dimensions + 1)*NumberOfVariables*spaceTimeBasisSize; //Dimensions+1 because this is also used for lShi, which contains source terms. Don't ask me why that isn't it's own variable
-    constexpr int sizeGradQ = Dimensions*NumberOfVariables*spaceBasisSize;
-    
-    constexpr int sizeLQhi = (NumberOfVariables+NumberOfParameters)*spaceBasisSize;
-    constexpr int sizeLFhi = (Dimensions + 1)*NumberOfVariables*spaceBasisSize;
+    static constexpr int sizeLQi   = (NumberOfVariables+NumberOfParameters) * spaceTimeBasisSize * (Order + 1);
+    static constexpr int sizeRhs   = sizeLQi;
+    static constexpr int sizeLFi   = (Dimensions + 1) * NumberOfVariables * spaceTimeBasisSize; // Dimensions + 1 because this is also used for lShi, which contains source terms. TODO: Make its own storage.
+    static constexpr int sizeGradQ = Dimensions * NumberOfVariables * spaceBasisSize;
 
-    constexpr int sizeLduh = sizeLQhi;
-    
+    static constexpr int sizeLQhi = (NumberOfVariables + NumberOfParameters) * spaceBasisSize;
+    static constexpr int sizeLFhi = (Dimensions + 1) * NumberOfVariables * spaceBasisSize;
+
+    static constexpr int sizeLduh = sizeLQhi;
+/*
     constexpr int totalSize = sizeLQi + sizeRhs + sizeLFi + sizeGradQ +
-                          sizeLQhi + sizeLFhi + sizeLduh;
-  
+                              sizeLQhi + sizeLFhi + sizeLduh;
+
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}} block[totalSize] __attribute__((aligned({{ARCHITECTURE_ALIGNMENT}})));
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* memory = block;
-        
+
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi   = memory; memory+=sizeLQi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* rhs   = memory; memory+=sizeRhs;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi   = memory; memory+=sizeLFi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ = memory; memory+=sizeGradQ;
-    
+
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi = memory; memory+=sizeLQhi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi = memory; memory+=sizeLFhi;
     {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lduh = memory; memory+=sizeLduh;
-    
-    {{CORRECTOR_COMPUTATION_PRECISION}} lQhbnd[2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters)]{0.0};
-    {{CORRECTOR_COMPUTATION_PRECISION}} lFhbnd[2*Dimensions*spaceFaceSize*NumberOfVariables]{0.0};
+*/
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeLQi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* rhs = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeRhs, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeLFi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* gradQ = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeGradQ, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lQhi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeLQhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lFhi = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeLFhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}* lduh = tarch::allocateMemory<{{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(
+      sizeLduh, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+
+    {{CORRECTOR_COMPUTATION_PRECISION}}* lQhbnd = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+      2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters),
+      tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
+    {{CORRECTOR_COMPUTATION_PRECISION}}* lFhbnd = tarch::allocateMemory<{{CORRECTOR_COMPUTATION_PRECISION}}>(
+      2*Dimensions*spaceFaceSize*NumberOfVariables,
+      tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+    );
 """
 
     Template_kernelgenerator = """
@@ -85,10 +114,9 @@ def create_predictor_allocations(use_kernelgenerator=True):
 """
     return (Template_kernelgenerator if use_kernelgenerator else Template_generic)
 
+
 def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
     Template_generic_linear = """
-    // template <bool EvaluatePointSource, bool EvaluateAlgebraicSource, bool EvaluateFlux,
-    //   bool EvaluateNonconservativeProduct, bool EvaluateMaterialParameters, class SolverType>
     ::exahype2::aderdg::generic::spaceTimePredictorLinear<
       false, // EvaluatePointSource
       {{ "true" if USE_SOURCE!="<none>" else "false" }}, // EvaluateAlgebraicSource
@@ -98,32 +126,37 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
       {{SOLVER_NAME}},
       {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, //predictor_computation_precision
       {{CORRECTOR_COMPUTATION_PRECISION}} //predictor_storage_precision
-      >(
-        repositories::{{SOLVER_INSTANCE}},
-        lQhbnd, lFhbnd,
-        lQi, lFi, gradQ,
-        nullptr, nullptr, nullptr, //PSi, PSderivatives, tmp_PSderivatives
-        lQhi, lFhi,
-        luh,
-        marker.x(), marker.h(), timeStamp, timeStepSize
+    >(
+      lQhbnd,
+      lFhbnd,
+      lQi,
+      lFi,
+      gradQ,
+      nullptr, nullptr, nullptr, // PSi, PSderivatives, tmp_PSderivatives
+      lQhi,
+      lFhi,
+      luh,
+      marker.x(),
+      marker.h(),
+      timeStamp,
+      timeStepSize
     );
 
-    //template <typename SolverType,bool useSource, bool useFlux, int numberOfVariables, int basisSize>
     ::exahype2::aderdg::generic::volumeIntegralLinear<
       {{SOLVER_NAME}},
       {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, //predictor_computation_precision
       {{ "true" if USE_SOURCE!="<none>" else "false" }}, //useSource
       {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
       {{NUMBER_OF_UNKNOWNS}},
-      {{ORDER}}+1>(
-        lduh,
-        lFhi,
-        marker.h() //cellSize
+      {{ORDER}}+1
+    >(
+      lduh,
+      lFhi,
+      marker.h() //cellSize
     );
     """
 
     Template_generic_nonlinear = """
-    //template <bool useSource, bool useFlux, bool useViscousFlux, bool useNCP, typename SolverType>
     int numberOfIterations = kernels::aderdg::generic::c::spaceTimePredictorNonlinear<
       {{ "true" if USE_SOURCE!="<none>" else "false" }}, //source
       {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
@@ -142,7 +175,6 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
         marker.x(), marker.h(), timeStamp, timeStepSize
     );
 
-    //template <typename SolverType, bool useSourceOrNCP, bool useFlux, bool noTimeAveraging, const int numberOfVariables, int basisSize>
     kernels::aderdg::generic::c::volumeIntegralNonlinear<
       {{SOLVER_NAME}},
       {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, //predictor_computation_precision
@@ -157,7 +189,7 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
     );
 """
     Template_kernelgenerator_linear_no_ps = """
-    //linear, no pointSources
+    // Linear, no point sources.
     int numberOfIterations = generated::kernels::AderDG::linear::fusedSpaceTimePredictorVolumeIntegral<{{SOLUTION_STORAGE_PRECISION}}, {{PREDICTOR_COMPUTATION_PRECISIONS[PRECISION_NUM]}}, {{CORRECTOR_COMPUTATION_PRECISION}}>(
       repositories::{{SOLVER_INSTANCE}},
       lduh, lQhbnd, lFhbnd,
@@ -235,8 +267,9 @@ def create_fstpvi_call(is_linear, usePointSource, useKernelGenerator=True):
 
 def create_solution_update(use_kernelgenerator):
     template_generic = """
-    ::exahype2::aderdg::generic::solutionUpdate(
-      repositories::{{SOLVER_INSTANCE}},
+    ::exahype2::aderdg::generic::solutionUpdate<
+      {{SOLVER_NAME}}
+    > (
       luh,
       luh,
       lduh,
@@ -245,10 +278,10 @@ def create_solution_update(use_kernelgenerator):
 """
 
     template_kernelgenerator = """
-    generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate( 
+    generated::kernels::AderDG::{{LINEARITY}}::solutionUpdate(
       luh,
-      luh, 
-      lduh, 
+      luh,
+      lduh,
       timeStepSize
     );
 """
@@ -257,12 +290,12 @@ def create_solution_update(use_kernelgenerator):
 
 def reset_troubled_markers():
     return """
-    // reset cell and face labels for limiting
+    // Reset cell and face labels for limiting
     fineGridCell{{SOLVER_NAME}}CellLabel.setTroubled_Marker(celldata::{{SOLVER_NAME}}CellLabel::Troubled_Marker::ADER);
 
-    for(int d=0; d<Dimensions; d++){
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::ADER);
-        fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::ADER);
+    for (int d=0; d<Dimensions; d++) {
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(d).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::ADER);
+      fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).setTroubled_Marker(facedata::{{SOLVER_NAME}}FaceLabel::Troubled_Marker::ADER);
     }
 """
 
@@ -374,7 +407,6 @@ def riemann_solver(use_custom_riemann_solver, use_kernelgenerator, is_linear):
       {{ "true" if USE_NCP!="<none>" else "false" }}, //useNCP
       false, //useMM
       {{SOLVER_NAME}}>(
-        repositories::{{SOLVER_INSTANCE}},
         FL,
         FR,
         QL,
@@ -517,7 +549,7 @@ def copy_estimates_and_perform_riemann_solution_on_hanging_faces(use_custom_riem
 
     """ + face_integral(use_kernelgenerator, is_linear) + """
 
-        } else{
+        } else {
             // Project to faces and update face timestamp
             std::copy_n(&lQhbnd[2*d*basisElementsPerFace], basisElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}Estimates(d).value+basisElementsPerFace);
             std::copy_n(&lFhbnd[2*d*fluxElementsPerFace], fluxElementsPerFace, fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d).value+fluxElementsPerFace);

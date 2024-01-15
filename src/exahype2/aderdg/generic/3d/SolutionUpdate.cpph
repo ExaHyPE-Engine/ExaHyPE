@@ -13,7 +13,7 @@
 #if Dimensions == 3
 
 template <class SolverType, class pType>
-void exahype2::aderdg::generic::solutionUpdate(SolverType& solver, double* luh, const double* const luhOld, const pType* const lduh, const double dt) {
+void exahype2::aderdg::generic::solutionUpdate(double* luh, const double* const luhOld, const pType* const lduh, const double dt) {
   constexpr int numberOfVariables  = SolverType::NumberOfUnknowns;
   constexpr int numberOfParameters = SolverType::NumberOfAuxiliaryVariables;
   constexpr int numberOfData       = numberOfVariables + numberOfParameters;

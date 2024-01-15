@@ -8,7 +8,6 @@
 
 template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
 void exahype2::aderdg::generic::riemannSolverLinear(
-  SolverType&                                  solver,
   double*                                      FL,
   double*                                      FR,
   const double* const                          QL,
@@ -47,8 +46,8 @@ void exahype2::aderdg::generic::riemannSolverLinear(
   exahype2::aderdg::averageRiemannInputs<basisSize, numberOfData>(QR, exahype2::aderdg::ADERDGSolver::weights, QavR);
 
   // get abs max eigenvalue
-  const double maxHyperbolicEigenvalueL = solver.maxEigenvalue(QavL, faceCentre, dx, t, dt, direction);
-  const double maxHyperbolicEigenvalueR = solver.maxEigenvalue(QavR, faceCentre, dx, t, dt, direction);
+  const double maxHyperbolicEigenvalueL = SolverType::maxEigenvalue(QavL, faceCentre, dx, t, dt, direction, ::exahype2::Solver::Offloadable::Yes);
+  const double maxHyperbolicEigenvalueR = SolverType::maxEigenvalue(QavR, faceCentre, dx, t, dt, direction, ::exahype2::Solver::Offloadable::Yes);
   const double smax                     = std::max(maxHyperbolicEigenvalueL, maxHyperbolicEigenvalueR);
 
   double Qdiff[numberOfData] = {0.0};
@@ -83,7 +82,7 @@ void exahype2::aderdg::generic::riemannSolverLinear(
         }
 
         if constexpr (useNCP) {
-          solver.nonconservativeProduct(Qavg, Qdiff, faceCentre, dx, t, dt, direction, ncp);
+          SolverType::nonconservativeProduct(Qavg, Qdiff, faceCentre, dx, t, dt, direction, ncp, ::exahype2::Solver::Offloadable::Yes);
           /*
                     if constexpr (useMM) {
                       solver.multiplyMaterialParameterMatrix(Qavg, ncp);
@@ -96,7 +95,7 @@ void exahype2::aderdg::generic::riemannSolverLinear(
         }
 
         if constexpr (useFlux) {
-          solver.flux(Qdiff, faceCentre, dx, t, dt, direction, flux);
+          SolverType::flux(Qdiff, faceCentre, dx, t, dt, direction, flux, ::exahype2::Solver::Offloadable::Yes);
 
           //          if constexpr(useMM){
           //            solver.multiplyMaterialParameterMatrix(Qavg, flux);

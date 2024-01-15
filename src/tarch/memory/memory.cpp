@@ -134,17 +134,16 @@ void tarch::memory::dumpStatistics() {
         << MemoryManager::getInstance().getNumberOfUsedPages(memoryPage.first) << "/" << tarch::memory::MemoryManager::getInstance().getNumberOfFreePages(memoryPage.first) << ")";
     }
     msg
-      << ", Managed: "
-      << tarch::memory::MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::GByte
-         ) + tarch::memory::MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::GByte);
-    msg << "/" << tarch::memory::MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::GByte) << "/"
-        << tarch::memory::MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::GByte);
-    msg << " GB, ";
+      << ", Managed: " << tarch::memory::MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte) << "/"
+      << tarch::memory::MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte) << "/"
+      << tarch::memory::MemoryManager::getInstance().getFreeAllocatedMemory(MemoryUsageFormat::MByte
+         ) + tarch::memory::MemoryManager::getInstance().getUsedAllocatedMemory(MemoryUsageFormat::MByte);
+    msg << " MB, ";
     // TODO: Use memory locations to report device and host memory.
   }
 
-  msg << "System: " << getTotalMemory(MemoryUsageFormat::GByte) << "/" << getFreeMemory(MemoryUsageFormat::GByte) << "/" << getMemoryUsage(MemoryUsageFormat::GByte);
-  msg << " GB (Total/Free/Used)";
+  msg << "System: " << getMemoryUsage(MemoryUsageFormat::MByte) << "/" << getFreeMemory(MemoryUsageFormat::MByte) << "/" << getTotalMemory(MemoryUsageFormat::MByte);
+  msg << " MB (Used/Free/Total)";
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     logInfo("dumpStatistics()", msg.str());

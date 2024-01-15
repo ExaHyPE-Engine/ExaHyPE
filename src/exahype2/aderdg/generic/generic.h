@@ -47,7 +47,6 @@ namespace exahype2::aderdg::generic {
     class pCompType,
     class pStoreType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void spaceTimePredictorLinear(
-    SolverType&                                  solver,
     pStoreType*                                  lQbnd,
     pStoreType*                                  lFbnd,
     pCompType*                                   lQi,
@@ -67,7 +66,6 @@ namespace exahype2::aderdg::generic {
 
   template <bool useSource, bool useFlux, bool useNCP, bool noTimeAveraging, class SolverType, class pCompType, class pStoreType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions int spaceTimePredictorNonlinear(
-    SolverType&                                  solver,
     pStoreType*                                  lQhbnd,
     pStoreType*                                  lGradQhbnd,
     pStoreType*                                  lFhbnd,
@@ -85,7 +83,7 @@ namespace exahype2::aderdg::generic {
   ) InlineMethod;
 
   template <class SolverType, class pType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void solutionUpdate(SolverType& solver, double* luh, const double* const luhOld, const pType* const lduh, const double dt)
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void solutionUpdate(double* luh, const double* const luhOld, const pType* const lduh, const double dt)
     InlineMethod;
 
   template <class SolverType, class pCompType, bool useSourceOrNCP, bool useFlux, int numberOfVariables, int basisSize>
@@ -126,7 +124,7 @@ namespace exahype2::aderdg::generic {
 
   template <class SolverType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void solutionAdjustment(
-    SolverType& solver, double* luh, const tarch::la::Vector<Dimensions, double>& center, const tarch::la::Vector<Dimensions, double>& dx, const double t, const double dt
+    double* luh, const tarch::la::Vector<Dimensions, double>& center, const tarch::la::Vector<Dimensions, double>& dx, const double t, const double dt
   ) InlineMethod;
 
   // @todo Dominic Etienne Charrier
@@ -148,7 +146,6 @@ namespace exahype2::aderdg::generic {
    */
   template <bool useFlux, bool useNCP, bool useMM, typename SolverType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void riemannSolverLinear(
-    SolverType&                                  solver,
     double*                                      FL,
     double*                                      FR,
     const double* const                          QL,
@@ -162,7 +159,6 @@ namespace exahype2::aderdg::generic {
 
   template <bool useNCP, class SolverType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void riemannSolverNonlinear(
-    SolverType&                                  solver,
     double*                                      FL,
     double*                                      FR,
     const double* const                          QL,
@@ -203,12 +199,11 @@ namespace exahype2::aderdg::generic {
    */
   template <bool useFlux, bool useNCP, class SolverType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void generalisedOsherSolomon(
-    SolverType& solver, double* const FL, double* const FR, const double* const QL, const double* const QR, const double t, const double dt, const int direction
+    double* const FL, double* const FR, const double* const QL, const double* const QR, const double t, const double dt, const int direction
   ) InlineMethod;
 
   template <bool useGradientFlux, class SolverType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void boundaryConditions(
-    SolverType&                                  solver,
     double*                                      fluxOut,
     double*                                      stateOut,
     const double* const                          fluxIn,
@@ -224,7 +219,7 @@ namespace exahype2::aderdg::generic {
 
   template <class SolverType, class T>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions double maxScaledEigenvalue(
-    SolverType& solver, const T* const luh, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& dx, const double t, const double dt
+    const T* const luh, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& dx, const double t, const double dt
   ) InlineMethod;
 
   /**
@@ -295,12 +290,11 @@ namespace exahype2::aderdg::generic {
 
   template <class SolverType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions std::vector<int>* getPointSources(
-    SolverType& solver, const tarch::la::Vector<Dimensions, double>& center, const tarch::la::Vector<Dimensions, double>& dx
+    const tarch::la::Vector<Dimensions, double>& center, const tarch::la::Vector<Dimensions, double>& dx
   ) InlineMethod;
 
   template <class SolverType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void deltaDistribution(
-    SolverType&                                  solver,
     const double* const                          luh,
     const double                                 t,
     const double                                 dt,

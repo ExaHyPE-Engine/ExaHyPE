@@ -17,7 +17,7 @@ from exahype2.solvers.rkdg.rusanov.kernels import create_Riemann_solver_call
 
 from exahype2.solvers.rkdg.AdaptiveTimeSteppingCodeSnippets import AdaptiveTimeSteppingCodeSnippets
 
-class GlobalAdaptiveTimeStepWithEnclaveTasking( SeparateSweepsWithEnclaveTasking ):
+class GlobalAdaptiveTimeStepWithEnclaveTasking(SeparateSweepsWithEnclaveTasking):
   def __init__(self,
     name,
     rk_order,

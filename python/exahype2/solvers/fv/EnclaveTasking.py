@@ -92,8 +92,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
   } else { // is an enclave cell
-    assertion( marker.willBeEnclaveCell() );
-    assertion( not marker.willBeRefined() );
+    assertion(marker.willBeEnclaveCell());
+    assertion(not marker.willBeRefined());
     auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       timeStamp,
@@ -103,7 +103,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
 
-    tarch::multicore::spawnTask( newEnclaveTask );
+    tarch::multicore::spawnTask(newEnclaveTask);
   }
   """
     )
@@ -746,13 +746,10 @@ class EnclaveTasking(FV):
 
 
     def add_implementation_files_to_project(self, namespace, output, dimensions):
-        """!
-        Add the enclave task for the GPU
-        """
-
         super(EnclaveTasking, self).add_implementation_files_to_project(
             namespace, output, dimensions
         )
+
         templatefile_prefix = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             "EnclaveTasking.EnclaveTask.template",

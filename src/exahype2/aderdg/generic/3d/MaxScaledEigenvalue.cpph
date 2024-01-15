@@ -13,7 +13,7 @@
  */
 template <class SolverType, class T>
 double exahype2::aderdg::generic::maxScaledEigenvalue(
-  SolverType& solver, const T* const luh, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& dx, const double t, const double dt
+  const T* const luh, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& dx, const double t, const double dt
 ) {
   constexpr int NumberOfData = SolverType::NumberOfUnknowns + SolverType::NumberOfAuxiliaryVariables;
   constexpr int BasisSize    = SolverType::Order + 1;
@@ -31,19 +31,20 @@ double exahype2::aderdg::generic::maxScaledEigenvalue(
         double denominator = 0.0;
         for (int d = 0; d < Dimensions; d++) {
           denominator
-            += solver.maxEigenvalue(
+            += SolverType::maxEigenvalue(
                  &luh[linearisedIndex * NumberOfData],
                  ::exahype2::dg::getQuadraturePoint(
                    cellCentre,
                    dx,
                    index, // index
                    SolverType::Order,
-                   solver.QuadraturePoints1d
+                   SolverType::QuadraturePoints1d
                  ), // faceCentre
                  dx,
                  t,
                  dt,
-                 d
+                 d,
+                 ::exahype2::Solver::Offloadable::Yes
                )
                * invDx[d];
         }

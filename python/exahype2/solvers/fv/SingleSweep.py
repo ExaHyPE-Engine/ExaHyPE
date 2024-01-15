@@ -89,7 +89,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       add_assertions_to_halo_exchange = False
     )
     self._solver = solver
-    
+
     self._Template_TouchCellFirstTime_Epilogue += """
   else if (not marker.willBeRefined() and not marker.hasBeenRefined()) {{
     const double timeStamp    = fineGridCell{SOLVER_NAME}CellLabel.getTimeStamp();
@@ -107,20 +107,18 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 """ + self._Template_TouchCellFirstTime_Preamble
 
 
-  def _add_action_set_entries_to_dictionary(self,d):
+  def _add_action_set_entries_to_dictionary(self, d):
     """
-    
     This is our plug-in point to alter the underlying dictionary
-    
     """
     super(UpdateCell,self)._add_action_set_entries_to_dictionary(d)
-    
+
     self._solver._init_dictionary_with_default_parameters(d)
     self._solver.add_entries_to_text_replacement_dictionary(d)
-    
+
     d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**d)
 
-  
+
   def get_includes(self):
     return """
 #include "exahype2/fv/BoundaryConditions.h"
@@ -176,18 +174,16 @@ class SingleSweep(FV):
 
   def create_data_structures(self):
     """
-    
      Call the superclass' create_data_structures() to ensure that all the data
-     structures are in place, i.e. each cell can host a patch, that each face hosts 
+     structures are in place, i.e. each cell can host a patch, that each face hosts
      patch overlaps, and so forth. These quantities are all set to defaults. See
      FV.create_data_structures().
-     
+
      After that, take the patch overlap (that's the data stored within the faces)
-     and ensure that these are sent and received via MPI whenever they are also 
+     and ensure that these are sent and received via MPI whenever they are also
      stored persistently. The default in FV is that no domain boundary data exchange
-     is active. Finally, ensure that the old data is only exchanged between the 
+     is active. Finally, ensure that the old data is only exchanged between the
      initialisation sweep and the first first grid run-through.
-    
     """
     super(SingleSweep, self).create_data_structures()
 
@@ -205,15 +201,13 @@ class SingleSweep(FV):
     self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
     self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
 
-            
+
   def create_action_sets(self):
     """
-
       Call superclass routine and then reconfigure the update cell call.
       Only the UpdateCell action set is specific to a single sweep.
-      
+
       This operation is implicity called via the superconstructor.
-      
     """
     super(SingleSweep, self).create_action_sets()
     self._action_set_update_cell = UpdateCell(self)

@@ -417,8 +417,8 @@ class LagrangeBasis():
       ws = transformed_quadrature_weights[n]
       sorted_transformed_quadrature_weights.append(ws)
     return sorted_transformed_quadrature_points, sorted_transformed_quadrature_weights
-  
-  
+
+
   def init_dictionary_with_default_parameters(self,d,multiDimArrays=False):
     def snake_to_camel(word):
       return ''.join(x.capitalize() or '_' for x in word.lower().split('_'))
@@ -431,40 +431,44 @@ class LagrangeBasis():
       if var == "quadrature_points":
         var_name = "QuadraturePoints1d"
       if var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right"]:
-          basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_1(getattr(self,var_key))))
+          basisDeclarations += "static const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          basisInitializers += "const double applications::exahype2::exaseis::AbstractElasticWaveSolver::{var_name}[{order}+1]={initializer};\n".format(var_name=var_name,\
+              order=self.__max_poly_order, initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_1(getattr(self,var_key))))
       elif var in ["fine_grid_projector"]:
           if multiDimArrays:
-            basisDeclarations += "const double {var_name}[3][{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+            basisDeclarations += "static const double {var_name}[3][{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+            basisInitializers += "const double applications::exahype2::exaseis::AbstractElasticWaveSolver::{var_name}[3][{order}+1][{order}+1]={initializer};\n".format(var_name=var_name,\
+                order=self.__max_poly_order, initializer="{" + \
+                  ",".join([LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(elem,multiDimArrays)) for elem in self.__fine_grid_projector]) +\
+                "}")
           else:
-            basisDeclarations += "const double {var_name}[3][({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-            initializer="{" + \
-              ",".join([LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(elem,multiDimArrays)) for elem in self.__fine_grid_projector]) +\
-             "}")
+            basisDeclarations += "static const double {var_name}[3][({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+            basisInitializers += "const double applications::exahype2::exaseis::AbstractElasticWaveSolver::{var_name}[3][({order}+1)*({order}+1)]={initializer};\n".format(var_name=var_name,\
+                order=self.__max_poly_order, initializer="{" + \
+                  ",".join([LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(elem,multiDimArrays)) for elem in self.__fine_grid_projector]) +\
+                "}")
       else:
           if multiDimArrays:
-            basisDeclarations += "const double {var_name}[{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+            basisDeclarations += "static const double {var_name}[{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+            basisInitializers += "const double applications::exahype2::exaseis::AbstractElasticWaveSolver::{var_name}[{order}+1][{order}+1]={initializer};\n".format(var_name=var_name,\
+                order=self.__max_poly_order, initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key),multiDimArrays)))
           else:
-            basisDeclarations += "const double {var_name}[({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
-          basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key),multiDimArrays)))
-    
+            basisDeclarations += "static const double {var_name}[({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+            basisInitializers += "const double applications::exahype2::exaseis::AbstractElasticWaveSolver::{var_name}[({order}+1)*({order}+1)]={initializer};\n".format(var_name=var_name,\
+                order=self.__max_poly_order, initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key),multiDimArrays)))
+
     d["ORDER"]              = self.__max_poly_order
-    d["BASIS_DECLARATIONS"] = basisDeclarations  
+    d["BASIS_DECLARATIONS"] = basisDeclarations
     d["BASIS_INITIALIZERS"] = basisInitializers
-   
-   
-  # public
+
+
   def quadrature_points(self,render=True):
     return LagrangeBasis.__render_tensor_1(self.__quadrature_points) if render else self.__quadrature_points
-  
-  
+
+
   def quadrature_weights(self,render=True):
     return LagrangeBasis.__render_tensor_1(self.__quadrature_weights) if render else self.__quadrature_weights
-  
-  
+
 
 class GaussLegendreBasis(LagrangeBasis):
   def _compute_quadrature_points_and_weights(self,num_points):

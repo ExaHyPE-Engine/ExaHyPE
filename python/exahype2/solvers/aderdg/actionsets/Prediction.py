@@ -25,8 +25,8 @@ class Prediction(AbstractADERDGActionSet):
 
     _Template_TouchCellFirstTime_Preamble = """
   bool isHangingCell = false;
-  for(int d=0; d<2*Dimensions; d++){
-    if(fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()){
+  for (int d = 0; d < 2 * Dimensions; d++) {
+    if (fineGridFaces{{SOLVER_NAME}}FaceLabel(d).getIsHanging()) {
       isHangingCell = true;
       break;
     }
@@ -39,24 +39,24 @@ class Prediction(AbstractADERDGActionSet):
 
     {{SOLUTION_STORAGE_PRECISION}}* luh = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
 
-    const int Order = {{ORDER}};
-    const int NumberOfVariables  = {{NUMBER_OF_UNKNOWNS}};
-    const int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    static constexpr int Order = {{ORDER}};
+    static constexpr int NumberOfVariables  = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
 
-    #if Dimensions==2
-    constexpr int spaceBasisSize     = (Order+1)*(Order+1);
-    constexpr int spaceFaceSize      = (Order+1);
-    #else
-    constexpr int spaceBasisSize     = (Order+1)*(Order+1)*(Order+1);
-    constexpr int spaceFaceSize      = (Order+1)*(Order+1);
-    #endif
+#if Dimensions==2
+    static constexpr int spaceBasisSize     = (Order + 1) * (Order + 1);
+    static constexpr int spaceFaceSize      = (Order + 1);
+#else
+    static constexpr int spaceBasisSize     = (Order + 1) * (Order + 1) * (Order + 1);
+    static constexpr int spaceFaceSize      = (Order + 1) * (Order + 1);
+#endif
 
-    constexpr int spaceTimeBasisSize = spaceBasisSize*(Order+1);
+    static constexpr int spaceTimeBasisSize = spaceBasisSize * (Order + 1);
 
     {{CREATE_PREDICTOR_ALLOCATIONS}}
 
     {% if STORE_OLD_SOLUTION %}
-    std::copy_n(luh ,sizeLduh, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
+    std::copy_n(luh, sizeLduh, fineGridCell{{UNKNOWN_IDENTIFIER}}_old.value);
     {% endif %}
 """
 
@@ -70,6 +70,16 @@ class Prediction(AbstractADERDGActionSet):
     _Template_TouchCellFirstTime_Epilogue = """
     {{RESET_TROUBLED_MARKERS}}
     repositories::{{SOLVER_INSTANCE}}.update(timeStepSize, timeStamp, marker.h()(0));
+
+    tarch::freeMemory(lQi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(rhs, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lFi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(gradQ, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lQhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lFhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lduh, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lQhbnd, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    tarch::freeMemory(lFhbnd, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
   }
 """
 
@@ -141,7 +151,7 @@ class Prediction(AbstractADERDGActionSet):
 
 
     def get_action_set_name(self):
-        return (__name__ + ("_on_hanging_cells" if self.onHangingCells else "")).replace(".py", "").replace(".", "_")
+        return (__name__ + ("_OnHangingCells" if self.onHangingCells else "")).replace(".py", "").replace(".", "_")
 
 
     def get_includes(self):

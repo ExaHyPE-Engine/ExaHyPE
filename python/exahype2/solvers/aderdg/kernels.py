@@ -23,7 +23,7 @@ def create_abstract_solver_declarations(
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 
 {% if EIGENVALUES_IMPLEMENTATION=="<none>" or EIGENVALUES_IMPLEMENTATION=="<empty>" %}
-  #error eigenvalue implementation cannot be none or empty
+  #error Eigenvalue implementation cannot be none or empty
 {% elif EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     virtual double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
@@ -43,6 +43,25 @@ def create_abstract_solver_declarations(
       int                                          normal
     );
 {% endif %}
+
+{% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod double maxEigenvalue(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+{% endif %}
+
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     virtual void flux(
@@ -66,6 +85,26 @@ def create_abstract_solver_declarations(
     );
 {% endif %}
 
+{% if FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<empty>" and STATELESS_PDE_TERMS %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod void flux(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__                         F, // F[{{NUMBER_OF_UNKNOWNS}}]
+      Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+{% endif %}
+
+
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     virtual void nonconservativeProduct(
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
@@ -88,6 +127,27 @@ def create_abstract_solver_declarations(
     {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ);
 {% endif %}
 
+{% if NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<empty>" and STATELESS_PDE_TERMS %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod void nonconservativeProduct(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__                   deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__                         BTimesDeltaQ, // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+      Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+{% endif %}
+
+
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
   virtual void algebraicSource(
     const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
@@ -107,6 +167,25 @@ def create_abstract_solver_declarations(
     {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
   );
 {% endif %}
+
+{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" and SOURCE_TERM_IMPLEMENTATION!="<empty>" and STATELESS_PDE_TERMS %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod void algebraicSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions, double>& x,
+      const tarch::la::Vector<Dimensions, double>& h,
+      double                                       t,
+      double                                       dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__                         S, // S[{{NUMBER_OF_UNKNOWNS}}]
+      Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+{% endif %}
+
 
 {% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}
     virtual void multiplyMaterialParameterMatrix(
@@ -130,6 +209,26 @@ def create_abstract_solver_declarations(
     );
 {% endif %}
 
+{% if MATERIAL_PARAMETER_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAMETER_IMPLEMENTATION!="<none>" and MATERIAL_PARAMETER_IMPLEMENTATION!="<empty>" and STATELESS_PDE_TERMS %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod void multiplyMaterialParameterMatrix(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+      const tarch::la::Vector<Dimensions, double> &x,
+      const tarch::la::Vector<Dimensions, double> &h,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs,
+      Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
+{% endif %}
+
+
 {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
     virtual void pointSource(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
@@ -148,6 +247,24 @@ def create_abstract_solver_declarations(
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,
       int n
     );
+{% endif %}
+
+{% if POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>" and POINT_SOURCE_IMPLEMENTATION!="<empty>" and STATELESS_PDE_TERMS %}
+    #if defined(GPUOffloadingOMP)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod void pointSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+      const double* const x,
+      const double t,
+      const double dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,
+      int n,
+      Offloadable
+    );
+    #if defined(GPUOffloadingOMP)
+    #pragma omp end declare target
+    #endif
 {% endif %}
 
 {% endfor %}
@@ -195,24 +312,67 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   double                                       t,
   double                                       dt,
   int                                          normal
-){
+) {
   {{EIGENVALUES_IMPLEMENTATION}}
 }
 {% endif %}
 
-{% if FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>"%}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
-  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q, // Q[3+0],
+{% if EIGENVALUES_IMPLEMENTATION!="<empty>" and EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" and STATELESS_PDE_TERMS %}
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t,
   double                                       dt,
   int                                          normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F // F[3]
-){
+  Offloadable
+) {
+  {{EIGENVALUES_IMPLEMENTATION}}
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
+{% endif %}
+
+
+{% if FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>"%}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+) {
   {{FLUX_IMPLEMENTATION}}
 }
 {% endif %}
+
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+{% if FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>" and STATELESS_PDE_TERMS %}
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F, // F[{{NUMBER_OF_UNKNOWNS}}]
+  Offloadable
+) {
+  {{FLUX_IMPLEMENTATION}}
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
+{% endif %}
+
 
 {% if NCP_IMPLEMENTATION!="<empty>" and NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -223,10 +383,32 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ)
-{
-    {{NCP_IMPLEMENTATION}}
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ
+) {
+  {{NCP_IMPLEMENTATION}}
 }
+{% endif %}
+
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+{% if NCP_IMPLEMENTATION!="<empty>" and NCP_IMPLEMENTATION!="<user-defined>" and NCP_IMPLEMENTATION!="<none>" and STATELESS_PDE_TERMS %}
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
+  const tarch::la::Vector<Dimensions, double> &x,
+  const tarch::la::Vector<Dimensions, double> &h,
+  double t,
+  double dt,
+  int normal,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ,
+  Offloadable
+) {
+  {{NCP_IMPLEMENTATION}}
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 {% endif %}
 
 
@@ -243,23 +425,96 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
 }
 {% endif %}
 
+{% if SOURCE_TERM_IMPLEMENTATION!="<empty>" and SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>" and STATELESS_PDE_TERMS %}
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& h,
+  double t,
+  double dt,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S,
+  Offloadable
+) {
+  {{SOURCE_TERM_IMPLEMENTATION}}
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
+{% endif %}
+
+
 {% if MATERIAL_PARAM_IMPLEMENTATION!="<empty>" and MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
-  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
   const tarch::la::Vector<Dimensions, double> &x,
   const tarch::la::Vector<Dimensions, double> &h,
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs){
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs
+) {
   {{MATERIAL_PARAM_IMPLEMENTATION}}
 }
 {% endif %}
 
-{% if POINT_SOURCE_IMPLEMENTATION!="<empty>" and POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>"%}
-    void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,int n) {
-    {{POINT_SOURCE_IMPLEMENTATION}}
+{% if MATERIAL_PARAM_IMPLEMENTATION!="<empty>" and MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>" and STATELESS_PDE_TERMS %}
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+  const tarch::la::Vector<Dimensions, double> &x,
+  const tarch::la::Vector<Dimensions, double> &h,
+  double t,
+  double dt,
+  int normal,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs,
+  Offloadable
+) {
+  {{MATERIAL_PARAM_IMPLEMENTATION}}
 }
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
+{% endif %}
+
+
+{% if POINT_SOURCE_IMPLEMENTATION!="<empty>" and POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>"%}
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+  const double* const x,
+  const double t,
+  const double dt,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*
+  const forceVector,
+  int n
+) {
+  {{POINT_SOURCE_IMPLEMENTATION}}
+}
+{% endif %}
+
+{% if POINT_SOURCE_IMPLEMENTATION!="<empty>" and POINT_SOURCE_IMPLEMENTATION!="<user-defined>" and POINT_SOURCE_IMPLEMENTATION!="<none>" and STATELESS_PDE_TERMS %}
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
+  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+  const double* const x,
+  const double t,
+  const double dt,
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*
+  const forceVector,
+  int n,
+  Offloadable
+) {
+  {{POINT_SOURCE_IMPLEMENTATION}}
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 {% endif %}
 
 {% endfor %}
@@ -267,7 +522,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatri
         undefined=jinja2.DebugUndefined,
     )
 
-    Exception("finish")
     d = {}
     d["FLUX_IMPLEMENTATION"] = flux_implementation
     d["NCP_IMPLEMENTATION"] = ncp_implementation
@@ -984,6 +1238,7 @@ def create_array_and_convert_from_type(from_name, to_name, type_to, array_size):
     )
     return template
 
+
 def create_abstract_solver_user_declarations_for_error_measurement():
     return """
 public:
@@ -1001,6 +1256,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setError(double* err){
   _errors[2] = std::max(_errors[2],err[2]);
 }
 """
+
 
 def create_finish_time_step_implementation_for_error_measurement():
     return """
@@ -1057,8 +1313,8 @@ def create_finish_time_step_implementation_for_error_measurement():
   }
 """
 
-def add_final_action_for_error_measurement():
 
+def add_final_action_for_error_measurement():
     return """
   if (
     fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()+repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize()>=MinTerminalTime

@@ -82,7 +82,7 @@ class Correction(AbstractADERDGActionSet):
       }
 
       // Positive face
-      if(!fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()){
+      if (!fineGridFaces{{SOLVER_NAME}}FaceLabel(d+Dimensions).getIsHanging()) {
         {{CORRECTOR_COMPUTATION_PRECISION}}* FIN = fineGridFaces{{UNKNOWN_IDENTIFIER}}FluxEstimates(d+Dimensions).value;
         const int orientation = 1;
 

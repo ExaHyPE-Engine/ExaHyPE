@@ -1,6 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 import dastgen2
 import peano4.toolbox.blockstructured
 import peano4.datamodel
@@ -1323,6 +1322,8 @@ Material parameters:    """
             "ERROR_MEASUREMENT_IMPLEMENTATION"
         ] = self._error_measurement_implementation
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
+
+        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
             self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined

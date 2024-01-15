@@ -1,6 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 from .ADERDG import ADERDG, PrecisionType
 
 from exahype2.solvers.PDETerms import PDETerms
@@ -174,7 +173,7 @@ class SingleSweep(ADERDG):
             self.get_name_of_global_instance(), self._name
         )
 
-        if(self._use_kernel_generator):
+        if self._use_kernel_generator:
             self._action_set_correction.riemann_guard = (
                 self._store_cell_data_default_guard()
                 + " and repositories::{}.getSolverState()=={}::SolverState::Correction".format(

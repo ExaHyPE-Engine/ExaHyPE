@@ -12,18 +12,19 @@ import exahype2
 # Define default values
 default_values = {
     "min_levels": 3,  # Determines the max. cell size.
-    "amr_levels": 0,  # TODO: Load balancing is bad for higher AMR levels at the moment.
+    "amr_levels": 0,
     "patch_size": 5,  # Dofs for FV
     "rk_order": 2,
     "dg_order": 3,  # Dofs for DG
     "end_time": 0.002,
+    #"end_time": 3.0,
     "plot_interval": 0.1,
     "rho": 2.7,
     "p_wave_speed": 6.0,
     "s_wave_speed": 3.464,
     "t0": 0.1,
     "M0": 1000.0,
-    "use_kernel_generator": True,  # Use ADER-DG kernel generator. Currently we only support GPU offloading for the generic kernels, i.e., set to false.
+    "use_kernel_generator": False,  # Use ADER-DG kernel generator. Currently we only support GPU offloading for the generic kernels, i.e., set to false.
     "use_riemann": True,  # Use custom Riemann solver
     "use_material_parameters": True,
     "use_point_source": True,  # If set to false, an algebraic source is used instead.
@@ -50,6 +51,7 @@ available_solver_types = {
     "RKDGRusanovGlobalAdaptiveEnclave": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
     "ADERDGRusanovGlobalFixed": exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep,
     "ADERDGRusanovGlobalAdaptive": exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep,
+    "ADERDGRusanovGlobalAdaptiveEnclave": exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 }
 
 
@@ -70,7 +72,7 @@ def parse_arguments():
         "-s",
         "--solver",
         choices=available_solver_types.keys(),
-        default="ADERDGRusanovGlobalAdaptive",
+        default="ADERDGRusanovGlobalAdaptiveEnclave",
         help="|".join(available_solver_types.keys()),
     )
     parser.add_argument(

@@ -175,9 +175,9 @@ namespace applications::exahype2::exaseis {
     rhs[VARS_vz] = rhoInv * rhs[VARS_vz];
 
     const double lamTemp = lambda * (rhs[VARS_sxx] + rhs[VARS_syy] + rhs[VARS_szz]);
-    rhs[VARS_sxx]       = (2.0 * mu) * rhs[VARS_sxx] + lamTemp;
-    rhs[VARS_syy]       = (2.0 * mu) * rhs[VARS_syy] + lamTemp;
-    rhs[VARS_szz]       = (2.0 * mu) * rhs[VARS_szz] + lamTemp;
+    rhs[VARS_sxx]        = (2.0 * mu) * rhs[VARS_sxx] + lamTemp;
+    rhs[VARS_syy]        = (2.0 * mu) * rhs[VARS_syy] + lamTemp;
+    rhs[VARS_szz]        = (2.0 * mu) * rhs[VARS_szz] + lamTemp;
 
     rhs[VARS_sxy] = mu * rhs[VARS_sxy];
     rhs[VARS_sxz] = mu * rhs[VARS_sxz];

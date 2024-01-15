@@ -1,6 +1,5 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.aderdg.ADERDG import PrecisionType
 from exahype2.solvers.aderdg.ADERDG import Polynomials
@@ -147,7 +146,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._point_source_implementation,
             self._is_linear,
             computation_precisions,
-            False,
+            self._pde_terms_without_state,
         )
         self._abstract_solver_user_declarations += (
             create_abstract_solver_user_declarations_for_adaptive_time_stepping()
@@ -161,7 +160,7 @@ class GlobalAdaptiveTimeStep(SingleSweep):
             self._point_source_implementation,
             self._is_linear,
             computation_precisions,
-            False,
+            self._pde_terms_without_state,
         )
         self._abstract_solver_user_definitions += (
             create_abstract_solver_user_definitions_for_adaptive_time_stepping()

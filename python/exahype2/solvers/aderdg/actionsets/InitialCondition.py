@@ -22,7 +22,7 @@ class InitialCondition(AbstractADERDGActionSet):
       {{GRID_IS_CONSTRUCTED}}
     );
     {% else %}
-    dfor( index, {{ORDER}}+1 ) {
+    dfor(index, {{ORDER}}+1) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
         ::exahype2::aderdg::getQuadraturePoint(
@@ -52,7 +52,8 @@ class InitialCondition(AbstractADERDGActionSet):
     logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
 """
-  
+
+
   def __init__(self,solver,guard,grid_is_constructed):
     super(InitialCondition,self).__init__(solver)
     self.guard               = guard
@@ -70,7 +71,7 @@ class InitialCondition(AbstractADERDGActionSet):
       d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed
       d[ "INITIALIZE_PATCHES" ]  = self._initialize_patches
       result = jinja2.Template(self.TemplateInitialCondition).render(**d)
-      pass 
+      pass
     return result
 
 

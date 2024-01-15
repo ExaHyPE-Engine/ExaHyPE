@@ -26,9 +26,9 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     and
     {{PREDICATES[PREDICATE_NO]}}
   ) {
-    #if Dimensions==2
+#if Dimensions==2
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
-    #elif Dimensions==3
+#elif Dimensions==3
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
     #endif
 
@@ -165,16 +165,12 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self._action_set_solve_volume_integral.spawn_volume_kernel_as_task = True
 
         self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)
-        self._action_set_merge_enclave_task_outcome.priority = (
+        self._action_set_merge_enclave_task_outcome.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
         )
 
 
     def add_implementation_files_to_project(self, namespace, output, dimensions):
-        """
-        Add the enclave task for the GPU
-        """
-
         super(
             SeparateSweepsWithEnclaveTasking, self
         ).add_implementation_files_to_project(namespace, output, dimensions)

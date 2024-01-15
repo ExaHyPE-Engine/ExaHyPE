@@ -19,7 +19,7 @@
 
 {{SOLVER_INCLUDES}}
 
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
+tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log("{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}");
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
@@ -383,16 +383,16 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return _solverState == SolverState::Secondary;
 }
 
-{{ABSTRACT_SOLVER_USER_DEFINITIONS}}
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchCentre,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchH,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] double                                       dt
 ) const {
   return true;
 }
+
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   #if defined(UseSmartMPI)
@@ -414,4 +414,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   #endif
 }
 
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
+
+
+{{ABSTRACT_SOLVER_USER_DEFINITIONS}}
