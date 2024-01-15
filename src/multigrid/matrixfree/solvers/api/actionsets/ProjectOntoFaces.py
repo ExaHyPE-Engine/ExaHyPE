@@ -10,8 +10,13 @@ class ProjectOntoFaces(ActionSet):
 
 
   def __init__(self,
-               solver):
-    super( ProjectOntoFaces, self ).__init__()
+               solver,
+               descend_invocation_order=0,
+               parallel=True):
+    super( ProjectOntoFaces, self ).__init__(
+      descend_invocation_order,
+      parallel
+    )
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()

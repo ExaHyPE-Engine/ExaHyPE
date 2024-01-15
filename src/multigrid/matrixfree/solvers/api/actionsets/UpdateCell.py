@@ -22,7 +22,7 @@ class UpdateCell(ActionSet):
     for (int f=0; f<TwoTimesD; f++)
     {
       // project the face solution onto the cell; add to r
-      *r += repositories::{{SOLVER_INSTANCE}}.getFaceToCellMatrix() * fineGridFaces{{SOLVER_NAME}}(f).getSolution();
+      //*r += repositories::{{SOLVER_INSTANCE}}.getFaceToCellMatrix() * fineGridFaces{{SOLVER_NAME}}(f).getSolution();
     }
 
     // fetch inverted assembly matrix from abstract solver class. left-multiply r.
@@ -44,8 +44,13 @@ class UpdateCell(ActionSet):
   """
 
   def __init__(self,
-               solver):
-    super( UpdateCell, self ).__init__()
+               solver,
+               descend_invocation_order=0,
+               parallel=True):
+    super( UpdateCell, self ).__init__(
+      descend_invocation_order,
+      parallel
+    )
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()

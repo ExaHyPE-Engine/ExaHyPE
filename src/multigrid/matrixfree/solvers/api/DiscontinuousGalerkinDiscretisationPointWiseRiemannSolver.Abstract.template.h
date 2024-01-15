@@ -106,11 +106,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     );
 
     // no arguments needed
-    virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution, double > getFaceToCellMatrix(
+    virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsProjection * TwoTimesD, double > getFaceToCellMatrix(
     );
 
     // no arguments needed
-    virtual tarch::la::Matrix< FaceUnknownsSolution, CellUnknowns, double > getCellToFaceMatrix(
+    virtual tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > getCellToFaceMatrix(
     );
 
   protected:

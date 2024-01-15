@@ -103,9 +103,9 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 
 
 {% if CELL_TO_FACE_PROJECTION!=[] %}
-tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellToFaceMatrix()
+tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection * TwoTimesD, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellToFaceMatrix()
 {
-  static tarch::la::Matrix< FaceUnknownsSolution, CellUnknowns, double > result = {
+  static tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > result = {
       {{CELL_TO_FACE_PROJECTION[0]| join(", ")}}
       {% for ROW in CELL_TO_FACE_PROJECTION[1:] %}
         ,{{ROW | join(", ")}}
@@ -118,9 +118,9 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolutio
 
 {% if FACE_TO_CELL_PROJECTION!=[] %}
 
-tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceToCellMatrix()
+tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection * TwoTimesD, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceToCellMatrix()
 {
-  static tarch::la::Matrix<  CellUnknowns, FaceUnknownsSolution, double > result = {
+  static tarch::la::Matrix<  CellUnknowns, FaceUnknownsProjection * TwoTimesD, double > result = {
       {{FACE_TO_CELL_PROJECTION[0]| join(", ")}}
       {% for ROW in FACE_TO_CELL_PROJECTION[1:] %}
         ,{{ROW | join(", ")}}

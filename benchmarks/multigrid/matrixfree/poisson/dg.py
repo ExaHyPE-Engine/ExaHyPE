@@ -33,8 +33,8 @@ project = matrixfree.Project( project_name = "DGPointwise",
 # matrices
 assembly_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 mass_matrix     = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
-cell_to_face    = np.zeros(( args.upfn * (args.poly_degree + 1) ** (args.dimensions-1),   args.upcn * (args.poly_degree + 1) ** (args.dimensions) ))
-face_to_cell    = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     args.upfn * (args.poly_degree + 1) ** (args.dimensions-1) ))
+cell_to_face    = np.zeros(( 2* args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions,   args.upcn * (args.poly_degree + 1) ** (args.dimensions) ))
+face_to_cell    = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     2*args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
 
 
 solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(

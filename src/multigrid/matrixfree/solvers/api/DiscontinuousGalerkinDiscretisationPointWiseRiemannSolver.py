@@ -8,6 +8,7 @@ import os
 from .Solver import Solver
 from .actionsets.InitDofs         import InitDofsDG
 from .actionsets.UpdateCell       import UpdateCell
+from .actionsets.ProjectOntoFaces import ProjectOntoFaces
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   """!
@@ -192,7 +193,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
     assert assembly_matrix.shape == mass_matrix.shape
 
-    assert  cell_to_face_projection.shape    == (self._unknowns_per_face_solution, self._unknowns_per_cell)
+    assert  cell_to_face_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
     assert (cell_to_face_projection.T).shape ==  self._face_to_cell_projection.shape
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
@@ -227,9 +228,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
   def add_to_solve(self, observer):
     # 1st priority, run sequentially
-    observer.add_action_set( UpdateCell(self), 0, False ) 
+    observer.add_action_set( UpdateCell(self, 0, False) ) 
     # 2nd priority, run sequentially
-    observer.add_action_set( ProjectOntoFaces(self), 1, False ) 
+    observer.add_action_set( ProjectOntoFaces(self, 1, False) ) 
     pass
   
   def add_implementation_files_to_project(self, namespace, output):
