@@ -38,22 +38,7 @@ cell_to_face    = np.zeros(( 2* args.upcn * (args.poly_degree + 1) ** (args.dime
 # we are projecting the face solution onto the cell here.
 face_to_cell    = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
 
-# fill out face_to_cell; move this to its own file soon
-assert(args.poly_degree == 1)
-# working from a sketch
-# this is NOT how it should work....
-# this is just a placeholder...
-face_to_cell[0,0] = 1
-face_to_cell[0,2] = 1
-
-face_to_cell[1,3] = 1
-face_to_cell[1,4] = 1
-
-face_to_cell[2,1] = 1
-face_to_cell[2,6] = 1
-
-face_to_cell[3,5] = 1
-face_to_cell[3,7] = 1
+riemann_matrix  = np.zeros( (args.upcn * (args.poly_degree + 1) ** (args.dimensions-1), 2* args.upcn * (args.poly_degree + 1) ** (args.dimensions-1)) )
 
 
 solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
@@ -70,6 +55,7 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   0, # mass matrix scaling
   cell_to_face, # cell to face
   face_to_cell, # face to cell
+  riemann_matrix
 )
 
 project.add_solver(solver)

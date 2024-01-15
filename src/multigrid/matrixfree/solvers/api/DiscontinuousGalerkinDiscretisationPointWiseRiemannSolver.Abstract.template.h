@@ -113,6 +113,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     virtual tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > getCellToFaceMatrix(
     );
 
+    virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix();
+
   protected:
     static tarch::logging::Log  _log;
 

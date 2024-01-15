@@ -29,6 +29,8 @@ class ProjectOntoFaces(ActionSet):
         p,
         (*faceProjections)( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p )
       );
+
+  delete faceProjections;
   }
 """
 

@@ -117,7 +117,6 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProject
 {% endif %}
 
 {% if FACE_TO_CELL_PROJECTION!=[] %}
-
 tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution * TwoTimesD, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceToCellMatrix()
 {
   static tarch::la::Matrix<  CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > result = {
@@ -132,4 +131,18 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAM
 
 {% endif %}
 
+{% if RIEMANN_MATRIX!=[] %}
+tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRiemannMatrix()
+{
+  static tarch::la::Matrix<  FaceUnknownsSolution, FaceUnknownsProjection, double > result = {
+      {{RIEMANN_MATRIX[0]| join(", ")}}
+      {% for ROW in RIEMANN_MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+  };
+
+  return result;
+} 
+
+{% endif %}
 

@@ -46,12 +46,28 @@ class UpdateCell(ActionSet):
       fineGridCell{{SOLVER_NAME}}.setSolution(i, sol + (*r)(i) );
     }
 
-
     delete r;
+    delete faceSol;
     logTraceOut("UpdateCell");
   }
   """
 
+  templateTFFT="""
+  if ( fineGridFace{{SOLVER_NAME}}.getType() != facedata::{{SOLVER_NAME}}::Type::Coarse )
+  {
+    // project the u^\pm into a temporary vector
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
+      repositories::{{SOLVER_INSTANCE}}.getRiemannMatrix() * fineGridFace{{SOLVER_NAME}}.getProjection();
+
+    for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
+      fineGridFace{{SOLVER_NAME}}.setSolution(
+        i,
+        (1-repositories::{{SOLVER_INSTANCE}}.OmegaFace)*fineGridFace{{SOLVER_NAME}}.getSolution(i)
+         + repositories::{{SOLVER_INSTANCE}}.OmegaFace * projection(i)
+      );
+  }
+
+"""
   def __init__(self,
                solver,
                descend_invocation_order=0,
