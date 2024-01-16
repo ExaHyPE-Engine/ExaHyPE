@@ -1,15 +1,11 @@
-# ExaSeis: A Computational Seismology Framework
-
-ExaSeis is a framework to solve seismic wave propagation with kinematic and dynamic rupture earthquake sources on dynamically refined curvilinear meshes. ExaSeis is used in Pilot Demonstrators PD1 (Extreme-scale modeling of seismic hazards) and PD4 (Complex multi-source tsunami modeling) within the [ChEESE-2P](https://cheese2.eu/) project.
-
-## LOH.1
+# LOH.1
 Currently, the ExaSeis framework implements LOH.1 similar to as seen below.
 
 <div align="center">
 <img src="./LOH1Geometry.png"/>
 </div>
 
-### Running LOH.1
+## Running LOH.1
 In the following some example configurations are given:
 
 ```shell
@@ -54,7 +50,7 @@ Yields 14348907 patches and requires >>250 GB of memory.
 
 When using the `SpreadOutOnceGridStagnates` the grid construction can take hours for larger meshes. However, the load is very well balanced after the grid is constructed.
 
-### Running LOH.1 on GPUs
+## Running LOH.1 on GPUs
 To run ExaSeis on GPUs we need to fulfill the following requirements:
 
 * A GPU-enabled Peano build.
@@ -72,7 +68,7 @@ python3 exaseis.py -s FVRusanovGlobalAdaptiveEnclave --min-levels 5 --amr-levels
 Yields 531441 patches and requires ~160 GB of memory. We fuse and
 offload batches of 10000 patches to the GPUs which requires ~5-10 GB of GPU memory.
 
-### Results
+## Results
 ![](LOH1Initial.png)
 
 <video controls width="640" height="360">
@@ -87,10 +83,10 @@ offload batches of 10000 patches to the GPUs which requires ~5-10 GB of GPU memo
 
 ![](LOH1.png)
 
-### Running on Leonardo
+## Running on Leonardo
 A job script for Leonardo can be found in this application's directory.
 
-#### Scaling Results
+### Scaling Results
 
 ```shell
 python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 6
@@ -102,4 +98,4 @@ python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 
 
 ![](plot_ADERDG_CPUs_Leonardo_3.png)
 
-### Score-P Tracing
+## Score-P
