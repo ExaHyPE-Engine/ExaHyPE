@@ -91,6 +91,10 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
                           for fs_pair in self._coupling_FF
                          }
         
+        # Matrix for rhs
+        # Remake this according to the note; now only works for the mass matrix for the Poisson equation with interior penalty method
+        self._RHS_CC = self._assemble_RHS_CC()
+        
         #MG = MatrixGenerator(r_)
 
     ###################################
@@ -475,6 +479,39 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
 
         #print(k, ell, relative_position, "\n", A_k_ell, "\n")
         return {gamma: A_k_ell}
+
+    ###########################
+    ### Assemble RHS matrix ###
+    ###########################
+    # Remake this according to the note; now only works for the mass matrix for the Poisson equation with interior penalty method
+    def _assemble_RHS_CC(self):
+        """
+        Assemble the mass matrix for the rhs.
+        It is then left-multiplied by the vector of f-function evaluated at nodal points to generate the rhs vector.
+        """
+        
+        k   = 0 # cell-cell mass matrix,
+        ell = 0 # so 0-0 pair of cell function spaces
+        ndof_k = self._fe_C[k].ndof
+        ndof_ell = self._fe_C[ell].ndof
+        MassMatrix = np.empty((ndof_k, ndof_ell))
+        gamma = (1, 1) # scaling from dx dy only => hx*hy
+
+        # Quadrature rule: based on the max degree of basis in the function spaces pair
+        max_degree = max(self._fe_C[k].degree, self._fe_C[ell].degree)
+        quad2d = Quadrature2d(GaussianQuadrature(max_degree + 1))
+
+        factor = 0.25
+        
+        # Assemble local mass matrix
+        for i in range(ndof_k):
+            for j in range(ndof_ell):
+                MassMatrix[i, j] = 0.0
+                for q, w in zip(quad2d.points, quad2d.weights):
+                    MassMatrix[i, j] += factor * w * self._fe_C[k].evaluate(i, q) * self._fe_C[ell].evaluate(j, q)
+
+        return {gamma: MassMatrix}    
+
 
 # r_press = 1
 # BM = DGPoisson2dPenaltyBlockMatrix(r_press)

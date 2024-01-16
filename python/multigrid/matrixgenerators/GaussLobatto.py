@@ -132,12 +132,14 @@ class GaussLobatto(MatrixGenerator):
     The resulting matrix has to be scaled by @f$ h^d @f$.
 
     '''
-    dim    = self.cell_nodes * self.unknowns_per_cell_node
-    output = np.zeros((dim,dim))
-    for i in range( self.cell_nodes ):
-      for j in range( self.cell_nodes ):
-        for k in range( self.unknowns_per_cell_node ):
-          output[self.unknowns_per_cell_node*i+k, self.unknowns_per_cell_node*j+k] += self.eval_integral(functions=[ self.get_polynomial(i), self.get_polynomial(j) ]) 
+    # dim    = self.cell_nodes * self.unknowns_per_cell_node
+    # output = np.zeros((dim,dim))
+    # for i in range( self.cell_nodes ):
+    #   for j in range( self.cell_nodes ):
+    #     for k in range( self.unknowns_per_cell_node ):
+    #       output[self.unknowns_per_cell_node*i+k, self.unknowns_per_cell_node*j+k] += self.eval_integral(functions=[ self.get_polynomial(i), self.get_polynomial(j) ]) 
+    
+    output = self.block_matrix._RHS_CC[(1,1)]
     return output
 
   def get_cell_system_matrix_for_laplacian(self):
@@ -290,7 +292,7 @@ class GaussLobatto(MatrixGenerator):
                        a,  0,0.5,  0, -a,  0,0.5,  0,
                        0,  a,  0,0.5,  0, -a,  0,0.5]).reshape(4,8)
   
-    # def get_face_to_face_matrix(self):
+  # def get_face_to_face_matrix(self):
   #   """ Face-face coupling block.
   #   I provide here the entire block includind identities and zeros, not only the averaging part,
   #   because later we may want to
