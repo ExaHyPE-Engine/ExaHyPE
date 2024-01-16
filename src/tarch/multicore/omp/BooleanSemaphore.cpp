@@ -1,7 +1,5 @@
 #include "tarch/multicore/multicore.h"
 
-#include "config.h"
-
 #if defined(SharedOMP)
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Core.h"

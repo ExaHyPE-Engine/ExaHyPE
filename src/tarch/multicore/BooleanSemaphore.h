@@ -1,6 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "config.h"
 #include "tarch/multicore/multicore.h"
 
 namespace tarch {

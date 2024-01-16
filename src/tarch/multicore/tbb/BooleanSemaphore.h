@@ -4,7 +4,6 @@
 
 #include <string>
 
-#include "config.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 

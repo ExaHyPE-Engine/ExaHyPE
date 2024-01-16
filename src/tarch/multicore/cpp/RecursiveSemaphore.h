@@ -1,7 +1,6 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/multicore.h"
-#include "config.h"
 
 #if !defined(_TARCH_MULTICORE_CPP_RECURSIVE_SEMAPHORE_H_) && defined(SharedCPP)
 #define _TARCH_MULTICORE_CPP_RECURSIVE_SEMAPHORE_H_

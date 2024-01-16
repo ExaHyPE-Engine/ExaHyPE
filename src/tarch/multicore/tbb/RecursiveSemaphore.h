@@ -1,11 +1,9 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#pragma once
-#include "config.h"
-
 #include "tarch/multicore/multicore.h"
 
-#if defined(SharedTBB)
+#if !defined(_TARCH_MULTICORE_TBB_RECURSIVE_SEMAPHORE_H_) && defined(SharedTBB)
+#define _TARCH_MULTICORE_TBB_RECURSIVE_SEMAPHORE_H_
 
 #include <string>
 #include <thread>

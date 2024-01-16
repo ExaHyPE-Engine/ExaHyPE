@@ -8,8 +8,6 @@
 #include <string>
 #include <vector>
 
-
-#include "config.h"
 #include "multicore.h"
 #include "tarch/multicore/otter.h"
 #include "tarch/multicore/orchestration/Strategy.h"
