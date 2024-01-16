@@ -140,6 +140,32 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         
     
     All of this functionality can be found in the subpackage actionsets.UpdateCell.
+
+  ## How does it work?
+
+  So far we have three non-trivial action sets.
+
+  ### 1. InitDofs
+  Code for this is in src.multigrid.matrixfree.solvers.api.actionsets.InitDofs.InitDofsDG .
+
+  ## How do I build it on COSMA?
+
+  Modules to load:
+    \li module load oneAPI/2022.3.0
+    \li module load gnu_comp/10.2.0 gsl
+    \li module load intel_mpi
+    \li module load openblas
+
+    Make sure LD_LIBRARY_PATH contains the openblas directory from the intel compiler files:
+      ''' export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/lib '''
+  
+  Stuff to add to CXXFLAGS:
+  \li -I/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/include/
+
+  Stuff to add to LDFLAGS:
+  \li -L/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/lib/
+  \li -lopenblas
+    
     
   """
   def __init__(self,
@@ -154,24 +180,24 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               assembly_matrix_scaling,
               mass_matrix,
               mass_matrix_scaling,
-              cell_to_face_projection,
-              face_to_cell_projection,
+              face_from_cell_projection,
+              cell_from_face_projection,
               riemann_matrix,
               ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).__init__(name, min_h, max_h)
 
     # store everything we pass in anyhow
-    self._dimensions              = dimensions
-    self._poly_degree             = poly_degree
-    self._unknowns_per_cell_node  = unknowns_per_cell_node
-    self._unknowns_per_face_node  = unknowns_per_face_node
-    self._assembly_matrix         = assembly_matrix
-    self._assembly_matrix_scaling = assembly_matrix_scaling
-    self._mass_matrix             = mass_matrix
-    self._mass_matrix_scaling     = mass_matrix_scaling
-    self._cell_to_face_projection = cell_to_face_projection
-    self._face_to_cell_projection = face_to_cell_projection
-    self._riemann_matrix          = riemann_matrix
+    self._dimensions                = dimensions
+    self._poly_degree               = poly_degree
+    self._unknowns_per_cell_node    = unknowns_per_cell_node
+    self._unknowns_per_face_node    = unknowns_per_face_node
+    self._assembly_matrix           = assembly_matrix
+    self._assembly_matrix_scaling   = assembly_matrix_scaling
+    self._mass_matrix               = mass_matrix
+    self._mass_matrix_scaling       = mass_matrix_scaling
+    self._face_from_cell_projection = face_from_cell_projection
+    self._cell_from_face_projection = cell_from_face_projection
+    self._riemann_matrix            = riemann_matrix
 
     # K^c * (p+1)^d
     self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree + 1) ** dimensions
@@ -195,8 +221,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
     assert assembly_matrix.shape == mass_matrix.shape
 
-    # assert  cell_to_face_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
-    # assert (cell_to_face_projection.T).shape ==  self._face_to_cell_projection.shape
+    # assert  face_from_cell_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
+    # assert (face_from_cell_projection.T).shape ==  self._cell_from_face_projection.shape
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_to_Peano4_datamodel(datamodel,verbose)
@@ -264,8 +290,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "MASS_MATRIX_SCALING"         : self._mass_matrix_scaling,
         "ASSEMBLY_MATRIX"             : self._assembly_matrix,
         "ASSEMBLY_MATRIX_SCALING"     : self._assembly_matrix_scaling,
-        "CELL_TO_FACE_PROJECTION"     : self._cell_to_face_projection,
-        "FACE_TO_CELL_PROJECTION"     : self._face_to_cell_projection,
+        "FACE_FROM_CELL_PROJECTION"   : self._face_from_cell_projection,
+        "CELL_FROM_FACE_PROJECTION"   : self._cell_from_face_projection,
         "RIEMANN_MATRIX"              : self._riemann_matrix
         }
 

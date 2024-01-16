@@ -12,30 +12,28 @@ class UpdateCell(ActionSet):
   {
     logTraceIn("UpdateCell");
 
-    // create a temporary array r on the heap
-    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double >* r = new tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double >();
     // write Mb into it, i.e. mass matrix * rhs
-    *r =  repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
+      repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() ) * fineGridCell{{SOLVER_NAME}}.getRhs();
 
-    // accumulate the solution on each of the faces into one vector. Do this in the heap
-    // This vector will contain: soln on face 0 | soln on face 1 | soln on face 2 | .....
-    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double >* faceSol = new tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double >();
+    // This vector faceSol will contain: soln on face 0 | soln on face 1 | soln on face 2 | .....
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution*TwoTimesD, double > faceSol;
     for (int f=0; f<TwoTimesD; f++)
     for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
-      (*faceSol)( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
+      faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
   
 
     // next, we need to project solution on face onto the cell...
-    auto projection = repositories::{{SOLVER_INSTANCE}}.getFaceToCellMatrix() * (*faceSol);
+    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix() * faceSol;
     // loop over each face
     for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
     {
       // project the face solution onto the cell; add to r
-      *r += projection(f);
+      r += projection(f);
     }
 
     // fetch inverted assembly matrix from abstract solver class. left-multiply r.
-    *r = repositories::{{SOLVER_INSTANCE}}.getInvertedAssemblyMatrix() * ( *r );
+    r = repositories::{{SOLVER_INSTANCE}}.getInvertedAssemblyMatrix() * r;
 
     // scale current entries in solution vector by (1-OmegaCell)
     for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++)
@@ -43,11 +41,9 @@ class UpdateCell(ActionSet):
       double sol = fineGridCell{{SOLVER_NAME}}.getSolution(i) * (1-repositories::{{SOLVER_INSTANCE}}.OmegaCell);
 
       // add on r values whilst we are here
-      fineGridCell{{SOLVER_NAME}}.setSolution(i, sol + (*r)(i) );
+      fineGridCell{{SOLVER_NAME}}.setSolution(i, sol + r(i) );
     }
 
-    delete r;
-    delete faceSol;
     logTraceOut("UpdateCell");
   }
   """
@@ -82,15 +78,12 @@ class UpdateCell(ActionSet):
 
   def get_body_of_operation(self,operation_name):
     result = ""
-    # if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-    #   result = jinja2.Template(self.templateTVFT).render(**self.d)
-    #   pass 
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      result = jinja2.Template(self.templateTFFT).render(**self.d)
+      pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = jinja2.Template(self.templateTCFT).render(**self.d)
       pass
-    # if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-    #   result = jinja2.Template(self.templateTVLT).render(**self.d)
-    #   pass
     return result
 
   def get_action_set_name(self):

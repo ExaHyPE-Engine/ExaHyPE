@@ -16,21 +16,19 @@ class ProjectOntoFaces(ActionSet):
   // what to do about boundary faces?
   if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
   {
-    // create a vector to hold all of the values for the faces
-    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection * TwoTimesD, double >* faceProjections = new tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection * TwoTimesD, double >();
 
     // apply cell to face projection, store it in faceProjections
-    (*faceProjections) = repositories::{{SOLVER_INSTANCE}}. getCellToFaceMatrix() * fineGridCell{{SOLVER_NAME}}.getSolution();
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection * TwoTimesD, double > faceProjections = 
+      repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix() * fineGridCell{{SOLVER_NAME}}.getSolution();
 
     // write these values into the faces themselves
     for (int f=0; f<TwoTimesD; f++)
     for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection; p++)
       fineGridFaces{{SOLVER_NAME}}(f).setProjection(
         p,
-        (*faceProjections)( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p )
+        faceProjections( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p )
       );
 
-  delete faceProjections;
   }
 """
 
@@ -48,15 +46,9 @@ class ProjectOntoFaces(ActionSet):
 
   def get_body_of_operation(self,operation_name):
     result = ""
-    # if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-    #   result = jinja2.Template(self.templateTVFT).render(**self.d)
-    #   pass 
-    # if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-    #   result = jinja2.Template(self.templateTCFT).render(**self.d)
-    #   pass
-    # if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-    #   result = jinja2.Template(self.templateTVLT).render(**self.d)
-    #   pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      pass
     return result
 
   def get_action_set_name(self):
