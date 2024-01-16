@@ -211,6 +211,8 @@ namespace toolbox {
 
         class Database {
           private:
+            static tarch::multicore::BooleanSemaphore  _semaphore;
+
             std::vector<MeshSweepData> _data;
 
           public:

@@ -10,7 +10,6 @@ namespace {
   tarch::logging::Log _log("toolbox::particles::assignmentchecks");
 
   toolbox::particles::assignmentchecks::internal::Database _database;
-  tarch::multicore::BooleanSemaphore                       _semaphore;
 } // namespace
 
 
@@ -202,6 +201,7 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier toolbox::part
   ParticleIdentifier result(particleName, particleX);
 
   if (fitToExistingParticles) {
+    tarch::multicore::Lock lock(_semaphore);
     auto currentSnapshot = _data.crbegin();
     while (currentSnapshot != _data.crend()) {
       for (const auto& event: *currentSnapshot) {
@@ -220,6 +220,9 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier toolbox::part
 }
 
 
+tarch::multicore::BooleanSemaphore  toolbox::particles::assignmentchecks::internal::Database::_semaphore;
+
+
 toolbox::particles::assignmentchecks::internal::Database::Database() { _data.push_back(MeshSweepData("initial")); };
 
 void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(const std::string& meshSweepName) {
@@ -230,6 +233,7 @@ void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(co
 
 
 int toolbox::particles::assignmentchecks::internal::Database::getCurrentMeshSweep() const {
+  tarch::multicore::Lock lock(_semaphore);
   return _data.size()-1;
 }
 
@@ -239,6 +243,8 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
   int                        spacetreeId,
   int                        firstNRecentEntriesToSkip
 ) const {
+  tarch::multicore::Lock lock(_semaphore);
+
   auto currentSnapshot = _data.crbegin();
 
   std::advance( currentSnapshot, firstNRecentEntriesToSkip );
@@ -290,6 +296,8 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
 
 
 std::string toolbox::particles::assignmentchecks::internal::Database::toString() const {
+  tarch::multicore::Lock lock(_semaphore);
+
   std::ostringstream msg;
 
   int  snapshotCounter   = 0;
@@ -309,6 +317,8 @@ std::string toolbox::particles::assignmentchecks::internal::Database::toString()
 
 
 int toolbox::particles::assignmentchecks::internal::Database::totalEntries(const ParticleIdentifier& identifier) const {
+  tarch::multicore::Lock lock(_semaphore);
+
   int result = 0;
   for (auto& p: _data) {
     result += p.count(identifier);
@@ -317,6 +327,8 @@ int toolbox::particles::assignmentchecks::internal::Database::totalEntries(const
 }
 
 std::string toolbox::particles::assignmentchecks::internal::Database::lastMeshSweepSnapshot() const {
+  tarch::multicore::Lock lock(_semaphore);
+
   std::ostringstream msg;
   if (not _data.empty()) {
     const auto& lastMeshSnapshot = *_data.crbegin();
@@ -332,6 +344,8 @@ std::string toolbox::particles::assignmentchecks::internal::Database::lastMeshSw
 }
 
 std::string toolbox::particles::assignmentchecks::internal::Database::particleHistory(const ParticleIdentifier& identifier) const {
+  tarch::multicore::Lock lock(_semaphore);
+
   std::ostringstream msg;
   msg << std::endl
       << "============================" << std::endl
@@ -374,6 +388,8 @@ std::string toolbox::particles::assignmentchecks::internal::Database::particleHi
 }
 
 void toolbox::particles::assignmentchecks::internal::Database::addEvent(ParticleIdentifier identifier, const Event& event) {
+  tarch::multicore::Lock lock(_semaphore);
+
   assertion(not _data.empty());
   MeshSweepData& snapshot = *_data.rbegin();
   if (snapshot.count(identifier) == 0) {
@@ -400,7 +416,6 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   const std::string&                           trace
 ) {
   logTraceInWith4Arguments("eraseParticle(...)", particleName, particleX, isLocal, treeId );
-  tarch::multicore::Lock lock(_semaphore);
 
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event(internal::Event::Type::Erase, isLocal, treeId, trace);
@@ -432,7 +447,6 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   const std::string&                           trace
 ) {
   logTraceInWith6Arguments( "assignParticleToVertex(...)", particleName, particleX, isLocal, vertexX, vertexH, treeId );
-  tarch::multicore::Lock lock(_semaphore);
 
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event(internal::Event::Type::AssignToVertex, isLocal, vertexX, vertexH, treeId, trace);
@@ -513,8 +527,6 @@ void toolbox::particles::assignmentchecks::moveParticle(
   logTraceInWith3Arguments( "moveParticle(...)", particleName, oldParticleX, newParticleX );
 
   if (not tarch::la::equals(oldParticleX,newParticleX)) {
-    tarch::multicore::Lock lock(_semaphore);
-
     internal::ParticleIdentifier newIdentifier = _database.createParticleIdentifier(particleName, newParticleX, false);
     internal::Event              newEvent(internal::Event::Type::MoveWhileAssociatedToVertex, oldParticleX, treeId, trace );
     internal::ParticleIdentifier oldIdentifier = _database.createParticleIdentifier(particleName, oldParticleX);
@@ -551,7 +563,6 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   const std::string&                           trace
 ) {
   logTraceInWith6Arguments( "detachParticleFromVertex(...)", particleName, particleX, isLocal, vertexX, vertexH, treeId );
-  tarch::multicore::Lock lock(_semaphore);
 
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event{internal::Event::Type::DetachFromVertex, isLocal, vertexX, vertexH, treeId, trace};
@@ -600,7 +611,6 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   const std::string&                           trace
 ) {
   logTraceInWith4Arguments( "assignParticleToSieveSet(...)", particleName, particleX, isLocal, treeId );
-  tarch::multicore::Lock lock(_semaphore);
 
   logDebug("assignParticleToSieveSet()", "assign " << particleName << " particle at " << particleX << " to global sieve set on tree " << treeId);
 
