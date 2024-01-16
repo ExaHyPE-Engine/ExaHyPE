@@ -15,6 +15,8 @@ class PredictionMergeEnclaveTaskOutcome(AbstractADERDGActionSet):
     marker.hasBeenEnclaveCell()
     and
     {{GUARD}}
+    and
+    repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::MergingPredictionOutcome
   ) {
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -43,8 +45,8 @@ class PredictionMergeEnclaveTaskOutcome(AbstractADERDGActionSet):
 
     def __init__(self, solver):
         super(PredictionMergeEnclaveTaskOutcome, self).__init__(solver)
-        self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
-        self.guard = "true"
+        self._label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
+        self._guard = "true"
 
 
     def get_body_of_operation(self, operation_name):
@@ -56,8 +58,8 @@ class PredictionMergeEnclaveTaskOutcome(AbstractADERDGActionSet):
             d = {}
             self._solver._init_dictionary_with_default_parameters(d)
             self._solver.add_entries_to_text_replacement_dictionary(d)
-            d["LABEL_NAME"] = self.label_name
-            d["GUARD"] = self.guard
+            d["LABEL_NAME"] = self._label_name
+            d["GUARD"] = self._guard
             result = jinja2.Template(self.Template).render(**d)
             pass
         return result

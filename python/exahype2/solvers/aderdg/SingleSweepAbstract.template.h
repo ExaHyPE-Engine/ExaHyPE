@@ -83,7 +83,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      * has to ensure that none of its ExaHyPE 2 solvers has to work on a mesh
      * which is coarser than its MaxH value.
      */
-    static constexpr double MaxAdmissibleCellH  = {{MAX_CELL_H}};
+    static constexpr double MaxAdmissibleCellH = {{MAX_CELL_H}};
 
     /**
      * Minimum mesh size that this solver wants to support. Peano 4 tries
@@ -93,9 +93,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      * work with fine mesh resolutions even though they have specified a
      * coarser MinH.
      */
-    static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
+    static constexpr double MinAdmissibleCellH = {{MIN_CELL_H}};
 
-    /*
+    /**
      * Maximal mesh size that can actually be reached, this is the greatest size
      * that can be reached by 3-subdivision of the domain size but is still lower
      * than MaxAdmissibleCellH
@@ -110,7 +110,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
     /**
      * Quadrature points, derivative operators, and various projectors for (1D) unit interval.
      */
-    {{BASIS_DECLARATIONS | indent(4,True) }}
+    {{BASIS_DECLARATIONS | indent(4,True)}}
 
     {{CLASSNAME}}();
     ~{{CLASSNAME}}();
@@ -331,13 +331,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      */
     virtual double getMaxMeshSize() const override final;
     virtual double getMinMeshSize() const override final;
-    
+
     /**
-     * Functions inherited from Solver.h in the aderdg context, these provide
-     * information to ExaSeis expansions
+     * Functions inherited from Solver.h in the ADER-DG context.
      *
      * @todo Should not be here
-     */    
+     */
     virtual tarch::la::Vector<Dimensions,double> getDomainSize()    const override final;
     virtual tarch::la::Vector<Dimensions,double> getDomainOffset()  const override final;
     virtual double getCoarsestMeshSize()                            const override final;
@@ -346,7 +345,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
     virtual int getMaximumAdaptiveMeshDepth()                       const override final;
 
     /**
-     * Update the global solver state, i.e. inform the solver about some
+     * Update the global solver state, i.e., inform the solver about some
      * updated global quantities.
      *
      * @see setTimeStepSize(double)
@@ -362,17 +361,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
 
     /**
      * This predicate is always true, as we work with a single-sweep
-     * implementation, i.e. each grid sweep realises one time step.
+     * implementation, i.e., each grid sweep realises one time step.
      */
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
 
     {% if STATELESS_PDE_TERMS %}
     /**
-     * By default each patch can use stateless PDE terms, i.e. the static
-     * versions of the operators. Therefore, each patch can go to the GPU
+     * By default each cell can use stateless PDE terms, i.e., the static
+     * versions of the operators. Therefore, each cell can go to the GPU
      * or inline aggressively. You can disable this behaviour for selected
-     * patches via this callback.
+     * cells via this callback.
      */
     {% else %}
     /**
@@ -382,9 +381,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::aderdg::ADER
      * GPU support.
      */
     {% endif %}
-    virtual bool patchCanUseStatelessPDETerms(
-      const tarch::la::Vector<Dimensions, double>& x,
-      const tarch::la::Vector<Dimensions, double>& h,
+    virtual bool cellCanUseStatelessPDETerms(
+      const tarch::la::Vector<Dimensions,double>&  cellCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellH,
       double                                       t,
       double                                       dt
     ) const;

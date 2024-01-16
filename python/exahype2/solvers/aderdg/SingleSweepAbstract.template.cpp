@@ -32,7 +32,7 @@ double**** exahype2::aderdg::ADERDGSolver::fineGridProjector                    
 ::exahype2::aderdg::UnivariateFunction** exahype2::aderdg::ADERDGSolver::basisFunctionFirstDerivative  = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
 ::exahype2::aderdg::UnivariateFunction** exahype2::aderdg::ADERDGSolver::basisFunctionSecondDerivative = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
 
-{{BASIS_INITIALIZERS | indent(2,True) }}
+{{BASIS_INITIALIZERS | indent(2,True)}}
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _solverState(SolverState::GridConstruction),
@@ -54,8 +54,8 @@ double**** exahype2::aderdg::ADERDGSolver::fineGridProjector                    
   {{CONSTRUCTOR_IMPLEMENTATION}}
 
   {% if USE_KERNEL_GENERATOR==True %}
-  //initialise nodes, weights and matrices for use of the kernels
-  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}    
+  // Initialise nodes, weights and matrices for use of the kernels.
+  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
   generated::kernels::AderDG::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
   generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
 
@@ -64,48 +64,46 @@ double**** exahype2::aderdg::ADERDGSolver::fineGridProjector                    
   {% endif %}
   {% endfor %}
   {% endif %}
-  
-  //setting coarsestMeshLevel and maxAdaptiveMeshLevel
+
+  // Setting coarsestMeshLevel and maxAdaptiveMeshLevel
   double maxDSize = std::numeric_limits<double>::min();
   double minDSize = std::numeric_limits<double>::max();
   tarch::la::Vector<Dimensions, double> sizes = {{NAMESPACE | join("::")}}::DomainSize;
-  
-  for(int i=0; i<Dimensions; i++){
-    if(sizes[i]>maxDSize){
+
+  for (int i=0; i<Dimensions; i++) {
+    if (sizes[i]>maxDSize) {
       maxDSize = sizes[i];
     }
-    if(sizes[i]<minDSize){
+    if (sizes[i]<minDSize) {
       minDSize = sizes[i];
-    }    
+    }
   }
-  
+
   int depth = 0;
-  
-  //finding coarsest possible Mesh level
-  while(maxDSize>MaxAdmissibleCellH){
+
+  // Finding coarsest possible mesh level
+  while (maxDSize > MaxAdmissibleCellH) {
     depth += 1;
     maxDSize /= 3.0;
   }
-  
+
   realCoarsestMeshSize = maxDSize;
-  coarsestMeshLevel = depth;  
-  
+  coarsestMeshLevel = depth;
+
   depth = 0;
   while(minDSize>MinAdmissibleCellH){
     depth += 1;
     minDSize /= 3.0;
   }
-  
-  maxAdaptiveMeshLevel = depth;
-  
 
+  maxAdaptiveMeshLevel = depth;
 }
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
 
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {
   {% if USE_KERNEL_GENERATOR==True %}
-  //free the generated nodes, weights and matrices
-  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}  
+  // Free the generated nodes, weights and matrices.
+  {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
   generated::kernels::AderDG::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
   generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
 
@@ -191,7 +189,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double cellSize) {
   tarch::multicore::Lock lock(_semaphore);
 
-  if ( tarch::la::greater(timeStepSize,0.0) ) {
+  if (tarch::la::greater(timeStepSize,0.0)) {
     assertion1(timeStepSize<std::numeric_limits<double>::max()/10.0,timeStepSize);
     assertion1(timeStepSize>=0.0,timeStepSize);
     _minTimeStepSizeThisTimeStep = std::min(timeStepSize,_minTimeStepSizeThisTimeStep);
@@ -233,8 +231,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 ) {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-
   return result;
   {% else %}
   {{REFINEMENT_CRITERION_IMPLEMENTATION}}
@@ -269,6 +265,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 }
 {% endif %}
 
+
 {% if ADAPTIVE_PRECISION_IMPLEMENTATION!="<empty>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<user-defined>" and ADAPTIVE_PRECISION_IMPLEMENTATION!="<none>"%}
     exahype2::PrecisionCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::precisionCriterion(
       const {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -281,6 +278,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 }
 {% endif %}
 
+
 {% if ERROR_MEASUREMENT_IMPLEMENTATION!="<empty>" and ERROR_MEASUREMENT_IMPLEMENTATION!="<user-defined>" and ERROR_MEASUREMENT_IMPLEMENTATION!="<none>"%}
     void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::analyticalSolution(
       const tarch::la::Vector<Dimensions,double>&   x,
@@ -291,6 +289,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   {{ERROR_MEASUREMENT_IMPLEMENTATION}}
 }
 {% endif %}
+
 
 {% if RIEMANN_SOLVER_IMPLEMENTATION!="<empty>" and RIEMANN_SOLVER_IMPLEMENTATION!="<user-defined>" and RIEMANN_SOLVER_IMPLEMENTATION!="<none>"%}
     void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::riemannSolver(
@@ -309,13 +308,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 }
 {% endif %}
 
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
-  assertion( _solverState == SolverState::GridConstruction );
+  assertion(_solverState == SolverState::GridConstruction);
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {
-}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {}
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
@@ -324,8 +323,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
-
-	if ( _solverState==SolverState::GridInitialisation ) {
+  if (_solverState==SolverState::GridInitialisation) {
     {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }
 }
@@ -413,9 +411,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-	if ( isLastGridSweepOfTimeStep() ) {
-
-  #ifdef Parallel
+  if (isLastGridSweepOfTimeStep()) {
+#ifdef Parallel
   double newMinTimeStamp    = _minTimeStampThisTimeStep;
   double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
   double newMinCellH        = _minCellHThisTimeStep;
@@ -495,17 +492,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       MPI_SUM,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
-  #endif
+#endif
 
-		if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
-			_minTimeStampThisTimeStep = 0.0;
-		}
-		if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
-			_maxTimeStampThisTimeStep = 0.0;
-		}
+    if (_minTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+      _minTimeStampThisTimeStep = 0.0;
+    }
+    if (_maxTimeStampThisTimeStep >= std::numeric_limits<double>::max() / 10.0) {
+      _maxTimeStampThisTimeStep = 0.0;
+    }
 
-  {{FINISH_TIME_STEP_IMPLEMENTATION}}
-
+    {{FINISH_TIME_STEP_IMPLEMENTATION}}
   }
 }
 
@@ -521,8 +517,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {
-}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {}
 
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
@@ -535,21 +530,16 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "plotting";
     case SolverState::Prediction:
       return "prediction";
-      break;
     case SolverState::PredictionOnHangingCells:
-      return "prediction on hanging cells";
-      break;
+      return "prediction-on-hanging-cells";
     case SolverState::Correction:
-			return "correction";
-      break;
+      return "correction";
     case SolverState::LimiterStatusSpreadingToNeighbours:
-			return "limiter status spreading to neighbours";
-      break;
+      return "limiter-status-spreading-to-neighbours";
     case SolverState::LimiterStatusSpreadingToSecondNeighbours:
-			return "limiter status spreading to second neighbours";
-      break;
+      return "limiter-status-spreading-to-second-neighbours";
     case SolverState::FVRecomputation:
-			return "fv recomputation";
+      return "fv-recomputation";
     }
   return "<undef>";
 }
@@ -572,11 +562,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() cons
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
-  [[maybe_unused]] double                                       t,
-  [[maybe_unused]] double                                       dt
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::cellCanUseStatelessPDETerms(
+  const tarch::la::Vector<Dimensions,double>&,
+  const tarch::la::Vector<Dimensions,double>&,
+  double,
+  double
 ) const {
   return true;
 }

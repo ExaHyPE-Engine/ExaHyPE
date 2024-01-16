@@ -151,7 +151,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   );
 
   ::exahype2::aderdg::generic::solutionUpdate<
-    ElasticWaveSolver
+    {{SOLVER_NAME}}
   > (
     QOut,
     QIn,
@@ -210,7 +210,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
 {% if STATELESS_PDE_TERMS %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
-  return repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
+  return repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(
     _marker.x(),
     _marker.h(),
     _t,
@@ -226,26 +226,85 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
   logInfo("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
     << " asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
-  ::exahype2::CellData patchData(otherTasks.size() + 1);
+  ::exahype2::CellData cellData(otherTasks.size() + 1);
   int currentTask = 0;
   for (auto& p: otherTasks) {
-    patchData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
-    patchData.cellCentre[currentTask]  = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
-    patchData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
-    patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
-    patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
-    patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
-    patchData.QOut[currentTask]        = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+    cellData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
+    cellData.cellCentre[currentTask]  = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
+    cellData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
+    cellData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
+    cellData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
+    cellData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
+    cellData.QOut[currentTask]        = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     delete p;
     currentTask++;
   }
-  patchData.QIn[currentTask]         = _inputValues;
-  patchData.cellCentre[currentTask]  = _marker.x();
-  patchData.cellSize[currentTask]    = _marker.h();
-  patchData.t[currentTask]           = _t;
-  patchData.dt[currentTask]          = _dt;
-  patchData.id[currentTask]          = _taskNumber;
-  patchData.QOut[currentTask]        = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  cellData.QIn[currentTask]         = _inputValues;
+  cellData.cellCentre[currentTask]  = _marker.x();
+  cellData.cellSize[currentTask]    = _marker.h();
+  cellData.t[currentTask]           = _t;
+  cellData.dt[currentTask]          = _dt;
+  cellData.id[currentTask]          = _taskNumber;
+  cellData.QOut[currentTask]        = tarch::allocateMemory<double>(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+
+  static constexpr int Order = {{ORDER}};
+  static constexpr int NumberOfVariables  = {{NUMBER_OF_UNKNOWNS}};
+  static constexpr int NumberOfParameters = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+
+#if Dimensions==2
+  static constexpr int spaceBasisSize     = (Order + 1) * (Order + 1);
+  static constexpr int spaceFaceSize      = (Order + 1);
+#else
+  static constexpr int spaceBasisSize     = (Order + 1) * (Order + 1) * (Order + 1);
+  static constexpr int spaceFaceSize      = (Order + 1) * (Order + 1);
+#endif
+
+  static constexpr int spaceTimeBasisSize = spaceBasisSize * (Order + 1);
+
+  static constexpr int basisElementsPerFace  = spaceFaceSize * (NumberOfVariables + NumberOfParameters);
+  static constexpr int fluxElementsPerFace   = spaceFaceSize * NumberOfVariables;
+
+  static constexpr int sizeLQi   = (NumberOfVariables+NumberOfParameters) * spaceTimeBasisSize * (Order + 1);
+  static constexpr int sizeRhs   = sizeLQi;
+  static constexpr int sizeLFi   = (Dimensions + 1) * NumberOfVariables * spaceTimeBasisSize; // Dimensions + 1 because this is also used for lShi, which contains source terms. TODO: Make its own storage.
+  static constexpr int sizeGradQ = Dimensions * NumberOfVariables * spaceBasisSize;
+
+  static constexpr int sizeLQhi = (NumberOfVariables + NumberOfParameters) * spaceBasisSize;
+  static constexpr int sizeLFhi = (Dimensions + 1) * NumberOfVariables * spaceBasisSize;
+
+  static constexpr int sizeLduh = sizeLQhi;
+
+  double* lQi = tarch::allocateMemory<double>(
+    sizeLQi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+  );
+  double* rhs = tarch::allocateMemory<double>(
+    sizeRhs, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+  );
+  double* lFi = tarch::allocateMemory<double>(
+    sizeLFi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+  );
+  double* gradQ = tarch::allocateMemory<double>(
+    sizeGradQ, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+  );
+
+  double* lQhi = tarch::allocateMemory<double>(
+    sizeLQhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+  );
+  double* lFhi = tarch::allocateMemory<double>(
+    sizeLFhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+  );
+  double* lduh = tarch::allocateMemory<double>(
+    sizeLduh, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+  );
+
+  double* lQhbnd = tarch::allocateMemory<double>(
+    2*Dimensions*spaceFaceSize*(NumberOfVariables+NumberOfParameters),
+    tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+  );
+  double* lFhbnd = tarch::allocateMemory<double>(
+    2*Dimensions*spaceFaceSize*NumberOfVariables,
+    tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory
+  );
 
   //
   // =========================
@@ -262,17 +321,75 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 
   if (not foundOffloadingBranch) {
     logInfo("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
-     << " cannot find offloading branch for device " << targetDevice << ". Using the CPU.");
+      << " cannot find offloading branch for device " << targetDevice << ". Process fused tasks on the CPU.");
+
+    for (int i = 0; i < cellData.numberOfCells; i++) {
+      ::exahype2::aderdg::generic::spaceTimePredictorLinear<
+        false, // EvaluatePointSource
+        {{ "true" if USE_SOURCE!="<none>" else "false" }}, // EvaluateAlgebraicSource
+        {{ "true" if USE_FLUX!="<none>" else "false" }}, // EvaluateFlux
+        {{ "true" if USE_NCP!="<none>" else "false" }}, // EvaluateNonconservativeProduct
+        {{ "true" if USE_MATERIAL_PARAMETERS!="<none>" else "false" }}, // EvaluateMaterialParameters
+        {{SOLVER_NAME}},
+        double, //predictor_computation_precision
+        double //predictor_storage_precision
+      >(
+        lQhbnd,
+        lFhbnd,
+        lQi,
+        lFi,
+        gradQ,
+        nullptr, nullptr, nullptr, // PSi, PSderivatives, tmp_PSderivatives
+        lQhi,
+        lFhi,
+        cellData.QIn[i],
+        cellData.cellCentre[i],
+        cellData.cellSize[i],
+        cellData.t[i],
+        cellData.dt[i]
+      );
+
+      ::exahype2::aderdg::generic::volumeIntegralLinear<
+        {{SOLVER_NAME}},
+        double, //predictor_computation_precision
+        {{ "true" if USE_SOURCE!="<none>" else "false" }}, //useSource
+        {{ "true" if USE_FLUX!="<none>" else "false" }}, //useFlux
+        {{NUMBER_OF_UNKNOWNS}},
+        {{ORDER}}+1
+      >(
+        lduh,
+        lFhi,
+        cellData.cellSize[i]
+      );
+
+      ::exahype2::aderdg::generic::solutionUpdate<
+        {{SOLVER_NAME}}
+      > (
+        cellData.QOut[i],
+        cellData.QIn[i],
+        lduh,
+        cellData.dt[i]
+      );
+    }
   }
+
+  tarch::freeMemory(lQi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  tarch::freeMemory(rhs, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  tarch::freeMemory(lFi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  tarch::freeMemory(gradQ, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  tarch::freeMemory(lQhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  tarch::freeMemory(lFhi, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  tarch::freeMemory(lduh, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  tarch::freeMemory(lQhbnd, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
+  tarch::freeMemory(lFhbnd, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
 
   //
   // ==================
   // Bring back results
   // ==================
   //
-  for (int i = 0; i < patchData.numberOfCells; i++) {
-    tarch::freeMemory(patchData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
+  for (int i = 0; i < cellData.numberOfCells; i++) {
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(cellData.id[i], _numberOfResultValues, cellData.QOut[i], cellData.maxEigenvalue[i]);
   }
 
   // Don't rerun, so return false.

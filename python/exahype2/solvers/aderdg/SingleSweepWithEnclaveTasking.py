@@ -73,7 +73,7 @@ class SingleSweepWithEnclaveTasking(SingleSweep):
             initialize_patches,
         )
 
-        self._solver_template_file_class_name = "SingleSweep"
+        self._solver_template_file_class_name = "SingleSweepWithEnclaveTasking"
 
         self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
 
