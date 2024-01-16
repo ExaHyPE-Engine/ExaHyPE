@@ -124,7 +124,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
             self._eigenvalues_implementation,
             self._source_term_implementation,
             self._point_sources_implementation,
-            False,
+            self._pde_terms_without_state,
         )
         self._abstract_solver_user_declarations += (
             solver_code_snippets.create_abstract_solver_user_declarations()
@@ -135,7 +135,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
             self._eigenvalues_implementation,
             self._source_term_implementation,
             self._point_sources_implementation,
-            False,
+            self._pde_terms_without_state,
         )
         self._abstract_solver_user_definitions += (
             solver_code_snippets.create_abstract_solver_user_definitions()
@@ -147,7 +147,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
             self._eigenvalues_implementation,
             self._source_term_implementation,
             self._point_sources_implementation,
-            False,
+            self._pde_terms_without_state,
         )
         self._solver_user_definitions = create_solver_definitions(
             self._flux_implementation,
@@ -155,7 +155,7 @@ class GlobalFixedTimeStep(SeparateSweeps):
             self._eigenvalues_implementation,
             self._source_term_implementation,
             self._point_sources_implementation,
-            False,
+            self._pde_terms_without_state,
         )
 
         self._compute_time_step_size = (

@@ -240,5 +240,4 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         d["SEMAPHORE_LABEL"] = exahype2.grid.UpdateCellLabel.get_attribute_name(
             self._name
         )
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority

@@ -152,7 +152,7 @@ class RungeKuttaDG(object):
 
     ## Semantics of FaceLabel
 
-    - The update time stamp is the one we udpate in each and every
+    - The update time stamp is the one we update in each and every
       Runge-Kutta step.
 
     - The new time stamp is the valid one, i.e. the one that
@@ -1498,6 +1498,7 @@ We use RK("""
 
         d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
 
+        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["KERNEL_NAMESPACE"] = self._kernel_namespace
 
         d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut

@@ -66,21 +66,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   );
 
   {% if STATELESS_PDE_TERMS %}
-  if ( repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
+  if ( repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(
       marker.x(),
       marker.h(),
-      t,
-      dt
+      timeStamp,
+      timeStepSize
   )) {
-    ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{FUSED_VOLUMETRIC_KERNEL_CALL_CPU}}
   } else
   {% endif %}
 
   ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}
 }
 
-
-//_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker& marker,
@@ -351,8 +349,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     cellData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
     cellData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     cellData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
-    cellData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_id;
-    cellData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+    cellData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
+    cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     delete p;
     currentTask++;
   }
@@ -361,8 +359,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   cellData.cellSize[currentTask]    = _marker.h();
   cellData.t[currentTask]           = _t;
   cellData.dt[currentTask]          = _dt;
-  cellData.id[currentTask]          = _id;
-  cellData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+  cellData.id[currentTask]          = _taskNumber;
+  cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
 
   //
   // ==============
@@ -374,27 +372,28 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::dg::rusanov::omp::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::omp::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
   }
   #endif
 
   #if defined(GPUOffloadingHIP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::dg::rusanov::hip::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::hip::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
   }
   #endif
 
   #if defined(GPUOffloadingSYCL)
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
-
-    ::exahype2::dg::rusanov::sycl::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
   }
   #endif
 
   if (not foundOffloadingBranch) {
-    ::exahype2::dg::rusanov::{{FUSED_VOLUMETRIC_KERNEL_CALL_CPU}}
+    logInfo("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+      << " cannot find offloading branch for device " << targetDevice << ". Using the CPU.");
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{FUSED_VOLUMETRIC_KERNEL_CALL_CPU}}
   }
 
   //

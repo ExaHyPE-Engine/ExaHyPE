@@ -26,13 +26,13 @@ def create_abstract_solver_declarations(
     Template = jinja2.Template(
         """
   public:
-    {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
-    #error eigenvalue implementation cannot be none
+    {% if EIGENVALUES_IMPLEMENTATION=="<none>" or EIGENVALUES_IMPLEMENTATION=="<empty>" %}
+    #error Eigenvalue implementation cannot be none or empty
     {% endif %}
 
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
-     * Depending on the implementation, this variant might be slow as it 
+     * Depending on the implementation, this variant might be slow as it
      * lacks an inline define. Also, if you don't want to use ipo aggressively,
      * it might be clever to put the implementation into the header.
      */

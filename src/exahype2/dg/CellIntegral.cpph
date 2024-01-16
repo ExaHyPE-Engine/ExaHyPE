@@ -70,6 +70,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
           Solver::flux(
             &cellQin[enumeratorIn(currentCell, contributingNodeIndex, 0)],
             position,
+            h,
             t,
             dt,
             dim, //normal
@@ -99,9 +100,10 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
           Solver::QuadraturePoints1d);
 
         //compute source term contributions
-        Solver::sourceTerm(
+        Solver::algebraicSource(
           &cellQin[enumeratorIn(currentCell, dof, 0)],
           position,
+          h,
           t,
           dt,
           sourceValues,
@@ -158,6 +160,7 @@ void exahype2::dg::cellIntegral_patchwise_in_situ_GaussLegendre(
             &cellQin[enumeratorIn(currentCell, dof, 0)],
             gradientValues,
             position,
+            h,
             t,
             dt,
             dim,
