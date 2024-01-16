@@ -30,7 +30,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
 #elif Dimensions==3
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
-    #endif
+#endif
 
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
     if ( taskNumber>=0 ) {

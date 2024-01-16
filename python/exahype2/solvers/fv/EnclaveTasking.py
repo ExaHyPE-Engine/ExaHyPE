@@ -20,7 +20,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     Update cell in primary sweep
 
     This action set is used in the primary sweeps only. In the secondary sweep,
-    its counterpart, the action set UpdateCell, is active and works in all data
+    its counterpart, the action set MergeEnclaveTaskOutcome, is active and works in all data
     computed by tasks which have been spawned here.
 
     We extend the superclass ReconstructPatchAndApplyFunctor and hence have
@@ -200,10 +200,10 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     and
     {{GUARD}}
     and
-    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
+    repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::Secondary
   ) {
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
-    if ( marker.hasBeenEnclaveCell() and taskNumber>=0 ) {
+    if (marker.hasBeenEnclaveCell() and taskNumber >= 0) {
       double maxEigenvalue;
       ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, maxEigenvalue );
 
@@ -223,8 +223,8 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     }
 
-    if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
-      double*  newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+    if (fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated()) {
+      double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
 
       {{POSTPROCESS_UPDATED_PATCH}}
 
@@ -233,8 +233,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
         marker.h()(0)
       );
-    }
-    else {
+    } else {
       repositories::{{SOLVER_INSTANCE}}.update(
         0.0,
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),

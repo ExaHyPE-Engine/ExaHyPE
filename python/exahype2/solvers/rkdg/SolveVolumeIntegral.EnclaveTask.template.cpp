@@ -392,7 +392,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
 
   if (not foundOffloadingBranch) {
     logInfo("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
-      << " cannot find offloading branch for device " << targetDevice << ". Using the CPU.");
+      << " cannot find offloading branch for device " << targetDevice << ". Process fused tasks on the CPU.");
     ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{FUSED_VOLUMETRIC_KERNEL_CALL_CPU}}
   }
 
@@ -402,7 +402,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==================
   //
   for (int i=0; i<cellData.numberOfCells; i++) {
-    tarch::freeMemory( cellData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+    //tarch::freeMemory(cellData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(cellData.id[i], _numberOfResultValues, cellData.QOut[i], cellData.maxEigenvalue[i]);
   }
 
