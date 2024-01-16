@@ -2,11 +2,9 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "config.h"
 #include "tarch/multicore/multicore.h"
 
-#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) \
-  and !defined(GPUOffloadingCUDA)
+#if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) and !defined(GPUOffloadingCUDA)
 #define GPUOffloadingOff
 #endif
 
