@@ -440,11 +440,6 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   if (isLocal) {
     internal::Event              previousEvent = _database.getEntry(identifier, treeId);
 
-//    std::cout << "x_new=" << std::setprecision(20)  << particleX(0) << "," << particleX(1) << std::endl;
-//    std::cout << "x_old=" << std::setprecision(20)  << previousEvent.previousParticleX(0) << "," << previousEvent.previousParticleX(1) << std::endl;
-
-    // x_new=1.66756109398908697328e-01,3.33378054657027356189e-01
-
     assertion7(
       previousEvent.type == internal::Event::Type::NotFound
       or
@@ -517,11 +512,6 @@ void toolbox::particles::assignmentchecks::moveParticle(
 ) {
   logTraceInWith3Arguments( "moveParticle(...)", particleName, oldParticleX, newParticleX );
 
-  if ( tarch::la::equals(oldParticleX, {1.0/6.0, 1.0/3.0})) {
-    std::cout << std::endl << "moveParticle(...): bookmark particle " << oldParticleX << " -> " << newParticleX <<  " on tree " << treeId  << std::endl;
-  }
-
-
   if (not tarch::la::equals(oldParticleX,newParticleX)) {
     tarch::multicore::Lock lock(_semaphore);
 
@@ -545,12 +535,6 @@ void toolbox::particles::assignmentchecks::moveParticle(
     );
 
     _database.addEvent(newIdentifier, newEvent);
-
-    if ( tarch::la::equals(oldParticleX, {1.0/6.0, 1.0/3.0})) {
-      std::cout << std::endl << "moveParticle(...): add new event " << newEvent.toString()  << " for identifier " << newIdentifier.toString() << std::endl;
-      std::cout << std::endl << _database.particleHistory(newIdentifier) << std::endl;
-      std::cout << std::endl << _database.lastMeshSweepSnapshot() << std::endl;
-    }
   }
 
   logTraceOut( "moveParticle(...)" );
