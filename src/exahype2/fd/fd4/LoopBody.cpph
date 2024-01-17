@@ -41,16 +41,16 @@ namespace {
     leftAdjacentVolume3(normal)--;
     leftAdjacentVolume3(normal)--;
 
-    for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
+    /*for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
       CentralQ[unknown] = QIn[QInEnumerator(patchIndex, centralVolume, unknown)];
       DeltaQ[unknown]   = (8.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume1, unknown)]
                         - (8.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, unknown)]
                         - (1.0 / 12.0) * QIn[QInEnumerator(patchIndex, rightAdjacentVolume2, unknown)]
                         + (1.0 / 12.0) * QIn[QInEnumerator(patchIndex, leftAdjacentVolume2, unknown)];
-    }
+    }*/
 
     //direct so
-    /*double cellsize = patchSize(normal)/QInEnumerator._numberOfDoFsPerAxisInCell;
+    double cellsize = patchSize(normal)/QInEnumerator._numberOfDoFsPerAxisInCell;
     double gradcoef = 1.0/(12.0*cellsize);
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
       CentralQ[unknown] = QIn[ QInEnumerator(patchIndex, centralVolume, unknown) ];
@@ -110,7 +110,7 @@ namespace {
                             (1.0/12.0) * QIn[ QInEnumerator(patchIndex,rightAdjacentVolume2,unknown) ] +
                             (1.0/12.0) * QIn[ QInEnumerator(patchIndex, leftAdjacentVolume2,unknown) ];
       }
-    }*/
+    }
   }
 
   /**
@@ -231,10 +231,10 @@ namespace {
     leftAdjacentVolume3(normal)--;
     leftAdjacentVolume3(normal)--;
 
-    int QwithoutAdvection[11] = {
-      0, 1, 2, 3, 4, 5, 16, 17, 18, 19, 54}; // these are quantities that do not need advection
-    //int QwithoutAdvection[]={0,1,2,3,4,5,16,17,18,19,23,24,25,26,27,28,29,30,31,32,33,34,
-    //                          35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,54,55,56,57}; //used in soccz4, we
+    //int QwithoutAdvection[11] = {
+    //  0, 1, 2, 3, 4, 5, 16, 17, 18, 19, 54}; // these are quantities that do not need advection
+    int QwithoutAdvection[]={0,1,2,3,4,5,16,17,18,19,23,24,25,26,27,28,29,30,31,32,33,34,
+                              35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,54,55,56,57}; //used in soccz4, we
     //                          do not update auxiliary variables, also test for non lopsided-aux
     for (int unknown = 0; unknown < QInEnumerator._unknowns; unknown++) {
       bool NeedAdvection
