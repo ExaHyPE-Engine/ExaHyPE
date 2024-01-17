@@ -34,7 +34,7 @@ def parse_file(file_path):
         throughput_value = None
 
         for line in file:
-            match = re.search(r'tarch::dumpStatistics\(\)\s+(\d+) Rank\(s\),\s+(\d+) Core\(s\)(?:,\s+(\d+) Device\(s\))?', line)
+            match = re.search(r'tarch::dumpStatistics\(\)\s+(\d+) Rank\(s\),\s+(\d+) Core\(s\)(?:,\s+(\d+) GPU\(s\))?', line)
             if match:
                 num_ranks = int(match.group(1))
                 num_cores = int(match.group(2))
@@ -94,7 +94,7 @@ def plot_scaling(input_files):
 
     print("Number of Ranks:", num_ranks_values)
     print("Number of Cores:", num_cores_values)
-    print("Number of Devices:", num_devices_values)
+    print("Number of GPUs:", num_devices_values)
     print("Throughput Values:", throughput_values)
 
 if __name__ == "__main__":
