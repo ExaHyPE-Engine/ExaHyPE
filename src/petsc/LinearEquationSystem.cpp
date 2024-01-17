@@ -227,6 +227,10 @@ PCType petsc::LinearEquationSystem::getPreconditionerTypeFromEnum(Preconditioner
     {
       output = PCLU;
     } break;
+    case PreconditionerType::JACOBI:
+    {
+      output = PCJACOBI;
+    } break;
     default:
     {
       // invalid enum passed to this point

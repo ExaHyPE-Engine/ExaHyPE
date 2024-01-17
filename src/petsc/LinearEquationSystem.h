@@ -161,7 +161,7 @@ class petsc::LinearEquationSystem{
     */
     enum class PreconditionerType: int 
     {
-      None, LU
+      None, LU, JACOBI
     };
 
     /**

@@ -35,7 +35,8 @@ project = multigrid.petsc.Project(project_name = "DG",
                                   namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ],
 
                                   # next two arguments let us customise the solver we use in petsc
-                                  preconditioner_type = "LU",
+                                  # see enum class in Peano/src/petsc/LinearEquationSystem.h for implemented options
+                                  preconditioner_type = "JACOBI",
                                   solver_type         = "GMRES"
                                   ) 
 #! [Create project]
