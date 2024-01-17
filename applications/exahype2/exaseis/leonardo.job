@@ -4,10 +4,10 @@
 #SBATCH -A EUHPC_D03_043
 #SBATCH -p boost_usr_prod
 #SBATCH --time 00:15:00
-#SBATCH -N 8 # Number of nodes
-#SBATCH --ntasks-per-node=1 # Out of 32 -> Should match --gres=gpu:N for multi-GPU runs.
-#SBATCH --cpus-per-task=16 # Out of (32 / ntasks-per-node)
-#SBATCH --gres=gpu:0 # GPUs per node out of 4
+#SBATCH -N 2 # Number of nodes
+#SBATCH --ntasks-per-node=4 # Out of 32 -> Should match --gres=gpu:N for multi-GPU runs.
+#SBATCH --cpus-per-task=8 # Out of (32 / ntasks-per-node)
+#SBATCH --gres=gpu:4 # GPUs per node out of 4
 #SBATCH --job-name=ExaHyPE2-ExaSeis
 
 export OMP_PLACES="cores($SLURM_CPUS_PER_TASK)"
@@ -25,14 +25,15 @@ export SCOREP_ENABLE_TRACING=true
 export SCOREP_EXPERIMENT_DIRECTORY=ExaSeis-ScoreP
 
 #srun nvidia-smi
-srun --cpu-bind=cores ./gpu-launch ./ExaSeis-ADERDGRusanovGlobalAdaptive-Release
+#srun --cpu-bind=cores ./gpu-launch ./ExaSeis-ADERDGRusanovGlobalAdaptive-Release
 #srun --cpu-bind=cores ./gpu-launch ./ExaSeis-ADERDGRusanovGlobalAdaptive-Stateless-Release
+srun --cpu-bind=cores ./gpu-launch ./ExaSeis-ADERDGRusanovGlobalAdaptiveEnclave-Stateless-Release
 
 # For reading the SLURM output in realtime:
 # tail -f
 
 # For interactive runs:
-# salloc -N 1 --ntasks-per-node=4  --cpus-per-task=4 --gres=gpu:4 --time=0:30:00 --partition boost_usr_prod --account EUHPC_D03_043
+# salloc -N 1 --ntasks-per-node=4  --cpus-per-task=4 --gres=gpu:4 --time=01:00:00 --partition boost_usr_prod --account EUHPC_D03_043
 # OMP_NUM_THREADS=4 srun -N 1 -n 4 ./gpu-launch ./ExaSeis-ADERDGRusanovGlobalAdaptive-Stateless-Release
 
 # To watch used cores and memory:
