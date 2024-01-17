@@ -316,6 +316,29 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse(const std::list<Task*>& oth
 #if defined(GPUOffloadingOMP)
   if (targetDevice >= 0) {
     foundOffloadingBranch = true;
+
+    ::exahype2::aderdg::generic::spaceTimePredictorLinearFused<
+      false, // EvaluatePointSource
+      {{ "true" if USE_SOURCE!="<none>" else "false" }}, // EvaluateAlgebraicSource
+      {{ "true" if USE_FLUX!="<none>" else "false" }}, // EvaluateFlux
+      {{ "true" if USE_NCP!="<none>" else "false" }}, // EvaluateNonconservativeProduct
+      {{ "true" if USE_MATERIAL_PARAMETERS!="<none>" else "false" }}, // EvaluateMaterialParameters
+      {{SOLVER_NAME}},
+      double, //predictor_computation_precision
+      double //predictor_storage_precision
+    >(
+      lQhbnd,
+      lFhbnd,
+      lQi,
+      lFi,
+      gradQ,
+      nullptr, nullptr, nullptr, // PSi, PSderivatives, tmp_PSderivatives
+      lQhi,
+      lFhi,
+      targetDevice,
+      cellData,
+      _numberOfResultValues
+    );
   }
 #endif
 

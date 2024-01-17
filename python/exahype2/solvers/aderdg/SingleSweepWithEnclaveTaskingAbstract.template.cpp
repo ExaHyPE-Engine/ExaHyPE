@@ -20,6 +20,9 @@ tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_l
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
 double**   exahype2::aderdg::ADERDGSolver::weights                                 = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::weights;
 double**   exahype2::aderdg::ADERDGSolver::nodes                                   = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::nodes;
 double***  exahype2::aderdg::ADERDGSolver::Kxi                                     = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::Kxi;
@@ -31,6 +34,9 @@ double**** exahype2::aderdg::ADERDGSolver::fineGridProjector                    
 ::exahype2::aderdg::UnivariateFunction** exahype2::aderdg::ADERDGSolver::basisFunction                 = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::basisFunction;
 ::exahype2::aderdg::UnivariateFunction** exahype2::aderdg::ADERDGSolver::basisFunctionFirstDerivative  = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
 ::exahype2::aderdg::UnivariateFunction** exahype2::aderdg::ADERDGSolver::basisFunctionSecondDerivative = ::exahype2::aderdg::basis::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
 {{BASIS_INITIALIZERS | indent(2,True)}}
 

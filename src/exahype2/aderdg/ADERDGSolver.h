@@ -12,6 +12,9 @@ namespace exahype2::aderdg {
 
 class exahype2::aderdg::ADERDGSolver: public exahype2::aderdg::Solver {
 public:
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
   // [order][node i]
   static double** weights;
   static double** nodes;
@@ -34,6 +37,9 @@ public:
   double pml_alpha_scalar;
   double pml_rel_error;
   int    pml_power;
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
 
   /*
    * The following functions exist because the generic kernels require these to exist in order to compile

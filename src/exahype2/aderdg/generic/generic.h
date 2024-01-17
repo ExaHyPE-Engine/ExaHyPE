@@ -8,6 +8,7 @@
 #include "exahype2/aderdg/ADERDGSolver.h"
 #include "exahype2/aderdg/basis/GaussLegendreBasis.h"
 #include "exahype2/aderdg/basis/GaussLobattoBasis.h"
+#include "exahype2/CellData.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/la/Scalar.h"
 #include "tarch/la/ScalarOperations.h"
@@ -64,6 +65,31 @@ namespace exahype2::aderdg::generic {
     const double                                 dt
   ) InlineMethod;
 
+  template <
+    bool EvaluatePointSource,
+    bool EvaluateAlgebraicSource,
+    bool EvaluateFlux,
+    bool EvaluateNonconservativeProduct,
+    bool EvaluateMaterialParameters,
+    class SolverType,
+    class pCompType,
+    class pStoreType>
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void spaceTimePredictorLinearFused(
+    pStoreType*         lQbnd,
+    pStoreType*         lFbnd,
+    pCompType*          lQi,
+    pCompType*          lFi,
+    pCompType*          gradQ,
+    pCompType*          PSi,
+    pCompType*          PSderivatives,
+    pCompType*          tmp_PSderivatives,
+    pCompType*          lQhi,
+    pCompType*          lFhi,
+    int                 targetDevice,
+    exahype2::CellData& cellData,
+    int                 numberOfResultValues
+  ) InlineMethod;
+
   template <bool useSource, bool useFlux, bool useNCP, bool noTimeAveraging, class SolverType, class pCompType, class pStoreType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions int spaceTimePredictorNonlinear(
     pStoreType*                                  lQhbnd,
@@ -83,8 +109,7 @@ namespace exahype2::aderdg::generic {
   ) InlineMethod;
 
   template <class SolverType, class pType>
-  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void solutionUpdate(double* luh, const double* const luhOld, const pType* const lduh, const double dt)
-    InlineMethod;
+  KeywordToAvoidDuplicateSymbolsForInlinedFunctions void solutionUpdate(double* luh, const double* const luhOld, const pType* const lduh, const double dt) InlineMethod;
 
   template <class SolverType, class pCompType, bool useSourceOrNCP, bool useFlux, int numberOfVariables, int basisSize>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void volumeIntegralLinear(pCompType* lduh, const pCompType* const lFhi, const tarch::la::Vector<Dimensions, double>& dx)
@@ -338,6 +363,7 @@ namespace exahype2::aderdg::generic {
 // #include "3d/SolutionAdjustment.cpph"
 #include "3d/SolutionUpdate.cpph"
 #include "3d/SpaceTimePredictorLinear.cpph"
+#include "3d/SpaceTimePredictorLinearFused.cpph"
 // #include "3d/SpaceTimePredictorNonlinear.cpph"
 // #include "3d/SurfaceIntegralLinear.cpph"
 // #include "3d/SurfaceIntegralNonlinear.cpph"
