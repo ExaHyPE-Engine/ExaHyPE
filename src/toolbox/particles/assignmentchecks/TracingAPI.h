@@ -9,6 +9,7 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
 #include "tarch/la/Vector.h"
+#include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
 
 
 namespace toolbox {
@@ -211,11 +212,10 @@ namespace toolbox {
 
         class Database {
           private:
-            static tarch::multicore::BooleanSemaphore  _semaphore;
+            tarch::multicore::MultiReadSingleWriteSemaphore  _semaphore;
 
             std::vector<MeshSweepData> _data;
-
-          public:
+         public:
             static constexpr int AnyTree = -1;
 
             Database();
@@ -233,12 +233,14 @@ namespace toolbox {
              * this one instead of one matching the precise arguments. See
              * ParticleIdentifier's discussion on map storage for further
              * details.
+             *
+             * Cannot be const as we have a semaphore to be thread-safe.
              */
             ParticleIdentifier createParticleIdentifier(
               const std::string&                            particleName,
               const tarch::la::Vector<Dimensions, double>&  particleX,
               bool                                          fitToExistingParticles = true
-            ) const;
+            );
 
             /**
              * Add a new snapshot for a new mesh sweep
@@ -249,7 +251,7 @@ namespace toolbox {
            * We enumerate the mesh sweeps. This routine returns the number of
            * the current one.
            */
-          int getCurrentMeshSweep() const;
+          int getCurrentMeshSweep();
 
           static constexpr int SearchWholeDatabase = 0;
           static constexpr int DoNotFollowParticleMovementsInDatabase = -1;
@@ -266,25 +268,31 @@ namespace toolbox {
            * We expect that identifier has been constructed through
            * createParticleIdentifier() to accommodate floating-point inaccuracies.
            *
+           * Cannot be const as we have a semaphore to be thread-safe.
+           *
            * @param spacetreeId Either a valid spacetree or AnyTree if you don't care
            */
           Event getEntry(
             const ParticleIdentifier&  identifier,
             int                        spacetreeId,
             int                        firstNRecentEntriesToSkip = SearchWholeDatabase
-          ) const;
+          );
 
           /**
            * Print history of one particle
+           *
+           * Cannot be const as we have a semaphore to be thread-safe.
            */
-          std::string particleHistory(const ParticleIdentifier& identifier) const;
+          std::string particleHistory(const ParticleIdentifier& identifier);
 
-          std::string lastMeshSweepSnapshot() const;
+          std::string lastMeshSweepSnapshot();
 
           /**
            * Count total number of entries for a particle
+           *
+           * Cannot be const as we have a semaphore to be thread-safe.
            */
-          int totalEntries(const ParticleIdentifier& identifier) const;
+          int totalEntries(const ParticleIdentifier& identifier);
 
           /**
            * Add a new event to the database
@@ -297,8 +305,10 @@ namespace toolbox {
 
           /**
            * Dump the whole database
+           *
+           * Cannot be const as we have a semaphore to be thread-safe.
            */
-          std::string toString() const;
+          std::string toString();
         };
       } // namespace internal
 
