@@ -2,4 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .GlobalFixedTimeStep import GlobalFixedTimeStep
 from .GlobalAdaptiveTimeStep import GlobalAdaptiveTimeStep
+
+from .GlobalFixedTimeStepWithEnclaveTasking import GlobalFixedTimeStepWithEnclaveTasking
 from .GlobalAdaptiveTimeStepWithEnclaveTasking import GlobalAdaptiveTimeStepWithEnclaveTasking

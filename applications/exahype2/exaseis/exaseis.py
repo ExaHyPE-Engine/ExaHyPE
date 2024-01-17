@@ -16,6 +16,7 @@ default_values = {
     "patch_size": 5,  # Dofs for FV
     "rk_order": 2,
     "dg_order": 3,  # Dofs for DG
+    "time_step_size": 0.001,  # For fixed time-stepping
     "end_time": 0.002,
     #"end_time": 3.0,
     "plot_interval": 0.1,
@@ -43,14 +44,15 @@ default_values = {
 # Define available solver types and their corresponding classes
 available_solver_types = {
     "FVRusanovGlobalFixed": exahype2.solvers.fv.rusanov.GlobalFixedTimeStep,
-    "FVRusanovGlobalFixedEnclave": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
     "FVRusanovGlobalAdaptive": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep,
+    "FVRusanovGlobalFixedEnclave": exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
     "FVRusanovGlobalAdaptiveEnclave": exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
     "RKDGRusanovGlobalFixed": exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep,
     "RKDGRusanovGlobalAdaptive": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep,
     "RKDGRusanovGlobalAdaptiveEnclave": exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
     "ADERDGRusanovGlobalFixed": exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStep,
     "ADERDGRusanovGlobalAdaptive": exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStep,
+    "ADERDGRusanovGlobalFixedEnclave": exahype2.solvers.aderdg.rusanov.GlobalFixedTimeStepWithEnclaveTasking,
     "ADERDGRusanovGlobalAdaptiveEnclave": exahype2.solvers.aderdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking,
 }
 
@@ -72,7 +74,7 @@ def parse_arguments():
         "-s",
         "--solver",
         choices=available_solver_types.keys(),
-        default="ADERDGRusanovGlobalAdaptiveEnclave",
+        default="ADERDGRusanovGlobalFixedEnclave",
         help="|".join(available_solver_types.keys()),
     )
     parser.add_argument(
@@ -309,9 +311,10 @@ def setup_solver(args):
     if "Fixed" in args.solver:
         solver_params.update(
             {
-                "normalised_time_step_size": solver_params["min_volume_h"]
-                / args.patch_size
-                * 0.5,
+                #"normalised_time_step_size": solver_params["min_volume_h"]
+                #/ args.patch_size
+                #* 0.5,
+                "time_step_size": default_values["time_step_size"]
             }
         )
     elif "Adaptive" in args.solver:
