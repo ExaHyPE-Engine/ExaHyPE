@@ -45,6 +45,12 @@ before you build the application:
 module load gsl
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+and include the installation in the CXX flags in configuration
+
+~~~~~~~~~~~~~~~~~~~~~~~
+CXXFLAGS="...... -Icosma/local/gsl/2.4/include ......"
+~~~~~~~~~~~~~~~~~~~~~~~
+
 ## SLURM script
 The default setup for this benchmark takes about 5 minutes to finish on 2 nodes on DINE,
 using the following job script.
