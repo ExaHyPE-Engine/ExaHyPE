@@ -11,11 +11,13 @@ import numpy as np
 # See comments in README.dox
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
+from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import (
     CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking,
 )
 
+from ComputeFirstDerivatives import ComputeFirstDerivativesFD4RK
 
 parser = argparse.ArgumentParser(
     description="ExaHyPE 2 - CCZ4-GaugeWave benchmarking script"
@@ -65,6 +67,22 @@ parser.add_argument(
     ],
     required=True,
     help="Pick solver type",
+)
+parser.add_argument(
+    "-enclave",
+    "--enclave",
+    dest="enclave",
+    action="store_true",
+    default=False,
+    help="switch on the enclave tasking solver",
+)
+parser.add_argument(
+    "-AS",
+    "--additional-step",
+    dest="AS_flag",
+    action="store_true",
+    default=False,
+    help="add the additional_step",
 )
 parser.add_argument(
     "-et",
@@ -140,15 +158,24 @@ if args.solver == "fv":
     )
 if "fd4-rk" in args.solver:
     order = int(args.solver[-1])
-    my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
-        name="CCZ4FD4RK" + str(order),
-        patch_size=9,
-        rk_order=order,
-        min_meshcell_h=args.cell_size / 3,
-        max_meshcell_h=args.cell_size / 3,
-        use_heap_storage=False,
-        pde_terms_without_state=True
-    )
+    if args.enclave==True:
+        my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
+            name="CCZ4FD4RK" + str(order) + "-enclave",
+            patch_size=9,
+            rk_order=order,
+            min_meshcell_h=args.cell_size / 3,
+            max_meshcell_h=args.cell_size / 3,
+            use_heap_storage=False,
+            pde_terms_without_state=True
+        )
+    else:
+        my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
+            name="CCZ4FD4RK" + str(order),
+            patch_size=9,
+            rk_order=order,
+            min_meshcell_h=args.cell_size / 3,
+            max_meshcell_h=args.cell_size / 3,
+        )
     my_solver.set_implementation(
         initial_conditions="""
     for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
@@ -241,6 +268,9 @@ project.set_global_simulation_parameters(
     8,  # plotter precision
 )
 
+probe_point = [-12,-12,0.0]
+project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
+
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 # project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
@@ -250,6 +280,27 @@ project.set_load_balancing(
 )
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
+
+if args.AS_flag==True:
+    additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
+                                                           add_user_defined_actions=False,
+                                                           )
+    project_patch_onto_faces  = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(my_solver)
+    project_patch_onto_faces.guards  = [ my_solver._store_cell_data_default_guard() for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
+
+    roll_over_projected_faces = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(my_solver, 
+                                                                                    my_solver._store_face_data_default_guard(),
+                                                                                    )
+
+    additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
+                                                                            is_enclave_solver = False,
+                                                                            ))
+    additional_mesh_traversal.add_action_set( project_patch_onto_faces )
+    additional_mesh_traversal.add_action_set( roll_over_projected_faces )
+      
+    project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
+    peano4_project.solversteps.add_step( additional_mesh_traversal )
+
 
 my_solver.add_makefile_parameters(
     peano4_project, "../../../../applications/exahype2/ccz4"

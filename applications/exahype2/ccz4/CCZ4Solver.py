@@ -852,7 +852,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
 ):
     """!
 
-    CCZ4 solver using fourth-order finite differences and global adaptive time stepping incl enclave tasking
+    CCZ4 solver using fourth-order finite differences and global adaptive time stepping without enclave tasking
 
     Consult CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking please.
 
@@ -885,7 +885,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
             min_meshcell_h=min_meshcell_h,
             max_meshcell_h=max_meshcell_h,
             time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
-            / 16.0,
+            ,
         )
 
         self._add_standard_includes()
