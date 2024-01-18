@@ -509,26 +509,24 @@ the boundary conditions of the Finite Volume solver. Those are the dark
 blue cells around the Finite Volume patches. With these coupling boundary 
 conditions and global Sommerfeld conditions for the FD4 scheme, both solvers
 advance in time by one time step. After that one, the Finite Volume scheme
-overwrites the FD4 scheme no points which are covered by both numerical 
-schemes. We restrict the FV solution into the FD4 solution via a trivial
-injection.
+overwrites the FD4 scheme in points which are covered by both numerical 
+schemes (restriction). 
 
 
 This coupling strategy follows @ref page_exahype_coupling "the default coupling schema" of
-ExaHyPE. Different to the generic coupling recipes there, we however let higher-order 
+ExaHyPE. Different to the generic coupling recipes there, we let the higher-order 
 solver cover the whole domain. As FV only will be used in a tiny region, this 
 overhead is acceptable. Furthermore, we do not use any fancy colouring to 
-decide which solver is active wher. We hard-code this information, as we know
-where our black hole is. Since we couple solely PDE terms, we get away with a
-volumetric coupling without any additional material or auxiliary parameters.
+decide which solver is active where. We hard-code this information, as we know
+where our black hole is. 
 
 
 Mathematically, the Finite Volume solver serves as a priori limiter to the
 FD4 solution. It is a priori, as we do not wait for the FD4 solution to 
 determine if we need Finite Volumes. We overwrite always. For the realisation,
 we try to keep as much coupling logic as possible within the FD4 scheme: 
-The limiter knows where to compute. Beyond that, all the remaining logic is 
-realised with the FD4 solver, as this solver knows what the data layout of 
+The limiter knows where to compute, but all the remaining logic is 
+realised with the FD4 solver, as this one knows what the data layout of 
 FD4 is. Furthermore, this separation of responsibilities allows us, in theory,
 to use the same limiter with RKDG as well.
 
@@ -639,6 +637,8 @@ to the constructor.
 
 ## The FD4 solver
 
+### FD4-FV coupling (projection) 
+
 To realise the coupling, we have to augment the FD4 solver by some additional 
 pre- and post-processing steps:
 
@@ -664,12 +664,13 @@ pre- and post-processing steps:
    provide access to the patch data plus its halo. However, plugging into this
    routine 
    makes assumptions on the evaluation order: We have to know that the FV code
-   has not started any calculation yet. We conclude that the 
-   coupling has to happen within either solver's _action_set_preprocess_solution
-   action set as a preamble of its actual time step. 
+   has not started any calculation yet. It is more convenient to let the 
+   coupling happen within either solver's _action_set_preprocess_solution
+   action set as a preamble of its actual time step. This way, it will definitely
+   be kicked off before we actually run into the timestepping.
 
 3. The preprocessing has to be of type exahype2.solvers.rkfd.actionsets.PreprocessReconstructedSolutionWithHalo
-   as we need the area around the FD4 patch to set interpolate into all the 
+   as we need the area around the FD4 patch to interpolate into all the 
    "edge" volumes of the Finite Volume patch. This PreprocessReconstructedSolutionWithHalo
    is itself a subclass of peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor and
    reconstructs the FD4 solver's halo (temporarily) into a field called oldQWithHalo
@@ -703,6 +704,8 @@ temporary volumetric step, but is a realisation which can be implemented
 with the on-board routines and the logic of it is rather clear.
 
 
+### FV-FD4 coupling (restriction)
+
 The coupling from the Finite Volume scheme to FD4 in contrast is a real
 volumetric coupling: We overwrite the FD4's self._action_set_postprocess_solution 
 with an instance of exahype2.solvers.rkfd.actionsets.PatchWisePostprocessSolution.
@@ -713,14 +716,30 @@ fact that postprocessing steps always plug into touchCellLastTime (cmp
 
 
 
-For the realisation, we employ the built-in routine toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(),
-and we call this routine for every cell which holds Finite Volume data, i.e. overlaps
+For the realisation, we employ the built-in routines. For example, we call
+toolbox::blockstructured::restrictCellIntoOverlappingCell_inject() for every cell which holds Finite Volume data, i.e. overlaps
 with the black hole. This is slightly different to @ref page_exahype_coupling "ExaHypE's generic coupling sketch", where
 I recommend to have at least one whole cell overlap between any two solvers:
 I do not only inject data from Finite Volume patches back which are completely
 surrounded by further FV patches.
 It seemed to me to be a waste of compute power to do this. 
 Rather make the black hole influence area smaller.
+
+
+We have played around with different restriction variants:
+
+- toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(): If we use
+  a plain injection, we get a reasonably stable coupling, but the solution 
+  starts to show a kink after a while where the FD4 domain meets the limiter
+  area. This effect can be mitigated by makind the FV domain larger, but this
+  leads to stronger numerical dissipation and therefore harms the solution.
+- toolbox::blockstructured::restrictCellIntoOverlappingCell_inject_and_average(): 
+  This variant accepts that FD4 delivers a reasonable numerical answer (albeit
+  likely unstable) and uses the FV solution to drag it into a different 
+  solution, i.e. to correct it, as we always take the average of both solvers
+  and continue to work with this one.
+- Finally, we can use a hybrid of the two worlds, where the very centre of the
+  domain is determined by FV only, but the area around it results from averaging.
 
 
 # Optimisation
