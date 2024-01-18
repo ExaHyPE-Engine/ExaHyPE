@@ -11,6 +11,7 @@ from .Solver                                              import Solver
 from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
 from multigrid.petsc.actionsets.InitCellDoFs              import InitCellDoFs
 from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
+from multigrid.petsc.actionsets.PlotExactSolution                   import PlotExactSolution
 from multigrid.petsc.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
 from multigrid.petsc.actionsets.ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod   import ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod 
 
@@ -689,8 +690,9 @@ the matrix is applied to
     assert( len( quadrature_points_in_unit_interval ) == len( gaussian_integration_points ) == len( gaussian_integration_weights ), "Something has gone wrong. These should all be same length for fixed polynomial degree" )
     
     self._cell_pde_data   = peano4.datamodel.DaStGen2( name )
-    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self.number_of_matrix_entries_per_cell) ) )
-    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self.number_of_matrix_entries_per_cell) ) )
+    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",    str(self.number_of_matrix_entries_per_cell) ) )
+    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self.number_of_matrix_entries_per_cell) ) )
+    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "exactSol", str(self.number_of_matrix_entries_per_cell) ) )
     
     pass
 
@@ -771,6 +773,7 @@ the matrix is applied to
 
   def add_to_map_solution_onto_mesh(self, observer):
     observer.add_action_set( ProjectPETScSolutionOnCellsBackOntoMesh(self) )
+    observer.add_action_set( PlotExactSolution(self) )
     pass
     
   def add_implementation_files_to_project(self, namespace, output):

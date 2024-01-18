@@ -16,7 +16,8 @@ void benchmarks::multigrid::petsc::poisson::DGPoisson::initNode(
   const tarch::la::Vector<Dimensions, double>&  h,
   
   double&                                       value,
-  double&                                       rhs
+  double&                                       rhs,
+  double&                                       exactSol
   
 ) {
   logTraceInWith4Arguments("initNode", x, h, value, rhs);

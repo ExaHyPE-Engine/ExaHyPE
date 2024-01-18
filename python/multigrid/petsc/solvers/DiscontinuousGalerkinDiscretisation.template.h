@@ -55,10 +55,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
       const tarch::la::Vector<Dimensions, double>&  h,
       {% if CELL_UNKNOWNS==1 %}
       double&                                       value,
-      double&                                       rhs
+      double&                                       rhs,
+      double&                                       exactSol
       {% else %}
       tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  value,
-      tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  rhs
+      tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  rhs,
+      tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  exactSol
       {% endif %}
     ) override;
 

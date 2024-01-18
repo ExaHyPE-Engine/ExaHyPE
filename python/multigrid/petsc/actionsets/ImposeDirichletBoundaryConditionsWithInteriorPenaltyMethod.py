@@ -66,12 +66,13 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
       logTraceInWith5Arguments("TFFT::dfore", faceNode, faceNormalAxis, marker.x(), x,repositories::{{SOLVER_INSTANCE}}.FaceUnknowns);
           
       // Look up the value: rhs is not relevant here, but I want to reuse the existing signatures 
-      double value, rhs;
+      double value, rhs, exact;
       repositories::{{SOLVER_INSTANCE}}.initNode(
         x,
         marker.h(),
         value,
-        rhs
+        rhs,
+        exact
       );
       
       for (int unknown = 0; unknown<repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; unknown++) {

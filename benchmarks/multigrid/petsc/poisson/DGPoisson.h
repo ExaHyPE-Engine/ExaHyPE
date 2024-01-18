@@ -50,7 +50,8 @@ class benchmarks::multigrid::petsc::poisson::DGPoisson: public benchmarks::multi
       const tarch::la::Vector<Dimensions, double>&  h,
       
       double&                                       value,
-      double&                                       rhs
+      double&                                       rhs,
+      double&                                       exactSol
       
     ) override;
     
