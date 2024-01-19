@@ -11,6 +11,27 @@
 namespace peano4 {
   namespace datamanagement {
     struct VertexMarker;
+
+    /**
+     * Reconstruct parent vertex position
+     *
+     * Whenever we run into a vertex event, this event is triggered from a
+     * cell's point of view. You can find out from the VertexMarker where
+     * within this cell the vertex is for which you got a vertex event.
+     * Likewisely, you can also reconstruct the spatial arrangement of
+     * this cell's parent cell. It is not a core vertex marker routine,
+     * which is frequently used, so we outsource it into a separate function
+     * of its own. At the moment, we are only aware of some debugging, tracing
+     * facilities which need this function.
+     *
+     * @param parentVertexPositionWithinParentCell follows Peano's
+     *   dimension-generic lexicographic enumeration. You can also pass in an
+     *   integer, which will automatically be packed into a bitset then.
+     */
+    tarch::la::Vector<Dimensions, double> reconstructXOfParentVertex(
+      const VertexMarker&             marker,
+      const std::bitset<Dimensions>&  parentVertexPositionWithinParentCell
+    );
   } // namespace datamanagement
 } // namespace peano4
 

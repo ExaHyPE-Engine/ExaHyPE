@@ -10,6 +10,22 @@ std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::Verte
 }
 
 
+tarch::la::Vector<Dimensions, double>  peano4::datamanagement::reconstructXOfParentVertex(
+  const VertexMarker&             marker,
+  const std::bitset<Dimensions>&  parentVertexPositionWithinParentCell
+) {
+  return marker.x()
+       - tarch::la::multiplyComponents(
+           tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+           marker.h()
+         )
+       + tarch::la::multiplyComponents(
+           tarch::la::Vector<Dimensions,double>( parentVertexPositionWithinParentCell ),
+           3.0*marker.h()
+         );
+}
+
+
 peano4::datamanagement::VertexMarker::VertexMarker(
   const peano4::grid::GridTraversalEvent&   event,
   int                                       select
