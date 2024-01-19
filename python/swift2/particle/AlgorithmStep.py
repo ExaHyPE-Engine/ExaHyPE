@@ -99,7 +99,7 @@ class AlgorithmStep(object):
         TOUCH_VERTEX_FIRST_TIME = 0
         CELL_KERNEL = 1
         TOUCH_VERTEX_LAST_TIME = 2
-        STAGE_COUNT = 3
+        EVENT_COUNT = 3
 
     @staticmethod
     def get_event_name(stage: PeanoEventUsedBySwift):
@@ -112,7 +112,7 @@ class AlgorithmStep(object):
             AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_FIRST_TIME: peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME,
             AlgorithmStep.PeanoEventUsedBySwift.CELL_KERNEL: "cellKernel",
             AlgorithmStep.PeanoEventUsedBySwift.TOUCH_VERTEX_LAST_TIME: peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME,
-            AlgorithmStep.PeanoEventUsedBySwift.STAGE_COUNT: "count",
+            AlgorithmStep.PeanoEventUsedBySwift.EVENT_COUNT: "count",
         }
         return Results[stage]
 

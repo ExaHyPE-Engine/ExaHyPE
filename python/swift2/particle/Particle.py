@@ -235,7 +235,7 @@ Particle properties:
         """
         steps = copy.deepcopy(steplist)
         nsteps = len(steps)
-        nevents = AlgorithmStep.PeanoEventUsedBySwift.STAGE_COUNT.value
+        nevents = AlgorithmStep.PeanoEventUsedBySwift.EVENT_COUNT.value
 
         # add enum to particle for each AlgorithmStep. This enum tracks in
         # which algorithmic step a particle currently is. See
