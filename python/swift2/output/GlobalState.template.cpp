@@ -119,10 +119,11 @@ void startInitialisationStep() {
 
 
 void startTimeStep() {
+  logTraceIn( "startTimeStep()" );
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
   {%- endfor %}
-  logTraceIn( "TimeStep()" );
+  logTraceOut( "startTimeStep()" );
 }
 
 

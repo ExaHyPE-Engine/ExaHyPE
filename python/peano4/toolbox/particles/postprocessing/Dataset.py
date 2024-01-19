@@ -34,6 +34,11 @@ def assert_ascending(data):
   
 
 class Dataset(object):
+  """!
+  
+  Dataset object corresponding to one VTU snapshot
+  
+  """  
   def __init__(self):
     self.valid                   = False
     self.number_of_data_columns_ = -1
