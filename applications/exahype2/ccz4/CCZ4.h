@@ -8,7 +8,7 @@
 //
 #pragma once
 
-#include "AbstractFiniteVolumeCCZ4.h"
+#include "AbstractCCZ4.h"
 #include "tarch/logging/Log.h"
 
 
@@ -21,18 +21,18 @@
 namespace applications {
   namespace exahype2 {
     namespace ccz4 {
-      class FiniteVolumeCCZ4;
+      class CCZ4;
     }
   }
 }
 
 
-class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ4 {
+class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
   private:
     static tarch::logging::Log   _log;
 
   public:
-    FiniteVolumeCCZ4();
+    CCZ4();
     
     /**
      * Refinement criterion

@@ -1,4 +1,4 @@
-#include "FiniteVolumeCCZ4.h"
+#include "CCZ4.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
 //#include "exahype2/CellAccess.h"
@@ -16,11 +16,11 @@
 TP::TwoPunctures* _tp = new TP::TwoPunctures();
 #endif
 
-tarch::logging::Log   applications::exahype2::ccz4::FiniteVolumeCCZ4::_log( "applications::exahype2::ccz4::FiniteVolumeCCZ4" );
+tarch::logging::Log   applications::exahype2::ccz4::CCZ4::_log( "applications::exahype2::ccz4::CCZ4" );
 
 #ifdef IncludeTwoPunctures
 //pre-process, solve the puncture equations
-void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
+void applications::exahype2::ccz4::CCZ4::prepare(TP::TwoPunctures* tp){
     //first we set the parameter. TODO:find a way to read parameter from python script
     //int swi=0;//0--single black hole,  2--BBH hoc, 2--BBH rotation, 3--GW150914
     //bbhtype=0 head on, 1-b=3, 2-b=2
@@ -111,7 +111,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* t
 }
 #endif
 
-applications::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
+applications::exahype2::ccz4::CCZ4::CCZ4() {
   if ( Scenario==0 || Scenario==1 ) {
     const char* name = "GaugeWave";//nothing to do here for now
     int length = strlen(name);
@@ -128,7 +128,7 @@ applications::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   }
 }
 
-void applications::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
+void applications::exahype2::ccz4::CCZ4::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -177,7 +177,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
 }
 
 
-void applications::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
+void applications::exahype2::ccz4::CCZ4::sourceTerm(
   const double * __restrict__                  Q, // Q[59+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -194,7 +194,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
  // for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
   //  S[i] = 0.0;
   //}
-  applications::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
+  applications::exahype2::ccz4::CCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
  /*
   if (CCZ4smoothing>0){// then we apply simple laplacian smoothing
     constexpr int NumberOfRefinementLayers = 3;
@@ -230,7 +230,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
 }
 
 
-void applications::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
+void applications::exahype2::ccz4::CCZ4::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[59+0]
   double * __restrict__                        Qoutside, // Qoutside[59+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -247,7 +247,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
 }
 
 
-double applications::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
+double applications::exahype2::ccz4::CCZ4::maxEigenvalue(
   const double * __restrict__ Q, // Q[59+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -260,7 +260,7 @@ double applications::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
 }
 
 
-void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
+void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
   const double * __restrict__ Q, // Q[59+0],
   const double * __restrict__             deltaQ, // [59+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -288,7 +288,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
+void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
   const double * __restrict__ Q, // Q[59+0],
   const double * __restrict__             deltaQ, // [59+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -312,13 +312,13 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   //  BgradQ[i] = 0.0;
   //}
   ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
-   //applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ);
+   //applications::exahype2::ccz4::CCZ4::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ);
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
 #endif
 
-::exahype2::RefinementCommand applications::exahype2::ccz4::FiniteVolumeCCZ4::refinementCriterion(
+::exahype2::RefinementCommand applications::exahype2::ccz4::CCZ4::refinementCriterion(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>& volumeCentre,
   const tarch::la::Vector<Dimensions,double>& volumeH,
