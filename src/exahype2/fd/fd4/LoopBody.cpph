@@ -378,7 +378,7 @@ void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
   if (order==2){
   //gradcoef = 1.0 / (2.0 * cellsize);
   gradcoef = 1.0 / ( cellsize );
-    if (QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, 17+normal)]>0) {// on the right side of the center
+    if (QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, 17+normal)]<0) {// on the left side of the center
       QIn[QInEnumerator(
         patchIndex, centralVolume, 23 + normal
       )] = - gradcoef * QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, 16)]
@@ -413,9 +413,7 @@ void exahype2::fd::fd4::internal::computeAuxiliaryVariables_LoopBody(
                + 0.5 * gradcoef * QIn[QInEnumerator(patchIndex, centralVolume, k)];
         }
       }
-    }
-
-    if (QIn[QInEnumerator(patchIndex, leftAdjacentVolume1, 17+normal)]<0) {// on the left side of the center
+    } else {// on the left side of the center
       QIn[QInEnumerator(
         patchIndex, centralVolume, 23 + normal
       )] = - gradcoef * QIn[QInEnumerator(patchIndex, centralVolume, 16)]
