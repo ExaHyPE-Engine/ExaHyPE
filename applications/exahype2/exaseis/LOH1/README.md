@@ -62,7 +62,6 @@ If these requirements are met, the solver will automatically fuse patches and pu
 
 If your mesh is too small, the GPU will likely be never used as you do have not enough patches that can be fused into one meta task. For this, you can adjust (reduce) the number of fused tasks (or patches) in the configuration of ExaSeis. The same holds for very large meshes, here you might want to increase the number of fused patches. You need to find a tradeoff.
 
-## Results
 ![](LOH1Initial.png)
 
 <video controls width="640" height="360">
@@ -80,16 +79,22 @@ If your mesh is too small, the GPU will likely be never used as you do have not 
 ## Running on Leonardo
 A job script for Leonardo can be found in this application's directory.
 
-### Scaling Results
+## Scaling Results
 
 ```shell
 python3 exaseis.py -s ADERDGRusanovGlobalAdaptiveEnclave --stateless --min-levels 4 --amr-levels 0 --dg-order 6 -f 5000
 ```
 
-![](plot_ADERDG_CPUs_Leonardo_1.png)
+![](scaling-plot_GPUs_Leonardo_Order_5.png)
 
-![](plot_ADERDG_CPUs_Leonardo_2.png)
+![](scaling-plot_GPUs_Leonardo_Order_6.png)
 
-![](plot_ADERDG_CPUs_Leonardo_3.png)
+![](scaling-plot_GPUs_Leonardo_Order_7.png)
+
+![](scaling-plot_Leonardo_1_GPU_per_Node_Order_5.png)
+
+![](scaling-plot_Leonardo_1_GPU_per_Node_Order_6.png)
+
+![](scaling-plot_Leonardo_1_GPU_per_Node_Order_7.png)
 
 ## Score-P
