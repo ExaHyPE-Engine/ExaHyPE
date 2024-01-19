@@ -4,17 +4,17 @@
 
 
 This page describes how you introduce a new solver. New solver here means that
-you introduce a new particle species - likely with some bespoke numerics, 
-runtime behaviour or physics. Therefore, introducing a new solver comes along 
+you introduce a new particle species - likely with some bespoke numerics,
+runtime behaviour or physics. Therefore, introducing a new solver comes along
 in three flavours:
 
 1. You might arrange existing Swift kernels into a new particle type;
 2. You might introduce totally new physics;
-3. You might tune a certain numerical particle species to yield better 
+3. You might tune a certain numerical particle species to yield better
    performance.
 
-Actual performance optimisation is discussed on its @ref page_swift_performance_optimisation "dedicated page". 
-This page here describes how you enable the optimisation techniques when you 
+Actual performance optimisation is discussed on its @ref page_swift_performance_optimisation "dedicated page".
+This page here describes how you enable the optimisation techniques when you
 introduce your own solvers.
 
 
@@ -120,9 +120,9 @@ As an example, we discuss the SPH density loop:
 
 
 - The algorithmic step has a unique name.
-- `dependencies` can distinguish between two options: `NEIGHBOURS` and `SELF`. 
-  These refer to the two type of operations that are done in the SPH context: 
-  either the computation depends on the particle itself or it requires 
+- `dependencies` can distinguish between two options: `NEIGHBOURS` and `SELF`.
+  These refer to the two type of operations that are done in the SPH context:
+  either the computation depends on the particle itself or it requires
   contributions from neighbours.
 - `effect` has different options depending on the output type of the
   calculation, e.g. `ALTER_LOCAL_STATE` means that only the current particle is
@@ -134,22 +134,22 @@ As an example, we discuss the SPH density loop:
   exclusively on the `localParticles` set of the PIDT scheme when the particle
   is first `touched' during the mesh traversal.
 - `touch_vertex_last_time_kernel` analogous to the previous one.
-- `includes` allows us to ensure that the kernels that we invoke are 
+- `includes` allows us to ensure that the kernels that we invoke are
   well-known.
-- You can inform Swift about dependency invariants such as 
+- You can inform Swift about dependency invariants such as
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
   cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   In non-release builds, these will be checked at runtime.
-  
+
 
 The full life cycle is just a list of such an algorithmic steps.
-A very simple case of such a class can be found in 
+A very simple case of such a class can be found in
 swift2.particle.ExplicitEulerDynamicSearchRadius. Here, the two key routines
-simply create a new sequence of swift2.particle.AlgorithmStep in the two 
+simply create a new sequence of swift2.particle.AlgorithmStep in the two
 core routines. You might want to study swift2.particle.SPHLeapfrogFixedSearchRadius,
-which is more sophisticated. It first creates a dictionary of elementary steps and 
+which is more sophisticated. It first creates a dictionary of elementary steps and
 lets algorithm_steps() and initialisation_steps() then "assemble" the particle
 flow from this dictionary.
 
@@ -247,80 +247,80 @@ conflict. It is a simple critical section.
 
 #### Reruns of steps
 
-If you want to specify an algorithm step that is maybe rerun (as you alter the 
+If you want to specify an algorithm step that is maybe rerun (as you alter the
 search radius, e.g., or implement an iterative scheme), you can trigger such a
 rerun through the species. The idea is as follows:
 
 1. You plug into the step's preparation, and you invoke clearRerunPreviousGridSweepFlag()
    on the species.
-2. At any point where you decide to rerun throughout the step, i.e. in any 
+2. At any point where you decide to rerun throughout the step, i.e. in any
    event, you can grab the particle's species and invoke setRerunPreviousGridSweep().
-   
+
 The clss swift2::ParticleSpecies provides further details. However, the user is
-usually only handling those to core operations. All global reductions, i.e. 
-synchronisation of ranks, and the actual reruns are then championed by the 
+usually only handling those to core operations. All global reductions, i.e.
+synchronisation of ranks, and the actual reruns are then championed by the
 Swift/Peano framework.
 
 
 #### Iterators
 
-Swift phrases its physics in particle-to-particle interactions (see remarks 
-below). You map these onto sets of particles via functions such as 
-swift2::forAllParticles(). These functions are written down as templates. 
+Swift phrases its physics in particle-to-particle interactions (see remarks
+below). You map these onto sets of particles via functions such as
+swift2::forAllParticles(). These functions are written down as templates.
 We refer to them as iterators.
 
 Most particle kernels or particle-particle kernels are templates, too. The
-combination/nesting of two templates becomes tricky. While sophisticated 
-template meta programming can resolve this, it makes sense to specialise 
+combination/nesting of two templates becomes tricky. While sophisticated
+template meta programming can resolve this, it makes sense to specialise
 the kernels explicitly. We do so through the format() call above.
 
 
 
 # New solver kernels (physics)
 
-Swift's core philosophy is that users should take care of only three things 
+Swift's core philosophy is that users should take care of only three things
 (most of the time):
 
 - Specify initial and boundary conditions;
 - Model the lifecycle of the individual particle species;
 - Specify the physics through particle-particle (1:1) compute kernels.
 
-In line with this philosophy, new physics are primarily introduced by adding 
-new particle-particle interaction routines: They take a local particle (to me 
-modified) and an active particle (acting on the local one) and upate the 
+In line with this philosophy, new physics are primarily introduced by adding
+new particle-particle interaction routines: They take a local particle (to be
+modified) and an active particle (acting on the local one) and upate the
 former. This is a binary compute kernel. We also have unary compute kernels
 which only take one single particle and update it. Our goal is to come up
-with an SPH formalism, where physical aspects are decoupled from data 
+with an SPH formalism, where physical aspects are decoupled from data
 management, HPC, orchestration, ... challenges where possible.
 
 
-To make this work, all particle-update kernels and particle-particle kernels 
+To make this work, all particle-update kernels and particle-particle kernels
 have to commit to a few basic conventions:
 
-1. They accept three arguments: The local particle, an active particle, and a 
+1. They accept three arguments: The local particle, an active particle, and a
    vertex or cell marker. The second argument is not required for an unary
    kernel.
 2. They internally check that the two particles are not the same. If so, they
-   do not alter the particle. That is, self-action is avoided within the 
+   do not alter the particle. That is, self-action is avoided within the
    compute kernel itself. This item obviously is irrelevant for unary kernels.
 3. The kernel internally checks if a particle has to be updated. For a vertex
-   kernel (unary), it should check that the particle has not been moved 
+   kernel (unary), it should check that the particle has not been moved
    meanwhile and hence is updated twice. For a cell (binary) kernel, it should
-   check that the particle resides within the cell of interest. For both 
+   check that the particle resides within the cell of interest. For both
    checks, Swift provides the generic check routines localParticleCanBeUpdatedInVertexKernel()
    and localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle() which usually serve the needs.
 4. Kernels can be either void or return a value. However, any assumption that
-   some data is to be (globally) reduced has to be documented explicitly, and 
+   some data is to be (globally) reduced has to be documented explicitly, and
    it will become the responsibility of the user to care for this reduction.
-   Alternatively, kernels can obviously reduce internally into their species, 
-   e.g.    
+   Alternatively, kernels can obviously reduce internally into their species,
+   e.g.
 
 Most kernels are templates parameterised over the particle type. However, there
-might be cases where you have bespoke kernels that apply only to one single 
+might be cases where you have bespoke kernels that apply only to one single
 species. The punchline to take away is that it is the kernel's responsibility
 to ensure that any particle update is rightfully performed.
 
-To make both the tuning and the validation of the kernel easier, it is very 
+To make both the tuning and the validation of the kernel easier, it is very
 important that the kernel's documentation explicitly enlists its constraints
 and also the checks used internally. Such information can later on be used
 within the algorithm steps (see remark above on invariants) and performance
@@ -332,12 +332,12 @@ engineers (see remarks below).
 
 Tuning a solver can mean various things. First, users can tune
 their code by picking an optimising @ref swift_graph_compiler "graph compiler".
-Sophisticated graph compilers improve the memory reusage, reduce memory 
+Sophisticated graph compilers improve the memory reusage, reduce memory
 movements, and improve the scalability.
 
 
-Second, users can switch the iteration scheme, i.e. how they run through 
-the sets of particles associated with a cell or vertex. 
+Second, users can switch the iteration scheme, i.e. how they run through
+the sets of particles associated with a cell or vertex.
 Both topics are subject to
 a longer discussion at @ref page_swift_performance_optimisation.
 
@@ -348,7 +348,7 @@ guided by compiler feedback. We have @ref swift_runtime_analysis "collected some
 how to extract the relevant knowledge from the compiler.
 
 
-### Step 4.1: Making your kernels vectoriser friendly
+### Step 1: Making your kernels vectoriser friendly
 
 While vectorising any non-trivial kernel is as much art as it is engineering, there are common steps most kernels can benefit from.
 
@@ -361,10 +361,10 @@ We've started to collect a list of todos and no-goes for the vectorisation
 below. You might want to weak this in one way or the other and it will be
 incomplete. But it is a reasonable starting point:
 
-- You cannot collapse the two for loops that invoke the force kernel. That 
-  would lead to a scattered iteration space in memory and hence make any 
+- You cannot collapse the two for loops that invoke the force kernel. That
+  would lead to a scattered iteration space in memory and hence make any
   vectorisation impossible. In general, it makes sense to try to have only
-  one loop and/or to vectorise over the innermost loop. 
+  one loop and/or to vectorise over the innermost loop.
 - The compiler has to be able to inline. According to https://clang.llvm.org/docs/AttributeReference.html#always-inline-force-inline
   this is something one should be able to control via the annotation
 
@@ -392,15 +392,15 @@ incomplete. But it is a reasonable starting point:
   an integer. The C++ standard https://en.cppreference.com/w/cpp/numeric/math/pow
   is not clear if there is still a specialised version of pow for
   integers. However, all seems to vectorise nicely even if we use
-  the power with the Intel 2023.2 compiler. 
-  
-  Along the same lines, we sometimes encouter issues with the max and 
-  min function. While replacing it with a manual case distinction 
+  the power with the Intel 2023.2 compiler.
 
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
+  Along the same lines, we sometimes encouter issues with the max and
+  min function. While replacing it with a manual case distinction
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   auto value = newValue > value : newValue : value;
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
-  
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
   might
   help for some compilers, it is usually a bad idea and leads to error
   reports due to dependencies. We found it more convenient to work with
@@ -424,14 +424,14 @@ incomplete. But it is a reasonable starting point:
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   vectorisation seems to work.
-- Besides inlining, a good approach is to move as many function calls and/or 
+- Besides inlining, a good approach is to move as many function calls and/or
   data accesses outside the loop as possible. Specifically:
-  - All reads from the local particle (which is to be updated) should be done 
-    before the loop. Store the read data as local variables, i.e. manually 
+  - All reads from the local particle (which is to be updated) should be done
+    before the loop. Store the read data as local variables, i.e. manually
     extract parameters from their underlying struct.
-  - Inside the loop, all reads/writes that touch the local particle should be 
+  - Inside the loop, all reads/writes that touch the local particle should be
     substituted with the newly created local variables.
-  - All writes to the local particle should be done after the loop by loading 
+  - All writes to the local particle should be done after the loop by loading
     data from the local variables.
   If you don't follow these recipes, you typically get messages similar to
   ~~~~~~~~~~~~~~~~~~~
@@ -441,8 +441,8 @@ incomplete. But it is a reasonable starting point:
 
 #### Validate outcome
 
-For fully vectorised kernels, the reported width will always match the machine 
-width (4 for AVX2 and 8 for AVX512 capable machines and double precision 
+For fully vectorised kernels, the reported width will always match the machine
+width (4 for AVX2 and 8 for AVX512 capable machines and double precision
 kernels). Sometimes, the compiler decides against vectorisation:
 
   ~~~~~~~~~~~~~~~~~~~
@@ -458,41 +458,41 @@ your compiler handbook. Again, it might be inconvenient to do this for the whole
 code. Instead, you might want to do it only for one object file. Follow the same
 pattern as introduced above for the optimisation report.
 
-Unfortunately, Swift/Peano has currently no feature to pick compiler arguments 
-manually. Worse, the Python API overwrite the Makefile. It might make sense to 
-design a proper makefile manually and then to disable the overwriting in the 
-Peano 4 project that is produced by Swift's Python API. Consult peano4.Project 
+Unfortunately, Swift/Peano has currently no feature to pick compiler arguments
+manually. Worse, the Python API overwrite the Makefile. It might make sense to
+design a proper makefile manually and then to disable the overwriting in the
+Peano 4 project that is produced by Swift's Python API. Consult peano4.Project
 for details (see its attribute makefile and the docu of the underlying class
 peano4.output.Makefile).
 
 We ran sometimes into issues when we studied the success of our vectorisation
-"only" via performance analysis tools such as Advisor or MAQAO. The tools 
-showed that we use vectorisation. Still, the code remained slow. In many of 
-these cases, the compiler failed to vectorise over multiple particles but 
+"only" via performance analysis tools such as Advisor or MAQAO. The tools
+showed that we use vectorisation. Still, the code remained slow. In many of
+these cases, the compiler failed to vectorise over multiple particles but
 was successful in vectorising some subcalculations per particle. The resulting
 code then contained AVX instructions, and the tool reported "successfully vectorised"
-which is not what we wanted. It is important to study the actual compiler 
+which is not what we wanted. It is important to study the actual compiler
 feedback.
 
 
 
-### Step 4.2: Selecting carefully
+### Step 2: Selecting carefully
 
 You switch from normal to any vectorised kernels within the Python interface
-by replacing the cell or vertex kernels. Some care is required for one of 
+by replacing the cell or vertex kernels. Some care is required for one of
 them:
 
 - cell_kernel. You may assume that all data are always properly aligned
-  in memory when your solver's kernels are invoked. 
+  in memory when your solver's kernels are invoked.
 - touch_vertex_first_time_kernel. Same story. By the time the user's touch
   first kernels are actually called, all the data is in the right place.
 - touch_vertex_last_time_kernel. You have to be a little bit careful here.
   In principle, the data of the vertex should be fine. However, a finer
   vertex might have decided to lift particles from its place one level up
   and to place them with the parent. This triggers a scatter on the coarser
-  vertex, and its data is not contiguously stored anymore. Therefore, it 
+  vertex, and its data is not contiguously stored anymore. Therefore, it
   makes sense to insert an additional case distinction:
- 
+
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
           touch_vertex_last_time_kernel_for_drift = """
               if (numberOfAssignedParticles>0) {
@@ -506,7 +506,7 @@ them:
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-Once complete, 
+Once complete,
 
 
 ## Optimising kernels

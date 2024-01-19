@@ -14,13 +14,13 @@ class UpdateParallelState(ActionSet):
 
     Update the parallel state of particles and keep stats of them
 
-    Particles within a parallel code hold a boolean flags ParallelState.
-    peano4.toolbox.Particle. It is this action set's responsibility to maintain
+    Particles within a parallel code hold a boolean flag ParallelState.
+    It is this action set's responsibility to maintain
     this property. Users' codes may use the ParallelState, but as read-only
     only.
 
-    We have two options per particle (held within ParallelState): local and virtual. In our data model,
-    particles are either local or virtual throughout
+    We have two options per particle (held within ParallelState): local and virtual.
+    In our data model, particles are either local or virtual throughout
     the mesh traversal, but they might change their position and
     consequently alter their state. Virtual particles can fly in through
     the boundary, while particles can leave the local domain (and hence become
@@ -136,14 +136,14 @@ class UpdateParallelState(ActionSet):
         """
 for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   const bool particleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
-  assertion2( 
-    not particleWillBeLocal 
+  assertion2(
+    not particleWillBeLocal
     or
     p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
     p->toString(),
     marker.toString()
   );
-  // Has just left the domain. So we set it to virtual now. Next iteration, 
+  // Has just left the domain. So we set it to virtual now. Next iteration,
   // the neighbour who has received this particle due to the movement will
   // send us an update, i.e. after this iteration we can throw it away.
   if (not particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local ) {
@@ -214,7 +214,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
-#include "toolbox/particles/assignmentchecks/TracingAPI.h"        
+#include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"

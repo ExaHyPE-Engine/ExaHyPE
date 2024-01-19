@@ -576,7 +576,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="Kick2",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            #            touch_vertex_first_time_kernel = iterate_over_particles_assigned_to_vertex.format("::swift2::timestepping::resetMovedParticleMarker"),
             touch_vertex_last_time_kernel=(
                 iterate_over_particles_assigned_to_vertex.format(
                     "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"

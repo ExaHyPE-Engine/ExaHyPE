@@ -29,56 +29,6 @@ void swift2::kernels::legacy::leapfrog_drift_global_time_step_size(
 }
 
 
-/*
-template <typename ParticleContainer>
-void swift2::kernels::legacy::computeLeapfrogDriftWithGlobalTimeStepSize(
-  const ParticleContainer& particles, int numberOfParticles
-) {
-
-  const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                                .getMinTimeStepSize();
-
-  const auto newState = std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved;
-
-  typename ParticleContainer::value_type firstParticle = *particles.begin();
-
-  assertion1(particles.isGathered(), particles.toString());
-  assertionEquals1(particles.size(), numberOfParticles, particles.toString());
-  int currentParticle = 0;
-  for (auto* particle : particles) {
-    assertion1(firstParticle + currentParticle == particle, particles.toString());
-    currentParticle++;
-  }
-
-  for (auto i = 0; i < numberOfParticles; i++) {
-    auto* particle = firstParticle + i;
-
-    auto mask = (double)(swift2::kernels::localParticleCanBeMoved(particle) & !particle->getIsBoundaryParticle());
-
-    particle->setX(particle->getX() + mask * timeStepSize * particle->getV_full());
-    particle->setMoveState(newState);
-  }
-}
-*/
-
-
-/*
-template <typename ParticleContainer>
-void swift2::kernels::legacy::computeLeapfrogKickWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
-  const double timeStepSizeKick = 0.5
-                                  * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                                      .getMinTimeStepSize();
-  for (auto* particle : localParticles) {
-    if (swift2::kernels::localParticleCanBeUpdatedInVertexKernel(particle) and not particle->getIsBoundaryParticle()) {
-
-      // Kick the particle
-      particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
-    }
-  }
-}
-*/
-
-
 template <typename Particle>
 void swift2::kernels::legacy::leapfrog_kick_global_time_step_size(
   Particle*  particle
@@ -88,38 +38,6 @@ void swift2::kernels::legacy::leapfrog_kick_global_time_step_size(
   /* Kick the particle */
   particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
 }
-
-
-/*
- *
- * Debugging:
- * Fake Drift step in which we move a particle into the midpoint of a cell.
- * Does that particle disappear from the simulation?
- *
- */
-
-/*
-template <typename ParticleContainer>
-void swift2::kernels::legacy::moveParticleIntoCriticalLine(const ParticleContainer& localParticles) {
-  double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                          .getMinTimeStepSize();
-  for (auto* particle : localParticles) {
-    if (swift2::kernels::localParticleCanBeMoved(particle) and not particle->getIsBoundaryParticle()) {
-
-
-       * Disappearing particle test.
-       * Just move the position to the central axis of a cell and watch it
-       * disappear.
-
-      tarch::la::Vector<Dimensions, double> xCritical = {1.0 / 6.0, 0.5};
-      particle->setX(xCritical);
-
-       Flag this particle as Moved
-      particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
-    }
-  }
-}
-*/
 
 
 template <typename Particle>

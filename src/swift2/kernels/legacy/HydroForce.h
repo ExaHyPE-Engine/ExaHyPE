@@ -42,8 +42,7 @@ namespace swift2 {
        *
        * Cosmological terms are also added/multiplied here.
        *
-       * @param p The particle to act upon
-       * @param cosmo The current cosmological model.
+       * @param localParticle The particle to act upon
        */
       template <typename Particle>
       void hydro_end_force(Particle* localParticle);
@@ -62,6 +61,9 @@ namespace swift2 {
        * ## Vectorisation
        *
        * This operation struggles to vectorise, as we have the statement
+       *
+       * @todo: boundary particle documentation needs to be removed along with
+       * that sort of boundary particle treatment
        *
        * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and not localParticle->getIsBoundaryParticle())
@@ -117,7 +119,7 @@ namespace swift2 {
        *
        * ## Specific differences to other vector kernel
        *
-       * As we know a priori that this function is only invoked on distinct junks
+       * As we know a priori that this function is only invoked on distinct chunks
        * of particles, we know that we'll compare the same particle against each
        * other. Consequently, we may assume that the radius is never 0. This
        * additional check can be omitted.

@@ -590,7 +590,7 @@ def map_onto_separate_mesh_traversals_constructing_task_graph(
 ):
     """!
 
-    Simpest graph compiler constructing a task tree
+    Simplest graph compiler constructing a task tree
 
     This graph compiler is very very similar to Sequential.map_onto_separate_mesh_traversals().
     It runs over the tree and generates one task per touchVertexFirstTime(),

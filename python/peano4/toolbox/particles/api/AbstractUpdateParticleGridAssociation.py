@@ -83,7 +83,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 
     - The very moment you alter a particle's position, you cannot be sure that
       it is still associated with the nearest vertex. Consequently, neighbourhood
-      searchersmight yield invalid results.
+      searchers might yield invalid results.
     - In the grid sweep after the position change, the particle will be
       associated with the correct vertex (unless you change its position once again
       obviously).
@@ -132,9 +132,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     are not persistent in Peano.
 
     This would yield a lot of memory movements and also potentially destroy
-    any well-aligned and ordered memory arrangement which is poisoneous for
+    any well-aligned and ordered memory arrangement which is poisonous for
     vectorisation. Therefore, we leave particles on coarser levels. The green
-    particles is no dropped.
+    particles is not dropped.
 
     Let the green particle affect the blue one. As a consequence of the
     constraint above, the green particle has to be updated with contributions
@@ -243,9 +243,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
           _numberOfDrops++;
           (*p)->setCellH(marker.h());
           // @todo introduce new function in vertex marker
-          toolbox::particles::assignmentchecks::removeParticleFromVertex( 
-            "{{PARTICLE}}", 
-            (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, 
+          toolbox::particles::assignmentchecks::removeParticleFromVertex(
+            "{{PARTICLE}}",
+            (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
             marker.x()
             -
             tarch::la::multiplyComponents(
@@ -257,7 +257,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
               tarch::la::Vector<Dimensions,double>( std::bitset<Dimensions>(i) ),
               3.0*marker.h()
             ),
-            marker.h()*3.0, _spacetreeId 
+            marker.h()*3.0, _spacetreeId
           );
           toolbox::particles::assignmentchecks::assignParticleToVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId );
           assertion3(
@@ -285,17 +285,17 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _Template_Sieve = jinja2.Template(
         """
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices( vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort ) ) {
-    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( 
-      marker, 
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
+      marker,
       vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort,
       _spacetreeId
     );
 
     for (auto& newParticle: sievedParticles) {
       if ( ::toolbox::particles::particleIsDuplicate(
-        newParticle, 
-        fineGridVertex{{PARTICLES_CONTAINER}}.begin(), 
-        fineGridVertex{{PARTICLES_CONTAINER}}.end() 
+        newParticle,
+        fineGridVertex{{PARTICLES_CONTAINER}}.begin(),
+        fineGridVertex{{PARTICLES_CONTAINER}}.end()
       ) != fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
         _numberOfSkippedDropsFromSieveSet++;
         delete newParticle;
@@ -350,18 +350,18 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     }
     for (auto* p: fineGridVertex{{PARTICLES_CONTAINER}}) {
       toolbox::particles::assignmentchecks::removeParticleFromVertex( "{{PARTICLE}}", p->getX(), p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId );
-      toolbox::particles::assignmentchecks::assignParticleToVertex( 
+      toolbox::particles::assignmentchecks::assignParticleToVertex(
         "{{PARTICLE}}",
-        p->getX(), 
-        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, 
-        marker.x() 
-        - 
-        tarch::la::multiplyComponents( 
+        p->getX(),
+        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
+        marker.x()
+        -
+        tarch::la::multiplyComponents(
           tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
           marker.h()
         )
         +
-        tarch::la::multiplyComponents( 
+        tarch::la::multiplyComponents(
           tarch::la::Vector<Dimensions,double>(target),
           3.0*marker.h()
         ),
@@ -392,7 +392,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
             """
 #include "tarch/multicore/Lock.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
-#include "toolbox/particles/assignmentchecks/TracingAPI.h"        
+#include "toolbox/particles/assignmentchecks/TracingAPI.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 """
