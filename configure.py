@@ -306,7 +306,12 @@ if args.cmake:
         }
 
     # Create a string to display environment variables like in a terminal
-    env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler --thread=omp:ompt\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+    if args.scorep:
+        # --thread=omp:ompt
+        env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+    else:
+        env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+
     print(f"Running: {env_vars_str} cmake .. {' '.join(configure_args)}")
 
     # Update the current environment with the specified variables
@@ -364,7 +369,12 @@ else:
         env_vars["NVCC"] = "{}/bin/nvcc {}".format(args.with_cuda, nvccflags)
 
     # Create a string to display environment variables like in a terminal
-    env_vars_str = "SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+    if args.scorep:
+        # --thread=omp:ompt
+        env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+    else:
+        env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+
     print(f"Running: {env_vars_str} ./configure {' '.join(configure_args)}")
 
     # Update the current environment with the specified variables
