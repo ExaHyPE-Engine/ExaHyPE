@@ -23,113 +23,6 @@ namespace toolbox {
  * they all share common stats, operations, ... This is covered by this class.
  *
  *
- * ## Statistics output
- *
- * The particle species delivers a couple of generic stats which are explained
- * below
- *
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   subdomain-local sorting statistics: #lifts=0, #drops=0,
- * #sieves=0, #reassignments=0
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *
- * Lift means that a particle was associated to a vertex but left the area
- * around this vertex. The resorting algorithm was not able or not configured
- * to assign it directly to its new owner vertex on the correct level and
- * therefore has pushed the particle to the next coarser level. A particle
- * can be pushed multiple times (if it is very fast and jumps through cells).
- * In this case - which is unlikely in many physical systems - it contributes
- * to the counter multiple times.
- *
- * Drop means that a particle was found on a certain level, but its search
- * radius was so small that the sorting decided to move it to the next finer
- * level.
- *
- * Whenever a tree decides that it cannot sort a particle locally, it removes
- * the particle from its local data structure and puts it into a global sieve
- * list. This sieve list is aggregated between all ranks and shared. In the
- * subsequent iteration, all the trees will sieve the particles into their
- * mesh if they can accommodate it. The sieve counter tells you how often this
- * was the case.
- *
- * Reassignments means that a particle has left the catchment area of its
- * vertex, but the code successfully reassigned it to a neighbouring vertex
- * on the same resolution level.
- *
- *
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   global sorting statistics:
- * #lifts(assignments)-into-sieve-set=0
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *
- * This is the counterpart of of the sieve operation. Note that a particle
- * might be lifted into the sieve set once, but then multiple ranks/threads
- * might sieve it into their domain. This happens if the object ends up
- * exactly at the interface of two subdomains and hence is held redundantly.
- *
- *
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   particle state updates: #remaining=121, #incoming=0,
- * #leaving=0, #expired-and-dropped-halos=51
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *
- * After each step where particles move, we might want to update their state.
- * These statistics summarise how many particles have stayed within their
- * local subdomain, i.e. within their tree, and how many had been merged into
- * the local domain and then we found out that they actually entered the domain.
- * Those are incoming particles. The other way round, we also track how many
- * particles have left our local domain.
- *
- * Finally, the statistics keep track of halo (virtual) particles. After each
- * step, we exchange a halo layer of particles. Next time we look at these
- * virtual particles, they might be totally outdated. Therefore, we throw them
- * away. They are expired.
- *
- *
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   boundary merge statistics: #added new virtual particles
- * (new halo particles)=51, #replaced virtual particles (halo particle updates)=0, #dropped virtual particles (redundant
- * halo information)=0
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *
- * When we merge data sent in from another tree, we ever only consider data
- * that is marked as local on the other tree. We are only interested in updated
- * virtual data. The incoming data might be a new virtual particle, or we
- * might already know about this one, so we also don't use it. The latter
- * thing happens if a particle sits at the boundary of two partitions, i.e.
- * both update it concurrently. Now they might send this info to a third
- * partition which now has two copies of the halo data but should really only
- * host one.
- *
- * Usually, virtual copies on a rank expire after one step, are subsequently
- * dropped and hence not sent out. However, if a code decides not to drop a
- * particle, for whatever reason, then we still don't work it in here. We
- * however make a note in. This should usually not happen, i.e. the last
- * counter should be zero.
- *
- * Particles can move in touchVertexLastTime() and hence be marked as local
- * even though they have just left their domain. They will enter here as
- * virtual particles, but subsequently be reset to local by toolbox.particles.UpdateParallelState().
- * In this context, it is important to reiterate that this local/virtual
- * property really never should be used for some programming logic. Particle
- * codes should solely use the particles' position in space, i.e. are they
- * inside a cell, to make a decision if to update them or not.
- *
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- * toolbox::particles::ParticleSet::reduceAndPrintStatistics()   replica deletion statistics: #eliminated local spatial
- * duplicates=0, #eliminated virtual spatial duplicates=0
- * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *
- * Some codes explicitly check for redundant particles in teh mesh and remove
- * them. The last counters keep track of such redundant data. It is usually
- * suspicious if you have to many redundant particles. Some data might be
- * inconsistent. We have however seen redundant data when two subtrees for
- * example hold a local particle which sits exactly on the boundary between
- * their domains. Both then update the particle and make it fly into a third
- * domain via the sieve mechanism (as it is a very fast particle). In such a
- * case, particles can enter a domain multiple times.
- *
- *
  *
  * ## Rationale: static attributes vs static aggregation
  *
@@ -337,20 +230,47 @@ protected:
   static int _numberOfLeavingLocalParticles;
 
   /**
-   * Number of updated halo particles
+   * Number of incoming halo particles which are not worked in
+   *
+   * Dropped incoming virtual particles "happen" when a neighbour sends in a
+   * particle which is already virtual on the neighbour. In this case, the
+   * neighbour hasn't updated this particle at all (has no ownership).
+   * Therefore, we can just ignore it.
    *
    * Updated by boundary merge operations.
-   *
-   * @see merge()
-   *
-   * See class documentation of toolbox::particles::ParticleSet for
-   * an overview of the statistics tracked.
    */
   static int _numberOfDroppedIncomingVirtualParticles;
   static int _numberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual;
+
+  /**
+   * Particles which are local here and local somewhere else
+   *
+   * This happens if a particle resides almost exactly on the face between two
+   * ranks and we therefore decide that both call it a local particle.
+   *
+   * Updated by boundary merge operations.
+   */
   static int _numberOfRedundantlySharedLocalParticles;
-  static int _numberOfNewIncomingLocalParticles;
+
+  /**
+   * Replace virtual particles are those where we have a copy and receive an update
+   *
+   * Virtual particles are owned by someone else. So whenever this owner sends
+   * in an update, we throw away our local copy and use this updated data.
+   *
+   * Updated by boundary merge operations.
+   */
   static int _numberOfReplacedVirtualParticles;
+
+  /**
+   * Newly "discovered" virtual particles
+   *
+   * If a particle is far away from "our" boundary and then approaches this
+   * boundary on the neighbouring rank, it will, at one point, become visible
+   * here and we add it to our set of virtual particles.
+   *
+   * Updated by boundary merge operations.
+   */
   static int _numberOfAddedVirtualParticles;
 
   /**
