@@ -17,11 +17,11 @@ namespace toolbox {
     /**
      * @namespace toolbox::particles::assignmentchecks Correctness checks of particle-mesh assignment
      *
-     * This API is inspired by SWIFT's swift2::dependencychecks as introduced by
-     * Mladen: We keep some history of particle-mesh associations, trace new mesh
-     * assignments and validate them against the recorded history. All the tracing
-     * degenerates to empty routines if we work in release mode, so there should not
-     * be any overhead.
+     * This API is inspired by SWIFT's swift2::dependencychecks as introduced
+     * by Mladen: We keep some history of particle-mesh associations, trace new
+     * mesh assignments and validate them against the recorded history. All the
+     * tracing degenerates to empty routines if we work in release mode, so
+     * there should not be any overhead.
      *
      * Most toolbox routines do automatically report against this API. However, to
      * make the checks work, you have to report particle movements manually.
@@ -29,6 +29,18 @@ namespace toolbox {
      * Furthermore, you might want to invoke toolbox::particles::assignmentchecks::startMeshSweep()
      * prior to your traversals to ensure that you get a nice break-down of all
      * mesh transitions.
+     *
+     * ## Enable assignment checks
+     *
+     * By default, the assignment checks are enabled as soon as PeanoDebug is
+     * set to a value greater than 0. However, you can explicitly disable it
+     * by adding
+     *
+     * -DnoAssignmentChecks
+     *
+     * to your compile flags. This is important as assignment checks are very
+     * expensive. The checks also might yield invalid errors once you run them
+     * over multiple ranks, i.e with -DParallel.
      */
     namespace assignmentchecks {
       namespace internal {
@@ -257,7 +269,7 @@ namespace toolbox {
           static constexpr int DoNotFollowParticleMovementsInDatabase = -1;
 
           /**
-           * Has a fitting entry
+           * Return last entry matching identifier
            *
            * This routine runs backwards (from new to old) through the
            * database and searches for a particle entry with the specified
@@ -269,6 +281,16 @@ namespace toolbox {
            * createParticleIdentifier() to accommodate floating-point inaccuracies.
            *
            * Cannot be const as we have a semaphore to be thread-safe.
+           *
+           * If the routine encounters a move particle, it changes the
+           * identifier and invokes itself recursively for this identifier.
+           * This way, we can follow a particle through the database even
+           * though it has changed its position in space. If the find
+           * information on a previous position, this previous position is held
+           * as raw floating point data, i.e. might differ from the position
+           * use in the database to identify previous particle states by
+           * floating point accuracy. So we have to make them match before we
+           * continue to search recursively.
            *
            * @param spacetreeId Either a valid spacetree or AnyTree if you don't care
            */
@@ -282,6 +304,21 @@ namespace toolbox {
            * Print history of one particle
            *
            * Cannot be const as we have a semaphore to be thread-safe.
+           *
+           * The particle runs backwards through the database and plots all
+           * fitting identifiers. When we encounter a move, we memorise it.
+           * Once at the end of the database, we look if there has been a
+           * move before. If so, we call the search again for this previous
+           * particle position. When we construct the particle identifier
+           * for the tail recursion, we have to take into account that the
+           * previous position is stored as raw position data, but the
+           * database's entries might be slightly off due to truncation
+           * errors.
+           *
+           * If there are multiple moves, we only take the first one into
+           * account. Multiple moves might occur if several particles
+           * "hop through" the same spatial position in the database. Only
+           * the most recent one however is relevant for identifier.
            */
           std::string particleHistory(const ParticleIdentifier& identifier);
 
@@ -360,81 +397,96 @@ namespace toolbox {
        *
        * ### Consistency checks for local particles
        *
-       * - If we have
-       * - The particle has to be "free", i.e. it may not be assigned to any
-       *   other vertex yet. Consequently, the particle is either new (created or flying in from somewhere else), or we have
-       * triggered detachParticleFromVertex() before.
+       * - A new particle might have been inserted into the domain for the very
+       *   first time. In this case, the particle has to be "free", i.e. it may
+       *   not have been assigned to any other vertex yet. The search should
+       *   reduce a NotFound.
+       * - The particle might have been dropped from a coarser level. See
+       *   corresponding discussion for virtual particles below including some
+       *   sketches.
+       * - The particle might have been lifted. Lifting can only occur for
+       *   local particles, as it is a result of a move and we may only move
+       *   local particles. If the assignment is due to a lift, this local
+       *   particle has been assigned to a finer mesh resolution before.
+       * - If we lift a particle into the global sieve set (as the particle
+       *   tunnels or there's a horizontal cut through the spacetree, i.e. the
+       *   coarser cell is held by another rank), we will sieve the particle
+       *   into the local domain in the next step. In this case, the previous
+       *   particle's state could be local or virtual: If the particle has moved
+       *   and therefore ended up in the sieve set, we will not have updated
+       *   its parallel flag yet. Therefore, it might have changed.
+       *
        *
        * ### Consistency check for virtual particles
        *
-       * - The particle has to be "free", i.e. it may not be assigned to any
-       *   other vertex yet. The particle has to be new. If it is an update of
-       *   a halo copy, we would expect the corresponing merge() to replace
-       *   this copy. A replacement manifests in an event sequence of
-       *   detach->erase->assign.
+       * - The particle comes in through the boundary as part of the boundary
+       *   exchange. In this case, the particle has to be "free", i.e. it may
+       *   not be assigned to any other vertex yet. The particle has to be new
+       *   (NotFound in database).
+       * - If it is an update of the halo copy, we would expect the
+       *   corresponding merge() to replace this copy. A replacement manifests
+       *   in an event sequence of detach->erase->assign, so we still get a
+       *   NotFound throughout the assign.
+       * - A virtual particle might also be subject of a mesh drop: If we lift
+       *   a particle, exchange it along the boundary, we have to drop it on
+       *   both sides again. We update its state
+       *   ***after*** we have assigned it to a vertex, but we also set its
+       *   state in the merge, so here the state has to be virtual.
+       * - A local particle might have changed from local to virtual as it
+       *   had moved. In this case, the update should detach the particle
+       *   before it adds it again.
+       * - We might drop due to a global sieve. In this case, the previous
+       *   particle's state could be local or virtual: If the particle has moved
+       *   and therefore ended up in the sieve set, we will not have updated
+       *   its parallel flag yet. Therefore, it might have changed.
        *
-       * To make this a valid operation,
-       *
-       * Alternatively, we might have a virtual particle here. In this case,
-       * we can ensure that all vertices are associated to the same vertex on
-       * all trees. They also have to belong to the same mesh level.
-       *
-       * ## Scenarios
-       *
-       * In the scenario below, we study the interface between two ranks. It
+       * In the scenario below, we illustrate the last scenario by means of an
+       * interface between two ranks. It
        * is denoted below as grey partition (one left rank) and a blueish
        * partition (on the right rank). They have kind of a halo layer of
        * width one, which is a logical construct, i.e. not maintained manually.
        *
        * @image html scenario00_particle-through-domain-wall.png
        *
-       * ### Particle is held redundantly on both ranks
+       * Study the central setup: In step N, yellow moves, while red will be
+       * deleted after the traversal, as each step moving particles has to
+       * update states as well (UpdateParallelState action set). Yellow now
+       * might be lifted to the next level. So far, its state is local on the
+       * grey rank, no matter if it stays within this subdomain or not. We
+       * exchange the data after step N.
        *
-       * As long as the particle does not move, each rank updates its local
-       * copy and sends it over to its adjacent partner. Here, the received
-       * copy replaces the old one (even though they should hold exactly the
-       * same data). We end up with a detach->erase->assign sequence in merge()
-       * right at the begin of a traversal.
+       * In step N+1, either rank sets the state to local or virtual. This
+       * happens either in touchVertexFirstTime() in the UpdateParallelState
+       * action set, or it happens straight in merge(). No matter what, it
+       * happens on the coarser level before we even touch the fine mesh
+       * level. When we drop it, the particle has the correct parallel state.
        *
-       * Let there be one particle close to the domain boundary, such that it
-       * is held both on the left and right subdomain. If the particle sits
-       * directly on the boundary (left scenario), both ranks hold them as a
-       * local particle. If it is slightly shifted, one holds a local version,
-       * the other one a virtual one. If the particle move, it either moves
-       * through the boundary (middle) or away from it (right).
        *
-       * If both subdomains hold a local copy (left), both will move the
-       * particle. On one of the ranks, the particle will end up outside of the
-       * domain (grey). On the other one (blue), it will end up "more inside
-       * the domain". The trace resembles
+       * Another special situation arises from a setup, where the particle of
+       * interest is located exactly along the subdomain boundary. In this
+       * case, we move both copies, as the particle is considered to be local
+       * on both ranks. Let one rank (tree 0) subsequently lift the particle,
+       * as it has moved quite a bit. The other rank (tree 1) therefore also
+       * has to lift yet cannot do so, as the next coarser mesh level is
+       * actually owned by tree 0. It adds its particle to the sieve set.
+       * After the movement, the particle is on the coarser level on tree 0
+       * and in the sieve set of tree 1.
        *
-       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-       * (HydroPart,[0.166756,0.333378])
-       * ============================
-       * sweep #9 (Drift):(moved-while-associated-to-vertex,[0.166667,0.333333]->x_new,tree=0,trace=toolbox::particles::assignmentchecks::traceParticleMovements())
-       * ============================
-       * (HydroPart,[0.166667,0.333333])
-       * ============================
-       * sweep #9 (Drift):(detach-from-vertex,local=1,x=[0.148148,0.333333],h=[0.037037,0.037037],tree=0,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())->(erase,local=1,tree=0,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())->(assign-to-vertex,local=1,x=[0.148148,0.333333],h=[0.037037,0.037037],tree=0,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())->(detach-from-vertex,local=1,x=[0.148148,0.333333],h=[0.037037,0.037037],tree=1,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())->(erase,local=1,tree=1,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())->(assign-to-vertex,local=1,x=[0.148148,0.333333],h=[0.037037,0.037037],tree=1,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())
-       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * This sieve set is now exchanged between the trees. Tree 1 seems to be
+       * kind of simple: The particle will be taken from the sieve set,
+       * inserted into the domain (given that it hasn't totally left this
+       * tree) and will then either be set to local or virtual. However, we
+       * will also get a copy of this particle from tree 0 through the
+       * boundary. This copy will then be sieved. We end up with two copies:
+       * One from the global sieve set and one from the boundary.
        *
-       * @todo This trace is wrong!!!!! there is no move on tree 1 and therefore all data are inconsistent
+       * Tree 0's behaviour exhibits the same behaviour: We will drop the
+       * particle which we have temporarily lifted to the next coarser level.
+       * After we have dropped it, we will also insert the copy from the
+       * global sieve set.
        *
-       * In the next sweep, the grey partition will receive a
-       * If lift
-       *
-       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-       * (HydroPart,[0.166756,0.333378])
-       * ============================
-       * sweep #9 (Drift):(moved-while-associated-to-vertex,[0.166667,0.333333]->x_new,tree=0,trace=toolbox::particles::assignmentchecks::traceParticleMovements())->(detach-from-vertex,local=1,x=[0.148148,0.333333],h=[0.037037,0.037037],tree=0,trace=HydroPart::touchVertexLastTime())->(assign-to-vertex,local=1,x=[0.222222,0.333333],h=[0.111111,0.111111],tree=0,trace=HydroPart::touchVertexLastTime())
-       * ============================
-       * (HydroPart,[0.166667,0.333333])
-       * ============================
-       * sweep #9 (Drift):(detach-from-vertex,local=1,x=[0.148148,0.333333],h=[0.037037,0.037037],tree=0,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())->(erase,local=1,tree=0,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())->(assign-to-vertex,local=1,x=[0.148148,0.333333],h=[0.037037,0.037037],tree=0,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())->(detach-from-vertex,local=1,x=[0.148148,0.333333],h=[0.037037,0.037037],tree=1,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())->(erase,local=1,tree=1,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())->(assign-to-vertex,local=1,x=[0.148148,0.333333],h=[0.037037,0.037037],tree=1,trace=benchmarks::swift2::noh::vertexdata::HydroPartSet::merge())
-       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-       *
-       * ### Particle is local on one rank and virtual on the other
-       *
+       * @param particleIsNew If we know that a particle is new, there's no
+       *                      need to search through the database.
        */
       void assignParticleToVertex(
         const std::string&                           particleName,
@@ -443,8 +495,10 @@ namespace toolbox {
         const tarch::la::Vector<Dimensions, double>& vertexX,
         const tarch::la::Vector<Dimensions, double>& vertexH,
         int                                          treeId,
-        const std::string&                           trace
+        const std::string&                           trace,
+        bool                                         particleIsNew = false
       );
+
 
       /**
        * Remove particle from vertex

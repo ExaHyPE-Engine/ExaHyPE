@@ -72,6 +72,7 @@ void toolbox::particles::insertParticleIntoCell(
     marker.x() - 0.5 * marker.h() + tarch::la::multiplyComponents(tarch::la::Vector<Dimensions, double>(targetVertex), marker.h()),
     marker.h(),
     spacetreeId,
-    "toolbox::particles::insertParticleIntoCell()"
+    "toolbox::particles::insertParticleIntoCell()",
+    true
   );
 }
