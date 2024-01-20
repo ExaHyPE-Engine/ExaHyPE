@@ -20,13 +20,30 @@ namespace tarch {
  *
  * Semaphore where many people can get write access concurrently but only
  * one can write. If the write lock is on, no reads are allowed.
+ *
+ * We offer two realisation variants of the semaphore: The default variant
+ * gives write accesses high priority. The alternative one gives read
+ * accesses higher priority.
+ *
+ * The latter happens automatically if we don't do anything: If one thread
+ * locks the semaphore for reads, any other thread can read as well.
+ * Consequently, the probability is high that a read will pass quickly,
+ * while a write basically has to wait for a slot where no reads are
+ * fired anymore. You can toggle this behaviour when you create the
+ * semaphore, but this has to be done with care: The semaphore has been
+ * designed to allow concurrent reads, and if you give the writes the
+ * higher priority, you eliminate this advantage to some degree, as any
+ * write request makes the semaphore degenerate to a normal boolean
+ * semaphore.
  */
 class tarch::multicore::MultiReadSingleWriteSemaphore {
   private:
     friend class tarch::multicore::MultiReadSingleWriteLock;
 
+    const bool        _highPriorityToWrites;
     BooleanSemaphore  _semaphore;
-    bool              _writeAccessRequired;
+    int               _numberOfPendingWriteRequests;
+    bool              _writeAccessAcquired;
     int               _numberOfActiveReadAccesses;
 
     /**
@@ -44,7 +61,7 @@ class tarch::multicore::MultiReadSingleWriteSemaphore {
     /**
      * You may not copy a semaphore
      */
-    MultiReadSingleWriteSemaphore( const MultiReadSingleWriteSemaphore& ) {}
+    MultiReadSingleWriteSemaphore( const MultiReadSingleWriteSemaphore& ) = delete;
 
     /**
      * You may not copy a semaphore
@@ -52,7 +69,7 @@ class tarch::multicore::MultiReadSingleWriteSemaphore {
     MultiReadSingleWriteSemaphore& operator = ( const MultiReadSingleWriteSemaphore& ) { return *this; }
 
   public:
-    MultiReadSingleWriteSemaphore();
+    MultiReadSingleWriteSemaphore(bool highPriorityToWrites = false);
     ~MultiReadSingleWriteSemaphore();
 };
 
