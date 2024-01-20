@@ -1,5 +1,4 @@
 #include "tarch/multicore/MultiReadSingleWriteSemaphore.h"
-#include "tarch/multicore/Lock.h"
 #include "tarch/Assertions.h"
 
 
@@ -17,13 +16,22 @@ tarch::multicore::MultiReadSingleWriteSemaphore::~MultiReadSingleWriteSemaphore(
 
 
 void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalReadSection() {
-  volatile bool success = false;
+  volatile bool letWriteAccessOvertake = not _highPriorityToWrites;
+  if (letWriteAccessOvertake) {
+    if (_semaphore.tryEnterCriticalSection()) {
+      letWriteAccessOvertake = _numberOfPendingWriteRequests>0;
+      _semaphore.leaveCriticalSection();
+    }
+  }
 
+  volatile bool success = false;
   while (not success) {
-    tarch::multicore::Lock lock(_semaphore);
-    success = not _writeAccessAcquired and _numberOfPendingWriteRequests==0;
-    if (success) {
-      _numberOfActiveReadAccesses++;
+    if (_semaphore.tryEnterCriticalSection()) {
+      success = not _writeAccessAcquired;
+      if (success) {
+        _numberOfActiveReadAccesses++;
+      }
+      _semaphore.leaveCriticalSection();
     }
   }
 }
@@ -31,34 +39,39 @@ void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalReadSection()
 
 void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalWriteSection() {
   if (_highPriorityToWrites) {
-    tarch::multicore::Lock lock(_semaphore);
+    _semaphore.enterCriticalSection();
     _numberOfPendingWriteRequests++;
+    _semaphore.leaveCriticalSection();
   }
 
   volatile bool success = false;
 
   while (not success) {
-    tarch::multicore::Lock lock(_semaphore);
-    success = not _writeAccessAcquired and (_numberOfActiveReadAccesses==0);
-    if (success) {
-      if (_highPriorityToWrites) {
-        _numberOfPendingWriteRequests--;
+    if (_semaphore.tryEnterCriticalSection()) {
+      success = not _writeAccessAcquired and (_numberOfActiveReadAccesses==0);
+      if (success) {
+        if (_highPriorityToWrites) {
+          _numberOfPendingWriteRequests--;
+        }
+        _writeAccessAcquired = true;
       }
-      _writeAccessAcquired = true;
+      _semaphore.leaveCriticalSection();
     }
   }
 }
 
 
 void tarch::multicore::MultiReadSingleWriteSemaphore::leaveCriticalReadSection() {
-  tarch::multicore::Lock lock(_semaphore);
+  _semaphore.enterCriticalSection();
   _numberOfActiveReadAccesses--;
   assertion( _numberOfActiveReadAccesses>=0 );
+  _semaphore.leaveCriticalSection();
 }
 
 
 void tarch::multicore::MultiReadSingleWriteSemaphore::leaveCriticalWriteSection() {
-  tarch::multicore::Lock lock(_semaphore);
+  _semaphore.enterCriticalSection();
   assertion(_writeAccessAcquired);
   _writeAccessAcquired = false;
+  _semaphore.leaveCriticalSection();
 }

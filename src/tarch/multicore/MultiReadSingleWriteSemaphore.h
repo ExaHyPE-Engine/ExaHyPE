@@ -32,9 +32,17 @@ namespace tarch {
  * fired anymore. You can toggle this behaviour when you create the
  * semaphore, but this has to be done with care: The semaphore has been
  * designed to allow concurrent reads, and if you give the writes the
- * higher priority, you eliminate this advantage to some degree, as any
- * write request makes the semaphore degenerate to a normal boolean
- * semaphore.
+ * higher priority, you eliminate this advantage to some degree.
+ *
+ * ## Realisation rationale
+ *
+ * I played around with sleeps, but this is a really stupid idea. It
+ * makes the performance deteriorate absolutely. I then integrated the
+ * two checks for number of pending write accesses and read accesses
+ * into one semaphore loop, and that didn't work either. My assumption
+ * is that we then tend to starve all other threads. So the best result
+ * is achieved if we poll with tryEnterCriticalSection(), but then
+ * check for writes and reads in two stages.
  */
 class tarch::multicore::MultiReadSingleWriteSemaphore {
   private:
@@ -69,7 +77,7 @@ class tarch::multicore::MultiReadSingleWriteSemaphore {
     MultiReadSingleWriteSemaphore& operator = ( const MultiReadSingleWriteSemaphore& ) { return *this; }
 
   public:
-    MultiReadSingleWriteSemaphore(bool highPriorityToWrites = false);
+    MultiReadSingleWriteSemaphore(bool highPriorityToWrites = true);
     ~MultiReadSingleWriteSemaphore();
 };
 
