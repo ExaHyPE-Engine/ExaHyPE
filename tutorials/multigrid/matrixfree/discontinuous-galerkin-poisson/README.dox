@@ -13,7 +13,8 @@ from a user perspective. Therefore, it is reasonable to study the present text
 in combination with the actual script. This page is more on the how to use the 
 class to construct a working solver.
 The solver of interest is 
-multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.
+multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+(cmp multigrid/matrixfree/solvers/api/DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.py in src).
  
  Once again, we solve the Poisson equation, and employ a Discontinuous Galerkin
  formalism with a point-wise Riemann solver. That is, we start from

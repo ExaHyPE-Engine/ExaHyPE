@@ -30,7 +30,7 @@ However, we hold all the data within the cells (from a data structure point
 of view). 
 As we store all the unknowns of all degrees of freedom per cell in one 
 huge array per cell, we end up with an array of doubles of size 
-@f$ K (p+1)^d @f$, K being the number of unknowns per cell node and @f$ p @f$
+@f$ K (p+1)^d @f$, @f$ K @f$ being the number of unknowns per cell node and @f$ p @f$
 denoting the polynomial order.
 
 
@@ -45,6 +45,31 @@ can assemble into more complex code setups.
 An alternative approach would have been to write one generic, monolithic solver
 with a lot of features which cover all eventualities and then can be specialised.
 </div>
+
+The degree of freedom layout and the storage of the unknowns are 
+@ref multigrid_enumeration "discussed on a page of thereown". This page also 
+reiterates that we work w.l.o.g. with an AoS data layout plus tensor product
+function spaces.
+
+# Mathematical notation
+
+## Reserved letters
+
+- @f$ d \in \{2,3\} @f$ is the dimension of the spatial problem. 
+- @f$ p \geq 0 @f$ denotes a polynomial order.
+
+## Symbols
+
+- Constants are written as uppercase letters such as @f$ K @f$. Usually, they 
+  are scalars.
+- Lowercase letters such as @f$ u @f$ denote a function if they are used within 
+  a PDE, or ***weights*** within a ***degree of freedom*** if they are used 
+  within a matrix equation. It depends on the context is they are scalar PDEs
+  or vector-valued PDEs or scalars or weight vectors, respectively, i.e. we do
+  not use any syntax to highlight such a distinction.
+- Matrices are written with uppercase symbols. 
+- 
+
 
 
  */
