@@ -20,43 +20,50 @@ parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       defau
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
-parser.add_argument("-upcn", "--unknowns_per_cell", dest="upcn",            type=int, default=1, help="Unknowns per cell node")
-parser.add_argument("-upfn", "--unknowns_per_face", dest="upfn",            type=int, default=1, help="Unknowns per face node")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
+#! [Create project]
 project = matrixfree.Project( project_name = "DGPointwise", 
                               namespace = [ "benchmarks", "multigrid", "matrixfree", "poisson" ]
                             )
+#! [Create project]
 
-# matrices
+
+#! [Construct matrices]
 assembly_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 mass_matrix     = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 face_from_cell  = np.zeros(( 2* args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions,   args.upcn * (args.poly_degree + 1) ** (args.dimensions) ))
 
-# we are projecting the face solution onto the cell here.
 cell_from_face  = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
 
 riemann_matrix  = np.zeros( (args.upcn * (args.poly_degree + 1) ** (args.dimensions-1), 2* args.upcn * (args.poly_degree + 1) ** (args.dimensions-1)) )
+#! [Construct matrices]
 
 
+#! [Instantiate solver]
 solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
-  "DGPoisson",
-  args.dimensions,
-  args.poly_degree,
-  args.upcn,
-  args.upfn,
-  args.meshsize,
-  args.meshsize,
-  assembly_matrix, # assembly matrix
-  0, # assembly matrix scaling
-  mass_matrix, # mass matrix
-  0, # mass matrix scaling
-  face_from_cell, # cell to face
-  cell_from_face, # face to cell
-  riemann_matrix
+  name = "DGPoisson",
+  dimensions = args.dimensions,
+  poly_degree = args.poly_degree,
+  unknowns_per_cell_node = 1,
+  unknowns_per_face_node = 1,
+  min_h = args.meshsize,
+  max_h = args.meshsize,
+  assembly_matrix= assembly_matrix, 
+  assembly_matrix_scaling = 0, 
+  mass_matrix = mass_matrix, 
+  mass_matrix_scaling = 0, 
+  face_from_cell_projection = face_from_cell, 
+  cell_from_face_projection = cell_from_face, 
+  riemann_matrix = riemann_matrix,
+  cell_relaxation = 0.8,
+  face_relaxation = 0.8,
+  approximate_system_matrix = approximate_system_matrix,
+  approximate_system_matrix_scaling = 0,
 )
+#! [Instantiate solver]
 
 project.add_solver(solver)
 

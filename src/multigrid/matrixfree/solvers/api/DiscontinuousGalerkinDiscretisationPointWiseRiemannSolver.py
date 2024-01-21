@@ -15,69 +15,96 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   \f{eqnarray*}{\f}
 
   Discontinuous Galerkin Solver
+  
+  The text below specifies the semantics and behaviour of this matrix-free
+  DG solver. A tutorial running step by step through the steps how to use
+  it can be found @ref tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson "in the tutorials section".
+  The solver in general tackles a PDE
 
+    @f$ \mathcal{L}(u) = f @f$
+    
+  resulting in a linear equation system
+
+    @f$ Au = b. @f$
+    
+  Throughout the discussion, we @ref page_multigrid_unfolding "unfold the compute steps over the compute mesh".
+
+  ## Storage 
+  
   This solver holds \f$ K^c (p+1)^d \f$ unknowns (doubles) per cell for the
   solution, \f$  K^c (p+1)^d \f$ per cell for the right-hand side.
-  We also hold \f$ ( K^f + 2K^c ) (p+1)^{d-1} \f$ unknowns per face, ie 
-  for each node, we hold one solution for each unknown per face node, as 
+  These are the primary variables, i.e. those directly resulting from the
+  PDE formulation. The correspond to the unknowns directly from @f$ u @f$
+  and the right-hand side.
+  
+  Further to that, we hold auxiliary variables on the faces: 
+  Our Riemann solver accepts the left and the right solution. Here, each
+  degree of freedom has @f$ K^c @f$ unknowns. It will return a result 
+  (the flux), which has @f$ K^f @f$ unknowns.
+  Per face node, we hence hold, in total, \f$ ( K^f + 2K^c ) (p+1)^{d-1} \f$ unknowns. 
+  That is the solution for each unknown per face node, as 
   well as a projection from the left and right for each unknown per cell.
-  \f$ K^c \f$ and \f$ K^f \f$ are different in general.
+  \f$ K^c \f$ and \f$ K^f \f$ can be different, but often they are the same.
 
-  The internal functionality relies on the break-down of the per-cell
-  operations into 
-
-  \f$ A u|_c - P \mathcal{R}(u^-,u^+) = A u|_c - P \mathcal{R}(u|_f) = A u|_c - P \varphi|_f = Mf \f$  
-
-  and it realises a Block-Jacobi smoother subject to two relaxation 
-  parameters \f$ \omega _c, \omega _f \in [0,1] \f$. Conceptually,
-  the solver starts from the representation
-
+  ## Operators 
+  
+  With the auxiliary variables, in place, we can write down the DG 
+  problem as 
+  
   \f$
   \left(
-    \begin{array}{ccccc}
-      A &   &   &   & ... \\
-        & A &   &   & ... \\
-        &   & A &   & ... \\
-        &   &   & A & ... \\
-      . & . & . & . & \hat A
+    \begin{array}{cccc}
+      A^{cc} &   &   & P_{c \gets f} \\
+      P_{f \gets c} & id & & \\
+      P_{f \gets c} & & id  \\
+      & id & id & A^{ff}
+    \end{array}
+  \right)
+  \left(
+    \begin{array}{c}
+      u^c \\
+      u^+ \\
+      u^- \\
+      q
+    \end{array}
+  \right)
+  =
+  \left(
+    \begin{array}{c}
+      M b \\
+      0 \\
+      0 \\
+      0
     \end{array}
   \right)
   \f$
+  
+  in line with @ref xxxx. The @f$ q @f$ is the result of the Riemann solver.
+  
+  @todo Eike It would be nice to refer to the overall write-up here. But is should all be linked in one page.
+  
+  ## Solver 
+  
+  We now realise a Block-Jacobi smoother subject to two relaxation parameters 
+  \f$ \omega _c, \omega _f \in [0,1] \f$. We tackle the first line in the 
+  block system with one smoothing step of a stationary iterative scheme, solve two and three exact (as they are
+  trivial with the identity on the diagonal) and apply Jacobi to the last
+  row again. As the first and last block are updated in parallel by the 
+  Jacobi scheme, the resuling algorithm is globally a Jacobi relaxation, too.
 
-  of the overall left-hand side above. Here \f$ A \f$ acts on the individual 
-  cell, and the block entries with a dot couple the cell to the faces and vice
-  versa. We extract the matrix 
-
-  \f$
-  \left(
-    \begin{array}{ccccc}
-      A &   &   &   &  \\
-        & A &   &   &  \\
-        &   & A &   &  \\
-        &   &   & A &  \\
-        &   &   &   & diag( \hat A )
-    \end{array}
-  \right)
-  \f$
-
-  from this system matrix, and use this one within an (outer) Jacobi scheme.
-  This yields a block-Jacobi solver, where individual cells (matrix blocks)
-  are explicitly inverted.
-
-  We end up with an iterative scheme where two phases take turns:
-
-  - Per cell, we solve the equation
+  - Per cell, we tackle the equation
     \f$ 
-    A u|_c + P q|_f = M b
+    A^{cc} u^c + P_{c \gets f} q = M b
     \f$ 
     which yields the update rule
     \f{eqnarray*}{ 
-    u|_c & \gets & u|_c + \omega _c A^{-1}\left( Mb - A u|_c - P q|_f \right) \\
-        &   =   & (1-\omega _c) u|_c + \omega _c A^{-1}\left( Mb - P q|_f \right)
+    u|_c & \gets & u|_c + \omega _c \tilde {A}^{-1}\left( Mb - A^{cc} u^c - P_{c \gets f} q \right).
     \f}
     Here, the \f$ q \f$ is the solution of the PDE term on the faces which we
-    assume to be fixed. Obviously, \f$ \omega _c > 0 \f$ whilst \f$ \omega _c=1 \f$
-    solves the problem per cell exactly (and might still be a bad smoother).
+    assume to be fixed.  At this point, we are quite generic and dump the 
+    responsibility onto the user to give us an approximation of @f$ A_{cc} @f$ 
+    that we can invert. Notably, we highlight that the user may give us
+     @f$ \tilde{A} = A^{cc} @f$ in a DG sense, as we cannot invert @f$ A^{cc} @f$.
   - Per face, we use a plain Jacobi. We assume that we have an explicit
     expression of the Riemann solution (simple averaging would be an example)
     and hence \f$ \hat A = id \f$. We consequently get
@@ -89,6 +116,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
 
   ## Algorithmical blueprint
+  
+  @todo Sean, Alex: The notation has to be globally consistent. 
 
   1. Enter cell: Whenever a cell is entered, we create a temporary 
     \f$ N(p+1)^d \f$ array (on the heap). 
@@ -107,14 +136,15 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         \f$
         r \gets Mb + Pq|_f.
         \f$
-    3. The third step is where the MFlops come from: We take the cell
+    3. The third step is where the MFlops come from: We take the user's
+       approximation of the cell
         matrix and explicitly invert it. For a linear, invariant matrix
         \f$ A \f$, we could do so once, but the solver itself makes no
         assumption if the matrix is invariant or not. So it inverts it
         every step and uses BLAS routines or this. The result is multiplied
         with the residual as accumulated so far:
         \f$
-        r \gets A^{-1} \left( Mb + Pq|_f \right).
+        r \gets \tilde{A}^{-1} \left( Mb + Pq|_f \right).
         \f$
     4. We run over the solution within the cell and scale each entry 
         with \f$ (1-\omega _c) \f$. If \f$ \omega _c =1 \f$, this means we
@@ -144,24 +174,13 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   ## How does it work?
 
   ### Python stuff
-  The benchmarks folder contains a dg.py file. In there, we define the simulation paramters,
-  the Peano project, the solver and the various matrices we pass in.
-
-  As always, the number of nodes per face/cell is fixed by the polynomial degree and the 
-  dimension of the space.
-
-  Some important parameters:
-
-  \li ```poly_degree``` - The degree of the polynomial that we use. Defaults to 1.
-
-  \li ```unknowns_per_cell``` - The number of unknowns that we solve for in each cell, \f$ K^c \f$
-
-  \li ```unknowns_per_face``` - The number of unknowns that we solve for in each face, \f$ K^f \f$. 
-  It's not clear whether it makes sense to have this as a different value from ```unknowns_per_cell```, 
-  since our update rule \f$ u|_c \gets u|_c + \omega _c A^{-1}\left( Mb - A u|_c - P q|_f \right) \f$ implies
-  that there are the same number of \f$ u|_c \f$ as \f$ q|_f \f$ at coinciding nodal points.
+  
+  There is a @ref tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson "very simple Poisson solver tutorial"
+  in the tutorials section which illustrates how to use this solver.
 
   ### Under the hood
+  
+  @todo Sean please revise this part. It is wrong.
 
   Inside the cells we store \f$ K^c (p+1)^{d} \f$ values for the solution, and the same number for the rhs.
   On each face we store \f$ K^f (p+1)^{d-1} \f$ (although, at time of writing I fix \f$K^f==K^c\f$) values
@@ -173,24 +192,6 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   ### Matrices we pass in to the solver class
   See documentation for this class itself...
 
-  \li ```assembly_matrix``` - this is the cell-to-cell matrix which defines how the cell nodes couple to one another.
-  This is a square matrix with \f$ K^c * (p+1)^{d} \f$ rows.
-
-  \li ```mass_matrix``` - similar to ```assembly_matrix```.
-
-  \li ```face_from_cell``` - this matrix projects the cell solution onto all of the faces. It has \f$ 2K^c (p+1)^{d-1} * 2D \f$
-  rows (note the extra factor of 2D, the number of faces),
-   ie, one row for each element of the ```projection``` array, for each face, with the entries for each face listed one 
-  after another. The matrix has \f$ K^c * (p+1)^{d} \f$ columns, ie one row for each face-solution. It is the job of the user
-  to ensure that this matrix performs the correct ordering in the desired manner - more on this later.
-
-  \li ```cell_from_face``` - this matrix projects the solution on all of the faces onto the cell. It hence has 
-  \f$ 2K^f (p+1)^{d-1} * 2D \f$ columns (note the extra factor of 2D) and \f$ K^c * (p+1)^{d} \f$. The user should
-  enumerate these correctly.
-
-  \li ```riemann_matrix``` - The matrix that combines the left/right projections on the cell and outputs a value 
-  which we use to update the \f$ q\_f \f$. It has \f$ 2K^c (p+1)^{d-1} \f$ columns and \f$ 2K^f (p+1)^{d-1} \f$ rows.
-  @todo I think this is another reason why K^c cannot be different from K^f....
 
   So far we have three non-trivial action sets.
 
@@ -209,6 +210,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   ## Solver class
   For now, the solver class contains the matrices mentioned above. We also include a method that explicitly
   inverts a matrix using BLAS, in two stages:
+
+  @todo Sean As discussed, this belongs into the tarch::la component. Please see changes above: We are now working against a @f$ \tilde{A} @f$ matrix.
 
   \verbatim
 #include <cblas.h>
@@ -272,14 +275,64 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               unknowns_per_face_node,
               min_h,
               max_h,
-              assembly_matrix,
-              assembly_matrix_scaling,
+              system_matrix,
+              system_matrix_scaling,
               mass_matrix,
               mass_matrix_scaling,
               face_from_cell_projection,
               cell_from_face_projection,
-              riemann_matrix,
+              Riemann_matrix,
+              cell_relaxation,
+              face_relaxation,
+              approximate_system_matrix,
+              approximate_system_matrix_scaling,
               ):
+    """!
+    
+    Construct the solver
+    
+    @param poly_degree: Integer
+      The degree of the polynomial that we use. Has to be bigger or equal to one.
+
+    @param unknowns_per_cell_node: Positive Integer
+      This is the @f$ K^c @f$ from the solver description.
+       
+    @param unknowns_per_face_node: Positive Integer
+      This is the @f$ K^f @f$ from the solver description.
+
+    @param cell_relaxation: Float   
+      This is the @f$ \omega _c @f$ from the description above and typically 
+      chosen form @f$ ]0,1[ @f$ though some scenarios benefit from a slight 
+      overrelaxation.
+
+    @param assembly_matrix: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
+      This is the cell-to-cell matrix which defines how the cell nodes couple 
+      to one another. Is is a square matrix. You can pass in None. In this 
+      case, the generated C++ code will not compile, but you will be allowed
+      to fill it in manually.
+
+    @param mass_matrix: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
+
+    @param face_from_cell: \f$ \mathbb{R}^{2d K^f * (p+1)^{d-1} \times K^c * (p+1)^{d}}\f$ 
+      This matrix projects the cell solution onto all of the faces. Note the 
+      extra factor of @f$ 2d @f$.
+
+    @param cell_from_frame: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times 2d K^f * (p+1)^{d-1}}\f$ 
+      This matrix projects the cell solution onto all of the faces. Note the 
+      extra factor of @f$ 2d @f$.
+
+    @param Riemann_matrix: \f$ \mathbb{R}^{ K^f (p+1)^{d-1} \times 2K^f (p+1)^{d-1}} @f$
+      The matrix that combines the left/right projections on the cell and outputs a value 
+      which determines @f$ q @f$.
+  
+    @param face_relaxation: Float
+      This is the @f$ \omega _f @f$ from above. Chosen from @f$ ]0,1[ @f$.
+      
+    @param approximate_system_matrix: @f$ \mathbb{R}^{K^c (p+1)^d \times K^c (p+1)^d} @f$
+      Approximation @f$ \tilde{A} @f$ which will be internally inverted, so it 
+      has to be non-singular.
+      
+    """  
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).__init__(name, min_h, max_h)
 
     # store everything we pass in anyhow

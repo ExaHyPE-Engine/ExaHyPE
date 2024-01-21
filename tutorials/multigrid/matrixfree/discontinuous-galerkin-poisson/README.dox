@@ -19,25 +19,39 @@ multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRie
  Once again, we solve the Poisson equation, and employ a Discontinuous Galerkin
  formalism with a point-wise Riemann solver. That is, we start from
  
+ @f$ \mathcal{L}(u) = - \Delta u = f @f$
+ 
+ and apply a weak formulation:
+ 
  \f{eqnarray*}{
- - \Delta u & = & f \\
- \int \left( - \Delta u, \phi \right) dx & = & \int (f, \phi) dx \\
- \int _c \left( \nabla u, \nabla \phi \right) dx - \sum _f \int _f \left( \nabla u, n \right) \phi dS(x) & = & \int (f, \phi) dx \\
- \int _c \left( \nabla u, \nabla \phi \right) dx - \sum _f \int _f \left( \mathcal{R}(u^-,u^+), n \right) \phi dS(x) & = & \int (f, \phi) dx
+ \int \left( - \Delta u, v \right) dx & = & \int (f, v) dx \\
+ \int _c \left( \nabla u, \nabla v \right) dx - \sum _f \int _f \left( \nabla u, n \right) v dS(x) & = & \int (f, v) dx \\
+ \int _c \left( \nabla u, \nabla v \right) dx - \sum _f \int _f \left( \mathcal{R}(u^-,u^+), n \right) \phi dS(x) & = & \int (f,v) dx.
  \f}
- 
- which leads to the equation system
 
- @f$
-  A u|_c - P \mathcal{R}(u^-,u^+) = A u|_c - P \mathcal{R}(u|_f) = A u|_c - P \varphi|_f = Mf
-  @f$  
+Which we solve with the simplest Riemann solver one can think of: We average, 
+i.e. @f$ \mathcal{R}(u^-,u^+) = [[\nabla u]] @f$. This is neither a stable 
+approach nor elegant, but it helps us to illustrate how to set up the solver.
+Once we @ref page_multigrid_unfolding "unfold this weak formulation over the mesh", we 
+see all the operators and steps of the script involved:
  
- per cell.
  
+# Project setup
  
- # Project setup
+Creating a project is a one-liner:
+
+@snippet benchmarks/multigrid/matrixfree/poisson/dg.py Create project
  
- To be written.
+
+# Create the solver
+
+The solver construction also is a "one-liner" using the following observations:
+
+- We solve a scalar equation system. Consequently, we have @f$ K_c=1 @f$.
+- Our Riemann solver will take the 
+
+@snippet benchmarks/multigrid/matrixfree/poisson/dg.py Instantiate solver
+
  
  We create a solver of the type multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.
  This solver is given the name MyDG in the present example.
