@@ -110,17 +110,17 @@ void toolbox::particles::ParticleSet<T>::clearReassignmentStatistics() {
 template <typename T>
 void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
 #if PeanoDebug >= 1 and !defined(Parallel) and !defined(SharedMemoryParallelisation)
-  nonCriticalAssertion11(
+  nonCriticalAssertion9(
     _numberOfRemainingLocalParticles == 0 or _numberOfRemainingLocalParticles == _numberOfParticlesInLastClear or _numberOfParticlesInLastClear == 0,
     _numberOfParticlesInLastClear,
     _numberOfRemainingLocalParticles,
-    _numberOfIncomingLocalParticles,
+    // _numberOfIncomingLocalParticles, // Looks like this was deleted in this MR? Not sure if replaced with something else?
     _numberOfLeavingLocalParticles,
     _numberOfExpiredHaloParticles,
     _numberOfLeavingLocalParticles,
     _numberOfAddedVirtualParticles,
     _numberOfReplacedVirtualParticles,
-    _numberOfDroppedVirtualParticles,
+    // _numberOfDroppedVirtualParticles,// Looks like this was deleted in this MR? Not sure if replaced with something else?
     _numberOfLocalEliminatedSpatialDuplicates,
     _numberOfVirtualEliminatedSpatialDuplicates
   );
