@@ -1,14 +1,19 @@
 /**
 
- @page tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson Matrix-free Discontinuous Galerkin for the Poisson equation
+@page tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson Matrix-free Discontinuous Galerkin for the Poisson equation
 
- This simple example discusses the steps from the file t.b.d..
- We omit some technical details (such as the parsing of the command line) and 
- focus on key ingredients. Therefore, it is reasonable to study this description 
- in combination with the actual script. It is best to read this documentation in 
- combination with the docu of the class multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver,
- which provides a lot of details on the actual implementation and mathematical ingredients.
- This page is more on the how to use the class to construct a working solver.
+This simple example discusses the most basic steps behind a Discontinuous 
+Galerkin solver. 
+
+The standard "benchmark" for this solver (once again solving the Poisson 
+equation on the unit square) can be found in benchmarks/multigrid/matrixfree/poisson/dg.py.
+Our discussion follows this script, though we omit many technical details such
+as the parsing of the command line) and  focus on key numerical ingredients 
+from a user perspective. Therefore, it is reasonable to study the present text 
+in combination with the actual script. This page is more on the how to use the 
+class to construct a working solver.
+The solver of interest is 
+multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.
  
  Once again, we solve the Poisson equation, and employ a Discontinuous Galerkin
  formalism with a point-wise Riemann solver. That is, we start from
