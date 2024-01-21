@@ -81,7 +81,9 @@ function spaces.
   mass matrix, which we traditionally find on the right-hand side.
 - Partial differential operators are written as @f$ \mathcal{L} @f$ or 
   @f$ \mathcal{A} @f$ or similar, unless there are well-established symbols 
-  such as @f$ \nabla @f$ or @f$ \Delta @f$. 
+  such as @f$ \nabla @f$ or @f$ \Delta @f$. The most frequently used 
+  identifiers are @f$ \mathcal{L} @f$ for the linear(ised) operator within 
+  the PDE, and @f$ \mathcal{R} @f$ as generic symbol for a Riemann solver.
 - If we have to deal with individual shape/trial functions, we abstain from 
   Greek letters (@f$ \phi, \psi @f$ and @f$ \varphi @f$ are frequently found
   in literature) but instead favour @f$ v, q, \dots @f$.
