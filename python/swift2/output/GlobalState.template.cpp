@@ -140,6 +140,8 @@ void finishTimeStep() {
   vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   {%- endfor %}
 
+  logTraceIn( "finishTimeStep()" );
+
   loadBalancer.finishStep();
 
   logInfo("TimeStep()", "min mesh size=" << ::peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()(0) );
@@ -157,7 +159,7 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
-  logTraceOut( "TimeStep()" );
+  logTraceOut( "finishTimeStep()" );
 }
 
 
