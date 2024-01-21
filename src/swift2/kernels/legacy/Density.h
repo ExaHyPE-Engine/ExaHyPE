@@ -12,23 +12,6 @@ namespace swift2 {
   namespace kernels {
     namespace legacy {
 
-
-      /**
-       * @brief Predict additional particle fields forward in time when drifting
-       *
-       * Additional hydrodynamic quantites are drifted forward in time here. These
-       * include thermal quantities (thermal energy or total energy or entropy, ...).
-       */
-      template <typename Particle>
-      void hydro_predict_extra(Particle* localParticle);
-
-      template <typename Particle>
-      void hydroPredictExtra(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
-          hydro_predict_extra(&localParticle);
-        }
-      }
-
       /**
        * @brief Prepares a particle for the density calculation.
        *

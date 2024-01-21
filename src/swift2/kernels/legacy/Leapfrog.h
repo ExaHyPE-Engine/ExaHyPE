@@ -49,6 +49,26 @@ namespace swift2 {
         }
       }
 
+
+      /**
+       * @brief Predict additional particle fields forward in time when drifting
+       *
+       * Additional hydrodynamic quantites are drifted forward in time here. These
+       * include thermal quantities (thermal energy or total energy or entropy, ...).
+       * Note that which and how quantities get updated depends on the specific SPH
+       * flavour.
+       */
+      template <typename Particle>
+      void hydro_predict_extra(Particle* localParticle);
+
+      template <typename Particle>
+      void hydroPredictExtra(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
+          hydro_predict_extra(&localParticle);
+        }
+      }
+
+
       /**
        *  Kick steps. There are two kick steps in the KDK scheme, in which we
        *  update the particle velocity by a half-timestep using:

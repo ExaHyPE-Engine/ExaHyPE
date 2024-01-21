@@ -421,11 +421,12 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             )
             iterate_over_particles_assigned_to_vertex_for_move = (
                 "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
-                + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
                 + self.name
                 + ">, ::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel<globaldata::"
                 + self.name
                 + ">);"
+                #  + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
+                #  + self.name
             )
         else:
             raise NotImplemented()
@@ -506,7 +507,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             ),
             includes="""
                 #include "Constants.h"
-                #include "swift2/kernels/legacy/Density.h"
+                #include "swift2/kernels/legacy/Leapfrog.h"
                                        """,
             touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
             #  touch_vertex_last_time_dependency_policy  = "TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
