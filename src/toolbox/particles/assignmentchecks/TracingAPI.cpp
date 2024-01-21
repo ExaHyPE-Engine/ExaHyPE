@@ -447,7 +447,9 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
         or
         (isLifting and previousEvent.isLocal)
         or
-        (isDropping and previousEvent.isLocal),
+        (isDropping and previousEvent.isLocal)
+        or
+        (previousEvent.type == internal::Event::Type::DetachFromVertex and not previousEvent.isLocal),
         identifier.toString(),
         event.toString(),
         previousEvent.toString(),

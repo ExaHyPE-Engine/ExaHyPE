@@ -40,16 +40,19 @@ template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfLeavingLocalParticles;
 
 template <typename T>
+int toolbox::particles::ParticleSet<T>::_numberOfIncomingParticles;
+
+template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfDroppedIncomingVirtualParticles;
 
 template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfRedundantlySharedLocalParticles;
 
 template <typename T>
-int toolbox::particles::ParticleSet<T>::_numberOfReplacedVirtualParticles;
+int toolbox::particles::ParticleSet<T>::_numberOfReplacedParticlesAlongBoundary;
 
 template <typename T>
-int toolbox::particles::ParticleSet<T>::_numberOfAddedVirtualParticles;
+int toolbox::particles::ParticleSet<T>::_numberOfAddedParticlesAlongBoundary;
 
 template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfVirtualEliminatedSpatialDuplicates;
@@ -137,10 +140,11 @@ void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
   _numberOfRemainingLocalParticles = 0;
   _numberOfExpiredHaloParticles    = 0;
   _numberOfLeavingLocalParticles   = 0;
+  _numberOfIncomingParticles       = 0;
 
   _numberOfDroppedIncomingVirtualParticles                    = 0;
   _numberOfRedundantlySharedLocalParticles                    = 0;
-  _numberOfReplacedVirtualParticles                           = 0;
+  _numberOfReplacedParticlesAlongBoundary                           = 0;
 
   _numberOfLocalEliminatedSpatialDuplicates   = 0;
   _numberOfVirtualEliminatedSpatialDuplicates = 0;
@@ -159,11 +163,12 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
   int globalNumberOfRemainingLocalParticles = 0;
   int globalNumberOfExpiredHaloParticles    = 0;
   int globalNumberOfLeavingLocalParticles   = 0;
+  int globalNumberOfIncomingParticles       = 0;
 
   int globalNumberOfDroppedIncomingVirtualParticles                    = 0;
   int globalNumberOfRedundantlySharedLocalParticles                    = 0;
-  int globalNumberOfReplacedVirtualParticles                           = 0;
-  int globalNumberOfAddedVirtualParticles                              = 0;
+  int globalNumberOfReplacedParticlesAlongBoundary                           = 0;
+  int globalNumberOfAddedParticlesAlongBoundary                              = 0;
 
   int globalNumberOfVirtualEliminatedSpatialDuplicates = 0;
   int globalNumberOfLocalEliminatedSpatialDuplicates   = 0;
@@ -205,6 +210,10 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     });
   tarch::mpi::Rank::getInstance()
+    .reduce(&_numberOfIncomingParticles, &globalNumberOfIncomingParticles, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    });
+  tarch::mpi::Rank::getInstance()
     .reduce(&_numberOfExpiredHaloParticles, &globalNumberOfExpiredHaloParticles, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     });
@@ -215,11 +224,11 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
 
 
   tarch::mpi::Rank::getInstance()
-    .reduce(&_numberOfAddedVirtualParticles, &globalNumberOfAddedVirtualParticles, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
+    .reduce(&_numberOfAddedParticlesAlongBoundary, &globalNumberOfAddedParticlesAlongBoundary, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     });
   tarch::mpi::Rank::getInstance()
-    .reduce(&_numberOfReplacedVirtualParticles, &globalNumberOfReplacedVirtualParticles, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
+    .reduce(&_numberOfReplacedParticlesAlongBoundary, &globalNumberOfReplacedParticlesAlongBoundary, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     });
   tarch::mpi::Rank::getInstance()
@@ -256,11 +265,12 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
   globalNumberOfRemainingLocalParticles = _numberOfRemainingLocalParticles;
   globalNumberOfExpiredHaloParticles    = _numberOfExpiredHaloParticles;
   globalNumberOfLeavingLocalParticles   = _numberOfLeavingLocalParticles;
+  globalNumberOfIncomingParticles       = _numberOfIncomingParticles;
 
   globalNumberOfDroppedIncomingVirtualParticles                    = _numberOfDroppedIncomingVirtualParticles;
   globalNumberOfRedundantlySharedLocalParticles                    = _numberOfRedundantlySharedLocalParticles;
-  globalNumberOfReplacedVirtualParticles                           = _numberOfReplacedVirtualParticles;
-  globalNumberOfAddedVirtualParticles                              = _numberOfAddedVirtualParticles;
+  globalNumberOfReplacedParticlesAlongBoundary                     = _numberOfReplacedParticlesAlongBoundary;
+  globalNumberOfAddedParticlesAlongBoundary                              = _numberOfAddedParticlesAlongBoundary;
 
   globalNumberOfVirtualEliminatedSpatialDuplicates = _numberOfVirtualEliminatedSpatialDuplicates;
   globalNumberOfLocalEliminatedSpatialDuplicates   = _numberOfLocalEliminatedSpatialDuplicates;
@@ -276,14 +286,18 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
     logInfo(
       "reduceAndPrintStatistics()",
       "particle state updates"
-        << ": #remaining=" << globalNumberOfRemainingLocalParticles << ", #expired=" << globalNumberOfExpiredHaloParticles << ", #leaving=" << globalNumberOfLeavingLocalParticles
+        << ": #remaining=" << globalNumberOfRemainingLocalParticles
+        << ", #expired=" << globalNumberOfExpiredHaloParticles
+        << ", #leaving=" << globalNumberOfLeavingLocalParticles
+        << ", #incoming=" << globalNumberOfIncomingParticles
     );
     logInfo(
       "reduceAndPrintStatistics()",
       "boundary merge statistics"
-        ": #redundantly shared particles (local on multiple trees)=" << globalNumberOfRedundantlySharedLocalParticles
-        << ", #added virtual particles (flying into halo)=" << globalNumberOfAddedVirtualParticles << ", #replaced virtual particles (halo updates)="
-        << globalNumberOfReplacedVirtualParticles << ", #dropped virtual particles=" << globalNumberOfDroppedIncomingVirtualParticles
+        ": #redundantly shared particles=" << globalNumberOfRedundantlySharedLocalParticles
+        << ", #added particles=" << globalNumberOfAddedParticlesAlongBoundary
+        << ", #replaced particles=" << globalNumberOfReplacedParticlesAlongBoundary
+        << ": #dropped incoming virtual particles=" << globalNumberOfDroppedIncomingVirtualParticles
     );
     logInfo(
       "reduceAndPrintStatistics()",
@@ -349,12 +363,14 @@ int toolbox::particles::ParticleSet<T>::getGlobalNumberOfNewIncomingParticles() 
 
 template <typename T>
 void toolbox::particles::ParticleSet<T>::updateNumberOfLocalAndExpiredParticles(
-  int numberOfRemainingLocalParticles, int numberOfExpiredHaloParticles, int numberOfLeavingLocalParticles
+  int numberOfRemainingLocalParticles, int numberOfExpiredHaloParticles, int numberOfLeavingLocalParticles,
+  int numberOfIncomingParticles
 ) {
   tarch::multicore::Lock lock(_statisticsSemaphore);
   _numberOfRemainingLocalParticles += numberOfRemainingLocalParticles;
   _numberOfExpiredHaloParticles += numberOfExpiredHaloParticles;
   _numberOfLeavingLocalParticles += numberOfLeavingLocalParticles;
+  _numberOfIncomingParticles += numberOfIncomingParticles;
 }
 
 

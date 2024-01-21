@@ -151,8 +151,8 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
           logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " has to be sieved globally. Current assocation=" << marker.toString() );
           _numberOfLiftsIntoSieveSet++;
-          toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "{{PARTICLE}}::touchCellLastTime()" );
-          toolbox::particles::assignmentchecks::assignParticleToSieveSet( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, _spacetreeId, "{{PARTICLE}}::touchCellLastTime()" );
+          toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell" );
+          toolbox::particles::assignmentchecks::assignParticleToSieveSet( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, _spacetreeId, "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell" );
           p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
           break;
         case 0:
@@ -166,9 +166,9 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         case 7:
         #endif
           p = fineGridVertices{{PARTICLES_CONTAINER}}(instruction).move(p,fineGridVertices{{PARTICLES_CONTAINER}}(i));
-      toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "{{PARTICLE}}::touchCellLastTime()" );
-      toolbox::particles::assignmentchecks::assignParticleToVertex( 
-        "{{PARTICLE}}",
+          toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell" );
+          toolbox::particles::assignmentchecks::assignParticleToVertex( 
+            "{{PARTICLE}}",
         (*p)->getX(),
         (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,  
         marker.x() 
@@ -182,8 +182,8 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
           tarch::la::Vector<Dimensions,double>(target),
           3.0*marker.h()
         ),
-        3.0*marker.h(), _spacetreeId, "{{PARTICLE}}::touchCellLastTime()"
-      );
+            3.0*marker.h(), _spacetreeId, "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell"
+          );
           _numberOfParticleReassignmentsOnCurrentLevel++;
           break;
         case 0+TwoPowerD:
@@ -197,7 +197,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         case 7+TwoPowerD:
         #endif
           (*p)->setCellH(3.0 * marker.h());
-          toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "{{PARTICLE}}::touchCellLastTime()" );
+          toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell" );
           toolbox::particles::assignmentchecks::assignParticleToVertex( 
             "{{PARTICLE}}",
             (*p)->getX(), 
@@ -214,7 +214,7 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
               3.0*marker.h()
             ),
             3.0*marker.h(), _spacetreeId,
-            "{{PARTICLE}}::touchCellLastTime()"
+            "UpdateParticleGridAssociation_Reassign::__Template_ReassignAndLiftWithinCell"
           );
           coarseGridVertices{{PARTICLES_CONTAINER}}(instruction-TwoPowerD).push_back(*p);
           p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);

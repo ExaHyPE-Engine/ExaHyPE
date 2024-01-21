@@ -415,6 +415,9 @@ namespace toolbox {
        *   particle's state could be local or virtual: If the particle has moved
        *   and therefore ended up in the sieve set, we will not have updated
        *   its parallel flag yet. Therefore, it might have changed.
+       * - A particle might change from remote to local. This can only happen
+       *   in UpdateParallelState after a merge, which first detaches a particle
+       *   and then readds it with the local flag set.
        *
        *
        * ### Consistency check for virtual particles

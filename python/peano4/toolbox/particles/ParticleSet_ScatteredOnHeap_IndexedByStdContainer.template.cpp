@@ -30,7 +30,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
         for (auto p: neighbour) {
           const bool incomingParticleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
-//          if (not incomingParticleWillBeLocal and p->getParallelState()==DoFType::ParallelState::Virtual){
           if (p->getParallelState()==DoFType::ParallelState::Virtual) {
             logDebug(
               "merge(...)",
@@ -40,34 +39,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
             tarch::multicore::Lock lock( _statisticsSemaphore );
             _numberOfDroppedIncomingVirtualParticles++;
           }
-/*          else if (incomingParticleWillBeLocal) {
-            p->setParallelState( DoFType::ParallelState::Local );
-            Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _container.begin(), _container.end());
-            if ( iteratorToExistingCopy!=end() and (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Virtual ) {
-              logDebug( "merge(...)", "incoming particle " << p->toString() << " will be local and replaces previous virtual copy of " << (*iteratorToExistingCopy)->toString() << ", i.e. particle enters domain" );
-              delete *iteratorToExistingCopy;
-              _container.erase(iteratorToExistingCopy);
-              _container.push_back(p);
-              tarch::multicore::Lock lock( _statisticsSemaphore );
-              _numberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual++;
-            }
-            else if ( iteratorToExistingCopy!=end() ) {
-              logDebug( "merge(...)", "incoming particle " << p->toString() << " would be local, but we already have a local particle copy here. Drop" );
-              delete p;
-              tarch::multicore::Lock lock( _statisticsSemaphore );
-              _numberOfRedundantlySharedLocalParticles++;
-            }
-            else {
-              _container.push_back(p);
-              logDebug( "merge(...)", "incoming particle " << p->toString() << " is a new local particle (will be counted by UpdateParticle action set)" );
-              tarch::multicore::Lock lock( _statisticsSemaphore );
-              _numberOfNewIncomingLocalParticles++;
-              toolbox::particles::assignmentchecks::assignParticleToVertex(
-                toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
-                p->getX(), true, marker.x(), marker.h(), spacetreeId );
-            }
-          }
-          */
           else {
             p->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
             Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _container.begin(), _container.end());
@@ -92,12 +63,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
               _container.erase(iteratorToExistingCopy);
               _container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
-              _numberOfReplacedVirtualParticles++;
+              _numberOfReplacedParticlesAlongBoundary++;
             }
             else {
               _container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
-              _numberOfAddedVirtualParticles++;
+              _numberOfAddedParticlesAlongBoundary++;
             }
             toolbox::particles::assignmentchecks::assignParticleToVertex(
               toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),

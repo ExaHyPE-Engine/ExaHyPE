@@ -105,7 +105,12 @@ public:
     int numberOfSkippedDropsFromSieveSetInThisTree
   );
 
-  static void updateNumberOfLocalAndExpiredParticles(int numberOfRemainingLocalParticles, int numberOfExpiredHaloParticles, int numberOfLeavingLocalParticles);
+  static void updateNumberOfLocalAndExpiredParticles(
+    int numberOfRemainingLocalParticles,
+    int numberOfExpiredHaloParticles,
+    int numberOfLeavingLocalParticles,
+    int numberOfIncomingParticles
+  );
 
 
 #ifdef Parallel
@@ -215,19 +220,36 @@ protected:
    * an overview of the statistics tracked.
    */
   static int _numberOfLiftsIntoSieveSet;
-
   static int _numberOfDropsFromSieveSet;
   static int _numberOfSkippedDropsFromSieveSet;
 
   /**
    * Set by parallel state analysis
    *
-   * See class documentation of toolbox::particles::ParticleSet for
-   * an overview of the statistics tracked.
+   * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
    */
   static int _numberOfRemainingLocalParticles;
+
+  /**
+   * Set by parallel state analysis
+   *
+   * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
+   */
   static int _numberOfExpiredHaloParticles;
+
+  /**
+   * Set by parallel state analysis
+   *
+   * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
+   */
   static int _numberOfLeavingLocalParticles;
+
+  /**
+   * Set by parallel state analysis
+   *
+   * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
+   */
+  static int _numberOfIncomingParticles;
 
   /**
    * Number of incoming halo particles which are not worked in
@@ -240,7 +262,6 @@ protected:
    * Updated by boundary merge operations.
    */
   static int _numberOfDroppedIncomingVirtualParticles;
-  static int _numberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual;
 
   /**
    * Particles which are local here and local somewhere else
@@ -260,7 +281,7 @@ protected:
    *
    * Updated by boundary merge operations.
    */
-  static int _numberOfReplacedVirtualParticles;
+  static int _numberOfReplacedParticlesAlongBoundary;
 
   /**
    * Newly "discovered" virtual particles
@@ -271,7 +292,7 @@ protected:
    *
    * Updated by boundary merge operations.
    */
-  static int _numberOfAddedVirtualParticles;
+  static int _numberOfAddedParticlesAlongBoundary;
 
   /**
    * Stats on duplicate elimination

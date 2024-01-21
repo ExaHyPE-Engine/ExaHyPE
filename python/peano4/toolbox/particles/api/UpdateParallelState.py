@@ -85,6 +85,7 @@ class UpdateParallelState(ActionSet):
   _numberOfRemainingLocalParticles = 0;
   _numberOfExpiredHaloParticles    = 0;
   _numberOfLeavingParticles        = 0;
+  _numberOfIncomingParticles       = 0;
 """
     )
 
@@ -93,7 +94,8 @@ class UpdateParallelState(ActionSet):
   vertexdata::{{PARTICLES_CONTAINER}}::updateNumberOfLocalAndExpiredParticles(
     _numberOfRemainingLocalParticles,
     _numberOfExpiredHaloParticles,
-    _numberOfLeavingParticles
+    _numberOfLeavingParticles,
+    _numberOfIncomingParticles
   );
 """
     )
@@ -104,10 +106,10 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   const bool particleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
 
   if (particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual ) {
-  // @todo incoming paritlce
     p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
-    _numberOfLeavingParticles++;
-    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), true, marker.x(), marker.h(), _treeNumber, "{{PARTICLE}}::touchVertexFirstTime()" );
+    _numberOfIncomingParticles++;
+    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
+    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), true,  marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
   }
 
   // Has just left the domain. So we set it to virtual now. Next iteration,
@@ -116,8 +118,8 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   if (not particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local ) {
     p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
     _numberOfLeavingParticles++;
-    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), true, marker.x(), marker.h(), _treeNumber, "{{PARTICLE}}::touchVertexFirstTime()" );
-    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "{{PARTICLE}}::touchVertexFirstTime()" );
+    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), true, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
+    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
   }
 }
 """
@@ -138,8 +140,8 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   }
   else {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
-    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), false, marker.x(), marker.h(), _treeNumber, "{{PARTICLE}}::touchVertexLastTime()" );
-    toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), false, _treeNumber, "{{PARTICLE}}::touchVertexLastTime()" );
+    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
+    toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), false, _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
     _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
     #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
@@ -197,6 +199,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   int  _numberOfRemainingLocalParticles;
   int  _numberOfExpiredHaloParticles;
   int  _numberOfLeavingParticles;
+  int  _numberOfIncomingParticles;
 """
 
     def get_body_of_prepareTraversal(self):
