@@ -61,16 +61,60 @@ function spaces.
 ## Symbols
 
 - Constants are written as uppercase letters such as @f$ K @f$. Usually, they 
-  are scalars.
+  are scalars. An exceptions to this rule is @f$ \omega >0 @f$ which we
+  use in line with popular literature as damping/relaxation factor.
 - Lowercase letters such as @f$ u @f$ denote a function if they are used within 
   a PDE, or ***weights*** within a ***degree of freedom*** if they are used 
   within a matrix equation. It depends on the context is they are scalar PDEs
   or vector-valued PDEs or scalars or weight vectors, respectively, i.e. we do
-  not use any syntax to highlight such a distinction.
-- Matrices are written with uppercase symbols. 
-- 
+  not use any syntax to highlight such a distinction. Our most popular choices
+  for these guys are @f$ u @f$ and @f$ p @f$.
+- If we introduce "artificial" solver spaces/functions, we typically use Greek
+  letters @f$ \lambda, \varphi, \cdots @f$. These are proper functions. They 
+  just do not appear in the original problem formulation (PDE). 
+- Matrices are written with uppercase symbols and bold, i.e.~@f$ \mathbf{A} @f$
+  or @f$ \mathbf{P} @f$. The bold type distinguishes them from constants.
+- Usually, we use @f$ \mathbf{A} @f$ for system matrices (acting on some 
+  unknowns), @f$ \mathbf{P} @f$ for projection matrices (mapping one set of
+  unknowns onto another one) and @f$ \mathbf{M} @f$ for matrices acting on 
+  other quantities. The choice of @f$ \mathbf{M} @f$ is inspired by the term
+  mass matrix, which we traditionally find on the right-hand side.
+- Partial differential operators are written as @f$ \mathcal{L} @f$ or 
+  @f$ \mathcal{A} @f$ or similar, unless there are well-established symbols 
+  such as @f$ \nabla @f$ or @f$ \Delta @f$. 
+- If we have to deal with individual shape/trial functions, we abstain from 
+  Greek letters (@f$ \phi, \psi @f$ and @f$ \varphi @f$ are frequently found
+  in literature) but instead favour @f$ v, q, \dots @f$.
+  
 
 
+## Specifiers
+
+Often, symbols are subject to some further clarification or additional 
+specification:
+
+- To highlight that a matrix or function acts on a cell or face, we use a 
+  superscript @f$ ^c @f$ or @f$ ^f @f$ respectively. @f$ u^c @f$ consequently
+  denotes a function or weights, but the superscript highlights that they 
+  live on cells only.
+- If we have a projection (or literally any matrix/operator) and want to 
+  highlight from where to where it maps, we write this as @f$ P_{f \gets c} @f$.
+  This projection @f$ P @f$ takes a cell representation and yields a face 
+  representation.
+
+## Function manipulators
+
+- If we have a face where a function @f$ u @f$ does not exist, but there is
+  a valid @f$ u @f$ left and right, @f$ u^- @f$ denotes this left function, 
+  while @f$ u^+ @f$ denotes the right one.
+- The modifier @f$ [[ u ]] @f$ on a function denotes that this function does 
+  not exist at the point where we evaluate it. However, there is are two 
+  valid function values - typically left and right - and this is the average.
+- The modifier @f$ { u } @f$ takes the jump between two values.
+- If a function lives on a cell, but we evaluate it only along the face, we 
+  use @f$ u|_f @f$. This means that we don't project it. We literally evaluate
+  is. In this sense @f$ u^+ = u_c|_f @f$ where the @f$ u_c @f$ is the solution 
+  over the right adjacent cell of a face.
 
  */
  
