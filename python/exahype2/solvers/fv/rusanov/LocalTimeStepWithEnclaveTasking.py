@@ -60,7 +60,7 @@ class LocalTimeStepWithEnclaveTasking(EnclaveTasking):
       This routine discretises (buckets) the time step sizes. You find more information
       in the C++ code in exahype2::TimeStepping.
     """
-    self._interpolate_linearly_in_time        = interpolate_linearly_in_time
+    self._interpolate_linearly_in_time = interpolate_linearly_in_time
 
     super(LocalTimeStepWithEnclaveTasking,self).__init__(name,
                                                          patch_size,
@@ -119,7 +119,7 @@ class LocalTimeStepWithEnclaveTasking(EnclaveTasking):
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
 
-    self._compute_kernel_call_cpu = create_compute_Riemann_kernel_for_Rusanov(
+    self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation,
       self._ncp_implementation,
       self._source_term_implementation,
@@ -128,7 +128,7 @@ class LocalTimeStepWithEnclaveTasking(EnclaveTasking):
       kernel_variant = KernelVariant.VolumeWiseAoS
     )
 
-    self._compute_kernel_call_stateless_cpu = create_compute_Riemann_kernel_for_Rusanov(
+    self._compute_kernel_call_stateless = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation,
       self._ncp_implementation,
       self._source_term_implementation,
@@ -137,7 +137,16 @@ class LocalTimeStepWithEnclaveTasking(EnclaveTasking):
       kernel_variant = KernelVariant.VolumeWiseSoA
     )
 
-    self._compute_kernel_call_stateless_gpu = create_compute_Riemann_kernel_for_Rusanov(
+    self._fused_compute_kernel_call_stateless_cpu = create_compute_Riemann_kernel_for_Rusanov(
+      self._flux_implementation,
+      self._ncp_implementation,
+      self._source_term_implementation,
+      compute_max_eigenvalue_of_next_time_step = True,
+      solver_variant = SolverVariant.Stateless,
+      kernel_variant = KernelVariant.VolumeWiseSoA
+    )
+
+    self._fused_compute_kernel_call_stateless_gpu = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation,
       self._ncp_implementation,
       self._source_term_implementation,
@@ -159,18 +168,16 @@ class LocalTimeStepWithEnclaveTasking(EnclaveTasking):
 
     self._start_time_step_implementation     = create_start_time_step_implementation_for_local_time_stepping(True)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_local_time_stepping()
-      
+
     super(LocalTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
 
   def create_action_sets(self):
     """
-    
     The actual action sets all are created by the superclass. So nothing
-    is to be done here. But we want to reset the actual updates and 
-    projection, and these only happen if we are allowed to update 
+    is to be done here. But we want to reset the actual updates and
+    projection, and these only happen if we are allowed to update
     indeed.
-    
     """
     super(LocalTimeStepWithEnclaveTasking, self).create_action_sets()
 
@@ -178,12 +185,12 @@ class LocalTimeStepWithEnclaveTasking(EnclaveTasking):
     updated_cell_guard = "fineGridCell" + self._name + "CellLabel.getSemaphoreNumber()!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber"
     self._action_set_update_cell.guard                += " and " + update_cell_guard
     self._action_set_merge_enclave_task_outcome.guard  = updated_cell_guard
-    
+
     if self._interpolate_linearly_in_time:
       self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)
-      
+
     self._action_set_AMR.event_lifetime = 2*3*int(self._max_volume_h/self._min_volume_h+1)
-    
+
 
   @property
   def user_action_set_includes(self):
@@ -198,5 +205,3 @@ class LocalTimeStepWithEnclaveTasking(EnclaveTasking):
 
     self._patch_overlap_old.generator.send_condition               = self._patch_overlap_new.generator.send_condition
     self._patch_overlap_old.generator.receive_and_merge_condition  = self._patch_overlap_new.generator.receive_and_merge_condition
-
-    

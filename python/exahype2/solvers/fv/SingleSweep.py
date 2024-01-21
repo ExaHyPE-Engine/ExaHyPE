@@ -37,16 +37,16 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
       {% if STATELESS_PDE_TERMS %}
       if (repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
-          marker.x(),
-          marker.h(),
-          timeStamp,
-          timeStepSize
+        marker.x(),
+        marker.h(),
+        timeStamp,
+        timeStepSize
       )) {
-        ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS_CPU}}
+        ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_STATELESS}}
       } else
       {% endif %}
 
-      ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL_CPU}}
+      ::exahype2::fv::{{KERNEL_NAMESPACE}}::{{COMPUTE_KERNEL_CALL}}
 
       {{POSTPROCESS_UPDATED_PATCH}}
 

@@ -246,7 +246,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _cellUpdates    = 0;
   }
 
-  logInfo( "startTimeStep(...)", "phase " + toString(_solverState) );
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("startTimeStep()", "Phase " + toString(_solverState));
+  }
 }
 
 

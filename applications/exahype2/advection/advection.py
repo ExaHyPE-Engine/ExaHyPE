@@ -350,6 +350,7 @@ elif args.solver in rkdg_rusanov_solvers and "Adaptive" in args.solver:
         max_cell_h=args.max_cell_size,
         min_cell_h=args.max_cell_size * 3.0 ** (-args.amr_levels),
         time_step_relaxation=0.5,
+        pde_terms_without_state=args.use_stateless_pde_terms
     )
 elif args.solver in rkdg_rusanov_solvers and "Fixed" in args.solver:
     from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import (
@@ -368,6 +369,7 @@ elif args.solver in rkdg_rusanov_solvers and "Fixed" in args.solver:
         max_cell_h=args.max_cell_size,
         min_cell_h=min_h,
         time_step_size=admissible_time_step_size,
+        pde_terms_without_state=args.use_stateless_pde_terms
     )
 elif args.solver in aderdg_rusanov_solvers and "Fixed" in args.solver:
     # stability condition: CFL for Ader-DG

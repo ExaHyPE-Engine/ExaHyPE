@@ -39,8 +39,8 @@ class SubcyclingFixedTimeStep(SingleSweep):
       downscale the time step size accordingly. So hand in a valid time step size w.r.t.
       to max_volume_h.
     """
-    self._interpolate_linearly_in_time        = interpolate_linearly_in_time
-    
+    self._interpolate_linearly_in_time = interpolate_linearly_in_time
+
     super(SubcyclingFixedTimeStep,self).__init__(name,
                                                  patch_size,
                                                  overlap,
@@ -92,7 +92,7 @@ class SubcyclingFixedTimeStep(SingleSweep):
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
 
-    self._compute_kernel_call_cpu = create_compute_Riemann_kernel_for_Rusanov(
+    self._compute_kernel_call = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation,
       self._ncp_implementation,
       self._source_term_implementation,
@@ -101,7 +101,7 @@ class SubcyclingFixedTimeStep(SingleSweep):
       kernel_variant = KernelVariant.VolumeWiseAoS
     )
 
-    self._compute_kernel_call_stateless_cpu = create_compute_Riemann_kernel_for_Rusanov(
+    self._compute_kernel_call_stateless = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation,
       self._ncp_implementation,
       self._source_term_implementation,
@@ -131,28 +131,25 @@ class SubcyclingFixedTimeStep(SingleSweep):
 #include "exahype2/TimeStepping.h"
 #include "exahype2/fv/rusanov/rusanov.h"
 """
-      
+
     super(SubcyclingFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
 
   def create_action_sets(self):
     """
-    
     The actual action sets all are created by the superclass. So nothing
-    is to be done here. But we want to reset the actual updates and 
-    projection, and these only happen if we are allowed to update 
+    is to be done here. But we want to reset the actual updates and
+    projection, and these only happen if we are allowed to update
     indeed.
-    
     """
     super(SubcyclingFixedTimeStep, self).create_action_sets()
 
     self._action_set_update_cell.guard += " and ::exahype2::runTimeStepOnCell( fineGridCell" + self._name + "CellLabel, fineGridFaces" + self._name + "FaceLabel, repositories::getMinTimeStamp())"
-    
+
     if self._interpolate_linearly_in_time:
       self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)
-    
-    self._action_set_AMR.event_lifetime =  int(self._max_volume_h/self._min_volume_h+1)
 
+    self._action_set_AMR.event_lifetime =  int(self._max_volume_h/self._min_volume_h+1)
 
 
   def create_data_structures(self):
@@ -160,5 +157,3 @@ class SubcyclingFixedTimeStep(SingleSweep):
 
     self._patch_overlap_old.generator.send_condition               = "true"
     self._patch_overlap_old.generator.receive_and_merge_condition  = "true"
-
-    

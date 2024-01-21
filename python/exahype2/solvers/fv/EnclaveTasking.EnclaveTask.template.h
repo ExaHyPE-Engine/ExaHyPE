@@ -103,7 +103,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * set. As applyKernelToCell() erases the
      * reconstructedPatch argument, we don't have to call a free() in the
      * task constructor of the functor that we pass to the enclave
-     * task (superclass). Likewisely, the superclass EnclaveTask tasks
+     * task (superclass). Likewise, the superclass EnclaveTask tasks
      * care of the allocation of the output data.
      */
     {{CLASSNAME}}(
