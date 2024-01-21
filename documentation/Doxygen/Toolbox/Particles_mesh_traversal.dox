@@ -19,7 +19,7 @@ levels. This allows us to define our particle sets:
 
 - Particles associated with local, persistent (non-hanging) vertices of a cell.
   This set, called localParticles, holds all the particle pointers of particles
-  that reside on the same resolution level as the set's vertex and where the 
+  that reside on the same resolution level as the set's vertex and where the
   current vertex is the closest one to the particles' coordinates.
 - The set of active particles is the local set plus the active set from
   the father cell in the spacetree. This is a recursive definition. So the set
@@ -166,7 +166,7 @@ The assumption that the counterpart will be taken care of is wrong if A
 resides on a coarser level than L. Local particles see all (active) particles
 from coarser scales, but coarse scale data doesn't see fine scale data. So if
 the particle's cell size @f$ h(A)>h(L) @f$, then we have evaluated @f$ f(A,L) @f$
-immediately as well within the loop. If we evaluate @f$ f(A,L) @f4 for
+immediately as well within the loop. If we evaluate @f$ f(A,L) @f$ for
 @f$ h(A)=h(L) @f$, it will be evaluated twice - which is bad if the evaluation
 feeds into an accumulation.
 
