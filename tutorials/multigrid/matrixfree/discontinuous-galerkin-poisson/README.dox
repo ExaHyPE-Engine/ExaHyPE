@@ -48,19 +48,53 @@ Creating a project is a one-liner:
 The solver construction also is a "one-liner" using the following observations:
 
 - We solve a scalar equation system. Consequently, we have @f$ K_c=1 @f$.
-- Our Riemann solver will take the 
+- Our Riemann solver will take the projections of the gradients and average it. In this simple case, @f$ K_c=1 @f$.
 
 @snippet benchmarks/multigrid/matrixfree/poisson/dg.py Instantiate solver
+
+The instantiation relies heavily on several matrices. Here, we can reuse 
+the same utility routines that we also use for the @ref tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson "DG with PETSc"
+code.  
+
+@todo Sean, Alex This is taken from the dg.py script. I honestly have no clue where these come from and who wrote that, but we should simply "reuse" the same matrices that we've used with PETSc. Alex has written functions to generate them and we should use exactly the same routines here.
+@todo Alex Please fix scaling
+
+@snippet benchmarks/multigrid/matrixfree/poisson/dg.py Construct matrices
+
+Only two matrices are new:
+
+- The @f$ \tilde{A} @f$ matrix from multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
+  (called approximate_system_matrix) has to be an approximation to 
+  @f$ A^{cc} @f$ that we can invert. In the present example, we use the 
+  simplest robust one possible and set @f$ \tilde{A} = diag(A^{cc}) @f$. This 
+  means that we end up with a global Jacobi solver.
+- The Riemann solver matrix here can either be specified, or we set it to None.
+  If we set it to None, we will get an empty routine in the generated C++ 
+  code that we have to befill (see below). In our case, we simply average 
+  between the left and right projection of the gradient and hence can hard-code
+  the operator. It is not scaled with the mesh size, i.e. it is scaled with 
+  @f$ h^0 @f$.
+    
+@todo Alex Do we already ahve this averaging matrix somewhere?
+
+
+@todo Alex can you add this?
+
+
+# Implement the functionality
+ 
+Upon the first run of the Python script, we get two new C++ classes, i.e. four
+files: AbstractMyDG.h, AbstractMyDG.cpp, MyDG.h, MyDG.cpp. The interesting file
+for the user is MyDG.cpp
+
+
+@todo Sean The parts below needs more details. Direction of travel is clear I hope.
+
 
  
  We create a solver of the type multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.
  This solver is given the name MyDG in the present example.
  
- # Implement core
- 
- Upon the first run of the Python script, we get two new C++ classes, i.e. four
- files: AbstractMyDG.h, AbstractMyDG.cpp, MyDG.h, MyDG.cpp. The interesting file
- for the user is MyDG.cpp
  
  
  
