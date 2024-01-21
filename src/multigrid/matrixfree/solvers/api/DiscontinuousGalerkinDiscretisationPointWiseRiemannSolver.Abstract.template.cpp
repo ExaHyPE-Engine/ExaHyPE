@@ -1,4 +1,5 @@
 #include "{{CLASSNAME}}.h"
+
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {}
@@ -63,12 +64,7 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
-  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = {
-      {{ASSEMBLY_MATRIX[0]| join(", ")}}
-      {% for ROW in ASSEMBLY_MATRIX[1:] %}
-        ,{{ROW | join(", ")}}
-      {% endfor %}
-  };
+  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = AssemblyMatrix;
 
   // @todo add in scaling
 
@@ -88,26 +84,36 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
   // const tarch::la::Vector<Dimensions, double>&  cellCentre,
   // const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
-  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = {
-      {{ASSEMBLY_MATRIX[0]| join(", ")}}
-      {% for ROW in ASSEMBLY_MATRIX[1:] %}
-        ,{{ROW | join(", ")}}
-      {% endfor %}
-  };
 
-  // @todo add in scaling
+  // make copy of current Assembly matrix
+  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > M = AssemblyMatrix;
 
-  return result;
+  // aux variables
+  int returnCode;
+  // don't think +1 is necessary. copied from stackoverflow
+  int ipiv[CellUnknowns+1];
+
+  // step 1
+  returnCode = LAPACKE_dgetrf( LAPACK_COL_MAJOR, CellUnknowns, CellUnknowns, M.data(), CellUnknowns, ipiv );
+  // check return code
+  assertion(returnCode>=0);
+
+  // step 2
+  returnCode = LAPACKE_dgetri( LAPACK_COL_MAJOR, CellUnknowns, M.data(), CellUnknowns, ipiv );
+ // check return code
+  assertion(returnCode>=0);
+
+  return M;
 }
 {% endif %}
 
 
-{% if CELL_TO_FACE_PROJECTION!=[] %}
-tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection * TwoTimesD, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellToFaceMatrix()
+{% if FACE_FROM_CELL_PROJECTION!=[] %}
+tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection * TwoTimesD, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceFromCellMatrix()
 {
   static tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > result = {
-      {{CELL_TO_FACE_PROJECTION[0]| join(", ")}}
-      {% for ROW in CELL_TO_FACE_PROJECTION[1:] %}
+      {{FACE_FROM_CELL_PROJECTION[0]| join(", ")}}
+      {% for ROW in FACE_FROM_CELL_PROJECTION[1:] %}
         ,{{ROW | join(", ")}}
       {% endfor %}
   };
@@ -116,12 +122,12 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProject
 } 
 {% endif %}
 
-{% if FACE_TO_CELL_PROJECTION!=[] %}
-tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution * TwoTimesD, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceToCellMatrix()
+{% if CELL_FROM_FACE_PROJECTION!=[] %}
+tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution * TwoTimesD, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellFromFaceMatrix()
 {
   static tarch::la::Matrix<  CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > result = {
-      {{FACE_TO_CELL_PROJECTION[0]| join(", ")}}
-      {% for ROW in FACE_TO_CELL_PROJECTION[1:] %}
+      {{CELL_FROM_FACE_PROJECTION[0]| join(", ")}}
+      {% for ROW in CELL_FROM_FACE_PROJECTION[1:] %}
         ,{{ROW | join(", ")}}
       {% endfor %}
   };

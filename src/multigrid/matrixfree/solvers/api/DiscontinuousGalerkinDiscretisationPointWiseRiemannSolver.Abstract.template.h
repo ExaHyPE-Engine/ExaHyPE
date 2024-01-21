@@ -13,6 +13,10 @@
 #include "celldata/{{SOLVER_NAME}}.h"
 #include "facedata/{{SOLVER_NAME}}.h"
 
+// for openblas
+#include <cblas.h>
+#include <lapacke.h>
+
 {{SOLVER_INCLUDES}}
 
 {% for item in NAMESPACE -%}
@@ -43,6 +47,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     static constexpr int        UnknownsPerCellNode    = {{UNKNOWNS_PER_CELL_NODE}};
     static constexpr int        UnknownsPerFaceNode    = {{UNKNOWNS_PER_FACE_NODE}};
+
+  private:
+    // make this a variable class member, so we can modify it later.
+    tarch::la::Matrix< CellUnknowns, CellUnknowns, double > AssemblyMatrix = 
+    {
+      {{ASSEMBLY_MATRIX[0]| join(", ")}}
+      {% for ROW in ASSEMBLY_MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+  };
+
+  public:
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
 
@@ -106,11 +122,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     );
 
     // no arguments needed
-    virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > getFaceToCellMatrix(
+    virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > getCellFromFaceMatrix(
     );
 
     // no arguments needed
-    virtual tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > getCellToFaceMatrix(
+    virtual tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > getFaceFromCellMatrix(
     );
 
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix();

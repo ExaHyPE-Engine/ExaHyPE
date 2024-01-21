@@ -140,6 +140,128 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         
     
     All of this functionality can be found in the subpackage actionsets.UpdateCell.
+
+  ## How does it work?
+
+  ### Python stuff
+  The benchmarks folder contains a dg.py file. In there, we define the simulation paramters,
+  the Peano project, the solver and the various matrices we pass in.
+
+  As always, the number of nodes per face/cell is fixed by the polynomial degree and the 
+  dimension of the space.
+
+  Some important parameters:
+
+  \li ```poly_degree``` - The degree of the polynomial that we use. Defaults to 1.
+
+  \li ```unknowns_per_cell``` - The number of unknowns that we solve for in each cell, \f$ K^c \f$
+
+  \li ```unknowns_per_face``` - The number of unknowns that we solve for in each face, \f$ K^f \f$. 
+  It's not clear whether it makes sense to have this as a different value from ```unknowns_per_cell```, 
+  since our update rule \f$ u|_c \gets u|_c + \omega _c A^{-1}\left( Mb - A u|_c - P q|_f \right) \f$ implies
+  that there are the same number of \f$ u|_c \f$ as \f$ q|_f \f$ at coinciding nodal points.
+
+  ### Under the hood
+
+  Inside the cells we store \f$ K^c (p+1)^{d} \f$ values for the solution, and the same number for the rhs.
+  On each face we store \f$ K^f (p+1)^{d-1} \f$ (although, at time of writing I fix \f$K^f==K^c\f$) values
+  for the solution, and then \f$ 2K^c (p+1)^{d-1} \f$ for the projections in a separate array. Since this is
+  a projection of \f$ u|_c \f$ onto the face, we have one for each face nodal point, with the factor of two
+  since we have one on the left and one on the right.
+
+
+  ### Matrices we pass in to the solver class
+  See documentation for this class itself...
+
+  \li ```assembly_matrix``` - this is the cell-to-cell matrix which defines how the cell nodes couple to one another.
+  This is a square matrix with \f$ K^c * (p+1)^{d} \f$ rows.
+
+  \li ```mass_matrix``` - similar to ```assembly_matrix```.
+
+  \li ```face_from_cell``` - this matrix projects the cell solution onto all of the faces. It has \f$ 2K^c (p+1)^{d-1} * 2D \f$
+  rows (note the extra factor of 2D, the number of faces),
+   ie, one row for each element of the ```projection``` array, for each face, with the entries for each face listed one 
+  after another. The matrix has \f$ K^c * (p+1)^{d} \f$ columns, ie one row for each face-solution. It is the job of the user
+  to ensure that this matrix performs the correct ordering in the desired manner - more on this later.
+
+  \li ```cell_from_face``` - this matrix projects the solution on all of the faces onto the cell. It hence has 
+  \f$ 2K^f (p+1)^{d-1} * 2D \f$ columns (note the extra factor of 2D) and \f$ K^c * (p+1)^{d} \f$. The user should
+  enumerate these correctly.
+
+  \li ```riemann_matrix``` - The matrix that combines the left/right projections on the cell and outputs a value 
+  which we use to update the \f$ q\_f \f$. It has \f$ 2K^c (p+1)^{d-1} \f$ columns and \f$ 2K^f (p+1)^{d-1} \f$ rows.
+  @todo I think this is another reason why K^c cannot be different from K^f....
+
+  So far we have three non-trivial action sets.
+
+  ###  InitDofs
+  Code for this is in actionsets.InitDofsDG. So far nothing happens, other than determining which cells/faces are 
+  on the boundary and putting in initial guesses for each cell and face dof.
+
+  ### UpdateCell
+  This is called before ProjectOntoFaces. Code for this is in actionsets.UpdateCell.
+  @todo - include code snippets here
+
+  ### ProjectOntoFaces
+  Code for this is in actionsets.ProjectOntoFaces
+  @todo - include code snippets here
+
+  ## Solver class
+  For now, the solver class contains the matrices mentioned above. We also include a method that explicitly
+  inverts a matrix using BLAS, in two stages:
+
+  \verbatim
+#include <cblas.h>
+#include <lapacke.h>
+
+...
+
+  // make copy of current Assembly matrix
+  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > M = AssemblyMatrix;
+
+  // aux variables
+  int returnCode;
+  int ipiv[CellUnknowns];
+
+  // step 1 - compute LU factorisation. M -> P * L * U, where P a permutation matrix
+  returnCode = LAPACKE_dgetrf( LAPACK_COL_MAJOR, CellUnknowns, CellUnknowns, M.data(), CellUnknowns, ipiv );
+  // check return code
+  assertion(returnCode>=0);
+
+  // step 2 - use the result of the above to compute the inverse.
+  returnCode = LAPACKE_dgetri( LAPACK_COL_MAJOR, CellUnknowns, M.data(), CellUnknowns, ipiv );
+ // check return code
+  assertion(returnCode>=0);
+
+  return M;
+
+  \endverbatim
+
+  Here we neatly (ab)use the tarch::la::Matrix::data() function to get a pointer to a double array.
+  See documentation on these functions [here](https://www.netlib.org/lapack/explore-html-3.6.1/dd/d9a/group__double_g_ecomputational_ga0019443faea08275ca60a734d0593e60.html)
+  and [here](https://www.netlib.org/lapack/explore-html-3.6.1/dd/d9a/group__double_g_ecomputational_ga56d9c860ce4ce42ded7f914fdb0683ff.html)
+
+  ## How do I build it on COSMA?
+
+  Modules to load:
+    \li module load oneAPI/2022.3.0
+    \li module load gnu_comp/10.2.0 gsl
+    \li module load intel_mpi
+    \li module load openblas
+
+    Make sure LD_LIBRARY_PATH contains the openblas directory from the intel compiler files:
+      ```export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/lib```
+  
+  Stuff to add to CXXFLAGS:
+  \li -I/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/include/
+
+  Stuff to add to LDFLAGS:
+  \li -L/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/lib/
+  \li -lopenblas
+    
+  # Questions to be answered:
+  - What to do on boundary cells/faces?
+
     
   """
   def __init__(self,
@@ -154,24 +276,24 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               assembly_matrix_scaling,
               mass_matrix,
               mass_matrix_scaling,
-              cell_to_face_projection,
-              face_to_cell_projection,
+              face_from_cell_projection,
+              cell_from_face_projection,
               riemann_matrix,
               ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).__init__(name, min_h, max_h)
 
     # store everything we pass in anyhow
-    self._dimensions              = dimensions
-    self._poly_degree             = poly_degree
-    self._unknowns_per_cell_node  = unknowns_per_cell_node
-    self._unknowns_per_face_node  = unknowns_per_face_node
-    self._assembly_matrix         = assembly_matrix
-    self._assembly_matrix_scaling = assembly_matrix_scaling
-    self._mass_matrix             = mass_matrix
-    self._mass_matrix_scaling     = mass_matrix_scaling
-    self._cell_to_face_projection = cell_to_face_projection
-    self._face_to_cell_projection = face_to_cell_projection
-    self._riemann_matrix          = riemann_matrix
+    self._dimensions                = dimensions
+    self._poly_degree               = poly_degree
+    self._unknowns_per_cell_node    = unknowns_per_cell_node
+    self._unknowns_per_face_node    = unknowns_per_face_node
+    self._assembly_matrix           = assembly_matrix
+    self._assembly_matrix_scaling   = assembly_matrix_scaling
+    self._mass_matrix               = mass_matrix
+    self._mass_matrix_scaling       = mass_matrix_scaling
+    self._face_from_cell_projection = face_from_cell_projection
+    self._cell_from_face_projection = cell_from_face_projection
+    self._riemann_matrix            = riemann_matrix
 
     # K^c * (p+1)^d
     self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree + 1) ** dimensions
@@ -195,8 +317,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
     assert assembly_matrix.shape == mass_matrix.shape
 
-    # assert  cell_to_face_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
-    # assert (cell_to_face_projection.T).shape ==  self._face_to_cell_projection.shape
+    # assert  face_from_cell_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
+    # assert (face_from_cell_projection.T).shape ==  self._cell_from_face_projection.shape
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).add_to_Peano4_datamodel(datamodel,verbose)
@@ -264,8 +386,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "MASS_MATRIX_SCALING"         : self._mass_matrix_scaling,
         "ASSEMBLY_MATRIX"             : self._assembly_matrix,
         "ASSEMBLY_MATRIX_SCALING"     : self._assembly_matrix_scaling,
-        "CELL_TO_FACE_PROJECTION"     : self._cell_to_face_projection,
-        "FACE_TO_CELL_PROJECTION"     : self._face_to_cell_projection,
+        "FACE_FROM_CELL_PROJECTION"   : self._face_from_cell_projection,
+        "CELL_FROM_FACE_PROJECTION"   : self._cell_from_face_projection,
         "RIEMANN_MATRIX"              : self._riemann_matrix
         }
 
