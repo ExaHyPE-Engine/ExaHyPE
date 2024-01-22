@@ -11,6 +11,12 @@ template <typename Particle>
 void swift2::kernels::legacy::leapfrog_drift_global_time_step_size(
   Particle* particle
 ) {
+  //
+  // @todo The docu is clear that this is not admissible: There should be a
+  //       check here! See the Euler.cpph file. So it should be
+  //   if ( ::swift2::kernels::localParticleCanBeMoved(marker, localParticle) ) {
+  //
+  //
   const double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
 
   // Drift the particle (update position for a full time-step). It's important

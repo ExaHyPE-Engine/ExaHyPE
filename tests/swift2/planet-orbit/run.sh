@@ -10,7 +10,7 @@ export OMP_NUM_THREADS=1
 
 # Run python script to generate the experiment
 # TODO: I'm not sure this is the intended way of running, which also would conserve energy and pass this test.
-python3 ./planet-orbit-leapfrog.py
+python3 planet-orbit.py --time-integrator leapfrog -et 5.0 -cs 0.3 -plot 0.01 --asserts
 
 # run experiment
 echo 'running experiment...'

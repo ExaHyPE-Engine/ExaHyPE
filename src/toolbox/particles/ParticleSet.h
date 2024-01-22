@@ -250,6 +250,17 @@ public:
    */
   static bool hasParticlesToBeSievedIntoVertices(int originatingTree);
 
+  /**
+   * Return total number of remaining particles
+   *
+   * Should be invoked on the global master rank only. After each
+   * reduceAndPrintStatistics() call, we memorise this quantity and
+   * subsequently return it.
+   */
+  static int getGlobalNumberOfLocalParticles();
+  static int getGlobalNumberOfLeavingParticles();
+  static int getGlobalNumberOfExpiredHaloParticles();
+  static int getGlobalNumberOfNewIncomingParticles();
 private:
   static tarch::logging::Log _log;
 
@@ -377,6 +388,12 @@ protected:
    */
   static int _numberOfParticlesInLastClear;
 #endif
+
+  static int _globalNumberOfRemainingLocalParticles;
+  static int _globalNumberOfExpiredHaloParticles;
+  static int _globalNumberOfLeavingLocalParticles;
+  static int _globalNumberOfNewIncomingParticles;
+
 };
 
 

@@ -17,9 +17,43 @@ namespace swift2 {
      * internally to check if it actually should update. How this knowledge
      * is taken into account is however up to the realisation. In the simplest
      * case, it is just a mere enclosing if statement.
+     *
+     * A typical operator looks like
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~
+     * [=](
+     *   const peano4::datamanagement::VertexMarker& marker,
+     *   globaldata::MyParticle&                     particle
+     * ) -> void {
+     *   if ( ::swift2::kernels::localParticleCanBeMoved(marker, particle) ) {
+     *     [...]
+     *     particle.setMoveState(Particle::MoveState::Moved);
+     *   }
+     * }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * This realisation is stereotypical and also highlight one tiny detail:
+     * If you alter the particle position, you have to reset the MoveState.
+     * Other kernels do not have any additional bookkeeping.
+     *
+     * Swift offers a set of pre-defined timestepping and reduction kernels.
+     * These are templates and hence have to be specialised:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~
+     * AlgorithmStep(
+     *   [...]
+     *   touch_vertex_first_time_kernel = """::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::resetMovedParticleMarker<globaldata::{}> );""".format( my_particle_type ),
+     *   touch_vertex_last_time_kernel  = """::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize<globaldata::{}> );""".format( my_particle_type ),
+     *   [...]
+     * )
+     * ~~~~~~~~~~~~~~~~~~~~~~~~
+     *
      */
     template <typename Particle>
-    using ParticleUnaryOperator = std::function<void(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle)>;
+    using ParticleUnaryOperatorOnVertex = std::function<void(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle)>;
+
+    template <typename Particle>
+    using ParticleUnaryOperatorOnCell = std::function<void(const peano4::datamanagement::CellMarker& marker, Particle& localParticle)>;
 
     /**
      * Definition of particle-particle interaction
@@ -35,6 +69,82 @@ namespace swift2 {
      * internally to check if it actually should update. How this knowledge
      * is taken into account is however up to the realisation. In the simplest
      * case, it is just a mere enclosing if statement.
+     *
+     * So one we assume that we employ localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle
+     * as update rule, a function implementing the concept of
+     * ParticleBinaryOperator resembles
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * void myParticleBinaryOperator(
+     *   const peano4::datamanagement::CellMarker& marker,
+     *   globaldata::MyParticle&                   localParticle,
+     *   globaldata::MyParticle&                   activeParticle
+     * ) {
+     *   if ( ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
+     *     marker,
+     *     localParticle,
+     *     activeParticle
+     *   )) {
+     *     [...] // your code
+     *   }
+     * }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * This function can now be used anywhere where a template expects a
+     * ParticleBinaryOperator.
+     *
+     *
+     * ## Using the function
+     *
+     * Once you have introduced your function (in a cpp file of your choice,
+     * e.g.), you can hand it in via a plain myParticleBinaryOperator argument.
+     *
+     *
+     * For very simple interactions that you define only once, don't want to
+     * unit test, ... you might skip the explicit declaration and add the thing
+     * in directly as a functor:
+     *
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * [=](
+     *   const peano4::datamanagement::CellMarker& marker,
+     *   globaldata::MyParticle&                   localParticle,
+     *   globaldata::MyParticle&                   activeParticle
+     * ) -> void {
+     *   if ( ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle(
+     *     marker,
+     *     localParticle,
+     *     activeParticle
+     *   )) {
+     *     [...] // your code
+     *   }
+     * }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * ## Type-generic interaction operators
+     *
+     * Obviously, you might want to make this function
+     * a template, so it can be used for different particles. It might also be
+     * tempting to distinguish the type of active and local particles, so you
+     * can have interactions between different species:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * template <typename LocalParticle, typename ActiveParticle>
+     * void myParticleBinaryOperator(
+     *   const peano4::datamanagement::CellMarker& marker,
+     *   LocalParticle&                            localParticle,
+     *   ActiveParticle&                           activeParticle
+     * ) {
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * The only thing to take into account is that the compiler now might
+     * struggle to deduce the type. If this happens, simply hand in
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     * myParticleBinaryOperator<globaldata::MyType,globaldata::MyType>
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * as argument where myParticleBinaryOperator had been sufficient before.
      */
     template <typename LocalParticle, typename ActiveParticle>
     using ParticleBinaryOperator = std::function<void(const peano4::datamanagement::CellMarker& marker, LocalParticle& localParticle, ActiveParticle& activeParticle)>;
@@ -76,9 +186,22 @@ namespace swift2 {
     void forAllParticles(
       const peano4::datamanagement::VertexMarker&                  marker,
       ParticleContainer&                                           assignedParticles,
-      ParticleUnaryOperator<typename ParticleContainer::DoFType >  f,
+      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType >  f,
       UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate =
           ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
+    );
+
+
+    /**
+     * Loop over all particles within a cell
+     */
+    template <typename ParticleContainer>
+    void forAllLocalParticles(
+      const peano4::datamanagement::CellMarker&                    marker,
+      ParticleContainer&                                           localParticles,
+      ParticleUnaryOperatorOnCell<typename std::remove_pointer<typename ParticleContainer::value_type>::type >  f,
+      UpdateParticleAssignedToCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+          predicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
     );
 
 
@@ -100,7 +223,7 @@ namespace swift2 {
       const peano4::datamanagement::VertexMarker&                  marker,
       ParticleContainer&                                           assignedParticles,
       int                                                          numberOfAssignedParticles,
-      ParticleUnaryOperator<typename ParticleContainer::DoFType >  f
+      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType >  f
     );
 
 
@@ -123,7 +246,7 @@ namespace swift2 {
       const peano4::datamanagement::VertexMarker&                  marker,
       ParticleContainer&                                           assignedParticles,
       int                                                          numberOfAssignedParticles,
-      ParticleUnaryOperator<typename ParticleContainer::DoFType >  f,
+      ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType >  f,
       UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate =
           ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel<typename ParticleContainer::DoFType>
     );

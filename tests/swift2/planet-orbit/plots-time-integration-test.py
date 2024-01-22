@@ -88,7 +88,8 @@ plt.tight_layout()
 
 #plt.show()
 fig.savefig('energy_conservation_profile.pdf')
-print("saved energy_conservation_profile.pdf")
+fig.savefig('energy_conservation_profile.png')
+print("saved energy_conservation_profile")
 #plt.close()
 
 # Check energy conservation

@@ -60,7 +60,7 @@ simulations:
 
 Nothing stops you from additing further action sets to
 algorithm_step_initial_conditions. Some scenarios, for example, hard code
-the initial condition of further particles. The @ref benchmarks_swift2_planet_orbit "planet orbit benchmark"
+the initial condition of further particles. The @ref tests_swift2_planet_orbit "planet orbit benchmark"
 is such an example, where no input files are required.
 
 

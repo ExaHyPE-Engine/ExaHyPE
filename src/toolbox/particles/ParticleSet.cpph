@@ -63,6 +63,18 @@ int toolbox::particles::ParticleSet<T>::_numberOfVirtualEliminatedSpatialDuplica
 template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfLocalEliminatedSpatialDuplicates;
 
+template <typename T>
+int toolbox::particles::ParticleSet<T>::_globalNumberOfRemainingLocalParticles;
+
+template <typename T>
+int toolbox::particles::ParticleSet<T>::_globalNumberOfExpiredHaloParticles;
+
+template <typename T>
+int toolbox::particles::ParticleSet<T>::_globalNumberOfLeavingLocalParticles;
+
+template <typename T>
+int toolbox::particles::ParticleSet<T>::_globalNumberOfNewIncomingParticles;
+
 
 #if PeanoDebug >= 1 and !defined(Parallel) and !defined(SharedMemoryParallelisation)
 template <typename T>
@@ -281,7 +293,7 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
     logInfo(
       "reduceAndPrintStatistics()",
       "boundary merge statistics"
-        << ": #incoming particles (previously known as halos)=" << globalNumberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual << ", #incoming particles (previously unseen)="
+        << ": #incoming particles (previously known as halos)=" << _globalNumberOfNewIncomingParticles << ", #incoming particles (previously unseen)="
         << globalNumberOfNewIncomingLocalParticles << ", #redundantly shared particles (local on multiple trees)=" << globalNumberOfRedundantlySharedLocalParticles
         << ", #added virtual particles (flying into halo)=" << globalNumberOfAddedVirtualParticles << ", #replaced virtual particles (halo updates)="
         << globalNumberOfReplacedVirtualParticles << ", #dropped virtual particles=" << globalNumberOfDroppedIncomingVirtualParticles
@@ -292,6 +304,11 @@ void toolbox::particles::ParticleSet<T>::reduceAndPrintStatistics() {
         << ": #eliminated local spatial duplicates=" << globalNumberOfLocalEliminatedSpatialDuplicates
         << ", #eliminated virtual spatial duplicates=" << globalNumberOfVirtualEliminatedSpatialDuplicates
     );
+
+    _globalNumberOfRemainingLocalParticles = globalNumberOfRemainingLocalParticles;
+    _globalNumberOfExpiredHaloParticles    = globalNumberOfExpiredHaloParticles;
+    _globalNumberOfLeavingLocalParticles   = globalNumberOfLeavingLocalParticles;
+    _globalNumberOfNewIncomingParticles = globalNumberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual + globalNumberOfNewIncomingLocalParticles;
   }
 }
 
@@ -312,6 +329,34 @@ void toolbox::particles::ParticleSet<T>::updateLiftDropStatistics(
   _numberOfLiftsIntoSieveSet += numberOfLiftsIntoSieveSetInThisTree;
   _numberOfDropsFromSieveSet += numberOfDropsFromSieveSetInThisTree;
   _numberOfSkippedDropsFromSieveSet += numberOfSkippedDropsFromSieveSetInThisTree;
+}
+
+
+template <typename T>
+int toolbox::particles::ParticleSet<T>::getGlobalNumberOfLocalParticles() {
+  assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
+  return _globalNumberOfRemainingLocalParticles;
+}
+
+
+template <typename T>
+int toolbox::particles::ParticleSet<T>::getGlobalNumberOfExpiredHaloParticles() {
+  assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
+  return _globalNumberOfExpiredHaloParticles;
+}
+
+
+template <typename T>
+int toolbox::particles::ParticleSet<T>::getGlobalNumberOfLeavingParticles() {
+  assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
+  return _globalNumberOfLeavingLocalParticles;
+}
+
+
+template <typename T>
+int toolbox::particles::ParticleSet<T>::getGlobalNumberOfNewIncomingParticles() {
+  assertion( tarch::mpi::Rank::getInstance().isGlobalMaster() );
+  return _globalNumberOfNewIncomingParticles;
 }
 
 
