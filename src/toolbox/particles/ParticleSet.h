@@ -161,6 +161,8 @@ public:
   typedef T             DoFType;
   typedef std::list<T*> ParticleList;
 
+  using SieveParticles = SieveParticles<T>;
+
 #if PeanoDebug >= 1
   void                                  setDebugX(const tarch::la::Vector<Dimensions, double>& data);
   void                                  setDebugH(const tarch::la::Vector<Dimensions, double>& data);
@@ -175,7 +177,7 @@ public:
    *
    * Has to be called per rank prior to any collection of stats.
    * I used to call this routine in the prepare traversal event, i.e. in
-   * peano4.toolbox.particles.AbstractUpdateParticleGridAssociation.get_body_of_prepareTraversal().
+   * peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation.get_body_of_prepareTraversal().
    * However, this is not clever, as the reassignment usually spans multiple
    * grid sweeps. If we clear the stats prior to each of these sweeps, we
    * will only get a state snapshot from what happened in the last sweep.
@@ -206,15 +208,12 @@ public:
     int numberOfDropsInThisTree,
     int numberOfReassignmentsInThisTree,
     int numberOfLiftsIntoSieveSetInThisTree,
-    int numberOfDropsFromSieveSetInThisTree
+    int numberOfDropsFromSieveSetInThisTree,
+    int numberOfSkippedDropsFromSieveSetInThisTree
   );
 
-  static void updateNumberOfLocalParticleStatistics(
-    int numberOfRemainingLocalParticles,
-    int numberOfIncomingLocalParticles,
-    int numberOfLeavingLocalParticles,
-    int numberOfExpiredHaloParticles
-  );
+  static void updateNumberOfLocalAndExpiredParticles(int numberOfRemainingLocalParticles, int numberOfExpiredHaloParticles, int numberOfLeavingLocalParticles);
+
 
 #ifdef Parallel
   static void initDatatype();
@@ -231,20 +230,37 @@ public:
    * Make routine from SieveParticles public
    *
    * Delegate through. This way, we don't have to expose the actual
-   * sieve object.
+   * sieve object. Usually combined with hasParticlesToBeSievedIntoVertices()
+   * as guard, which makes the querying faster.
+   *
+   * @see SieveParticles::getParticlesToBeSievedIntoVertex() for parameter
+   *   descriptions.
    */
-  static ParticleList getParticlesToBeSievedIntoVertex(
-    const peano4::datamanagement::VertexMarker& marker, int originatingTree = SieveParticles<T>::GlobalSort
-  );
+  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree, int callingTree);
 
   /**
    * Make routine from SieveParticles public
    *
    * Delegate through. This way, we don't have to expose the actual
-   * sieve object.
+   * sieve object. This predicate is usually always used as guard before
+   * actually invoking getParticlesToBeSievedIntoVertex().
+   *
+   * @param originatingTree Either a number associated with a local tree or
+   *                        SieveParticles<T>::GlobalSort.
    */
-  static bool hasParticlesToBeSievedIntoVertices(int originatingTree = SieveParticles<T>::GlobalSort);
+  static bool hasParticlesToBeSievedIntoVertices(int originatingTree);
 
+  /**
+   * Return total number of remaining particles
+   *
+   * Should be invoked on the global master rank only. After each
+   * reduceAndPrintStatistics() call, we memorise this quantity and
+   * subsequently return it.
+   */
+  static int getGlobalNumberOfLocalParticles();
+  static int getGlobalNumberOfLeavingParticles();
+  static int getGlobalNumberOfExpiredHaloParticles();
+  static int getGlobalNumberOfNewIncomingParticles();
 private:
   static tarch::logging::Log _log;
 
@@ -308,6 +324,7 @@ protected:
   static int _numberOfLiftsIntoSieveSet;
 
   static int _numberOfDropsFromSieveSet;
+  static int _numberOfSkippedDropsFromSieveSet;
 
   /**
    * Set by parallel state analysis
@@ -316,9 +333,8 @@ protected:
    * an overview of the statistics tracked.
    */
   static int _numberOfRemainingLocalParticles;
-  static int _numberOfIncomingLocalParticles;
-  static int _numberOfLeavingLocalParticles;
   static int _numberOfExpiredHaloParticles;
+  static int _numberOfLeavingLocalParticles;
 
   /**
    * Number of updated halo particles
@@ -330,15 +346,18 @@ protected:
    * See class documentation of toolbox::particles::ParticleSet for
    * an overview of the statistics tracked.
    */
-  static int _numberOfAddedVirtualParticles;
+  static int _numberOfDroppedIncomingVirtualParticles;
+  static int _numberOfIncomingParticlesWhichWerePreviouslyKnownAsVirtual;
+  static int _numberOfRedundantlySharedLocalParticles;
+  static int _numberOfNewIncomingLocalParticles;
   static int _numberOfReplacedVirtualParticles;
-  static int _numberOfDroppedVirtualParticles;
+  static int _numberOfAddedVirtualParticles;
 
   /**
    * Stats on duplicate elimination
    *
-   * This one is updated internally by eliminateSpatialDuplicates() which you
-   * might call or you might not call. It is never updated anywhere else.
+   * This one is updated internally by addParticles() which you
+   * might call with duplicate detection or not.
    *
    * See class documentation of toolbox::particles::ParticleSet for
    * an overview of the statistics tracked.
@@ -349,12 +368,32 @@ protected:
   /**
    * Map of persistent particles that have to be sieved
    */
-  static SieveParticles<T> _sieveParticles;
+  static SieveParticles _sieveParticles;
 
 #if PeanoDebug >= 1
   tarch::la::Vector<Dimensions, double> _debugX;
   tarch::la::Vector<Dimensions, double> _debugH;
 #endif
+
+#if PeanoDebug >= 1 and !defined(Parallel) and !defined(SharedMemoryParallelisation)
+  /**
+   * Counter to ensure no particles get lost
+   *
+   * We reset the particle counter in each clearParticleStateStatistics().
+   * Therefore, we can each (prior to the reset) if the total particle count
+   * is still the same. However, this works if and only if no parallelisation
+   * is switched on. As soon as the parallelisation kicks in, particles can be
+   * hosted redundantly and travel, so counting the number of local/real
+   * particles is not that trivial anymore.
+   */
+  static int _numberOfParticlesInLastClear;
+#endif
+
+  static int _globalNumberOfRemainingLocalParticles;
+  static int _globalNumberOfExpiredHaloParticles;
+  static int _globalNumberOfLeavingLocalParticles;
+  static int _globalNumberOfNewIncomingParticles;
+
 };
 
 

@@ -6,13 +6,15 @@
 // however are not subject of copyright, i.e. feel free to add your copyright in
 // here
 //
-#pragma once 
+#pragma once
 
 #include <string>
 
+
+
 #ifdef Parallel
-#include <mpi.h>
-#include <functional>
+  #include <mpi.h>
+  #include <functional>
 #endif
 
 #include "tarch/la/Vector.h"
@@ -26,14 +28,20 @@
 
 namespace peano4{
 namespace grid{
+
   struct GridTraversalEvent;
 }
 }
 
+
+
 struct peano4::grid::GridTraversalEvent {
   public:
+
+
     GridTraversalEvent() {}
-    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
+    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, std::bitset<ThreePowerD>  __isAdjacentCellLocal, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
+
 
     tarch::la::Vector<Dimensions,double>   getX() const;
     void   setX(const tarch::la::Vector<Dimensions,double>& value);
@@ -82,6 +90,11 @@ struct peano4::grid::GridTraversalEvent {
     bool   getIsFaceAdjacentToParallelDomainBoundary(int index) const;
     void   setIsFaceAdjacentToParallelDomainBoundary(int index, bool value);
     void   flipIsFaceAdjacentToParallelDomainBoundary(int index);
+    std::bitset<ThreePowerD>   getIsAdjacentCellLocal() const;
+    void   setIsAdjacentCellLocal(const std::bitset<ThreePowerD>&  value);
+    bool   getIsAdjacentCellLocal(int index) const;
+    void   setIsAdjacentCellLocal(int index, bool value);
+    void   flipIsAdjacentCellLocal(int index);
     tarch::la::Vector<TwoPowerD,int>   getVertexDataFrom() const;
     void   setVertexDataFrom(const tarch::la::Vector<TwoPowerD,int>& value);
     int   getVertexDataFrom(int index) const;
@@ -112,8 +125,6 @@ struct peano4::grid::GridTraversalEvent {
 
 
     #ifdef Parallel
-    PragmaPush
-    SilenceUnknownAttribute
     /**
      * Hands out MPI datatype if we work without the LLVM MPI extension.
      * If we work with this additional feature, this is the routine where
@@ -133,7 +144,7 @@ struct peano4::grid::GridTraversalEvent {
 
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
-    PragmaPop
+
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -190,8 +201,6 @@ struct peano4::grid::GridTraversalEvent {
     std::string toString() const;
 
   private:
-    PragmaPush
-    SilenceUnknownAttribute
 #if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
     [[clang::truncate_mantissa(23)]]  double   _x[Dimensions];
 #endif
@@ -248,6 +257,12 @@ struct peano4::grid::GridTraversalEvent {
 #if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
       std::bitset<TwoTimesD>   _isFaceAdjacentToParallelDomainBoundary;
 #endif
+#if defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+    [[clang::pack]]  bool   _isAdjacentCellLocal[ThreePowerD];
+#endif
+#if !defined(__PACKED_ATTRIBUTES_LANGUAGE_EXTENSION__)
+      std::bitset<ThreePowerD>   _isAdjacentCellLocal;
+#endif
     tarch::la::Vector<TwoPowerD,int>   _vertexDataFrom;
     tarch::la::Vector<TwoPowerD,int>   _vertexDataTo;
     tarch::la::Vector<TwoTimesD,int>   _faceDataFrom;
@@ -261,11 +276,12 @@ struct peano4::grid::GridTraversalEvent {
 #endif
     [[clang::pack_range(-1,std::numeric_limits<int>::max())]]  int   _invokingSpacetree;
     [[clang::pack]]  bool   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
-    PragmaPop
+
+
 
     #ifdef Parallel
     private:
-      int _senderDestinationRank;
+      int                  _senderDestinationRank;
 
       #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
       /**
@@ -281,3 +297,7 @@ struct peano4::grid::GridTraversalEvent {
 
 
 };
+
+  
+
+

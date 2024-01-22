@@ -89,7 +89,7 @@
        * @see STDVectorOverContainerOfPointers::startReceive()
        * @see clone()
        */
-      void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
+      void merge(::peano4::grid::TraversalObserver::SendReceiveContext context, {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker, int spacetreeId);
 
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
@@ -108,14 +108,6 @@
        *   copies.
        */
       void clone( const {{CLASSNAME}}& otherSet );
-
-      /**
-       * Eliminate spatial duplicates
-       *
-       * Please consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" before
-       * you study the implementation remarks below.
-       */
-      void eliminateSpatialDuplicates();
 
       std::string toString() const;
 
@@ -198,17 +190,6 @@
        * Is internally mapped onto a push_back.
        */
       void addParticle(DoFType* particle);
-
-      /**
-       * Add set of particles
-       *
-       * This is a shallow addition, i.e. I attach these new pointers. The
-       * particles themselves are not copied.
-       *
-       * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
-       * some context and references to other routines.
-       */
-      void addParticles(const ParticleList& particleSet);
 
       /**
        * Some simple validation

@@ -2,11 +2,11 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/la/ScalarOperations.h"
 #include "peano4/utils/Loop.h"
 #include <cmath>
+#include "../../../src/tarch/NonCriticalAssertions.h"
 
 enum derivatives { h_x=1, h_y, u_x, u_y, u_xx, u_yy, u_xy, v_x, v_y, v_xx, v_yy, v_xy };
 enum unknowns { h = 0, hu, hv };

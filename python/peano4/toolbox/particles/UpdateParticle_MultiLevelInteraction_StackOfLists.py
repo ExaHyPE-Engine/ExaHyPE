@@ -474,6 +474,12 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists(ActionSet):
   std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
   std::vector< int >                             _numberOfActiveParticlesAdded;
   std::vector< int >                             _numberOfActiveParticlesPerVertex;
+  int                                            _spacetreeId;
 """
         )
         return result.render(**self.d)
+
+    def get_constructor_body(self):
+        return """
+            _spacetreeId              = treeNumber;
+          """

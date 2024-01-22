@@ -5,8 +5,6 @@
 
 #include <functional>
 
-#include "tarch/multicore/Tasks.h"
-
 
 namespace swift2 {
   /**
@@ -36,12 +34,14 @@ namespace swift2 {
      * Memorize the three parameters, and grab a new task number from the
      * multicore component via
      */
-    VertexTask(const ParticleSet& assignedParticles, Functor functor);
+    VertexTask(const ParticleSet& assignedParticles, Functor functor, bool FuseAndPortToGPU);
     ~VertexTask() = default;
 
     virtual bool run() override;
 
   private:
+    static int TaskTypeId;
+
     ParticleSet _assignedParticles;
     Functor     _functor;
   };

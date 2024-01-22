@@ -68,7 +68,8 @@ void toolbox::particles::FileReaderHDF5::readHDF5File( const std::string& filena
   logInfo( "readHDF5File()", "Reading file: " << FILE_NAME << " complete." ) ;
 
 #else
-  logError( "readHDF5File()", "tried to use Peano's HDF5 reader though code has been compiled without -DHDF5" );
+  logError( "readHDF5File()", "tried to use Peano's HDF5 reader though code has been compiled without --with-hdf5 (autotools)" );
+  exit(-1);
 #endif
 
 }

@@ -8,6 +8,7 @@
 #include "config.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "tarch/multicore/Tasks.h"
+#include "tarch/Enumerator.h"
 
 
 namespace exahype2 {
@@ -92,7 +93,7 @@ public:
    * @param inputValues        Has to be created on heap via tarch::multicore::allocateMemory().
    * @param enclaveTaskTypeId  Please create it through
    * <pre>
-  static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
+  static int enclaveTaskTypeId = peano4::parallel::getTaskType("{{SOLVER_INSTANCE}}");
 </pre>
    *
    * @see _inputValues for a discussion of const qualifiers
@@ -137,8 +138,7 @@ public:
   static void releaseTaskNumber(int number);
 
 private:
-  static tarch::multicore::BooleanSemaphore _taskNumberSemaphore;
-  static std::set<int>                      _activeTaskNumbers;
+  static tarch::Enumerator                  _enumerator;
 
   static int reserveTaskNumber();
 };

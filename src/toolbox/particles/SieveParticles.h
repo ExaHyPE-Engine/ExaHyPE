@@ -126,10 +126,12 @@ public:
    * particleList, as it returns the particles that are to be sieved and
    * removes them from the current set.
    *
-   * All the particles in the result set have the parallel state Virtual,
-   * as we have to assume that they have been non-local on the current rank
-   * so far. The new parallel state is not altered, as this is the job of
-   * the action set UpdateParallelSet.
+   * All the particles in the result set have the "correct" parallel state,
+   * i.e. are correctly set to either Virtual or Local. For this, the sieve
+   * analyses the marker handed in.
+   *
+   * All the particles in the result set are assigned the correct mesh
+   * size h of the corresponding mesh into which we sieve it.
    *
    *
    * ## Thread safety
@@ -152,11 +154,14 @@ public:
    * @see ::toolbox::particles::sieveParticle() for the sieve logic.
    * @see deleteParticles() for the deletion of deep copies.
    *
-   * @param originatingTree Number of tree (positive integer) or GlobalSort.
+   * @param originatingTree Number of tree (positive integer) or GlobalSort. It
+   *   indicates where the particles should come from, i.e. are they form a
+   *   specific tree or some particles that we have to sort globally.
+   * @param callingTree Number of tree calling this routine. We need this
+   *   information to find out if particles that we deposit are local or
+   *   virtual.
    */
-  ParticleList getParticlesToBeSievedIntoVertex(
-    const peano4::datamanagement::VertexMarker& marker, int originatingTree
-  );
+  ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree, int callingTree);
 
   /**
    * Fine out how many particles still to sieve

@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "exahype2/NonCriticalAssertions.h"
+#include "../../../../../src/tarch/NonCriticalAssertions.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"

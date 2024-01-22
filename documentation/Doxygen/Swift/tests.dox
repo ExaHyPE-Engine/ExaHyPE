@@ -3,6 +3,7 @@
 @page swift_tests Tests
 
 \li \subpage tests_swift2_dastgen_test
+\li \subpage tests_swift2_planet_orbit
 \li \subpage tests_swift2_hydro_simple_sph_noh_2d
 \li \subpage tests_swift2_hydro_simple_sph_sedov_blast
 \li \subpage tests_swift2_hydro_simple_sph_sod_1d

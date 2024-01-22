@@ -119,10 +119,11 @@ void startInitialisationStep() {
 
 
 void startTimeStep() {
+  logTraceIn( "startTimeStep()" );
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
   {%- endfor %}
-  logTraceIn( "TimeStep()" );
+  logTraceOut( "startTimeStep()" );
 }
 
 
@@ -138,6 +139,8 @@ void finishTimeStep() {
   vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
   vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
   {%- endfor %}
+
+  logTraceIn( "finishTimeStep()" );
 
   loadBalancer.finishStep();
 
@@ -156,7 +159,7 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
-  logTraceOut( "TimeStep()" );
+  logTraceOut( "finishTimeStep()" );
 }
 
 

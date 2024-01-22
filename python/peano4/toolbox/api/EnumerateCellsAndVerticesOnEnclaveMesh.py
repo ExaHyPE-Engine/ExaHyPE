@@ -45,10 +45,23 @@ def create_vertex_marker(task_name):
 
     """
     dastgen_marker = peano4.datamodel.DaStGen2(construct_marker_name(task_name))
-    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer("Number"))
+    dastgen_marker.data.add_attribute(
+        dastgen2.attributes.Integer(
+            name="Number",
+            initval=UndefinedNumber,
+        )
+    )
     dastgen_marker.data.add_attribute(
         peano4.dastgen2.Peano4IntegerArray(
             name="AdjacentCellNumber", cardinality="TwoPowerD"
+        )
+    )
+    dastgen_marker.data.add_attribute(
+        dastgen2.attributes.UserDefinedType(
+            name="Enumerator",
+            type="tarch::Enumerator",
+            include=""" #include "tarch/Enumerator.h" """,
+            qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
         )
     )
     return dastgen_marker
@@ -65,7 +78,20 @@ def create_cell_marker(task_name):
 
     """
     dastgen_marker = peano4.datamodel.DaStGen2(construct_marker_name(task_name))
-    dastgen_marker.data.add_attribute(dastgen2.attributes.Integer("Number"))
+    dastgen_marker.data.add_attribute(
+        dastgen2.attributes.Integer(
+            name="Number",
+            initval=UndefinedNumber,
+        )
+    )
+    dastgen_marker.data.add_attribute(
+        dastgen2.attributes.UserDefinedType(
+            name="Enumerator",
+            type="tarch::Enumerator",
+            include=""" #include "tarch/Enumerator.h" """,
+            qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+        )
+    )
     return dastgen_marker
 
 
@@ -109,9 +135,10 @@ class AssignNumbersToMesh(ActionSet):
             or operation_name == ActionSet.OPERATION_CREATE_HANGING_VERTEX
         ):
             return """
-            fineGridVertex{}.setNumber(NoNumber);
-            fineGridVertex{}.setNumber(NoNumber);
-            for (int i=0; i<TwoPowerD; i++) fineGridVertex{}.setAdjacentCellNumber(i,NoNumber);
+            fineGridVertex{}.setNumber(tarch::Enumerator::NoNumber);
+            for (int i=0; i<TwoPowerD; i++) {{
+              fineGridVertex{}.setAdjacentCellNumber(i,tarch::Enumerator::NoNumber);
+            }}
             """.format(
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
@@ -122,77 +149,53 @@ class AssignNumbersToMesh(ActionSet):
             or operation_name == ActionSet.OPERATION_DESTROY_HANGING_VERTEX
         ):
             return """
-            tarch::multicore::releaseTaskNumber( fineGridVertex{}.getNumber() );
-            tarch::multicore::releaseTaskNumber( fineGridVertex{}.getNumber() );
+            fineGridVertex{}.getEnumerator().releaseNumber( fineGridVertex{}.getNumber() );
             """.format(
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
             )
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
             return """
-            if ( 
-              fineGridVertex{}.getNumber()==NoNumber 
-              and
-              {}
-            ) {{
-              fineGridVertex{}.setNumber( tarch::multicore::reserveTaskNumber() );
-            }}
-            if ( 
-              fineGridVertex{}.getNumber()==NoNumber 
-              and
-              {}
-            ) {{
-              fineGridVertex{}.setNumber( tarch::multicore::reserveTaskNumber() );
+            if ( fineGridVertex{}.getNumber()==tarch::Enumerator::NoNumber ) {{
+              fineGridVertex{}.setNumber( fineGridVertex{}.getEnumerator().getNumber() );
+              logDebug( "touchVertexFirstTime(...)", "set number " << fineGridVertex{}.toString() );
             }}
             """.format(
                 construct_marker_name(self._task_name),
-                self.touch_vertex_first_time_assignment_predicate,
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
-                self.touch_vertex_last_time_assignment_predicate,
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
             )
         if operation_name == ActionSet.OPERATION_CREATE_CELL:
             return """
-            fineGridCell{}.setNumber(NoNumber);
+            fineGridCell{}.setNumber(tarch::Enumerator::NoNumber);
             """.format(
                 construct_marker_name(self._task_name)
             )
         if operation_name == ActionSet.OPERATION_DESTROY_CELL:
             return """
-            tarch::multicore::releaseTaskNumber( fineGridCell{}.getTouchFirstNumber() );
+            fineGridCell{}.getEnumerator().releaseNumber( fineGridCell{}.getNumber() );
             """.format(
-                construct_marker_name(self._task_name)
+                construct_marker_name(self._task_name),
+                construct_marker_name(self._task_name),
             )
         if operation_name == ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
             return """
-            if ( 
-              fineGridCell{}.getNumber()==NoNumber 
-              and
-              {}
-            ) {{
-              fineGridCell{}.setNumber( tarch::multicore::reserveTaskNumber() );
-            }}
-            if ( 
-              fineGridCell{}.getNumber()==NoNumber 
-              and
-              {}
-            ) {{
-              fineGridCell{}.setNumber( tarch::multicore::reserveTaskNumber() );
+            if ( fineGridCell{}.getNumber()==tarch::Enumerator::NoNumber ) {{
+              fineGridCell{}.setNumber( fineGridCell{}.getEnumerator().getNumber() );
+              logDebug( "touchCellFirstTime(...)", "set number " << fineGridCell{}.toString() );
             }}
             for (int i=0; i<TwoPowerD; i++) {{
-              fineGridVertices{}(i).setNumber(
+              fineGridVertices{}(i).setAdjacentCellNumber(
                 TwoPowerD-1-i,
                 fineGridCell{}.getNumber()
               );
             }}
             """.format(
                 construct_marker_name(self._task_name),
-                self.touch_cell_first_time_assignment_predicate,
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
-                self.touch_cell_last_time_assignment_predicate,
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
@@ -208,23 +211,11 @@ class AssignNumbersToMesh(ActionSet):
     def user_should_modify_template(self):
         return False
 
-    def get_attributes(self):
-        """!
-
-        Propagates the no number through to the generated file.
-
-        """
+    def get_includes(self):
         return """
-static constexpr int NoNumber = {};
-""".format(
-            UndefinedNumber
-        )
+#include "tarch/Enumerator.h"
+ """
 
-
-#    def get_includes(self):
-#        return """
-##include "tarch/multicore/Tasks.h"
-# """
 
 #  /**
 #   * Used to administer task numbers
@@ -246,19 +237,21 @@ class ClearNumbersOnMesh(ActionSet):
         """
         if operation_name == ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
             return """
-            fineGridVertex{}.setNumber(NoNumber);
-            fineGridVertex{}.setNumber(NoNumber);
-            for (int i=0; i<TwoPowerD; i++) fineGridVertex{}.setNumber(i,NoNumber);
+            fineGridVertex{}.setNumber(tarch::Enumerator::NoNumber);
+            for (int i=0; i<TwoPowerD; i++) fineGridVertex{}.setAdjacentCellNumber(i,tarch::Enumerator::NoNumber);
+            logDebug( "touchVertexFirstTime(...)", "reset " << fineGridVertex{}.toString() );
             """.format(
+                construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
             )
         if operation_name == ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
             return """
-            fineGridCell{}.setNumber(NoNumber);
-            fineGridCell{}.setNumber(NoNumber);
+            fineGridCell{}.setNumber(tarch::Enumerator::NoNumber);
+            logDebug( "touchCellFirstTime(...)", "reset " << fineGridCell{}.toString() );
             """.format(
+                construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
                 construct_marker_name(self._task_name),
             )
@@ -273,8 +266,7 @@ class ClearNumbersOnMesh(ActionSet):
     def user_should_modify_template(self):
         return False
 
-
-#    def get_includes(self):
-#        return """
-##include "tarch/multicore/Tasks.h"
-# """
+    def get_includes(self):
+        return """
+#include "tarch/Enumerator.h"
+"""

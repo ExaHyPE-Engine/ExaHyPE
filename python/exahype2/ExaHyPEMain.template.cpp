@@ -7,10 +7,10 @@
 
 #include <iomanip>
 
+#include "tarch/NonCriticalAssertions.h"
 #include "config.h"
 #include "Constants.h"
 #include "{{MAIN_NAME}}.h"
-#include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UnitTests.h"
 #include "exahype2/UserInterface.h"
 #include "observers/CreateGrid.h"
@@ -81,7 +81,7 @@ bool selectNextAlgorithmicStep() {
   static int globalNumberOfTrees = 0;
   bool       continueToSolve     = true;
 
-  if (exahype2::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
+  if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
     );
@@ -89,7 +89,7 @@ bool selectNextAlgorithmicStep() {
     logError(
       "selectNextAlgorithmicStep()", "non-critical assertion has been triggered in code. Dump final state and terminate"
     );
-  } else if (exahype2::hasNonCriticalAssertionBeenViolated()) {
+  } else if (tarch::hasNonCriticalAssertionBeenViolated()) {
     continueToSolve = false;
   } else if (gridConstructed and not gridBalanced) {
     if (not repositories::loadBalancer.isEnabled(true) and not repositories::loadBalancer.hasSplitRecently()) {
@@ -458,7 +458,7 @@ int main(int argc, char** argv) {
   // Do this early, so people can use logInfo properly
   repositories::initLogFilters();
 
-  exahype2::initNonCritialAssertionEnvironment();
+  tarch::initNonCriticalAssertionEnvironment();
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
 

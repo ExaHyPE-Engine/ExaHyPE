@@ -453,7 +453,7 @@ thus appreciate any citation of the original release paper
 
         - UpdateParallelState is added to each and every time step and plotting
           sweep. As we also add
-        - UpdateParticleGridAssociation_LiftDrop to each and every time step,
+        - peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop to each and every time step,
           particles can move at any point. We always resort them immediately.
 
         Both action sets are assigned the standard priority of sort_priority_within_action_sets.
@@ -517,11 +517,11 @@ thus appreciate any citation of the original release paper
         # Initialisation
         #
         self.init_grid.add_action_set(
-            peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles)
+            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
         )
 
         update_particle_association_action_set = (
-            peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles)
+            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
         )
         update_particle_association_action_set.priority = (
             sort_priority_within_action_sets
