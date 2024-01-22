@@ -1,18 +1,20 @@
 import os
 import argparse
+import dastgen2
+import shutil
+import numpy as np
 
 import peano4
 import exahype2
-
 import peano4.toolbox.particles
-import dastgen2
+from peano4.toolbox.blockstructured.DynamicAMR        import DynamicAMR
 
-from Probe_file_gene import tracer_seeds_generate
 
-from ComputeFirstDerivatives import ComputeFirstDerivativesFD4RK
+from Probe_file_gene          import tracer_seeds_generate
+from ComputeFirstDerivatives  import ComputeFirstDerivativesFD4RK
+import CCZ4Helper
 
-from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
-import numpy as np
+
 
 modes = { 
   "release": peano4.output.CompileMode.Release,
@@ -30,7 +32,7 @@ floatparams = {
         "domain_r":0.5, "smoothing":0.0, "KOSigma":4.0 #, \
 }
 
-intparams = {"BBHType":2, "LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
+intparams = {"BBHType":2, "LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "SO":0}
 #sss
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
@@ -52,13 +54,13 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-dc", "--double-communication",  dest="DC_flag",           default=False, action="store_true",  help="enable double communication per timestep, used in the soccz4 formulation.")
+    parser.add_argument("-so", "--second-order",  dest="SO_flag",           default=False, action="store_true",  help="enable double communication per timestep, used in the soccz4 formulation.")
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
       if k=="ReSwi":
-        parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s, choose refinement criterion, 0-no refinement, 1-radius based, 2-SBH phi gradient based, 3-BBH phi gradient based. Notice: 2 and 3 only work with -ext Full")
+        parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s, choose refinement criterion.")
       else: parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s")
 
     args = parser.parse_args()
@@ -70,8 +72,6 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep
     if args.implementation=="fd4-rk1-adaptive-enclave":
        SuperClass = exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking
-    if args.implementation=="fd4-rk1-fixed" or args.implementation=="fd4-rk4-fixed":
-       SuperClass = exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep
     if args.implementation=="RKDG":
        SuperClass = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 
@@ -134,21 +134,7 @@ if __name__ == "__main__":
             KOSigma=KOSig,
             pde_terms_without_state=True
           )
-        elif SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStep or SuperClass==exahype2.solvers.rkfd.fd4.GlobalFixedTimeStepWithEnclaveTasking:
-          if args.implementation=="fd4-rk1-fixed":
-            rk_order = 1
-          else:
-            rk_order = 4
-          SuperClass.__init__(
-            self,
-            name=name, patch_size=patch_size, rk_order=rk_order,
-            unknowns=number_of_unknowns,
-            auxiliary_variables=0,
-            min_meshcell_h=min_mesh_unit_h, max_meshcell_h=max_mesh_unit_h,
-            normalised_time_step_size=0.01,
-            KOSigma=KOSig
-          )
-        elif SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
+        else: # only rkdg left. i.e., SuperClass == exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep:
           SuperClass.__init__(
             self,
             name=name,
@@ -159,17 +145,6 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_cell_h=min_mesh_unit_h, max_cell_h=max_mesh_unit_h,
             time_step_relaxation=cfl
-          )
-        else:
-          SuperClass.__init__(
-            self,
-            name=name, patch_size=patch_size,
-            unknowns=number_of_unknowns,
-            auxiliary_variables=0,
-            min_volume_h=min_mesh_unit_h, max_volume_h=max_mesh_unit_h,
-            time_step_relaxation=cfl
-            #use_gpu =args.GPU #=="fv-fixed-gpu" else False
-#                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
 
         self._patch_size = patch_size
@@ -199,25 +174,7 @@ if __name__ == "__main__":
                 exahype2.solvers.rkfd.Storage.Heap, exahype2.solvers.rkfd.Storage.Heap
             )
         
-        self.postprocess_updated_patch += """
-  {
-    #if Dimensions==2
-    constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
-    #endif
-
-    #if Dimensions==3
-    constexpr int itmax = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
-    #endif
-"""
-        self.postprocess_updated_patch += """
-    int index = 0;
-    for (int i=0;i<itmax;i++)
-    {
-      applications::exahype2::ccz4::enforceCCZ4constraints( newQ+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-"""
+        self.postprocess_updated_patch += CCZ4Helper.get_body_of_enforceCCZ4constraint()
    
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
@@ -235,49 +192,14 @@ if __name__ == "__main__":
         """
           @add adm constriants (Hamilton and Momentum)
         """
-        self._auxiliary_variables = 7
+        self._auxiliary_variables = 4
 
         self._my_user_includes += """
   #include "../CCZ4Kernels.h"
     """
 
-        self._preprocess_reconstructed_patch = """ 
-        const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
-
-    const int n_a_v=7;
-    const int overlap=3; //make sure you are using fd4 solver!
-
-    //if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()==FiniteVolumeCCZ4::SolverState::RungeKuttaSubStep0) {
-    if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction) {
-      dfor(cell,patchSize) {
-        tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
-
-        double gradQ[3*59]={ 0 };
-
-        for (int d=0; d<3; d++) {
-          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-          leftCell(d)  -= 1;
-          rightCell(d) += 1;
-          const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
-          const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
-          for(int i=0; i<59; i++) {
-            gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
-          }
-        }
-
-        const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*overlap);
-        
-        double constraints[7]={0,0,0,0,0,0,0};
-        admconstraints(constraints, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ);
-        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables ( 1, patchSize, 0, 59, n_a_v);
-        for (int i=0;i<7;i++){
-          fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+i) ] = constraints[i]; 
-        }
-      }  
-    } 
-    """
+        self._preprocess_reconstructed_patch = CCZ4Helper.get_body_of_adm_constraints(
+          self._patch.dim[0], self._auxiliary_variables)
 
         self.create_data_structures()
         self.create_action_sets()
@@ -293,44 +215,8 @@ if __name__ == "__main__":
   #include "../CCZ4Kernels.h"
     """
 
-        self._preprocess_reconstructed_patch = """ 
-        const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::fv::getVolumeLength(marker.h(),patchSize);
-
-    const int n_a_v=2;
-    const int overlap=3; //make sure you are using fd4 solver!
-
-    //if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()==FiniteVolumeCCZ4::SolverState::RungeKuttaSubStep0) {
-    if (not marker.willBeRefined() and repositories::InstanceOfFiniteVolumeCCZ4.getSolverState()!=FiniteVolumeCCZ4::SolverState::GridConstruction) {
-      dfor(cell,patchSize) {
-        tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(overlap);
-
-        double gradQ[3*59]={ 0 };
-
-        for (int d=0; d<3; d++) {
-          tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-          tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-          leftCell(d)  -= 1;
-          rightCell(d) += 1;
-          const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*overlap);
-          const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*overlap);
-          for(int i=0; i<59; i++) {
-            gradQ[d*59+i] = ( oldQWithHalo[rightCellSerialised*(59+n_a_v)+i] - oldQWithHalo[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
-          }
-        }
-
-        const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*overlap);
-        
-        double Psi4[2]={0,0};
-        double currentPosition[3]; 
-        for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
-        Psi4Calc(Psi4, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ, currentPosition);
-        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables   ( 1, patchSize, 0, 59, n_a_v);
-        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+0) ] = Psi4[0]; 
-        fineGridCellFiniteVolumeCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+1) ] = Psi4[1];
-      }  
-    } 
-    """
+        self._preprocess_reconstructed_patch = CCZ4Helper.get_body_of_Psi_Calc(
+          self._patch.dim[0], self._auxiliary_variables)
 
         self.create_data_structures()
         self.create_action_sets()
@@ -382,8 +268,9 @@ if __name__ == "__main__":
     else:
       solver_name    = solver_name
 
-    if args.DC_flag==True:
+    if args.SO_flag==True:
       args.cfl=args.cfl/2
+      intparams.update({"SO":1})
 
     min_h = args.min_h
     if min_h <=0.0:
@@ -428,11 +315,6 @@ if __name__ == "__main__":
       my_solver.add_adm_constriants()
     if args.extension=="Psi4":
       my_solver.add_Psi4W()    
-    if args.extension=="phy-debug":
-      my_solver.add_intermediate_quantities()
-    if args.extension=="PT":
-      my_solver.add_puncture_tracker()
-
 
 ########################################################################################
 #parameter setting according to scenarios
@@ -446,7 +328,7 @@ if __name__ == "__main__":
       msg = "Periodic BC deactivated because you pick Puncture scenario\nInitialize binary black holes"
       print(msg)
       periodic_boundary_conditions = [False,False,False]
-      intparams.update({"swi":2})  #notice it may change, see according function in FiniteVolumeCCZ4.cpp
+      intparams.update({"swi":2})  #notice it may change, see according function in CCZ4.cpp
       print(intparams)
       userinfo.append((msg,None))
     elif args.scenario=="single-puncture":
@@ -470,87 +352,10 @@ if __name__ == "__main__":
       msg = "set Sommerfeld boundary condition"
       userinfo.append((msg,None))
       periodic_boundary_conditions = [False,False,False]
-      if args.scenario=="single-puncture":  #please notice the default black hole mass (1.0) is hard-coded. need to be modified accordingly if necessary.
-        my_solver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
-      ::exahype2::fd::applySommerfeldConditions(
-        [&](
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
-        },
-        [&](
-          double * __restrict__                        Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH
-        ) -> void {
-          for (int i=0; i<"""+str(my_solver._unknowns+my_solver._auxiliary_variables)+"""; i++) {
-            Q[i] = 0.0;
-          }
-          Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
-          //const double r=tarch::la::norm2(faceCentre);
-          //Q[16] = 0.5*(1+(1-1.0/2/r)/(1+1.0/2/r)); 
-          //Q[54] = 1/(1+1.0/2/r)/(1+1.0/2/r);
-          Q[16] = 1.0; Q[54] = 1.0;
-        },
-        marker.x(),
-        marker.h(),
-        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
-        {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
-        {{OVERLAP}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        marker.getSelectedFaceNumber(),
-        {0.0, 0.0, 0.0},
-        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
-      );
-        """
-      else:
-        my_solver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = """
-      ::exahype2::fd::applySommerfeldConditions(
-        [&](
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, gridCellH, t, dt, normal );
-        },
-        [&](
-          double * __restrict__                        Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  gridCellH
-        ) -> void {
-          for (int i=0; i<"""+str(my_solver._unknowns+my_solver._auxiliary_variables)+"""; i++) {
-            Q[i] = 0.0;
-          }
-          Q[0] = 1.0; Q[3] = 1.0; Q[5] = 1.0;
-          Q[16] = 1.0; Q[54] = 1.0;
-        },
-        marker.x(),
-        marker.h(),
-        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
-        {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
-        {{OVERLAP}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        marker.getSelectedFaceNumber(),
-        {0.0, 0.0, 0.0},
-        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value,
-        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
-      );
-        """
-
-
+      my_solver._action_set_handle_boundary.TemplateHandleBoundary_KernelCalls = CCZ4Helper.get_body_of_SommerfeldCondition(
+                                                                                  args.scenario,
+                                                                                  my_solver._unknowns,
+                                                                                  my_solver._auxiliary_variables)
 
     solverconstants=""
 
@@ -622,12 +427,12 @@ if __name__ == "__main__":
     project.set_output_path(path)
     probe_point = [-12,-12,0.0]
     project.add_plot_filter( probe_point,[24.0,24.0,0.01],1 )
-    if args.extension=="Psi4":
-      my_solver.select_dofs_to_print = [0,12,16,17,18,53,54,59,60]
-    elif args.extension=="adm" or args.extension=="phy-debug":
-      pass
-    else:
-      pass#my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
+    #if args.extension=="Psi4":
+    #  my_solver.select_dofs_to_print = [0,12,16,17,18,53,54,59,60]
+    #elif args.extension=="adm" or args.extension=="phy-debug":
+    #  pass
+    #else:
+    #  pass#my_solver.select_dofs_to_print = [0,12,16,17,18,53,54]
    
 
     #project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.95,100,-1,32))" )
@@ -637,7 +442,7 @@ if __name__ == "__main__":
     project.set_load_balancing("toolbox::loadbalancing::strategies::SpreadOutHierarchically","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
     #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_RecursiveBipartition","(new ::exahype2::LoadBalancingConfiguration(0.98))" )
     #project.set_load_balancing("toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
-    #    "new ::exahype2::LoadBalancingConfiguration(0.98, 1, 8,::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",)
+    #  "new ::exahype2::LoadBalancingConfiguration(0.98, 1, 8,::exahype2::LoadBalancingConfiguration::UseNumberOfThreads), new toolbox::loadbalancing::metrics::CellCount()",)
 
 ########################################################################################
 #Tracer setting 
@@ -652,16 +457,6 @@ if __name__ == "__main__":
         #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
         init_action_set.priority = 0
         project.add_action_set_to_initialisation( init_action_set )
-
-
-        # Not required anymore, as will be done by tracer routine itself. See
-        # exahype2.Project.add_tracer()
-        # -------------------------------------------------------------------
-        #project.add_action_set_to_timestepping(
-        #  peano4.toolbox.particles.UpdateParallelState(
-        #    particle_set=tracer_particles
-        #  )
-        #)
         
         tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                my_solver,
@@ -690,15 +485,6 @@ if __name__ == "__main__":
             particle_set=tracer_particles, coordinates=[[2.0,0,0],[-2.0,0,0]])
         init_action_set.priority = 0
         project.add_action_set_to_initialisation( init_action_set )
-
-        # Not required anymore, as will be done by tracer routine itself. See
-        # exahype2.Project.add_tracer()
-        # -------------------------------------------------------------------
-        #project.add_action_set_to_timestepping(
-        #  peano4.toolbox.particles.UpdateParallelState(
-        #    particle_set=tracer_particles
-        #  )
-        #)
         
         tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                my_solver,
@@ -762,7 +548,7 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_cpp_file( "InitialValues.cpp" )
     peano4_project.output.makefile.add_cpp_file( "CCZ4Kernels.cpp" )
 
-    if args.DC_flag==True:
+    if args.SO_flag==True:
       userinfo.append(("Enable double communication, make sure you are using the Second formulism.", None))
       additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
                                                            add_user_defined_actions=False,
@@ -790,8 +576,12 @@ if __name__ == "__main__":
       project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
       peano4_project.solversteps.add_step( additional_mesh_traversal )
 
-
+    #we need to change the main file accordingly as it is not automatical
+    os.remove("./ccz4-main.cpp")
     peano4_project.generate( throw_away_data_after_generation=False )
+    if args.SO_flag==True:
+      shutil.copyfile("./ccz4-main-SO.cpp", "./ccz4-main.cpp")
+
     peano4_project.build( make_clean_first = True )
 
     #Report the application information
