@@ -4,7 +4,6 @@
 #include <type_traits>
 
 
-
 template <typename ParticleContainer>
 void swift2::dastgenTest::checkDastgen(ParticleContainer& assignedParticles) {
 
@@ -43,7 +42,9 @@ void swift2::dastgenTest::reportStep(const std::string& particleName) {
     logInfo("reportStep()", "===============");
     logInfo("reportStep()", particleName);
     logInfo("reportStep()", "t=" << Particle::getSpecies().getMinTimeStamp());
-    logInfo("reportStep()", "dt=" << Particle::getSpecies().getMinTimeStepSize());
+    logInfo(
+      "reportStep()", "dt=" << Particle::getSpecies().getMinTimeStepSize()
+    );
     logInfo("reportStep()", "===============");
   }
 }

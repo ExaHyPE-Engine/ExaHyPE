@@ -25,67 +25,88 @@ namespace swift2 {
     /**
      * Perform all the checks on a particle's boolean members
      */
-    void checkBooleans(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkBooleans(
+      tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**
      * Perform all the checks on a particle's double members
      */
-    void checkDoubles(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkDoubles(
+      tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**
      * Perform all the checks on a particle's enum members
      */
-    void checkEnums(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkEnums(tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**
      * Perform all the checks on a particle's integer members
      */
-    void checkIntegers(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkIntegers(
+      tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**
      * Perform all the checks on a particle's string members
      */
-    void checkStrings(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkStrings(
+      tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**
      * Perform all the checks on a particle's boolean array members
      */
-    void checkBooleanArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkBooleanArrays(
+      tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**
      * Perform all the checks on a particle's double array members
      */
-    void checkDoubleArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkDoubleArrays(
+      tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**
      * Perform all the checks on a particle's integer array members
      */
-    void checkIntegerArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkIntegerArrays(
+      tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**
      * Perform all the checks on a particle's double array members
      */
-    void checkPeanoDoubleArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkPeanoDoubleArrays(
+      tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**
      * Perform all the checks on a particle's integer array members
      */
-    void checkPeanoIntegerArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkPeanoIntegerArrays(
+      tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**
      * Perform all the checks on a particle's user defined types.
      */
-    void checkUserDefinedType(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkUserDefinedType(
+      tests::swift2::dastgenTest::globaldata::dummyPart& particle
+    );
 
 
     /**

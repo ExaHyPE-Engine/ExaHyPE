@@ -1,8 +1,9 @@
 #include "DastgenTest.h"
 
 
-
-void swift2::dastgenTest::checkBooleans(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void swift2::dastgenTest::checkBooleans(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   // First set some values, where applicable.
   const bool initval_bool = false;
@@ -67,7 +68,9 @@ void swift2::dastgenTest::checkBooleans(tests::swift2::dastgenTest::globaldata::
   var_bool = particle.getMyStaticInitvalDebugBoolean();
   assert(var_bool == true);
   // Test setter here too
-  particle.setMyStaticInitvalDebugBoolean(particle.getMyStaticInitvalDebugBoolean());
+  particle.setMyStaticInitvalDebugBoolean(
+    particle.getMyStaticInitvalDebugBoolean()
+  );
   var_bool = particle.getMyStaticInitvalDebugBoolean();
   assert(var_bool == true);
 
@@ -84,7 +87,9 @@ void swift2::dastgenTest::checkBooleans(tests::swift2::dastgenTest::globaldata::
 }
 
 
-void swift2::dastgenTest::checkDoubles(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void swift2::dastgenTest::checkDoubles(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   // First set some values, where applicable.
   const double initval_double = 123.456;
@@ -149,7 +154,8 @@ void swift2::dastgenTest::checkDoubles(tests::swift2::dastgenTest::globaldata::d
   var_double = particle.getMyStaticInitvalDebugDouble();
   assert(var_double == 8.);
   // Test setter here too
-  particle.setMyStaticInitvalDebugDouble(particle.getMyStaticInitvalDebugDouble());
+  particle.setMyStaticInitvalDebugDouble(particle.getMyStaticInitvalDebugDouble(
+  ));
   var_double = particle.getMyStaticInitvalDebugDouble();
   assert(var_double == 8.);
 
@@ -185,7 +191,9 @@ void swift2::dastgenTest::checkDoubles(tests::swift2::dastgenTest::globaldata::d
   var_double = particle.getMyStaticInitvalCompressedDouble();
   assert(var_double == 8.);
   // Test setter here too
-  particle.setMyStaticInitvalCompressedDouble(particle.getMyStaticInitvalCompressedDouble());
+  particle.setMyStaticInitvalCompressedDouble(
+    particle.getMyStaticInitvalCompressedDouble()
+  );
   var_double = particle.getMyStaticInitvalCompressedDouble();
   assert(var_double == 8.);
 
@@ -221,7 +229,9 @@ void swift2::dastgenTest::checkDoubles(tests::swift2::dastgenTest::globaldata::d
   var_double = particle.getMyStaticInitvalDebugCompressedDouble();
   assert(var_double == 8.);
   // Test setter here too
-  particle.setMyStaticInitvalDebugCompressedDouble(particle.getMyStaticInitvalDebugCompressedDouble());
+  particle.setMyStaticInitvalDebugCompressedDouble(
+    particle.getMyStaticInitvalDebugCompressedDouble()
+  );
   var_double = particle.getMyStaticInitvalDebugCompressedDouble();
   assert(var_double == 8.);
 
@@ -237,7 +247,9 @@ void swift2::dastgenTest::checkDoubles(tests::swift2::dastgenTest::globaldata::d
 }
 
 
-void swift2::dastgenTest::checkEnums(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void swift2::dastgenTest::checkEnums(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   // Default enums
   // ----------------
@@ -261,7 +273,8 @@ void swift2::dastgenTest::checkEnums(tests::swift2::dastgenTest::globaldata::dum
   // ----------------
 
 #if PeanoDebug > 0
-  using MyEnumD = tests::swift2::dastgenTest::globaldata::dummyPart::MyDebugEnum;
+  using MyEnumD = tests::swift2::dastgenTest::globaldata::dummyPart::
+    MyDebugEnum;
 
   MyEnumD eD1 = MyEnumD::Baz;
   particle.setMyDebugEnum(eD1);
@@ -277,7 +290,9 @@ void swift2::dastgenTest::checkEnums(tests::swift2::dastgenTest::globaldata::dum
 }
 
 
-void swift2::dastgenTest::checkIntegers(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void swift2::dastgenTest::checkIntegers(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   // First set some values, where applicable.
   const int initval_int = 4321;
@@ -341,7 +356,9 @@ void swift2::dastgenTest::checkIntegers(tests::swift2::dastgenTest::globaldata::
   var_int = particle.getMyStaticInitvalDebugInteger();
   assert(var_int == 1234);
   // Test setter here too
-  particle.setMyStaticInitvalDebugInteger(particle.getMyStaticInitvalDebugInteger());
+  particle.setMyStaticInitvalDebugInteger(
+    particle.getMyStaticInitvalDebugInteger()
+  );
   var_int = particle.getMyStaticInitvalDebugInteger();
   assert(var_int == 1234);
 
@@ -377,7 +394,9 @@ void swift2::dastgenTest::checkIntegers(tests::swift2::dastgenTest::globaldata::
   var_int = particle.getMyStaticInitvalCompressedInteger();
   assert(var_int == 1234);
   // Test setter here too
-  particle.setMyStaticInitvalCompressedInteger(particle.getMyStaticInitvalCompressedInteger());
+  particle.setMyStaticInitvalCompressedInteger(
+    particle.getMyStaticInitvalCompressedInteger()
+  );
   var_int = particle.getMyStaticInitvalCompressedInteger();
   assert(var_int == 1234);
 
@@ -413,7 +432,9 @@ void swift2::dastgenTest::checkIntegers(tests::swift2::dastgenTest::globaldata::
   var_int = particle.getMyStaticInitvalDebugCompressedInteger();
   assert(var_int == 1234);
   // Test setter here too
-  particle.setMyStaticInitvalDebugCompressedInteger(particle.getMyStaticInitvalDebugCompressedInteger());
+  particle.setMyStaticInitvalDebugCompressedInteger(
+    particle.getMyStaticInitvalDebugCompressedInteger()
+  );
   var_int = particle.getMyStaticInitvalDebugCompressedInteger();
   assert(var_int == 1234);
 
@@ -429,7 +450,9 @@ void swift2::dastgenTest::checkIntegers(tests::swift2::dastgenTest::globaldata::
 }
 
 
-void swift2::dastgenTest::checkStrings(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void swift2::dastgenTest::checkStrings(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   std::string var_str;
   std::string initval_str = "In a hole in the ground there lived a hobbit";
@@ -498,7 +521,9 @@ void swift2::dastgenTest::checkStrings(tests::swift2::dastgenTest::globaldata::d
 }
 
 
-void checkUserDefinedType(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void checkUserDefinedType(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   auto a = particle.getMyStaticUserDefinedAttribute();
 #if PeanoDebug > 0
@@ -508,7 +533,9 @@ void checkUserDefinedType(tests::swift2::dastgenTest::globaldata::dummyPart& par
 }
 
 
-void swift2::dastgenTest::checkBooleanArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void swift2::dastgenTest::checkBooleanArrays(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   std::bitset<8> init_bool = static_cast<std::bitset<8>>(511);
   std::bitset<8> bool_var;
@@ -585,7 +612,9 @@ void swift2::dastgenTest::checkBooleanArrays(tests::swift2::dastgenTest::globald
 }
 
 
-void swift2::dastgenTest::checkDoubleArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void swift2::dastgenTest::checkDoubleArrays(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   double init_double[8] = {1., 2., 3., 4., 5., 6., 7., 8.};
 
@@ -661,7 +690,9 @@ void swift2::dastgenTest::checkDoubleArrays(tests::swift2::dastgenTest::globalda
 }
 
 
-void swift2::dastgenTest::checkIntegerArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void swift2::dastgenTest::checkIntegerArrays(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   int init_integer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -737,7 +768,9 @@ void swift2::dastgenTest::checkIntegerArrays(tests::swift2::dastgenTest::globald
 }
 
 
-void swift2::dastgenTest::checkPeanoDoubleArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void swift2::dastgenTest::checkPeanoDoubleArrays(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   double init_double[8] = {1., 2., 3., 4., 5., 6., 7., 8.};
 
@@ -752,7 +785,8 @@ void swift2::dastgenTest::checkPeanoDoubleArrays(tests::swift2::dastgenTest::glo
 
   // getter/setter with array
   particle.setMyPeanoDoubleArray(init_double);
-  const tarch::la::Vector<8, double> double_var1 = particle.getMyPeanoDoubleArray();
+  const tarch::la::Vector<8, double>
+    double_var1 = particle.getMyPeanoDoubleArray();
   for (int i = 0; i < 8; i++) {
     assert(double_var1[i] == particle.getMyPeanoDoubleArray(i));
   }
@@ -770,7 +804,8 @@ void swift2::dastgenTest::checkPeanoDoubleArrays(tests::swift2::dastgenTest::glo
 
   // getter/setter with array
   particle.setMyDebugDoubleArray(init_double);
-  const tarch::la::Vector<8, double> double_var2 = particle.getMyDebugDoubleArray();
+  const tarch::la::Vector<8, double>
+    double_var2 = particle.getMyDebugDoubleArray();
   for (int i = 0; i < 8; i++) {
     assert(double_var2[i] == particle.getMyDebugDoubleArray(i));
   }
@@ -787,7 +822,8 @@ void swift2::dastgenTest::checkPeanoDoubleArrays(tests::swift2::dastgenTest::glo
 
   // getter/setter with array
   particle.setMyCompressedDoubleArray(init_double);
-  const tarch::la::Vector<8, double> double_var3 = particle.getMyCompressedDoubleArray();
+  const tarch::la::Vector<8, double>
+    double_var3 = particle.getMyCompressedDoubleArray();
   for (int i = 0; i < 8; i++) {
     assert(double_var3[i] == particle.getMyCompressedDoubleArray(i));
   }
@@ -805,7 +841,8 @@ void swift2::dastgenTest::checkPeanoDoubleArrays(tests::swift2::dastgenTest::glo
 
   // getter/setter with array
   particle.setMyCompressedDebugDoubleArray(init_double);
-  const tarch::la::Vector<8, double> double_var4 = particle.getMyCompressedDebugDoubleArray();
+  const tarch::la::Vector<8, double>
+    double_var4 = particle.getMyCompressedDebugDoubleArray();
   for (int i = 0; i < 8; i++) {
     assert(double_var4[i] == particle.getMyCompressedDebugDoubleArray(i));
   }
@@ -813,7 +850,9 @@ void swift2::dastgenTest::checkPeanoDoubleArrays(tests::swift2::dastgenTest::glo
 }
 
 
-void swift2::dastgenTest::checkPeanoIntegerArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+void swift2::dastgenTest::checkPeanoIntegerArrays(
+  tests::swift2::dastgenTest::globaldata::dummyPart& particle
+) {
 
   int init_integer[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -828,7 +867,8 @@ void swift2::dastgenTest::checkPeanoIntegerArrays(tests::swift2::dastgenTest::gl
 
   // getter/setter with array
   particle.setMyPeanoIntegerArray(init_integer);
-  const tarch::la::Vector<8, int> integer_var1 = particle.getMyPeanoIntegerArray();
+  const tarch::la::Vector<8, int>
+    integer_var1 = particle.getMyPeanoIntegerArray();
   for (int i = 0; i < 8; i++) {
     assert(integer_var1[i] == particle.getMyPeanoIntegerArray(i));
   }
@@ -846,7 +886,8 @@ void swift2::dastgenTest::checkPeanoIntegerArrays(tests::swift2::dastgenTest::gl
 
   // getter/setter with array
   particle.setMyDebugPeanoIntegerArray(init_integer);
-  const tarch::la::Vector<8, int> integer_var2 = particle.getMyDebugPeanoIntegerArray();
+  const tarch::la::Vector<8, int>
+    integer_var2 = particle.getMyDebugPeanoIntegerArray();
   for (int i = 0; i < 8; i++) {
     assert(integer_var2[i] == particle.getMyDebugPeanoIntegerArray(i));
   }
@@ -863,7 +904,8 @@ void swift2::dastgenTest::checkPeanoIntegerArrays(tests::swift2::dastgenTest::gl
 
   // getter/setter with array
   particle.setMyCompressedPeanoIntegerArray(init_integer);
-  const tarch::la::Vector<8, int> integer_var3 = particle.getMyCompressedPeanoIntegerArray();
+  const tarch::la::Vector<8, int>
+    integer_var3 = particle.getMyCompressedPeanoIntegerArray();
   for (int i = 0; i < 8; i++) {
     assert(integer_var3[i] == particle.getMyCompressedPeanoIntegerArray(i));
   }
@@ -881,9 +923,12 @@ void swift2::dastgenTest::checkPeanoIntegerArrays(tests::swift2::dastgenTest::gl
 
   // getter/setter with array
   particle.setMyCompressedDebugPeanoIntegerArray(init_integer);
-  const tarch::la::Vector<8, int> integer_var4 = particle.getMyCompressedDebugPeanoIntegerArray();
+  const tarch::la::Vector<8, int>
+    integer_var4 = particle.getMyCompressedDebugPeanoIntegerArray();
   for (int i = 0; i < 8; i++) {
-  assert(integer_var4[i] == particle.getMyCompressedDebugPeanoIntegerArray(i));
+    assert(
+      integer_var4[i] == particle.getMyCompressedDebugPeanoIntegerArray(i)
+    );
   }
 #endif
 }
@@ -895,12 +940,13 @@ void swift2::dastgenTest::checkConstructors(void) {
 
   // Prepare some dummy arguments
   tarch::la::Vector<Dimensions, double> dummyDimDoubleVector = {0.1, 0.2, 0.3};
-  tarch::la::Vector<8, double>          dummyDoubleVector    = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8};
-  tarch::la::Vector<8, int>             dummyIntVector       = {1, 2, 3, 4, 5, 6, 7, 8};
-  std::bitset<8>                        dummyBitset          = 0b11111111;
-  double                                dummyDoubleArr[8]    = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8};
-  int                                   dummyIntArr[8]       = {1, 2, 3, 4, 5, 6, 7, 8};
-  char                                  dummyString[80]      = "Hello there";
+  tarch::la::Vector<8, double>          dummyDoubleVector    = {
+    0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8};
+  tarch::la::Vector<8, int> dummyIntVector = {1, 2, 3, 4, 5, 6, 7, 8};
+  std::bitset<8>            dummyBitset    = 0b11111111;
+  double dummyDoubleArr[8] = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8};
+  int    dummyIntArr[8]    = {1, 2, 3, 4, 5, 6, 7, 8};
+  char   dummyString[80]   = "Hello there";
 
   // First the copy constructor
   Part p1 = Part();
@@ -924,9 +970,11 @@ void swift2::dastgenTest::checkConstructors(void) {
 
   Part p2 = Part(
     /* tarch::la::Vector<Dimensions,double>  __debugX = */ dummyDimDoubleVector,
-    /* tarch::la::Vector<Dimensions,double>  __debugH = */ dummyDimDoubleVector * 2.,
+    /* tarch::la::Vector<Dimensions,double>  __debugH = */ dummyDimDoubleVector
+      * 2.,
     /* tarch::la::Vector<Dimensions,double>  __x = */ dummyDimDoubleVector * 3.,
-    /* tarch::la::Vector<Dimensions,double>  __cellH = */ dummyDimDoubleVector * 4.,
+    /* tarch::la::Vector<Dimensions,double>  __cellH = */ dummyDimDoubleVector
+      * 4.,
     /* double  __searchRadius = */ 1.,
     /* ParallelState  __ParallelState = */ Part::ParallelState::Local,
     /* MoveState  __MoveState = */ Part::MoveState::New,
@@ -944,10 +992,12 @@ void swift2::dastgenTest::checkConstructors(void) {
     /* double  __myInitvalDebugDouble = */ p1.getMyInitvalDebugDouble(),
 #endif
     /* double  __myCompressedDouble = */ 6.,
-    /* double  __myInitvalCompressedDouble = */ p1.getMyInitvalCompressedDouble(),
+    /* double  __myInitvalCompressedDouble = */
+    p1.getMyInitvalCompressedDouble(),
 #if PeanoDebug > 0
     /* double  __myDebugCompressedDouble = */ 8.,
-    /* double  __myInitvalDebugCompressedDouble = */ p1.getMyInitvalDebugCompressedDouble(),
+    /* double  __myInitvalDebugCompressedDouble = */
+    p1.getMyInitvalDebugCompressedDouble(),
 #endif
     /* MyEnum  __myEnum = */ Part::MyEnum::Foo,
 #if PeanoDebug > 0
@@ -963,7 +1013,8 @@ void swift2::dastgenTest::checkConstructors(void) {
     /* int  __myInitvalCompressedInteger = */ p1.getMyInitvalCompressedInteger(),
 #if PeanoDebug > 0
     /* int  __myDebugCompressedInteger = */ 7,
-    /* int  __myInitvalDebugCompressedInteger = */ p1.getMyInitvalDebugCompressedInteger(),
+    /* int  __myInitvalDebugCompressedInteger = */
+    p1.getMyInitvalDebugCompressedInteger(),
 #endif
     /* char  __myString[80] = */ dummyString,
     /* int  __myStringLength = */ 11,
@@ -994,16 +1045,21 @@ void swift2::dastgenTest::checkConstructors(void) {
     /* int  __myDebugCompressedIntegerArray[8] = */ dummyIntArr,
 #endif
     /* tarch::la::Vector<8,double>  __myPeanoDoubleArray = */ dummyDoubleVector,
-    /* tarch::la::Vector<8,double>  __myCompressedPeanoDoubleArray = */ dummyDoubleVector,
+    /* tarch::la::Vector<8,double>  __myCompressedPeanoDoubleArray = */
+    dummyDoubleVector,
 #if PeanoDebug > 0
-    /* tarch::la::Vector<8,double>  __myDebugPeanoDoubleArray = */ dummyDoubleVector,
-    /* tarch::la::Vector<8,double>  __myDebugCompressedPeanoDoubleArray = */ dummyDoubleVector,
+    /* tarch::la::Vector<8,double>  __myDebugPeanoDoubleArray = */
+    dummyDoubleVector,
+    /* tarch::la::Vector<8,double>  __myDebugCompressedPeanoDoubleArray = */
+    dummyDoubleVector,
 #endif
     /* tarch::la::Vector<8,int>  __myPeanoIntegerArray = */ dummyIntVector,
-    /* tarch::la::Vector<8,int>  __myCompressedPeanoIntegerArray = */ dummyIntVector,
+    /* tarch::la::Vector<8,int>  __myCompressedPeanoIntegerArray = */
+    dummyIntVector,
 #if PeanoDebug > 0
     /* tarch::la::Vector<8,int>  __myDebugPeanoIntegerArray = */ dummyIntVector,
-    /* tarch::la::Vector<8,int>  __myDebugCompressedPeanoIntegerArray); */ dummyIntVector
+    /* tarch::la::Vector<8,int>  __myDebugCompressedPeanoIntegerArray); */
+    dummyIntVector
 #endif
   );
 
@@ -1042,7 +1098,4 @@ void swift2::dastgenTest::checkConstructors(void) {
 
   checkPeanoDoubleArrays(p2);
   checkPeanoIntegerArrays(p2);
-
 }
-
-
