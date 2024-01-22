@@ -97,7 +97,7 @@ class DastgenTestDummyParticle(Particle):
                 name="myStatic" + var_basename,
                 type="std::string",
                 include="""
-#include <string>                
+#include <string>
 """,
                 ifdefs=defs,
                 qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
@@ -512,7 +512,7 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and not compress:
             var_basename = "DebugBooleanArray"
         if ifdefs and compress:
-            var_basename = "DebugCompressedBooleanArray"
+            var_basename = "CompressedDebugBooleanArray"
 
         # Set ifdefs
         defs = []
@@ -550,7 +550,7 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and not compress:
             var_basename = "DebugIntegerArray"
         if ifdefs and compress:
-            var_basename = "DebugCompressedIntegerArray"
+            var_basename = "CompressedDebugIntegerArray"
 
         # Set ifdefs
         defs = []
@@ -596,7 +596,7 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and not compress:
             var_basename = "DebugDoubleArray"
         if ifdefs and compress:
-            var_basename = "DebugCompressedDoubleArray"
+            var_basename = "CompressedDebugDoubleArray"
 
         # Set ifdefs
         defs = []
@@ -639,7 +639,7 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and not compress:
             var_basename = "DebugPeanoIntegerArray"
         if ifdefs and compress:
-            var_basename = "DebugCompressedPeanoIntegerArray"
+            var_basename = "CompressedDebugPeanoIntegerArray"
 
         # Set ifdefs
         defs = []
@@ -684,7 +684,7 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and not compress:
             var_basename = "DebugPeanoDoubleArray"
         if ifdefs and compress:
-            var_basename = "DebugCompressedPeanoDoubleArray"
+            var_basename = "CompressedDebugPeanoDoubleArray"
 
         # Set ifdefs
         defs = []

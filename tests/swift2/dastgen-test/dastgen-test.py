@@ -85,6 +85,8 @@ project.set_global_simulation_parameters(
 )
 
 project.set_Peano4_installation(args.peanodir, build_mode)
+project._project.output.makefile.add_cpp_file("DastgenTest.cpp", generated=False)
+
 
 
 ###############################################################################

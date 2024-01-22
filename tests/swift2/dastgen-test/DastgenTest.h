@@ -1,5 +1,7 @@
 #pragma once
 
+#include "globaldata/dummyPart.h"
+
 /**
  * @file DastgenTest.h
  * @brief Contains routines intended to test that the classes and attributes
@@ -89,8 +91,7 @@ namespace swift2 {
     /**
      * Check the constructor methods.
      */
-    template <typename ParticleContainer>
-    void checkConstructors(ParticleContainer& localParticles);
+    void checkConstructors();
 
 
     /**

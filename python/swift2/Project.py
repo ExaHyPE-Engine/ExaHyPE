@@ -203,7 +203,7 @@ We assume that you use a domain of ("""
                 + str(self._domain_offset[1])
                 + ""","""
                 + str(self._domain_size[1] - self._domain_offset[1])
-                + """). 
+                + """).
     """
             )
         else:
@@ -222,7 +222,7 @@ We assume that you use a domain of ("""
                 + str(self._domain_offset[2])
                 + ""","""
                 + str(self._domain_size[2] - self._domain_offset[2])
-                + """). 
+                + """).
 """
             )
 
@@ -244,7 +244,7 @@ The coarsest regular mesh hence will host """
             + str((3**self._dimensions) ** (self.__real_max_mesh_size()[1]))
             + """ octants.
 
-Once this resultion is reached, the mesh will stop the initial load balancing, insert the 
+Once this resultion is reached, the mesh will stop the initial load balancing, insert the
 particles and then kick off the simulation. The mesh might be refined and erased subsequently,
 but it will never become coarser than these constraints.
 
@@ -267,9 +267,9 @@ Species | max_h | coarsest level | min_h | finest level
 
         readme_text += """
 
-The meshing quantities abive are species-specific. Once you have multiple 
-particle species, the actual grid results from a combination of their 
-properties, and some species particles might reside on different resolution 
+The meshing quantities abive are species-specific. Once you have multiple
+particle species, the actual grid results from a combination of their
+properties, and some species particles might reside on different resolution
 levels.
 
 """
