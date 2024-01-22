@@ -73,11 +73,7 @@ namespace swift2 {
        * constants and add the self-contribution term. Additional quantities
        * such as the velocity gradients will also get the final terms added to
        * them here.
-       * This is equivalent to the hydro_end_density function in SWIFT
-       *
-       * Ends the density calculation. Also does a single Newton-Raphson
-       * iteration.
-       *
+       * This is equivalent to the hydro_end_density function in SWIFT.
        *
        * @param ParticleContainer Typicaly either
        *         std::list<Particle *>

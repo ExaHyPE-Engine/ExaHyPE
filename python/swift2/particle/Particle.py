@@ -212,10 +212,10 @@ Particle properties:
         ## Default settings
 
         If the user does not define bespoke default settings, this routine adds
-        default ones.
+        default ones. These are set through instances of swift::dependencychecks::Invariant.
 
         - For vertices, this is touch-at-most-once-mask-out-otherwise-all-previous-steps-update-at-least-once.
-        - For cells, this is
+        - For cells, this is also touch-at-most-once-mask-out-otherwise-all-previous-steps-update-at-least-once.
 
         ## Additional attributes
 
@@ -228,6 +228,10 @@ Particle properties:
         @param step_type_name: str
             name of type of steps we're dealing with. Either AlgorithmStep
             or InitStep.
+
+        @param peano4_event_enum: list
+            list of enums of peano4 events within a single mesh traversal
+            (e.g. touch vertex first time, cell kernel, ...)
 
         @return steps: list
             the modified list of AlgorithmSteps, now including dependency checks
