@@ -267,7 +267,7 @@ hints which might be useful in this context.
 See also
 
 - Notes in @ref benchmarks_swift2_hydro_noh_imposion_test
-- Section @ref section_new_solver_vectorisation_hints on page @ref swift_particle_new_solver
+- Section "Tune a kernel realisation" on page @ref swift_particle_new_solver
 
  */
 
