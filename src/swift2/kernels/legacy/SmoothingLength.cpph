@@ -5,6 +5,7 @@
 
 template <typename Particle>
 void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_required(Particle* localParticle) {
+  // TODO Mladen: rething naming w.r.t. legacy SWIFT 1 names.
 
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::kernels::legacy::kernelHydro;
