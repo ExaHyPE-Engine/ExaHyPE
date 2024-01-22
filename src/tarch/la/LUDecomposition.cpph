@@ -83,6 +83,33 @@ double tarch::la::det(
   return R(0,0)*R(1,1)-R(0,1)*R(1,0);
 }
 
+#if defined(LAPACKE_AVAILABLE) and defined(CBLAS_AVAILABLE)
+template<int Rows, typename Scalar>
+Matrix<rows,rows,Scalar> invert(
+  const Matrix<Rows,Rows,Scalar>&  R
+){
+  // make a copy
+  Matrix<rows,rows,Scalar> M = R;
+
+  // aux variables
+  int returnCode;
+  int ipiv[rows];
+
+  // step 1 - compute LU factorisation. M -> P * L * U, where P a permutation matrix
+  returnCode = LAPACKE_dgetrf( LAPACK_COL_MAJOR, Rows, Rows, M.data(), Rows, ipiv );
+  // check return code
+  assertion(returnCode==0);
+
+  // step 2 - use the result of the above to compute the inverse.
+  returnCode = LAPACKE_dgetri( LAPACK_COL_MAJOR, CellUnknowns, M.data(), CellUnknowns, ipiv );
+ // check return code
+  assertion(returnCode==0);
+
+  return M;
+}
+
+
+#else
 
 template<typename Scalar>
 tarch::la::Matrix<2,2,Scalar> tarch::la::invert(
@@ -134,3 +161,5 @@ tarch::la::Matrix<3,3,Scalar> tarch::la::invert(
   
   return result;
 }
+
+#endif

@@ -7,6 +7,17 @@
 
 #include "tarch/Assertions.h"
 
+#if defined __has_include
+  #if __has_include (<cblas.h>)
+    #include <cblas.h>
+    #define CBLAS_AVAILABLE true
+  #endif
+  #if __has_include (<lapacke.h>)
+    #include <lapacke.h>
+    #define LAPACKE_AVAILABLE true
+  #endif
+#endif
+
 namespace tarch {
   namespace la {
     /**
@@ -42,6 +53,14 @@ namespace tarch {
       const Vector<Rows,Scalar>&       f
     );
 
+    #if defined(LAPACKE_AVAILABLE) and defined(CBLAS_AVAILABLE)
+    #pragma message("CBLAS and LAPACKE available. Augmenting the matrix routines.")
+    template<int Rows, typename Scalar>
+    Matrix<rows,rows,Scalar> invert(
+      const Matrix<Rows,Rows,Scalar>&  R
+    );
+
+    #else
     template<typename Scalar>
     Matrix<2,2,Scalar> invert(
       const Matrix<2,2,Scalar>&  R
@@ -61,6 +80,8 @@ namespace tarch {
     double det(
       const Matrix<3,3,Scalar>&  R
     );
+
+    #endif
   }
 }
 
