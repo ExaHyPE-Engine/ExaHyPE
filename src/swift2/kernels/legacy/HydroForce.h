@@ -88,22 +88,6 @@ namespace swift2 {
       }
 
       /**
-       * Predict hydro terms (SWIFT)
-       * Relevant for inactive particles when using local-timestepping, but always
-       * used.
-       */
-      template <typename Particle>
-      void predict_hyrdro(Particle* particle);
-
-
-      template <typename Particle>
-      void predictHydro(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
-          predict_hyrdro(&localParticle);
-        }
-      }
-
-      /**
        * Vectorised alternative implementation of forceKernel()
        *
        * This routine is a vectorised variant of forceKernel() which you can use
