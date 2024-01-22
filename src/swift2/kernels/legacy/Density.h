@@ -75,13 +75,6 @@ namespace swift2 {
        * them here.
        * This is equivalent to the hydro_end_density function in SWIFT.
        *
-       * @param ParticleContainer Typicaly either
-       *         std::list<Particle *>
-       *   or
-       *         std::unordered_set<Particle *>
-       *
-       * @todo Do we need this one?
-       *
        */
       template <typename Particle>
       void end_density_calculation(Particle* particle);
