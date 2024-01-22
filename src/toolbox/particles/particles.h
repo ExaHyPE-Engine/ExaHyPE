@@ -53,8 +53,6 @@ namespace toolbox {
      *
      * This routine basically runs through the vector passed and calls the
      * other insertParticleIntoCell() operation per particle.
-     *
-     * The routine does not (!) connect to
      */
     template <typename Particle, typename ParticleSet>
     void insertParticlesIntoCell(
