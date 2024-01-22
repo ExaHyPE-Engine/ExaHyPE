@@ -55,7 +55,6 @@ class Particle(DaStGen2):
       work with a halo of h/2 per mesh level. 
       
     The only action set that should alter the state is UpdateParallelState. 
-    However,   
       
     ## State updates  
     
