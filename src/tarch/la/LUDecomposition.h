@@ -65,7 +65,7 @@ namespace tarch {
     *
     */
     template<int Rows, typename Scalar>
-    Matrix<rows,rows,Scalar> invert(
+    Matrix<Rows,Rows,Scalar> invert(
       const Matrix<Rows,Rows,Scalar>&  R
     );
 
@@ -79,6 +79,7 @@ namespace tarch {
     Matrix<3,3,Scalar> invert(
       const Matrix<3,3,Scalar>&  R
     );
+    #endif
 
     template<typename Scalar>
     double det(
@@ -90,7 +91,6 @@ namespace tarch {
       const Matrix<3,3,Scalar>&  R
     );
 
-    #endif
   }
 }
 

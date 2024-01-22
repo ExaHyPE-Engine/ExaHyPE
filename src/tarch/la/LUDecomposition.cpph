@@ -85,15 +85,15 @@ double tarch::la::det(
 
 #if defined(LAPACKE_AVAILABLE) and defined(CBLAS_AVAILABLE)
 template<int Rows, typename Scalar>
-Matrix<rows,rows,Scalar> invert(
-  const Matrix<Rows,Rows,Scalar>&  R
+tarch::la::Matrix<Rows,Rows,Scalar> tarch::la::invert(
+  const tarch::la::Matrix<Rows,Rows,Scalar>&  R
 ){
   // make a copy
-  Matrix<rows,rows,Scalar> M = R;
+  tarch::la::Matrix<Rows,Rows,Scalar> M = R;
 
   // aux variables
   int returnCode;
-  int ipiv[rows];
+  int ipiv[Rows];
 
   // step 1 - compute LU factorisation. M -> P * L * U, where P a permutation matrix
   returnCode = LAPACKE_dgetrf( LAPACK_ROW_MAJOR, Rows, Rows, M.data(), Rows, ipiv );
