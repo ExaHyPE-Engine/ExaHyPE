@@ -83,13 +83,35 @@ namespace swift2 {
        * depends on ${\bf v}$ (e.g. due to artificial viscosity terms), which in
        * principle requires extra treatments (see e.g. Price et al. 2017).
        *
-       * In Swift, the second step is in practice more complicated: We kick and
-       * afterwards call
+       * While the time integration scheme should be kick1 - drift - kick2, we do a
+       * slightly different sequence. First, we do a kick1 during initialization.
+       * Then every subsequent normal simulation step does a drift - kick2 - kick1
+       * sequence. The reason for that is to permit individual time step sizes for
+       * individual particles: By starting the particle time step with a drift, we
+       * can always drift neighbours to their correct positions, even when they
+       * are inactive (= not being updated in the current step). The drifts are
+       * linear operations which in principle can be concatenated in any number,
+       * provided the total time a particle is being drifted sums up to the correct
+       * value. So for example, it should be equivalent to compute
+       * \f$ K_1(\Delta t/2) \circ D(\Delta t) \circ K_2(\Delta t/2) \f$ or
+       * \f$ K_1(\Delta t/2) \circ D(\Delta t/4) \circ D(\Delta t/4) \circ D(\Delta t/4)
+       * \circ D(\Delta t/4) \circ K_2(\Delta t/2) \f$.
        *
-       * - hydro_kick_extra()
-       * - hydro_reset_predicted_values()
        *
-       * So there are two additional steps that you have to add afterwards.
+       * After the kick1, we also call hydro_kick_extra(). That function performs
+       * additional operations on particle quantities aside from the velocity, and
+       * strongly depends on the SPH flavour used.
+       *
+       * Similarly, after a drift, some additional particle quantities aside from
+       * their position need updating, which also heavily depend on the SPH flavour
+       * used. They are being updated in the function hydro_predict_extra().
+       *
+       * Once the kick2 operation is complete, the "predicted" values stemming from
+       * the "prediction" step in hydro_predict_extra() after a drift need to be
+       * reset to up-to-date current values that the particle carries. So after a kick2,
+       * we reset them using hydro_reset_predicted_values().
+       *
+       * So in total, there are two additional steps that you have to add afterwards.
        *
        * This version is tailored towards the SPH time integration, where we access additional
        * particle fields which are otherwise not present, such as the time derivative
@@ -111,6 +133,8 @@ namespace swift2 {
        *
        * Additional hydrodynamic quantites are kicked forward in time here. These
        * include thermal quantities (thermal energy or total energy or entropy, ...).
+       * The additional quantities being updated here depend on the exact SPH flavour
+       * being used.
        *
        * Kick extra step, i.e. update some thermodynamic
        * quantities forward in time. In particular, U is integrated forward in
