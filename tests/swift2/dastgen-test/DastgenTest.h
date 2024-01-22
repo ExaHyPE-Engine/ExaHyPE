@@ -17,83 +17,73 @@ namespace swift2 {
      * where applicable. Also try constructor versions of particles.
      **/
     template <typename ParticleContainer>
-    void checkDastgen(ParticleContainer& localParticles);
+    void checkDastgen(ParticleContainer& assignedParticles);
 
 
     /**
      * Perform all the checks on a particle's boolean members
      */
-    template <typename Particle>
-    void checkBooleans(Particle& particle);
+    void checkBooleans(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
      * Perform all the checks on a particle's double members
      */
-    template <typename Particle>
-    void checkDoubles(Particle& particle);
+    void checkDoubles(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
      * Perform all the checks on a particle's enum members
      */
-    void checkEnums(benchmarks::swift2::dastgen_test::globaldata::dummyPart& particle);
+    void checkEnums(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
      * Perform all the checks on a particle's integer members
      */
-    template <typename Particle>
-    void checkIntegers(Particle& particle);
+    void checkIntegers(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
      * Perform all the checks on a particle's string members
      */
-    template <typename Particle>
-    void checkStrings(Particle& particle);
+    void checkStrings(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
      * Perform all the checks on a particle's boolean array members
      */
-    template <typename Particle>
-    void checkBooleanArrays(Particle& particle);
+    void checkBooleanArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
      * Perform all the checks on a particle's double array members
      */
-    template <typename Particle>
-    void checkDoubleArrays(Particle& particle);
+    void checkDoubleArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
      * Perform all the checks on a particle's integer array members
      */
-    template <typename Particle>
-    void checkIntegerArrays(Particle& particle);
+    void checkIntegerArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
      * Perform all the checks on a particle's double array members
      */
-    template <typename Particle>
-    void checkPeanoDoubleArrays(Particle& particle);
+    void checkPeanoDoubleArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
      * Perform all the checks on a particle's integer array members
      */
-    template <typename Particle>
-    void checkPeanoIntegerArrays(Particle& particle);
+    void checkPeanoIntegerArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
      * Perform all the checks on a particle's string arrays members
      */
-    template <typename Particle>
-    void checkStringArrays(Particle& particle);
+    void checkStringArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
