@@ -239,7 +239,7 @@ void swift2::dastgenTest::checkDoubles(tests::swift2::dastgenTest::globaldata::d
 
 void swift2::dastgenTest::checkEnums(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
 
-  // Default MyEnumms
+  // Default enums
   // ----------------
 
   using MyEnum = tests::swift2::dastgenTest::globaldata::dummyPart::MyEnum;
@@ -495,6 +495,16 @@ void swift2::dastgenTest::checkStrings(tests::swift2::dastgenTest::globaldata::d
 
   // constexpr left out for now. Not working yet. Not needed atm.
 #endif
+}
+
+
+void checkUserDefinedType(tests::swift2::dastgenTest::globaldata::dummyPart& particle) {
+
+  auto a = particle.getMyStaticUserDefinedAttribute();
+#if PeanoDebug > 0
+  auto b = particle.getMyStaticDebugUserDefinedAttribute();
+#endif
+  // We currently have no setters for User Defined Attributes.
 }
 
 

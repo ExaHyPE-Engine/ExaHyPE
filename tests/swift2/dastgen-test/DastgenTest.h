@@ -83,9 +83,9 @@ namespace swift2 {
 
 
     /**
-     * Perform all the checks on a particle's string arrays members
+     * Perform all the checks on a particle's user defined types.
      */
-    void checkStringArrays(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
+    void checkUserDefinedType(tests::swift2::dastgenTest::globaldata::dummyPart& particle);
 
 
     /**
