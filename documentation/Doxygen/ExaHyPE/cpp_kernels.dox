@@ -2,7 +2,8 @@
 
 @page page_exahype_cpp_kernels C++ kernels
 
-\li \subpage exahype2_enumerators
+\li \subpage exahype2_NoncriticalAssertions
+\li \subpage exahype2_enumerator
 \li \subpage exahype2_dg
 \li \subpage exahype2_dg_DG_AMD
 \li \subpage exahype2_fv_rusanov

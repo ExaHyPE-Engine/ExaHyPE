@@ -35,7 +35,6 @@
 #include "tarch/multicore/otter.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "tarch/timing/Measurement.h"
-#include "tarch/timing/TPSCalculator.h"
 #include "tarch/timing/Watch.h"
 #include "toolbox/blockstructured/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
@@ -51,7 +50,6 @@ using namespace {{NAMESPACE | join("::")}};
 tarch::logging::Log _log("::");
 
 
-tarch::timing::TPSCalculator tpsCalculator;
 tarch::timing::Measurement   tpsMeasurement;
 tarch::timing::Measurement   gridConstructionMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
@@ -435,10 +433,6 @@ void step() {
     OTTER_POOL_POP(step_task, otter::label::step);
     OTTER_TASK_WAIT_FOR(OTTER_NULL_TASK, descendants);
 
-    tpsCalculator.update(watch.getCalendarTime());
-    tpsMeasurement.setValue(tpsCalculator.getTPS());
-    logInfo("step()", "TPS: " << std::fixed << std::setprecision(2) << tpsCalculator.getTPS());
-
     repositories::finishTimeStep();
   } break;
   case repositories::StepRepository::Steps::Undef:
@@ -453,9 +447,11 @@ int main(int argc, char** argv) {
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
 
+  static tarch::timing::Watch watch("::", "main()", false);
+
   peano4::initParallelEnvironment(&argc, &argv);
 
-  // Do this early, so people can use logInfo properly
+  // Do this early, so people can use logInfo properly.
   repositories::initLogFilters();
 
   tarch::initNonCriticalAssertionEnvironment();
@@ -507,8 +503,8 @@ int main(int argc, char** argv) {
 #endif
 
 #if defined(UseSmartMPI)
-      const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
-      const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  const bool isGlobalMaster = tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
 #else
   const bool isGlobalMaster     = tarch::mpi::Rank::getInstance().isGlobalMaster();
   const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
@@ -516,26 +512,33 @@ int main(int argc, char** argv) {
 
       if (isGlobalMaster) {
         while (selectNextAlgorithmicStep()) {
+          watch.start();
           step();
+          watch.stop();
+
+          const double timestepsPerSecond = double(1 / watch.getCalendarTime()); // Inverse of the time per timestep
+          tpsMeasurement.setValue(timestepsPerSecond);
+          logInfo("main()", "TPS: " << std::fixed << std::setprecision(2) << timestepsPerSecond);
         }
 
         logInfo("main()", "terminated successfully");
         logInfo(
           "main()",
-          "initial grid construction:  " << gridConstructionMeasurement.getAccumulatedValue(
+          "initial grid construction: " << gridConstructionMeasurement.getAccumulatedValue(
           ) << "s\t" << gridConstructionMeasurement.toString()
         );
         logInfo(
           "main()",
-          "plotting:                   " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString()
+          "plotting:                  " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString()
         );
         logInfo(
           "main()",
-          "time stepping:              " << timeStepMeasurement.getAccumulatedValue(
+          "time stepping:             " << timeStepMeasurement.getAccumulatedValue(
           ) << "s\t" << timeStepMeasurement.toString()
         );
         logInfo(
-          "main()", "average TPS:                " << tpsMeasurement.getValue() << "\t" << tpsMeasurement.toString()
+          "main()",
+          "average TPS:               " << tpsMeasurement.getValue() << "\t" << tpsMeasurement.toString()
         );
       } else if (isPeanoComputeNode) {
         while (peano4::parallel::Node::getInstance().continueToRun()) {
