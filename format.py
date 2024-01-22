@@ -29,14 +29,14 @@ def get_peano_root():
 
     returns:
     peano_root: str
-        root of Peano repo
+        Root of Peano repo
     """
 
     cmd = "git rev-parse --show-toplevel"
 
     if verbose:
         print("Searching for Peano root dir via git.")
-        print("Running '{}'".format(cmd))
+        print("Running '{}'.".format(cmd))
 
     gitrevparse = subprocess.run(
         cmd,
@@ -78,8 +78,8 @@ def git_is_available():
     cmd = "git --version"
 
     if verbose:
-        print("Checking if git is available")
-        print("Running '{}'".format(cmd))
+        print("Checking if git is available.")
+        print("Running '{}'.".format(cmd))
 
     run = subprocess.run(
         cmd,
@@ -111,7 +111,7 @@ def check_black(black_cmd):
 
         if verbose:
             print("Checking black formatter runs.")
-            print("Running '{}'".format(cmd))
+            print("Running '{}'.".format(cmd))
 
         run = subprocess.run(
             cmd,
@@ -199,7 +199,7 @@ def install_black_formatting_tool():
     cmd = (bfepython + " -m pip install click==8.1.3 black==" + black_version,)
     if verbose:
         print("Installing black formatter.")
-        print("Running '{}'".format(cmd))
+        print("Running '{}'.".format(cmd))
 
     run = subprocess.run(
         cmd,
@@ -232,7 +232,7 @@ def install_clang_formatting_tool():
     cmd = clangpython + " -m pip install clang-format==" + clang_version
     if verbose:
         print("Installing clang-format.")
-        print("Running '{}'".format(cmd))
+        print("Running '{}'.".format(cmd))
 
     run = subprocess.run(
         cmd,
@@ -261,7 +261,7 @@ def setup_venv(peano_root):
         cmd = "python3 -m venv " + venv_path
 
         if verbose:
-            print("Running '{}'".format(cmd))
+            print("Running '{}'.".format(cmd))
         run = subprocess.run(cmd, shell=True, check=True)
 
         if not os.path.exists(venv_path):
@@ -447,7 +447,7 @@ def run_python_formatter(filename, dry_run, peano_root):
     cmd = black_cmd + " --check "
 
     if verbose:
-        print("Checking '{}' using '{}'".format(filename, cmd))
+        print("Checking '{}' using '{}'.".format(filename, cmd))
     run = subprocess.run(cmd + filename, stdout=subprocess.DEVNULL, shell=True)
 
     returncode = run.returncode
@@ -459,7 +459,7 @@ def run_python_formatter(filename, dry_run, peano_root):
 
     # If not dry run: Now actually format the file
     if verbose:
-        print("Running '{} {}'".format(black_cmd, filename))
+        print("Running '{} {}'.".format(black_cmd, filename))
     run = subprocess.run(
         black_cmd + " " + filename, stdout=subprocess.DEVNULL, shell=True
     )
@@ -483,7 +483,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
     # need to/do format through the return code.
     cmd = clang_cmd + " --dry-run "
     if verbose:
-        print("Checking '{}' using '{}'".format(filename, cmd))
+        print("Checking '{}' using '{}'.".format(filename, cmd))
     # Pipe sterr to /dev/null too here. In dry run mode, every line that needs
     # to be changed will otherwise be printed to stderr.
     run = subprocess.run(
@@ -501,7 +501,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
         return returncode
 
     if verbose:
-        print("Running '{} {}'".format(clang_cmd, filename))
+        print("Running '{} {}'.".format(clang_cmd, filename))
     # Pipe sterr to /dev/null too here. In dry run mode, every line that needs
     # to be changed will otherwise be printed to stderr.
     run = subprocess.run(
@@ -542,7 +542,7 @@ if __name__ == "__main__":
     # Is this a dry run?
     dry_run = args.dry_run
     if dry_run and verbose:
-        print("Starting a dry run")
+        print("Starting a dry run.")
 
     # Update target branch?
     if args.branch is not None:
@@ -612,11 +612,11 @@ if __name__ == "__main__":
             )
         except subprocess.CalledProcessError:
             print("Something went wrong when trying to check whether branch exists.")
-            print("Command that failed was:", git_check_branch_exists_cmd)
+            print("Command that failed was: '{}'.".format(git_check_branch_exists_cmd))
             sys.exit(1)
 
         if verbose:
-            print("Comparing against", target_branch, "branch")
+            print("Comparing against", target_branch, "branch.")
         # No file list means we're checking for git diffs
         # So get file list from a git diff now
         gitdiff = subprocess.run(

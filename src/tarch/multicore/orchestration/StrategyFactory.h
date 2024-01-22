@@ -4,6 +4,10 @@
 
 #include <string>
 
+#include "AllOnGPU.h"
+#include "BackfillAndDeployRoundRobin.h"
+#include "Hardcoded.h"
+
 namespace tarch {
   namespace multicore {
     namespace orchestration {
