@@ -97,7 +97,9 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
 
 
     // Be verbose about the particles that struggle to converge
-    // @todo Mladen and Tobias have to discuss how to avoid too many iterations
+    // `max_iterations` is currently a user-set variable, with the swift1
+    // choice being 30. You can set that when initialising the SPH particle.
+    // via the python project generation.
 
     if (iteration > max_iterations - 10) {
       logWarning(
