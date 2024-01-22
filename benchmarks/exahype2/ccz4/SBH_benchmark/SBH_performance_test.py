@@ -321,7 +321,7 @@ if __name__ == "__main__":
     elif is_rkdg:
       solver_name    = "RKDG" + solver_name
     else:
-      solver_name    = "FiniteVolume" + solver_name
+      solver_name    = solver_name
 
     if args.DC_flag==True:
       args.cfl=args.cfl/2
@@ -388,7 +388,7 @@ if __name__ == "__main__":
       msg = "Periodic BC deactivated because you pick Puncture scenario\nInitialize binary black holes"
       print(msg)
       periodic_boundary_conditions = [False,False,False]
-      intparams.update({"swi":2})  #notice it may change, see according function in FiniteVolumeCCZ4.cpp
+      intparams.update({"swi":2})  #notice it may change, see according function in CCZ4.cpp
       print(intparams)
       userinfo.append((msg,None))
     elif args.scenario=="single-puncture":
