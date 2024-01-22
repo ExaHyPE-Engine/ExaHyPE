@@ -96,12 +96,12 @@ Matrix<rows,rows,Scalar> invert(
   int ipiv[rows];
 
   // step 1 - compute LU factorisation. M -> P * L * U, where P a permutation matrix
-  returnCode = LAPACKE_dgetrf( LAPACK_COL_MAJOR, Rows, Rows, M.data(), Rows, ipiv );
-  // check return code
+  returnCode = LAPACKE_dgetrf( LAPACK_ROW_MAJOR, Rows, Rows, M.data(), Rows, ipiv );
+  // check return code. 
   assertion(returnCode==0);
 
   // step 2 - use the result of the above to compute the inverse.
-  returnCode = LAPACKE_dgetri( LAPACK_COL_MAJOR, CellUnknowns, M.data(), CellUnknowns, ipiv );
+  returnCode = LAPACKE_dgetri( LAPACK_ROW_MAJOR, Rows, M.data(), Rows, ipiv );
  // check return code
   assertion(returnCode==0);
 

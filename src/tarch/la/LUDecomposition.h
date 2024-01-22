@@ -55,6 +55,15 @@ namespace tarch {
 
     #if defined(LAPACKE_AVAILABLE) and defined(CBLAS_AVAILABLE)
     #pragma message("CBLAS and LAPACKE available. Augmenting the matrix routines.")
+    /**
+    * Accepts a square matrix R and inverts it using BLAS routines.
+    * See documentation on these functions [here](https://www.netlib.org/lapack/explore-html-3.6.1/dd/d9a/group__double_g_ecomputational_ga0019443faea08275ca60a734d0593e60.html)
+    * and [here](https://www.netlib.org/lapack/explore-html-3.6.1/dd/d9a/group__double_g_ecomputational_ga56d9c860ce4ce42ded7f914fdb0683ff.html)
+    * These functions accept a pointer to a double array, which we get
+    * from tarch::la::Matrix::data().
+    *
+    *
+    */
     template<int Rows, typename Scalar>
     Matrix<rows,rows,Scalar> invert(
       const Matrix<Rows,Rows,Scalar>&  R
