@@ -245,3 +245,13 @@ class UpdateParticle_SingleLevelInteraction(ActionSet):
 """
         )
         return result.render(**self.d)
+
+    def get_attributes(self):
+        return """
+  int  _spacetreeId;
+"""
+
+    def get_constructor_body(self):
+        return """
+            _spacetreeId              = treeNumber;
+          """

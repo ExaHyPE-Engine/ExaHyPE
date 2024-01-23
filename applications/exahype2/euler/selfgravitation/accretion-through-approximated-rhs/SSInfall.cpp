@@ -1,9 +1,9 @@
 #include "../../selfgravitation/accretion-through-approximated-rhs/SSInfall.h"
 
+#include "../../../../../src/tarch/NonCriticalAssertions.h"
 #include "Constants.h"
 #include "exahype2/RefinementControl.h"
 
-#include "exahype2/NonCriticalAssertions.h"
 #include "tarch/multicore/Lock.h"
 
 

@@ -1,20 +1,6 @@
 #include "ADERDGCCZ4.h"
 #include "InitialValues.h"
 #include "exahype2/RefinementControl.h"
-#include "exahype2/NonCriticalAssertions.h"
-
-
-/** it is for aderdg solver with signatures changed from the one with fv.
- * I manually include this header which in turn declared all the
- * routines written in Fortran.
- */
-//#include "PDE.h"
-//#include "Properties.h"
-
-/**
- * This file is automatically created by Peano. I need it to interact with
- * the Python API, i.e. to read out data set there.
- */
 #include "Constants.h"
 #include "CCZ4Kernels.h"
 #include <algorithm>
@@ -22,6 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "../../../../src/tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   examples::exahype2::ccz4::ADERDGCCZ4::_log( "examples::exahype2::ADERDGCCZ4::CCZ4" );

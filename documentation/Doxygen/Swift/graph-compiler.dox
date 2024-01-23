@@ -2,7 +2,7 @@
 
 @page swift_graph_compiler SWIFT's task graph compiler
 
-SWIFT's graph compiler takes the @ref swift_particle_lifecycle "lifecycle of all particle species" and
+SWIFT's graph compiler takes the @ref swift_particle_new_solver "lifecycle of all particle species" and
 maps them onto mesh traversals. That is, it takes the lifecycles and answers 
 the following questions:
 

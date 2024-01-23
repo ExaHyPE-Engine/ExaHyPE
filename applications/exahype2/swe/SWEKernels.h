@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-#include "exahype2/NonCriticalAssertions.h"
+#include "../../../src/tarch/NonCriticalAssertions.h"
 #include "tarch/la/Vector.h"
 
 namespace exahype2::swe {

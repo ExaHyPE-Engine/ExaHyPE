@@ -14,34 +14,34 @@ namespace exahype2::fv::rusanov::internal {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseStateless(
-    CellData&                                     patchData,
-    peano4::utils::LoopParallelism                loopParallelism,
+    CellData&                                      patchData,
+    peano4::utils::LoopPlacement                 loopParallelism,
     const enumerator::AoSLexicographicEnumerator& QInEnumerator,
     const enumerator::AoSLexicographicEnumerator& QOutEnumerator,
-    const TempDataEnumeratorType&                 fluxEnumerator,
-    const TempDataEnumeratorType&                 ncpEnumerator,
-    const TempDataEnumeratorType&                 eigenvalueEnumerator,
-    double*                                       tempFluxX,
-    double*                                       tempFluxY,
-    double*                                       tempFluxZ,
-    double*                                       tempNonconservativeProductX,
-    double*                                       tempNonconservativeProductY,
-    double*                                       tempNonconservativeProductZ,
-    double*                                       tempEigenvalueX,
-    double*                                       tempEigenvalueY,
-    double*                                       tempEigenvalueZ
+    const TempDataEnumeratorType&                  fluxEnumerator,
+    const TempDataEnumeratorType&                  ncpEnumerator,
+    const TempDataEnumeratorType&                  eigenvalueEnumerator,
+    double*                                        tempFluxX,
+    double*                                        tempFluxY,
+    double*                                        tempFluxZ,
+    double*                                        tempNonconservativeProductX,
+    double*                                        tempNonconservativeProductY,
+    double*                                        tempNonconservativeProductZ,
+    double*                                        tempEigenvalueX,
+    double*                                        tempEigenvalueY,
+    double*                                        tempEigenvalueZ
   ) InlineMethod {
     static_assert(HaloSize == 1);
 
     static tarch::logging::Log _log("exahype2::fv::rusanov");
     logTraceIn("timeStepWithRusanovPatchwiseStateless()");
 
-    parallelForWithDynamicScheduling(patchIndex, patchData.numberOfCells, loopParallelism) {
+    parallelForWithSchedulerInstructions(patchIndex, patchData.numberOfCells, loopParallelism) {
       // ====================================================
       // Copy solution over and evaluate source (if required)
       // ====================================================
       if constexpr (EvaluateSource) {
-        simtDforWithDynamicScheduling(volume, NumberOfVolumesPerAxisInPatch, loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, NumberOfVolumesPerAxisInPatch, loopParallelism) {
           loopbodies::copySolutionAndAddSourceTerm<SolverType>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -57,7 +57,7 @@ namespace exahype2::fv::rusanov::internal {
         }
         endSimtDfor
       } else {
-        simtDPlusOneForWithDynamicScheduling(
+        simtDPlusOneForWithSchedulerInstructions(
           volume, internal::rangeOverVolumesTimesUnknownsPlusAuxiliaryVariables(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns, NumberOfAuxiliaryVariables), loopParallelism
         ) {
           loopbodies::copySolution(
@@ -76,7 +76,7 @@ namespace exahype2::fv::rusanov::internal {
       // ====================================================
       // Compute damping due to max eigenvalue
       // ====================================================
-      simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
+      simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
         volume(0) -= HaloSize;
         loopbodies::computeMaxEigenvalue<SolverType>(
           patchData.QIn[patchIndex],
@@ -94,7 +94,7 @@ namespace exahype2::fv::rusanov::internal {
       }
       endSimtDfor
 
-        simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
         volume(1) -= HaloSize;
         loopbodies::computeMaxEigenvalue<SolverType>(
           patchData.QIn[patchIndex],
@@ -113,7 +113,7 @@ namespace exahype2::fv::rusanov::internal {
       endSimtDfor
 
 #if Dimensions == 3
-        simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
         volume(2) -= HaloSize;
         loopbodies::computeMaxEigenvalue<SolverType>(
           patchData.QIn[patchIndex],
@@ -132,7 +132,7 @@ namespace exahype2::fv::rusanov::internal {
       endSimtDfor
 #endif
 
-        simtDPlusOneForWithDynamicScheduling(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
+        simtDPlusOneForWithSchedulerInstructions(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
         loopbodies::updateSolutionWithEigenvalueDamping(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -156,7 +156,7 @@ namespace exahype2::fv::rusanov::internal {
         // Normal (conservative) flux
         // ====================================================
         if constexpr (EvaluateFlux) {
-        simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
           volume(0) -= HaloSize;
           loopbodies::computeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -174,7 +174,7 @@ namespace exahype2::fv::rusanov::internal {
         }
         endSimtDfor
 
-          simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
+          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
           volume(1) -= HaloSize;
           loopbodies::computeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -193,7 +193,7 @@ namespace exahype2::fv::rusanov::internal {
         endSimtDfor
 
 #if Dimensions == 3
-          simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
+          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
           volume(2) -= HaloSize;
           loopbodies::computeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -212,7 +212,7 @@ namespace exahype2::fv::rusanov::internal {
         endSimtDfor
 #endif
 
-          simtDPlusOneForWithDynamicScheduling(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
+          simtDPlusOneForWithSchedulerInstructions(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
           loopbodies::updateSolutionWithFlux(
             tempFluxX,
             tempFluxY,
@@ -232,7 +232,7 @@ namespace exahype2::fv::rusanov::internal {
       }
 
       if constexpr (EvaluateNonconservativeProduct) {
-        simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
           volume(0) -= HaloSize;
           loopbodies::computeNonconservativeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -250,7 +250,7 @@ namespace exahype2::fv::rusanov::internal {
         }
         endSimtDfor
 
-          simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
+          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
           volume(1) -= HaloSize;
           loopbodies::computeNonconservativeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -269,7 +269,7 @@ namespace exahype2::fv::rusanov::internal {
         endSimtDfor
 
 #if Dimensions == 3
-          simtDforWithDynamicScheduling(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
+          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
           volume(2) -= HaloSize;
           loopbodies::computeNonconservativeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -288,7 +288,7 @@ namespace exahype2::fv::rusanov::internal {
         endSimtDfor
 #endif
 
-          simtDPlusOneForWithDynamicScheduling(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
+          simtDPlusOneForWithSchedulerInstructions(volume, internal::rangeOverVolumesTimesUnknowns(NumberOfVolumesPerAxisInPatch, NumberOfUnknowns), loopParallelism) {
           loopbodies::updateSolutionWithNonconservativeFlux(
             tempNonconservativeProductX,
             tempNonconservativeProductY,
@@ -346,16 +346,16 @@ template <
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
 void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseCallStackStateless(
-  CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism
+  CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism
 ) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovPatchwiseCallStackStateless()");
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const TempDataEnumeratorType                 fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                 ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                 eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
   double tempFluxX[fluxEnumerator.size()] __attribute__((aligned(AlignmentOnHeap)));
   double tempFluxY[fluxEnumerator.size()] __attribute__((aligned(AlignmentOnHeap)));
@@ -414,15 +414,15 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseCallStackStateless(CellData& patchData, peano4::utils::LoopParallelism loopParallelism) {
+void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseCallStackStateless(CellData& patchData, peano4::utils::LoopPlacement loopParallelism) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovPatchwiseCallStackStateless()");
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const TempDataEnumeratorType                 fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                 ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                 eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
   double tempFluxX[fluxEnumerator.size()] __attribute__((aligned(AlignmentOnHeap)));
   double tempFluxY[fluxEnumerator.size()] __attribute__((aligned(AlignmentOnHeap)));
@@ -479,16 +479,16 @@ template <
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
 void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless(
-  CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism
+  CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism
 ) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovPatchwiseHeapStateless()");
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const TempDataEnumeratorType                 fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                 ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                 eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
   double* tempFluxX                   = EvaluateFlux ? tarch::allocateMemory<double>(fluxEnumerator.size(), tarch::MemoryLocation::Heap) : nullptr;
   double* tempFluxY                   = EvaluateFlux ? tarch::allocateMemory<double>(fluxEnumerator.size(), tarch::MemoryLocation::Heap) : nullptr;
@@ -577,15 +577,15 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless(CellData& patchData, peano4::utils::LoopParallelism loopParallelism) {
+void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapStateless(CellData& patchData, peano4::utils::LoopPlacement loopParallelism) {
   static tarch::logging::Log _log("exahype2::fv::rusanov");
   logTraceIn("timeStepWithRusanovPatchwiseHeapStateless()");
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const TempDataEnumeratorType                 fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                 ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                 eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
   double* tempFluxX                   = EvaluateFlux ? tarch::allocateMemory<double>(fluxEnumerator.size(), tarch::MemoryLocation::Heap) : nullptr;
   double* tempFluxY                   = EvaluateFlux ? tarch::allocateMemory<double>(fluxEnumerator.size(), tarch::MemoryLocation::Heap) : nullptr;

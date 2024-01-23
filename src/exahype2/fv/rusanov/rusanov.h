@@ -384,7 +384,7 @@ namespace exahype2::fv::rusanov {
     const SourceFunctor&                 sourceFunctor,
     const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
     tarch::timing::Measurement&          measurement,
-    peano4::utils::LoopParallelism       loopParallelism = peano4::utils::LoopParallelism::None
+    peano4::utils::LoopPlacement       loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -404,7 +404,7 @@ namespace exahype2::fv::rusanov {
     const NonconservativeProductFunctor& nonconservativeProductFunctor,
     const SourceFunctor&                 sourceFunctor,
     const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
-    peano4::utils::LoopParallelism       loopParallelism = peano4::utils::LoopParallelism::None
+    peano4::utils::LoopPlacement       loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -428,7 +428,7 @@ namespace exahype2::fv::rusanov {
     const SourceFunctor&                 sourceFunctor,
     const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
     tarch::timing::Measurement&          measurement,
-    peano4::utils::LoopParallelism       loopParallelism = peano4::utils::LoopParallelism::None
+    peano4::utils::LoopPlacement       loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -448,7 +448,7 @@ namespace exahype2::fv::rusanov {
     const NonconservativeProductFunctor& nonconservativeProductFunctor,
     const SourceFunctor&                 sourceFunctor,
     const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
-    peano4::utils::LoopParallelism       loopParallelism = peano4::utils::LoopParallelism::None
+    peano4::utils::LoopPlacement       loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -508,7 +508,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseCallStackStateless(
-    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -524,7 +524,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseCallStackStateless(
-    CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    CellData& patchData, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -540,7 +540,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseHeapStateless(
-    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -556,7 +556,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseHeapStateless(
-    CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    CellData& patchData, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -571,7 +571,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseInsituStateless(
-    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -586,7 +586,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovPatchwiseInsituStateless(
-    CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    CellData& patchData, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -601,7 +601,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedInsituStateless(
-    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -616,7 +616,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateSource,
     bool EvaluateMaximumEigenvalueAfterTimeStep>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedInsituStateless(
-    CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    CellData& patchData, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -632,7 +632,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedCallStackStateless(
-    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -648,7 +648,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedCallStackStateless(
-    CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    CellData& patchData, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -664,7 +664,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedHeapStateless(
-    ::exahype2::CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    ::exahype2::CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 
@@ -680,7 +680,7 @@ namespace exahype2::fv::rusanov {
     bool EvaluateMaximumEigenvalueAfterTimeStep,
     class TempDataEnumeratorType>
   KeywordToAvoidDuplicateSymbolsForInlinedFunctions void timeStepWithRusanovBatchedHeapStateless(
-    ::exahype2::CellData& patchData, peano4::utils::LoopParallelism loopParallelism = peano4::utils::LoopParallelism::None
+    ::exahype2::CellData& patchData, peano4::utils::LoopPlacement loopParallelism = peano4::utils::LoopPlacement::Serial
   ) InlineMethod;
 
 

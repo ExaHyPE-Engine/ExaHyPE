@@ -4,10 +4,27 @@
 #include "EnclaveBookkeeping.h"
 #include "tarch/accelerator/Device.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/Lock.h"
 #include "tarch/multicore/otter.h"
 
 
 tarch::logging::Log exahype2::EnclaveTask::_log("exahype2::EnclaveTask");
+
+
+tarch::Enumerator   exahype2::EnclaveTask::_enumerator;
+
+
+int exahype2::EnclaveTask::getNumberOfActiveTasks() { return _enumerator.size(); }
+
+
+void exahype2::EnclaveTask::releaseTaskNumber(int number) {
+  _enumerator.releaseNumber(number);
+}
+
+
+int exahype2::EnclaveTask::reserveTaskNumber() {
+  return _enumerator.getNumber();
+}
 
 
 exahype2::EnclaveTask::EnclaveTask(
@@ -21,7 +38,7 @@ exahype2::EnclaveTask::EnclaveTask(
   Functor functor
 ):
   tarch::multicore::Task(enclaveTaskTypeId, tarch::multicore::Task::DefaultPriority),
-  _taskNumber(tarch::multicore::reserveTaskNumber()),
+  _taskNumber(reserveTaskNumber()),
   _marker(marker),
   _t(t),
   _dt(dt),
