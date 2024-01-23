@@ -3,8 +3,10 @@
 #pragma once
 
 
-#include <list>
-#include <vector>
+#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/VertexMarker.h"
+
+#include "swift2/kernels/ParticleUpdatePredicates.h"
 
 
 namespace swift2 {
@@ -16,10 +18,18 @@ namespace swift2 {
      * as you should also call this routine prior to a change of the interaction
      * radius.
      */
-    template <typename ParticleContainer>
+    template <typename Particle>
+    void reset_moved_particle_marker(Particle&  particle);
+
+    template <typename Particle>
     void resetMovedParticleMarker(
-      const ParticleContainer&  localParticles
-    );
+      const peano4::datamanagement::VertexMarker&  marker,
+      Particle&                                    particle
+    ) {
+      if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle)) {
+        reset_moved_particle_marker(particle);
+      }
+    }
   }
 }
 

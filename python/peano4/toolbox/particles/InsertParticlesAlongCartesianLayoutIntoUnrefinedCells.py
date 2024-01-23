@@ -105,7 +105,8 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
         toolbox::particles::insertParticleIntoCell(
           marker,
           particle,
-          fineGridVertices{{PARTICLES_CONTAINER}}
+          fineGridVertices{{PARTICLES_CONTAINER}},
+          _spacetreeId
         );
       }
       else {
@@ -141,3 +142,13 @@ class InsertParticlesAlongCartesianLayoutIntoUnrefinedCells(ActionSet):
 """
         )
         return result.render(**self.d) + self.additional_includes
+
+    def get_attributes(self):
+        return f"""
+    int                                        _spacetreeId;
+"""
+
+    def get_constructor_body(self):
+        return """
+  _spacetreeId              = treeNumber;
+"""

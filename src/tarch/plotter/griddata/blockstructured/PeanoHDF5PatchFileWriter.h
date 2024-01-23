@@ -26,7 +26,7 @@ namespace tarch {
 /**
  * HDF 5 writer
  *
- * This class works if and only if you have compiled Peano with -DHDF5.
+ * This class works if and only if you have compiled Peano with --with-hdf5 (autotools).
  */
 class tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter: public tarch::plotter::griddata::blockstructured::PatchWriter {
   protected:

@@ -218,7 +218,52 @@ rendered once again as source code. You have to remove the indentation sometimes
 that this mainly affects the Python code, but not the C++ documentation.
 
 
-Brief doxygen cheat sheet
+
+# Tutorials
+
+
+We hold tutorials parallel to the actual source code, tests and benchmarks.
+It is obviously up to the author of a tutorial how to structure the tutorial.
+However, we found it very useful if tutorials refer to other benchmarks and 
+tests wherever possible rather than duplicating code. 
+
+To facilitate this,
+doxygen allows you to "extract" source code snippets into your documentation 
+pages. The feature is documented at https://www.doxygen.nl/manual/commands.html#cmdsnippet.
+
+The idea is that the code that is relevant/discussed has to be annotated with 
+
+\verbatim
+//! [tutorials swift2 planet-orbit create project]
+
+Code that you want to display in tutorials, too 
+
+//! [tutorials swift2 planet-orbit create project]
+\endverbatim
+
+(in C/C++ code) or
+
+\verbatim
+#! [tutorials swift2 planet-orbit create project]
+
+Code that you want to display in tutorials, too 
+
+#! [tutorials swift2 planet-orbit create project]
+\endverbatim
+
+respectively. We can then integrate this code part through
+
+
+\verbatim
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit create project
+
+This snippet stems from tests/swift2/planet-orbit/planet-orbit.py.
+\endverbatim
+
+
+
+
+Doxygen cheat sheet
 ======================
 
 Creating new chapters within the page (note what appears in the dropdown on the left

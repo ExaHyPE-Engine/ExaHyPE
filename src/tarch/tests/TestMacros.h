@@ -132,7 +132,7 @@
   }
 
 
-#define validateWithParams7(booleanExpr,param0,param1,param2,param3,param4,param5,param6) if (!(booleanExpr)) { \
+  #define validateWithParams7(booleanExpr,param0,param1,param2,param3,param4,param5,param6) if (!(booleanExpr)) { \
     _errors++; \
     _error = true; \
     std::cerr << "  boolean test failed " << std::endl \
@@ -149,7 +149,154 @@
   }
 
 
-#define validateEquals(actualValue, validValue) if (!(actualValue == validValue)) { \
+  #define validateWithParams8(booleanExpr,param0,param1,param2,param3,param4,param5,param6,param7) if (!(booleanExpr)) { \
+    _errors++; \
+    _error = true; \
+    std::cerr << "  boolean test failed " << std::endl \
+              << "  file: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
+              << "  statement: " << #booleanExpr << std::endl \
+              << "  parameter " << #param0 << "=" << param0 << std::endl \
+              << "  parameter " << #param1 << "=" << param1 << std::endl \
+              << "  parameter " << #param2 << "=" << param2 << std::endl \
+              << "  parameter " << #param3 << "=" << param3 << std::endl \
+              << "  parameter " << #param4 << "=" << param4 << std::endl \
+              << "  parameter " << #param5 << "=" << param5 << std::endl \
+              << "  parameter " << #param6 << "=" << param6 << std::endl \
+              << "  parameter " << #param7 << "=" << param7 << std::endl; \
+    return;\
+  }
+
+
+  #define validateWithParams9(booleanExpr,param0,param1,param2,param3,param4,param5,param6,param7,param8) if (!(booleanExpr)) { \
+    _errors++; \
+    _error = true; \
+    std::cerr << "  boolean test failed " << std::endl \
+              << "  file: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
+              << "  statement: " << #booleanExpr << std::endl \
+              << "  parameter " << #param0 << "=" << param0 << std::endl \
+              << "  parameter " << #param1 << "=" << param1 << std::endl \
+              << "  parameter " << #param2 << "=" << param2 << std::endl \
+              << "  parameter " << #param3 << "=" << param3 << std::endl \
+              << "  parameter " << #param4 << "=" << param4 << std::endl \
+              << "  parameter " << #param5 << "=" << param5 << std::endl \
+              << "  parameter " << #param6 << "=" << param6 << std::endl \
+              << "  parameter " << #param7 << "=" << param7 << std::endl \
+              << "  parameter " << #param8 << "=" << param8 << std::endl; \
+    return;\
+  }
+
+
+  #define validateWithParams10(booleanExpr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9) if (!(booleanExpr)) { \
+    _errors++; \
+    _error = true; \
+    std::cerr << "  boolean test failed " << std::endl \
+              << "  file: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
+              << "  statement: " << #booleanExpr << std::endl \
+              << "  parameter " << #param0 << "=" << param0 << std::endl \
+              << "  parameter " << #param1 << "=" << param1 << std::endl \
+              << "  parameter " << #param2 << "=" << param2 << std::endl \
+              << "  parameter " << #param3 << "=" << param3 << std::endl \
+              << "  parameter " << #param4 << "=" << param4 << std::endl \
+              << "  parameter " << #param5 << "=" << param5 << std::endl \
+              << "  parameter " << #param6 << "=" << param6 << std::endl \
+              << "  parameter " << #param7 << "=" << param7 << std::endl \
+              << "  parameter " << #param8 << "=" << param8 << std::endl \
+              << "  parameter " << #param9 << "=" << param9 << std::endl; \
+    return;\
+  }
+
+
+  #define validateWithParams11(booleanExpr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10) if (!(booleanExpr)) { \
+    _errors++; \
+    _error = true; \
+    std::cerr << "  boolean test failed " << std::endl \
+              << "  file: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
+              << "  statement: " << #booleanExpr << std::endl \
+              << "  parameter " << #param0 << "=" << param0 << std::endl \
+              << "  parameter " << #param1 << "=" << param1 << std::endl \
+              << "  parameter " << #param2 << "=" << param2 << std::endl \
+              << "  parameter " << #param3 << "=" << param3 << std::endl \
+              << "  parameter " << #param4 << "=" << param4 << std::endl \
+              << "  parameter " << #param5 << "=" << param5 << std::endl \
+              << "  parameter " << #param6 << "=" << param6 << std::endl \
+              << "  parameter " << #param7 << "=" << param7 << std::endl \
+              << "  parameter " << #param8 << "=" << param8 << std::endl \
+              << "  parameter " << #param9 << "=" << param9 << std::endl \
+              << "  parameter " << #param10 << "=" << param10 << std::endl; \
+    return;\
+  }
+
+
+  #define validateWithParams12(booleanExpr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11) if (!(booleanExpr)) { \
+    _errors++; \
+    _error = true; \
+    std::cerr << "  boolean test failed " << std::endl \
+              << "  file: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
+              << "  statement: " << #booleanExpr << std::endl \
+              << "  parameter " << #param0 << "=" << param0 << std::endl \
+              << "  parameter " << #param1 << "=" << param1 << std::endl \
+              << "  parameter " << #param2 << "=" << param2 << std::endl \
+              << "  parameter " << #param3 << "=" << param3 << std::endl \
+              << "  parameter " << #param4 << "=" << param4 << std::endl \
+              << "  parameter " << #param5 << "=" << param5 << std::endl \
+              << "  parameter " << #param6 << "=" << param6 << std::endl \
+              << "  parameter " << #param7 << "=" << param7 << std::endl \
+              << "  parameter " << #param8 << "=" << param8 << std::endl \
+              << "  parameter " << #param9 << "=" << param9 << std::endl \
+              << "  parameter " << #param10 << "=" << param10 << std::endl \
+              << "  parameter " << #param11 << "=" << param11 << std::endl; \
+    return;\
+  }
+
+
+  #define validateWithParams13(booleanExpr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12) if (!(booleanExpr)) { \
+    _errors++; \
+    _error = true; \
+    std::cerr << "  boolean test failed " << std::endl \
+              << "  file: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
+              << "  statement: " << #booleanExpr << std::endl \
+              << "  parameter " << #param0 << "=" << param0 << std::endl \
+              << "  parameter " << #param1 << "=" << param1 << std::endl \
+              << "  parameter " << #param2 << "=" << param2 << std::endl \
+              << "  parameter " << #param3 << "=" << param3 << std::endl \
+              << "  parameter " << #param4 << "=" << param4 << std::endl \
+              << "  parameter " << #param5 << "=" << param5 << std::endl \
+              << "  parameter " << #param6 << "=" << param6 << std::endl \
+              << "  parameter " << #param7 << "=" << param7 << std::endl \
+              << "  parameter " << #param8 << "=" << param8 << std::endl \
+              << "  parameter " << #param9 << "=" << param9 << std::endl \
+              << "  parameter " << #param10 << "=" << param10 << std::endl \
+              << "  parameter " << #param11 << "=" << param11 << std::endl \
+              << "  parameter " << #param12 << "=" << param12 << std::endl; \
+    return;\
+  }
+
+
+  #define validateWithParams14(booleanExpr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12,param13) if (!(booleanExpr)) { \
+    _errors++; \
+    _error = true; \
+    std::cerr << "  boolean test failed " << std::endl \
+              << "  file: " << __FILE__ << " \t line: " << __LINE__ << std::endl \
+              << "  statement: " << #booleanExpr << std::endl \
+              << "  parameter " << #param0 << "=" << param0 << std::endl \
+              << "  parameter " << #param1 << "=" << param1 << std::endl \
+              << "  parameter " << #param2 << "=" << param2 << std::endl \
+              << "  parameter " << #param3 << "=" << param3 << std::endl \
+              << "  parameter " << #param4 << "=" << param4 << std::endl \
+              << "  parameter " << #param5 << "=" << param5 << std::endl \
+              << "  parameter " << #param6 << "=" << param6 << std::endl \
+              << "  parameter " << #param7 << "=" << param7 << std::endl \
+              << "  parameter " << #param8 << "=" << param8 << std::endl \
+              << "  parameter " << #param9 << "=" << param9 << std::endl \
+              << "  parameter " << #param10 << "=" << param10 << std::endl \
+              << "  parameter " << #param11 << "=" << param11 << std::endl \
+              << "  parameter " << #param12 << "=" << param12 << std::endl \
+              << "  parameter " << #param13 << "=" << param13 << std::endl; \
+    return;\
+  }
+
+
+  #define validateEquals(actualValue, validValue) if (!(actualValue == validValue)) { \
     _errors++; \
     _error = true; \
     std::cerr << "  equality test failed: " << actualValue << " instead of " << validValue << std::endl \

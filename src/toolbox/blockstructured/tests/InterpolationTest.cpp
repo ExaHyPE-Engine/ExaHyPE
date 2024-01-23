@@ -45,7 +45,7 @@ void toolbox::blockstructured::tests::InterpolationTest::testInterpolateCellData
     NumberOfUnknowns,
     sourceData,
     destinationData,
-    ::peano4::utils::LoopParallelism::Subtasks
+    ::peano4::utils::LoopPlacement::SpreadOut
   );
 
   for (int i=0; i<DestinationSize; i++) {

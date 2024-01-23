@@ -6,10 +6,9 @@
 // **********************************************************************************************
 #pragma once
 
+#include "../../../../src/tarch/NonCriticalAssertions.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PrecisionControl.h"
-#include "exahype2/NonCriticalAssertions.h"
-
 #include "exahype2/aderdg/solvers/ADERDGSolver.h"
 
 #include "tarch/la/Vector.h"

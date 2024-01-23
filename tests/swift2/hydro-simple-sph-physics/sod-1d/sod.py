@@ -138,7 +138,6 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=20,
     min_h=args.cell_size,
     max_h=args.cell_size,
-    asserts=args.asserts,
 )
 
 
@@ -203,7 +202,8 @@ particle.set_parameters()
 particle_set = project.add_particle_species(particle)
 
 if args.asserts:
-    build_mode = peano4.output.CompileMode.Asserts
+    #  build_mode = peano4.output.CompileMode.Asserts
+    build_mode = peano4.output.CompileMode.Debug
 else:
     build_mode = peano4.output.CompileMode.Release
 
@@ -227,7 +227,7 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::RecursiveBipartition",
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new toolbox::loadbalancing::DefaultConfiguration()",
 )
 
@@ -240,6 +240,11 @@ project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesFromHDF5File(
         particle_set=particle_set, filename="sodShock.hdf5"
     )
+)
+
+
+project.additional_action_sets_per_solver_step.append(
+    swift2.boundaryconditions.Fixed(particle_set=particle_set)
 )
 
 
@@ -280,8 +285,6 @@ particle_plotter.add_attribute_to_plot(particle.density, 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-particle_plotter.add_attribute_to_plot(particle.f, 1)
-particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
 particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 
