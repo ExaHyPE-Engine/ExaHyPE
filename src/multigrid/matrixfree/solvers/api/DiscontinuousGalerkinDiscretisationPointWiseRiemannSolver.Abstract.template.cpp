@@ -72,42 +72,6 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 }
 {% endif %}
 
-/*
-Warning: this will become a variable matrix one day.
-  Will need to become a class member
-
-  Whilst in development, we just make this the same as 
-  the un-inverted assembly matrix.
-*/
-{% if ASSEMBLY_MATRIX!=[] %}
-tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getInvertedAssemblyMatrix(
-  // const tarch::la::Vector<Dimensions, double>&  cellCentre,
-  // const tarch::la::Vector<Dimensions, double>&  cellSize
-) {
-
-  // make copy of current Assembly matrix
-  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > M = AssemblyMatrix;
-
-  // aux variables
-  int returnCode;
-  // don't think +1 is necessary. copied from stackoverflow
-  int ipiv[CellUnknowns+1];
-
-  // step 1
-  returnCode = LAPACKE_dgetrf( LAPACK_COL_MAJOR, CellUnknowns, CellUnknowns, M.data(), CellUnknowns, ipiv );
-  // check return code
-  assertion(returnCode>=0);
-
-  // step 2
-  returnCode = LAPACKE_dgetri( LAPACK_COL_MAJOR, CellUnknowns, M.data(), CellUnknowns, ipiv );
- // check return code
-  assertion(returnCode>=0);
-
-  return M;
-}
-{% endif %}
-
-
 {% if FACE_FROM_CELL_PROJECTION!=[] %}
 tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection * TwoTimesD, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceFromCellMatrix()
 {
