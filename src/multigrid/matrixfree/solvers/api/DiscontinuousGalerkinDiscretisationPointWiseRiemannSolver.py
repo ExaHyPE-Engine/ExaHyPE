@@ -189,6 +189,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   since we have one on the left and one on the right.
 
 
+  IT SHOULD BE SOMETHING LIKE PROJECTIONS HAVE TWICE THE CELL UNKNOWNS 
+  AND THEN SOLUTION JUST HAS FACE UNKNOWNS OR WHATEVER
+
   ### Matrices we pass in to the solver class
   See documentation for this class itself...
 
