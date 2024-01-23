@@ -224,13 +224,13 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               unknowns_per_face_node,
               min_h,
               max_h,
-              system_matrix,
-              system_matrix_scaling,
+              assembly_matrix,
+              assembly_matrix_scaling,
               mass_matrix,
               mass_matrix_scaling,
               face_from_cell_projection,
               cell_from_face_projection,
-              Riemann_matrix,
+              riemann_matrix,
               cell_relaxation,
               face_relaxation,
               approximate_system_matrix,
@@ -296,6 +296,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._face_from_cell_projection = face_from_cell_projection
     self._cell_from_face_projection = cell_from_face_projection
     self._riemann_matrix            = riemann_matrix
+    self._approximate_system_matrix = approximate_system_matrix
+    self._approximate_system_matrix_scaling = approximate_system_matrix_scaling
+
 
     # K^c * (p+1)^d
     self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree + 1) ** dimensions
@@ -390,7 +393,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "ASSEMBLY_MATRIX_SCALING"     : self._assembly_matrix_scaling,
         "FACE_FROM_CELL_PROJECTION"   : self._face_from_cell_projection,
         "CELL_FROM_FACE_PROJECTION"   : self._cell_from_face_projection,
-        "RIEMANN_MATRIX"              : self._riemann_matrix
+        "RIEMANN_MATRIX"              : self._riemann_matrix,
+        "APPROX_SYSTEM_MATRIX"        : self._approximate_system_matrix
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

@@ -64,7 +64,12 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
-  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = AssemblyMatrix;
+  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = {
+    {{ASSEMBLY_MATRIX[0]| join(", ")}}
+    {% for ROW in ASSEMBLY_MATRIX[1:] %}
+      ,{{ROW | join(", ")}}
+    {% endfor %}
+  };
 
   // @todo add in scaling
 
@@ -115,4 +120,24 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolutio
 } 
 
 {% endif %}
+
+{% if APPROX_SYSTEM_MATRIX!=[] %}
+tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getInvertedApproxSystemMatrix(
+  const tarch::la::Vector<Dimensions, double>&  cellCentre,
+  const tarch::la::Vector<Dimensions, double>&  cellSize
+) {
+
+  static tarch::la::Matrix<  CellUnknowns, CellUnknowns, double > result = {
+      {{APPROX_SYSTEM_MATRIX[0]| join(", ")}}
+      {% for ROW in APPROX_SYSTEM_MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+  };
+
+  // merge the inversion routine in here
+
+  return result;
+}
+{% endif %}
+
 

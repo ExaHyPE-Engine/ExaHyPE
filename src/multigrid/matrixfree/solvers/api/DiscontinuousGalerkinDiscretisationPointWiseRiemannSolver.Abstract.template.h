@@ -48,16 +48,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr int        UnknownsPerCellNode    = {{UNKNOWNS_PER_CELL_NODE}};
     static constexpr int        UnknownsPerFaceNode    = {{UNKNOWNS_PER_FACE_NODE}};
 
-  private:
-    // make this a variable class member, so we can modify it later.
-    tarch::la::Matrix< CellUnknowns, CellUnknowns, double > AssemblyMatrix = 
-    {
-      {{ASSEMBLY_MATRIX[0]| join(", ")}}
-      {% for ROW in ASSEMBLY_MATRIX[1:] %}
-        ,{{ROW | join(", ")}}
-      {% endfor %}
-  };
-
   public:
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
@@ -114,6 +104,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions, double>&  cellSize
     );
 
+    virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getInvertedApproxSystemMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
+    );
+
     // no arguments needed
     virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > getCellFromFaceMatrix(
     );
@@ -123,6 +118,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     );
 
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix();
+
+
 
   protected:
     static tarch::logging::Log  _log;

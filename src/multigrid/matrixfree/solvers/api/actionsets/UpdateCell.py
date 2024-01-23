@@ -33,7 +33,7 @@ class UpdateCell(ActionSet):
     }
 
     // fetch inverted assembly matrix from abstract solver class. left-multiply r.
-    r = repositories::{{SOLVER_INSTANCE}}.getInvertedAssemblyMatrix() * r;
+    r = repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) * r;
 
     // scale current entries in solution vector by (1-OmegaCell)
     for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++)

@@ -20,6 +20,8 @@ parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       defau
 parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
+parser.add_argument("-upcn", "--unknowns_per_cell", dest="upcn",            type=int, default=1, help="Unknowns per cell node")
+parser.add_argument("-upfn", "--unknowns_per_face", dest="upfn",            type=int, default=1, help="Unknowns per face node")
 parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
@@ -39,6 +41,8 @@ face_from_cell  = np.zeros(( 2* args.upcn * (args.poly_degree + 1) ** (args.dime
 cell_from_face  = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
 
 riemann_matrix  = np.zeros( (args.upcn * (args.poly_degree + 1) ** (args.dimensions-1), 2* args.upcn * (args.poly_degree + 1) ** (args.dimensions-1)) )
+approximate_system_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
+
 #! [Construct matrices]
 
 
@@ -47,8 +51,8 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   name = "DGPoisson",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
-  unknowns_per_cell_node = 1,
-  unknowns_per_face_node = 1,
+  unknowns_per_cell_node = args.upcn,
+  unknowns_per_face_node = args.upfn,
   min_h = args.meshsize,
   max_h = args.meshsize,
   assembly_matrix= assembly_matrix, 
