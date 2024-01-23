@@ -55,6 +55,48 @@ class UpdateParallelState(ActionSet):
     merges, which eliminate replica.
 
 
+    ## Merges along domain boundary
+    
+    We would like all state updates to be localised within this action set.
+    However, we cannot do everything here: We also have to update the 
+    parallel state when we merge along the domain boundary. This happens
+    in the particle set's merge(). The documentation around merge() is 
+    summarise here, as we have multiple particle set implementations, but
+    all of them are realised through Jinja templates. So it is better to
+    have stuff in one place only.
+    
+    The merge in principle is trivial: If a neighbour sends you in a 
+    virtual particle, don't do anything with it. Just ignore it. If it
+    is local at the neighbour, we add it to our local vertex.
+    
+    @image html UpdateParallelState_merge.png
+    
+    The sketch above illustrates why it is important to neglect virtual
+    particles sent in: In the sketch, the left subdomain sends its 
+    particle (green) over to the right, where it is marked as virtual 
+    (red). The right one now sends this particle back (dark green) and 
+    we would hold redundant information.
+    
+    The sketch also illustrates why we throw away virtual particles after
+    the mesh sweep: If the particle moves on the owning rank - and it can
+    only move there - the neighbour would have two virtual copies (as it 
+    cannot match old one to new one). So we better throw away all old stuff
+    by default.
+    
+    With that data flow in mind, particles crossing domain boundaries are
+    automatically given the correct state. We wouldn't have to implement
+    and local/non-local logic in the merge(). This could all be done in 
+    this action set. However, we still need some logic here. 
+
+    The reason is simple: A merge happens in each and every mesh sweep, 
+    even if particles do not move. When a particle flies into a domain 
+    (it doesn't have to fly, most of the time it has been there anyway)
+    and is a local one at the neighbour, we cannot imply toggle it to 
+    virtual here, as it might be owned redundantly if it sits directly
+    on the domain boundaries. We have to rerun the "is local
+    here" analysis after each merge.
+
+    
     ## Statistics
 
     The mapping keeps some statistics on any state update. These statistics
