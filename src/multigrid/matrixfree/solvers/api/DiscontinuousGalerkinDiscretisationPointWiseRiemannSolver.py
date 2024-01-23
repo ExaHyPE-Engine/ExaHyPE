@@ -211,57 +211,6 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   For now, the solver class contains the matrices mentioned above. We also include a method that explicitly
   inverts a matrix using BLAS, in two stages:
 
-  @todo Sean As discussed, this belongs into the tarch::la component. Please see changes above: We are now working against a @f$ \tilde{A} @f$ matrix.
-
-  \verbatim
-#include <cblas.h>
-#include <lapacke.h>
-
-...
-
-  // make copy of current Assembly matrix
-  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > M = AssemblyMatrix;
-
-  // aux variables
-  int returnCode;
-  int ipiv[CellUnknowns];
-
-  // step 1 - compute LU factorisation. M -> P * L * U, where P a permutation matrix
-  returnCode = LAPACKE_dgetrf( LAPACK_COL_MAJOR, CellUnknowns, CellUnknowns, M.data(), CellUnknowns, ipiv );
-  // check return code
-  assertion(returnCode>=0);
-
-  // step 2 - use the result of the above to compute the inverse.
-  returnCode = LAPACKE_dgetri( LAPACK_COL_MAJOR, CellUnknowns, M.data(), CellUnknowns, ipiv );
- // check return code
-  assertion(returnCode>=0);
-
-  return M;
-
-  \endverbatim
-
-  Here we neatly (ab)use the tarch::la::Matrix::data() function to get a pointer to a double array.
-  See documentation on these functions [here](https://www.netlib.org/lapack/explore-html-3.6.1/dd/d9a/group__double_g_ecomputational_ga0019443faea08275ca60a734d0593e60.html)
-  and [here](https://www.netlib.org/lapack/explore-html-3.6.1/dd/d9a/group__double_g_ecomputational_ga56d9c860ce4ce42ded7f914fdb0683ff.html)
-
-  ## How do I build it on COSMA?
-
-  Modules to load:
-    \li module load oneAPI/2022.3.0
-    \li module load gnu_comp/10.2.0 gsl
-    \li module load intel_mpi
-    \li module load openblas
-
-    Make sure LD_LIBRARY_PATH contains the openblas directory from the intel compiler files:
-      ```export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/lib```
-  
-  Stuff to add to CXXFLAGS:
-  \li -I/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/include/
-
-  Stuff to add to LDFLAGS:
-  \li -L/cosma/local/openblas/intel_2020-update2/0.3.12cosma7/lib/
-  \li -lopenblas
-    
   # Questions to be answered:
   - What to do on boundary cells/faces?
 
