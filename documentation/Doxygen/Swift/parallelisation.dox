@@ -52,9 +52,13 @@
  various tasks and if you switch on the per-rank domain decomposition in return,
  then you end up with a classic, old-fashioned domain decomposition.
 
+ To distinguish particles that are local to a domain and mere copies (halos) 
+ from neighbours, each particle carries a state flag. The action set
+ peano4.toolbox.particles.api.UpdateParallelState is responsible to keep this
+ flag up-to-date, though some updates also are performed when we merge two 
+ particles among the domain boundary. Consult the action set's documentation for
+ more information.
 
- This yet has to be written. Likely a lot of references into Peano, besides
- the discussion of the particle handling.
 
  @todo A lot to write here
 
