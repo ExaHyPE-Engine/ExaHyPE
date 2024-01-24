@@ -184,7 +184,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   @todo Sean please revise this part. It is wrong.
 
   Inside the cells we store \f$ K^c (p+1)^{d} \f$ values for the solution, and the same number for the rhs.
-  On each face we store \f$ K^f (p+1)^{d-1} \f$ (although, at time of writing I fix \f$K^f==K^c\f$) values
+  On each face we store \f$ K^f (p+1)^{d-1} \f$ values
   for the solution, and then \f$ 2K^c (p+1)^{d-1} \f$ for the projections in a separate array. Since this is
   a projection of \f$ u|_c \f$ onto the face, we have one for each face nodal point, with the factor of two
   since we have one on the left and one on the right.

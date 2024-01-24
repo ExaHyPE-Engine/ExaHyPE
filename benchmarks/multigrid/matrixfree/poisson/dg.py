@@ -35,6 +35,11 @@ project = matrixfree.Project( project_name = "DGPointwise",
 
 
 #! [Construct matrices]
+
+'''
+TODO: hand this over to Alex
+'''
+
 assembly_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 mass_matrix     = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 
