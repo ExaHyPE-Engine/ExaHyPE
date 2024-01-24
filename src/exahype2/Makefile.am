@@ -11,7 +11,6 @@ ExaHyPE2Sources = \
   EnclaveBookkeeping.cpp \
   EnclaveTask.cpp \
   LoadBalancingConfiguration.cpp \
-  NonCriticalAssertions.cpp \
   PlotFilter.cpp \
   RefinementControl.cpp \
   PrecisionControl.cpp \

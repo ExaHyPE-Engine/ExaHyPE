@@ -78,6 +78,7 @@ class Project(object):
         self.plot_solution = peano4.solversteps.Step("PlotSolution", False)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
 
+
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments=""):
         """
         load_balancer_name: string
@@ -94,12 +95,14 @@ class Project(object):
         self._load_balancer_name = load_balancer_name
         self._load_balancer_arguments = load_balancer_arguments
 
+
     def set_log_filter_file(self, file_name):
         """! Set a log filter file name
         Pass in the empty string, if you want the code to use the hard-coded
         defaults.
         """
         self._log_filter_file = file_name
+
 
     def set_number_of_threads(self, value):
         """! Set number of threads to use
@@ -108,22 +111,21 @@ class Project(object):
         """
         self._number_of_threads = value
 
-    def set_multicore_orchestration(self,value):
+
+    def set_multicore_orchestration(self, value):
         """! Set orchestration
-        
-        value has to be a string which creates an orchestration object, 
-        i.e. an object of the type tarch::multicore::orchestration::Orchestration.
+        value has to be a string which creates an orchestration object,
+        i.e., an object of the type tarch::multicore::orchestration::Orchestration.
         You can either create it directly (in this case you need to add a new),
-        or you can use a factory method such as 
+        or you can use a factory method such as
         "tarch::multicore::orchestration::StrategyFactory::createDefaultStrategy()".
-        
         """
         self._multicore_orchestration = value
 
-    def set_timeout(self,value):
+
+    def set_timeout(self, value):
         """! Set timeout
-        
-        value has to be a number greater or equal to zero, this then sets the 
+        value has to be a number greater or equal to zero, this then sets the
         timeout in seconds after which a node waiting for an MPI message shall
         quit an shutdown the whole application with an error report.
         If zero is passed, this feature is switched off and nodes will wait
@@ -132,19 +134,19 @@ class Project(object):
         if value < 0:
             raise Exception("Timeout has to be greater or equal to 0")
         self._timeout = value
-        
-    def set_gpus(self,value):
+
+
+    def set_gpus(self, value):
         """! Set GPUs to be used
-        
-        value is a list of integers or the empty list if you want the code to 
-        use all GPUs that are visible to a rank. 
-        
+        value is a list of integers or the empty list if you want the code to
+        use all GPUs that are visible to a rank.
         """
-        self._gpus                    = value
-        
+        self._gpus = value
+
+
     """
-   The standard extensions that I use for both Peano and ExaHyPE.
-  """
+    The standard extensions that I use for both Peano and ExaHyPE.
+    """
     LibraryDebug = "_debug"
     LibraryRelease = ""
     LibraryTrace = "_trace"
@@ -453,7 +455,7 @@ thus appreciate any citation of the original release paper
 
         - UpdateParallelState is added to each and every time step and plotting
           sweep. As we also add
-        - UpdateParticleGridAssociation_LiftDrop to each and every time step,
+        - peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop to each and every time step,
           particles can move at any point. We always resort them immediately.
 
         Both action sets are assigned the standard priority of sort_priority_within_action_sets.
@@ -517,11 +519,11 @@ thus appreciate any citation of the original release paper
         # Initialisation
         #
         self.init_grid.add_action_set(
-            peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles)
+            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
         )
 
         update_particle_association_action_set = (
-            peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles)
+            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
         )
         update_particle_association_action_set.priority = (
             sort_priority_within_action_sets

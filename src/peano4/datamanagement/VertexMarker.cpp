@@ -1,4 +1,6 @@
 #include "VertexMarker.h"
+
+#include "peano4/utils/Loop.h"
 #include "peano4/grid/TraversalObserver.h"
 
 
@@ -21,6 +23,7 @@ peano4::datamanagement::VertexMarker::VertexMarker(
   _isParentCellLocal                      = event.getIsParentCellLocal();
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
   _isAdjacentToParallelDomainBoundary     = event.getIsVertexAdjacentToParallelDomainBoundary();
+  _isAdjacentCellLocal                    = event.getIsAdjacentCellLocal();
 
   _isHanging = 0;
   for (int i=0; i<TwoPowerD; i++) {
@@ -93,7 +96,19 @@ tarch::la::Vector<Dimensions,double> peano4::datamanagement::VertexMarker::x() c
 
 std::string peano4::datamanagement::VertexMarker::toString() const {
   std::ostringstream msg;
-  msg << "(cell-centre=" << _cellCentre << ",cell-h=" << _h << ",hanging=" << _isHanging << ",select=" << _select << ")";
+  msg << "(cell-centre=" << _cellCentre <<
+         ",cell-h=" << _h <<
+         ",local=" << _isLocal <<
+         ",hanging=" << _isHanging <<
+         ",select=" << _select <<
+         ",has-been-refined=" << _hasBeenRefined <<
+         ",will-be-refined=" << _willBeRefined <<
+         ",is-parent-vertex-local=" << _isParentVertexLocal <<
+         ",is-parent-cell-local=" << _isParentCellLocal <<
+         ",rel-pos-within-father=" << _relativePositionOfCellWithinFatherCell <<
+         ",is-adjacent-cell-local=" << _isAdjacentCellLocal <<
+         ",x(selected)=" << x() <<
+         ")";
   return msg.str();
 }
 
@@ -160,18 +175,6 @@ bool peano4::datamanagement::VertexMarker::isContainedInAdjacentCells( const tar
 }
 
 
-/*
-bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary() const {
-  return isAdjacentToParallelDomainBoundary(_select);
-}
-
-
-bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary(int i) const {
-  return _isAdjacentToParallelDomainBoundary[i];
-}
-*/
-
-
 tarch::la::Vector<Dimensions,int> peano4::datamanagement::VertexMarker::getRelativeAdjacentCell( const tarch::la::Vector<Dimensions,double>& x ) const {
   tarch::la::Vector<Dimensions,int> result;
   for (int d=0; d<Dimensions; d++) {
@@ -198,5 +201,40 @@ bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary() 
 
 bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary(int i) const {
   return _isAdjacentToParallelDomainBoundary[i];
+}
+
+
+tarch::la::Vector<Dimensions, double> peano4::datamanagement::VertexMarker::getInvokingCellCentre() const {
+  return _cellCentre;
+}
+
+
+tarch::la::Vector<Dimensions, double> peano4::datamanagement::VertexMarker::getInvokingCellsFatherCentre() const {
+  tarch::la::Vector<Dimensions, double> result = _cellCentre;
+  for (int d=0; d<Dimensions; d++) {
+    assertion1( _relativePositionOfCellWithinFatherCell(d)>=0, toString() );
+    assertion1( _relativePositionOfCellWithinFatherCell(d)<=2, toString() );
+    if (_relativePositionOfCellWithinFatherCell(d)==0) {
+      result(d) += _h(d);
+    }
+    if (_relativePositionOfCellWithinFatherCell(d)==2) {
+      result(d) -= _h(d);
+    }
+  }
+  return result;
+}
+
+
+std::bitset<TwoPowerD> peano4::datamanagement::VertexMarker::areAdjacentCellsLocal() const {
+  std::bitset<TwoPowerD> result = 0;
+
+  std::bitset<Dimensions> selectedVertexAsBitset = _select;
+  tarch::la::Vector<Dimensions,int> selectedVertex( selectedVertexAsBitset );
+  dfor2(j) {
+    tarch::la::Vector<Dimensions,int>  entryIn3x3Patch = selectedVertex + j;
+    result[ jScalar ] = _isAdjacentCellLocal[ peano4::utils::dLinearised(entryIn3x3Patch,3) ];
+  } enddforx
+
+  return result;
 }
 

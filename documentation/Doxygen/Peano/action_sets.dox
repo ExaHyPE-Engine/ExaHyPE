@@ -99,5 +99,15 @@ The markers of relevance are
 
 ## Sequence and parallelisation of actions
 
+Each action set within an observer (algorithmic step) has two relevant 
+properties:
+
+- descend_invocation_order
+- parallel
+
+See the documentation in peano4.solversteps.ActionSet for further details. 
+These flags (set in the constructor) give the user control over the order
+of the actions for each even throughout the traversal. They also allow you
+to specify if events can run in parallel.
 
 */

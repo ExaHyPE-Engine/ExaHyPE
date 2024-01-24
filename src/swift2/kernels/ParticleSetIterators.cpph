@@ -1,0 +1,173 @@
+#include "swift2/kernels/ParticleUpdatePredicates.h"
+#include "peano4/utils/Loop.h"
+
+
+#include <bit>
+
+
+template <typename ParticleContainer>
+void swift2::kernels::forAllParticles(
+    const peano4::datamanagement::VertexMarker& marker,
+    ParticleContainer& assignedParticles,
+    ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType>     f,
+    UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate
+) {
+  for (auto& particle : assignedParticles) {
+    if (predicate(marker,*particle)) {
+      f(marker,*particle);
+    }
+  }
+}
+
+
+template <typename ParticleContainer>
+void swift2::kernels::forAllLocalParticles(
+  const peano4::datamanagement::CellMarker&                    marker,
+  ParticleContainer&                                           localParticles,
+  ParticleUnaryOperatorOnCell<typename std::remove_pointer<typename ParticleContainer::value_type>::type >  f,
+  UpdateParticleAssignedToCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>
+      predicate
+) {
+  for (auto& particle : localParticles) {
+    if (predicate(marker,*particle)) {
+      f(marker,*particle);
+    }
+  }
+}
+
+
+template <typename ParticleContainer>
+void swift2::kernels::forAllParticles_vectorise(
+  const peano4::datamanagement::VertexMarker&                  marker,
+  ParticleContainer&                                           assignedParticles,
+  int                                                          numberOfAssignedParticles,
+  ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType >  f
+) {
+  typename ParticleContainer::value_type pFirstParticle = *assignedParticles.begin();
+
+  assertionEquals( assignedParticles.size(), numberOfAssignedParticles );
+
+  simtFor(particleNumber,numberOfAssignedParticles) {
+    f(marker,*(pFirstParticle+particleNumber));
+  } endSimtFor
+}
+
+
+template <typename ParticleContainer>
+void swift2::kernels::forAllParticles_vectoriseWithCheckPreamble(
+  const peano4::datamanagement::VertexMarker&                  marker,
+  ParticleContainer&                                           assignedParticles,
+  int                                                          numberOfAssignedParticles,
+  ParticleUnaryOperatorOnVertex<typename ParticleContainer::DoFType >  f,
+  UpdateParticleAssignedToVertexPredicate<typename ParticleContainer::DoFType> predicate
+) {
+  assertionEquals( assignedParticles.size(), numberOfAssignedParticles );
+
+  typename ParticleContainer::value_type pFirstParticle = *assignedParticles.begin();
+
+  constexpr int MaxVectorSize       = 8;
+
+  int currentFirstParticleInChunk = 0;
+  while (currentFirstParticleInChunk<numberOfAssignedParticles) {
+    const int    currentChunkSize    = std::min(MaxVectorSize,numberOfAssignedParticles-currentFirstParticleInChunk);
+    unsigned int evaluatedPredicates = 0;
+
+    simtFor(particleInChunkNumber,currentChunkSize) {
+      const bool evaluate    = predicate(marker,*(pFirstParticle+currentFirstParticleInChunk+particleInChunkNumber));
+      int        evaluateBit = evaluate ? 1: 0;
+      evaluatedPredicates   |= (evaluateBit << particleInChunkNumber);
+    } endSimtFor
+
+    auto update2 = [&]( unsigned int evaluatedPredicates, int indexOfFirstParticle) -> void {
+      const int    currentChunkSize    = std::min(2,numberOfAssignedParticles-indexOfFirstParticle);
+      if (currentChunkSize<=0) {
+        // degenerated, return
+      }
+      else if (std::popcount(evaluatedPredicates)==2 and currentChunkSize==2) {
+        simtFor(particleInChunkNumber,2) {
+          f(marker,*(pFirstParticle+indexOfFirstParticle+particleInChunkNumber));
+        } endSimtFor
+      }
+      else {
+        if (indexOfFirstParticle & 0b01) {
+          f(marker,*(pFirstParticle+indexOfFirstParticle+0));
+        }
+        if (indexOfFirstParticle & 0b10) {
+          f(marker,*(pFirstParticle+indexOfFirstParticle+1));
+        }
+      }
+    };
+
+    auto update4 = [&]( unsigned int evaluatedPredicates, int indexOfFirstParticle) -> void {
+      const int    currentChunkSize    = std::min(4,numberOfAssignedParticles-indexOfFirstParticle);
+      if (currentChunkSize<=0) {
+        // degenerated, return
+      }
+      else if (std::popcount(evaluatedPredicates)>=3 and currentChunkSize==4) {
+        simtFor(particleInChunkNumber,4) {
+          f(marker,*(pFirstParticle+indexOfFirstParticle+particleInChunkNumber));
+        } endSimtFor
+      }
+      else {
+        constexpr int LeftMask   = 0b0011;
+        constexpr int RightMask  = 0b1100;
+        int leftEvaluatedPredicates  = evaluatedPredicates & LeftMask;
+        int rightEvaluatedPredicates = (evaluatedPredicates & RightMask) >> 2;
+        update2( leftEvaluatedPredicates,  indexOfFirstParticle);
+        update2( rightEvaluatedPredicates, indexOfFirstParticle+4);
+      }
+    };
+
+    auto update8 = [&]( unsigned int evaluatedPredicates, int indexOfFirstParticle) -> void {
+      const int    currentChunkSize    = std::min(8,numberOfAssignedParticles-indexOfFirstParticle);
+      if (currentChunkSize<=0) {
+        // degenerated, return
+      }
+      else if (std::popcount(evaluatedPredicates)>=6 and currentChunkSize==8) {
+        simtFor(particleInChunkNumber,8) {
+          f(marker,*(pFirstParticle+indexOfFirstParticle+particleInChunkNumber));
+        } endSimtFor
+      }
+      else {
+        constexpr int LeftMask   = 0b00001111;
+        constexpr int RightMask  = 0b11110000;
+        int leftEvaluatedPredicates  = evaluatedPredicates & LeftMask;
+        int rightEvaluatedPredicates = (evaluatedPredicates & RightMask) >> 4;
+        update4( leftEvaluatedPredicates,  indexOfFirstParticle);
+        update4( rightEvaluatedPredicates, indexOfFirstParticle+4);
+      }
+    };
+
+    update8( evaluatedPredicates, currentFirstParticleInChunk );
+
+    currentFirstParticleInChunk += MaxVectorSize;
+  }
+}
+
+
+
+template <typename LocalParticleContainer, typename ActiveParticleContainer>
+void swift2::kernels::forAllParticlePairs(
+  const peano4::datamanagement::CellMarker&  marker,
+  LocalParticleContainer&                    localParticles,
+  ActiveParticleContainer&                   activeParticles,
+  ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>  f,
+  UpdateParticleAssignedToCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
+      localParticlePredicate,
+  UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
+      particlePairPredicate
+) {
+  for (auto& localParticle : localParticles) {
+    if ( localParticlePredicate(marker, *localParticle) ) {
+      for (auto& activeParticle : activeParticles) {
+        if ( particlePairPredicate(marker, *localParticle, *activeParticle) ) {
+          f(marker, *localParticle, *activeParticle);
+          if (tarch::la::oneGreater(activeParticle->getCellH(), localParticle->getCellH())) {
+            f(marker, *activeParticle, *localParticle);
+          }
+        }
+      }
+    }
+  }
+}
+

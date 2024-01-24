@@ -561,7 +561,7 @@ namespace toolbox {
       int                                       unknowns,
       const double* __restrict__                sourceValues,
       double* __restrict__                      destinationValues,
-      ::peano4::utils::LoopParallelism          parallelisation
+      ::peano4::utils::LoopPlacement          parallelisation
     );
 
     namespace internal {
