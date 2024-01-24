@@ -53,13 +53,29 @@ void peano4::datamanagement::CellMarker::setRelativePositionWithinFatherCell(int
 
 bool peano4::datamanagement::CellMarker::isContained(const tarch::la::Vector<Dimensions, double>& x, double tolerance)
   const {
+  return isContained(
+    x,
+    _centre,
+    _h,
+    tolerance
+  );
+}
+
+
+bool peano4::datamanagement::CellMarker::isContained(
+  const tarch::la::Vector<Dimensions, double>& x,
+  const tarch::la::Vector<Dimensions, double>& cellCentre,
+  const tarch::la::Vector<Dimensions, double>& h,
+  double tolerance
+) {
   bool result = true;
   for (int d = 0; d < Dimensions; d++) {
-    result &= tarch::la::greaterEquals(x(d), _centre(d) - _h(d) / 2.0, tolerance);
-    result &= tarch::la::smallerEquals(x(d), _centre(d) + _h(d) / 2.0, tolerance);
+    result &= tarch::la::greaterEquals(x(d), cellCentre(d) - h(d) / 2.0, tolerance);
+    result &= tarch::la::smallerEquals(x(d), cellCentre(d) + h(d) / 2.0, tolerance);
   }
   return result;
 }
+
 
 bool peano4::datamanagement::CellMarker::overlaps(
   const tarch::la::Vector<Dimensions, double>& offset, const tarch::la::Vector<Dimensions, double>& size
@@ -83,6 +99,21 @@ bool peano4::datamanagement::CellMarker::isLocal() const { return _isLocal; }
 bool peano4::datamanagement::CellMarker::isParentLocal() const { return _isParentLocal; }
 
 tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::x() const { return _centre; }
+
+tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::getInvokingCellsFatherCentre() const {
+  tarch::la::Vector<Dimensions, double> result = _centre;
+  for (int d=0; d<Dimensions; d++) {
+    assertion1( _relativePositionOfCellWithinFatherCell(d)>=0, toString() );
+    assertion1( _relativePositionOfCellWithinFatherCell(d)<=2, toString() );
+    if (_relativePositionOfCellWithinFatherCell(d)==0) {
+      result(d) += _h(d);
+    }
+    if (_relativePositionOfCellWithinFatherCell(d)==2) {
+      result(d) -= _h(d);
+    }
+  }
+  return result;
+}
 
 tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::h() const { return _h; }
 

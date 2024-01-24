@@ -197,6 +197,12 @@ class UpdateParticle_MultiLevelInteraction_Sets(ActionSet):
         result = jinja2.Template(
             """
   {{SET_IMPLEMENTATION}}< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
+  int  _spacetreeId;
 """
         )
         return result.render(**self.d)
+
+    def get_constructor_body(self):
+        return """
+            _spacetreeId              = treeNumber;
+          """

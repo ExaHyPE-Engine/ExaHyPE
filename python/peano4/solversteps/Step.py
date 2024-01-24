@@ -72,14 +72,17 @@ class Step:
         """!
 
         Simple bubble sort the action sets, such that their descend_invocation_order
-        is preserved. 
-        
+        is preserved.
+
         @see peano4.solversteps.ActionSet.descend_invocation_order
 
         """
         for i in range(0, len(self.action_sets)):
             for j in range(i + 1, len(self.action_sets)):
-                if self.action_sets[i].descend_invocation_order > self.action_sets[j].descend_invocation_order:
+                if (
+                    self.action_sets[i].descend_invocation_order
+                    > self.action_sets[j].descend_invocation_order
+                ):
                     tmp = self.action_sets[i]
                     self.action_sets[i] = self.action_sets[j]
                     self.action_sets[j] = tmp
@@ -128,7 +131,7 @@ class Step:
         """!
 
         Return max descend_invocation_order over all action sets associated with this step.
-        
+
         @see peano4.solversteps.ActionSet.descend_invocation_order
 
         """
@@ -141,7 +144,7 @@ class Step:
         """!
 
         Return minimum descend_invocation_order over all action sets associated with this step.
-        
+
         @see peano4.solversteps.ActionSet.descend_invocation_order
 
         """

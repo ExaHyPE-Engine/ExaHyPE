@@ -1,141 +1,31 @@
-#include "swift2/kernels/ParticleState.h"
-#include "tarch/la/ScalarOperations.h"
-#include "tarch/la/VectorOperations.h"
-#include "tarch/la/VectorVectorOperations.h"
-
-template <typename ParticleContainer>
-void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
-
-  const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                                .getMinTimeStepSize();
-
-  for (auto* particle : localParticles) {
-
-    if (swift2::kernels::localParticleCanBeMoved(particle) and not particle->getIsBoundaryParticle()) {
-
-      // Drift the particle (update position for a full time-step). It's important
-      // to take the "V_full" here, not the fluid velocity V. V_full doesn't get
-      // touched outside of kicks. V will be interpolated/integrated in time as the
-      // time step progresses. V_full is the correct choice here.
-
-      particle->setX(particle->getX() + timeStepSize * particle->getV_full());
-
-      assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
-
-      // Note that original SWIFT predicts the velocities at this point. We moved that
-      // into computePredictHydro()
-
-      /* Flag this particle as Moved */
-      particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
-    }
-  }
-}
+#include "swift2/kernels/ParticleUpdatePredicates.h"
 
 
-template <typename ParticleContainer>
-void swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize(
-  const ParticleContainer& particles, int numberOfParticles
+template <typename Particle>
+void swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize(
+  const peano4::datamanagement::VertexMarker&  marker,
+  Particle&                                    particle
 ) {
+  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
 
-  const double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                                .getMinTimeStepSize();
-
-  const auto newState = std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved;
-
-  typename ParticleContainer::value_type firstParticle = *particles.begin();
-
-  assertion1(particles.isGathered(), particles.toString());
-  assertionEquals1(particles.size(), numberOfParticles, particles.toString());
-  int currentParticle = 0;
-  for (auto* particle : particles) {
-    assertion1(firstParticle + currentParticle == particle, particles.toString());
-    currentParticle++;
-  }
-
-  for (auto i = 0; i < numberOfParticles; i++) {
-    auto* particle = firstParticle + i;
-
-    auto mask = (double)(swift2::kernels::localParticleCanBeMoved(particle) & !particle->getIsBoundaryParticle());
-
-    particle->setX(particle->getX() + mask * timeStepSize * particle->getV_full());
-    particle->setMoveState(newState);
+  if ( ::swift2::kernels::localParticleCanBeMoved(marker, particle) ) {
+    particle.setX( particle.getX() + timeStepSize * particle.getV() );
+    assertion1(tarch::la::isEntryFinite(particle.getX()), particle.toString());
+    particle.setMoveState(Particle::MoveState::Moved);
   }
 }
 
 
-template <typename ParticleContainer>
-void swift2::timestepping::computeLeapfrogKickWithGlobalTimeStepSize(const ParticleContainer& localParticles) {
-  const double timeStepSizeKick = 0.5
-                                  * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                                      .getMinTimeStepSize();
-  for (auto* particle : localParticles) {
-    if (swift2::kernels::localParticleCanBeWorkedOnVertexKernel(particle) and not particle->getIsBoundaryParticle()) {
 
-      // Kick the particle
-      particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
-    }
-  }
-}
-
-
-template <typename ParticleContainer>
-void swift2::timestepping::computeSPHLeapfrogKickWithGlobalTimeStepSize(
-  const ParticleContainer& localParticles, const int kickNumber
+template <typename Particle>
+void swift2::timestepping::leapfrogKickWithGlobalTimeStepSize(
+  const peano4::datamanagement::VertexMarker&  marker,
+  Particle&                                    particle
 ) {
-  const double timeStepSizeKick = 0.5
-                                  * std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                                      .getMinTimeStepSize();
-  for (auto* particle : localParticles) {
-    if (swift2::kernels::localParticleCanBeWorkedOnVertexKernel(particle)) {
+  double timeStepSize = 0.5 * Particle::getSpecies().getMinTimeStepSize();
 
-      /* Kick the particle */
-      particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
-
-      swift2::kernelPlaceholders::hydro_kick_extra(particle);
-      /* In SWIFT SPH, Kick 1 and Kick 2 are slightly different as Kick 2 does
-       * some extra operations. Not relevant for non-hydro systems */
-      if (kickNumber == 2) {
-        swift2::kernelPlaceholders::hydro_reset_predicted_values(particle);
-      }
-    }
+  if ( ::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker, particle) ) {
+    particle.setV( particle.getV() + timeStepSize * particle.getA() );
   }
 }
 
-
-template <typename ParticleContainer>
-void swift2::timestepping::computePredictHydro(const ParticleContainer& localParticles) {
-  for (auto* particle : localParticles) {
-    if (swift2::kernels::localParticleCanBeWorkedOnVertexKernel(particle)) {
-      swift2::kernelPlaceholders::hydro_predict_extra(particle);
-    }
-  }
-}
-
-/*
- *
- * Debugging:
- * Fake Drift step in which we move a particle into the midpoint of a cell.
- * Does that particle disappear from the simulation?
- *
- */
-
-template <typename ParticleContainer>
-void swift2::timestepping::moveParticleIntoCriticalLine(const ParticleContainer& localParticles) {
-  double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies()
-                          .getMinTimeStepSize();
-  for (auto* particle : localParticles) {
-    if (swift2::kernels::localParticleCanBeMoved(particle) and not particle->getIsBoundaryParticle()) {
-
-      /*
-       * Disappearing particle test.
-       * Just move the position to the central axis of a cell and watch it
-       * disappear.
-       */
-      tarch::la::Vector<Dimensions, double> xCritical = {1.0 / 6.0, 0.5};
-      particle->setX(xCritical);
-
-      /* Flag this particle as Moved */
-      particle->setMoveState(std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved);
-    }
-  }
-}

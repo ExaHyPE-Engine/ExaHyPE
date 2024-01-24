@@ -79,7 +79,7 @@ exahype2-benchmarks-amd:
     matrix:
     - benchmark: [euler, acoustic-wave, elastic-wave, advection]
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -m Release --no-make"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -s 1 -e -m Release --no-make"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} bash <<< "cd benchmarks/exahype2/$benchmark/kernel-benchmarks; make -j $(nproc --all)"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${AMD_IMAGE_TAG} benchmarks/exahype2/$benchmark/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-Release
   retry: 0

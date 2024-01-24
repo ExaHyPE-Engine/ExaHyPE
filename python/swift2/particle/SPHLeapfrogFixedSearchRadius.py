@@ -23,9 +23,10 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
         """
 
-        DEFAULT = 0
-        VECTORISE_DISTANCE_CHECKS_AND_UNARY_OPERATIONS = 1
+        NO_OPTIMISATION = 0
+        USE_OUTER_GUARDS = 1
         VECTORISE_ALL = 2
+        VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS = 3
 
     """!
 
@@ -99,12 +100,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
     particle.f.valid_mantissa_bits            = args.mantissa_size
     particle.wcount_dh.valid_mantissa_bits    = args.mantissa_size
     particle.rho_dh.valid_mantissa_bits       = args.mantissa_size
-    particle.hleft.valid_mantissa_bits        = args.mantissa_size
-    particle.hright.valid_mantissa_bits       = args.mantissa_size
-    particle.smoothL_prev.valid_mantissa_bits = args.mantissa_size
     particle.wcount.valid_mantissa_bits       = args.mantissa_size
     particle.hDot.valid_mantissa_bits         = args.mantissa_size
-    particle.residual.valid_mantissa_bits     = args.mantissa_size
     particle.balsara.valid_mantissa_bits      = args.mantissa_size
     particle.rot_v.valid_mantissa_bits        = args.mantissa_size
     particle.div_v.valid_mantissa_bits        = args.mantissa_size
@@ -156,8 +153,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         particles_per_cell=0,  # makes no sense, and should likely be forbidden
         min_h=0.3,
         max_h=0.3,
-        particle_interaction_kernel_realisation: ParticleKernelRealisation = ParticleKernelRealisation.DEFAULT,
-        asserts=False,
+        particle_interaction_kernel_realisation: ParticleKernelRealisation = ParticleKernelRealisation.USE_OUTER_GUARDS,
     ):
         super(SPHLeapfrogFixedSearchRadius, self).__init__(
             name,
@@ -228,27 +224,19 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         self.f = dastgen2.attributes.Double("f")
         self.wcount_dh = dastgen2.attributes.Double("wcount_dh")
         self.rho_dh = dastgen2.attributes.Double("rho_dh")
-        self.hleft = dastgen2.attributes.Double("hLeft")
-        self.hright = dastgen2.attributes.Double("hRight")
         self.data.add_attribute(self.f)
         self.data.add_attribute(self.wcount_dh)
         self.data.add_attribute(self.rho_dh)
-        self.data.add_attribute(self.hleft)
-        self.data.add_attribute(self.hright)
 
         # Newton-Raphson iterations ----------------------------------------------------
-        self.smoothL_prev = dastgen2.attributes.Double("smoothingLengthPrevious")
         self.wcount = dastgen2.attributes.Double("wcount")
         self.hDot = dastgen2.attributes.Double("hDot")
-        self.residual = dastgen2.attributes.Double("residual")
-        self.iteration_count = dastgen2.attributes.Integer("iterCount")
-        self.has_converged = dastgen2.attributes.Boolean("hasConverged")
-        self.data.add_attribute(self.smoothL_prev)
+        self.sml_iteration_count = dastgen2.attributes.Integer(
+            "smoothingLengthIterCount"
+        )
         self.data.add_attribute(self.wcount)
         self.data.add_attribute(self.hDot)
-        self.data.add_attribute(self.residual)
-        self.data.add_attribute(self.iteration_count)
-        self.data.add_attribute(self.has_converged)
+        self.data.add_attribute(self.sml_iteration_count)
 
         # Artificial viscosity scheme --------------------------------------------------
         self.balsara = dastgen2.attributes.Double("balsara")
@@ -276,11 +264,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # Extra ------------------------------------------------------------------------
         self.has_no_neighbours = dastgen2.attributes.Boolean("hasNoNeighbours")
         self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
-        self.Ncount = dastgen2.attributes.Integer("Ncount")  # integer number count
         self.part_id = dastgen2.attributes.Integer("partid")
         self.data.add_attribute(self.has_no_neighbours)
         self.data.add_attribute(self.is_boundary_part)
-        self.data.add_attribute(self.Ncount)
         self.data.add_attribute(self.part_id)
 
         # Algorithm Steps ---------------------------------------------------------------
@@ -301,10 +287,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         # same for initialization steps
         self._setup_initialisation_steps()
 
-        # Debugging --------------------------------------------------------------------
-        # Add dependency checks
-        if asserts:
-            self.add_dependency_checks()
+        self._add_dependency_checks()
 
     def set_parameters(self):
         """
@@ -395,6 +378,60 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         so they can be accessed at various points.
         """
 
+        if (
+            self._particle_interaction_kernel_realisation
+            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
+        ):
+            iterate_over_particles_assigned_to_vertex = (
+                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
+                + self.name
+                + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
+                + self.name
+                + ">);"
+            )
+            iterate_over_particles_assigned_to_cell = (
+                "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0}<globaldata::"
+                + self.name
+                + ">, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::"
+                + self.name
+                + ">, ::swift2::kernels::alwaysUpdateParticlePairs<globaldata::"
+                + self.name
+                + ">);"
+            )
+            iterate_over_particles_assigned_to_vertex_for_move = (
+                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
+                + self.name
+                + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
+                + self.name
+                + ">);"
+            )
+        elif (
+            self._particle_interaction_kernel_realisation
+            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
+        ):
+            iterate_over_particles_assigned_to_vertex = (
+                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
+                + self.name
+                + ">);"
+            )
+            iterate_over_particles_assigned_to_cell = (
+                "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0}<globaldata::"
+                + self.name
+                + ">);"
+            )
+            iterate_over_particles_assigned_to_vertex_for_move = (
+                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
+                + self.name
+                + ">, ::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel<globaldata::"
+                + self.name
+                + ">);"
+                #  + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
+                #  + self.name
+            )
+        else:
+            raise NotImplemented()
+
+        # @todo Mladen, can we remove this one please?
         flagBoundaryParticlesStep = AlgorithmStep(
             name="FlagBoundaryParticles",
             dependencies=AlgorithmStep.Dependencies.SELF,
@@ -408,7 +445,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             ),
             includes="""
                                        #include "Constants.h"
-                                       #include "swift2/kernels/ParticleParticleInteraction.h"
                                        #include "swift2/kernels/ParticleSelfInteraction.h"
                                        """,
         )
@@ -418,47 +454,41 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="Kick1",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
-            touch_vertex_last_time_kernel="""::swift2::timestepping::computeSPHLeapfrogKickWithGlobalTimeStepSize(assignedParticles, 1);""",
+            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex.format(
+                "::swift2::timestepping::resetMovedParticleMarker"
+            ),
+            touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex.format(
+                "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
+            ),
             prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
                 self.name,
             ),
             includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/timestepping/Leapfrog.h"
-                                       #include "swift2/timestepping/GlobalTimeStepping.h"
-                                       #include "swift2/timestepping/TimeStepping.h"
-                                       """,
+                #include "swift2/kernels/legacy/Leapfrog.h"
+                #include "swift2/timestepping/GlobalTimeStepping.h"
+                #include "swift2/timestepping/TimeStepping.h"
+            """,
         )
         self.algorithm_steps_dict["Kick1"] = kick1
-
-        if (
-            self._particle_interaction_kernel_realisation
-            == self.ParticleKernelRealisation.DEFAULT
-        ):
-            touch_vertex_last_time_kernel_for_drift = """::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles );"""
-        else:
-            touch_vertex_last_time_kernel_for_drift = """
-              if (numberOfAssignedParticles>0) {
-                ::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles, numberOfAssignedParticles );
-              }
-              else {
-                ::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles );
-              }
-          """
 
         drift = AlgorithmStep(
             name="Drift",
             dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_BUT_NEVER_RERUN,
-            touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
-            touch_vertex_last_time_kernel=touch_vertex_last_time_kernel_for_drift,
+            effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
+            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex.format(
+                "::swift2::timestepping::resetMovedParticleMarker"
+            ),
+            touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex_for_move.format(
+                "::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSize"
+            ),
             includes="""
-                                           #include "Constants.h"
-                                           #include "swift2/timestepping/Leapfrog.h"
-                                           #include "swift2/timestepping/GlobalTimeStepping.h"
-                                           #include "swift2/timestepping/TimeStepping.h"
+                #include "Constants.h"
+                #include "swift2/kernels/legacy/Leapfrog.h"
+                #include "swift2/timestepping/GlobalTimeStepping.h"
+                #include "swift2/timestepping/TimeStepping.h"
                                            """,
+            touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
+            touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
         )
         self.algorithm_steps_dict["Drift"] = drift
 
@@ -471,122 +501,75 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="PredictHydro",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
-            touch_vertex_last_time_kernel="""::swift2::timestepping::computePredictHydro(assignedParticles);""",
+            #            touch_vertex_first_time_kernel = iterate_over_particles_assigned_to_vertex.format("""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
+            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex.format(
+                "::swift2::kernels::legacy::hydroPredictExtra"
+            ),
             includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/timestepping/Leapfrog.h"
-                                       #include "swift2/timestepping/GlobalTimeStepping.h"
-                                       #include "swift2/timestepping/TimeStepping.h"
+                #include "Constants.h"
+                #include "swift2/kernels/legacy/Leapfrog.h"
                                        """,
+            touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
+            #  touch_vertex_last_time_dependency_policy  = "TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
+            cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
         )
         self.algorithm_steps_dict["PredictHydro"] = predictHydro
 
         densityWithConstantSearchRadius = AlgorithmStep(
             name="DensityLoopWithConstantSearchRadius",
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="",
-            # Keeping this as a reminder for SPH versions with variable search radii.
-            #  touch_vertex_first_time_kernel="""
-            #                             ::swift2::kernels::prepareDensityCalculation( localParticles );
-            #                             """,
-            cell_kernel="""
-                                       ::swift2::kernels::computeDensityWithConstantSearchRadius(
-                                         marker, localParticles, activeParticles
-                                       );
-                                       """,
-            touch_vertex_last_time_kernel="",
-            # Keeping this as a reminder for SPH versions with variable search radii.
-            #  touch_vertex_last_time_kernel="""
-            #                             ::swift2::kernels::endDensityCalculation(localParticles);
-            #                             """,
+            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
+            prepare_traversal_kernel="""
+                                       globaldata::{PARTICLE}::getSpecies().clearRerunPreviousGridSweepFlag();
+                                       """.replace(
+                "{PARTICLE}", self.name
+            ),
+            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex.format(
+                "::swift2::kernels::legacy::prepareDensity"
+            ),
+            cell_kernel=iterate_over_particles_assigned_to_cell.format(
+                "::swift2::kernels::legacy::densityKernel"
+            ),
+            touch_vertex_last_time_kernel=(
+                iterate_over_particles_assigned_to_vertex.format(
+                    "::swift2::kernels::legacy::endDensityCalculation"
+                )
+                + iterate_over_particles_assigned_to_vertex.format(
+                    "::swift2::kernels::legacy::updateSmoothingLengthAndRerunIfRequired"
+                )
+            ),
             includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/kernels/ParticleParticleInteraction.h"
-                                       #include "swift2/kernels/ParticleSelfInteraction.h"
-                                       """,
+                #include "swift2/kernels/legacy/SmoothingLength.h"
+                #include "swift2/kernels/legacy/Density.h"
+                     """,
         )
         self.algorithm_steps_dict["Density"] = densityWithConstantSearchRadius
-
-        if (
-            self._particle_interaction_kernel_realisation
-            == self.ParticleKernelRealisation.DEFAULT
-        ):
-            cell_kernel_for_force_calculation = "::swift2::kernels::computeHydroForce(marker, localParticles, activeParticles);"
-        elif (
-            self._particle_interaction_kernel_realisation
-            == self.ParticleKernelRealisation.VECTORISE_DISTANCE_CHECKS_AND_UNARY_OPERATIONS
-        ):
-            cell_kernel_for_force_calculation = (
-                """
-                ::toolbox::particles::ensureAllParticleListsAreGatheredOrEmpty(
-                  fineGridVertices"""
-                + self.name
-                + """Set
-                );
-                ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                  activeParticles,
-                  _numberOfActiveParticlesPerVertex
-                );
-                ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                  localParticles,
-                  numberOfParticlesPerLocalVertex
-                );
-                ::swift2::kernels::computeHydroForce_vectoriseDistanceChecks(
-                  marker,
-                  localParticles,
-                  numberOfParticlesPerLocalVertex,
-                  activeParticles,
-                  _numberOfActiveParticlesPerVertex
-                );
-                """
-            )
-        else:
-            cell_kernel_for_force_calculation = (
-                """
-                ::toolbox::particles::ensureAllParticleListsAreGatheredOrEmpty(
-                   fineGridVertices"""
-                + self.name
-                + """Set
-                );
-                ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                  activeParticles,
-                  _numberOfActiveParticlesPerVertex
-                );
-                ::toolbox::particles::ensureThatParticleListsEncodeContinuousMemoryChunks(
-                  localParticles,
-                  numberOfParticlesPerLocalVertex
-                );
-                ::swift2::kernels::computeHydroForce_vectoriseAndMapDistanceChecksOntoMasking(
-                  marker,
-                  localParticles,
-                  numberOfParticlesPerLocalVertex,
-                  activeParticles,
-                  _numberOfActiveParticlesPerVertex
-                );
-                """
-            )
-            pass
 
         force = AlgorithmStep(
             name="ForceLoop",
             dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""
-                                   ::swift2::kernels::prepareHydroForceCalculation(assignedParticles);
-                                   """,
-            cell_kernel=cell_kernel_for_force_calculation,
-            touch_vertex_last_time_kernel="""
-                                     ::swift2::kernels::endHydroForceCalculation(
-                                           assignedParticles);
-                                       """,
+            touch_vertex_first_time_kernel=(
+                iterate_over_particles_assigned_to_vertex.format(
+                    "::swift2::kernels::legacy::resetSmoothingLengthIterationCounter"
+                )
+                + iterate_over_particles_assigned_to_vertex.format(
+                    "::swift2::kernels::legacy::prepareHydroForce"
+                )
+                + iterate_over_particles_assigned_to_vertex.format(
+                    "::swift2::kernels::legacy::resetAcceleration"
+                )
+            ),
+            cell_kernel=iterate_over_particles_assigned_to_cell.format(
+                "::swift2::kernels::legacy::forceKernel"
+            ),
+            touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex.format(
+                "::swift2::kernels::legacy::endHydroForceCalculation"
+            ),
             includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/kernels/ParticleParticleInteraction.h"
-                                       #include "swift2/kernels/ParticleSelfInteraction.h"
-                                       #include "toolbox/particles/ParticleListValidation.h"
-                                       """,
+              #include "swift2/kernels/legacy/Swift.h"
+              #include "swift2/kernels/legacy/HydroForce.h"
+            """,
         )
         self.algorithm_steps_dict["Force"] = force
 
@@ -594,17 +577,25 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="Kick2",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
-            touch_vertex_last_time_kernel="""::swift2::timestepping::computeSPHLeapfrogKickWithGlobalTimeStepSize(
-                      assignedParticles, 2);""",
+            touch_vertex_last_time_kernel=(
+                iterate_over_particles_assigned_to_vertex.format(
+                    "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
+                )
+                + iterate_over_particles_assigned_to_vertex.format(
+                    "::swift2::kernels::legacy::leapfrogKickExtraWithGlobalTimeStepSize"
+                )
+                + iterate_over_particles_assigned_to_vertex.format(
+                    "::swift2::kernels::legacy::resetPredictedValues"
+                )
+            ),
             prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
                 self.name,
             ),  # TODO: temporary solution for initialization step
             includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/timestepping/Leapfrog.h"
-                                       #include "swift2/timestepping/GlobalTimeStepping.h"
-                                       #include "swift2/timestepping/TimeStepping.h"
+                #include "Constants.h"
+                #include "swift2/kernels/legacy/Leapfrog.h"
+                #include "swift2/timestepping/GlobalTimeStepping.h"
+                #include "swift2/timestepping/TimeStepping.h"
                                        """,
         )
         self.algorithm_steps_dict["Kick2"] = kick2
@@ -613,7 +604,9 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="ReduceGlobalQuantities",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-            cell_kernel="""::swift2::statistics::reduceVelocityAndSearchRadius( localParticles );""",
+            touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex.format(
+                "::swift2::statistics::reduceVelocityAndSearchRadius"
+            ),
             prepare_traversal_kernel="""
                                        globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                        globaldata::{PARTICLE}::getSpecies().clearVelocity();

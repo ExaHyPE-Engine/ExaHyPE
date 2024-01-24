@@ -11,6 +11,26 @@
 
 
 
+# HDF5 
+
+Peano does not need hdf5. There's no generic input file format, and it can write
+its own mesh files without hdf5. Things are different if you want to dump hdf5,
+or if you use an extension/toolbox which requires hdf5. In this case, you have 
+to enable hdf5 in the configuration (pass in --with-hdf5) and ensure that your 
+CXXFLAGS and LDFLAGS include all libraries. 
+
+For the latter, different systems have other paths. On local Ubuntu 
+workstations, we typically use something similar to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-L/usr/lib/x86_64-linux-gnu/hdf5/serial -lhdf5 -lhdf5_cpp
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Please note that two hdf5 libraries are required: the hdf5 library which is 
+written in C and the C++ counterpart.
+
+
+
 
 # The Visualization Toolkit (VTK)
 

@@ -941,11 +941,11 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
   int                                       unknowns,
   const double* __restrict__                sourceValues,
   double* __restrict__                      destinationValues,
-  ::peano4::utils::LoopParallelism          parallelisation
+  ::peano4::utils::LoopPlacement          parallelisation
 ) {
   assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
 
-  simtDforWithDynamicScheduling( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch, parallelisation )
+  simtDforWithSchedulerInstructions( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch, parallelisation )
     const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch) * unknowns;
     for (int unknown=0; unknown<unknowns; unknown++) {
       destinationValues[baseIndexDestination+unknown] = 0.0;

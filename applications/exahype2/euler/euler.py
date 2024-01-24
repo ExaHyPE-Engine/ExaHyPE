@@ -12,11 +12,11 @@ import exahype2
 # Some reasonable default values
 dimensions = 2
 cell_size = 0.1
-amr_levels = 2
+amr_levels = 4
 patch_size = 4
 rk_order = 2
 dg_order = 1
-end_time = 3.0
+end_time = 3.001
 plot_interval = end_time / 100
 # plot_interval             = 0
 # Based on the assumption that the fluid is an ideal gas, gamma chosen for dry air.
@@ -162,6 +162,14 @@ parser.add_argument(
     help="Use GPU offloading (requires a GPU enabled Peano build).",
 )
 parser.add_argument(
+    "-f",
+    "--fuse",
+    dest="fused_tasks",
+    type=int,
+    default=16384,
+    help="Number of enclave tasks to fuse into one meta task to offload to GPUs.",
+)
+parser.add_argument(
     "-vis",
     "--visualise",
     dest="visualise",
@@ -225,9 +233,19 @@ parser.add_argument(
 parser.add_argument(
     "--timeout", dest="timeout", type=int, default=3600, help="MPI timeout in seconds."
 )
+parser.add_argument(
+    "-fpe",
+    "--fp-exception",
+    dest="enable_fpe",
+    action="store_true",
+    help="Enable a floating-point exception handler",
+)
 
 parser.add_argument(
-    "--no-make", dest="no_make", action="store_true", help="Do not compile the code after generation"
+    "--no-make",
+    dest="no_make",
+    action="store_true",
+    help="Do not compile the code after generation",
 )
 parser.add_argument(
     "--executable",
@@ -488,14 +506,14 @@ if args.visualise:
 
 if args.trees > 0:
     my_project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+        "toolbox::loadbalancing::strategies::SpreadOut",
         "new ::exahype2::LoadBalancingConfiguration(0.98, 100, "
         + str(args.trees)
         + ")",
     )
 else:
     my_project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+        "toolbox::loadbalancing::strategies::SpreadOut",
         "new ::exahype2::LoadBalancingConfiguration(0.98)",
     )
 if args.threads > 0:
@@ -507,9 +525,15 @@ else:
 
 my_project.set_timeout(args.timeout)
 
+my_project.set_multicore_orchestration(
+    "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, ::tarch::accelerator::Device::getInstance().getLocalDeviceId())"
+    % str(args.fused_tasks)
+)
+
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
-my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+if args.enable_fpe:
+    my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 my_project.constants.define_value("GAMMA", str(gamma))
 my_project.constants.define_value("SCENARIO", str(args.scenario))

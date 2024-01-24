@@ -14,7 +14,7 @@ All of the recommendations there apply for SWIFT, too.
 
 
 
-# Optimisting the single core performance of individual species (vectorisation)
+# Optimising the single core performance of individual species (vectorisation)
 
 To enable proper vectorisation is not trivial within a Lagrangian framework,
 as we typically need the right instructions, i.e. compute kernels, but also
@@ -173,221 +173,93 @@ which moves all attribute setters and getters into the header and hence
 facilitiates very aggressive inlining via copy n paste.
 
 
+## Step 4: Switch to optimised and vectorised kernels
 
-## Step 4: Equip your solver with vectorised kernels
-
-Some of Swift's solvers are already well-prepared to exploit the knowledge about
-optimised memory layouts and proper setups of action sets. Once you have
-followed the steps above, you can now activate this vectorisation. It differs
-from solver to solver how to do this, but most offer a boolean flag in their
-constructor.
-
-### Step 4.1: Making your kernels vectoriser friendly
-
-While vectorising any non-trivial kernel is as much art as it is engineering, there are common steps most kernels can benefit from.
+Our rewrite of Swift is based upon the concept that all physics should be
+realisable through two-body forces or unary particle updates. Furthermore, we
+assume that such update kernels have all validity checks built-in, i.e. they
+determine internally if a particle is, for example, within the cut off radius
+or does not act on itself. These design decisions are discussed
+@ref swift_particle_new_solver "in the context of introducing new, bespoke solvers".
 
 
-#### Analyse tool feedback 
-
-Start by gathering vectoriser output. If you use LLVM/Clang, recompile the appropriate object file with the flags 
- ~~~~~~~~~~~~~~~~~~~~~~~~~
--Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize`
- ~~~~~~~~~~~~~~~~~~~~~~~~~
- 
-Find the desired loop in the output. For templates, the reported file/line is of the template, not the template instantiation location. When working with nested loops, usually only the innermost loop gets vectorised, so focus on this one.
-Sample expected output:
-
- ~~~~~~~~~~~~~~~~~~~~~~~~~
-../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:481:11: remark: loop not vectorized [-Rpass-missed=loop-vectorize]
-         for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
- ~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Sometimes the vectoriser only mentions that the loop isn't vectorised without 
-mentioning why. This is usually the case where the are multiple issues. A safe
-point in this case is it to start to try to inline any major functions called 
-inside the loop. If your kernel consists of a loop that calls a single 
-interaction function, manually inline this function.
+Switching to optimised kernels is conceptually simple: You alter the iteration
+scheme over the particles within a cell or those that are attached to a vertex.
+However, this is a delicate process, and it definitely is worth trying things
+out one by one and to let a profiler guide any changes.
 
 
-The Intel toolchain is a little bit more convenient:
-Include '''-O3 -xHost -qopt-report=3''' in the compile call. This make the
-compiler yield a .optrpt text file, which contains the actual optimisation 
-feedback. Often, you don't want to configure with the optimisation report
-and get one optimisation report per file. If you know where your routines
-are used, generate your code plus the Makefile through Python and, afterwards,
-manipulate the Makefile:
+### Move if checks out of the kernels
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-solver:  $(CXX_OBJS) $(FORTRAN_OBJS)
-	rm observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.o
-	$(CXX) -qopt-report=3 $(CXXFLAGS) -c -o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.o observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.cpp
-	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(CU_OBJS) $(LIBS) -o noh2D
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Users typically start from a generic usage of the iterators in ParticleSetIterators.h.
+That is, they simply type down swift2::kernels::forAllParticlePairs() and hand
+in their compute kernels of choice. As kernels always should check internally
+if they are supposed to run or not (consult @ref swift_particle_new_solver "how to introduce a new solver"),
+all the iterators could do is invoke the actual kernel per particle or
+particle pair, respectively.
 
-where the observer file names have to be replaced with the name of the file
-which uses your altered kernel invocation.
-This tweaked makefile builds all object files. After that, it deletes the object
-file behind the action set StephydroPartForceLoop. This is the step where the
-force kernel is actually used. We then retranslate this single object file with
-Intel's -opt-report flag which provides ample evidence which vectorisation
-optimisation has been performed by the compiler.
+However, it might make sense to evaluate a "shall I run" predicate ahead of the
+actual kernel invocation: If a particle is outside of a cell in a cell kernel,
+it might be reasonable not even to start to run over all the (active) particles
+around it. So this additional check makes mainly sense for particle-particle
+interactions, i.e. forAllParticlePairs(), but Swift 2 realises the same
+guard mechanism for both forAllParticles() and forAllParticlePairs(). Both
+routines do accept additional guards which allow you to mask out certain
+calculations a priori.
 
-You should get a file observers/StephydroPartForceLoop_sweep62peano4_toolbox_particles_UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles4.optrpt
-which summarises if the compiler has vectorised your code and even how much
-speedup you might expect. Please note that every rerun of the Python script
-overwrites the Makefile. However, there's no need to do this while you tweak
-the kernels. Just re-invoke make.
+By default, some of them are already active: The update of a particle
+associated to a vertex for example is only evaluated if this vertex is local,
+and particle pairs are only evaluated if the receiver side is inside a cell
+and hasn't been taken into account yet.
+Whilst, it might be interesting to deactivate these guards and to evaluate
+the impact, the particle-particle interactions per cell indeed do check each
+particle pair individually (this is important for a lot of consistency checks
+in non-release modes) and one might want to shortcut these checks. For this,
+you have to alter your
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, mykernel, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::MyParticleType>);"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#### Fix issues
+which is the default into
 
-We've started to collect a list of todos and no-goes for the vectorisation
-below. You might want to weak this in one way or the other and it will be
-incomplete. But it is a reasonable starting point:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, mykernel, ::swift2::kernels::localParticleCanBeUpdatedInCellKernel<globaldata::MyParticleType>);"
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- You cannot collapse the two for loops that invoke the force kernel. That 
-  would lead to a scattered iteration space in memory and hence make any 
-  vectorisation impossible. In general, it makes sense to try to have only
-  one loop and/or to vectorise over the innermost loop. 
-- The compiler has to be able to inline. According to https://clang.llvm.org/docs/AttributeReference.html#always-inline-force-inline
-  this is something one should be able to control via the annotation
-
-          [[clang::always_inline]]
-
-  but this led to multiple compiler crashes (again with Intel). To some
-  degree this makes sense: The function has to be in the header! I played
-  around with ipo, but that did not resolve the fundamental issues. So you
-  have to put everything used in the for loops into headers.
-- You might have to recursively study all inlined methods and make the
-  stuff they use inline as well.
-- Big if branches are challenging for the vectoriser. Hence, I compute one
-  scalar which is either set to 1.0 if we should update and otherwise 0.0. By
-  multiplying all updates with this scalar, we can effectively mask out the
-  kernel or keep its action. This works as long as all updates are additive,
-  i.e. we take the existing value and add something onto it, though some
-  slight tweaking also makes it work with the max and min function.
-- The tarch::la macros like smaller() or smallerEquals() might stop the
-  vectorisation. In this case, you have to move the implementations
-  into the header. We don't move all linear algebra routines into the
-  header, as this would blow up the executable size. For this
-  particular kernel, we have moved the required routines already.
-- It seemed originally that one has to replace the std::pow function
-  with a specialised version that takes into account that the power is
-  an integer. The C++ standard https://en.cppreference.com/w/cpp/numeric/math/pow
-  is not clear if there is still a specialised version of pow for
-  integers. However, all seems to vectorise nicely even if we use
-  the power with the Intel 2023.2 compiler. 
-  
-  Along the same lines, we sometimes encouter issues with the max and 
-  min function. While replacing it with a manual case distinction 
-
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
-  auto value = newValue > value : newValue : value;
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~  
-  
-  might
-  help for some compilers, it is usually a bad idea and leads to error
-  reports due to dependencies. We found it more convenient to work with
-  the actual C++ max function. In this case, the vectorisation however
-  works if and only if we translate with -Ofast or -ffast-math!
-- Complex statements such as
-
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  // Update the signal velocity
-  localParticle->setV_sig_AV(std::max(localParticle->getV_sig_AV(), mask * v_sig));
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  break the vectorisation. But once you replace them with statements
-  similar to
-
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  const double currentAV = localParticle->getV_sig_AV();
-  const double biggerAV  = mask * v_sig;
-  const double newAV     = biggerAV > currentAV ? biggerAV : currentAV;
-  localParticle->setV_sig_AV(newAV);
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  vectorisation seems to work.
-- Besides inlining, a good approach is to move as many function calls and/or 
-  data accesses outside the loop as possible. Specifically:
-  - All reads from the local particle (which is to be updated) should be done 
-    before the loop. Store the read data as local variables, i.e. manually 
-    extract parameters from their underlying struct.
-  - Inside the loop, all reads/writes that touch the local particle should be 
-    substituted with the newly created local variables.
-  - All writes to the local particle should be done after the loop by loading 
-    data from the local variables.
-  If you don't follow these recipes, you typically get messages similar to
-  ~~~~~~~~~~~~~~~~~~~
-   ../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:316:23: remark: loop not vectorized: value that could not be identified as reduction is used outside the loop [-Rpass-analysis=loop-vectorize]
-    void swift2::kernels::computeHydroForce(
-  ~~~~~~~~~~~~~~~~~~~
-
-#### Validate outcome
-
-For fully vectorised kernels, the reported width will always match the machine 
-width (4 for AVX2 and 8 for AVX512 capable machines and double precision 
-kernels). Sometimes, the compiler decides against vectorisation:
-
-  ~~~~~~~~~~~~~~~~~~~
-../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: Disabling scalable vectorization, because target does not support scalable vectors. [-Rpass-analysis=loop-vectorize]
-            for (int activeParticleNumberInThisChunk = 0; activeParticleNumberInThisChunk < activeParticlesChunkSize;
-            ^
-../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: the cost-model indicates that interleaving is not beneficial [-Rpass-analysis=loop-vectorize]
-../../../../src/swift2/kernels/ParticleParticleInteraction.cpph:369:13: remark: vectorized loop (vectorization width: 8, interleaved count: 1) [-Rpass=loop-vectorize]
-  ~~~~~~~~~~~~~~~~~~~
-
-In this case, it might make sense to overwrite the compiler heuristics. Consult
-your compiler handbook. Again, it might be inconvenient to do this for the whole
-code. Instead, you might want to do it only for one object file. Follow the same
-pattern as introduced above for the optimisation report.
-
-Unfortunately, Swift/Peano has currently no feature to pick compiler arguments 
-manually. Worse, the Python API overwrite the Makefile. It might make sense to 
-design a proper makefile manually and then to disable the overwriting in the 
-Peano 4 project that is produced by Swift's Python API. Consult peano4.Project 
-for details (see its attribute makefile and the docu of the underlying class
-peano4.output.Makefile).
-
-We ran sometimes into issues when we studied the success of our vectorisation
-"only" via performance analysis tools such as Advisor or MAQAO. The tools 
-showed that we use vectorisation. Still, the code remained slow. In many of 
-these cases, the compiler failed to vectorise over multiple particles but 
-was successful in vectorising some subcalculations per particle. The resulting
-code then contained AVX instructions, and the tool reported "successfully vectorised"
-which is not what we wanted. It is important to study the actual compiler 
-feedback.
+Once again: It is not always beneficial to move predicates outside, as this
+introduces additional outer branching which in turn challenges any
+vectorisation. You have to test and see.
 
 
+### Switch to vectorised kernels
 
-### Step 4.2: Selecting carefully
+If kernels consume a lot of compute time, it is reasonable to switch the
+compute kernels. This again can be done through the iterators. Replace
+the ::swift2::kernels::forAllParticlePairs() call with a vectorised
+counterpart. There are at multiple variants in the ParticleSetIterator.h
+file. It is never clear a priori which one yields the best performance.
 
-You switch from normal to any vectorised kernels within the Python interface
-by replacing the cell or vertex kernels. Some care is required for one of 
-them:
+Please note that vectorised kernels have a slightly different call
+signature. Besides the particle sets and marker, all of them need meta data
+how the particle sets are arranged in memory. In the Python API, they need
+the numberOfAssignedParticles, numberOfLocalParticles, or
+numberOfActiveParticles, respectively. Obviously, vectorised kernels work
+if and only if you have chosen a vector-friendly memory layout.
 
-- cell_kernel. You may assume that all data are always properly aligned
-  in memory when your solver's kernels are invoked. 
-- touch_vertex_first_time_kernel. Same story. By the time the user's touch
-  first kernels are actually called, all the data is in the right place.
-- touch_vertex_last_time_kernel. You have to be a little bit careful here.
-  In principle, the data of the vertex should be fine. However, a finer
-  vertex might have decided to lift particles from its place one level up
-  and to place them with the parent. This triggers a scatter on the coarser
-  vertex, and its data is not contiguously stored anymore. Therefore, it 
-  makes sense to insert an additional case distinction:
- 
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-          touch_vertex_last_time_kernel_for_drift = """
-              if (numberOfAssignedParticles>0) {
-                ::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles, numberOfAssignedParticles );
-              }
-              else {
-                ::swift2::timestepping::computeLeapfrogDriftWithGlobalTimeStepSize( assignedParticles );
-              }
-          """
+A lot of particle kernels vectorise poorly, as they have internal branching.
+Therefore, solver developers might offer them in two variants: The plain one
+where the particle updates are protected with a validation predicate
+("am I supposed to update the particle") and a variant which works with
+masking, i.e. where the final update is multiplied with either 0 or 1 and
+therefore either activated or disabled. Masking can be very expensive, as
+it means that we might do a lot of calculations. However, it can allow
+vectorisation. To make a long story short: Some kernels come along with a
+variant that is fast yet does not vectorise and a flavour which is not that
+efficient yet vectorises. You have to test combinations of them with the
+iterators. There is @ref swift_runtime_analysis "a page on runtime analysis"
+hints which might be useful in this context.
 
-  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 # Further References
@@ -395,7 +267,7 @@ them:
 See also
 
 - Notes in @ref benchmarks_swift2_hydro_noh_imposion_test
-- Section @ref section_new_solver_vectorisation_hints on page @ref swift_particle_new_solver
+- Section "Tune a kernel realisation" on page @ref swift_particle_new_solver
 
  */
 

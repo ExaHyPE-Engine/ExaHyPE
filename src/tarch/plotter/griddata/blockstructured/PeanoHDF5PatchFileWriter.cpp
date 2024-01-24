@@ -198,7 +198,7 @@ tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::PeanoHDF5Pa
   }
 #else
   logError(
-    "PeanoHDF5PatchFileWriter()", "tried to use Peano's HDF5 writer though code has been compiled without -DHDF5"
+    "PeanoHDF5PatchFileWriter()", "tried to use Peano's HDF5 writer though code has been compiled without --with-hdf5 (autotools)"
   );
   _isOpen = false;
 #endif
