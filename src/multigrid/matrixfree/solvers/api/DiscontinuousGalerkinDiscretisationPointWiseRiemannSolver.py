@@ -40,12 +40,14 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   
   Further to that, we hold auxiliary variables on the faces: 
   Our Riemann solver accepts the left and the right solution. Here, each
-  degree of freedom has @f$ K^c @f$ unknowns. It will return a result 
+  degree of freedom has @f$ K^f_{f \gets c} @f$ unknowns. It will return a result 
   (the flux), which has @f$ K^f @f$ unknowns.
-  Per face node, we hence hold, in total, \f$ ( K^f + 2K^c ) (p+1)^{d-1} \f$ unknowns. 
+  Per face node, we hence hold, in total, \f$ ( K^f + 2K^f_{f \gets c} ) (p+1)^{d-1} \f$ unknowns. 
   That is the solution for each unknown per face node, as 
   well as a projection from the left and right for each unknown per cell.
   \f$ K^c \f$ and \f$ K^f \f$ can be different, but often they are the same.
+  The user can choose how many of the \f$ K^c \f$ to project onto the face
+  by modifying \f$ K^f_{f \gets c} \f$.
 
   ## Operators 
   
@@ -131,7 +133,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         \f$
         r \gets Mb.
         \f$
-    2. Once complete, we substract \f$ Pq|_f \f$. That is, we take the 
+    2. Once complete, we substract \f$ P^{c \gets f}  q|_f \f$. That is, we take the 
         solution on the face and we project it (cell from face) onto the 
         cell, where we substract it from the previous \f$ r \f$ value:
         \f$
@@ -181,17 +183,12 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
   ### Under the hood
   
-  @todo Sean please revise this part. It is wrong.
-
   Inside the cells we store \f$ K^c (p+1)^{d} \f$ values for the solution, and the same number for the rhs.
   On each face we store \f$ K^f (p+1)^{d-1} \f$ values
-  for the solution, and then \f$ 2K^c (p+1)^{d-1} \f$ for the projections in a separate array. Since this is
-  a projection of \f$ u|_c \f$ onto the face, we have one for each face nodal point, with the factor of two
-  since we have one on the left and one on the right.
-
-
-  IT SHOULD BE SOMETHING LIKE PROJECTIONS HAVE TWICE THE CELL UNKNOWNS 
-  AND THEN SOLUTION JUST HAS FACE UNKNOWNS OR WHATEVER
+  for the solution, and then \f$ 2K^f_{f \gets c} (p+1)^{d-1} \f$ for the projections in a separate array.
+  We note that this factor of two comes from the fact that we have projections from cells on both the left 
+  and right. The user is free to choose how many variables from the cell they want to project onto the face.
+  The value K^f_{f \gets c} is exposed in dg.py as the argument ``` --projections_per_face" ```.
 
   ### Matrices we pass in to the solver class
   See documentation for this class itself...
@@ -272,9 +269,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     @param face_from_cell: \f$ \mathbb{R}^{2d K^f * (p+1)^{d-1} \times K^c * (p+1)^{d}}\f$ 
       This matrix projects the cell solution onto all of the faces. Note the 
-      extra factor of @f$ 2d @f$.
+      extra factor of @f$ 2d @f$. The intention of this factor is that we project all values
+      into a flat array, face-by-face.
 
-    @param cell_from_frame: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times 2d K^f * (p+1)^{d-1}}\f$ 
+    @param cell_from_face: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times 2d K^f * (p+1)^{d-1}}\f$ 
       This matrix projects the cell solution onto all of the faces. Note the 
       extra factor of @f$ 2d @f$.
 
