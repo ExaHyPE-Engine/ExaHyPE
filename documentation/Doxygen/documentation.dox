@@ -223,9 +223,6 @@ rendered once again as source code. You have to remove the indentation sometimes
 that this mainly affects the Python code, but not the C++ documentation.
 
 
-<<<<<<< HEAD
-# Brief doxygen cheat sheet
-=======
 
 # Tutorials
 
@@ -273,7 +270,6 @@ This snippet stems from tests/swift2/planet-orbit/planet-orbit.py.
 
 Doxygen cheat sheet
 ======================
->>>>>>> p4
 
 New chapters are created with the ''' # ''' symbol. This will make "Brief doxygen cheat sheet"
 in the sidebar, as a drop-down menu within the current page.
