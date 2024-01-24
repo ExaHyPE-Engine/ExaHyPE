@@ -577,7 +577,10 @@ if __name__ == "__main__":
       peano4_project.solversteps.add_step( additional_mesh_traversal )
 
     #we need to change the main file accordingly as it is not automatical
-    os.remove("./ccz4-main.cpp")
+    try:
+      os.remove("./ccz4-main.cpp")
+    except:
+      pass
     peano4_project.generate( throw_away_data_after_generation=False )
     if args.SO_flag==True:
       shutil.copyfile("./ccz4-main-SO.cpp", "./ccz4-main.cpp")
