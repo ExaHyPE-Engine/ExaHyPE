@@ -34,6 +34,8 @@ for mesh in meshes:
 
     os.system(f"git clean -xdf -e {folder_name}")
 
+    #input("Press Enter to continue...")
+
 # Compute error
 Err = []
 H = []
@@ -64,13 +66,14 @@ plt.plot(
 )
 
 ax = plt.gca()
+plt.title(r"Interiror penatly method for 2D Poisson equation: " + '\n' + r"$-\Delta u = f(x,y), \quad f(x,y) = 8 \pi^2 \, \sin(2\pi x) \, \sin(2\pi y), \quad u |_{\partial \Omega} = 0$")
 ax.set_xscale("log")
 ax.set_yscale("log")
 ax.set_xlabel("Grid spacing $h$")
 ax.set_ylabel(r"Max error: $||u-u_{\mathrm{exact}}||_\inf$")
 plt.plot(
     [1e-2, 1e-1],
-    [3e-3, 3.0e-3 * 10**2.0],
+    [2.0e-3, 2.0e-3 * 10**2.0],
     linewidth=2,
     linestyle="--",
     color="black",

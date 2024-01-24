@@ -117,9 +117,10 @@ if __name__ == "__main__":
 
 
   # clip the rounding errors
-  mat=clip(mat)
+  # mat=clip(mat)
 
   print(f"rank of this matrix is {getRankOfMatrix(mat)}")
+  print(f'condition number is {np.linalg.cond(mat)}')
 
   nv = get_null_vector(mat)
   # print("printing null vector....\n")
