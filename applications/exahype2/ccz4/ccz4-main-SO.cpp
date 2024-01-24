@@ -19,6 +19,7 @@
 #include "observers/InitGrid.h"
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
+#include "observers/AdditionalMeshTraversal.h"
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
 #include "repositories/DataRepository.h"
@@ -151,7 +152,15 @@ bool selectNextAlgorithmicStep() {
 
     continueToSolve = true;
   } else {
-    if (TimeInBetweenPlots > 0.0 and repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and repositories::mayPlot()) {
+    if (repositories::isLastGridSweepOfTimeStep()
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+      ) {
+        peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalMeshTraversal )
+      );
+      continueToSolve         = true;
+    } else if (TimeInBetweenPlots > 0.0 and repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and repositories::mayPlot()) {
       if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
         nextMinPlotTimeStamp += TimeInBetweenPlots;
       }
@@ -435,6 +444,15 @@ void step() {
 
     repositories::finishTimeStep();
   } break;
+  case repositories::StepRepository::Steps::AdditionalMeshTraversal:
+    {
+      tarch::logging::LogFilter::getInstance().switchProgramPhase( "additional-MeshTraversal" );
+   
+      repositories::suspendSolversForOneGridSweep();
+      observers::AdditionalMeshTraversal observer;
+      peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    }
+    break;
   case repositories::StepRepository::Steps::Undef:
     assertion(false);
     break;
