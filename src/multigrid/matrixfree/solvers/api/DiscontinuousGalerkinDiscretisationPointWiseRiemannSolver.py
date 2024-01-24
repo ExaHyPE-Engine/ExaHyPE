@@ -267,7 +267,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     @param mass_matrix: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
 
-    @param face_from_cell: \f$ \mathbb{R}^{2d K^f * (p+1)^{d-1} \times K^c * (p+1)^{d}}\f$ 
+    @param face_from_cell: \f$ \mathbb{R}^{2d K^f_{f \gets c} * (p+1)^{d-1} \times K^c * (p+1)^{d}}\f$ 
       This matrix projects the cell solution onto all of the faces. Note the 
       extra factor of @f$ 2d @f$. The intention of this factor is that we project all values
       into a flat array, face-by-face.
@@ -276,7 +276,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       This matrix projects the cell solution onto all of the faces. Note the 
       extra factor of @f$ 2d @f$.
 
-    @param Riemann_matrix: \f$ \mathbb{R}^{ K^f (p+1)^{d-1} \times 2K^f (p+1)^{d-1}} @f$
+    @param Riemann_matrix: \f$ \mathbb{R}^{ K^f (p+1)^{d-1} \times 2K^f_{f \gets c} (p+1)^{d-1}} @f$
       The matrix that combines the left/right projections on the cell and outputs a value 
       which determines @f$ q @f$.
   
