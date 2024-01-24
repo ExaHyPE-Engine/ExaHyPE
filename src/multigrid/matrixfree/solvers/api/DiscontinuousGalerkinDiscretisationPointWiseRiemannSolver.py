@@ -225,7 +225,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               dimensions,
               poly_degree,
               unknowns_per_cell_node,
-              unknowns_per_face_node,
+              solutions_per_face_node,
+              projections_per_face_node,
               min_h,
               max_h,
               assembly_matrix,
@@ -250,8 +251,11 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     @param unknowns_per_cell_node: Positive Integer
       This is the @f$ K^c @f$ from the solver description.
        
-    @param unknowns_per_face_node: Positive Integer
+    @param solutions_per_face_node: Positive Integer
       This is the @f$ K^f @f$ from the solver description.
+
+    @param projections_per_face_node: Positive Integer
+      This is the @f$ K^f_{f \gets c} @f$ from the solver description.
 
     @param cell_relaxation: Float   
       This is the @f$ \omega _c @f$ from the description above and typically 
@@ -292,7 +296,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._dimensions                = dimensions
     self._poly_degree               = poly_degree
     self._unknowns_per_cell_node    = unknowns_per_cell_node
-    self._unknowns_per_face_node    = unknowns_per_face_node
+    self._solutions_per_face_node   = solutions_per_face_node
+    self._projections_per_face_node = projections_per_face_node
     self._assembly_matrix           = assembly_matrix
     self._assembly_matrix_scaling   = assembly_matrix_scaling
     self._mass_matrix               = mass_matrix
@@ -303,14 +308,17 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._approximate_system_matrix = approximate_system_matrix
     self._approximate_system_matrix_scaling = approximate_system_matrix_scaling
 
+    self._cell_relaxation           = cell_relaxation
+    self._face_relaxation           = face_relaxation
+
 
     # K^c * (p+1)^d
     self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree + 1) ** dimensions
     #(K^f +  2K^c) * (p+1)^(d-1)
-    self._unknowns_per_face_solution   = (    unknowns_per_face_node) * ( poly_degree + 1) ** (dimensions-1)
+    self._unknowns_per_face_solution   = (    solutions_per_face_node) * ( poly_degree + 1) ** (dimensions-1)
 
     # to each node we leave one copy of each of the cell unknowns from left and right
-    self._unknowns_per_face_projection = (2 * unknowns_per_cell_node) * ( poly_degree + 1) ** (dimensions-1)
+    self._unknowns_per_face_projection = (2 * projections_per_face_node) * ( poly_degree + 1) ** (dimensions-1)
 
     # ignore vertex data
 
@@ -319,7 +327,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell) ))
 
     # face stuff
-    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution) ))
+    self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "projection",    str(self._unknowns_per_face_projection) ))
 
     # assertions for matrix shapes
@@ -394,7 +402,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "NODES_PER_CELL"              : (self._poly_degree + 1) **  self._dimensions,
         "NODES_PER_FACE"              : (self._poly_degree + 1) ** (self._dimensions-1),
         "UNKNOWNS_PER_CELL_NODE"      : self._unknowns_per_cell_node,
-        "UNKNOWNS_PER_FACE_NODE"      : self._unknowns_per_face_node,
+        "SOLUTIONS_PER_FACE_NODE"     : self._solutions_per_face_node,
         "MASS_MATRIX"                 : self._mass_matrix,
         "MASS_MATRIX_SCALING"         : self._mass_matrix_scaling,
         "ASSEMBLY_MATRIX"             : self._assembly_matrix,
@@ -402,7 +410,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "FACE_FROM_CELL_PROJECTION"   : self._face_from_cell_projection,
         "CELL_FROM_FACE_PROJECTION"   : self._cell_from_face_projection,
         "RIEMANN_MATRIX"              : self._riemann_matrix,
-        "APPROX_SYSTEM_MATRIX"        : self._approximate_system_matrix
+        "APPROX_SYSTEM_MATRIX"        : self._approximate_system_matrix,
+        "CELL_RELAXATION"             : self._cell_relaxation,
+        "FACE_RELAXATION"             : self._face_relaxation,
+
         }
 
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

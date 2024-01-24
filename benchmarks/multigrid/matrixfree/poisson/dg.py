@@ -16,15 +16,16 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 
 
 parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
-parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=int, default=-1, help="Parallel builds" )
-parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
-parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
-parser.add_argument("-upcn", "--unknowns_per_cell", dest="upcn",            type=int, default=1, help="Unknowns per cell node")
-parser.add_argument("-upfn", "--unknowns_per_face", dest="upfn",            type=int, default=1, help="Unknowns per face node")
-parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
-parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
+parser.add_argument("-j",   "--parallel-builds",      dest="j",              type=int, default=-1, help="Parallel builds" )
+parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       default="../../../../", help="Peano4 directory" )
+parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
+parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
+parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
+parser.add_argument("-upcn", "--unknowns_per_cell",   dest="upcn",            type=int, default=1, help="Unknowns per cell node")
+parser.add_argument("-spfn", "--solutions_per_face",  dest="spfn",            type=int, default=1, help="Number of solutions to store per face node")
+parser.add_argument("-ppfn", "--projections_per_face",dest="ppfn",            type=int, default=1, help="Number of projections to store per face node")
+parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
+parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
 #! [Create project]
@@ -37,19 +38,18 @@ project = matrixfree.Project( project_name = "DGPointwise",
 #! [Construct matrices]
 
 '''
-TODO: hand this over to Alex
+TODO: hand this over to Alex. The shapes here are an indicator for what needs to go where...
 '''
 
 assembly_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 mass_matrix     = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 
-# 2 * args.upcn cos we project the cell solns onto the face...
-face_from_cell  = np.zeros(( 2* args.upcn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions,   args.upcn * (args.poly_degree + 1) ** (args.dimensions) ))
+face_from_cell  = np.zeros(( 2* args.ppfn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions,   args.upcn * (args.poly_degree + 1) ** (args.dimensions) ))
 
 # we are sending the solns on the face onto the cell
-cell_from_face  = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     args.upfn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
+cell_from_face  = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     args.spfn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
 
-riemann_matrix  = np.zeros( (args.upcn * (args.poly_degree + 1) ** (args.dimensions-1), 2* args.upcn * (args.poly_degree + 1) ** (args.dimensions-1)) )
+riemann_matrix  = np.zeros( (args.spfn * (args.poly_degree + 1) ** (args.dimensions-1), 2* args.ppfn * (args.poly_degree + 1) ** (args.dimensions-1)) )
 approximate_system_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 
 #! [Construct matrices]
@@ -61,7 +61,8 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
   unknowns_per_cell_node = args.upcn,
-  unknowns_per_face_node = args.upfn,
+  solutions_per_face_node = args.spfn,
+  projections_per_face_node = args.ppfn,
   min_h = args.meshsize,
   max_h = args.meshsize,
   assembly_matrix= assembly_matrix, 

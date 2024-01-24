@@ -31,8 +31,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr double     MinH = {{MIN_H}};
     static constexpr double     MaxH = {{MAX_H}};
 
-    static constexpr double     OmegaCell = 0.6;
-    static constexpr double     OmegaFace = 0.6;
+    static constexpr double     OmegaCell              = {{CELL_RELAXATION}};
+    static constexpr double     OmegaFace              = {{FACE_RELAXATION}};
     static constexpr int        VertexUnknowns         = {{VERTEX_CARDINALITY}};
     static constexpr int        CellUnknowns           = {{CELL_CARDINALITY}};
     static constexpr int        FaceUnknownsSolution   = {{FACE_CARDINALITY_SOLUTION}};
@@ -42,7 +42,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr int        NodesPerFace           = {{NODES_PER_FACE}};
 
     static constexpr int        UnknownsPerCellNode    = {{UNKNOWNS_PER_CELL_NODE}};
-    static constexpr int        UnknownsPerFaceNode    = {{UNKNOWNS_PER_FACE_NODE}};
+    static constexpr int        SolutionsPerFaceNode   = {{SOLUTIONS_PER_FACE_NODE}};
 
   public:
     {{CLASSNAME}}();
