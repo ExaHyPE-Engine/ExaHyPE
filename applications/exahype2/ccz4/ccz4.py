@@ -270,7 +270,6 @@ if __name__ == "__main__":
 
     if args.SO_flag==True:
       args.cfl=args.cfl/2
-      intparams.update({"SO":1})
 
     min_h = args.min_h
     if min_h <=0.0:
@@ -323,6 +322,9 @@ if __name__ == "__main__":
       intparams.update({k:eval("args.CCZ4{}".format(k))})
     for k, v in floatparams.items():
       floatparams.update({k:eval("args.CCZ4{}".format(k))})
+
+    if args.SO_flag==True:
+      intparams.update({"SO":1})
 
     if args.scenario=="two-punctures":
       msg = "Periodic BC deactivated because you pick Puncture scenario\nInitialize binary black holes"

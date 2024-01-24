@@ -744,6 +744,7 @@ void exahype2::fd::fd4::reconstruct_first_derivatives(
           QOutEnumerator
         );
       }
-    }  
+    }
+
   }
 }
