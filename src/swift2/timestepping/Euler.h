@@ -2,10 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
-
-#include <list>
-#include <vector>
-
+#include "peano4/datamanagement/CellMarker.h"
+#include "peano4/datamanagement/VertexMarker.h"
 
 namespace swift2 {
   namespace timestepping {
@@ -22,15 +20,17 @@ namespace swift2 {
      * of the particle should do this, and we then expect such a rank to send
      * over a new copy.
      */
-    template <typename ParticleContainer>
+    template <typename Particle>
     void computeExplicitEulerWithGlobalTimeStepSize(
-      const ParticleContainer&  localParticles
+      const peano4::datamanagement::VertexMarker&  marker,
+      Particle&                                    particle
     );
 
 
-    template <typename ParticleContainer>
+    template <typename Particle>
     void computeExplicitEulerCromerWithGlobalTimeStepSize(
-      const ParticleContainer&  localParticles
+      const peano4::datamanagement::VertexMarker&  marker,
+      Particle&                                    particle
     );
   }
 }

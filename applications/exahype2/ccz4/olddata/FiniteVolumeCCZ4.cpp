@@ -1,6 +1,5 @@
 #include "FiniteVolumeCCZ4.h"
 #include "exahype2/RefinementControl.h"
-#include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/fv/CellAccess.h"
 
 #include <algorithm>
@@ -11,6 +10,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "../../../../src/tarch/NonCriticalAssertions.h"
 
 #ifdef IncludeTwoPunctures
 TP::TwoPunctures* _tp = new TP::TwoPunctures();

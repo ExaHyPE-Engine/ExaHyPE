@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "config.h"
+
 #ifdef Parallel
 #include <mpi.h>
 #endif

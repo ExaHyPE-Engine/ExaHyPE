@@ -1,9 +1,12 @@
 #include "tarch/multicore/Tasks.h"
 
+#include "config.h"
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/Lock.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/services/ServiceRepository.h"
 
@@ -21,71 +24,114 @@
 #include <execution>
 #include <future>
 
+
 namespace {
-  std::atomic<int> nonblockingTasksCounter = 0;
+  /**
+   * Logging
+   */
+  tarch::logging::Log _log("tarch::multicore::cpp");
 
   /**
-   * Native mapping of a task loop onto a task loop
-   *
-   * I found that quite a lot of OpenMP implementations realise the taskwait at the
-   * end as busy wait. This is totally annoying as it might lead to deadlocks whenever
-   * a task has a taskyield internally and/or there are more tasks than threads.
+   * Keep track of fact if any spawned task has terminated.
    */
-  void spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
-    // important, otherwise taskwait synchronises
-    assertion(not tasks.empty());
-
-    std::for_each(std::execution::par_unseq, tasks.begin(), tasks.end(), [](auto&& item) -> void {
-      while (item->run()) {
-#if !defined(GPUOffloadingCPP)
-        std::this_thread::yield();
-#endif
-      }
-      delete item;
-    });
-  }
+  std::map<tarch::multicore::TaskNumber, std::shared_future<void>*> spawnedTasks;
+  tarch::multicore::BooleanSemaphore                                spawnedTasksSemaphore;
 } // namespace
 
 
-void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
-  tarch::multicore::native::spawnTask(job);
+// #define OpenMPHighThroughputWaiting
+
+
+#if defined(OpenMPHighThroughputWaiting)
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
+  assertion(not tasks.empty());
+
+  std::atomic<int> numberOfLoopTasks = tasks.size(); // bookkeeping of how many loop tasks
+                                                     // we have in the system
+
+  std::for_each(std::execution::par_unseq, tasks.begin(), tasks.end(), [](auto&& item) -> void {
+    while (tasks[i]->run()) {
+      tarch::multicore::Core::getInstance().yield();
+    }
+    delete tasks[i];
+
+    int currentNumberOfLoopTasks;                   // reduce the bookkeeping
+    currentNumberOfLoopTasks = --numberOfLoopTasks; // own loop termination
+                                                    // criterion
+
+    while (currentNumberOfLoopTasks > 0) {
+      if (processPendingTasks(1, false)) { // I use FILO to increase cache hit probability
+        currentNumberOfLoopTasks = numberOfLoopTasks;
+      } else {
+        currentNumberOfLoopTasks = 0; // This is not nice. It means that a
+                                      // fast task might finish while ready
+                                      // tasks literally become a available a
+                                      // second later. However, without his
+                                      // statement, another loop task might
+                                      // never be able to run, as the busy
+                                      // polling keeps the thread idle. We
+                                      // starve.
+      }
+    }
+  });
+
+  assertionEquals(numberOfLoopTasks, 0);
 }
+#else
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
+  assertion(not tasks.empty());
+
+  std::for_each(std::execution::par_unseq, tasks.begin(), tasks.end(), [](auto&& item) -> void {
+    while (item->run()) {
+      std::this_thread::yield();
+    }
+    delete item;
+  });
+}
+#endif
 
 
-void tarch::multicore::native::spawnTask(Task* job) {
-  nonblockingTasksCounter++;
+void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
+  {
+    tarch::multicore::Lock lock(spawnedTasksSemaphore);
 
-  std::future<void> dontWait = std::async(std::launch::async, [job]() -> void {
+    // is_ready() will enter the standard soon according to change requests
+    // if ( spawnedTasks.count(taskNumber)>0 and not spawnedTasks.at(taskNumber)->is_ready()) {
+    if (spawnedTasks.count(taskNumber) > 0 and spawnedTasks.at(taskNumber)->wait_until(std::chrono::system_clock::time_point::min()) != std::future_status::ready) {
+      logWarning(
+        "spawnTaskWithDependencies(...)",
+        "task " << taskNumber << " is already among submitted tasks, i.e. noone ever waited for it although we now submit new task with this number. Wait before spawning. "
+      );
+      lock.free(); // if task recursively locks table
+      waitForTask(taskNumber);
+    }
+  }
+
+  logInfo("spawnTask(...)", "submit task " << taskNumber);
+  std::shared_future<void> submittedTask = std::async(std::launch::async, [job, taskNumber, inDependencies]() -> void {
+    logInfo("spawnTask(...)", "kick off task " << taskNumber);
+    tarch::multicore::native::waitForTasks(inDependencies);
     while (job->run()) {
       tarch::multicore::Core::getInstance().yield();
     }
     delete job;
   });
 
-  // @todo This one should not be there
-  nonblockingTasksCounter--;
+  if (taskNumber != NoDependencies) {
+    tarch::multicore::Lock lock(spawnedTasksSemaphore);
+    logInfo("spawnTask(...)", "store shared future of task " << taskNumber);
+    assertion1(spawnedTasks.count(taskNumber) == 0, taskNumber);
+    spawnedTasks[taskNumber] = new std::shared_future<void>(submittedTask);
+  }
 }
 
-int tarch::multicore::native::getNumberOfPendingTasks() { return nonblockingTasksCounter; }
 
-/**
- * It is not clear what happens if I use tasksOfSameType directly within the task.
- * It is clear that a pure reference cannot be used within a task, as the task uses
- * firstprivate by default. Therefore, it would copy something which ceases to exist.
- * It is not clear what happens with const references, but we had some memory issues
- * with the newer Intel/LLVM versions. Therefore, I manually copy the list and pass
- * this one into fuse(). The firstprivate annotation is not required, as this is the
- * default. But I leave it in here to highlight that three variables are copied,
- * but tasksOfSameType is not copied and not used within the task.
- */
-void tarch::multicore::native::processFusedTask(
-  Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
-) {
+void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-  std::future<void> dontWait = std::async(std::launch::async, [myTask, copyOfTasksOfSameType, device]() -> void {
+  std::future<void>                  dontWait              = std::async(std::launch::async, [myTask, copyOfTasksOfSameType, device]() -> void {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask);
+      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
     } else {
       delete myTask;
     }
@@ -93,17 +139,55 @@ void tarch::multicore::native::processFusedTask(
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
-  tarch::multicore::native::spawnTask(job);
+void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
+  for (auto& p : inDependencies) {
+    std::shared_future<void>* checkFuture = nullptr;
+
+    tarch::multicore::Lock lock(spawnedTasksSemaphore);
+    // check if there's something
+    // @todo
+    if (spawnedTasks.count(p) > 0 and spawnedTasks.at(p)->valid()) {
+      checkFuture = spawnedTasks.at(p);
+    }
+    lock.free();
+
+    // check but let someone else later tidy it up
+    // @todo intod ocu
+    if (checkFuture != nullptr) {
+      logInfo("waitForTasks(...)", "wait for task " << p);
+      checkFuture->wait();
+    }
+
+    // tidy up. Could happen that it is eliminated by now so better doublecheck
+    lock.lock();
+    if (spawnedTasks.count(p) > 0) {
+      delete spawnedTasks.at(p);
+      spawnedTasks.erase(p);
+    }
+    lock.free();
+  }
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
-  tarch::multicore::native::spawnTask(job);
+void tarch::multicore::native::waitForAllTasks() {
+  logTraceInWith1Argument("waitForAllTasks()", spawnedTasks.size());
+  int firstUnfinishedTask = NoDependencies + 1;
+  while (firstUnfinishedTask != NoDependencies) {
+    firstUnfinishedTask = NoDependencies;
+
+    tarch::multicore::Lock lock(spawnedTasksSemaphore);
+    if (not spawnedTasks.empty()) {
+      firstUnfinishedTask = spawnedTasks.begin()->first;
+    }
+    lock.free();
+
+    if (firstUnfinishedTask != NoDependencies) {
+      logInfo("waitForAllTasks()", "wait for task " << firstUnfinishedTask);
+      waitForTask(firstUnfinishedTask);
+    }
+  }
+  logTraceOut("waitForAllTasks()");
 }
 
 
-void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
-
-void tarch::multicore::native::waitForTask( int taskNumber ){}
 #endif

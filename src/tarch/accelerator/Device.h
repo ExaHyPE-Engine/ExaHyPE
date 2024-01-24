@@ -36,6 +36,8 @@ class tarch::accelerator::Device {
      */
     static tarch::logging::Log  _log;
 
+    static int _localDeviceId;
+
     Device();
   public:
     /**
@@ -99,4 +101,6 @@ class tarch::accelerator::Device {
      * on the used GPU backend.
      */
     int getNumberOfDevices() const;
+
+    int getLocalDeviceId() const;
 };

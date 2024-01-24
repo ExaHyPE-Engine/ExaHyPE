@@ -1,0 +1,58 @@
+/**
+
+ @page swift_boundary_conditions Boundary conditions and solver coupling
+
+ Boundary conditions are notoriously challenging within SPH. So is solver 
+ coupling. In Swift, we recommend to realise volumetric
+ boundary conditions, which means that we do not alter individual particles,
+ but can modify whole particle sets close to the boundary. Periodic boundary
+ conditions are an exception: They are natively supported through Peano.
+ 
+ 
+ # Periodic boundary conditions
+ 
+ Periodic boundary conditions are enabled globally for a Swift project. Other
+ conditions can be imposed particle species by species, but periodic BCs are 
+ global:
+ 
+  ~~~~~~~~~~~~~~~~~~~~~~~~ 
+  project.set_global_simulation_parameters(
+    dimensions=dimensions,
+    offset=offset,
+    domain_size=domain_size,
+    min_end_time=args.end_time,
+    max_end_time=0.0,
+    first_plot_time_stamp=0.0,
+    time_in_between_plots=args.plot_delta,
+    periodic_BC=[True,True,False],
+    plotter_precision=8,
+  )
+  ~~~~~~~~~~~~~~~~~~~~~~~~ 
+  
+ It is possible to switch them on/off per coordinate axis. Once enabled, the 
+ underlying Peano framework realises them through a plain domain decomposition.
+ That is, any particle close to the right border appears in turn as halo 
+ particle on the left and vice versa.
+  
+  
+ # Other boundary conditions
+ 
+ All other boundary conditions are set per species. There are many different 
+ options, and it is up to the programmer to decide where and how the conditions 
+ have to be taken into account. Swift offers a couple of pre-manufactured BCs 
+ such as 
+ 
+ - swift2.boundaryconditions.Inflow
+ - swift2.boundaryconditions.Fixed
+ - swift2.boundaryconditions.Outflow
+ 
+ 
+ 
+ # Solver coupling
+ 
+ 
+
+
+ */
+ 
+ 

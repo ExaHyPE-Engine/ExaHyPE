@@ -100,21 +100,21 @@ class SubcyclingFixedTimeStep( SingleSweep ):
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=False, 
       solver_variant         = SolverVariant.WithVirtualFunctions,
-      kernel_variant         = KernelVariant.PatchWiseAoSHeap
+      kernel_variant         = KernelVariant.VolumeWiseAoS
     )
     
     self._fused_compute_kernel_call_cpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step=False, 
       solver_variant = SolverVariant.Stateless,
-      kernel_variant         = KernelVariant.PatchWiseAoSHeap
+      kernel_variant         = KernelVariant.VolumeWiseSoA
     )
 
     self._fused_compute_kernel_call_gpu  = create_compute_Riemann_kernel_for_Rusanov(
       self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step = False, 
       solver_variant                           = SolverVariant.AcceleratorWithExplicitCopy,
-      kernel_variant         = KernelVariant.GenericAoS
+      kernel_variant         = KernelVariant.VolumeWiseSoA
     )
 
     solver_code_snippets = FixedSubcyclingTimeSteppingCodeSnippets(self._time_step_size,False,True)

@@ -1,10 +1,10 @@
 //
 // Included by peano4/utils/Loop.h. Do not use directly
 //
-#define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
+#define parallelForWithSchedulerInstructions(counter, max, loopParallelism) \
   tbb::parallel_for( \
     tbb::blocked_range<int>( \
-      0, max, loopParallelism==::peano4::utils::LoopParallelism::None ? max : 1 \
+      0, max, loopParallelism==::peano4::utils::LoopPlacement::Serial ? max : 1 \
     ), \
     [&]( const tbb::blocked_range<int>&  range ) { \
       for( int counter = range.begin();  counter < range.end();  counter++ ) \
@@ -25,8 +25,8 @@
 tarch::la::Vector<2,int> counter##Max(max); \
   tbb::parallel_for( \
     tbb::blocked_range2d<int>( \
-      0, counter##Max(0), loopParallelism==::peano4::utils::LoopParallelism::None ? counter##Max(0) : 1, \
-      0, counter##Max(1), loopParallelism==::peano4::utils::LoopParallelism::None ? counter##Max(1) : 1 \
+      0, counter##Max(0), loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1, \
+      0, counter##Max(1), loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(1) : 1 \
     ), \
     [&]( const tbb::blocked_range2d<int>&  range ) { \
       for( int counter##1 = range.rows().begin();  counter##1 < range.rows().end();  counter##1++ ) \
@@ -39,9 +39,9 @@ tarch::la::Vector<2,int> counter##Max(max); \
   tarch::la::Vector<3,int> counter##Max(max); \
   tbb::parallel_for( \
     tbb::blocked_range3d<int>( \
-      0, counter##Max(0), loopParallelism==::peano4::utils::LoopParallelism::None ? counter##Max(0) : 1, \
-      0, counter##Max(1), loopParallelism==::peano4::utils::LoopParallelism::None ? counter##Max(1) : 1, \
-      0, counter##Max(2), loopParallelism==::peano4::utils::LoopParallelism::None ? counter##Max(2) : 1 \
+      0, counter##Max(0), loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1, \
+      0, counter##Max(1), loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(1) : 1, \
+      0, counter##Max(2), loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(2) : 1 \
     ), \
     [&]( const tbb::blocked_range3d<int>&  range ) { \
       for( int counter##1 = range.pages().begin();  counter##1 < range.pages().end();  counter##1++ ) \
@@ -59,7 +59,7 @@ tarch::la::Vector<2,int> counter##Max(max); \
     tbb::blocked_rangexd<int,4>( \
       counter##Begin, \
       counter##End, \
-      loopParallelism==::peano4::utils::LoopParallelism::None ? counter##Max(0) : 1 \
+      loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1 \
     ), \
     [&]( const tbb::blocked_rangexd<int,4>&  range ) { \
       for( int counter##1 = range.subrange(0).begin();  counter##1 < range.subrange(0).end();  counter##1++ ) \
@@ -78,7 +78,7 @@ tarch::la::Vector<2,int> counter##Max(max); \
     tbb::blocked_rangexd<int,5>( \
       counter##Begin, \
       counter##End, \
-      loopParallelism==::peano4::utils::LoopParallelism::None ? counter##Max(0) : 1 \
+      loopParallelism==::peano4::utils::LoopPlacement::Serial ? counter##Max(0) : 1 \
     ), \
     [&]( const tbb::blocked_rangexd<int,5>&  range ) { \
       for( int counter##1 = range.subrange(0).begin();  counter##1 < range.subrange(0).end();  counter##1++ ) \
@@ -109,8 +109,8 @@ tarch::la::Vector<2,int> counter##Max(max); \
 
 
 
-#define simtForWithDynamicScheduling(counter, max, loopParallelism) \
-  parallelForWithDynamicScheduling(counter, max, loopParallelism)
+#define simtForWithSchedulerInstructions(counter, max, loopParallelism) \
+  parallelForWithSchedulerInstructions(counter, max, loopParallelism)
 
 #define endSimtFor \
   endParallelFor

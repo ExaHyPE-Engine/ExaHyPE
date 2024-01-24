@@ -99,7 +99,7 @@ h_tol = args.h_tol
 # Generate SWIFT project
 ########################################################################################
 
-project_namespace = ["benchmarks", "swift2", "testSML1D"]
+project_namespace = ["tests", "swift2", "testSML1D"]
 
 project = swift2.Project(
     namespace=project_namespace, project_name="TestSML1D", executable="testSML"
@@ -278,8 +278,6 @@ particle_plotter.add_attribute_to_plot(particle.density, 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-particle_plotter.add_attribute_to_plot(particle.f, 1)
-particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
 particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 

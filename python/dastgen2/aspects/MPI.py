@@ -67,6 +67,20 @@ class MPI(object):
     [[clang::map_mpi_datatype]]
     static MPI_Datatype  getGlobalCommunciationDatatype();
 
+    [[clang::map_mpi_datatype]]
+    static void  freeForkDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeJoinDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeBoundaryExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeMultiscaleDataExchangeDatatype();
+
+    [[clang::map_mpi_datatype]]
+    static void  freeGlobalCommunciationDatatype();
 
     /**
      * @return The rank of the sender of an object. It only make ssense to call
@@ -124,7 +138,7 @@ class MPI(object):
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
 MPI_Datatype """
             + full_qualified_name
-            + """::Datatype;
+            + """::Datatype = MPI_DATATYPE_NULL;
 #endif
 
 
@@ -168,11 +182,67 @@ MPI_Datatype """
 }
 
 
+[[clang::map_mpi_datatype]]
+void """
+            + full_qualified_name
+            + """::freeForkDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void """
+            + full_qualified_name
+            + """::freeGlobalCommunciationDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void """
+            + full_qualified_name
+            + """::freeJoinDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void """
+            + full_qualified_name
+            + """::freeBoundaryExchangeDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void """
+            + full_qualified_name
+            + """::freeMultiscaleDataExchangeDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
 int """
             + full_qualified_name
             + """::getSenderRank() const {
   return _senderDestinationRank;
 }
+
 
 
 void """
@@ -277,17 +347,11 @@ void """
             + full_qualified_name
             + """::shutdownDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  MPI_Datatype type;
-  type = getForkDatatype();
-  MPI_Type_free( &type );
-  type = getJoinDatatype();
-  MPI_Type_free( &type );
-  type = getBoundaryExchangeDatatype();
-  MPI_Type_free( &type );
-  type = getMultiscaleDataExchangeDatatype();
-  MPI_Type_free( &type );
-  type = getGlobalCommunciationDatatype();
-  MPI_Type_free( &type );
+  freeForkDatatype();
+  freeJoinDatatype();
+  freeBoundaryExchangeDatatype();
+  freeMultiscaleDataExchangeDatatype();
+  freeGlobalCommunciationDatatype();
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );

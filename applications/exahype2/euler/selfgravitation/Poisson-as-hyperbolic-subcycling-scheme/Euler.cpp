@@ -1,6 +1,6 @@
 #include "Euler.h"
 
-#include "exahype2/NonCriticalAssertions.h"
+#include "../../../../../src/tarch/NonCriticalAssertions.h"
 #include "exahype2/RefinementControl.h"
 
 
