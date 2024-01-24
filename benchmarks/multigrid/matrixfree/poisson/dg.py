@@ -4,6 +4,7 @@ import peano4
 import numpy as np
 
 import src.multigrid.matrixfree as matrixfree
+import multigrid.matrixgenerators
 
 print( """
 

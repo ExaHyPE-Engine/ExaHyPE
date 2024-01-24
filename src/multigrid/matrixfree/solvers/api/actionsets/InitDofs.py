@@ -296,8 +296,7 @@ class InitDofsDG(ActionSet):
       {
         fineGridFace{{SOLVER_NAME}}.setType( facedata::{{SOLVER_NAME}}::Type::Outside );
       }
-    }
-    break;
+    } break;
 
     case facedata::{{SOLVER_NAME}}::Type::Interior:
     {
@@ -309,8 +308,20 @@ class InitDofsDG(ActionSet):
       {
         fineGridFace{{SOLVER_NAME}}.setType( facedata::{{SOLVER_NAME}}::Type::Interior );
       }
-    }
-    break;
+    } break;
+
+    case facedata::{{SOLVER_NAME}}::Type::Boundary:
+    {
+      if ( marker.willBeRefined() )
+      {
+        fineGridFace{{SOLVER_NAME}}.setType( facedata::{{SOLVER_NAME}}::Type::Coarse );
+      }
+      else 
+      {
+        fineGridFace{{SOLVER_NAME}}.setType( facedata::{{SOLVER_NAME}}::Type::Boundary );
+      }
+    } break;
+    
 
   }
   

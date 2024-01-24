@@ -13,10 +13,6 @@
 #include "celldata/{{SOLVER_NAME}}.h"
 #include "facedata/{{SOLVER_NAME}}.h"
 
-// for openblas
-#include <cblas.h>
-#include <lapacke.h>
-
 {{SOLVER_INCLUDES}}
 
 {% for item in NAMESPACE -%}

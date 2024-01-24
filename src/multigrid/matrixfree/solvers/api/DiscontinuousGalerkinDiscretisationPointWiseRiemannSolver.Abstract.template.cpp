@@ -7,10 +7,16 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {}
 
-/*
-  Add in methods to fetch matrices, determine position in domain of faces, cells, vertices
-*/
-
+bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
+{
+  using namespace {{NAMESPACE | join("::")}};
+  bool isOnBoundary = false;
+  for (int d=0; d<Dimensions; d++) {
+    isOnBoundary |= tarch::la::smallerEquals( x(d), DomainOffset(d) );
+    isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
+  }
+  return isOnBoundary;
+}
 
 {{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
   const tarch::la::Vector<Dimensions, double>&  x,
@@ -30,7 +36,9 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h
 ) {
-  return facedata::{{SOLVER_NAME}}::Type::Interior;
+  return isOnBoundary(x) ?
+    facedata::{{SOLVER_NAME}}::Type::Boundary:
+    facedata::{{SOLVER_NAME}}::Type::Interior;
 }
 
 /*
