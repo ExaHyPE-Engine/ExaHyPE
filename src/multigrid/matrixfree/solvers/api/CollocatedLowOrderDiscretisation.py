@@ -4,9 +4,9 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import dastgen2
 import os
 
-from .Solver                                   import Solver
-from multigrid.matrixfree.actionsets.InitDofs  import InitDofs
-from multigrid.matrixfree.actionsets.Solve     import Solve
+from .Solver                      import Solver
+from .actionsets.InitDofs         import InitDofsCollocated
+from .actionsets.CollocatedSolver import CollocatedSolver
 
 from abc import abstractmethod
 from peano4.solversteps.ActionSet import ActionSet
@@ -58,13 +58,8 @@ class CollocatedLowOrderDiscretisation(Solver):
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( CollocatedLowOrderDiscretisation, self ).add_to_Peano4_datamodel(datamodel,verbose)
 
-    # handled in super!
-    # datamodel.add_vertex(self._vertex_data)
-
   def add_use_statements(self, observer):
     super( CollocatedLowOrderDiscretisation, self ).add_use_statements(observer)
-    # handled in super!
-    # observer.use_vertex( self._vertex_data )
 
   def add_to_plot(self, observer):
     """!
@@ -105,11 +100,11 @@ class CollocatedLowOrderDiscretisation(Solver):
     Solution initialisation
     
     """
-    observer.add_action_set( InitDofs(self) ) 
+    observer.add_action_set( InitDofsCollocated(self) ) 
     pass
 
   def add_to_solve(self, observer):
-    observer.add_action_set( Solve(self) )
+    observer.add_action_set( CollocatedSolver(self) )
     pass
   
   def add_implementation_files_to_project(self, namespace, output):

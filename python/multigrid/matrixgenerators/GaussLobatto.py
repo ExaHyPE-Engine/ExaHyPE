@@ -11,7 +11,7 @@ from .MatrixGenerator import MatrixGenerator
 from .BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
 
 class GaussLobatto(MatrixGenerator):
-  '''
+  """!
   
   Simple matrix generator assuming that we use a Gauss Lobatto unknown layout
   
@@ -22,7 +22,7 @@ class GaussLobatto(MatrixGenerator):
   with the corresponding number of unknowns, you get the degrees of freedom
   within a global assembly matrix which correspond to volumetric data. 
   
-  '''
+  """
   def __init__(self,
                Dimensions,
                poly_degree,

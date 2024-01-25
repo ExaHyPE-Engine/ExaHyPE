@@ -4,7 +4,7 @@ import peano4
 import jinja2
 
 
-class Solve(ActionSet):
+class CollocatedSolver(ActionSet):
   templateTVFT = """ 
   if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
   {
@@ -32,7 +32,7 @@ class Solve(ActionSet):
     for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
     {
       logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(dof), fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof), fineGridVertex{{SOLVER_NAME}}.getResidual(dof));
-      assertion( repositories::{{SOLVER_NAME}}.getFieldDiag(dof) > 0 );
+      assertion( fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof) > 0 );
       double val = fineGridVertex{{SOLVER_NAME}}.getValue(dof) 
                   + repositories::{{SOLVER_INSTANCE}}.Omega 
                     * ( 1.0 / fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof) )
@@ -99,7 +99,7 @@ class Solve(ActionSet):
   
   def __init__(self,
                solver):
-    super( Solve, self ).__init__()
+    super( CollocatedSolver, self ).__init__()
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
