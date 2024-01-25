@@ -2,14 +2,14 @@
   <img src="./documentation/logos/Peano-logo.png"/>
 </div>
 
-[![Build Status](https://gitlab.lrz.de/hpcsoftware/Peano/badges/p4/pipeline.svg)](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines "Build Status")
-[![SQAaaS badge shields.io](https://img.shields.io/badge/sqaaas%20software-bronze-e6ae77)](https://api.eu.badgr.io/public/assertions/vg8PP-0FQlafJ-L-cRs_Xw "SQAaaS bronze badge achieved")
-
 <div align="center" style="text-align: center;"><b>
   <a href="http://www.peano-framework.org">Website</a> •
   <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html">Documentation</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/releases">Releases</a>
 </b></div>
+
+[![Build Status](https://gitlab.lrz.de/hpcsoftware/Peano/badges/p4/pipeline.svg)](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines "Build Status")
+[![SQAaaS badge shields.io](https://img.shields.io/badge/sqaaas%20software-bronze-e6ae77)](https://api.eu.badgr.io/public/assertions/vg8PP-0FQlafJ-L-cRs_Xw "SQAaaS bronze badge achieved")
 
 # Overview
 
