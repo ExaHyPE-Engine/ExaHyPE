@@ -15,8 +15,10 @@ rm noh2D.*
 for REALISATION in domain-decomposition.scattered.no-optimisation domain-decomposition.scattered.outer-guards
 do
   N_PART=240
-  python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION
+  PLOT_DELTA=0.0
+  #python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION
   N_PART=120
+  PLOT_DELTA=$END_TIME
   python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m asserts -o noh2D.$REALISATION-asserts
 done
 

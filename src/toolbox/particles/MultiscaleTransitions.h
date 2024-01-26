@@ -69,55 +69,105 @@ namespace toolbox {
     constexpr double GrabOwnershipSpatialSortingTolerance = 1.001;
 
     /**
-     * Take particle from current vertex and lift and further
+     * Take particle from current vertex and lift it or keep it local
      *
-     * Should be called by touchVertexLastTime if you decide to sort particles
-     * in this routine and not within the cell. It returns one of the following
-     * constants:
+     * This routine should be called by touchVertexLastTime(). Different to
+     * its cousin getParticleReassociationInstructionWithinCellWithIntraCellReassignment(),
+     * it should not be called within the cell. Usually, users do not invoke
+     * the routine directly. Instead the action set peano4.toolbox.particles.api.UpdateParticleGridAssociation_ListDrop
+     * injects calls to this routine into the generated source code.
      *
-     * - ParticleReassociationInstruction_Keep. All is fine, just analyse the
+     * The function returns one of the following values:
+     *
+     * - particles::internal::ParticleReassociationInstruction_Keep. All is fine, just analyse the
      *   next particles.
-     * - 0..2^d-1. The particle should not be associated to this vertex. Remove
-     *   the association and associate to the next coarsest level. The vertex
-     *   within this coarse cell is identified by the result number.
-     * - ParticleReassociationInstruction_SieveGlobally. Particle should not be
+     * - particles::internal::ParticleReassociationInstruction_SieveGlobally. Particle should not be
      *   associated with this vertex, but you can't just move it one level up.
      *   Remove it completely from mesh and push it into a global list of
      *   particles which shall be sieved in the next step.
-     *
-     * When we try to lift to the next coarser level, we have to check if the
-     * target vertex is local. If not, we have to sieve.
+     * - A value between 0 and @f$ 2^d-1 @f$. In this case, the particle should not be associated to this vertex. Remove
+     *   the association and associate to the next coarsest level. The vertex
+     *   within this coarse cell is identified by the result number.
      *
      *
      * ## Algorithm
      *
-     * If a particle is not local, we keep it, as we don't dare to make a
-     * comment.
+     * The algorithm starts from a simple observation:
      *
+     * - If a particle is not local, we keep it, as we don't dare to make a
+     *   comment to which mesh entity is should be moved to. Actually,
+     *   non-local particles should never be moved. Hence, we could run the
+     *   association analysis and then check if a non-local particle is kept
+     *   where it should be, but we do it the other way round: We don't
+     *   continue to check for virtual particles. We use the local flag as
+     *   an optimisation opportunity.
+     * - If a particle is local, it might have moved and it might have to be
+     *   assigned to another vertex.
      *
-     * We basically first check if a particle is contained within the h/2
-     * environment of a vertex. For this, we exploit the fact that a marker
-     * has a routine x() which returns the position of the associated of the
-     * vertex plus a routine h() which returns the size of the adjacent cells.
+     * @image html MultiscaleTransitions_belongs-to-vertex.svg
      *
-     * If the particle is at the right place, we return ParticleReassociationInstruction_Keep.
-     * Nothing is to be done. Otherwise, we have to lift:
+     * Particles are always associated to their closest vertex. If the blue
+     * particle moves, it remains within that area around the vertex where it
+     * belongs to, and we can return a particles::internal::ParticleReassociationInstruction_Keep
+     * command. peano4::datatraversal::VertexMarker::isContainedInAdjacentCells()
+     * allows us to make this decision quickly: We check if a particle is
+     * contained within the h/2 environment around a vertex.
+     * If a particle has left this
+     * (greenish) area around a vertex, we have to associate it to another
+     * vertex. We have to lift.
+     * Lifts however can only be realised within the local spacetree, where we
+     * have local and thread-safe access to the coarse level data structures of
+     * the tree.
      *
-     * If the parent cell is local, then we can safely move the particles
-     * up the tree, as we know that all 2^d coarse grid vertices are
-     * adjacent to the local domain.
+     * liftParticleAssociatedWithVertex() is called by
+     * touchVertexLastTime() which in turn is called from within a cell: We are
+     * about to leave a cell, find out that a vertex won't be needed anymore,
+     * and consequently trigger touchVertexLastTime().
+     * Each cell has a unique parent within the spacetree.
      *
      * If the parent cell is not local, we have
      * to assume that we just did hit a vertical tree cut. In this case,
      * we are on the safe side if we just add the particles to the global
      * sieve particle list. We return ParticleReassociationInstruction_SieveGlobally.
      *
-     * All of these considerations apply if and only if a particle is local. If
-     * a particle is virtual, it is a copy from another rank. In this case, we
-     * should not change its position, and we should not change its association.
+     * If the parent cell is local, we can determine which of the @f$ 2^d @f$
+     * coarse grid vertices would hold the particle.
+     * If this coarse grid is not adjacent to the local domain, we have to sieve.
+     * In the illustration below, we can see this behaviour on the right-hand
+     * side:
      *
+     * @image html MultiscaleTransitions_liftParticleAssociatedWithVertex.png
      *
-     * @see LiftingTolerance
+     * - The particle (red solid dot) moves from left to right.
+     * - Due to the move, the particle's current vertex association (blurry
+     *   blue) becomes invalid.
+     * - We have would like to lift it to the red blurry vertex.
+     * - The parent cell belongs to another rank (yellow instaed of blue).
+     * - Therefore, we have to add it to the global sieve list.
+     *
+     * There is a second, more delicate case which is illustrated on the
+     * left-hand side of the sketch:
+     *
+     * - Let the part move from left to right on the fine grid owned by
+     *   the blue rank.
+     * - Therefore, the particle changes its vertex association from
+     *   blurry blue to blurry green.
+     * - We cannot realise this reassociation directly within
+     *   touchVertexLastTime(). Therefore, we lift the particle to the
+     *   red coarse grid vertex.
+     * - This vertex also is adjacent to the blue rank. Nevertheless, we
+     *   have to assign is to the global sieve list, as we move it through
+     *   the horizontal tree cut.
+     *
+     * If we reassigned it locally, it would be labelled as remote on the
+     * coarser level in the next iteration. The yellow rank in return would
+     * receive a copy from the blue-yellow coarse grid boundary and then
+     * label it as local there. While this is correct, we now have to sieve
+     * it through a horizontal tree cut again. All not nice. We better get
+     * it straight and assign it to the global sieve list right from the start.
+     *
+     * @see toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance()
+     * @see toolbox::particles::particleAssignedToVertexWillBeLocal()
      */
     template <typename Particle>
     ParticleReassociationInstruction liftParticleAssociatedWithVertex(const Particle& p, const peano4::datamanagement::VertexMarker marker);

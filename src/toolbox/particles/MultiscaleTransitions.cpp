@@ -69,7 +69,11 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
     return ParticleReassociationInstruction_SieveGlobally;
   } else {
     std::bitset<Dimensions> target = internal::getParticleAssociationWithinCell(x, marker.getInvokingCellsFatherCentre());
-    if (marker.isParentVertexLocal(target.to_ulong())) {
+    if (
+      marker.isParentVertexLocal(target.to_ulong())
+      and
+      toolbox::particles::particleAssignedToVertexWillBeLocal( x, marker )
+    ) {
       return target.to_ulong();
     } else {
       return ParticleReassociationInstruction_SieveGlobally;
