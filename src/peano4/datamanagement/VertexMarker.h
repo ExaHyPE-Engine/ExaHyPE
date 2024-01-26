@@ -374,7 +374,7 @@ public:
    * See getInvokingCellCentre(). This routine gives you the centre of its
    * parent cell.
    */
-  tarch::la::Vector<Dimensions, double> getInvokingCellsFatherCentre() const;
+  tarch::la::Vector<Dimensions, double> getInvokingParentCellsCentre() const;
 
   /**
    * Are adjacent cells of selected vertex local

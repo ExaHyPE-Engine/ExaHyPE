@@ -225,7 +225,7 @@ tarch::la::Vector<Dimensions, double> peano4::datamanagement::VertexMarker::getI
 }
 
 
-tarch::la::Vector<Dimensions, double> peano4::datamanagement::VertexMarker::getInvokingCellsFatherCentre() const {
+tarch::la::Vector<Dimensions, double> peano4::datamanagement::VertexMarker::getInvokingParentCellsCentre() const {
   tarch::la::Vector<Dimensions, double> result = _cellCentre;
   for (int d=0; d<Dimensions; d++) {
     assertion1( _relativePositionOfCellWithinFatherCell(d)>=0, toString() );

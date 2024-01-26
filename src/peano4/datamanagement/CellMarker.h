@@ -117,7 +117,7 @@ public:
    * See getInvokingCellCentre(). This routine gives you the centre of its
    * parent cell.
    */
-  tarch::la::Vector<Dimensions, double> getInvokingCellsFatherCentre() const;
+  tarch::la::Vector<Dimensions, double> getInvokingParentCellsCentre() const;
 
   /**
    * Is x contained within cell identified by marker object
@@ -149,8 +149,23 @@ public:
    */
   bool isContained(const tarch::la::Vector<Dimensions, double>& x, double tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE) const;
 
+  /**
+   * Is point contained in cell
+   *
+   * Evaluate if x is in a h/2 environment around cellCentre. We use
+   * tarch::la comparison functions as we operate with floating point
+   * values. tolerance is the tolerance we pass into these functions.
+   *
+   * @param x          Point to query
+   * @param cellCentre Centre of cell of interest
+   * @param h          Mesh size on this level
+   * @param tolerance  Search tolerance
+   *
+   */
   static bool isContained(
-    const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& h, double tolerance
+    const tarch::la::Vector<Dimensions, double>& x,
+    const tarch::la::Vector<Dimensions, double>& cellCentre,
+    const tarch::la::Vector<Dimensions, double>& h, double tolerance
   );
 
   bool overlaps(const tarch::la::Vector<Dimensions, double>& offset, const tarch::la::Vector<Dimensions, double>& size) const;
