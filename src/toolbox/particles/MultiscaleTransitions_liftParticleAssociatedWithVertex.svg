@@ -25,13 +25,13 @@
      showgrid="false"
      inkscape:zoom="1.2810466"
      inkscape:cx="397.72168"
-     inkscape:cy="370.40027"
+     inkscape:cy="370.40026"
      inkscape:window-width="1850"
      inkscape:window-height="1136"
      inkscape:window-x="70"
      inkscape:window-y="27"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1" />
+     inkscape:current-layer="g1113-6-9" />
   <defs
      id="defs2">
     <marker
@@ -255,7 +255,7 @@
          y="34.392044" />
       <g
          id="g10382"
-         transform="translate(1.2767959,-3.9226294)">
+         transform="translate(1.2767959,1.1845544)">
         <circle
            style="fill:#ff0000;stroke:#000000;stroke-width:0.465"
            id="path6412"
@@ -817,7 +817,7 @@
          y="15.609037" />
       <g
          id="g10382-4"
-         transform="matrix(0.32674157,0,0,0.32674157,13.805861,9.2779434)">
+         transform="matrix(0.32674157,0,0,0.32674157,13.805861,10.946672)">
         <circle
            style="fill:#ff0000;stroke:#000000;stroke-width:0.465"
            id="path6412-9"
@@ -920,7 +920,7 @@
        cx="37.343121"
        cy="35.07819"
        r="4.4602203"
-       transform="matrix(0.5920283,0,0,0.5920283,12.127143,10.939913)" />
+       transform="matrix(0.5920283,0,0,0.5920283,12.127143,18.877418)" />
     <g
        id="g1113-0"
        transform="matrix(0.82889781,0,0,0.82889781,106.28464,2.630959)">
@@ -1657,6 +1657,6 @@
        cx="37.343121"
        cy="35.07819"
        r="4.4602203"
-       transform="matrix(0.5920283,0,0,0.5920283,5.36122,10.006711)" />
+       transform="matrix(0.5920283,0,0,0.5920283,5.36122,17.944213)" />
   </g>
 </svg>

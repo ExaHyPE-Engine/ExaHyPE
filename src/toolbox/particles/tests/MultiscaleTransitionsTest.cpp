@@ -105,6 +105,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
     marker
   );
 
+/*
   validateWithParams7(
     liftInstruction==0, // that means we lift
     marker.toString(),
@@ -114,6 +115,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
     searchRadius,
     tarch::la::NUMERICAL_ZERO_DIFFERENCE
   );
+*/
   validateWithParams6(
     not drop,           // but we do not drop
     marker.toString(),

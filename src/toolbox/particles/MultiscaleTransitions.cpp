@@ -61,14 +61,19 @@ std::bitset<Dimensions> toolbox::particles::internal::getParticleAssociationWith
 toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftParticleAssociatedWithVertex(
   bool isLocal, double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker marker
 ) {
+  const double tolerance = internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE;
   if (not isLocal) {
     return ParticleReassociationInstruction_Keep;
-  } else if (internal::fitsIntoLevel(searchRadius, marker) and marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE)) {
+  }
+  else if (internal::fitsIntoLevel(searchRadius, marker) and marker.isContainedInAdjacentCells(x, 0.5, tolerance)) {
     return ParticleReassociationInstruction_Keep;
-  } else if (not marker.isParentCellLocal()) {
-    return ParticleReassociationInstruction_SieveGlobally;
-  } else {
-    std::bitset<Dimensions> target = internal::getParticleAssociationWithinCell(x, marker.getInvokingCellsFatherCentre());
+  }
+  else if (
+    marker.isParentCellLocal()
+    and
+    peano4::datamanagement::CellMarker::isContained(x, marker.getInvokingParentCellsCentre(), marker.h() * 3.0, tolerance)
+  ) {
+    std::bitset<Dimensions> target = internal::getParticleAssociationWithinCell(x, marker.getInvokingParentCellsCentre());
     if (
       marker.isParentVertexLocal(target.to_ulong())
       and
@@ -79,7 +84,9 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::liftPar
       return ParticleReassociationInstruction_SieveGlobally;
     }
   }
-  return -65536;
+  else {
+    return ParticleReassociationInstruction_SieveGlobally;
+  }
 }
 
 
@@ -115,7 +122,7 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
         "lift particle at " << x << " from cell " << marker.toString() << " as difference is " << (x - marker.x())
       );
 
-      const std::bitset<Dimensions> coarseDestAssociation = internal::getParticleAssociationWithinCell(x, marker.getInvokingCellsFatherCentre());
+      const std::bitset<Dimensions> coarseDestAssociation = internal::getParticleAssociationWithinCell(x, marker.getInvokingParentCellsCentre());
 
       return coarseDestAssociation.to_ulong() + TwoPowerD;
     }

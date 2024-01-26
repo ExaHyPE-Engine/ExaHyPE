@@ -166,8 +166,22 @@ namespace toolbox {
      * it through a horizontal tree cut again. All not nice. We better get
      * it straight and assign it to the global sieve list right from the start.
      *
+     * The need for special care becomes apparent once we take into account
+     * which cell triggers the touchVertexLastTime(): Should it be a cell
+     * above the two fine grid vertices of interest, we would always associate
+     * the particle to the global sieve set, as we spot the multilevel transition.
+     * If it is called from one of the two adjacent cells below, the parent
+     * cell is local and we cannot spot the tree cut.
+     *
+     * Originally, I thought we could get away with an analysis of the coarse
+     * vertex and use particleAssignedToVertexWillBeLocal() to figure out
+     * whether we lift thorough a tree cut or not. However, we do not have
+     * the marker of the coarse grid vertices. So we cannot access the information
+     * we'd need. So the only thing that we can do is to lift if and only if
+     * we lift within the coarse cell and therefore can be sure that our
+     * analysis of the parent cell's owner provides sufficient information.
+     *
      * @see toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance()
-     * @see toolbox::particles::particleAssignedToVertexWillBeLocal()
      */
     template <typename Particle>
     ParticleReassociationInstruction liftParticleAssociatedWithVertex(const Particle& p, const peano4::datamanagement::VertexMarker marker);
