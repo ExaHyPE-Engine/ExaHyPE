@@ -33,6 +33,15 @@ It is the subsequent grid sweep that then sorts the particles again into the
 right resolution of the mesh plus associates it with the right vertex.
 So it needs access to UpdateParticleGridAssocation.
 
+Please note that you will need potentially multiple follow-up action sets
+aka mesh sweeps: 
+In the first sweep, all particles are put into the right place in space and 
+the mesh hierarchy yet maybe on a too coarse level.
+In the second sweep, we drop them.
+Throughout the drop, we might drop them through a horizontal tree cut.
+We cannot handle this, so have to send out the particle through message passing
+and then drop once more.
+
 
 A similar argument holds if you parallelise:
 If a particle leaves a domain, the owning tree sends it out by the end of the
