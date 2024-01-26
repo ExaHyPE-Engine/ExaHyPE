@@ -12,7 +12,7 @@ messed up.
 
 # Particle sorting
 
-The particle sorting is realised through peano4.toolbox.particles.AbstractUpdateParticleGridAssociation
+The particle sorting is realised through peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation
 and subclasses of this type. In principle all flavours work in a similar way
 and spread up the sorting over at least two mesh traversals. That is, once
 you have updated either a particle position or a particle's search radius,

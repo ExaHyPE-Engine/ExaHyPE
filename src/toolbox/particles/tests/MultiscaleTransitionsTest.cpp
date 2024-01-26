@@ -4,8 +4,7 @@
 #include "toolbox/particles/MultiscaleTransitions.h"
 
 tarch::logging::Log toolbox::particles::tests::MultiscaleTransitionsTest::_log(
-  "toolbox::particles::tests::"
-  "MultiscaleTransitionsTest"
+  "toolbox::particles::tests::MultiscaleTransitionsTest"
 );
 
 #ifdef UseTestSpecificCompilerSettings
@@ -24,6 +23,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testSievePredicate() 
   marker._h          = {0.037037, 0.037037};
   marker._isHanging  = 0;
   marker._select     = 1;
+  marker._isAdjacentCellLocal.set();
 
   tarch::la::Vector<Dimensions, double> cornerVertex1 = {
     marker._cellCentre(0) + 0.5 * marker._h(0), marker._cellCentre(1) - 0.5 * marker._h(1)};
@@ -84,6 +84,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._isParentVertexLocal = 1+2+4+8;
   marker._isParentCellLocal   = true;
   marker._relativePositionOfCellWithinFatherCell = {0,0};
+  marker._isAdjacentCellLocal.set();
 
   tarch::la::Vector<Dimensions,double> x = {0.554725,0.166678};
   const double                         searchRadius = 0.0185185;
@@ -177,6 +178,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._isParentCellLocal   = true;
   marker._relativePositionOfCellWithinFatherCell = {2,0};
   marker._select     = 2;
+  marker._isAdjacentCellLocal.set();
 
   tarch::la::Vector<Dimensions,double> x = {0.504975,0.1667};
   const double                         searchRadius = 0.0185185;
