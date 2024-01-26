@@ -6,7 +6,10 @@
 #include <list>
 #include <map>
 
+#include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+
+#include "peano4/datamanagement/VertexMarker.h"
 
 
 namespace toolbox {
