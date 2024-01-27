@@ -3,15 +3,18 @@
 from enum import Enum
 
 
-class Optimisation(Enum):
+class ParticleSortingAndStorage(Enum):
     """ """
 
-    NONE = 0
-    INSERT_RESORT_SWEEPS_AND_VECTORISE = 1
-    SORT_ON_THE_FLY = 2
+    INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE = 0
+    SORT_ON_THE_FLY = 1
 
 
 class AddAdditionalDummySweep(Enum):
     NO = 0
     BEFORE = 1
     AFTER = 2
+    BEFORE_AND_SCATTER_DATA = 3 # todo implement
+    AFTER_AND_SCATTER_DATA = 4
+
+

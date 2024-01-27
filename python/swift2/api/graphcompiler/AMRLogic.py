@@ -11,6 +11,11 @@ from swift2.actionsets.DynamicMeshRefinementAnalysis import (
 from swift2.actionsets.DynamicMeshRefinementTrigger import DynamicMeshRefinementTrigger
 
 
+#
+# total scatter brauchen wir auch!
+#
+#
+
 def add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption(
     steps, alter_position, species_sets, verbose
 ):

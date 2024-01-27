@@ -112,6 +112,22 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     while the extraction of particles or moves from fine to coarse are epilogues to
     any operation in the primary mesh sweep.
 
+  
+    ## Number of sweeps
+    
+    All update flavours need 2+ mesh sweeps.
+    In the first sweep, they check if a particle sits with the right vertex. If 
+    not, is it either lifted locally or added to a global sort set. In the 
+    second sweep, we then insert particles from global sort sets into the 
+    domain or we drop the particles down further in the mesh hierarchy. 
+    
+    Horizontal tree cuts, i.e. situations where the parent cell of a cell 
+    belongs to another tree, are challenging: We cannot know prior to the
+    drop if we would drop into such a cut. If we do however, we have to take
+    the respective particle, send it to the neighbour, pick it up in the next
+    mesh traversal and continue dropping. For a tree with depth L, we have up
+    to L-1 drop iterations. 
+    
 
     ## Grid resorting followed by particle-particle interactions
 
@@ -185,6 +201,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   _numberOfLiftsIntoSieveSet = 0;
   _numberOfDropsFromSieveSet = 0;
   _numberOfSkippedDropsFromSieveSet = 0;
+  _numberOfDropsIntoHorizontalTreeDecomposition = 0;
 """
     )
 
@@ -196,7 +213,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfParticleReassignmentsOnCurrentLevel,
     _numberOfLiftsIntoSieveSet,
     _numberOfDropsFromSieveSet,
-    _numberOfSkippedDropsFromSieveSet
+    _numberOfSkippedDropsFromSieveSet,
+    _numberOfDropsIntoHorizontalTreeDecomposition
   );
 """
     )
@@ -241,6 +259,15 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
         if ( ::toolbox::particles::dropParticle(**p,marker) ) {
           _numberOfDrops++;
+          
+          if (
+            marker.isParentOfSubtree() 
+            and 
+            toolbox::particles::particleWillBeDroppedFurther(**p, marker)
+          ) {
+            _numberOfDropsIntoHorizontalTreeDecomposition++;
+          }
+          
           (*p)->setCellH(marker.h());
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
             "{{PARTICLE}}",
@@ -407,6 +434,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   int  _numberOfLiftsIntoSieveSet;
   int  _numberOfDropsFromSieveSet;
   int  _numberOfSkippedDropsFromSieveSet;
+  int  _numberOfDropsIntoHorizontalTreeDecomposition;
 """
         ).render(**self.d)
 

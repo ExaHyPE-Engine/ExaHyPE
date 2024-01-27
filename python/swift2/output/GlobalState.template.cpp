@@ -32,6 +32,8 @@ toolbox::loadbalancing::strategies::NoLoadBalancing  loadBalancer;
 bool rerunPreviousGridSweep() {
   bool result = false;
   {% for PARTICLE in PARTICLE_SPECIES -%}
+  result |= vertexdata::{{PARTICLE}}Set::getNumberOfDropsIntoHorizontalTreeDecomposition()>0;
+
   result |= globaldata::{{PARTICLE}}::getSpecies().rerunPreviousGridSweep();
   {%- endfor %}
   return result;
@@ -99,6 +101,10 @@ void startGridConstructionStep() {
 
 void startIntermediateStep() {
   logTraceIn( "IntermediateStep()" );
+
+  {% for PARTICLE in PARTICLE_SPECIES -%}
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  {%- endfor %}
 }
 
 
@@ -122,6 +128,9 @@ void startTimeStep() {
   logTraceIn( "startTimeStep()" );
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().startTimeStep();
+
+  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   {%- endfor %}
   logTraceOut( "startTimeStep()" );
 }
@@ -136,8 +145,8 @@ void finishTimeStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   globaldata::{{PARTICLE}}::getSpecies().finishTimeStep();
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
-  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
+  vertexdata::{{PARTICLE}}Set::printParticleStateStatistics();
   {%- endfor %}
 
   logTraceIn( "finishTimeStep()" );
@@ -176,8 +185,11 @@ void finishGridConstructionStep() {
 void finishInitialisationStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
-  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
-  vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+
+  vertexdata::{{PARTICLE}}Set::reduceReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::reduceParticleStateStatistics();
+  vertexdata::{{PARTICLE}}Set::printReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::printParticleStateStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -188,8 +200,9 @@ void finishInitialisationStep() {
 void finishInitialConditionStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
-  vertexdata::{{PARTICLE}}Set::reduceAndPrintStatistics();
+
   vertexdata::{{PARTICLE}}Set::clearReassignmentStatistics();
+  vertexdata::{{PARTICLE}}Set::clearParticleStateStatistics();
   {%- endfor %}
 
   loadBalancer.finishStep();
@@ -208,6 +221,11 @@ void finishPlotStep() {
 void finishIntermediateStep() {
   {% for PARTICLE in PARTICLE_SPECIES -%}
   vertexdata::{{PARTICLE}}Set::finishedTraversal();
+
+  vertexdata::{{PARTICLE}}Set::reduceReassignmentStatistics();
+  if (vertexdata::{{PARTICLE}}Set::registeredAnyResorting()) {
+    vertexdata::{{PARTICLE}}Set::printReassignmentStatistics();
+  }
   {%- endfor %}
   logTraceOut( "IntermediateStep()" );
 }

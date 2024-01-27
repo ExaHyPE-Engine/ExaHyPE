@@ -66,7 +66,7 @@ public:
   std::string toString(bool addBrackets = true) const;
 
   /**
-   * Clear stats
+   * Clear stats of all counters that have to do with resorting
    *
    * Has to be called per rank prior to any collection of stats.
    * I used to call this routine in the prepare traversal event, i.e. in
@@ -94,7 +94,11 @@ public:
   /**
    * Reduces and prints the global statistics
    */
-  static void reduceAndPrintStatistics();
+  static void reduceParticleStateStatistics();
+  static void printParticleStateStatistics();
+
+  static void reduceReassignmentStatistics();
+  static void printReassignmentStatistics();
 
   static void updateLiftDropStatistics(
     int numberOfLiftsInThisTree,
@@ -102,7 +106,8 @@ public:
     int numberOfReassignmentsInThisTree,
     int numberOfLiftsIntoSieveSetInThisTree,
     int numberOfDropsFromSieveSetInThisTree,
-    int numberOfSkippedDropsFromSieveSetInThisTree
+    int numberOfSkippedDropsFromSieveSetInThisTree,
+    int numberOfDropsIntoHorizontalTreeDecomposition
   );
 
   static void updateNumberOfLocalAndExpiredParticles(
@@ -112,6 +117,20 @@ public:
     int numberOfIncomingParticles
   );
 
+  /**
+   * Return number of drops into cuts recorded
+   *
+   * This counter is typically updated by the action sets which update the
+   * particle-mesh association. The field should guide the simulation main
+   * whether to rerun this dropping action set again or continue with next
+   * step in simulation pipeline.
+   */
+  static int getNumberOfDropsIntoHorizontalTreeDecomposition();
+
+  /**
+   * Returns true if there have been any lifts, drops, reassignments, ...
+   */
+  static bool registeredAnyResorting();
 
 #ifdef Parallel
   static void initDatatype();
@@ -148,17 +167,6 @@ public:
    */
   static bool hasParticlesToBeSievedIntoVertices(int originatingTree);
 
-  /**
-   * Return total number of remaining particles
-   *
-   * Should be invoked on the global master rank only. After each
-   * reduceAndPrintStatistics() call, we memorise this quantity and
-   * subsequently return it.
-   */
-  static int getGlobalNumberOfLocalParticles();
-  static int getGlobalNumberOfLeavingParticles();
-  static int getGlobalNumberOfExpiredHaloParticles();
-  static int getGlobalNumberOfNewIncomingParticles();
 private:
   static tarch::logging::Log _log;
 
@@ -222,6 +230,7 @@ protected:
   static int _numberOfLiftsIntoSieveSet;
   static int _numberOfDropsFromSieveSet;
   static int _numberOfSkippedDropsFromSieveSet;
+  static int _numberOfDropsIntoHorizontalTreeDecomposition;
 
   /**
    * Set by parallel state analysis
@@ -295,18 +304,6 @@ protected:
   static int _numberOfAddedParticlesAlongBoundary;
 
   /**
-   * Stats on duplicate elimination
-   *
-   * This one is updated internally by addParticles() which you
-   * might call with duplicate detection or not.
-   *
-   * See class documentation of toolbox::particles::ParticleSet for
-   * an overview of the statistics tracked.
-   */
-  static int _numberOfVirtualEliminatedSpatialDuplicates;
-  static int _numberOfLocalEliminatedSpatialDuplicates;
-
-  /**
    * Map of persistent particles that have to be sieved
    */
   static SieveParticles _sieveParticles;
@@ -329,12 +326,6 @@ protected:
    */
   static int _numberOfParticlesInLastClear;
 #endif
-
-  static int _globalNumberOfRemainingLocalParticles;
-  static int _globalNumberOfExpiredHaloParticles;
-  static int _globalNumberOfLeavingLocalParticles;
-  static int _globalNumberOfNewIncomingParticles;
-
 };
 
 

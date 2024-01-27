@@ -111,6 +111,7 @@ private:
   [[clang::pack]] std::bitset<TwoPowerD>    _isHanging;
   [[clang::pack]] std::bitset<TwoPowerD>    _isParentVertexLocal;
   [[clang::pack]] std::bitset<ThreePowerD>  _isAdjacentCellLocal;
+  [[clang::pack]] std::bitset<TwoPowerD>    _isParentOfSubtree;
 
   bool _isParentCellLocal;
 
@@ -176,6 +177,9 @@ public:
    * @return Position in space of currently selected vertex.
    */
   tarch::la::Vector<Dimensions, double> x() const;
+
+  bool isParentOfSubtree(int i) const;
+  bool isParentOfSubtree() const;
 
   tarch::la::Vector<Dimensions, double> h() const;
 

@@ -58,6 +58,10 @@
  flag up-to-date, though some updates also are performed when we merge two 
  particles among the domain boundary. Consult the action set's documentation for
  more information.
+ 
+ 
+ Immer Leeriteration einschieben nach jedem Schritt
+ @todo Scatter fehlt
 
 
  @todo A lot to write here

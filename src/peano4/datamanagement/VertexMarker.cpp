@@ -40,6 +40,7 @@ peano4::datamanagement::VertexMarker::VertexMarker(
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
   _isAdjacentToParallelDomainBoundary     = event.getIsVertexAdjacentToParallelDomainBoundary();
   _isAdjacentCellLocal                    = event.getIsAdjacentCellLocal();
+  _isParentOfSubtree                      = event.getIsVertexParentOfSubtree();
 
   _isHanging = 0;
   for (int i=0; i<TwoPowerD; i++) {
@@ -60,6 +61,16 @@ peano4::datamanagement::VertexMarker::VertexMarker(
   }
 
   _isParentVertexLocal = event.getIsParentVertexLocal();
+}
+
+
+bool peano4::datamanagement::VertexMarker::isParentOfSubtree(int i) const {
+  return _isParentOfSubtree[i];
+}
+
+
+bool peano4::datamanagement::VertexMarker::isParentOfSubtree() const {
+  return isParentOfSubtree(_select);
 }
 
 
