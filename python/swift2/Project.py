@@ -69,10 +69,10 @@ class Project(object):
         self.additional_action_sets_per_solver_step = []
 
         self.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
         )
         self.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
         )
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):

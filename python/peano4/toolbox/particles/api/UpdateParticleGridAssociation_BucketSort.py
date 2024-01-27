@@ -168,7 +168,8 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
           newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
           marker.x(),
           marker.h(),
-          _spacetreeId, "UpdateParticleGridAssociation_BucketSort::_Template_Sieve"
+          _spacetreeId, 
+          "UpdateParticleGridAssociation_BucketSort::_Template_Sieve"
         );
       }
     }
@@ -200,7 +201,8 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
           newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
           marker.x(),
           marker.h(),
-          _spacetreeId
+          _spacetreeId,
+          "UpdateParticleGridAssociation_BucketSort::_Template_Sieve"
         );
       }
     }

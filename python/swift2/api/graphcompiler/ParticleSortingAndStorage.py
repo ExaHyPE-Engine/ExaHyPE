@@ -7,8 +7,10 @@ class ParticleSortingAndStorage(Enum):
     """ """
 
     INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE = 0
-    SORT_ON_THE_FLY = 1
+    SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE = 1
 
+
+# Wor ist das scattering?
 
 class AddAdditionalDummySweep(Enum):
     NO = 0
