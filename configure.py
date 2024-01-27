@@ -30,7 +30,7 @@ parser.add_argument(
 )
 parser.add_argument("--fem", action="store_true", help="Enable finite elements support")
 parser.add_argument("--petsc", action="store_true", help="Enable PETSc support")
-parser.add_argument("--libxsmm", action="store_true", help="Enable libxsmm support")
+parser.add_argument("--libxsmm", action="store_true", help="Enable LIBXSMM support")
 parser.add_argument(
     "--multithreading",
     choices=["omp", "tbb", "sycl", "cpp"],
@@ -80,6 +80,15 @@ if args.multithreading == "omp":
     cxxflags += " -fopenmp"
     ldflags += " -fopenmp"
 
+    # Intel suggests to use -fiopenmp for performance and features:
+    # https://www.intel.com/content/www/us/en/developer/articles/guide/porting-guide-for-icc-users-to-dpcpp-or-icx.html
+    if "icx" in args.cc:
+        cflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
+        ldflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
+    if "icpx" in args.cxx:
+        cxxflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
+        ldflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
+
 if args.multithreading == "tbb":
     cflags += " -ltbb"
     cxxflags += " -ltbb"
@@ -100,7 +109,21 @@ if args.cc is None or args.cxx is None:
 Specify compatible C and C++ compilers by using --cc and --cxx or the environment flags CC and CXX."
     )
 
-if (
+if args.gpu == "omp" and "icx" in args.cc and "icpx" in args.cxx and "spir64" in args.arch:
+    cflags += (
+        " -fopenmp-targets="
+        + args.arch
+    )
+    cxxflags += (
+        " -fopenmp-targets="
+        + args.arch
+    )
+    ldflags += (
+        " -fopenmp-targets="
+        + args.arch
+    )
+
+elif (
     args.gpu == "omp"
     and ("clang" in args.cc or "clangwrap" in args.cc or "tdclang" in args.cc)
     and (
@@ -126,10 +149,12 @@ if (
     if args.asm:
         cflags += " -save-temps -Xcuda-ptxas -v"
         cxxflags += " -save-temps -Xcuda-ptxas -v"
+
 elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
     cflags += " -lstdc++fs --offload-arch=" + args.arch
     cxxflags += " -lstdc++fs --offload-arch=" + args.arch
     ldflags += " -lstdc++fs --offload-arch=" + args.arch
+
 elif (
     args.gpu == "omp"
     and ("nvc" in args.cc or "nvc++ in args.cc")
@@ -141,13 +166,19 @@ elif (
     if args.asm:
         cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
         cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mpp"
-elif args.gpu == "cpp" and "nvc" in args.cc and "nvc++" in args.cxx:
+
+elif (
+    args.gpu == "cpp"
+    and ("nvc" in args.cc or "nvc++ in args.cc")
+    and "nvc++" in args.cxx
+):
     cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch + " -stdpar=gpu"
     ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch
     if args.asm:
         cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
         cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
+
 elif args.gpu == "omp" and "gcc" in args.cc and "g++" in args.cxx:
     cflags += " -fopenmp -foffload=nvptx-none -march=native"
     cxxflags += " -fopenmp -foffload=nvptx-none -march=native"
@@ -155,6 +186,7 @@ elif args.gpu == "omp" and "gcc" in args.cc and "g++" in args.cxx:
     if args.asm:
         cflags += " -save-temps"
         cxxflags += " -save-temps"
+
 elif args.gpu == "sycl" and "icx" in args.cc and "icpx" in args.cxx:
     if "gfx" in args.arch:
         cflags += (
@@ -186,6 +218,7 @@ elif args.gpu == "sycl" and "icx" in args.cc and "icpx" in args.cxx:
             " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_"
             + args.arch
         )
+
 elif args.gpu == "cuda":
     nvccflags += f" -arch=sm_{args.arch}"
     if args.with_cuda is not None:
@@ -197,15 +230,18 @@ elif args.gpu == "cuda":
         raise Exception(
             "You need to specify the path to the CUDA toolkit when compiling with CUDA. Use --with-cuda=<CUDA_PATH>."
         )
+
 else:
     if args.gpu is not None:
         raise Exception(
-            "Unsupported GPU compiler and flag combination requested: CC="
+            "Unsupported compiler and GPU flag/arch combination requested: CC="
             + args.cc
             + " CXX="
             + args.cxx
             + " --gpu="
             + args.gpu
+            + " --arch="
+            + args.arch
         )
 
 if args.multithreading is not None:
@@ -311,7 +347,7 @@ if args.cmake:
     else:
         env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
 
-    print(f"Running: {env_vars_str} cmake .. {' '.join(configure_args)}")
+    print(f"{env_vars_str} cmake .. {' '.join(configure_args)}")
 
     # Update the current environment with the specified variables
     new_env = os.environ.copy()
@@ -373,7 +409,7 @@ else:
     else:
         env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
 
-    print(f"Running: {env_vars_str} ./configure {' '.join(configure_args)}")
+    print(f"{env_vars_str} ./configure {' '.join(configure_args)}")
 
     # Update the current environment with the specified variables
     new_env = os.environ.copy()
