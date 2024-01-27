@@ -24,11 +24,11 @@ plt.rcParams.update(
 
 output_file_name = "scaling-plot_GPUs_Leonardo"
 output_format = "png"
-title = "Strong Scaling - 1 GPU per Node"
-xlabel = "Number of Nodes"
-ylabel = "Number of Timesteps per Second (TPS)"
-label = "Order 7"
-plot_color = "red"
+title = "Strong Scaling"
+xlabel = "Number of GPUs"
+ylabel = "Number of Element Updates per Second (Throughput)"
+label = "Order 6"
+plot_color = "blue"
 log_x = True
 log_y = True
 
@@ -60,8 +60,8 @@ def parse_file(file_path):
             if 'Terminated successfully' in line:
                 throughput_value = -1
 
-            if 'TPS:' in line and throughput_value == -1:
-                throughput_value = float(line.split('TPS:')[1].split()[0])
+            if 'Throughput:' in line and throughput_value == -1:
+                throughput_value = float(line.split('Throughput:')[1].split()[0])
 
             if num_ranks is not None and num_cores is not None and num_gpus is not None and \
                 (throughput_value is not None and throughput_value is not -1):

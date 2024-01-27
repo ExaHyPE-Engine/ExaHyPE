@@ -9,42 +9,42 @@ Currently, the ExaSeis framework implements LOH.1 similar to as seen below.
 In the following some example configurations are given:
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 1 --amr-levels 0
+python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 1 --amr-levels 0
 ```
 Yields 27 patches.
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 2 --amr-levels 0
+python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 2 --amr-levels 0
 ```
 Yields 729 patches.
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 3 --amr-levels 0 --dg-order 5
+python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 3 --amr-levels 0 --dg-order 5
 ```
 Yields 19683 patches and requires ~3 GB of memory.
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 3 --amr-levels 0 --dg-order 7
+python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 3 --amr-levels 0 --dg-order 7
 ```
 Yields 19683 patches and requires ~6 GB of memory.
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 3
+python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 4 --amr-levels 0 --dg-order 3
 ```
 Yields 531441 patches and requires ~25 GB of memory.
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 4
+python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 4 --amr-levels 0 --dg-order 4
 ```
 Yields 531441 patches and requires ~42 GB of memory.
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 4 --amr-levels 0 --dg-order 5
+python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 4 --amr-levels 0 --dg-order 5
 ```
 Yields 531441 patches and requires ~62 GB of memory.
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptive --min-levels 5 --amr-levels 0 --dg-order 3
+python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 5 --amr-levels 0 --dg-order 3
 ```
 Yields 14348907 patches and requires >>250 GB of memory.
 
@@ -82,7 +82,7 @@ A job script for Leonardo can be found in this application's directory.
 ## Scaling Results
 
 ```shell
-python3 exaseis.py -s ADERDGRusanovGlobalAdaptiveEnclave --stateless --min-levels 4 --amr-levels 0 --dg-order 6 -f 5000
+python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 4 --amr-levels 0 --dg-order 7 -f 5000
 ```
 
 ![](scaling-plot_GPUs_Leonardo_Order_5.png)
@@ -90,11 +90,5 @@ python3 exaseis.py -s ADERDGRusanovGlobalAdaptiveEnclave --stateless --min-level
 ![](scaling-plot_GPUs_Leonardo_Order_6.png)
 
 ![](scaling-plot_GPUs_Leonardo_Order_7.png)
-
-![](scaling-plot_Leonardo_1_GPU_per_Node_Order_5.png)
-
-![](scaling-plot_Leonardo_1_GPU_per_Node_Order_6.png)
-
-![](scaling-plot_Leonardo_1_GPU_per_Node_Order_7.png)
 
 ## Score-P

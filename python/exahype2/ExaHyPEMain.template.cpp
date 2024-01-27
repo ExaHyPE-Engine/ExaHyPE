@@ -38,9 +38,6 @@
 #include "toolbox/blockstructured/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
-//#include <scorep/SCOREP_User.h>
-//SCOREP_USER_REGION_DEFINE(timeStepHandle)
-
 {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
 #include <fenv.h>
 #pragma float_control(precise, on)
@@ -51,7 +48,7 @@ using namespace {{NAMESPACE | join("::")}};
 
 tarch::logging::Log _log("::");
 
-tarch::timing::Measurement tpsMeasurement;
+tarch::timing::Measurement throughputMeasurement;
 tarch::timing::Measurement gridConstructionMeasurement;
 tarch::timing::Measurement timeStepMeasurement;
 tarch::timing::Measurement plotMeasurement;
@@ -276,8 +273,8 @@ void step() {
 
     repositories::finishGridConstructionStep();
 
-    // We always overestimate so give the convergence the opportunity to catch up. The constant
-    // here is a magic one.
+    // We always overestimate so give the convergence the opportunity to catch up.
+    // The constant here is a magic one.
     creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
                                  + tarch::multicore::Core::getInstance().getNumberOfThreads() * 3;
   } break;
@@ -332,12 +329,12 @@ void step() {
     repositories::finishGridConstructionStep();
 
     if (
-          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
-          and
-          not repositories::loadBalancer.hasSplitRecently()
-          and
-          repositories::loadBalancer.isEnabled(false)
-        ) {
+      ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
+      and
+      not repositories::loadBalancer.hasSplitRecently()
+      and
+      repositories::loadBalancer.isEnabled(false)
+    ) {
       logInfo(
         "step()",
         "Have to decrement local cell counter "
@@ -423,17 +420,31 @@ void step() {
 
     observers::TimeStep observer;
     watch.start();
-
-    //SCOREP_USER_REGION_BEGIN(timeStepHandle, "timeStep", SCOREP_USER_REGION_TYPE_FUNCTION)
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-    //SCOREP_USER_REGION_END(timeStepHandle)
     watch.stop();
     timeStepMeasurement.setValue(watch.getCalendarTime());
 
-    const double ticksPerSecond = double(1.0 / watch.getCalendarTime());
-    tpsMeasurement.setValue(ticksPerSecond);
+    const auto numberOfCells = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells();
+    int globalNumberOfCells = 0;
+#ifdef Parallel
+    tarch::mpi::Rank::getInstance().reduce(
+      &numberOfCells,
+      &globalNumberOfCells,
+      1,
+      MPI_INT,
+      MPI_SUM,
+      tarch::mpi::Rank::getGlobalMasterRank(),
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+#else
+    globalNumberOfCells = numberOfCells;
+#endif
+
+    const int throughput = globalNumberOfCells / watch.getCalendarTime();
+    throughputMeasurement.setValue(throughput);
     if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-      logInfo("step()", "TPS: " << std::fixed << std::setprecision(4) << ticksPerSecond);
+      logInfo("step()", "Number of Cells: " << globalNumberOfCells);
+      logInfo("step()", "Throughput: " << throughput << " cells/s");
     }
 
     OTTER_TASK_WAIT_FOR(step_task, children);
@@ -529,21 +540,19 @@ int main(int argc, char** argv) {
         logInfo("main()", "Terminated successfully");
         logInfo(
           "main()",
-          "Initial grid construction: " << gridConstructionMeasurement.getAccumulatedValue(
-          ) << "s\t" << gridConstructionMeasurement.toString()
+          "Initial grid construction: " << gridConstructionMeasurement.getAccumulatedValue() << " s\t" << gridConstructionMeasurement.toString()
         );
         logInfo(
           "main()",
-          "Plotting:                  " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString()
+          "Plotting:                  " << plotMeasurement.getAccumulatedValue() << " s\t" << plotMeasurement.toString()
         );
         logInfo(
           "main()",
-          "Time stepping:             " << timeStepMeasurement.getAccumulatedValue(
-          ) << "s\t" << timeStepMeasurement.toString()
+          "Time stepping:             " << timeStepMeasurement.getAccumulatedValue() << " s\t" << timeStepMeasurement.toString()
         );
         logInfo(
           "main()",
-          "TPS:                       " << tpsMeasurement.getValue() << "\t" << tpsMeasurement.toString()
+          "Throughput:                " << throughputMeasurement.getValue() << " cells/s\t" << throughputMeasurement.toString()
         );
       } else if (isPeanoComputeNode) {
         while (peano4::parallel::Node::getInstance().continueToRun()) {

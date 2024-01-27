@@ -178,8 +178,8 @@ if(WITH_MULTITHREADING)
   target_compile_definitions(project_options INTERFACE SharedMemoryParallelisation)
   endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
-  #find_package(OpenMP REQUIRED)
-  #check_include_files(omp.h HAVE_OMP_H)
+  find_package(OpenMP REQUIRED)
+  check_include_files(omp.h HAVE_OMP_H)
 
   # Workaround for Intel oneAPI. TODO: Fix this:
   # "PLEASE append the compiler options "-save-temps -v", rebuild the application to get the full command which is failing"
@@ -187,11 +187,8 @@ if(WITH_MULTITHREADING STREQUAL "omp")
     target_compile_options(project_options INTERFACE -fopenmp)
     target_link_libraries(project_options INTERFACE -fopenmp)
   else()
-    # Workaround for Score-P. TODO: Fix this:
-    target_compile_options(project_options INTERFACE -fopenmp)
-    target_link_libraries(project_options INTERFACE -fopenmp)
     target_link_libraries(project_options INTERFACE "-Wl,--copy-dt-needed-entries")
-    #target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
+    target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
   endif()
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)

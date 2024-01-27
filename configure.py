@@ -307,8 +307,7 @@ if args.cmake:
 
     # Create a string to display environment variables like in a terminal
     if args.scorep:
-        # --thread=omp:ompt
-        env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+        env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler --thread=omp:ompt\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
     else:
         env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
 
@@ -370,8 +369,7 @@ else:
 
     # Create a string to display environment variables like in a terminal
     if args.scorep:
-        # --thread=omp:ompt
-        env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
+        env_vars_str = "SCOREP_WRAPPER=OFF SCOREP_WRAPPER_INSTRUMENTER_FLAGS=\"--user --nocompiler --thread=omp:ompt\" " + " ".join(f'{key}="{value}"' for key, value in env_vars.items())
     else:
         env_vars_str = " ".join(f'{key}="{value}"' for key, value in env_vars.items())
 
