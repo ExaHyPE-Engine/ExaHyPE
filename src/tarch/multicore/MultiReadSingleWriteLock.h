@@ -22,6 +22,9 @@ class tarch::multicore::MultiReadSingleWriteLock {
     const bool                      _isReadLock;
     bool                            _lockIsAquired;
   public:
+    static constexpr bool Read  = true;
+    static constexpr bool Write = false;
+
     /**
      * Construct lock
      *
