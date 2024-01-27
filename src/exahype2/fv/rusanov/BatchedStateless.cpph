@@ -77,7 +77,7 @@ namespace exahype2::fv::rusanov::internal {
     // Compute damping due to max eigenvalue
     // ====================================================
     simtDPlusOneForWithSchedulerInstructions(
-      volume, internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
+      volume, internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize, patchData.numberOfCells), loopParallelism
     ) {
       volume(0) -= HaloSize;
       const int patchIndex = volume(Dimensions);
@@ -98,7 +98,7 @@ namespace exahype2::fv::rusanov::internal {
     endSimtDfor
 
       simtDPlusOneForWithSchedulerInstructions(
-        volume, internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
+        volume, internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize, patchData.numberOfCells), loopParallelism
       ) {
       volume(1) -= HaloSize;
       const int patchIndex = volume(Dimensions);
@@ -120,7 +120,7 @@ namespace exahype2::fv::rusanov::internal {
 
 #if Dimensions == 3
       simtDPlusOneForWithSchedulerInstructions(
-        volume, internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
+        volume, internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize, patchData.numberOfCells), loopParallelism
       ) {
       volume(2) -= HaloSize;
       const int patchIndex = volume(Dimensions);
@@ -174,7 +174,7 @@ namespace exahype2::fv::rusanov::internal {
       // ====================================================
       if constexpr (EvaluateFlux) {
       simtDPlusOneForWithSchedulerInstructions(
-        volume, internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
+        volume, internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize, patchData.numberOfCells), loopParallelism
       ) {
         volume(0) -= HaloSize;
         const int patchIndex = volume(Dimensions);
@@ -195,7 +195,7 @@ namespace exahype2::fv::rusanov::internal {
       endSimtDfor
 
         simtDPlusOneForWithSchedulerInstructions(
-          volume, internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
+          volume, internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize, patchData.numberOfCells), loopParallelism
         ) {
         volume(1) -= HaloSize;
         const int patchIndex = volume(Dimensions);
@@ -217,7 +217,7 @@ namespace exahype2::fv::rusanov::internal {
 
 #if Dimensions == 3
         simtDPlusOneForWithSchedulerInstructions(
-          volume, internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
+          volume, internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize, patchData.numberOfCells), loopParallelism
         ) {
         volume(2) -= HaloSize;
         const int patchIndex = volume(Dimensions);
@@ -263,7 +263,7 @@ namespace exahype2::fv::rusanov::internal {
 
     if constexpr (EvaluateNonconservativeProduct) {
       simtDPlusOneForWithSchedulerInstructions(
-        volume, internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
+        volume, internal::rangeOverVolumesTimesPatchesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize, patchData.numberOfCells), loopParallelism
       ) {
         volume(0) -= HaloSize;
         const int patchIndex = volume(Dimensions);
@@ -284,7 +284,7 @@ namespace exahype2::fv::rusanov::internal {
       endSimtDfor
 
         simtDPlusOneForWithSchedulerInstructions(
-          volume, internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
+          volume, internal::rangeOverVolumesTimesPatchesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize, patchData.numberOfCells), loopParallelism
         ) {
         volume(1) -= HaloSize;
         const int patchIndex = volume(Dimensions);
@@ -304,9 +304,9 @@ namespace exahype2::fv::rusanov::internal {
       }
       endSimtDfor
 
-#if Dimension == 3
+#if Dimensions == 3
         simtDPlusOneForWithSchedulerInstructions(
-          volume, internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, patchData.numberOfCells), loopParallelism
+          volume, internal::rangeOverVolumesTimesPatchesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize, patchData.numberOfCells), loopParallelism
         ) {
         volume(2) -= HaloSize;
         const int patchIndex = volume(Dimensions);

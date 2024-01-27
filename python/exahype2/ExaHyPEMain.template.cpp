@@ -567,7 +567,7 @@ int main(int argc, char** argv) {
   peano4::shutdownSingletons();
   repositories::DataRepository::shutdownDatatypes();
   tarch::multicore::shutdownSmartMPI();
-  exahype2::shutdownNonCritialAssertionEnvironment();
+  exahype2::shutdownNonCriticalAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;
