@@ -12,8 +12,12 @@ from .SpeciesStepOrdering import (
 from .Sequential import (
     particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory,
     particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory,
+    particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory,
+    particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory,
     initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory,
-    initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory
+    initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory,
+    initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory,
+    initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory,
 )
 
 

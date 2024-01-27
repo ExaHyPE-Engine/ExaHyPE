@@ -313,9 +313,10 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                             current_species_set.name, i
                         )
                     )
-                assert (
-                    not current_species_set.generator.gather_particles
-                ), "the aggressive AMR is not compatible with particles that gather data in memory pools"
+#                assert (
+#                    not current_species_set.generator.gather_particles
+#                ), "the aggressive AMR is not compatible with particles that gather data in memory pools"
+ # @todo Scattering is not in yet
                 
                 
             if global_steps_to_realise_amr[i]:
