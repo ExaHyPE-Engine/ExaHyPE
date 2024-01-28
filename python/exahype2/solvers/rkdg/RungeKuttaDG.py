@@ -75,7 +75,7 @@ class RungeKuttaDG(object):
     On the boundary, I store both the left and right solution projections. Per RK step, we
     project the linear combination onto the face. This is in line with the action set
     ComputeFinalLinearCombination which simply copies over the old time step
-    into the linear combination field in the very first Runge Kutta step.
+    into the linear combination field in the very first Runge-Kutta step.
 
     Our DG implementation is not tied to one particular Riemann solver, even though most
     users will likely use Rusanov. Therefore, it is not clear which data is to be projected
@@ -1124,6 +1124,7 @@ We use RK("""
         datamodel.add_face(self._old_solution_projection)
         datamodel.add_face(self._Riemann_solution)
 
+
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         """
         Tell Peano what data to move around
@@ -1648,9 +1649,9 @@ We use RK("""
 
              my_solver.postprocess_updated_cell = " ""
              {
-               constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+               constexpr int itmax = ({{DG_ORDER}} + 1) * ({{DG_ORDER}} + 1) * ({{DG_ORDER}} + 1);
                int index = 0;
-               for (int i=0;i<itmax;i++) {
+               for (int i = 0; i < itmax; i++) {
                  applications::exahype2::ccz4::enforceCCZ4constraints(dQdt + index);
                  index += {{NUMBER_OF_UNKNOWNS}};
                }
@@ -1670,7 +1671,7 @@ We use RK("""
         spot more variables that are on offer. Whenever I use the brackets below,
         these are symbolic constants which will be befilled with the proper constants
         when the postprocessing code snippet is inserted into the generated code.
-        The other variables are directly available, i.e. no text replacement is done
+        The other variables are directly available, i.e., no text replacement is done
         here.
 
         - {{DG_ORDER}} Spatial discretisation order.
@@ -1698,10 +1699,10 @@ We use RK("""
 
              my_solver.postprocess_updated_cell = " ""
              {
-               constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+               constexpr int itmax = ({{DG_ORDER}} +1 ) * ({{DG_ORDER}} + 1) * ({{DG_ORDER}} + 1);
                int index = 0;
-               for (int i=0;i<itmax;i++) {
-                 applications::exahype2::ccz4::enforceCCZ4constraints( dQdt+index );
+               for (int i = 0; i < itmax; i++) {
+                 applications::exahype2::ccz4::enforceCCZ4constraints(dQdt + index);
                  index += {{NUMBER_OF_UNKNOWNS}};
                }
              }
@@ -1720,7 +1721,7 @@ We use RK("""
         spot more variables that are on offer. Whenever I use the brackets below,
         these are symbolic constants which will be befilled with the proper constants
         when the postprocessing code snippet is inserted into the generated code.
-        The other variables are directly available, i.e. no text replacement is done
+        The other variables are directly available, i.e., no text replacement is done
         here.
 
         - {{DG_ORDER}} Spatial discretisation order.

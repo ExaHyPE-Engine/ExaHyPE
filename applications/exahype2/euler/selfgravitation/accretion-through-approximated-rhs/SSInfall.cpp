@@ -1,10 +1,10 @@
 #include "../../selfgravitation/accretion-through-approximated-rhs/SSInfall.h"
 
-#include "../../../../../src/tarch/NonCriticalAssertions.h"
 #include "Constants.h"
 #include "exahype2/RefinementControl.h"
 
 #include "tarch/multicore/Lock.h"
+#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   applications::exahype2::euler::sphericalaccretion::SSInfall::_log( "applications::exahype2::euler::sphericalaccretion::SSInfall" );
