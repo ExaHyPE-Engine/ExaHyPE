@@ -7,12 +7,10 @@
 
 #include "tarch/Assertions.h"
 
-#if defined __has_include
-  #if __has_include (<lapacke.h>)
-    #include <lapacke.h>
-    #define LAPACKE_AVAILABLE true
-  #endif
+#ifdef UseLapack
+#include <lapacke.h>
 #endif
+
 
 namespace tarch {
   namespace la {
@@ -49,7 +47,7 @@ namespace tarch {
       const Vector<Rows,Scalar>&       f
     );
 
-    #if defined(LAPACKE_AVAILABLE)
+    #ifdef UseLapack
     /**
     * Accepts a square matrix R and inverts it using BLAS routines.
     * See documentation on these functions [here](https://www.netlib.org/lapack/explore-html-3.6.1/dd/d9a/group__double_g_ecomputational_ga0019443faea08275ca60a734d0593e60.html)

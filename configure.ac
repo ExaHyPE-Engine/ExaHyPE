@@ -554,6 +554,24 @@ fi
 
 
 #
+# LAPACK
+#
+AC_ARG_WITH(lapack,
+  AS_HELP_STRING([--with-lapack],[enable LAPACK [default=false]]),
+  [ AC_MSG_CHECKING(for lapack)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_lapack=false ;;
+      *)     AC_MSG_RESULT(yes);   use_lapack=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for lapack); AC_MSG_RESULT(no); use_lapack=false ])
+AM_CONDITIONAL([UseLapack],[test "x$use_lapack" = xtrue])
+
+if test "$use_lapack" == true; then
+  AC_DEFINE([UseLapack], [UseLapack], [UseLapack])
+fi
+
+
+#
 # ===============================================================
 # Tailored toolchains
 #
@@ -1116,6 +1134,27 @@ if test "$use_Eigen" != false; then
     cd eigen
     cd ../..
   fi
+fi
+
+
+#
+# LAPACK
+#
+if test "$use_lapack" != false; then
+  # Find the lapack header
+  AC_CHECK_HEADER([lapacke.h], [
+  ], [
+    AC_MSG_ERROR([LAPACK headers not found])
+  ])
+  # Check for libraries
+  AC_CHECK_LIB([lapack], [LAPACKE_dgetrf], [
+    LAPACK_LIBS="ac_cv_search_LAPACKE_dgetrf"
+  ], [
+    AC_MSG_ERROR([LAPACK library not found])
+  ])
+  AC_SUBST([LAPACK_LIBS])
+  LAPACK_INCLUDE_DIR=$(dirname $LAPACK_LIBS)
+  AC_SUBST([LAPACK_INCLUDE_DIR])
 fi
 
 

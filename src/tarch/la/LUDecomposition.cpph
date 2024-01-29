@@ -83,7 +83,7 @@ double tarch::la::det(
   return R(0,0)*R(1,1)-R(0,1)*R(1,0);
 }
 
-#if defined(LAPACKE_AVAILABLE) and defined(CBLAS_AVAILABLE)
+#ifdef UseLapack
 template<int Rows, typename Scalar>
 tarch::la::Matrix<Rows,Rows,Scalar> tarch::la::invert(
   const tarch::la::Matrix<Rows,Rows,Scalar>&  R
@@ -107,7 +107,6 @@ tarch::la::Matrix<Rows,Rows,Scalar> tarch::la::invert(
 
   return M;
 }
-
 
 #else
 
