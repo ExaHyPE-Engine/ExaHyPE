@@ -100,8 +100,8 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
       self._ncp_implementation, 
       self._source_term_implementation, 
       compute_max_eigenvalue_of_next_time_step = True,
-      solver_variant                           = SolverVariant.Multicore,
-      kernel_variant                           = KernelVariant.BatchedAoSHeap,
+      solver_variant                           = SolverVariant.WithVirtualFunctions,
+      kernel_variant                           = KernelVariant.PatchWiseAoSHeap,
       KOSigma                                  = self._KO_Sigma
     )
 
