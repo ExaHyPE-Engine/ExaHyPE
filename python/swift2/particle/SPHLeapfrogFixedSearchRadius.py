@@ -460,17 +460,17 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             )
         elif (
             self._particle_interaction_kernel_realisation
-            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKSALL
+            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS
         ):
             iterate_over_particles_assigned_to_vertex = (
                 "::swift2::kernels::forAllParticlesVectoriseWithCheckPreamble( marker, assignedParticles, numberOfAssignedParticles, {0}<globaldata::"
                 + self.name
-                + "Vectorised>);"
+                + ">);"
             )
             iterate_over_particles_assigned_to_cell = (
                 "::swift2::kernels::forAllParticlePairsVectoriseWithCheckPreamble( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, {0}<globaldata::"
                 + self.name
-                + "Vectorised>);"
+                + ">);"
             )
         else:
             raise NotImplemented()
