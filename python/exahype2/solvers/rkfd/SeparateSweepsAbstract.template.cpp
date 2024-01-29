@@ -209,6 +209,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::RungeKuttaSubStep{{item+1}};
       break;
   {% endfor %}
+    case SolverState::Suspended:
     case SolverState::Plotting:
     case SolverState::PlottingAfterGridInitialisation:
     case SolverState::GridInitialisation:
