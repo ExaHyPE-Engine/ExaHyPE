@@ -36,7 +36,7 @@ So it needs access to UpdateParticleGridAssocation.
 Please note that you will need potentially multiple follow-up action sets
 aka mesh sweeps: 
 In the first sweep, all particles are put into the right place in space and 
-the mesh hierarchy yet maybe on a too coarse level.
+the mesh hierarchy yet may be on a too coarse level.
 In the second sweep, we drop them.
 Throughout the drop, we might drop them through a horizontal tree cut.
 We cannot handle this, so have to send out the particle through message passing
