@@ -106,16 +106,17 @@ void toolbox::particles::ParticleSet<T>::clearReassignmentStatistics() {
 template <typename T>
 void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
 #if PeanoDebug >= 1 and !defined(Parallel) and !defined(SharedMemoryParallelisation)
-  nonCriticalAssertion7(
+  nonCriticalAssertion9(
     _numberOfRemainingLocalParticles == 0 or _numberOfRemainingLocalParticles == _numberOfParticlesInLastClear or _numberOfParticlesInLastClear == 0,
     _numberOfParticlesInLastClear,
     _numberOfRemainingLocalParticles,
+    _numberOfIncomingParticles,
     _numberOfLeavingLocalParticles,
     _numberOfExpiredHaloParticles,
     _numberOfLeavingLocalParticles,
     _numberOfAddedParticlesAlongBoundary,
     _numberOfReplacedParticlesAlongBoundary,
-    _numberOfDroppedVirtualParticles
+    _numberOfDroppedIncomingVirtualParticles
   );
 
   _numberOfParticlesInLastClear = _numberOfRemainingLocalParticles;
