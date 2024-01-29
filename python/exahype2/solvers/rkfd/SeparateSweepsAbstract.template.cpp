@@ -380,6 +380,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Plotting:
       return "plotting";
+    case SolverState::Suspended:
+      return "suspended";
     case SolverState::PlottingAfterGridInitialisation:
       return "plotting-after-grid-initialisation";
     case SolverState::RungeKuttaSubStep0AfterGridInitialisation:
