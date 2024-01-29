@@ -52,6 +52,14 @@ cell_from_face  = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensi
 riemann_matrix  = np.zeros( (args.spfn * (args.poly_degree + 1) ** (args.dimensions-1), 2* args.ppfn * (args.poly_degree + 1) ** (args.dimensions-1)) )
 approximate_system_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 
+matrices = multigrid.matrixgenerators.GLMatrixFree(
+  args.poly_degree,
+  args.dimensions,
+  args.upcn,
+  False     # see if this causes error
+)
+
+assert 1
 #! [Construct matrices]
 
 

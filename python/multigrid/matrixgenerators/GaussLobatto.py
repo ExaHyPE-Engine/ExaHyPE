@@ -3,6 +3,7 @@
 import numpy as np
 from   numpy.polynomial.legendre  import leggauss
 from   scipy.interpolate import lagrange
+from abc import abstractmethod
 
 import peano4
 
@@ -11,7 +12,7 @@ from .MatrixGenerator import MatrixGenerator
 from .BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
 
 class GaussLobatto(MatrixGenerator):
-  """!
+  '''
   
   Simple matrix generator assuming that we use a Gauss Lobatto unknown layout
   
@@ -22,7 +23,7 @@ class GaussLobatto(MatrixGenerator):
   with the corresponding number of unknowns, you get the degrees of freedom
   within a global assembly matrix which correspond to volumetric data. 
   
-  """
+  '''
   def __init__(self,
                Dimensions,
                poly_degree,
@@ -97,6 +98,13 @@ class GaussLobatto(MatrixGenerator):
 
     output.append(firstWeight)
     return output
+
+  def get_weights1d_legendre(self):
+    return super( GaussLobatto, self ).get_weights1d()
+
+  def get_points1d_legendre(self):
+    return super( GaussLobatto, self ).get_points1d()
+
   
   def get_points_unit_interval(self):
     scale = lambda x: 0.5*(x+1)
@@ -125,12 +133,14 @@ class GaussLobatto(MatrixGenerator):
     The resulting matrix has to be scaled by @f$ h^d @f$.
 
     '''
-    dim    = self.cell_nodes * self.unknowns_per_cell_node
-    output = np.zeros((dim,dim))
-    for i in range( self.cell_nodes ):
-      for j in range( self.cell_nodes ):
-        for k in range( self.unknowns_per_cell_node ):
-          output[self.unknowns_per_cell_node*i+k, self.unknowns_per_cell_node*j+k] += self.eval_integral(functions=[ self.get_polynomial(i), self.get_polynomial(j) ]) 
+    # dim    = self.cell_nodes * self.unknowns_per_cell_node
+    # output = np.zeros((dim,dim))
+    # for i in range( self.cell_nodes ):
+    #   for j in range( self.cell_nodes ):
+    #     for k in range( self.unknowns_per_cell_node ):
+    #       output[self.unknowns_per_cell_node*i+k, self.unknowns_per_cell_node*j+k] += self.eval_integral(functions=[ self.get_polynomial(i), self.get_polynomial(j) ]) 
+    
+    output = self.block_matrix._RHS_CC[(1,1)]
     return output
 
   def get_cell_system_matrix_for_laplacian(self):
@@ -283,9 +293,9 @@ class GaussLobatto(MatrixGenerator):
                        a,  0,0.5,  0, -a,  0,0.5,  0,
                        0,  a,  0,0.5,  0, -a,  0,0.5]).reshape(4,8)
   
-    # def get_face_to_face_matrix(self):
+  # def get_face_to_face_matrix(self):
   #   """ Face-face coupling block.
-  #   I provede here the entire block includind identities and zeros, not only the averaging part,
+  #   I provide here the entire block includind identities and zeros, not only the averaging part,
   #   because later we may want to
   #   1) use more general definition of the flux,
   #   2) keep the face-face mass matrices, resulting from L-2 projections, in this block.
@@ -305,3 +315,20 @@ class GaussLobatto(MatrixGenerator):
   
   #   # dim = self.face_nodes * self.unknowns_per_face_node * 2 # * 2 at the end since we are glueing together 2 faces
   #   # return np.eye(dim,dim)
+
+
+'''
+New class to mimic the one above
+'''
+class GLMatrixFree(GaussLobatto):
+  def __init__(self,
+               Dimensions,
+               poly_degree,
+               unknowns_per_cell_node=1,
+               unknowns_per_face_node=1,
+               use_unit_interval=False):
+    super( GaussLobatto, self ).__init__(Dimensions,
+                                         poly_degree
+                                         )
+  def get_A_tilde():
+    raise NotImplementedError
