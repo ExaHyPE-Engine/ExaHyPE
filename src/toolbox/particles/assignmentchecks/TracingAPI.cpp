@@ -177,7 +177,7 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier toolbox::part
   ParticleIdentifier result(particleName, particleX);
 
   if (fitToExistingParticles) {
-    tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,true);
+    tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
     auto currentSnapshot = _data.crbegin();
     while (currentSnapshot != _data.crend()) {
       for (const auto& event: *currentSnapshot) {
@@ -202,13 +202,13 @@ toolbox::particles::assignmentchecks::internal::Database::Database() {
 
 void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(const std::string& meshSweepName) {
   logDebug("addMeshSweep()", "end mesh sweep with " << _data.rbegin()->size() << " event(s)");
-  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,false);
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Write);
   _data.push_back(MeshSweepData(meshSweepName));
 };
 
 
 int toolbox::particles::assignmentchecks::internal::Database::getCurrentMeshSweep() {
-  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,true);
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
   return _data.size()-1;
 }
 
@@ -218,7 +218,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
   int                        spacetreeId,
   int                        firstNRecentEntriesToSkip
 ) {
-  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,true);
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
 
   auto currentSnapshot = _data.crbegin();
 
@@ -272,7 +272,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
 
 
 std::string toolbox::particles::assignmentchecks::internal::Database::toString() {
-  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,true);
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
 
   std::ostringstream msg;
 
@@ -293,7 +293,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::toString()
 
 
 int toolbox::particles::assignmentchecks::internal::Database::totalEntries(const ParticleIdentifier& identifier) {
-  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,true);
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
 
   int result = 0;
   for (auto& p: _data) {
@@ -303,7 +303,7 @@ int toolbox::particles::assignmentchecks::internal::Database::totalEntries(const
 }
 
 std::string toolbox::particles::assignmentchecks::internal::Database::lastMeshSweepSnapshot() {
-  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,true);
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
 
   std::ostringstream msg;
   if (not _data.empty()) {
@@ -320,7 +320,7 @@ std::string toolbox::particles::assignmentchecks::internal::Database::lastMeshSw
 }
 
 std::string toolbox::particles::assignmentchecks::internal::Database::particleHistory(const ParticleIdentifier& identifier) {
-  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,true);
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
 
   std::ostringstream msg;
   msg << std::endl
@@ -364,12 +364,13 @@ std::string toolbox::particles::assignmentchecks::internal::Database::particleHi
 }
 
 void toolbox::particles::assignmentchecks::internal::Database::addEvent(ParticleIdentifier identifier, const Event& event) {
-  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,false);
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Write);
 
   assertion(not _data.empty());
   MeshSweepData& snapshot = *_data.rbegin();
   if (snapshot.count(identifier) == 0) {
     snapshot.insert(std::pair<ParticleIdentifier, ParticleEvents>(identifier, ParticleEvents()));
+    logDebug( "addEvent(...)", "add new particle history thread in this snapshot for " << identifier.toString() );
   }
   snapshot[identifier].push_back(event);
 }

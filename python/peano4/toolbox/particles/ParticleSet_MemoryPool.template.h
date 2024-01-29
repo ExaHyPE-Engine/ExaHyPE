@@ -47,8 +47,9 @@
   class {{CLASSNAME}}: public toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >
                        {
     public:
-      typedef toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >  Base;
-      typedef {{MEMORY_POOL_TYPE}}< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >          MemoryPool;
+      using Base       = toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >;
+      using MemoryPool = {{MEMORY_POOL_TYPE}}< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >;
+
       /**
        * This is the container as it looks like from outside.
        * Internally, we use instances of MemoryPool to administer
@@ -270,6 +271,15 @@
        * realisation which scatters particles over the heap.
        */
       void gather();
+
+      /**
+       * Scatter data
+       *
+       * This routine is usually not called on the user side, as we try to
+       * hide it, i.e. invoke scatter internally. There are very few cases
+       * where you might want to scatter manually.
+       */
+      void scatter();
 
       /**
        * Are particles gathered atm

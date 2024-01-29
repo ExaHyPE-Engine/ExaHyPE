@@ -28,10 +28,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
       // this is not a bug but intentional.
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
       {
+        assertionVectorNumericalEquals2( neighbour._debugX, _debugX, neighbour.toString(), toString() );
+        assertionVectorNumericalEquals2( neighbour._debugH, _debugH, neighbour.toString(), toString() );
+
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
         for (auto p: neighbour._memoryPool.container) {
           const bool incomingParticleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
-          //          if (not incomingParticleWillBeLocal and p->getParallelState()==DoFType::ParallelState::Virtual){
           if (p->getParallelState()==DoFType::ParallelState::Virtual) {
             logDebug(
               "merge(...)",
@@ -42,6 +44,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
             _numberOfDroppedIncomingVirtualParticles++;
           }
           else {
+            assertion1(
+              marker.isContainedInAdjacentCells(p->getX(), 0.5, toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+              p->toString()
+            );
             p->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
             Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _memoryPool.container.begin(), _memoryPool.container.end());
             if ( iteratorToExistingCopy!=end() ) {
@@ -49,6 +55,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
                 tarch::multicore::Lock lock( _statisticsSemaphore );
                 _numberOfRedundantlySharedLocalParticles++;
               }
+              assertionVectorNumericalEquals2( (*iteratorToExistingCopy)->getDebugX(), p->getDebugX(), (*iteratorToExistingCopy)->toString(), p->toString() );
+              assertionVectorNumericalEquals2( (*iteratorToExistingCopy)->getDebugH(), p->getDebugH(), (*iteratorToExistingCopy)->toString(), p->toString() );
               toolbox::particles::assignmentchecks::detachParticleFromVertex(
                 toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
                 p->getX(), (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
@@ -61,6 +69,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
                 spacetreeId,
                 "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()"
               );
+              // See docu of replace(): it will delete p
+              toolbox::particles::assignmentchecks::assignParticleToVertex(
+                toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+                p->getX(), p->getParallelState()==DoFType::ParallelState::Local,
+                marker.x(), marker.h(), spacetreeId,
+                "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()-replaced"
+              );
               _memoryPool.replace( iteratorToExistingCopy, p );
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfReplacedParticlesAlongBoundary++;
@@ -70,13 +85,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
               _memoryPool.container.push_back(p);
               tarch::multicore::Lock lock( _statisticsSemaphore );
               _numberOfAddedParticlesAlongBoundary++;
+              toolbox::particles::assignmentchecks::assignParticleToVertex(
+                toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
+                p->getX(), p->getParallelState()==DoFType::ParallelState::Local,
+                marker.x(), marker.h(), spacetreeId,
+                "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()"
+              );
             }
-            toolbox::particles::assignmentchecks::assignParticleToVertex(
-              toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
-              p->getX(), p->getParallelState()==DoFType::ParallelState::Local,
-              marker.x(), marker.h(), spacetreeId,
-              "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()"
-            );
           }
         }
 
@@ -313,6 +328,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::grabParticles({{CLASSNAME}}&  pa
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::gather() {
   _memoryPool.gather();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::scatter() {
+  _memoryPool.scatter();
 }
 
 

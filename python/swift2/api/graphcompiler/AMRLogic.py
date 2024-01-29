@@ -8,6 +8,9 @@ from peano4.solversteps import Steps
 from swift2.actionsets.DynamicMeshRefinementAnalysis import (
     DynamicMeshRefinementAnalysis,
 )
+from swift2.actionsets.ScatterGlobalMemory import (
+    ScatterGlobalMemory
+)
 from swift2.actionsets.DynamicMeshRefinementTrigger import DynamicMeshRefinementTrigger
 
 
@@ -364,12 +367,22 @@ def add_dynamic_mesh_refinement_and_particle_resorting(
                         steps[i].lowest_descend_invocation_order() - 1
                     )
                     action_set_gather.parallel = True
+                    
+                    action_set_scatter = ScatterGlobalMemory(
+                            particle_set=current_species_set,
+                    )
+                    action_set_scatter.descend_invocation_order = (
+                        steps[i].lowest_descend_invocation_order() - 1
+                    )
+                    action_set_scatter.parallel = True
+                    
                     #
                     # We have to add it once more, as a sieve or drop might trigger a "new" 
                     # neighbour exchange which then has to be taken into account on the 
                     # receiving side
                     #
                     steps[i].add_action_set(action_set_gather)
+                    steps[i].add_action_set(action_set_scatter)
                     steps[(i + 1) % (len(steps))].add_action_set(action_set_gather)
                     if verbose:
                         print(

@@ -27,6 +27,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
       // this is not a bug but intentional.
     case ::peano4::grid::TraversalObserver::SendReceiveContext::BoundaryExchange:
       {
+        assertionVectorNumericalEquals2( neighbour._debugX, _debugX, neighbour.toString(), toString() );
+        assertionVectorNumericalEquals2( neighbour._debugH, _debugH, neighbour.toString(), toString() );
+
         logDebug( "merge(...)", "merge " << neighbour.size() << " particles from neighbour " << neighbour.toString() << " into local vertex set of " << marker.toString() );
         for (auto p: neighbour) {
           const bool incomingParticleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
@@ -40,6 +43,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(
             _numberOfDroppedIncomingVirtualParticles++;
           }
           else {
+            assertion1(
+              marker.isContainedInAdjacentCells(p->getX(), 0.5, toolbox::particles::internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+              p->toString()
+            );
             p->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
             Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _container.begin(), _container.end());
             if ( iteratorToExistingCopy!=end() ) {
