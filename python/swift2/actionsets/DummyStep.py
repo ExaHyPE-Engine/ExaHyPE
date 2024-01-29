@@ -13,7 +13,7 @@ class DummyStep(ActionSet):
 
     Dummy step action set
 
-    Does almost nothering, as the name suggests. The only thing it does is to 
+    Does almost nothing, as the name suggests. The only thing it does is to 
     get the particle-vertex association tracing right, i.e. it tells the API 
     that a new mesh sweep starts.
 
