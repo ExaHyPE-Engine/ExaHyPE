@@ -13,14 +13,6 @@ namespace swift2 {
     namespace legacy {
 
       /**
-       * @todo No masking yet
-       */
-      template <typename Particle>
-      void hydroPredictExtraWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        hydroPredictExtra(marker, localParticle);
-      }
-
-      /**
        * @brief Prepares a particle for the density calculation.
        *
        * Zeroes all the relevant arrays in preparation for the sums taking place in

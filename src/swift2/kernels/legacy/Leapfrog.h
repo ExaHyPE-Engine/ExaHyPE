@@ -70,6 +70,15 @@ namespace swift2 {
 
 
       /**
+       * @todo No masking yet
+       */
+      template <typename Particle>
+      void hydroPredictExtraWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        hydroPredictExtra(marker, localParticle);
+      }
+
+
+      /**
        * @todo No masking in here yet
        */
       template <typename Particle>
