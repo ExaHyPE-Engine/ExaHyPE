@@ -205,3 +205,17 @@ void swift2::kernels::forAllParticlePairsVectorised(
   }
 }
 
+
+template <typename LocalParticleContainer, typename ActiveParticleContainer>
+void swift2::kernels::forAllParticlePairsVectoriseWithCheckPreamble(
+  const peano4::datamanagement::CellMarker&  marker,
+  LocalParticleContainer&                    localParticles,
+  ActiveParticleContainer&                   activeParticles,
+  const std::vector<int>&                    numberOfLocalParticlesPerVertex,
+  const std::vector<int>&                    numberOfActiveParticlesPerVertex,
+  ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
+      f
+) {
+  swift2::kernels::forAllParticlePairsVectorised(marker, localParticles, activeParticles, numberOfLocalParticlesPerVertex, numberOfActiveParticlesPerVertex, f);
+}
+

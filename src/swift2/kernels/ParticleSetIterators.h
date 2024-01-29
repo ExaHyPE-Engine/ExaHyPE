@@ -401,8 +401,23 @@ namespace swift2 {
       ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
           f
     );
-  }
-}
+
+    /**
+     * @todo dummy function at the moment. Only wraps around forAllParticlePairsVectorised()
+     */
+    template <typename LocalParticleContainer, typename ActiveParticleContainer>
+    void forAllParticlePairsVectoriseWithCheckPreamble(
+      const peano4::datamanagement::CellMarker&  marker,
+      LocalParticleContainer&                    localParticles,
+      ActiveParticleContainer&                   activeParticles,
+      const std::vector<int>&                    numberOfLocalParticlesPerVertex,
+      const std::vector<int>&                    numberOfActiveParticlesPerVertex,
+      ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
+          f
+    );
+
+  } // namespace kernels
+} // namespace swift2
 
 
 #include "ParticleSetIterators.cpph"
