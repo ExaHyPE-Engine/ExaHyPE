@@ -130,11 +130,7 @@ class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
       int                                          normal
     ) override;
     
-
-
     
-     
-     
     
     virtual void nonconservativeProduct(
       const double * __restrict__ Q, // Q[59+0],

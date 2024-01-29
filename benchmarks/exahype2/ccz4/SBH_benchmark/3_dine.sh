@@ -4,7 +4,7 @@
 #SBATCH -e %A.err
 #SBATCH -p bluefield1
 #SBATCH -A durham
-#SBATCH -t 24:00:00
+#SBATCH -t 1:00:00
 #SBATCH --ntasks-per-node=1
 #SBATCH --nodes=2
 #SBATCH -J ccz4

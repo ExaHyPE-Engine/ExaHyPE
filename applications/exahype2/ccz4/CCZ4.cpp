@@ -445,5 +445,3 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
   return result;
 }
 
-
-

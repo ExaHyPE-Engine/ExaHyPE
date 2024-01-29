@@ -33,7 +33,8 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
       const double CCZ4eta,
       const double CCZ4k1,
       const double CCZ4k2,
-      const double CCZ4k3
+      const double CCZ4k3,
+      const double CCZ4SO
       )
 {
     // Baojiu-01-08-22: alpha now is larger than 0.0001, in agreement with 2112.10567
@@ -496,8 +497,10 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
     for (int i = 0; i < 3; i++) S[55+i] = dtP[i];
     S[58] = 0;
     //used only in soccz4
-    for (int i = 23; i < 53; i++) S[i] = 0.0;
-    for (int i = 0; i < 3; i++) S[55+i] = 0.0;
+    if (CCZ4SO==1){
+        for (int i = 23; i < 53; i++) S[i] = 0.0;
+        for (int i = 0; i < 3; i++) S[55+i] = 0.0;
+    }
 }
 
 
@@ -510,7 +513,8 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
       const double CCZ4bs,
       const double CCZ4sk,
       const double CCZ4xi,
-      const double CCZ4mu
+      const double CCZ4mu,
+      const double CCZ4SO
       )
 {
     // Han 09-2022: add a parameter to switch off or on the advection here
@@ -980,6 +984,8 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
     BgradQ[58] = 0;
     //if (dtP[1]!=0) printf("dtP[1] = %g, dtP[2] = %g \n\n",dtP[1],dtP[2]);
     //used only in soccz4
-    for (int i = 23; i < 53; i++) BgradQ[i] = 0.0;
-    for (int i = 0; i < 3; i++) BgradQ[55+i] = 0.0;
+    if (CCZ4SO==1) {
+        for (int i = 23; i < 53; i++) BgradQ[i] = 0.0;
+        for (int i = 0; i < 3; i++) BgradQ[55+i] = 0.0;
+    }
 }

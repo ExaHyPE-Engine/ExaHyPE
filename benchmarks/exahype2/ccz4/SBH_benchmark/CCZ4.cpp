@@ -311,8 +311,7 @@ void applications::exahype2::ccz4::CCZ4::nonconservativeProduct(
   //for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
   //  BgradQ[i] = 0.0;
   //}
-  ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
-   //applications::exahype2::ccz4::CCZ4::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ);
+  ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target

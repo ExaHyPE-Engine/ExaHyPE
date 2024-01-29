@@ -1,19 +1,17 @@
 import os
 import argparse
+import dastgen2
+import shutil
+import numpy as np
 
 import peano4
 import exahype2
-
 import peano4.toolbox.particles
-import dastgen2
+from peano4.toolbox.blockstructured.DynamicAMR        import DynamicAMR
 
-from Probe_file_gene import tracer_seeds_generate
 
-from ComputeFirstDerivatives import ComputeFirstDerivativesFD4RK
-
-from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
-import numpy as np
-#todo no mpmath here so rkdg not working
+from Probe_file_gene          import tracer_seeds_generate
+from ComputeFirstDerivatives  import ComputeFirstDerivativesFD4RK
 
 def CoordListFromFile(file,scale):
   f=open(file)
@@ -51,7 +49,7 @@ floatparams = {
 	#"tp_epsilon":1e-6
 }
 
-intparams = {"BBHType":2, "LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":1, "source":0}
+intparams = {"BBHType":2, "LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":1, "SO":0}
 #sss
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
@@ -76,7 +74,7 @@ if __name__ == "__main__":
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
     parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant","order-2","linear-constant-extrap","linear-linear-extrap","linear-con-extrap-lin-normal-interp","linear-lin-extrap-lin-normal-interp"], default="linear-lin-extrap-lin-normal-interp",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject" ], default="average",  help="restriction scheme for AMR" )
-    parser.add_argument("-dc", "--double-communication",  dest="DC_flag",           default=True, action="store_true",  help="enable double communication per timestep")
+    parser.add_argument("-so", "--second-order",  dest="SO_flag",           default=True, action="store_true",  help="enable double communication per timestep, used in the soccz4 formulation.")
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -323,7 +321,7 @@ if __name__ == "__main__":
     else:
       solver_name    = solver_name
 
-    if args.DC_flag==True:
+    if args.SO_flag==True:
       args.cfl=args.cfl/2
 
     min_h = args.min_h
@@ -383,6 +381,9 @@ if __name__ == "__main__":
       intparams.update({k:eval("args.CCZ4{}".format(k))})
     for k, v in floatparams.items():
       floatparams.update({k:eval("args.CCZ4{}".format(k))})
+
+    if args.SO_flag==True:
+      intparams.update({"SO":1})
 
     if args.scenario=="two-punctures":
       msg = "Periodic BC deactivated because you pick Puncture scenario\nInitialize binary black holes"
@@ -509,7 +510,7 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/InitialValues.cpp" )
     peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/CCZ4Kernels.cpp" )
 
-    if args.DC_flag==True:
+    if args.SO_flag==True:
       userinfo.append(("Enable double communication, make sure you are using the Second formulism.", None))
       additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
                                                            add_user_defined_actions=False,
@@ -538,7 +539,15 @@ if __name__ == "__main__":
       peano4_project.solversteps.add_step( additional_mesh_traversal )
 
 
+    #we need to change the main file accordingly as it is not automatical
+    try:
+      os.remove("./ccz4-main.cpp")
+    except:
+      pass
     peano4_project.generate( throw_away_data_after_generation=False )
+    if args.SO_flag==True:
+      shutil.copyfile("./ccz4-main-SO.cpp", "./ccz4-main.cpp")
+
     peano4_project.build( make_clean_first = True )
 
     #Report the application information

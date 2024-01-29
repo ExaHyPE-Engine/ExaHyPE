@@ -30,7 +30,8 @@ namespace applications {
         const double CCZ4bs,
         const double CCZ4sk,
         const double CCZ4xi,
-        const double CCZ4mu
+        const double CCZ4mu,
+        const double CCZ4SO
       ) InlineMethod;
 
       /**
@@ -65,7 +66,8 @@ namespace applications {
         const double CCZ4eta,
         const double CCZ4k1,
         const double CCZ4k2,
-        const double CCZ4k3
+        const double CCZ4k3,
+        const double CCZ4SO
       ) InlineMethod;
 
       #if defined(SharedOMP)

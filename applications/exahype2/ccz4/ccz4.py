@@ -159,6 +159,16 @@ if __name__ == "__main__":
           eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation
         )
 
+        self._compute_kernel_call = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4(
+            self._flux_implementation, 
+            self._ncp_implementation, 
+            self._source_term_implementation, 
+            compute_max_eigenvalue_of_next_time_step = True,
+            solver_variant                           = exahype2.solvers.rkfd.kernels.SolverVariant.Multicore,
+            kernel_variant                           = exahype2.solvers.rkfd.kernels.KernelVariant.BatchedAoSHeap,
+            KOSigma                                  = self._KO_Sigma
+          )
+
         if SuperClass==exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking:
           self._fused_compute_kernel_call_cpu = exahype2.solvers.rkfd.fd4.kernels.create_compute_kernel_for_FD4(
             self._flux_implementation, 
