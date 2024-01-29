@@ -148,4 +148,32 @@ mesh sizes from above.
 @image html example-output/Tracer-dg4-rk4-0.5-rank-0-snapshot-0.csv.png
 
 
+## Implementation of second order formulation
+
+To realise the second order formulation, you have to invoke the Python 
+script with the -AS switch.
+If this switch is set, we add an additional mesh traversal to the arising
+Peano project, which we call after each and every Runge-Kutta step, as 
+well as after the very last step.
+
+We now need a main file that can both handle the additional mesh sweep as
+well as the version without an additional sweep. We don't want to write a
+main twice. Therefore, we either add
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    peano4_project.constants.define( "USE_ADDITIONAL_MESH_TRAVERSAL" )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+or we don't. This will yield a define pragma in Constants.h (generated).
+We query this pragma in the code when we decide which step we pick
+
+@snippet benchmarks/exahype2/ccz4/gauge-wave/ccz4-main.cpp Additional mesh sweep case distinction
+
+and also within the switch statement which runs the additional step:
+
+@snippet benchmarks/exahype2/ccz4/gauge-wave/ccz4-main.cpp Additional mesh sweep case step
+
+
+
+
 */

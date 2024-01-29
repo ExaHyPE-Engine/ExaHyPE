@@ -297,11 +297,15 @@ if args.AS_flag==True:
                                                                             ))
     additional_mesh_traversal.add_action_set( project_patch_onto_faces )
     additional_mesh_traversal.add_action_set( roll_over_projected_faces )
-      
-    # @todo Han, the change of the attribute CCZ4SO is missing here as well as the division of the CFL by two
-    
+     
     project.register_new_user_defined_algorithmic_step( additional_mesh_traversal )
+    
+    # 
+    # Consult remarks in README.dox on the additional step and how it is 
+    # integrated into the main routine.
+    #
     peano4_project.solversteps.add_step( additional_mesh_traversal )
+    peano4_project.constants.define( "USE_ADDITIONAL_MESH_TRAVERSAL" )
 
 
 my_solver.add_makefile_parameters(
