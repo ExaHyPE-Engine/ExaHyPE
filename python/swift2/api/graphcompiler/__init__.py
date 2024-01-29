@@ -19,19 +19,3 @@ from .Sequential import (
     initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory,
     initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory,
 )
-
-
-#from .TaskTree import (
-#    map_particle_steps_onto_task_tree,
-#    map_particle_steps_onto_task_tree_insert_dummy_sweeps_and_vectorise,
-#    map_initialisation_steps_onto_task_tree,
-#    map_initialisation_steps_onto_task_tree_for_coalesced_memory_access,
-#)
-
-
-#from .TaskGraph import (
-#    map_particle_steps_onto_task_graph,
-#    map_particle_steps_onto_task_graph_insert_dummy_sweeps_and_vectorise,
-#    map_initialisation_steps_onto_task_graph,
-#    map_initialisation_steps_onto_task_graph_for_coalesced_memory_access,
-#)
