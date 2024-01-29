@@ -92,3 +92,9 @@ python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 4
 ![](scaling-plot_GPUs_Leonardo_Order_7.png)
 
 ## Score-P
+
+![](ScoreP-Trace-1GPU.png)
+
+## POP Performance Efficiency Metrics
+
+![](metrics_hybrid_multiplicative_plot_FoA.png)
