@@ -99,23 +99,34 @@ specification:
   superscript @f$ ^c @f$ or @f$ ^f @f$ respectively. @f$ u^c @f$ consequently
   denotes a function or weights, but the superscript highlights that they 
   live on cells only.
+
 - If we have a projection (or literally any matrix/operator) and want to 
   highlight from where to where it maps, we write this as @f$ P_{f \gets c} @f$.
   This projection @f$ P @f$ takes a cell representation and yields a face 
   representation.
+
+- A bar over a letter is used to distinguish between a function and a finite set of its values in the context of discretization.
+  For example, if @f$ u = u(x,y) @f$ is a function defined on a 2D domain, @f$ \bar{u} @f$ can be used to denote
+  a set of nodal values of @f$ u(x,y) @f$.
+  (or should we use @f$ \textbf{u} @f$ insted?)
 
 ## Function manipulators
 
 - If we have a face where a function @f$ u @f$ does not exist, but there is
   a valid @f$ u @f$ left and right, @f$ u^- @f$ denotes this left function, 
   while @f$ u^+ @f$ denotes the right one.
-- The modifier @f$ [[ u ]] @f$ on a function denotes that this function does 
+
+- The modifier @f$ \hat{u} @f$ on a function denotes that this function does 
   not exist at the point where we evaluate it. However, there is are two 
   valid function values - typically left and right - and this is the average.
-- The modifier @f$ { u } @f$ takes the jump between two values.
+
+- Square double brackets denote the jump between two values: @f$ [[ u ]] = u^- - u^+ @f$
+
+- Curly brackets denote the average values: @f$ \{ u \} = \left( u^- + u^+ \right) / 2 @f$
+
 - If a function lives on a cell, but we evaluate it only along the face, we 
   use @f$ u|_f @f$. This means that we don't project it. We literally evaluate
-  is. In this sense @f$ u^+ = u_c|_f @f$ where the @f$ u_c @f$ is the solution 
+  it. In this sense @f$ u^+ = u_c|_f @f$ where the @f$ u_c @f$ is the solution 
   over the right adjacent cell of a face.
 
  */
