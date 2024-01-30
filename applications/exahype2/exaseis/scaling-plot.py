@@ -27,8 +27,8 @@ output_format = "png"
 title = "Strong Scaling"
 xlabel = "Number of GPUs"
 ylabel = "Number of Element Updates per Second (Throughput)"
-label = "Order 6"
-plot_color = "blue"
+label = "Order 7"
+plot_color = "red"
 log_x = True
 log_y = True
 
