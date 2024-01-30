@@ -19,8 +19,8 @@ parser.add_argument(
 parser.add_argument(
     "--cmake", help="Use CMake; specify target build folder via --cmake=..."
 )
-parser.add_argument("--exahype", action="store_true", help="Enable ExaHyPE2")
-parser.add_argument("--swift", action="store_true", help="Enable Swift2")
+parser.add_argument("--exahype", action="store_true", help="Enable ExaHyPE 2")
+parser.add_argument("--swift", action="store_true", help="Enable Swift 2")
 parser.add_argument("--particles", action="store_true", help="Enable particles support")
 parser.add_argument(
     "--loadbalancing", action="store_true", help="Enable load balancing support"
@@ -67,6 +67,12 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+if args.cc is None or args.cxx is None:
+    raise Exception(
+        "Invalid C and C++ compilers provided. \
+Specify compatible C and C++ compilers by using --cc and --cxx or the environment flags CC and CXX."
+    )
+
 cflags = "-O3 -march=native"
 cxxflags = "-std=c++20 -w -O3 -march=native"
 # cxxflags = '-std=c++20 -W -Wall -Wextra -O3 -march=native -mtune=native'
@@ -102,12 +108,6 @@ if args.multithreading == "sycl":
 # Merge in any additional flags needed for the selected GPU backend
 if args.gpu and not args.arch:
     raise Exception("You need to specify a GPU architecture when using GPU support.")
-
-if args.cc is None or args.cxx is None:
-    raise Exception(
-        "Invalid C and C++ compilers provided. \
-Specify compatible C and C++ compilers by using --cc and --cxx or the environment flags CC and CXX."
-    )
 
 if args.gpu == "omp" and "icx" in args.cc and "icpx" in args.cxx and "spir64" in args.arch:
     cflags += (
