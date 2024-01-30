@@ -10,24 +10,41 @@ class Fixed(ActionSet):
 
     Fixed boundary conditions
 
-    This is a very primitive implementation of the fixed boundary conditions.
-    We shrink the computational domain by domain_halo. Every particle which
-    approaches the domain boundary closer than domain_halo will effectively
-    be put back on the boundary of the shrinked domain. We do not allow
-    particles to leave the shrinked domain and, hence, they should not leave
-    the computational domain, which is bigger, either.
+    Impose fixed boundary conditions within an action set. Such an action set 
+    can be injected into each and every grid sweep. 
+    @ref swift_boundary_conditions "Swift's generic boundary condition"
+    remarks discuss this realisation variant. It is quite heavy-weight and can 
+    yield invalid states prior to the very first time step. 
 
-    This concept alone does not ensure that particles never leave their domain.
-    Their velocity might be so big that they effectively could be pressed out
-    of the domain. So we need to create another buffer within the domain which
-    ensures that the particles cannot tunnel through the buffer within one
-    time step. For this, we have to take the maximum velocity into account, and
-    we have to damp the velocities as they run risk to approach our domain
-    boundaries way too fast.
-
+    The action set is used by adding it after you have lowered the Swift 2
+    formalism into a Peano 4 project:
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+project.additional_action_sets_per_solver_step.append(
+    swift2.api.boundaryconditions.Fixed(particle_set=particle_set, 
+                                        damp_particles_as_they_approach_boundary=True
+                                        )
+)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
+    
+    @param particle_set: swift2.particle.Particle
+      The particle set for which we implement the boundary conditions.
+            
+    @param relative_domain_halo: Positive float smaller than 0.5
+      The relative boundary in which we actually check particles at
+      all. This one refers to the cells adjacent to the boundary. So 
+      if you pass in a 0.1, it means that 10% of this cell will next
+      to the boundary will actually be read as "on the boundary".
+    
+    @param damp_particles_as_they_approach_boundary: Boolean
+      
     """
 
-    def __init__(self, particle_set, domain_halo=0.001):
+    def __init__(self, 
+                 particle_set, 
+                 damp_particles_as_they_approach_boundary,
+                 relative_domain_halo=0.1
+                 ):
         """!
 
         Fixed boundary condition
@@ -42,17 +59,18 @@ class Fixed(ActionSet):
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
         self.d["PARTICLES_CONTAINER"] = particle_set.name
-        self.d[
-            "VELOCITY_ATTRIBUTE"
-        ] = particle_set.particle_model.velocity.get_accessor_name()
-        self.d["DOMAIN_HALO"] = domain_halo
-
+        self.d["VELOCITY_ATTRIBUTE"] = particle_set.particle_model.velocity.get_accessor_name()
+        if damp_particles_as_they_approach_boundary:
+          self.d["DAMP_VELOCITY"] = "true"
+        else:
+          self.d["DAMP_VELOCITY"] = "false"
+        self.d["RELATIVE_DOMAIN_HALO"] = relative_domain_halo
+ 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
 
     __Template_TouchVertexLastTime = jinja2.Template(
         """
-    constexpr double DomainHalo     = {{DOMAIN_HALO}};
     // check only boundary vertices
     if ( 
         tarch::la::oneSmallerEquals( marker.x() - 0.5 * marker.h(), DomainOffset )
@@ -60,50 +78,15 @@ class Fixed(ActionSet):
         tarch::la::oneGreaterEquals( marker.x() + 0.5 * marker.h(), DomainOffset + DomainSize )
     ) {
       for (auto& particle: fineGridVertex{{PARTICLES_CONTAINER}}) {
-        const double MaxDt          = particle->getSpecies().getMaxTimeStepSize();
-        const double MaxV           = particle->getSpecies().getMaxVelocity();
-        const double RelativeBuffer = 0.5  * tarch::la::min(marker.h()) + MaxV * MaxDt;
-        for (int d=0; d<Dimensions; d++) {
-          // damp velocity left
-          if ( 
-            particle->getX(d) < DomainOffset(d) + RelativeBuffer
-            and
-            particle->get{{VELOCITY_ATTRIBUTE}}(d)<0.0
-          ) {
-            double scaleOriginalVelocity = (particle->getX(d) - DomainOffset(d)) / RelativeBuffer; 
-            assertion5(scaleOriginalVelocity>=0.0, scaleOriginalVelocity, particle->getX(), DomainOffset(d), RelativeBuffer, marker.h()(d) );
-            assertion5(scaleOriginalVelocity<=1.0, scaleOriginalVelocity, particle->getX(), DomainOffset(d), RelativeBuffer, marker.h()(d) );
-            particle->set{{VELOCITY_ATTRIBUTE}}(d,scaleOriginalVelocity * particle->get{{VELOCITY_ATTRIBUTE}}(d));
-            logDebug( "touchVertexLastTime(...)", "damp velocity along x" << d << "-axis by " << scaleOriginalVelocity << ": " << particle->toString() );
-          }
-          
-          // reposition particle left
-          if ( tarch::la::smallerEquals( particle->getX(d), DomainOffset(d) + DomainHalo ) ) {
-            particle->setX(d,DomainOffset(d) + DomainHalo);
-            particle->setV(d,0.0 );
-            logDebug( "touchVertexLastTime(...)", "relocate particle along x" << d << "-axis: " << particle->toString() );
-          }
-          
-          // damp velocity right
-          if ( 
-            particle->getX(d) > DomainOffset(d) + DomainSize(d) - RelativeBuffer
-            and
-            particle->get{{VELOCITY_ATTRIBUTE}}(d)>0.0
-          ) {
-            double scaleOriginalVelocity = (DomainOffset(d) + DomainSize(d) - particle->getX(d)) / RelativeBuffer; 
-            assertion5(scaleOriginalVelocity>=0.0, scaleOriginalVelocity, particle->getX(), DomainOffset(d), RelativeBuffer, marker.h()(d) );
-            assertion5(scaleOriginalVelocity<=1.0, scaleOriginalVelocity, particle->getX(), DomainOffset(d), RelativeBuffer, marker.h()(d) );
-            particle->set{{VELOCITY_ATTRIBUTE}}(d,scaleOriginalVelocity * particle->get{{VELOCITY_ATTRIBUTE}}(d));
-            logDebug( "touchVertexLastTime(...)", "damp velocity along x" << d << "-axis by " << scaleOriginalVelocity << ": " << particle->toString() );
-          }
-          
-          // reposition particle right
-          if ( tarch::la::greaterEquals( particle->getX(d), DomainOffset(d) + DomainSize(d) - DomainHalo ) ) {
-            particle->setX(d,DomainOffset(d) + DomainSize(d) - DomainHalo );
-            particle->setV(d,0.0 );
-            logDebug( "touchVertexLastTime(...)", "relocate particle along x" << d << "-axis: " << particle->toString() );
-          }
-        } // for loop over dimensions
+        ::swift2::boundaryconditions::applyFixedBoundaryCondition(
+          *particle,
+          marker,
+          DomainOffset,
+          DomainSize,
+          {{RELATIVE_DOMAIN_HALO}},
+          {{DAMP_VELOCITY}},
+          _spacetreeId
+        );
       } // for loop over particles
     } // if on marker
     """
@@ -124,6 +107,21 @@ class Fixed(ActionSet):
 #include "Constants.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
+#include "swift2/kernels/ParticleSetIterators.h"
+#include "swift2/boundaryconditions/FixedBoundary.h"
 """
         )
         return result.render(**self.d)
+
+    def get_constructor_body(self):
+        return (
+            super(Fixed, self).get_constructor_body()
+            + """
+            _spacetreeId              = treeNumber;
+          """
+        )
+
+    def get_attributes(self):
+        return """
+  int  _spacetreeId;
+"""
