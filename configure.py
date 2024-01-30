@@ -51,9 +51,10 @@ parser.add_argument("--with-cuda", type=str, help="Path to the CUDA toolkit")
 parser.add_argument(
     "--arch",
     choices=[
-        "gfx906",
-        "gfx908",
-        "gfx90a",  # gfx906=MI50, gfx908=MI100, gfx90a=MI200
+        "gfx906",  # gfx906=MI50
+        "gfx908",  # gfx908=MI100
+        "gfx90a",  # gfx90a=MI200
+        "gfx942",  # gfx942=MI300
         "sm_70",
         "sm_72",
         "sm_75",

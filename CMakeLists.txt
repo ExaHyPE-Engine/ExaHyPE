@@ -226,6 +226,7 @@ list(APPEND ACCELERATOR_ARCHITECTURES
   "gfx906"
   "gfx908"
   "gfx90a"
+  "gfx942"
   "spir64"
 )
 set(WITH_GPU_ARCH "" CACHE STRING "GPU architecture sm_XX or gfxXXX")
