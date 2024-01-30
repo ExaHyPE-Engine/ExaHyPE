@@ -210,12 +210,15 @@ class AlgorithmStep(object):
 
         self.input_particles = input_particles
         self.includes = (
-            includes
-            + """
+            """
 #include "Constants.h"
 #include "swift2/kernels/ParticleUpdatePredicates.h"
 #include "swift2/kernels/ParticleSetIterators.h"
-        """
+
+#include "swift2/dependencychecks/DependencyChecks.h"
+#include "toolbox/particles/assignmentchecks/TracingAPI.h"
+#include "toolbox/particles/assignmentchecks/Utils.h"
+        """ + includes
         )
 
         self.cell_kernel_dependency_policy = cell_kernel_dependency_policy
