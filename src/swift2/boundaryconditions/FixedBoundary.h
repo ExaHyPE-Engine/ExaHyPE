@@ -18,8 +18,7 @@ namespace swift2 {
      * update within the particle database (so all assertions are still
      * correct).
      *
-     * Please consult the action set above for further information about
-     * the actual algorithm implemented.
+     * @see getUpdateDueToFixedBoundaryCondition()
      */
     template <typename Particle>
     void applyFixedBoundaryCondition(
@@ -28,7 +27,6 @@ namespace swift2 {
         const tarch::la::Vector<Dimensions, double>&  domainOffset,
         const tarch::la::Vector<Dimensions, double>&  domainSize,
         double                                        relativeDomainHalo,
-        bool                                          dampVelocity,
         int                                           treeId
     );
 
@@ -36,7 +34,19 @@ namespace swift2 {
      * Determine updated position and velocity due to boundary conditions
      *
      * See applyFixedBoundaryCondition() and notably swift2.api.boundaryconditions.Fixed
-     * for some detailed information what is actually implemented here.
+     * for some context where this routine is used. Please study notably the
+     * @ref swift_boundary_conditions "generic boundary condition" discussion
+     * of the project. It provides code snippets how to use this routine.
+     *
+     * ## Algorithm
+     *
+     * Our boundary condition handling consists of a series of checks:
+     *
+     * - If particles have left the computational domain, we reset them
+     *   hard to the boundary.
+     * - If
+     *
+     *
      *
      * @return Tuple of new position and velocity
      */
@@ -48,8 +58,7 @@ namespace swift2 {
       double                                        h,
       const tarch::la::Vector<Dimensions, double>&  domainOffset,
       const tarch::la::Vector<Dimensions, double>&  domainSize,
-      double                                        relativeDomainHalo,
-      bool                                          dampVelocity
+      double                                        relativeDomainHalo
     );
   }
 }

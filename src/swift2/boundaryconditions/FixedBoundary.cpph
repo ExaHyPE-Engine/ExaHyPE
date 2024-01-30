@@ -8,7 +8,6 @@ void swift2::boundaryconditions::applyFixedBoundaryCondition(
   const tarch::la::Vector<Dimensions, double>&  domainOffset,
   const tarch::la::Vector<Dimensions, double>&  domainSize,
   double                                        relativeDomainHalo,
-  bool                                          dampVelocity,
   int                                           treeId
 ) {
   const double maxDt          = particle.getSpecies().getMaxTimeStepSize();
@@ -23,8 +22,7 @@ void swift2::boundaryconditions::applyFixedBoundaryCondition(
     tarch::la::min( marker.h() ),
     domainOffset,
     domainSize,
-    relativeDomainHalo,
-    dampVelocity
+    relativeDomainHalo
   );
 
   if ( not tarch::la::equals(particle.getX(),newX) ) {

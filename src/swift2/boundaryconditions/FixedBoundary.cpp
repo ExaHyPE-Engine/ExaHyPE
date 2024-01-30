@@ -9,9 +9,9 @@ std::pair< tarch::la::Vector<Dimensions, double>, tarch::la::Vector<Dimensions, 
   double                                        h,
   const tarch::la::Vector<Dimensions, double>&  domainOffset,
   const tarch::la::Vector<Dimensions, double>&  domainSize,
-  double                                        relativeDomainHalo,
-  bool                                          dampVelocity
+  double                                        relativeDomainHalo
 ) {
+  static tarch::logging::Log _log( "swift2::boundaryconditions" );
   tarch::la::Vector<Dimensions, double> newX = particleX;
   tarch::la::Vector<Dimensions, double> newV = particleV;
 
@@ -19,6 +19,18 @@ std::pair< tarch::la::Vector<Dimensions, double>, tarch::la::Vector<Dimensions, 
 
   const double relativeBufferDueToTimeStepping = 0.5  * h + maxV * maxDt;
   for (int d=0; d<Dimensions; d++) {
+    // reposition particle left
+    if ( tarch::la::smallerEquals( particleX(d), domainOffset(d) ) ) {
+      logWarning( "getUpdateDueToFixedBoundaryCondition()", "reset particle at " << particleX << " as it penetrates left boundary along axis " << d );
+      newX(d) = domainOffset(d);
+    }
+
+    // reposition particle right
+    if ( tarch::la::greaterEquals( particleX(d), domainOffset(d) + domainSize(d)) ) {
+      logWarning( "getUpdateDueToFixedBoundaryCondition()", "reset particle at " << particleX << " as it penetrates right boundary along axis " << d );
+      newX(d) = domainOffset(d) + domainSize(d);
+    }
+
     // damp velocity left
     if (
       particleX(d) < domainOffset(d) + relativeBufferDueToTimeStepping
@@ -31,11 +43,6 @@ std::pair< tarch::la::Vector<Dimensions, double>, tarch::la::Vector<Dimensions, 
       newV(d) = scaleOriginalVelocity * particleV(d);
     }
 
-    // reposition particle left
-    if ( tarch::la::smallerEquals( particleX(d), domainOffset(d) + domainHalo ) ) {
-      newX(d) = domainOffset(d) + domainHalo;
-      newV(d) = 0.0;
-    }
 
     // damp velocity right
     if (
@@ -47,12 +54,6 @@ std::pair< tarch::la::Vector<Dimensions, double>, tarch::la::Vector<Dimensions, 
       assertion5(scaleOriginalVelocity>=0.0, scaleOriginalVelocity, particleX, domainOffset, relativeBufferDueToTimeStepping, h );
       assertion5(scaleOriginalVelocity<=1.0, scaleOriginalVelocity, particleX, domainOffset, relativeBufferDueToTimeStepping, h );
       newV(d) = scaleOriginalVelocity * particleV(d);
-    }
-
-    // reposition particle right
-    if ( tarch::la::greaterEquals( particleX(d), domainOffset(d) + domainSize(d) - domainHalo ) ) {
-      newX(d) = domainOffset(d) + domainSize(d) - domainHalo;
-      newV(d) = 0.0;
     }
   }
 

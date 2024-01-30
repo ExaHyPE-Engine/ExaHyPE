@@ -16,8 +16,10 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::ParticleIden
   particleName(particleName__),
   particleX(particleX__) {}
 
+double toolbox::particles::assignmentchecks::internal::ParticleIdentifier::Precision = 1e-8;
+
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::operator==(const ParticleIdentifier& rhs) const {
-  return (particleName == rhs.particleName) and tarch::la::equals(particleX, rhs.particleX);
+  return (particleName == rhs.particleName) and tarch::la::equals(particleX, rhs.particleX, Precision);
 }
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::operator<(const ParticleIdentifier& rhs) const {
@@ -172,19 +174,29 @@ std::string toolbox::particles::assignmentchecks::internal::MeshSweepData::getNa
 toolbox::particles::assignmentchecks::internal::ParticleIdentifier toolbox::particles::assignmentchecks::internal::Database::createParticleIdentifier(
   const std::string&                            particleName,
   const tarch::la::Vector<Dimensions, double>&  particleX,
-  bool                                          fitToExistingParticles
+  double                                        searchTolerance
 ) {
   ParticleIdentifier result(particleName, particleX);
 
-  if (fitToExistingParticles) {
+  if (searchTolerance>0.0) {
     tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
     auto currentSnapshot = _data.crbegin();
     while (currentSnapshot != _data.crend()) {
       for (const auto& event: *currentSnapshot) {
         // use floating-point aware comparison operator
-        if (event.first==result) {
+        if (
+          event.first.particleName==result.particleName
+          and
+          tarch::la::equals(event.first.particleX, result.particleX, searchTolerance)
+        ) {
           // bit-wise copy
+          logDebug(
+            "createParticleIdentifier()",
+            "found entry for " << particleX << " given tolerance of " << searchTolerance << ": will copy data over bit-wisely which biases identifier by "
+            << (event.first.particleX - result.particleX)
+          );
           result = event.first;
+          assertion(currentSnapshot->count(result) > 0);
           return result;
         }
       }
@@ -201,7 +213,7 @@ toolbox::particles::assignmentchecks::internal::Database::Database() {
 };
 
 void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(const std::string& meshSweepName) {
-  logDebug("addMeshSweep()", "end mesh sweep with " << _data.rbegin()->size() << " event(s)");
+  logInfo("startMeshSweep()", "finish old mesh sweep with " << _data.rbegin()->size() << " event(s) and start new one for " << meshSweepName );
   tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Write);
   _data.push_back(MeshSweepData(meshSweepName));
 };
@@ -426,8 +438,10 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
 ) {
   logTraceInWith6Arguments( "assignParticleToVertex(...)", particleName, particleX, isLocal, vertexX, vertexH, treeId );
 
-  if (particleIsNew) {
-    internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX, false);
+  constexpr bool checkNewParticles = false;
+
+  if ((not checkNewParticles) and particleIsNew) {
+    internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX, 0.0);
     internal::Event              event(internal::Event::Type::AssignToVertex, isLocal, vertexX, vertexH, treeId, trace);
 
     _database.addEvent(identifier, event);
@@ -519,51 +533,43 @@ void toolbox::particles::assignmentchecks::moveParticle(
 ) {
   logTraceInWith3Arguments( "moveParticle(...)", particleName, oldParticleX, newParticleX );
 
-  if (not tarch::la::equals(oldParticleX,newParticleX)) {
+  if (not tarch::la::equals(oldParticleX, newParticleX, internal::ParticleIdentifier::Precision)) {
     internal::ParticleIdentifier newIdentifier = _database.createParticleIdentifier(particleName, newParticleX);
-    internal::Event              newEvent(internal::Event::Type::MoveWhileAssociatedToVertex, oldParticleX, treeId, trace );
-    internal::ParticleIdentifier oldIdentifier = _database.createParticleIdentifier(particleName, oldParticleX);
-    internal::Event              previousEvent = _database.getEntry(oldIdentifier, treeId );
-    internal::Event              existingNewEvent = _database.getEntry(newIdentifier, internal::Database::AnyTree );
+    internal::ParticleIdentifier oldIdentifier = _database.createParticleIdentifier(particleName, oldParticleX, internal::ParticleIdentifier::Precision * 4.0);
+    if (
+      newIdentifier != oldIdentifier
+    ) {
+      internal::Event              newEvent(internal::Event::Type::MoveWhileAssociatedToVertex, oldIdentifier.particleX, treeId, trace );
+      internal::Event              previousEvent    = _database.getEntry(oldIdentifier, treeId );
+      internal::Event              existingNewEvent = _database.getEntry(newIdentifier, internal::Database::AnyTree );
+      assertion10(
+        existingNewEvent.type == internal::Event::Type::NotFound,
+        oldIdentifier.toString(),
+        previousEvent.toString(),
+        newIdentifier.toString(),
+        newEvent.toString(),
+        _database.getCurrentMeshSweep(),
+        treeId,
+        trace,
+        _database.totalEntries(oldIdentifier),
+        _database.particleHistory(oldIdentifier),
+        "make ParticleIdentifier::Precision smaller if this problem continues to persist (tracking might be too blurry) and ensure that particles do not overlap and collide"
+      );
+      assertion9(
+        previousEvent.type == internal::Event::Type::AssignToVertex,
+        oldIdentifier.toString(),
+        previousEvent.toString(),
+        newIdentifier.toString(),
+        newEvent.toString(),
+        _database.getCurrentMeshSweep(),
+        treeId,
+        trace,
+        _database.totalEntries(oldIdentifier),
+        _database.particleHistory(oldIdentifier)
+      );
 
-    assertion9(
-      newIdentifier != oldIdentifier,
-      oldIdentifier.toString(),
-      previousEvent.toString(),
-      newIdentifier.toString(),
-      newEvent.toString(),
-      _database.getCurrentMeshSweep(),
-      treeId,
-      trace,
-      _database.totalEntries(oldIdentifier),
-      _database.particleHistory(oldIdentifier)
-    );
-    assertion9(
-      existingNewEvent.type == internal::Event::Type::NotFound,
-      oldIdentifier.toString(),
-      previousEvent.toString(),
-      newIdentifier.toString(),
-      newEvent.toString(),
-      _database.getCurrentMeshSweep(),
-      treeId,
-      trace,
-      _database.totalEntries(oldIdentifier),
-      _database.particleHistory(oldIdentifier)
-    );
-    assertion9(
-      previousEvent.type == internal::Event::Type::AssignToVertex,
-      oldIdentifier.toString(),
-      previousEvent.toString(),
-      newIdentifier.toString(),
-      newEvent.toString(),
-      _database.getCurrentMeshSweep(),
-      treeId,
-      trace,
-      _database.totalEntries(oldIdentifier),
-      _database.particleHistory(oldIdentifier)
-    );
-
-    _database.addEvent(newIdentifier, newEvent);
+      _database.addEvent(newIdentifier, newEvent);
+    }
   }
 
   logTraceOut( "moveParticle(...)" );
