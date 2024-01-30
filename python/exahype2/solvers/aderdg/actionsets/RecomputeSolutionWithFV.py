@@ -143,9 +143,8 @@ class RecomputeSolutionWithFV(AbstractAderDGActionSet):
     }
 
   ::exahype2::CellData  patchData( oldQWithHalo, marker.x(), marker.h(), timeStamp, timeStepSize, newQWithoutHalo );
-        
-  ::exahype2::fv::rusanov::timeStepWithRusanov_patchwise_heap_functors(
-  patchData,
+
+  ::exahype2::fv::rusanov::timeStepWithRusanovPatchwiseHeapFunctors<
   {{2*ORDER+1}},
   1, //Halo_size
   {{NUMBER_OF_UNKNOWNS}},
@@ -153,7 +152,9 @@ class RecomputeSolutionWithFV(AbstractAderDGActionSet):
   {% if USE_FLUX=="<none>" %} false {% else %} true {% endif %}, //use_flux
   {% if USE_NCP=="<none>" %} false {% else %} true {% endif %}, //use_ncp
   {% if USE_SOURCE=="<none>" %} false {% else %} true {% endif %}, //use_source
-   false , //compute_max_eigenvalue
+  false, //compute_max_eigenvalue
+  ::exahype2::enumerator::AoSLexicographicEnumerator>(
+    patchData,
   [&](
     [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
     [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
