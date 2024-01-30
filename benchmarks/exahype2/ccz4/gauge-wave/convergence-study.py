@@ -223,6 +223,10 @@ if "rk" in args.solver and "dg" in args.solver:
 
 assert my_solver != None
 
+if args.AS_flag==True:
+    my_solver.integer_constants.update({"CCZ4SO":1})
+    my_solver._time_step_relaxation=my_solver._time_step_relaxation/2
+
 my_solver.add_all_solver_constants()
 project.add_solver(my_solver)
 

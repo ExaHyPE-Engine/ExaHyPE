@@ -152,8 +152,7 @@ class AbstractCCZ4Solver(object):
             "CCZ4k3": 0.5,
             "CCZ4GLMc": 1.2,
             "CCZ4GLMd": 2.0,
-            "CCZ4mu": 0.2,
-            "CCZ4SO": 0
+            "CCZ4mu": 0.2
         }
 
     def _add_standard_includes(self):
