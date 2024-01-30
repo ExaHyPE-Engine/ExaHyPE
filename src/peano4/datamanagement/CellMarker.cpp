@@ -100,7 +100,7 @@ bool peano4::datamanagement::CellMarker::isParentLocal() const { return _isParen
 
 tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::x() const { return _centre; }
 
-tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::getInvokingCellsFatherCentre() const {
+tarch::la::Vector<Dimensions, double> peano4::datamanagement::CellMarker::getInvokingParentCellsCentre() const {
   tarch::la::Vector<Dimensions, double> result = _centre;
   for (int d=0; d<Dimensions; d++) {
     assertion1( _relativePositionOfCellWithinFatherCell(d)>=0, toString() );

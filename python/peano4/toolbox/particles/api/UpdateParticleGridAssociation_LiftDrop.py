@@ -140,8 +140,8 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
         _numberOfLiftsIntoSieveSet++;
         logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " on tree " << _spacetreeId << " globally. Previously assigned to " << marker.toString() );
-        toolbox::particles::assignmentchecks::removeParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId );
-        toolbox::particles::assignmentchecks::assignParticleToSieveSet( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, _spacetreeId );
+        toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles" );
+        toolbox::particles::assignmentchecks::assignParticleToSieveSet( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, _spacetreeId, "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles" );
         p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
         assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );    
         break;
@@ -158,23 +158,13 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
         _numberOfLifts ++;
         logDebug( "touchVertexLastTime(...)", "have to lift particle " << (*p)->toString() << " to next coarser vertex " << instruction << ". Previously assigned to " << marker.toString() << ". Now lifted to " << coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );
         (*p)->setCellH(3.0 * marker.h());
-        toolbox::particles::assignmentchecks::removeParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId );
+        toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles" );
         toolbox::particles::assignmentchecks::assignParticleToVertex( 
           "{{PARTICLE}}",
           (*p)->getX(), 
           (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, 
-          marker.x() 
-          - 
-          tarch::la::multiplyComponents( 
-            tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
-            marker.h()
-          )
-          +
-          tarch::la::multiplyComponents( 
-            tarch::la::Vector<Dimensions,double>( std::bitset<Dimensions>(instruction) ),
-            3.0*marker.h()
-          ),
-          3.0*marker.h(), _spacetreeId
+          peano4::datamanagement::reconstructXOfParentVertex(marker, instruction),
+          3.0*marker.h(), _spacetreeId, "UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles"
         );
         p = coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).grabParticle( p, fineGridVertex{{PARTICLES_CONTAINER}} );
         assertion2( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(),                    fineGridVertex{{PARTICLES_CONTAINER}}.toString(), coarseGridVertices{{PARTICLES_CONTAINER}}( instruction ).toString() );    
