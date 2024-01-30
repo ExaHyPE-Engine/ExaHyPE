@@ -155,6 +155,11 @@ class AbstractCCZ4Solver(object):
             "CCZ4mu": 0.2
         }
 
+    def enable_seond_order(self):
+        self.integer_constants.update({"CCZ4SO":1})
+        self.Default_Time_Step_Size_Relaxation=self.Default_Time_Step_Size_Relaxation/2
+
+
     def _add_standard_includes(self):
         """!
 
@@ -750,6 +755,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         max_meshcell_h,
         use_heap_storage,
         pde_terms_without_state,
+        second_order=False
     ):
         """!
 
@@ -771,6 +777,8 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
 
         """
         AbstractCCZ4Solver.__init__(self)
+        if (second_order):
+            AbstractCCZ4Solver.enable_seond_order(self)
         exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(
             self,
             name=name,
@@ -780,7 +788,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             auxiliary_variables=0,
             min_meshcell_h=min_meshcell_h,
             max_meshcell_h=max_meshcell_h,
-            time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation,
+            time_step_relaxation=self.Default_Time_Step_Size_Relaxation,
             pde_terms_without_state = pde_terms_without_state,
         )
 
@@ -865,6 +873,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
         rk_order,
         min_meshcell_h,
         max_meshcell_h,
+        second_order=False
     ):
         """!
 
@@ -875,6 +884,8 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
 
         """
         AbstractCCZ4Solver.__init__(self)
+        if (second_order):
+            AbstractCCZ4Solver.enable_seond_order(self)
         exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep.__init__(
             self,
             name=name,
@@ -884,7 +895,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
             auxiliary_variables=0,
             min_meshcell_h=min_meshcell_h,
             max_meshcell_h=max_meshcell_h,
-            time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
+            time_step_relaxation=self.Default_Time_Step_Size_Relaxation
             ,
         )
 

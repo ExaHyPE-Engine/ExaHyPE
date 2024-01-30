@@ -152,6 +152,8 @@ bool selectNextAlgorithmicStep() {
 
     continueToSolve = true;
   } else {
+    //! [Additional mesh sweep case distinction]
+    #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
     if (repositories::isLastGridSweepOfTimeStep()
       and
       repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
@@ -160,7 +162,10 @@ bool selectNextAlgorithmicStep() {
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalMeshTraversal )
       );
       continueToSolve         = true;
-    } else if (TimeInBetweenPlots > 0.0 and repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and repositories::mayPlot()) {
+    } else
+    #endif 
+    //! [Additional mesh sweep case distinction]
+    if (TimeInBetweenPlots > 0.0 and repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and repositories::mayPlot()) {
       if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
         nextMinPlotTimeStamp += TimeInBetweenPlots;
       }
@@ -444,6 +449,8 @@ void step() {
 
     repositories::finishTimeStep();
   } break;
+  //! [Additional mesh sweep case step]
+  #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
   case repositories::StepRepository::Steps::AdditionalMeshTraversal:
     {
       tarch::logging::LogFilter::getInstance().switchProgramPhase( "additional-MeshTraversal" );
@@ -453,6 +460,8 @@ void step() {
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     }
     break;
+  #endif
+  //! [Additional mesh sweep case step]
   case repositories::StepRepository::Steps::Undef:
     assertion(false);
     break;

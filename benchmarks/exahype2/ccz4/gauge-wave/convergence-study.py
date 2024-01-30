@@ -77,12 +77,12 @@ parser.add_argument(
     help="switch on the enclave tasking solver",
 )
 parser.add_argument(
-    "-AS",
-    "--additional-step",
-    dest="AS_flag",
+    "-so",
+    "--second-order",
+    dest="SO_flag",
     action="store_true",
     default=False,
-    help="add the additional_step",
+    help="add the additional_step for the second order formulation",
 )
 parser.add_argument(
     "-et",
@@ -166,7 +166,8 @@ if "fd4-rk" in args.solver:
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
             use_heap_storage=False,
-            pde_terms_without_state=True
+            pde_terms_without_state=True,
+            second_order=args.SO_flag
         )
     else:
         my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
@@ -175,6 +176,7 @@ if "fd4-rk" in args.solver:
             rk_order=order,
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
+            second_order=args.SO_flag
         )
     my_solver.set_implementation(
         initial_conditions="""
@@ -182,26 +184,6 @@ if "fd4-rk" in args.solver:
       ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
     """
     )
-
-if "second-order" in args.solver:
-    order = 1
-    my_solver = (
-        CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTasking(
-            name="CCZ4FD4RK_SO_" + str(order),
-            patch_size=5,
-            rk_order=order,
-            min_meshcell_h=args.cell_size / 3,
-            max_meshcell_h=args.cell_size / 3,
-            reconstruction_type="leftDifferences",
-        )
-    )
-    my_solver.set_implementation(
-        initial_conditions="""
-    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
-      ::applications::exahype2::ccz4::gaugeWave(Q, meshCellCentre, 0);
-    """
-    )
-
 
 if "rk" in args.solver and "dg" in args.solver:
     space_order = int(args.solver[2])
@@ -222,10 +204,6 @@ if "rk" in args.solver and "dg" in args.solver:
 
 
 assert my_solver != None
-
-if args.AS_flag==True:
-    my_solver.integer_constants.update({"CCZ4SO":1})
-    my_solver._time_step_relaxation=my_solver._time_step_relaxation/2
 
 my_solver.add_all_solver_constants()
 project.add_solver(my_solver)
@@ -285,7 +263,7 @@ project.set_load_balancing(
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
-if args.AS_flag==True:
+if args.SO_flag==True:
     additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
                                                            add_user_defined_actions=False,
                                                            )
