@@ -54,13 +54,13 @@ parser.add_argument(
         "gfx906",
         "gfx908",
         "gfx90a",  # gfx906=MI50, gfx908=MI100, gfx90a=MI200
-        "70",
-        "72",
-        "75",
-        "80",
-        "86",
-        "89",
-        "90",
+        "sm_70",
+        "sm_72",
+        "sm_75",
+        "sm_80",
+        "sm_86",
+        "sm_89",
+        "sm_90",
         "spir64",
     ],
     help="Select GPU compute capability",
@@ -123,6 +123,12 @@ if args.gpu == "omp" and "icx" in args.cc and "icpx" in args.cxx and "spir64" in
         + args.arch
     )
 
+elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
+    cflags += " -lstdc++fs --offload-arch=" + args.arch
+    cxxflags += " -lstdc++fs --offload-arch=" + args.arch
+    cxxflags = re.sub(r"-std=c\+\+20", "-std=c++17", cxxflags)
+    ldflags += " -lstdc++fs --offload-arch=" + args.arch
+
 elif (
     args.gpu == "omp"
     and ("clang" in args.cc or "clangwrap" in args.cc or "tdclang" in args.cc)
@@ -134,26 +140,21 @@ elif (
     )
 ):
     cflags += (
-        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march="
         + args.arch
     )
     cxxflags += (
-        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march="
         + args.arch
     )
     cxxflags = re.sub(r"-std=c\+\+20", "-std=c++17", cxxflags)
     ldflags += (
-        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march="
         + args.arch
     )
     if args.asm:
         cflags += " -save-temps -Xcuda-ptxas -v"
         cxxflags += " -save-temps -Xcuda-ptxas -v"
-
-elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
-    cflags += " -lstdc++fs --offload-arch=" + args.arch
-    cxxflags += " -lstdc++fs --offload-arch=" + args.arch
-    ldflags += " -lstdc++fs --offload-arch=" + args.arch
 
 elif (
     args.gpu == "omp"
@@ -207,20 +208,20 @@ elif args.gpu == "sycl" and "icx" in args.cc and "icpx" in args.cxx:
         ldflags += " -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent"
     else:
         cflags += (
-            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_"
+            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch="
             + args.arch
         )
         cxxflags += (
-            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_"
+            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch="
             + args.arch
         )
         ldflags += (
-            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_"
+            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch="
             + args.arch
         )
 
 elif args.gpu == "cuda":
-    nvccflags += f" -arch=sm_{args.arch}"
+    nvccflags += f" -arch={args.arch}"
     if args.with_cuda is not None:
         if not args.cmake:
             # CUDA path is only needed with Automake builds
@@ -253,7 +254,7 @@ if args.multithreading is not None:
 if args.gpu is not None:
     if args.cmake:
         configure_args.append(f"-DWITH_GPU={args.gpu}")
-        configure_args.append(f"-DWITH_GPU_ARCH=sm_{args.arch}")
+        configure_args.append(f"-DWITH_GPU_ARCH={args.arch}")
     else:
         configure_args.append(f"--with-gpu={args.gpu}")
 
