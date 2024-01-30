@@ -42,7 +42,6 @@ project.additional_action_sets_per_solver_step.append(
 
     def __init__(self, 
                  particle_set, 
-                 damp_particles_as_they_approach_boundary,
                  relative_domain_halo=0.1
                  ):
         """!
@@ -60,10 +59,6 @@ project.additional_action_sets_per_solver_step.append(
         self.d["PARTICLE"] = particle_set.particle_model.name
         self.d["PARTICLES_CONTAINER"] = particle_set.name
         self.d["VELOCITY_ATTRIBUTE"] = particle_set.particle_model.velocity.get_accessor_name()
-        if damp_particles_as_they_approach_boundary:
-          self.d["DAMP_VELOCITY"] = "true"
-        else:
-          self.d["DAMP_VELOCITY"] = "false"
         self.d["RELATIVE_DOMAIN_HALO"] = relative_domain_halo
  
     def get_action_set_name(self):
@@ -72,11 +67,7 @@ project.additional_action_sets_per_solver_step.append(
     __Template_TouchVertexLastTime = jinja2.Template(
         """
     // check only boundary vertices
-    if ( 
-        tarch::la::oneSmallerEquals( marker.x() - 0.5 * marker.h(), DomainOffset )
-        or 
-        tarch::la::oneGreaterEquals( marker.x() + 0.5 * marker.h(), DomainOffset + DomainSize )
-    ) {
+    if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
       for (auto& particle: fineGridVertex{{PARTICLES_CONTAINER}}) {
         ::swift2::boundaryconditions::applyFixedBoundaryCondition(
           *particle,
@@ -84,7 +75,6 @@ project.additional_action_sets_per_solver_step.append(
           DomainOffset,
           DomainSize,
           {{RELATIVE_DOMAIN_HALO}},
-          {{DAMP_VELOCITY}},
           _spacetreeId
         );
       } // for loop over particles
@@ -108,6 +98,7 @@ project.additional_action_sets_per_solver_step.append(
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "swift2/kernels/ParticleSetIterators.h"
+#include "swift2/boundaryconditions/Utils.h"
 #include "swift2/boundaryconditions/FixedBoundary.h"
 """
         )

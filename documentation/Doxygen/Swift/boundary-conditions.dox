@@ -96,7 +96,6 @@ particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += """
       DomainOffset,
       DomainSize,
       0.1,
-      true,
       _spacetreeId
     );
   }
@@ -108,21 +107,15 @@ particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += """
  and solver steps. As written above, the documentation of each and every 
  solver has to contain information how to inject such information.
 
-
- Swift's premanufactured action sets report any particle boundary update to the
- particle tracing library which keeps track of particles and to which vertices
- they are assigned. If you alter the particle positions within the drift 
- actions "manually", you also should inform the tracing API of these changes.
- Otherwise, your code will fail with assertions. This is best achieved by taking
- a snapshot of the particles prior to the application of the boundary conditions
- and then report about the updates: 
- 
+ As a boundary update might be expensive, it is reasonable to embed it into
+ some additional checks:
+  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-auto particlePositionsBeforeBC = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-// your update; maybe like in the snippet above
-::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, particlePositionsBeforeBC, _spacetreeId);
+if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
+  // your update; maybe like in the snippet above
+}
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- 
+  
  # Solver coupling
 
  @todo Yet to be written 

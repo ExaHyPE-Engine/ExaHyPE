@@ -126,34 +126,33 @@ class SPHLeapfrogFixedSearchRadius(Particle):
     
     ~~~~~~~~~~~~~~~~~~~~~~
 particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += " " "
-::swift2::kernels::forAllParticles( 
-  marker, 
-  assignedParticles, 
-  [&](const peano4::datamanagement::VertexMarker& marker, globaldata::" " " + name + " " "&  assignedParticle)->void {
-    ::swift2::boundaryconditions::applyFixedBoundaryCondition(
-      assignedParticle,
-      marker,
-      DomainOffset,
-      DomainSize,
-      0.1,
-      true,
-      _spacetreeId
-    );
-  }
-);
+if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
+  ::swift2::kernels::forAllParticles( 
+    marker, 
+    assignedParticles, 
+    [&](const peano4::datamanagement::VertexMarker& marker, globaldata::" " " + name + " " "&  assignedParticle)->void {
+      ::swift2::boundaryconditions::applyFixedBoundaryCondition(
+        assignedParticle,
+        marker,
+        DomainOffset,
+        DomainSize,
+        0.1,
+        _spacetreeId
+      );
+    }
+  );
+}
 " " "
 particle.algorithm_steps_dict["Drift"].includes += " " "
 #include "swift2/boundaryconditions/FixedBoundary.h"
+#include "swift2/boundaryconditions/Utils.h"
 " " "
 particle._setup_algorithm_steps()
 particle._setup_initialisation_steps()
     ~~~~~~~~~~~~~~~~~~~~~~
     
     The spaced-out syntax is just there to ensure that the Python documentation
-    syntax is not broken. Please note that you will have to add tracing
-    information too if you want to use your code in debug mode as well. The
-    @ref swift_boundary_conditions "boundary condition discussion" provides
-    some context on this.
+    syntax is not broken. 
     
 
     ## Attributes
