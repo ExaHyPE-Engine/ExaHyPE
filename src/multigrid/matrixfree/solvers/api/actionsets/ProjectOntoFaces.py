@@ -16,8 +16,9 @@ class ProjectOntoFaces(ActionSet):
   // what to do about boundary faces?
   if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
   {
-
     // apply cell to face projection, store it in faceProjections
+    // no tricky indexing needed here, since the whole of the cell
+    // solution vector is in scope here.
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection * TwoTimesD, double > faceProjections = 
       repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix() * fineGridCell{{SOLVER_NAME}}.getSolution();
 

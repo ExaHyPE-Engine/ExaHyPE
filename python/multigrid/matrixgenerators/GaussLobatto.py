@@ -121,7 +121,7 @@ class GaussLobatto(MatrixGenerator):
 
   def get_cell_identity_matrix(self):
     dim    = self.cell_nodes * self.unknowns_per_cell_node
-    # output = np.eye(dim,dim) * 2**(-self.Dimensions)
+    output = np.eye(dim,dim)# * 2**(-self.Dimensions)
     return output
       
   def get_cell_mass_matrix(self):
@@ -330,6 +330,8 @@ class GLMatrixFree(GaussLobatto):
     super( GLMatrixFree, self ).__init__(Dimensions,
                                          poly_degree
                                          )
-  def get_A_tilde():
+  def get_A_tilde(self):
     return self.get_cell_identity_matrix()
 
+  def get_face_to_cell_matrix(self):
+    raise NotImplementedError

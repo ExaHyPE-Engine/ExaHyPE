@@ -291,10 +291,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         4. Projection of u onto node 1
 
     @param cell_from_face: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times 2d K^f * (p+1)^{d-1}}\f$ 
-      This matrix projects the cell solution onto all of the faces. Note the 
-      extra factor of @f$ 2d @f$, similar to face_from_cell matrix. This should essentially
-      be transposed version of face_from_cell matrix in terms of motivation, but it is up
-      to the user to make sure that each of the columns are filled in appropriately.
+      This matrix projects the face solution onto the cells. Note the 
+      extra factor of @f$ 2d @f$, similar to face_from_cell matrix. Some clever indexing
+      is required in the backend here. The enumeration of the cols should follow a similar
+      pattern to the rows of face_from_cell.
 
     @param Riemann_matrix: \f$ \mathbb{R}^{ K^f (p+1)^{d-1} \times 2K^f_{f \gets c} (p+1)^{d-1}} @f$
       The matrix that combines the left/right projections on the cell and outputs a value 

@@ -22,8 +22,8 @@ parser.add_argument("-v",   "--verbose",              dest="verbose",        act
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
 parser.add_argument("-upcn", "--unknowns_per_cell",   dest="upcn",            type=int, default=1, help="Unknowns per cell node")
-parser.add_argument("-spfn", "--solutions_per_face",  dest="spfn",            type=int, default=1, help="Number of solutions to store per face node")
-parser.add_argument("-ppfn", "--projections_per_face",dest="ppfn",            type=int, default=2, help="Number of projections to store per face node")
+parser.add_argument("-spfn", "--solutions_per_face_node",  dest="spfn",            type=int, default=2, help="Number of solutions to store per face node")
+parser.add_argument("-ppfn", "--projections_per_face_node",dest="ppfn",            type=int, default=2, help="Number of projections to store per face node")
 parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
@@ -41,16 +41,16 @@ project = matrixfree.Project( project_name = "DGPointwise",
 TODO: hand this over to Alex. The shapes here are an indicator for what needs to go where...
 '''
 
-assembly_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
-mass_matrix     = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
+# assembly_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
+# mass_matrix     = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 
-face_from_cell  = np.zeros(( 2* args.ppfn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions,   args.upcn * (args.poly_degree + 1) ** (args.dimensions) ))
+# face_from_cell  = np.zeros(( 2* args.ppfn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions,   args.upcn * (args.poly_degree + 1) ** (args.dimensions) ))
 
-# we are sending the solns on the face onto the cell
-cell_from_face  = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     args.spfn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
+# # we are sending the solns on the face onto the cell
+# cell_from_face  = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     args.spfn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
 
-riemann_matrix  = np.zeros( (args.spfn * (args.poly_degree + 1) ** (args.dimensions-1), 2* args.ppfn * (args.poly_degree + 1) ** (args.dimensions-1)) )
-approximate_system_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
+# riemann_matrix  = np.zeros( (args.spfn * (args.poly_degree + 1) ** (args.dimensions-1), 2* args.ppfn * (args.poly_degree + 1) ** (args.dimensions-1)) )
+# approximate_system_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 
 matrices = multigrid.matrixgenerators.GLMatrixFree(
   args.dimensions,
@@ -103,7 +103,7 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
   cell_relaxation = 0.8,
   face_relaxation = 0.8,
-  approximate_system_matrix = approximate_system_matrix,
+  approximate_system_matrix = matrices.get_A_tilde(),
   approximate_system_matrix_scaling = 0,
 )
 
