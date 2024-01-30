@@ -21,6 +21,14 @@ class Project (object):
   namespace Sequence of strings representing the (nested) namespace. Pass in 
     [ "examples", "algebraicmg" ] for example if you wanna write a solver that 
     is embedded into the namespace examples::algebraicmg.
+    
+    
+  ## Global project properties
+  
+  If you want to alter some global constants, you should manipulate
+  the constants attribute. It will eventually feed into the generated
+  file Constants.h. See peano4.output.Constants for further info.
+  
   """
 
   def __init__(self, namespace, project_name, directory = "."):
