@@ -98,3 +98,4 @@ python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 4
 ## POP Performance Efficiency Metrics
 
 ![](metrics_hybrid_multiplicative_plot_FoA.png)
+![](metrics_hybrid_multiplicative_plot_FoA-(timestep).png)
