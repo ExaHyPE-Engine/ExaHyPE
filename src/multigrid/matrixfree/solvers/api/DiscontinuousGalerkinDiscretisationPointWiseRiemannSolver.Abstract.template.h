@@ -114,6 +114,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     );
 
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix();
+    virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getBoundaryConditionMatrix();
 
 
 

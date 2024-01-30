@@ -49,7 +49,7 @@ class UpdateCell(ActionSet):
   """
 
   templateTFFT="""
-  if ( fineGridFace{{SOLVER_NAME}}.getType() != facedata::{{SOLVER_NAME}}::Type::Coarse )
+  if ( fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior )
   {
     // project the u^\pm into a temporary vector
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 

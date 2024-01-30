@@ -335,3 +335,7 @@ class GLMatrixFree(GaussLobatto):
 
   def get_face_to_cell_matrix(self):
     raise NotImplementedError
+
+  def get_boundary_matrix(self):
+    raise NotImplementedError
+    

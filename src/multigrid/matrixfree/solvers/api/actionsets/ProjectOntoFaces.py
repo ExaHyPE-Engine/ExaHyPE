@@ -33,6 +33,24 @@ class ProjectOntoFaces(ActionSet):
   }
 """
 
+  templateTFFT="""
+  /*
+  All we do here is set the value of the solution to be the same as 
+  the interior-side projection
+  */
+  if ( fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Boundary )
+  {
+    // project the u^\pm into a temporary vector
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution, double > projection = 
+      repositories::{{SOLVER_INSTANCE}}.getBoundaryConditionMatrix() * fineGridFace{{SOLVER_NAME}}.getProjection();
+
+    for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; i++)
+      fineGridFace{{SOLVER_NAME}}.setSolution(
+        i, projection(i)
+      );
+  }
+"""
+
   def __init__(self,
                solver,
                descend_invocation_order=0,

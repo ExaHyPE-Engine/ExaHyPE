@@ -59,7 +59,6 @@ matrices = multigrid.matrixgenerators.GLMatrixFree(
   False     # see if this causes error
 )
 
-assert 1
 #! [Construct matrices]
 
 
@@ -101,6 +100,7 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   face_from_cell_projection = matrices.get_cell_to_face_matrix(), 
   cell_from_face_projection = matrices.get_face_to_cell_matrix(), 
   riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
+  boundary_matrix = matrices.get_boundary_matrix(),
   cell_relaxation = 0.8,
   face_relaxation = 0.8,
   approximate_system_matrix = matrices.get_A_tilde(),

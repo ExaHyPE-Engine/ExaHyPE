@@ -129,6 +129,21 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolutio
 
 {% endif %}
 
+{% if BOUNDARY_MATRIX!=[] %}
+tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getBoundaryConditionMatrix()
+{
+  static tarch::la::Matrix<  FaceUnknownsSolution, FaceUnknownsProjection, double > result = {
+      {{BOUNDARY_MATRIX[0]| join(", ")}}
+      {% for ROW in BOUNDARY_MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+  };
+
+  return result;
+} 
+
+{% endif %}
+
 {% if APPROX_SYSTEM_MATRIX!=[] %}
 tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getInvertedApproxSystemMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,

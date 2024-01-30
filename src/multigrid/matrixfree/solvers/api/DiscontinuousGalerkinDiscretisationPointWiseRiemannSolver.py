@@ -236,6 +236,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               face_from_cell_projection,
               cell_from_face_projection,
               riemann_matrix,
+              boundary_matrix,
               cell_relaxation,
               face_relaxation,
               approximate_system_matrix,
@@ -270,25 +271,30 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     @param mass_matrix: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
 
-    @param face_from_cell: \f$ \mathbb{R}^{2d K^f_{f \gets c} * (p+1)^{d-1} \times K^c * (p+1)^{d}}\f$ 
+    @param face_from_cell: \f$ \mathbb{R}^{2d * 2K^f_{f \gets c} * (p+1)^{d-1} \times K^c * (p+1)^{d}}\f$ 
       This matrix projects the cell solution onto all of the faces. Note the 
       extra factor of @f$ 2d @f$. The structure of this matrix is quite important. The rows
-      should be structured in blocks of \f$ K^f_{f \gets c} * (p+1)^{d-1} \f$, ie one for each 
-      face in the familiar Peano ordering. We note that this is exactly half the number of 
-      projections that we store on each face, and this is deliberate. The matrix should not
-      contain redundant rows. We note that (for instance) face 0 has left-side projections
-      which lie outside the cell, and right-side projections that lie inside. The projections
-      relating to the left-side should be omitted. 
-      More concretely, let \f$  K^f_{f \gets c} = 2 \f$, meaning we project two quantities
-      onto each face node, and we label these quantities \f$ q \f$ and \f$ u \f$. 
-      We note that for each face containing multiple nodes, subsequent nodes within a face
-      are enumerated using the standard Peano ordering, ie starting at the negative of 
-      each coordinate axis, filling up greedily. Then for face 0, the rows should be ordered
-      as follows:
-        1. Projection of q onto node 0
-        2. Projection of q onto node 1
-        3. Projection of u onto node 0
-        4. Projection of u onto node 1
+      should be structured in blocks of \f$ 2K^f_{f \gets c} * (p+1)^{d-1} \f$, ie one for each 
+      face, in the familiar Peano ordering. We note that this is the same as the number of projections
+      we store per face. We note that, since the 0th face has left-side projections which
+      should be set outside of the cell, that at least half of the rows of the matrix should
+      be empty.
+      We also note that each face contains multiple nodes, and they should be ordered sequentially
+      in the typical Peano fashion, i.e. greedily along each coordinate axis until full, starting
+      from the negative. For each face, with two nodes, with two values (q and u) being projected onto the face,
+      the rows should be ordered as follows:
+        1. Negative projection of q onto node 0
+        2. Negative projection of q onto node 1
+        3. Negative projection of u onto node 0
+        4. Negative projection of u onto node 1
+        5. Positive projection of q onto node 0
+        6. Positive projection of q onto node 1
+        7. Positive projection of u onto node 0
+        8. Positive projection of u onto node 1
+      In two dimensions, all of the negative projections should be 0 on faces 0 and 1. Ditto for the 
+      positive projections on faces 2 and 3.
+
+      
 
     @param cell_from_face: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times 2d K^f * (p+1)^{d-1}}\f$ 
       This matrix projects the face solution onto the cells. Note the 
@@ -323,6 +329,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._face_from_cell_projection = face_from_cell_projection
     self._cell_from_face_projection = cell_from_face_projection
     self._riemann_matrix            = riemann_matrix
+    self._boundary_matrix           = boundary_matrix
     self._approximate_system_matrix = approximate_system_matrix
     self._approximate_system_matrix_scaling = approximate_system_matrix_scaling
 
@@ -428,6 +435,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "FACE_FROM_CELL_PROJECTION"   : self._face_from_cell_projection,
         "CELL_FROM_FACE_PROJECTION"   : self._cell_from_face_projection,
         "RIEMANN_MATRIX"              : self._riemann_matrix,
+        "BOUNDARY_MATRIX"             : self._boundary_matrix,
         "APPROX_SYSTEM_MATRIX"        : self._approximate_system_matrix,
         "CELL_RELAXATION"             : self._cell_relaxation,
         "FACE_RELAXATION"             : self._face_relaxation,
