@@ -388,7 +388,7 @@ First, in addition to the gradient projections @f$ q^\pm @f$, we introduce the p
 \f}
 It is convenient to introduce the opposite signs for the "-" and "+" projections, as we did above, because it will
 provide the required jumps when summed up.
-We also introduce @f$ u^f @f$, which couples with the projections on each facet in the same way as @f$ q^f @f$:
+We also introduce @f$ u^f @f$, which couples with the projections on each facet in the same way as @f$ q^f @f$, i.e.
 @f$ u^f = \mathcal{R} \left( u^-, u^+ \right) = \left( u^- + u^+ \right) / 2 @f$.
 
 The discretized weak formulation takes the following form
@@ -432,7 +432,7 @@ Now, let us review the components required to build the solver:
   - As in the previous paragraph, we specify the variable <code> polynomial_degree </code> and set
 
             cell_unknowns = 1
-    Number of cell unknowns stays the same
+    Number of cell unknowns stays the same.
     <br><br>
 
   - On the facets, we have, as previously, @f$ q^f @f$ and, additionally, @f$ u^f @f$, so we now set 
@@ -456,11 +456,11 @@ Now, let us review the components required to build the solver:
 
     This operator now has a part that couples @f$ u @f$ with @f$ q^f @f$ and another part that couples @f$ u @f$ with @f$ u^f @f$.
     The first, "classical", component under the boundary integral is responsible for coupling @f$ u @f$ and @f$ q^f @f$:
-    When we computed it for a given cell boundary, it gives the terms @f$ \pm \int q^f v \, ds @f$.
+    When computed for a given cell boundary, it gives the terms @f$ \pm \int q^f v \, ds @f$.
     
     Both penalty terms couple @f$ u @f$ and @f$ u^f @f$. They result from the integrals like
     @f$ \pm \theta \int u^f ( \nabla v, n) \, ds \pm 2 \gamma_F \int u^f v \, ds @f$.
-    In the 2D 1st order case, this is a @f$ 4 \times 16 @f$ matrix, which divided into segments as shown in the picture:
+    In the 2D 1st order case, this is a @f$ 4 \times 16 @f$ matrix, which is divided into segments as shown in the picture:
     blue segments result from the standard flux integral, and the green ones result from the summed-up penalty terms.
 
     @image html penalty-matrix.png width=45%
@@ -483,35 +483,77 @@ Now, let us review the components required to build the solver:
     <br><br>
 
   - The right-hand side operator @f$ M @f$ remains the same.
+    <br><br>
 
-  ...
+  - The operator @f$ P_{f \leftarrow c} @f$ needs to be changed to accommodate the projection @f$ u^\pm @f$.
+    It is now a @f$ 4d(p+1)^{d-1} \times (p+1)^{d} @f$ (i.e. @f$ 16 \times 4 @f$) matrix with the lines arranged
+    according to the order of unknowns in @f$ \bar{w}^\pm @f$. This is specified in <code> cell_to_face_matrix </code>.
+    
+    Similar to @f$ A^{\text{penalty}}_{c \gets f} @f$, the projection matrix will be divided into the segments corresponding to
+    @f$ q^\pm @f$ and segments corresponding to @f$ u^\pm @f$. The gradient-related @f$ q^\pm @f$ segments, as previously, 
+    should be scaled by @f$ h^{-1} @f$, while the @f$ u^\pm @f$ part does not need to be scaled (@f$ h^0 @f$).
+    <br><br>
 
-<!--
- The discussed above weak formulation
-
-\f{eqnarray*}{
-  \int _{K} ( \nabla u, \nabla v) \ dx
-  - 
-  \int _{\partial K} (\hat{\nabla u},n) \cdot v \ dx
-  =
-  \int _{K} f \cdot v \ dx 
+  - Finally, we need to extend the <code>face_face_Riemann_problem_matrix</code>
+    to include the relation @f$ u^f = \left( u^- + u^+ \right) / 2 @f$.
+    This gives a @f$ (p+1)^{d-1} \times 4(p+1)^{d-1} @f$ matrix:
+\f{equation}{
+    \left(
+      \begin{array}{c}
+        q^f_0 \\
+        u^f_0 \\
+        q^f_1 \\
+        u^f_1
+      \end{array}
+    \right)
+    =
+    \left(
+      \begin{array}{cccccccc}
+        \frac{1}{2} & 0 & 0 & 0 & \frac{1}{2} & 0 & 0 & 0 \\
+        0 & \frac{1}{2} & 0 & 0 & 0 & \frac{1}{2} & 0 & 0 \\
+        0 & 0 & \frac{1}{2} & 0 & 0 & 0 & \frac{1}{2} & 0 \\
+        0 & 0 & 0 & \frac{1}{2} & 0 & 0 & 0 & \frac{1}{2} \\
+      \end{array}
+    \right)
+    \left(
+      \begin{array}{c}
+        q_0^- \\
+        u_0^- \\
+        q_1^- \\
+        u_1^- \\
+        q_0^+ \\
+        u_0^+ \\
+        q_1^+ \\
+        u_1^+ \\ 
+      \end{array}
+    \right)
 \f}
+      See Section "The simplest Riemann solver: averaging" 
+      for a general discussion on the implementation of the face-face coupling.
 
-transforms into
+### Treatment of boundary facets and boundary conditions
 
-\f{eqnarray*}{
-  \int _{K} ( \nabla u, \nabla v) \ dx
-  - 
-  \int _{\partial K} (\hat{\nabla u},n) \cdot v \ dx
-  =
-  \int _{K} f \cdot v \ dx 
-\f}
-123
--->
+We now only consider Dirichlet boundary conditions
+@f$ u|_{\partial \Omega} = 0 @f$, incorporated into the used weak formulation.
+In order to impose non-zero Dirichlet condition or Neumann condition,
+one will need to modify the right-hand side of the weak form accordingly.
+
+Additionally, we need to take care that the integrals over the boundary facets are calculated
+correctly because, on the boundary, we have "redundant" projection unknowns that do not receive
+values from a cell.
+One way of doing this is by redefining @f$ q^f @f$ and @f$ u^f @f$ exceptionally for the boundary facets.
+One needs to set @f$ q^f = q^+ @f$, @f$ u^f = u^+ @f$ for the left and bottom facets and
+@f$ q^f = q^- @f$, @f$ u^f = u^- @f$ for the right and top.
+This way, the redundant projections on the boundary become uncoupled from the rest of the system,
+and we assign them 0s by setting identities in the relevant positions of the global matrix and 0s 
+in the right-hand-side vector.
+This treatment of boundary values is implemented
+in python/multigrid/petsc/actionsets/ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod.py
 
 ## The simplest Riemann solver: averaging
 
 @todo Tobias. Continue writing.
+@todo This section needs to be revisited or moved. 
 
   - On the faces, we have the gradient @f$ \nabla u @f$ from the left and from
     right right. So we might be tempted to hold @f$ \nabla u^+ @f$ and
