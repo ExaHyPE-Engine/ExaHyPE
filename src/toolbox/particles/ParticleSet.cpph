@@ -373,3 +373,9 @@ std::string toolbox::particles::ParticleSet<T>::toString(bool addBrackets) const
     msg << ")";
   return msg.str();
 }
+
+
+template <typename T>
+int toolbox::particles::ParticleSet<T>::getNumberOfRemainingLocalParticles() {
+  return _numberOfRemainingLocalParticles;
+}
