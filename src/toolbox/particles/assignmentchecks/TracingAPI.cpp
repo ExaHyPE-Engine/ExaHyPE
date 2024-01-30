@@ -247,14 +247,15 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
           and
           firstNRecentEntriesToSkip!=DoNotFollowParticleMovementsInDatabase
         ) {
-          ParticleIdentifier previousIdentifier = _database.createParticleIdentifier(identifier.particleName, event->previousParticleX);
+          lock.free();
+          const ParticleIdentifier previousIdentifier = _database.createParticleIdentifier(identifier.particleName, event->previousParticleX);
           assertion3(
             previousIdentifier!=identifier,
             previousIdentifier.toString(),
             identifier.toString(),
             event->toString()
           );
-          logDebug( "getEntry()", "rerun with " << previousIdentifier.toString() << " distilled from " << identifier.toString() );
+          logDebug( "getEntry()", "rerun with " << previousIdentifier.toString() << " distilled from " << identifier.toString() << " on iteration " << countSnapshotsBackwards );
           return getEntry(previousIdentifier, spacetreeId, countSnapshotsBackwards);
         }
         else if (event->type != Event::Type::Erase and treeIsAFit) {
@@ -519,14 +520,36 @@ void toolbox::particles::assignmentchecks::moveParticle(
   logTraceInWith3Arguments( "moveParticle(...)", particleName, oldParticleX, newParticleX );
 
   if (not tarch::la::equals(oldParticleX,newParticleX)) {
-
-    // @todo Hier darf man genau nicht false reingeben, denn sonst berechnet er den Move auf zwei Ranks und es kommt u.U. nicht
-    // das gleiche raus. Bei attach koennen wir evtl mit false arbeiten
     internal::ParticleIdentifier newIdentifier = _database.createParticleIdentifier(particleName, newParticleX);
     internal::Event              newEvent(internal::Event::Type::MoveWhileAssociatedToVertex, oldParticleX, treeId, trace );
     internal::ParticleIdentifier oldIdentifier = _database.createParticleIdentifier(particleName, oldParticleX);
     internal::Event              previousEvent = _database.getEntry(oldIdentifier, treeId );
+    internal::Event              existingNewEvent = _database.getEntry(newIdentifier, internal::Database::AnyTree );
 
+    assertion9(
+      newIdentifier != oldIdentifier,
+      oldIdentifier.toString(),
+      previousEvent.toString(),
+      newIdentifier.toString(),
+      newEvent.toString(),
+      _database.getCurrentMeshSweep(),
+      treeId,
+      trace,
+      _database.totalEntries(oldIdentifier),
+      _database.particleHistory(oldIdentifier)
+    );
+    assertion9(
+      existingNewEvent.type == internal::Event::Type::NotFound,
+      oldIdentifier.toString(),
+      previousEvent.toString(),
+      newIdentifier.toString(),
+      newEvent.toString(),
+      _database.getCurrentMeshSweep(),
+      treeId,
+      trace,
+      _database.totalEntries(oldIdentifier),
+      _database.particleHistory(oldIdentifier)
+    );
     assertion9(
       previousEvent.type == internal::Event::Type::AssignToVertex,
       oldIdentifier.toString(),
