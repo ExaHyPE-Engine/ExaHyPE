@@ -11,7 +11,7 @@
 
  Things that you should be familiar with before you read this tutorial:
  
- - Peano's @ref Multigrid "multigrid terminology";
+ - Peano's @ref page_multigrid_terminology "multigrid terminology";
  - DG basics (from a math point of view, though no in-depth knowledge is required);
  - How to @ref page_installation "install and build Peano" and notably how to enable it's @ref documentation_multigrid_petsc "PETSc backend".
  
@@ -320,18 +320,79 @@ The ingredients required for a DG solver are the following:
 
 ## Interior penalty method for the Poisson equation
  
- In order to make the DG discretization of the Poisson equation well-defined, we need to modify the weak formulation by introducing two additional terms,
- "penalizing" the basis functions' jumps across the faces. This method is known as the interior penalty method, 
- and we will use the formulation summarized in <a href="https://doi.org/10.1002/nla.1816">https://doi.org/10.1002/nla.1816</a>.
+In order to make the DG discretization of the Poisson equation well-defined, we need to modify the weak formulation by introducing two additional terms,
+"penalizing" the basis functions' jumps across the faces. This method is known as the interior penalty method, 
+and we will use the formulation summarized in <a href="https://doi.org/10.1002/nla.1816">https://doi.org/10.1002/nla.1816</a>.
 
- First, we need to introduce slightly different notation. Note that the sum of face integrals in the weak
- form discussed in the previous paragraph, i.e. @f$ \sum_{\text{cells } K} \left( - \int _{\partial K} (\hat{\nabla u},n) \cdot v \ ds \right) @f$,
- is equivalent to the following: ...
+First, we need to introduce slightly different notation. It can be shown that the sum of face integrals in the weak
+form discussed in the previous paragraph, i.e. @f$ - \sum_{\text{cells } K} \int _{\partial K} (\hat{\nabla u},n) \cdot v \ ds @f$,
+is equivalent to the following, for the interior facets:
+
+\f{equation}{
+  - \sum_{\text{facets } F} \int _{F} \{ (\nabla u, n_F) \} [\![ v ]\!] \ ds
+\f}
+
+Unlike the summation over the cells @f$ K @f$, where each facet of the boundary @f$ \partial K @f$ is itegrated over twice, in this case, we sum over the facets,
+so each of them is covered only once. This results in the jump and average terms under the integral:
+
+\f{equation}{
+  [\![ v ]\!] := v^- - v^+, \quad \{ (\nabla u, n_F) \} := \frac{1}{2} \left( (\nabla u, n_F)^- + (\nabla u, n_F)^+ \right),
+\f}
+
+where the "-"s and "+"s are the values from the two cells sharing the facet, evaluated on this facet. For the vertical facets, the "+" and "-" cells are
+the right and the left one, respectively, and for the horizontal ones, they correspond to the upper and the lower cells.
+Additionally, @f$ n_F @f$ here is the unit normal vector associated with the facet @f$ F @f$ and oriented from its "-" cell to the "+" cell for interior facets.
+For boundary faces, @f$ n_F @f$ coincides with the exterior unit normal.
+In our framework, we will use the discussed earlier projection variables for the "+" and "-" values.
+
+Note that the above equivalence of integral terms is consistent with how we defined the averaging flux
+@f$ \mathcal{R}\left( q^- , q^+ \right) = \left( q^- + q^+ \right) / 2 @f$. If we want to use another relation for
+@f$ \mathcal{R} @f$, we will need to redefine the @f$ \{ \cdot \} @f$.
+
+In these terms, the full formulation for our problem reads as follows
+
+\f{multline}{
+  \sum_{\text{cells } K} 
+  \int _{K} ( \nabla u, \nabla v) \ d\boldsymbol{x} 
+  +
+  \sum_{\text{interior facets } F_i}
+  \int _{F_i}
+  \biggl[
+    - \{ (\nabla u, n_F) \} [\![ v ]\!] 
+    + \theta [\![ u ]\!] \{ (\nabla v, n_F) \}
+    + \gamma_F [\![ u ]\!] [\![ v ]\!] 
+  \biggr] \ ds
+  +
+  \\
+  \sum_{\text{boundary facets } F_b}
+  \int _{F_b}
+  \biggl[
+    - (\nabla u, n_F) \, v 
+    + \theta \, u \, (\nabla v, n_F)
+    + \gamma_F u v
+  \biggr] \ ds
+  =
+  \sum_{\text{cells } K} \int _{K} f v \ d\boldsymbol{x}.
+\f}
+
+To implement this formulation in a solver, we will use the same notation and follow the same steps as for
+the "naive discretization" discussed earlier.
+
+First, in addition to the gradient projections @f$ q^\pm @f$, we introduce the projections of the solution:
+\f{equation}{
+  u^+ := - u |_{\text{left and bottom facet}}, \quad u^- := u |_{\text{right and top facet}}.
+\f}
+It is convenient to introduce the opposite signs for the "-" and "+" projections, as we did above, because it will
+proved the required jumps when summing up.
+We also introduce @f$ u^f @f$, which couples with the projections on each facet in the same way as @f$ q^f @f$:
+@f$ u^f = \mathcal{R} \left( u^-, u^+ \right) = \left( u^- + u^+ \right) / 2 @f$.
+
+@image html two-d-1st-order-penalty-stencil.png width=35%
  
- <!--
+<!--
  The discussed above weak formulation
 
- \f{eqnarray*}{
+\f{eqnarray*}{
   \int _{K} ( \nabla u, \nabla v) \ dx
   - 
   \int _{\partial K} (\hat{\nabla u},n) \cdot v \ dx
@@ -348,6 +409,7 @@ transforms into
   =
   \int _{K} f \cdot v \ dx 
 \f}
+123
 -->
 
 ## The simplest Riemann solver: averaging

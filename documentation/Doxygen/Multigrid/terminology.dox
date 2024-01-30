@@ -120,7 +120,7 @@ specification:
   not exist at the point where we evaluate it. However, there is are two 
   valid function values - typically left and right - and this is the average.
 
-- Square double brackets denote the jump between two values: @f$ [[ u ]] = u^- - u^+ @f$
+- Square double brackets denote the jump between two values: @f$ [\![ u ]\!] = u^- - u^+ @f$
 
 - Curly brackets denote the average values: @f$ \{ u \} = \left( u^- + u^+ \right) / 2 @f$
 
