@@ -150,7 +150,10 @@ particle._setup_initialisation_steps()
     ~~~~~~~~~~~~~~~~~~~~~~
     
     The spaced-out syntax is just there to ensure that the Python documentation
-    syntax is not broken.
+    syntax is not broken. Please note that you will have to add tracing
+    information too if you want to use your code in debug mode as well. The
+    @ref swift_boundary_conditions "boundary condition discussion" provides
+    some context on this.
     
 
     ## Attributes
