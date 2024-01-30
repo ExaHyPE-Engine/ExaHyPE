@@ -327,7 +327,7 @@ class GLMatrixFree(GaussLobatto):
                unknowns_per_cell_node=1,
                unknowns_per_face_node=1,
                use_unit_interval=False):
-    super( GaussLobatto, self ).__init__(Dimensions,
+    super( GLMatrixFree, self ).__init__(Dimensions,
                                          poly_degree
                                          )
   def get_A_tilde():

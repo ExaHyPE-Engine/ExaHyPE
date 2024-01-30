@@ -181,6 +181,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   There is a @ref tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson "very simple Poisson solver tutorial"
   in the tutorials section which illustrates how to use this solver.
 
+  The user needs to supply a few crucial matrices, referred to in the maths above. These are noted and their
+  shapes discussed in the parameters section of the documentation of this class.
+
   ### Under the hood
   
   Inside the cells we store \f$ K^c (p+1)^{d} \f$ values for the solution, and the same number for the rhs.
@@ -269,12 +272,29 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
     @param face_from_cell: \f$ \mathbb{R}^{2d K^f_{f \gets c} * (p+1)^{d-1} \times K^c * (p+1)^{d}}\f$ 
       This matrix projects the cell solution onto all of the faces. Note the 
-      extra factor of @f$ 2d @f$. The intention of this factor is that we project all values
-      into a flat array, face-by-face.
+      extra factor of @f$ 2d @f$. The structure of this matrix is quite important. The rows
+      should be structured in blocks of \f$ K^f_{f \gets c} * (p+1)^{d-1} \f$, ie one for each 
+      face in the familiar Peano ordering. We note that this is exactly half the number of 
+      projections that we store on each face, and this is deliberate. The matrix should not
+      contain redundant rows. We note that (for instance) face 0 has left-side projections
+      which lie outside the cell, and right-side projections that lie inside. The projections
+      relating to the left-side should be omitted. 
+      More concretely, let \f$  K^f_{f \gets c} = 2 \f$, meaning we project two quantities
+      onto each face node, and we label these quantities \f$ q \f$ and \f$ u \f$. 
+      We note that for each face containing multiple nodes, subsequent nodes within a face
+      are enumerated using the standard Peano ordering, ie starting at the negative of 
+      each coordinate axis, filling up greedily. Then for face 0, the rows should be ordered
+      as follows:
+        1. Projection of q onto node 0
+        2. Projection of q onto node 1
+        3. Projection of u onto node 0
+        4. Projection of u onto node 1
 
     @param cell_from_face: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times 2d K^f * (p+1)^{d-1}}\f$ 
       This matrix projects the cell solution onto all of the faces. Note the 
-      extra factor of @f$ 2d @f$.
+      extra factor of @f$ 2d @f$, similar to face_from_cell matrix. This should essentially
+      be transposed version of face_from_cell matrix in terms of motivation, but it is up
+      to the user to make sure that each of the columns are filled in appropriately.
 
     @param Riemann_matrix: \f$ \mathbb{R}^{ K^f (p+1)^{d-1} \times 2K^f_{f \gets c} (p+1)^{d-1}} @f$
       The matrix that combines the left/right projections on the cell and outputs a value 

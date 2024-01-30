@@ -23,7 +23,7 @@ parser.add_argument("-d",   "--dimensions",           dest="dimensions",     typ
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
 parser.add_argument("-upcn", "--unknowns_per_cell",   dest="upcn",            type=int, default=1, help="Unknowns per cell node")
 parser.add_argument("-spfn", "--solutions_per_face",  dest="spfn",            type=int, default=1, help="Number of solutions to store per face node")
-parser.add_argument("-ppfn", "--projections_per_face",dest="ppfn",            type=int, default=1, help="Number of projections to store per face node")
+parser.add_argument("-ppfn", "--projections_per_face",dest="ppfn",            type=int, default=2, help="Number of projections to store per face node")
 parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
@@ -53,8 +53,8 @@ riemann_matrix  = np.zeros( (args.spfn * (args.poly_degree + 1) ** (args.dimensi
 approximate_system_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
 
 matrices = multigrid.matrixgenerators.GLMatrixFree(
-  args.poly_degree,
   args.dimensions,
+  args.poly_degree,
   args.upcn,
   False     # see if this causes error
 )
@@ -64,6 +64,27 @@ assert 1
 
 
 #! [Instantiate solver]
+# solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
+#   name = "DGPoisson",
+#   dimensions = args.dimensions,
+#   poly_degree = args.poly_degree,
+#   unknowns_per_cell_node = args.upcn,
+#   solutions_per_face_node = args.spfn,
+#   projections_per_face_node = args.ppfn,
+#   min_h = args.meshsize,
+#   max_h = args.meshsize,
+#   assembly_matrix= assembly_matrix, 
+#   assembly_matrix_scaling = 0, 
+#   mass_matrix = mass_matrix, 
+#   mass_matrix_scaling = 0, 
+#   face_from_cell_projection = face_from_cell, 
+#   cell_from_face_projection = cell_from_face, 
+#   riemann_matrix = riemann_matrix,
+#   cell_relaxation = 0.8,
+#   face_relaxation = 0.8,
+#   approximate_system_matrix = approximate_system_matrix,
+#   approximate_system_matrix_scaling = 0,
+# )
 solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
   name = "DGPoisson",
   dimensions = args.dimensions,
@@ -73,18 +94,19 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   projections_per_face_node = args.ppfn,
   min_h = args.meshsize,
   max_h = args.meshsize,
-  assembly_matrix= assembly_matrix, 
+  assembly_matrix= matrices.get_cell_system_matrix_for_laplacian(), 
   assembly_matrix_scaling = 0, 
-  mass_matrix = mass_matrix, 
+  mass_matrix = matrices.get_cell_mass_matrix(), 
   mass_matrix_scaling = 0, 
-  face_from_cell_projection = face_from_cell, 
-  cell_from_face_projection = cell_from_face, 
-  riemann_matrix = riemann_matrix,
+  face_from_cell_projection = matrices.get_cell_to_face_matrix(), 
+  cell_from_face_projection = matrices.get_face_to_cell_matrix(), 
+  riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
   cell_relaxation = 0.8,
   face_relaxation = 0.8,
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = 0,
 )
+
 #! [Instantiate solver]
 
 project.add_solver(solver)
