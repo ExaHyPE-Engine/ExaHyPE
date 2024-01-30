@@ -56,34 +56,15 @@ matrices = multigrid.matrixgenerators.GLMatrixFree(
   args.dimensions,
   args.poly_degree,
   args.upcn,
-  False     # see if this causes error
+  args.spfn,
+  args.ppfn
 )
 
 #! [Construct matrices]
 
 
 #! [Instantiate solver]
-# solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
-#   name = "DGPoisson",
-#   dimensions = args.dimensions,
-#   poly_degree = args.poly_degree,
-#   unknowns_per_cell_node = args.upcn,
-#   solutions_per_face_node = args.spfn,
-#   projections_per_face_node = args.ppfn,
-#   min_h = args.meshsize,
-#   max_h = args.meshsize,
-#   assembly_matrix= assembly_matrix, 
-#   assembly_matrix_scaling = 0, 
-#   mass_matrix = mass_matrix, 
-#   mass_matrix_scaling = 0, 
-#   face_from_cell_projection = face_from_cell, 
-#   cell_from_face_projection = cell_from_face, 
-#   riemann_matrix = riemann_matrix,
-#   cell_relaxation = 0.8,
-#   face_relaxation = 0.8,
-#   approximate_system_matrix = approximate_system_matrix,
-#   approximate_system_matrix_scaling = 0,
-# )
+
 solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
   name = "DGPoisson",
   dimensions = args.dimensions,

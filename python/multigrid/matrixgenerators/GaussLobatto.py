@@ -325,17 +325,39 @@ class GLMatrixFree(GaussLobatto):
                Dimensions,
                poly_degree,
                unknowns_per_cell_node=1,
-               unknowns_per_face_node=1,
+               solutions_per_face_node=2,  # number of solutions   we hold per node. Default to 2 since we have u and q
+               projections_per_face_node=2 # number of projections we hold per node. Default to 2 since we have u and q
                use_unit_interval=False):
     super( GLMatrixFree, self ).__init__(Dimensions,
-                                         poly_degree
+                                         poly_degree,
+                                         unknowns_per_cell_node
                                          )
+    
   def get_A_tilde(self):
     return self.get_cell_identity_matrix()
 
   def get_face_to_cell_matrix(self):
+    '''
+    @Alex the shape of this should be:
+    unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions rows
+    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *Dimensions cols
+    
+    solutions_per_face_node counts u and q
+    multiply further by number of nodes per face
+    multiply further by number of faces
+
+
+    '''
     raise NotImplementedError
 
   def get_boundary_matrix(self):
+    '''
+    @Alex shape of this should be 
+    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) rows
+    projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) cols
+
+    we are fixing the value of the solution vector on the boundary with the value of 
+    the projections here. you can assume everything was set to 0 intitialliy
+    '''
     raise NotImplementedError
     
