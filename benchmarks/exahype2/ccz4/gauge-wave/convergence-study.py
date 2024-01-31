@@ -267,8 +267,13 @@ if args.SO_flag:
     additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
                                                            add_user_defined_actions=False,
                                                            )
+    
+    #
+    # We misuse the projection. See @ref benchmarks_exahype2_ccz4_gauge_wave for details
+    #
     project_patch_onto_faces  = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(my_solver)
-    project_patch_onto_faces.guards  = [ my_solver._store_cell_data_default_guard() for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
+    project_patch_onto_faces.guards     = [ "false" for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
+    project_patch_onto_faces.guards[-1] = my_solver._store_cell_data_default_guard()
 
     roll_over_projected_faces = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(my_solver, 
                                                                                     my_solver._store_face_data_default_guard(),

@@ -69,7 +69,8 @@ bool mayPlot() {
 std::string getSolverStateDescriptions() {
   std::ostringstream result;
   {% for item in SOLVERS -%}
-  result << {{ item[1] }}.toString( {{ item[1] }}.getSolverState() );
+  if (not result.str().empty()) result << ", ";
+  result << "{{ item[1] }}:" << {{ item[1] }}.toString( {{ item[1] }}.getSolverState() );
   {# Comment to ensure that jinja2 adds a new line#}
   {%- endfor %}
   return result.str();

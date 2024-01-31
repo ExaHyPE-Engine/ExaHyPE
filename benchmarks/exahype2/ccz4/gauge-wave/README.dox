@@ -195,9 +195,21 @@ following code snippet:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This variant kicks off the manual reconstruction prior to the first mesh sweep of 
-the Runge-Kutta scheme. This seems to work and do the job in our setup. However, 
+the Runge-Kutta scheme. This seems to work and to do the job in our setup. However, 
 it is not enough for higher-order convergence, where we would need a preprocessing
-step prior to each intermediate step.
+step prior to each intermediate step. We ignore this fact here.
+
+
+### Hijack the projection
+
+Once we have computed the second derivatives into auxiliary variables, we have to 
+project those guys onto the boundary. For this, we hijack the projection of the 
+Runge-Kutta scheme. The documentation of exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces
+requires K+1 predicates for a Runge-Kutta scheme of Kth order. The first K entries
+correspond to the Runge-Kutta scheme. The last one allows you to do something 
+different for the initialisation. We disable all K-1 entries, and only set the 
+very last option to true. This is clearly a hack, but if you study the 
+generated code, it seems to work.
 
 
 */

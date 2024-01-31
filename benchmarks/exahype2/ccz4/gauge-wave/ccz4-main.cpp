@@ -154,20 +154,6 @@ bool selectNextAlgorithmicStep() {
 
     continueToSolve = true;
   } else {
-    //! [Additional mesh sweep case distinction]
-    #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
-    if (
-      repositories::isFirstGridSweepOfTimeStep()
-      and
-      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
-      ) {
-        peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalMeshTraversal )
-      );
-      continueToSolve         = true;
-    } else 
-    #endif 
-    //! [Additional mesh sweep case distinction]
     if (TimeInBetweenPlots > 0.0 and repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and repositories::mayPlot()) {
       if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
         nextMinPlotTimeStamp += TimeInBetweenPlots;
@@ -201,13 +187,29 @@ bool selectNextAlgorithmicStep() {
       );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
-    } else if (repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime) {
+    }
+    //! [Additional mesh sweep case distinction]
+    #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
+    else if (
+      repositories::isFirstGridSweepOfTimeStep()
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+      ) {
+        peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalMeshTraversal )
+      );
+      continueToSolve         = true;
+    }
+    #endif
+    //! [Additional mesh sweep case distinction]
+    else if (repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime) {
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::TimeStep)
       );
       continueToSolve         = true;
       haveJustWrittenSnapshot = false;
-    } else {
+    }
+    else {
       if (not haveJustWrittenSnapshot and TimeInBetweenPlots > 0.0 and repositories::mayPlot()) {
         peano4::parallel::Node::getInstance().setNextProgramStep(
           repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
@@ -237,7 +239,7 @@ void step() {
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
-  logInfo("step()", "run " << repositories::StepRepository::toString(stepName) << " with solver's state " << repositories::getSolverStateDescriptions() );
+  logInfo("step()", "run " << repositories::StepRepository::toString(stepName) << " with solver's upcoming state " << repositories::getSolverStateDescriptions() );
 
   static tarch::timing::Watch watch("::", "step()", false);
 
