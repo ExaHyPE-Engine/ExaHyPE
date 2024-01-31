@@ -325,7 +325,7 @@ class GLMatrixFree(GaussLobatto):
                Dimensions,
                poly_degree,
                unknowns_per_cell_node=1,
-               solutions_per_face_node=2,  # number of solutions   we hold per node. Default to 2 since we have u and q
+               solutions_per_face_node=2,   # number of solutions   we hold per node. Default to 2 since we have u and q
                projections_per_face_node=2, # number of projections we hold per node. Default to 2 since we have u and q
                use_unit_interval=False):
     super( GLMatrixFree, self ).__init__(Dimensions,
@@ -344,19 +344,43 @@ class GLMatrixFree(GaussLobatto):
   def get_face_to_cell_matrix(self):
     '''
     @Alex the shape of this should be:
-    unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions rows
-    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *Dimensions cols
+    unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions rows (= 4)
+    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *Dimensions cols (= 16)
     
     solutions_per_face_node counts u and q
     multiply further by number of nodes per face
     multiply further by number of faces
 
-
     '''
-    return np.zeros((
-      self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
-      self._solutions_per_face_node* ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions
-    ))
+    
+    # SCALING: scaled by h
+    A_CF_q_left   = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
+    A_CF_q_bottom = self.block_matrix._A_CF[(0,2)]["bottom"][(1,0)]
+    A_CF_q_right  = self.block_matrix._A_CF[(0,2)]["right"][(0,1)]
+    A_CF_q_top    = self.block_matrix._A_CF[(0,2)]["top"][(1,0)]
+
+    # SCALING:
+    # !!! A_{C<-F} has penalty components of different scaling!  
+    # For now, we just sum them up into one matrix with scaling (0,0)
+    # Need to work out how to separate them in the solver.
+    A_CF_u_left   = self.block_matrix._A_CF[(0,5)]["left"][(0,0)] # + block_matrix._A_CF[(0,5)]["left"][(0,1)]
+    A_CF_u_bottom = self.block_matrix._A_CF[(0,5)]["bottom"][(0,0)] # + block_matrix._A_CF[(0,5)]["bottom"][(1,0)]
+    A_CF_u_right  = self.block_matrix._A_CF[(0,5)]["right"][(0,0)] # + block_matrix._A_CF[(0,5)]["right"][(0,1)]
+    A_CF_u_top    = self.block_matrix._A_CF[(0,5)]["top"][(0,0)] # + block_matrix._A_CF[(0,5)]["top"][(1,0)]
+
+    A_CF_left = np.concatenate((A_CF_q_left, A_CF_u_left), axis=1)
+    A_CF_bottom = np.concatenate((A_CF_q_bottom, A_CF_u_bottom), axis=1)
+    A_CF_right = np.concatenate((A_CF_q_right, A_CF_u_right), axis=1)
+    A_CF_top = np.concatenate((A_CF_q_top, A_CF_u_top), axis=1)
+
+    A_CF_result = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
+    
+    return A_CF_result
+
+    # return np.zeros((
+    #   self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
+    #   self._solutions_per_face_node* ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions
+    # ))
 
   def get_cell_to_face_matrix(self):
     """
@@ -369,22 +393,106 @@ class GLMatrixFree(GaussLobatto):
     Well, it's 2 * self._projections_per_face_node on each node.
 
     So the output of this matrix should have:                                               extra factor to account for all the faces
-    2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions rows
+    2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions rows (= 32)
     self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions                                  cols
+
+    @Sean: need to discuss the order of the redundant blocks
     """
-    return np.zeros((
-      2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions,
-      self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions 
-    ))
+
+    ### Compute the normal gradient projections
+    A_qp_u_left = self.block_matrix._A_FC[(0,0)]["left"][(0,0)]
+    A_qp_u_bottom = self.block_matrix._A_FC[(0,0)]["bottom"][(0,0)]
+    A_qm_u_right = self.block_matrix._A_FC[(1,0)]["right"][(0,0)]
+    A_qm_u_top = self.block_matrix._A_FC[(1,0)]["top"][(0,0)]
+
+    M_qp_qp_left   = self.block_matrix._A_FF[(0,0)]["left"][(0,1)]   # These are now the same;
+    M_qp_qp_bottom = self.block_matrix._A_FF[(0,0)]["bottom"][(1,0)] # keep for generality
+    M_qm_qm_right = self.block_matrix._A_FF[(1,1)]["right"][(0,1)]   #
+    M_qm_qm_top  = self.block_matrix._A_FF[(1,1)]["top"][(1,0)]      #
+
+    # SCALING: All P_q matrices are scaled with power -1 (i.e. 1/h)
+    P_qp_u_left = -np.dot(np.linalg.inv(M_qp_qp_left), A_qp_u_left)
+    P_qp_u_bottom = -np.dot(np.linalg.inv(M_qp_qp_bottom), A_qp_u_bottom)
+    P_qm_u_right = -np.dot(np.linalg.inv(M_qm_qm_right), A_qm_u_right)
+    P_qm_u_top = -np.dot(np.linalg.inv(M_qm_qm_top), A_qm_u_top)
+
+    ### Compute the solution projections
+    A_up_u_left = self.block_matrix._A_FC[(3,0)]["left"][(0,1)]
+    A_up_u_bottom = self.block_matrix._A_FC[(3,0)]["bottom"][(1,0)]
+    A_um_u_right = self.block_matrix._A_FC[(4,0)]["right"][(0,1)]
+    A_um_u_top = self.block_matrix._A_FC[(4,0)]["top"][(1,0)]
+
+    M_up_up_left   = self.block_matrix._A_FF[(3,3)]["left"][(0,1)]   # These are now the same;
+    M_up_up_bottom = self.block_matrix._A_FF[(3,3)]["bottom"][(1,0)] # keep for generality
+    M_um_um_right = self.block_matrix._A_FF[(4,4)]["right"][(0,1)]   #
+    M_um_um_top  = self.block_matrix._A_FF[(4,4)]["top"][(1,0)]      #
+
+    # SCALING: All P_u matrices are scaled with power 0
+    P_up_u_left = -np.dot(np.linalg.inv(M_up_up_left), A_up_u_left)
+    P_up_u_bottom = -np.dot(np.linalg.inv(M_up_up_bottom), A_up_u_bottom)
+    P_um_u_right = -np.dot(np.linalg.inv(M_um_um_right), A_um_u_right)
+    P_um_u_top = -np.dot(np.linalg.inv(M_um_um_top), A_um_u_top)
+
+    # Components of the resulting matrix  
+    # SCALING: Resulting matrix is made by concatenating P_q matrices and P_u matrices in the following order
+    P_left = np.concatenate((P_qp_u_left, P_up_u_left), axis=0)
+    P_bottom = np.concatenate((P_qp_u_bottom, P_up_u_bottom), axis=0)
+    P_right = np.concatenate((P_qm_u_right, P_um_u_right), axis=0)
+    P_top = np.concatenate((P_qm_u_top, P_um_u_top), axis=0)
+
+    # Add Zeros for redundant projections
+    Zeros = np.zeros_like(P_left)
+    return np.concatenate((Zeros, P_left, Zeros, P_bottom, P_right, Zeros, P_top, Zeros), axis=0)
+  
+    # SCALING: Consider our case with 32x4 matrix:
+    # [[ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 1. -1. -0. -0.]  -- scale by 1/h
+    #  [-0. -0.  1. -1.]  -- scale by 1/h
+    #  [-1. -0. -0. -0.]  -- scale by 1
+    #  [-0. -0. -1. -0.]  -- scale by 1
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 1. -0. -1. -0.]  -- scale by 1/h
+    #  [-0.  1. -0. -1.]  -- scale by 1/h
+    #  [-1. -0. -0. -0.]  -- scale by 1
+    #  [-0. -1. -0. -0.]  -- scale by 1
+    #  [-1.  1. -0. -0.]  -- scale by 1/h
+    #  [-0. -0. -1.  1.]  -- scale by 1/h
+    #  [-0.  1. -0. -0.]  -- scale by 1
+    #  [-0. -0. -0.  1.]  -- scale by 1
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [-1. -0.  1. -0.]  -- scale by 1/h
+    #  [-0. -1. -0.  1.]  -- scale by 1/h
+    #  [-0. -0.  1. -0.]  -- scale by 1
+    #  [-0. -0. -0.  1.]] -- scale by 1
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+    #  [ 0.  0.  0.  0.]  -- redundant
+
+    # return np.zeros((
+    #   2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions,
+    #   self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions 
+    # ))
 
   def get_boundary_matrix(self):
     '''
     @Alex shape of this should be 
-    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) rows
-    projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) cols
+    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1)   rows (= 4)
+    projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) cols (= 4)
 
     we are fixing the value of the solution vector on the boundary with the value of 
-    the projections here. you can assume everything was set to 0 intitialliy
+    the projections here. you can assume everything was set to 0 initially
+
+    @Sean: check the shape
     '''
     return np.zeros( ( 
       self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1),
@@ -396,22 +504,35 @@ class GLMatrixFree(GaussLobatto):
     """
     @Alex todo!
     """
-    return np.zeros_like( self.get_cell_mass_matrix(), dtype=int )
+    return 2 * np.ones_like( self.get_cell_mass_matrix(), dtype=int )
+    # return np.zeros_like( self.get_cell_mass_matrix(), dtype=int )
 
   def get_cell_system_matrix_for_laplacian_scaling(self):
     """
     @Alex todo!
     """
-    return np.zeros_like( self.get_cell_system_matrix_for_laplacian(), dtype=int )
+    return np.zeros_like( self.get_cell_system_matrix_for_laplacian(), dtype=int ) # yes, should be zero
 
   def get_cell_to_face_matrix_scaling(self):
     """
     @Alex todo!
     """
-    return np.zeros_like( self.get_cell_to_face_matrix(), dtype=int )
+
+    result = np.zeros_like( self.get_cell_to_face_matrix(), dtype=int )
+    # Only works for 2D 1st order
+    # will depend on the order of redundant blocks, needs checking
+    result[ [4,5,12,13,16,17,24,25], : ] = -1 * np.array([1, 1, 1, 1], dtype=int )
+
+    return result
 
   def get_face_to_cell_matrix_scaling(self):
     """
     @Alex todo!
     """
-    return np.zeros_like( self.get_face_to_cell_matrix(), dtype=int )
+
+    result = np.zeros_like( self.get_face_to_cell_matrix(), dtype=int )
+    # Only works for 2D 1st order
+    for i in range(0, result.shape[1], 2):
+      result[:, i:(i+2)] = np.array([1, 1, 1, 1], dtype=int )
+    
+    return result
