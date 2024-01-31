@@ -151,10 +151,12 @@ mesh sizes from above.
 ## Implementation of second order formulation
 
 To realise the second order formulation, you have to invoke the Python 
-script with the -AS switch.
+script with the -so switch.
 If this switch is set, we add an additional mesh traversal to the arising
 Peano project, which we call after each and every Runge-Kutta step, as 
 well as after the very last step.
+
+### Alter the main function
 
 We now need a main file that can both handle the additional mesh sweep as
 well as the version without an additional sweep. We don't want to write a
@@ -174,6 +176,28 @@ and also within the switch statement which runs the additional step:
 @snippet benchmarks/exahype2/ccz4/gauge-wave/ccz4-main.cpp Additional mesh sweep case step
 
 
+### Logic behind the additional mesh traversal selection
+
+A naive way to implement the activation of the additional mesh sweep is the
+following code snippet:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    if (
+      repositories::isFirstGridSweepOfTimeStep()
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+      ) {
+        peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalMeshTraversal )
+      );
+      continueToSolve         = true;
+    } else 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This variant kicks off the manual reconstruction prior to the first mesh sweep of 
+the Runge-Kutta scheme. This seems to work and do the job in our setup. However, 
+it is not enough for higher-order convergence, where we would need a preprocessing
+step prior to each intermediate step.
 
 
 */

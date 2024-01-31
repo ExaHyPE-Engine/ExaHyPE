@@ -114,6 +114,11 @@
 
   void initSharedMemoryAndGPUEnvironment();
 
+  /**
+   * Concatenates all the toString() results from the different solvers.
+   */
+  std::string getSolverStateDescriptions();
+
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}

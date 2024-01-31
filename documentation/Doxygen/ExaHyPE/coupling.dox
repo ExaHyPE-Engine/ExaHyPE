@@ -367,7 +367,7 @@ all the ExaHyPE mesh traversals and then there's a new, additional one.
       continueToSolve         = true;
     }
     else if (
-      repositories::isLastGridSweepOfTimeStep()
+      repositories::isFirstGridSweepOfTimeStep()
       and
       repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalStep
     ) {
@@ -492,6 +492,8 @@ then protected the code regions of interest with
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An example for the realisation of this usage pattern is benchmarks/exahhype2/ccz4/gauge-wave. 
+Study @ref benchmarks_exahype2_ccz4_gauge_wave for a discussion of their 
+particular algorithmic steps.
 
 
 ### Create new functionality in Python

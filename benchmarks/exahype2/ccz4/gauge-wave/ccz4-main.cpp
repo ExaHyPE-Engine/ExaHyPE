@@ -156,7 +156,8 @@ bool selectNextAlgorithmicStep() {
   } else {
     //! [Additional mesh sweep case distinction]
     #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
-    if (repositories::isLastGridSweepOfTimeStep()
+    if (
+      repositories::isFirstGridSweepOfTimeStep()
       and
       repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
       ) {
@@ -236,7 +237,7 @@ void step() {
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
-  logInfo("step()", "run " << repositories::StepRepository::toString(stepName));
+  logInfo("step()", "run " << repositories::StepRepository::toString(stepName) << " with solver's state " << repositories::getSolverStateDescriptions() );
 
   static tarch::timing::Watch watch("::", "step()", false);
 
