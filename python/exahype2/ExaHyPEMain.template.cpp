@@ -39,6 +39,11 @@
 #include "toolbox/blockstructured/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
+//! [Additional mesh sweep case step]
+#if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
+  #include "observers/AdditionalMeshTraversal.h"
+#endif
+
 {% if FENV_ARGS is defined and FENV_ARGS != "" -%}
 #include <fenv.h>
 #pragma float_control(precise, on)
@@ -155,6 +160,19 @@ bool selectNextAlgorithmicStep() {
 
     continueToSolve = true;
   } else {
+    //! [Additional mesh sweep case distinction]
+    #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
+    if (repositories::isLastGridSweepOfTimeStep()
+      and
+      repositories::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() ) != repositories::StepRepository::Steps::AdditionalMeshTraversal
+      ) {
+        peano4::parallel::Node::getInstance().setNextProgramStep(
+        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::AdditionalMeshTraversal )
+      );
+      continueToSolve         = true;
+    } else 
+    #endif 
+    //! [Additional mesh sweep case distinction]
     if (TimeInBetweenPlots > 0.0 and repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime and (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp or repositories::getMaxTimeStamp() >= nextMaxPlotTimeStamp) and repositories::mayPlot()) {
       if (repositories::getMinTimeStamp() >= nextMinPlotTimeStamp) {
         nextMinPlotTimeStamp += TimeInBetweenPlots;
@@ -435,6 +453,19 @@ void step() {
 
     repositories::finishTimeStep();
   } break;
+  //! [Additional mesh sweep case step]
+  #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
+  case repositories::StepRepository::Steps::AdditionalMeshTraversal:
+    {
+      tarch::logging::LogFilter::getInstance().switchProgramPhase( "additional-MeshTraversal" );
+   
+      repositories::suspendSolversForOneGridSweep();
+      observers::AdditionalMeshTraversal observer;
+      peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    }
+    break;
+  #endif
+  //! [Additional mesh sweep case step]
   case repositories::StepRepository::Steps::Undef:
     assertion(false);
     break;
