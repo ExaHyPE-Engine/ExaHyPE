@@ -482,6 +482,28 @@ fi
 
 
 #
+# OPENBLAS
+# This is needed by LAPACK and libxsmmjit, so we enable/disable
+# here, make sure we add "-lopenblas" to LIBS, and do not 
+# allow configuring --with-lapack or --with-libxsmm without
+# it
+#
+AC_ARG_WITH(openblas,
+  AS_HELP_STRING([--with-openblas],[enable OpenBLAS [default=false]]),
+  [ AC_MSG_CHECKING(for openblas)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_openblas=false ;;
+      *)     AC_MSG_RESULT(yes);   use_openblas=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for openblas); AC_MSG_RESULT(no); use_openblas=false ])
+AM_CONDITIONAL([UseOpenblas],[test "x$use_openblas" = xtrue])
+
+if test "$use_openblas" == true; then
+  AC_DEFINE([UseOpenblas], [UseOpenblas], [UseOpenblas])
+fi
+
+
+#
 # LIBXSMM
 #
 AC_ARG_WITH(libxsmm,
@@ -501,6 +523,8 @@ fi
 
 #
 # LIBXSMM JIT
+# 
+# Check to see if user enabled openblas...
 #
 AC_ARG_WITH(libxsmmjit,
   AS_HELP_STRING([--with-libxsmmjit],[enable LIBXSMM JIT [default=false]]),
@@ -513,7 +537,11 @@ AC_ARG_WITH(libxsmmjit,
 AM_CONDITIONAL([UselibxsmmJIT],[test "x$use_libxsmmJIT" = xtrue])
 
 if test "$use_libxsmmJIT" == true; then
+  if test "$use_openblas" == false; then
+  AC_MSG_ERROR([LIBXSMM JIT requires OpenBlas. Re-reun with --with-openblas])
+  else
   AC_DEFINE([UselibxsmmJIT], [UselibxsmmJIT], [UselibxsmmJIT])
+  fi
 fi
 
 
@@ -567,7 +595,11 @@ AC_ARG_WITH(lapack,
 AM_CONDITIONAL([UseLapack],[test "x$use_lapack" = xtrue])
 
 if test "$use_lapack" == true; then
+  if test "$use_openblas" == false; then
+  AC_MSG_ERROR([Lapack requires OpenBlas. Re-reun with --with-openblas])
+  else
   AC_DEFINE([UseLapack], [UseLapack], [UseLapack])
+  fi
 fi
 
 
