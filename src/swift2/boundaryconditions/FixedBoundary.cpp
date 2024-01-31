@@ -15,6 +15,9 @@ std::pair< tarch::la::Vector<Dimensions, double>, tarch::la::Vector<Dimensions, 
   tarch::la::Vector<Dimensions, double> newX = particleX;
   tarch::la::Vector<Dimensions, double> newV = particleV;
 
+  assertion1( relativeDomainHalo>=0.0, relativeDomainHalo );
+  assertion1( relativeDomainHalo<=1.0, relativeDomainHalo );
+
   const double domainHalo = relativeDomainHalo * h;
 
   const double relativeBufferDueToTimeStepping = 0.5  * h + maxV * maxDt;
@@ -33,7 +36,7 @@ std::pair< tarch::la::Vector<Dimensions, double>, tarch::la::Vector<Dimensions, 
 
     // damp velocity left
     if (
-      particleX(d) < domainOffset(d) + relativeBufferDueToTimeStepping
+      tarch::la::smallerEquals(particleX(d), domainOffset(d) + relativeBufferDueToTimeStepping)
       and
       particleV(d)<0.0
     ) {
@@ -46,7 +49,7 @@ std::pair< tarch::la::Vector<Dimensions, double>, tarch::la::Vector<Dimensions, 
 
     // damp velocity right
     if (
-      particleX(d) > domainOffset(d) + domainSize(d) - relativeBufferDueToTimeStepping
+      tarch::la::greaterEquals(particleX(d), domainOffset(d) + domainSize(d) - relativeBufferDueToTimeStepping)
       and
       particleV(d)>0.0
     ) {

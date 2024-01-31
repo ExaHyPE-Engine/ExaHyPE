@@ -44,9 +44,21 @@ namespace swift2 {
      *
      * - If particles have left the computational domain, we reset them
      *   hard to the boundary.
-     * - If
+     * - If particles are close to the boundary and approach it, we damp
+     *   their velocity.
      *
+     * Close in the last sentence means that they are within a fraction
+     * of relativeDomainHalo of the current particle's mesh size. The
+     * damping factor is subject to a linear interpolation, i.e. if a
+     * particle sits directly on the boundary and moves outside, we damp
+     * its velocity by 0. We set the velocity of 0. If it is relativeDomainHalo
+     * of the mesh size away from the boundary and approaches it, we
+     * multiply this velocity by 1, i.e. we do not damp it. If it is
+     * halfway close to the boundary, we multiply the velocity with 0.5
+     * and therefore damp the approach velocity of the particle.
      *
+     * @param relativeDomainHalo Floating point value between zero and
+     *   one. If you set it to zero, you disable the velocity damping.
      *
      * @return Tuple of new position and velocity
      */
