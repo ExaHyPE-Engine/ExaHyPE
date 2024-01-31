@@ -1,7 +1,8 @@
 # This file is part of the SWIFT2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from swift2.particle.Particle import Particle
+from swift2.particle.SPHParticle import SPHParticle
 from swift2.particle.AlgorithmStep import AlgorithmStep
+from swift2.particle.AlgorithmStepLibrary import get_algorithm_step_dict
 
 import peano4
 import dastgen2
@@ -14,20 +15,7 @@ import copy
 from enum import Enum
 
 
-class SPHLeapfrogFixedSearchRadius(Particle):
-    class ParticleKernelRealisation(Enum):
-        """!
-
-        Enum to toggle between the various vectorised/not vectorised
-        kernels.
-
-        """
-
-        NO_OPTIMISATION = 0
-        USE_OUTER_GUARDS = 1
-        VECTORISE_ALL = 2
-        VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS = 3
-
+class SPHLeapfrogFixedSearchRadius(SPHParticle):
     """!
 
     SPH particle with fixed search radius
@@ -121,15 +109,15 @@ class SPHLeapfrogFixedSearchRadius(Particle):
 
     Boundary conditions for Swift are @ref swift_boundary_conditions "discussed on a separate page".
     If you decide that you want to plug into the drift mechanism of
-    this SPH flavour, you typically add something similar to the 
+    this SPH flavour, you typically add something similar to the
     code snippet below to your code:
-    
+
     ~~~~~~~~~~~~~~~~~~~~~~
 particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += " " "
 if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
-  ::swift2::kernels::forAllParticles( 
-    marker, 
-    assignedParticles, 
+  ::swift2::kernels::forAllParticles(
+    marker,
+    assignedParticles,
     [&](const peano4::datamanagement::VertexMarker& marker, globaldata::" " " + name + " " "&  assignedParticle)->void {
       ::swift2::boundaryconditions::applyFixedBoundaryCondition(
         assignedParticle,
@@ -150,10 +138,10 @@ particle.algorithm_steps_dict["Drift"].includes += " " "
 particle._setup_algorithm_steps()
 particle._setup_initialisation_steps()
     ~~~~~~~~~~~~~~~~~~~~~~
-    
+
     The spaced-out syntax is just there to ensure that the Python documentation
-    syntax is not broken. 
-    
+    syntax is not broken.
+
 
     ## Attributes
 
@@ -190,13 +178,18 @@ particle._setup_initialisation_steps()
         particles_per_cell=0,  # makes no sense, and should likely be forbidden
         min_h=0.3,
         max_h=0.3,
-        particle_interaction_kernel_realisation: ParticleKernelRealisation = ParticleKernelRealisation.USE_OUTER_GUARDS,
+        particle_interaction_kernel_realisation: SPHParticle.ParticleKernelRealisation = SPHParticle.ParticleKernelRealisation.USE_OUTER_GUARDS,
     ):
         super(SPHLeapfrogFixedSearchRadius, self).__init__(
-            name,
-            particles_per_cell,
-            min_h,
-            max_h,
+            name=name,
+            dimensions_hydro=dimensions_hydro,
+            cfl_factor=cfl_factor,
+            initial_time_step_size=initial_time_step_size,
+            constant_time_step_size=constant_time_step_size,
+            swift_project_namespace=swift_project_namespace,
+            particles_per_cell=particles_per_cell,
+            min_h=min_h,
+            max_h=max_h,
         )
 
         # Initialize default parameters.
@@ -204,76 +197,20 @@ particle._setup_initialisation_steps()
 
         # This is an SPH scheme.
         # Hardcoded this for now until we can switch flavours.
-        self._sph_flavour = "minimal"
-
-        # Simulation properties
-        self._cfl_factor = cfl_factor
-        self._initial_time_step_size = initial_time_step_size
-        self._constant_time_step_size = constant_time_step_size
-        self._particle_interaction_kernel_realisation = (
-            particle_interaction_kernel_realisation
-        )
-
-        # SPH parameters (default values)
-        self._hydro_dimensions = dimensions_hydro
-
-        self._eta_factor = 1.2348
-        self._h_hydro_min = 1e-6
-        self._h_hydro_max = 1.0 / 3.0 / 2  # Approximated value for coarsest grid level
-        self._h_tolerance = 1e-4
-        self._h_max_iterations = 30
+        self._sph_flavour = "Minimal"
 
         # Minimal SPH parameters
         self._alpha_av = 0.8
         self._beta_av = 3.0
 
-        # Project namespace to have consistent use of exported Constants in kernels
-        # Not used right now.
-        self._swift_project_namespace = swift_project_namespace
-
-        # now set these parameters as dastgen attributes
+        # now set these parameters as dastgen attributes.
+        # This needs to be done in a careful way so that
+        # changes to parameters outside of the initializer
+        # propagate into the generated c++ files.
         self.set_parameters()
 
         # Construct particle properties
         # --------------------------------
-
-        # Baseline particle properties -------------------------------------------------
-        self.mass = dastgen2.attributes.Double("mass")
-        self.velocity = peano4.dastgen2.Peano4DoubleArray("v", "Dimensions")
-        self.acceleration = peano4.dastgen2.Peano4DoubleArray("a", "Dimensions")
-        self.data.add_attribute(self.mass)
-        self.data.add_attribute(self.velocity)
-        self.data.add_attribute(self.acceleration)
-
-        # Basic SPH properties
-        self.density = dastgen2.attributes.Double("density")
-        self.pressure = dastgen2.attributes.Double("pressure")
-        self.smoothL = dastgen2.attributes.Double("smoothingLength")
-        self.u = dastgen2.attributes.Double("u")
-        self.uDot = dastgen2.attributes.Double("uDot")
-        self.data.add_attribute(self.density)
-        self.data.add_attribute(self.pressure)
-        self.data.add_attribute(self.smoothL)
-        self.data.add_attribute(self.u)
-        self.data.add_attribute(self.uDot)
-
-        # Variable smoothing length scheme ---------------------------------------------
-        self.f = dastgen2.attributes.Double("f")
-        self.wcount_dh = dastgen2.attributes.Double("wcount_dh")
-        self.rho_dh = dastgen2.attributes.Double("rho_dh")
-        self.data.add_attribute(self.f)
-        self.data.add_attribute(self.wcount_dh)
-        self.data.add_attribute(self.rho_dh)
-
-        # Newton-Raphson iterations ----------------------------------------------------
-        self.wcount = dastgen2.attributes.Double("wcount")
-        self.hDot = dastgen2.attributes.Double("hDot")
-        self.sml_iteration_count = dastgen2.attributes.Integer(
-            "smoothingLengthIterCount"
-        )
-        self.data.add_attribute(self.wcount)
-        self.data.add_attribute(self.hDot)
-        self.data.add_attribute(self.sml_iteration_count)
 
         # Artificial viscosity scheme --------------------------------------------------
         self.balsara = dastgen2.attributes.Double("balsara")
@@ -292,19 +229,6 @@ particle._setup_initialisation_steps()
         self.data.add_attribute(self.v_sig_AV)
         self.data.add_attribute(self.soundSpeed)
 
-        # Extended arrays for time integration consistency
-        self.v_full = peano4.dastgen2.Peano4DoubleArray("v_full", "Dimensions")
-        self.u_full = dastgen2.attributes.Double("u_full")
-        self.data.add_attribute(self.v_full)
-        self.data.add_attribute(self.u_full)
-
-        # Extra ------------------------------------------------------------------------
-        self.has_no_neighbours = dastgen2.attributes.Boolean("hasNoNeighbours")
-        self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
-        self.part_id = dastgen2.attributes.Integer("partid")
-        self.data.add_attribute(self.has_no_neighbours)
-        self.data.add_attribute(self.is_boundary_part)
-        self.data.add_attribute(self.part_id)
 
         # Algorithm Steps ---------------------------------------------------------------
         # actual list containing the algorithm steps
@@ -312,7 +236,7 @@ particle._setup_initialisation_steps()
         # actual list containing the algorithm steps for initialization
         self._initialisation_steps = []
         # the dict containing all possible algorithm steps
-        self.algorithm_steps_dict = {}
+        self.algorithm_steps_dict = get_algorithm_step_dict(self)
 
         # First fill up the dict with all possible algorithm steps
         self._setup_algorithm_steps_dict()
@@ -325,6 +249,9 @@ particle._setup_initialisation_steps()
         self._setup_initialisation_steps()
 
         self._add_dependency_checks()
+
+        return
+
 
     def set_parameters(self):
         """
@@ -344,58 +271,9 @@ particle._setup_initialisation_steps()
         into the generated C++ files.
         """
 
+        super(SPHLeapfrogFixedSearchRadius, self).set_parameters()
+
         const_static = dastgen2.attributes.Attribute.Qualifier.CONST_STATIC
-
-        cfl_attr = dastgen2.attributes.Double(
-            "cfl", qualifier=const_static, initval=self._cfl_factor
-        )
-        self.data.add_or_replace_attribute(cfl_attr)
-
-        initial_time_step_size_attr = dastgen2.attributes.Double(
-            "initialTimeStepSize",
-            qualifier=const_static,
-            initval=self._initial_time_step_size,
-        )
-        self.data.add_or_replace_attribute(initial_time_step_size_attr)
-
-        if self._constant_time_step_size:
-            adjustTimeStepSize = "false"
-        else:
-            adjustTimeStepSize = "true"
-        adjust_time_step_size_attr = dastgen2.attributes.Boolean(
-            "adjustTimeStepSize", qualifier=const_static, initval=adjustTimeStepSize
-        )
-        self.data.add_or_replace_attribute(adjust_time_step_size_attr)
-
-        hydro_dimensions_attr = dastgen2.attributes.Double(
-            "hydroDimensions", qualifier=const_static, initval=self._hydro_dimensions
-        )
-        self.data.add_or_replace_attribute(hydro_dimensions_attr)
-
-        eta_factor_attr = dastgen2.attributes.Double(
-            "etaFactor", qualifier=const_static, initval=self._eta_factor
-        )
-        self.data.add_or_replace_attribute(eta_factor_attr)
-
-        h_hydro_min_attr = dastgen2.attributes.Double(
-            "smlMin", qualifier=const_static, initval=self._h_hydro_min
-        )
-        self.data.add_or_replace_attribute(h_hydro_min_attr)
-
-        h_hydro_max_attr = dastgen2.attributes.Double(
-            "smlMax", qualifier=const_static, initval=self._h_hydro_max
-        )
-        self.data.add_or_replace_attribute(h_hydro_max_attr)
-
-        h_tolerance_attr = dastgen2.attributes.Double(
-            "smlTolerance", qualifier=const_static, initval=self._h_tolerance
-        )
-        self.data.add_or_replace_attribute(h_tolerance_attr)
-
-        h_max_iterations_attr = dastgen2.attributes.Integer(
-            "smlMaxIterations", qualifier=const_static, initval=self._h_max_iterations
-        )
-        self.data.add_or_replace_attribute(h_max_iterations_attr)
 
         alpha_av_attr = dastgen2.attributes.Double(
             "alphaAV", qualifier=const_static, initval=self._alpha_av
@@ -409,322 +287,8 @@ particle._setup_initialisation_steps()
 
         return
 
-    def _setup_algorithm_steps_dict(self):
-        """!
-
-        Sets up a dict of the algorithm steps for this scheme so they can be accessed at various points.
-
-        There are three types of iterators:
-
-        - The one that's used to run over all particle assigned to a vertex. It
-          is called iterate_over_particles_assigned_to_vertex.
-        - There is one to iterate over all particle pairs associated with a
-          cell. This one is called iterate_over_particles_assigned_to_cell.
-
-        From hereon, we can define some "derived" iterators:
-
-        - One special iterator runs over all particles associated with a vertex
-          and allows them to move. This one is titled
-          iterate_over_particles_assigned_to_vertex_for_move and equals
-          iterate_over_particles_assigned_to_vertex. However, it embeds the
-          latter into some bookkeeping for the validation of the
-          vertex-particle assocation.
-        - Another special iterator runs over all particles but allows them to
-          reduce into some global space. If you use vectorisation, this one
-          cannot be vectorised by definition.
-
-        Both special iterators are constructed to default values unless you
-        explicitly set them beforehand.
-
-        """
-        iterate_over_particles_assigned_to_vertex_for_move = None
-        iterate_over_particles_assigned_to_vertex_with_global_reduction = None
-
-        if (
-            self._particle_interaction_kernel_realisation
-            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
-        ):
-            iterate_over_particles_assigned_to_vertex = (
-                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
-                + self.name
-                + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
-                + self.name
-                + ">);"
-            )
-            iterate_over_particles_assigned_to_cell = (
-                "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0}<globaldata::"
-                + self.name
-                + ">, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::"
-                + self.name
-                + ">, ::swift2::kernels::alwaysUpdateParticlePairs<globaldata::"
-                + self.name
-                + ">);"
-            )
-            iterate_over_particles_assigned_to_vertex_with_global_reduction = (
-                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
-                + self.name
-                + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
-                + self.name
-                + ">);"
-            )
-        elif (
-            self._particle_interaction_kernel_realisation
-            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
-        ):
-            iterate_over_particles_assigned_to_vertex = (
-                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
-                + self.name
-                + ">);"
-            )
-            iterate_over_particles_assigned_to_cell = (
-                "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, {0}<globaldata::"
-                + self.name
-                + ">);"
-            )
-        elif (
-            self._particle_interaction_kernel_realisation
-            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
-        ):
-            iterate_over_particles_assigned_to_vertex = (
-                "::swift2::kernels::forAllParticlesVectorised( marker, assignedParticles, numberOfAssignedParticles, {0}WithMasking<globaldata::"
-                + self.name
-                + ">);"
-            )
-            iterate_over_particles_assigned_to_cell = (
-                "::swift2::kernels::forAllParticlePairsVectorised( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, {0}WithMasking<globaldata::"
-                + self.name
-                + ">);"
-            )
-        elif (
-            self._particle_interaction_kernel_realisation
-            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS
-        ):
-            iterate_over_particles_assigned_to_vertex = (
-                "::swift2::kernels::forAllParticlesVectoriseWithCheckPreamble( marker, assignedParticles, numberOfAssignedParticles, {0}<globaldata::"
-                + self.name
-                + ">);"
-            )
-            iterate_over_particles_assigned_to_cell = (
-                "::swift2::kernels::forAllParticlePairsVectoriseWithCheckPreamble( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, {0}<globaldata::"
-                + self.name
-                + ">);"
-            )
-        else:
-            raise NotImplemented()
-
-        if iterate_over_particles_assigned_to_vertex_for_move is None:
-            iterate_over_particles_assigned_to_vertex_for_move = (
-                """
-                auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-                ::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"""
-                + self.name
-                + """>);
-                ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, _spacetreeId);
-                """
-                )
-            ## @todo This is not nice. We should still use the vectorised version if the vertex is gathered.
-        if iterate_over_particles_assigned_to_vertex_with_global_reduction is None:
-            iterate_over_particles_assigned_to_vertex_with_global_reduction = (
-                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
-                + self.name
-                + ">);"
-            )
-
-        # @todo Mladen, can we remove this one please?
-        flagBoundaryParticlesStep = AlgorithmStep(
-            name="FlagBoundaryParticles",
-            dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""
-                                       """,
-            touch_vertex_last_time_kernel="""::swift2::kernels::flagBoundaryParticles(assignedParticles, {0}, {1}, {2});""".format(
-                "::".join(self._swift_project_namespace) + "::HYDRO_PART_NUMBER",
-                "::".join(self._swift_project_namespace) + "::DomainSize",
-                "::".join(self._swift_project_namespace) + "::DomainOffset",
-            ),
-            includes="""
-                #include "swift2/kernels/ParticleSelfInteraction.h"
-            """,
-        )
-        self.algorithm_steps_dict["FlagBoundaryParticles"] = flagBoundaryParticlesStep
-
-        kick1 = AlgorithmStep(
-            name="Kick1",
-            dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex.format(
-                "::swift2::timestepping::resetMovedParticleMarker"
-            ),
-            touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex.format(
-                "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
-            ),
-            prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
-                self.name,
-            ),
-            includes="""
-                #include "swift2/kernels/legacy/Leapfrog.h"
-                #include "swift2/timestepping/GlobalTimeStepping.h"
-                #include "swift2/timestepping/TimeStepping.h"
-            """,
-        )
-        self.algorithm_steps_dict["Kick1"] = kick1
-
-        drift = AlgorithmStep(
-            name="Drift",
-            dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex.format(
-                "::swift2::timestepping::resetMovedParticleMarker"
-            ),
-            touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex_for_move.format(
-                "::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSize"
-            ),
-            includes="""
-                #include "swift2/kernels/legacy/Leapfrog.h"
-                #include "swift2/timestepping/GlobalTimeStepping.h"
-                #include "swift2/timestepping/TimeStepping.h"
-                                           """,
-            touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
-            touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
-        )
-        self.algorithm_steps_dict["Drift"] = drift
-
-        # From the SPH side of things, this doesn't need to be an AlgorithmStep
-        # on its own. We could merge it together with the drifts. However, in order
-        # to ensure that the particles which have just been moved in the preceeding
-        # drift sweep are sorted correctly into the cells and vertices, we need an
-        # extra sweep.
-        predictHydro = AlgorithmStep(
-            name="PredictHydro",
-            dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            #            touch_vertex_first_time_kernel = iterate_over_particles_assigned_to_vertex.format("""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
-            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex.format(
-                "::swift2::kernels::legacy::hydroPredictExtra"
-            ),
-            includes="""
-                #include "swift2/kernels/legacy/Leapfrog.h"
-                                       """,
-            touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
-            #  touch_vertex_last_time_dependency_policy  = "TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
-            cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
-        )
-        self.algorithm_steps_dict["PredictHydro"] = predictHydro
-
-        densityWithConstantSearchRadius = AlgorithmStep(
-            name="DensityLoopWithConstantSearchRadius",
-            dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
-            prepare_traversal_kernel="""
-                                       globaldata::{PARTICLE}::getSpecies().clearRerunPreviousGridSweepFlag();
-                                       """.replace(
-                "{PARTICLE}", self.name
-            ),
-            touch_vertex_first_time_kernel=iterate_over_particles_assigned_to_vertex.format(
-                "::swift2::kernels::legacy::prepareDensity"
-            ),
-            cell_kernel=iterate_over_particles_assigned_to_cell.format(
-                "::swift2::kernels::legacy::densityKernel"
-            ),
-            touch_vertex_last_time_kernel=(
-                iterate_over_particles_assigned_to_vertex.format(
-                    "::swift2::kernels::legacy::endDensityCalculation"
-                )
-                + iterate_over_particles_assigned_to_vertex_with_global_reduction.format(
-                    "::swift2::kernels::legacy::updateSmoothingLengthAndRerunIfRequired"
-                )
-            ),
-            includes="""
-                #include "swift2/kernels/legacy/SmoothingLength.h"
-                #include "swift2/kernels/legacy/Density.h"
-                     """,
-        )
-        self.algorithm_steps_dict["Density"] = densityWithConstantSearchRadius
-
-        force = AlgorithmStep(
-            name="ForceLoop",
-            dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel=(
-                iterate_over_particles_assigned_to_vertex.format(
-                    "::swift2::kernels::legacy::resetSmoothingLengthIterationCounter"
-                )
-                + iterate_over_particles_assigned_to_vertex.format(
-                    "::swift2::kernels::legacy::prepareHydroForce"
-                )
-                + iterate_over_particles_assigned_to_vertex.format(
-                    "::swift2::kernels::legacy::resetAcceleration"
-                )
-            ),
-            cell_kernel=iterate_over_particles_assigned_to_cell.format(
-                "::swift2::kernels::legacy::forceKernel"
-            ),
-            touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex.format(
-                "::swift2::kernels::legacy::endHydroForceCalculation"
-            ),
-            includes="""
-              #include "swift2/kernels/legacy/Swift.h"
-              #include "swift2/kernels/legacy/HydroForce.h"
-            """,
-        )
-        self.algorithm_steps_dict["Force"] = force
-
-        kick2 = AlgorithmStep(
-            name="Kick2",
-            dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_last_time_kernel=(
-                iterate_over_particles_assigned_to_vertex.format(
-                    "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
-                )
-                + iterate_over_particles_assigned_to_vertex.format(
-                    "::swift2::kernels::legacy::leapfrogKickExtraWithGlobalTimeStepSize"
-                )
-                + iterate_over_particles_assigned_to_vertex.format(
-                    "::swift2::kernels::legacy::resetPredictedValues"
-                )
-            ),
-            prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
-                self.name,
-            ),  # TODO: temporary solution for initialization step
-            includes="""
-                #include "swift2/kernels/legacy/Leapfrog.h"
-                #include "swift2/timestepping/GlobalTimeStepping.h"
-                #include "swift2/timestepping/TimeStepping.h"
-                                       """,
-        )
-        self.algorithm_steps_dict["Kick2"] = kick2
-
-        reduceGlobals = AlgorithmStep(
-            name="ReduceGlobalQuantities",
-            dependencies=AlgorithmStep.Dependencies.SELF,
-            effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-            touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex_with_global_reduction.format(
-                "::swift2::statistics::reduceVelocityAndSearchRadius"
-            ),
-            prepare_traversal_kernel="""
-                                       globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
-                                       globaldata::{PARTICLE}::getSpecies().clearVelocity();
-                                       """.replace(
-                "{PARTICLE}", self.name
-            ),
-            unprepare_traversal_kernel="""
-                                       globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
-                                       ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
-                                       """.replace(
-                "{PARTICLE}", self.name
-            ),
-            includes="""
-                                       #include "swift2/statistics/Reports.h"
-                                       #include "swift2/statistics/Statistics.h"
-                                       """,
-        )
-        self.algorithm_steps_dict["ReduceGlobalQuantities"] = reduceGlobals
-
-        return
-
     def _setup_algorithm_steps(self):
-        """
+        """!
         Set up the internal list of algorithm steps for this particle.
         We need to maintain an individual instance of this list for cases
         where we modify the algorithm steps later on. This can happen for
@@ -735,7 +299,7 @@ particle._setup_initialisation_steps()
         executed in that order.
 
         Definitions of the algorithm steps stored in the algorithm_steps_dict are
-        placed in _setup_algorithm_steps_dict(self). The dict is set up during
+        placed in get_algorithm_steps_dict(self). The dict is set up during
         instantiation of this class.
 
         Leapfrog consists basically of four steps per particle. We first
@@ -757,6 +321,8 @@ particle._setup_initialisation_steps()
             self.algorithm_steps_dict["Kick1"],
         ]
 
+        # make a copy of the steps, so if you modify them later (e.g. by
+        # adding dependency checks), it won't modify the steps in the dict.
         self._algorithm_steps = [copy.deepcopy(i) for i in steps]
         return
 
@@ -773,145 +339,6 @@ particle._setup_initialisation_steps()
 
         return self._algorithm_steps
 
-    @property
-    def hydro_dimensions(self):
-        """
-        Forbid users to modify hydro dimensions on-the-fly.
-        """
-        return self._hydro_dimensions
-
-    @hydro_dimensions.setter
-    def hydro_dimensions(self, hydro_dimensions):
-        raise ValueError(
-            "Can't change hydro_dimensions now. Modify it while instantiating the class."
-        )
-
-    @property
-    def eta_factor(self):
-        """
-
-        Set the eta factor used by the SPH kernel to target a certain number of
-        neighbour particles.
-        The default value is eta = 1.2348.
-
-        """
-        return self._eta_factor
-
-    @eta_factor.setter
-    def eta_factor(self, eta_factor):
-        if eta_factor <= 0:
-            raise ValueError("SPH eta factor value not valid.")
-        self._eta_factor = eta_factor
-
-    @property
-    def alpha_av(self):
-        """
-
-        Viscosity parameters of the Minimal SPH model. Default SWIFT values are
-        alpha_av=0.8 and beta_av=3.
-
-        """
-        return self._alpha_av
-
-    @alpha_av.setter
-    def alpha_av(self, alpha_av):
-        if alpha_av <= 0:
-            raise ValueError("Value for the alpha_av viscosiy parameter not valid.")
-        self._alpha_av = alpha_av
-
-    @property
-    def beta_av(self):
-        return self._alpha_av
-
-    @beta_av.setter
-    def beta_av(self, beta_av):
-        if beta_av <= 0:
-            raise ValueError("Value for the beta_av viscosiy parameter not valid.")
-        self._beta_av = beta_av
-
-    @property
-    def h_hydro_min(self):
-        """
-
-        Set the limits allowed for the SPH smoothing length. Notice that the max value
-        is bounded by Peano's search radius as h_max = R_search_max = max_grid_size /
-        gamma_k, where gamma_k is the SPH kernel factor that relates h and H.
-        Typically gamma_k = 2, so h_max = max_grid_size / 2.
-
-        """
-        return self._h_hydro_min
-
-    @h_hydro_min.setter
-    def h_hydro_min(self, h_hydro_min):
-        if h_hydro_min > self._h_hydro_max:
-            raise ValueError("Min value of smoothing length larger than max allowed.")
-        self._h_hydro_min = h_hydro_min
-
-    @property
-    def h_hydro_max(self):
-        return self._h_hydro_max
-
-    @h_hydro_max.setter
-    def h_hydro_max(self, h_hydro_max):
-        if h_hydro_max < self._h_hydro_min:
-            raise ValueError("max value of smoothing length smaller than min allowed.")
-        self._h_hydro_max = h_hydro_max
-
-    @property
-    def h_tolerance(self):
-        """
-
-        Tolerance for Newton-Raphson convergence criterion.
-
-        """
-        return self._h_tolerance
-
-    @h_tolerance.setter
-    def h_tolerance(self, h_tolerance):
-        if h_tolerance > 1:
-            raise ValueError("Value of h_tolerance cannot be larger than 1.")
-        self._h_tolerance = h_tolerance
-
-    @property
-    def h_max_iterations(self):
-        """
-        Max number of iterations to adapt the SPH smoothing length
-        """
-        return self._h_max_iterations
-
-    @h_max_iterations.setter
-    def h_max_iterations(self, h_max_iterations):
-        if h_max_iterations > 50:
-            raise ValueError("Value of h_max_iterations is too large.")
-        self._h_max_iterations = h_max_iterations
-
-    @property
-    def mantissa_size(self):
-        """
-
-        Set the mantissa size of doubles and Peano double arrays if
-        we want to use reduced precission via Clang annotations. As a reference,
-        floats have mantissa size = 23.
-
-        """
-        return self._mantissa_size
-
-    @mantissa_size.setter
-    def mantissa_size(self, mantissa_size):
-        if mantissa_size < 0:
-            raise ValueError("Mantissa size has to be larger than 0.")
-        self._mantissa_size = mantissa_size
-
-    def get_cpp_namespace_from_project_namespace(self):
-        """
-
-        Transform namespace into cpp format. Could be used to append namespace to
-        constants in kernels (not used currently).
-
-        """
-        namespace = "::".join(self._swift_project_namespace) + "::"
-
-        print(namespace)
 
     def _setup_initialisation_steps(self):
         """
@@ -943,6 +370,45 @@ particle._setup_initialisation_steps()
         Make sure self._setup_algorithm_steps_dict() and self._setup_initialisation_steps() have been called before.
         """
         return self._initialisation_steps
+
+
+    @property
+    def alpha_av(self):
+        """
+
+        Viscosity parameters of the Minimal SPH model. Default SWIFT values are
+        alpha_av=0.8 and beta_av=3.
+
+        """
+        return self._alpha_av
+
+    @alpha_av.setter
+    def alpha_av(self, alpha_av):
+        if alpha_av <= 0:
+            raise ValueError("Value for the alpha_av viscosiy parameter not valid.")
+        self._alpha_av = alpha_av
+
+    @property
+    def beta_av(self):
+        return self._alpha_av
+
+    @beta_av.setter
+    def beta_av(self, beta_av):
+        if beta_av <= 0:
+            raise ValueError("Value for the beta_av viscosiy parameter not valid.")
+        self._beta_av = beta_av
+
+
+    def get_cpp_namespace_from_project_namespace(self):
+        """
+
+        Transform namespace into cpp format. Could be used to append namespace to
+        constants in kernels (not used currently).
+
+        """
+        namespace = "::".join(self._swift_project_namespace) + "::"
+
+        print(namespace)
 
     @property
     def readme_descriptor(self):
