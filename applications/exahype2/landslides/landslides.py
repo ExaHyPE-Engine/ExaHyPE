@@ -63,7 +63,7 @@ storage_types = {
 }
 storage_type = "CallStack"
 
-parser = argparse.ArgumentParser(description='ExaHyPE 2 - Saint-Venant Application Script')
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - Landslides Application Script')
 
 parser.add_argument("-s",       "--solver",            dest="solver",         choices=solvers.keys(),     default=solver,             help="|".join(solvers.keys()))
 parser.add_argument("-o",       "--output",            dest="output_path",    type=str,                   default=output_path,        help="Output path for project solution output. The project will create a new folder at the given path. Default is 'solution'.")
@@ -109,7 +109,7 @@ if args.scenario not in scenarios:
 if args.executable:
   executable_name = args.executable
 else:
-  executable_name = "saintvenant-" + str(args.scenario)
+  executable_name = "landslides-" + str(args.scenario)
 my_project = exahype2.Project(
   namespace=["applications", "exahype2", "saintvenant"],
   project_name="SaintVenant" + args.scenario,

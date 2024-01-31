@@ -4,24 +4,10 @@
 tarch::logging::Log   exahype2::acoustic::acousticSolver::_log( "exahype2::acoustic::acousticSolver" );
 
 
-
-
-::exahype2::RefinementCommand exahype2::acoustic::acousticSolver::refinementCriterion(
-  const double * __restrict__ Q,               // Q[4+0]
-  const tarch::la::Vector<Dimensions,double>&  x,
-	const tarch::la::Vector<Dimensions,double>&  h,
-  double                                       t
-) {
-	logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  // see comments in header file
-
-  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
-  return result;
-}
-
-
+constexpr double rho = 1.0;
+constexpr double K_0 = 10.0;
+constexpr double inv_rho = 1.0/rho;
+constexpr double c = std::sqrt(K_0*inv_rho);
 
 
 void exahype2::acoustic::acousticSolver::initialCondition(
@@ -32,9 +18,9 @@ void exahype2::acoustic::acousticSolver::initialCondition(
 	bool                                         gridIsConstructed
 ) {
 
-  Q[0] = 0.5*(sqrt(x[0])+sqrt(x[1]));
-  Q[1] = 0.005*( sqrt(x[0]) + sqrt(x[1]) ); //vx
-  Q[2] = Q[1]; //vy
+  Q[0] = 1.0+0.1*tarch::la::norm2(x);
+  Q[1] = 0.0; //vx
+  Q[2] = 0.0; //vy
   Q[3] = 0.0; //vz
 
 }
@@ -52,10 +38,10 @@ void exahype2::acoustic::acousticSolver::boundaryConditions(
   int                                          normal
 ){
 
-  Qoutside[0] = 0.5*( sqrt(faceCentre[0]) + sqrt(faceCentre[1]) ) -10*t;
-  Qoutside[1] = 0.005*(faceCentre[0]+faceCentre[1]) - 0.05*sqrt(2)*t;
-  Qoutside[2] = Qoutside[1];
-  Qoutside[3] = 0.0;
+  Qoutside[0] = Qinside[0];
+  Qoutside[1] = -Qoutside[1];
+  Qoutside[2] = -Qoutside[2];
+  Qoutside[3] = -Qoutside[3];
 
 }
 
@@ -74,7 +60,7 @@ double ::exahype2::acoustic::acousticSolver::maxEigenvalue(
   int                                          normal
 ){
 
-  return 100;
+  return c;
 
 }
 
@@ -91,16 +77,12 @@ void ::exahype2::acoustic::acousticSolver::flux(
   double* __restrict__ F // F[4]
 ) {
 
-  double rho = 10.0;
-//  double c = 100.0;
-  double K_0 = 1000; //rho*c*c;
-
   F[0] = K_0 * Q[normal+1];
   F[1] = 0.0;
   F[2] = 0.0;
   F[3] = 0.0;
 
-  F[normal+1] = (1/rho) * Q[0];
+  F[normal+1] = inv_rho * Q[0];
 
 }
 

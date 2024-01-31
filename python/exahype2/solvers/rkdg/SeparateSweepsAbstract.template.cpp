@@ -9,8 +9,8 @@
 
 #include <algorithm>
 
-#include "../../../../src/tarch/NonCriticalAssertions.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
@@ -246,7 +246,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _cellUpdates    = 0;
   }
 
-  logInfo( "startTimeStep(...)", "phase " + toString(_solverState) );
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("startTimeStep()", "Phase " + toString(_solverState));
+  }
 }
 
 

@@ -93,7 +93,7 @@ namespace exahype2 {
     int getNodesPerCell(int nodesPerAxis);
 
 
-    /* returns a vector with the powers of nodesPerAxis up to the Dimension - 1
+    /* returns a vector with the powers of nodesPerAxis up to the Dimensions - 1
     ** e.g. for dims = 2, nodesPerAxis = 2 will return (1, 2)
     **      for dims = 3, nodesPerAxis = 4 will return (1, 4, 16)
     **

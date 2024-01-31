@@ -102,7 +102,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
           #self._fused_compute_kernel_call_gpu  = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
           #  self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
           #  compute_max_eigenvalue_of_next_time_step=True, 
-          #  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.AcceleratorWithExplicitCopy,
+          #  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.Accelerator,
           #  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.GenericAoS
           #  )
 

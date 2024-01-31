@@ -7,7 +7,6 @@
 
 #include <iomanip>
 
-#include "tarch/NonCriticalAssertions.h"
 #include "config.h"
 #include "Constants.h"
 #include "{{MAIN_NAME}}.h"
@@ -33,6 +32,7 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/otter.h"
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/tests/TreeTestCaseCollection.h"
 #include "tarch/timing/Measurement.h"
 #include "tarch/timing/Watch.h"
@@ -567,7 +567,7 @@ int main(int argc, char** argv) {
   peano4::shutdownSingletons();
   repositories::DataRepository::shutdownDatatypes();
   tarch::multicore::shutdownSmartMPI();
-  exahype2::shutdownNonCritialAssertionEnvironment();
+  tarch::shutdownNonCriticalAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;

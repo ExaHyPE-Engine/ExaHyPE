@@ -14,7 +14,8 @@ import peano4.solversteps
 import peano4.runner
 
 class Project (object):
-  """
+  """!
+  
   Represents a Peano 4 project.
 
   namespace Sequence of strings representing the (nested) namespace. Pass in 
@@ -253,3 +254,21 @@ class Project (object):
     else:
       print( "cannot run as code compilation has not been successful" )
     return success
+
+
+
+def merge(lhs: Project,
+          rhs: Project,
+          ):
+    """!
+    
+    Merges two Peano 4 projects
+    
+    """
+    result_project = Project()
+    
+    # @todo Dmitry please befill
+    
+    return result_project
+
+
