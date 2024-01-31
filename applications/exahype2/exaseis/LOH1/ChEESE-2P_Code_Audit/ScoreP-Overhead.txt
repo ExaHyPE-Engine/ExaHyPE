@@ -1,0 +1,3 @@
+# GPUs      With ScoreP       Without-ScoreP       Overhead
+1           4708.71 cells/s   4849.14 cells/s       ~2.90%
+32          25215.1 cells/s   25263.7 cells/s       ~0.19%   

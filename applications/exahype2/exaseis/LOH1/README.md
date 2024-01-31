@@ -1,4 +1,5 @@
 # LOH.1
+
 Currently, the ExaSeis framework implements LOH.1 similar to as seen below.
 
 <div align="center">
@@ -6,6 +7,7 @@ Currently, the ExaSeis framework implements LOH.1 similar to as seen below.
 </div>
 
 ## Running LOH.1
+
 In the following some example configurations are given:
 
 ```shell
@@ -51,6 +53,7 @@ Yields 14348907 patches and requires >>250 GB of memory.
 When using the `SpreadOutOnceGridStagnates` the grid construction can take hours for larger meshes. However, the load is very well balanced after the grid is constructed.
 
 ## Running LOH.1 on GPUs
+
 To run ExaSeis on GPUs we need to fulfill the following requirements:
 
 * A GPU-enabled Peano build.
@@ -77,6 +80,7 @@ If your mesh is too small, the GPU will likely be never used as you do have not 
 ![](LOH1.png)
 
 ## Running on Leonardo
+
 A job script for Leonardo can be found in this application's directory.
 
 ## Scaling Results
@@ -86,12 +90,10 @@ python3 exaseis.py -s ADERDGRusanovGlobalFixedEnclave --stateless --min-levels 4
 ```
 
 ![](scaling-plot_GPUs_Leonardo_Order_5.png)
-
 ![](scaling-plot_GPUs_Leonardo_Order_6.png)
-
 ![](scaling-plot_GPUs_Leonardo_Order_7.png)
 
-## Score-P
+## Score-P Traces
 
 ![](ScoreP-Trace-1GPU.png)
 
