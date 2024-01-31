@@ -1,6 +1,5 @@
 #include "FiniteVolumeCCZ4.h"
 #include "exahype2/RefinementControl.h"
-#include "exahype2/NonCriticalAssertions.h"
 //#include "exahype2/CellAccess.h"
 
 #include <algorithm>

@@ -35,7 +35,7 @@ class UserActionSet(ActionSet):
 
 
   def get_body_of_operation(self,operation_name):
-    return """
+    return ("""
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.     
 // logTraceIn( \""""

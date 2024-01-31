@@ -43,7 +43,7 @@ class ComputeFirstDerivativesFV(peano4.toolbox.blockstructured.ReconstructPatchA
     def get_includes(self):
         return super( ComputeFirstDerivativesFV, self ).get_includes() + """
     #include "exahype2/CellData.h"
-    #include "exahype2/NonCriticalAssertions.h"
+    #include "tarch/NonCriticalAssertions.h"
     """
 
 
@@ -243,7 +243,7 @@ class ComputeFirstDerivativesFD4RK(peano4.toolbox.blockstructured.ReconstructPat
         return super( ComputeFirstDerivativesFD4RK, self ).get_includes() + """
     #include "exahype2/CellData.h"
     #include "exahype2/fd/fd4/FD4.h" 
-    #include "exahype2/NonCriticalAssertions.h"
+    #include "tarch/NonCriticalAssertions.h"
     """
         
     def _add_action_set_entries_to_dictionary(self, d):
