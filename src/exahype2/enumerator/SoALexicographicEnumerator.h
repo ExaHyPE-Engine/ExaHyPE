@@ -34,7 +34,7 @@ namespace exahype2::enumerator {
    * then all Q[0] from cell three, and so forth. After that, it continues with
    * Q[1]. This means: The enumerator interleaves the individual cells.
    *
-   * @see enumerators.h for a generic description of attribute semantics.
+   * @see enumerator.h for a generic description of attribute semantics.
    */
   struct SoALexicographicEnumerator {
     constexpr GPUCallableInlineMethod SoALexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):

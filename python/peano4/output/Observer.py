@@ -1035,7 +1035,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::enterCell( const peano4::grid::GridTraversalE
         if len(self.vertices) > 0:
             md = self.mkSubDict(
                 [
-                    "name",  
+                    "name",
                     "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
                     ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
                 ]
@@ -1890,7 +1890,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
       }
 
-      data.merge(context, incomingData, marker);
+      data.merge(context, incomingData, marker, _spacetreeId);
     }
   }
 """
@@ -1938,7 +1938,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
       }
 
-      data.merge(context,incomingData, marker);
+      data.merge(context,incomingData, marker, _spacetreeId);
     }
   }
 """
@@ -1987,7 +1987,7 @@ void {{FULL_QUALIFIED_CLASSNAME}}::receiveAndMergeFace(int position, int fromSta
           data.getDebugX(), incomingData.getDebugX(), fromStack, event.toString(), marker.toString(), _spacetreeId );
       }
 
-      data.merge(context,incomingData, marker);
+      data.merge(context,incomingData, marker, _spacetreeId);
     }
   }
 """

@@ -1,11 +1,10 @@
 #include "PatchUtils.h"
 
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/la.h"
 
 #include "peano4/utils/Loop.h"
-
-#include "exahype2/NonCriticalAssertions.h"
 
 #include "toolbox/blockstructured/Enumeration.h"
 

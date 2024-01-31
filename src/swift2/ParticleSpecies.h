@@ -73,12 +73,31 @@ public:
   bool rerunPreviousGridSweep() const;
 
   /**
-   * Set the rerun flag back to false.
+   * Set the rerun flag back to false
+   *
+   * This operation has to be called explicitly in your code, i.e. we do not
+   * invoke it automatically. A canonical location to call it is the
+   * prepare_traversal_kernel event of the corresponding AlgorithmStep of
+   * your species.
    */
   void clearRerunPreviousGridSweepFlag();
 
   /**
-   * The rerun flag can only be activated. You cannot deactivate it.
+   * Tell Peano to run through mesh with same action sets again
+   *
+   * This flag tells Swift's main function that the step has not been
+   * complete, i.e. it has to rerun the same step again once this mesh
+   * traversal has completed. Therefore, the name is
+   * setRerunPreviousGridSweep() - by the time this information is
+   * evaluated it will be ***after*** the mesh sweep.
+   *
+   * The flag is not automatically reset at any point. You have to do this
+   * manually by calling clearRerunPreviousGridSweepFlag(). Consult the
+   * documentation there.
+   *
+   * The flag is automatically reduced by allReduce(), i.e. after the
+   * mesh traversal, all ranks will know if one rank has requested a rerun
+   * for the species.
    */
   void setRerunPreviousGridSweep();
 

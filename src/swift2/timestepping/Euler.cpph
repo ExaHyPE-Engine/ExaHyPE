@@ -1,57 +1,32 @@
-template <typename ParticleContainer>
-void swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize(
-  const ParticleContainer&  localParticles
-) {
-  double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
-  for (auto* particle: localParticles) {
-    if (
-      particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
-      and
-      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-    ) {
-      particle->setX( particle->getX() + timeStepSize * particle->getV() );
-    }
-  }
-  for (auto* particle: localParticles) {
-    if (
-      particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
-      and
-      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-    ) {
-      particle->setV( particle->getV() + timeStepSize * particle->getA() );
+#include "swift2/kernels/ParticleUpdatePredicates.h"
 
-      /* Flag this particle as Moved */
-      particle->setMoveState( std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved );
-    }
+
+template <typename Particle>
+void swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize(
+  const peano4::datamanagement::VertexMarker&  marker,
+  Particle&                                    particle
+) {
+  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+
+  if ( ::swift2::kernels::localParticleCanBeMoved(marker, particle) ) {
+    particle.setX( particle.getX() + timeStepSize * particle.getV() );
+    particle.setV( particle.getV() + timeStepSize * particle.getA() );
+    particle.setMoveState(Particle::MoveState::Moved);
   }
 }
 
 
-template <typename ParticleContainer>
+template <typename Particle>
 void swift2::timestepping::computeExplicitEulerCromerWithGlobalTimeStepSize(
-  const ParticleContainer&  localParticles
+  const peano4::datamanagement::VertexMarker&  marker,
+  Particle&                                    particle
 ) {
-  double timeStepSize = std::remove_pointer<typename ParticleContainer::value_type>::type::getSpecies().getMinTimeStepSize();
-  for (auto* particle: localParticles) {
-    if (
-      particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
-      and
-      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-    ) {
-      particle->setV( particle->getV() + timeStepSize * particle->getA() );
-    }
-  }
-  for (auto* particle: localParticles) {
-    if (
-      particle->getMoveState()==std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet
-      and
-      particle->getParallelState()==std::remove_pointer<typename ParticleContainer::value_type>::type::ParallelState::Local
-    ) {
-      particle->setX( particle->getX() + timeStepSize * particle->getV() );
+  double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
 
-      /* Flag this particle as Moved */
-      particle->setMoveState( std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::Moved );
-    }
+  if ( ::swift2::kernels::localParticleCanBeMoved(marker, particle) ) {
+    particle.setV( particle.getV() + timeStepSize * particle.getA() );
+    particle.setX( particle.getX() + timeStepSize * particle.getV() );
+    particle.setMoveState(Particle::MoveState::Moved);
   }
 }
 

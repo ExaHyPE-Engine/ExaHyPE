@@ -1,10 +1,8 @@
 
-template <typename ParticleContainer>
-void swift2::timestepping::resetMovedParticleMarker(
-  const ParticleContainer&  localParticles
+template <typename Particle>
+void swift2::timestepping::reset_moved_particle_marker(
+  Particle&  particle
 ) {
-  for (auto* particle: localParticles) {
-    particle->setMoveState( std::remove_pointer<typename ParticleContainer::value_type>::type::MoveState::NotMovedYet );
-  }
+  particle.setMoveState( Particle::MoveState::NotMovedYet );
 }
 

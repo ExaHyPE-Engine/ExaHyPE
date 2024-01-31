@@ -177,12 +177,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   [[maybe_unused]] double globalMinTimeStepSize,
   [[maybe_unused]] double globalMaxTimeStepSize
 ) {
-  if ( _solverState==SolverState::GridInitialisation ) {
-    _solverState     = SolverState::TimeStepAfterGridInitialisation;
-  }
-  else {
-    assertion( _solverState!=SolverState::GridConstruction );
-    _solverState     = SolverState::TimeStep;
+  if (_solverState == SolverState::GridInitialisation) {
+    _solverState = SolverState::TimeStepAfterGridInitialisation;
+  } else {
+    assertion(_solverState!=SolverState::GridConstruction);
+    _solverState = SolverState::TimeStep;
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
@@ -209,6 +208,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
   _patchUpdates    = 0;
+
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("startTimeStep()", "Phase " + toString(_solverState));
+  }
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
@@ -346,12 +349,27 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
   return true;
 }
 
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return true;
 }
 
-{{ABSTRACT_SOLVER_USER_DEFINITIONS}}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchH,
+  [[maybe_unused]] double                                       t,
+  [[maybe_unused]] double                                       dt
+) const {
+  return true;
+}
+
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
 
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
+
+
+{{ABSTRACT_SOLVER_USER_DEFINITIONS}}

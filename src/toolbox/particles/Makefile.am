@@ -14,6 +14,7 @@ ToolboxParticles_SOURCES = \
   TrajectoryDatabase.cpp \
   UnitTests.cpp \
   particles.cpp \
+  assignmentchecks/TracingAPI.cpp \
   potentials/Springs.cpp \
   tests/MultiscaleTransitionsTest.cpp \
   tests/TestParticle.cpp

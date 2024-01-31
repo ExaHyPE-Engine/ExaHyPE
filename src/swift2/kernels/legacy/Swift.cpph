@@ -1,0 +1,12 @@
+
+template <typename Particle>
+void swift2::kernels::legacy::hydro_reset_acceleration(Particle* localParticle) {
+
+  /* Reset the acceleration*/
+  localParticle->setA(0.0);
+
+  /* Reset the time derivatives */
+  localParticle->setUDot(0.0);
+  localParticle->setHDot(0.0);
+  localParticle->setV_sig_AV(2.0 * localParticle->getSoundSpeed());
+}

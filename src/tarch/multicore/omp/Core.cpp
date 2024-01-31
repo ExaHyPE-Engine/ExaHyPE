@@ -44,7 +44,7 @@ void tarch::multicore::Core::configure( int numberOfThreads) {
     }
 
     omp_set_num_threads(numberOfThreads);
-    _numberOfThreads = numberOfThreads;
+    _numberOfThreads = omp_get_max_threads();
     logInfo( "configure(int)", "manually reset number of threads used to " << numberOfThreads );
   } else {
     omp_set_num_threads(maxThreads);

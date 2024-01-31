@@ -234,7 +234,7 @@ int toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory:
       logInfo(
         "addPage(int)",
         "global memory had no free page of size " << size << " and we cannot accommodate an additional page of size " <<
-        size << " (current used size=" << totalUsedSize() << " vs available capacity of " <<
+        size << " (currently used size=" << totalUsedSize() << " vs available capacity of " <<
         data.size() << "). Will not report on further requests unless global memory space has grown"
       );
     }
@@ -260,6 +260,7 @@ void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory
   }
 
   if (pages.empty() and additionalEntriesRequested>0) {
+    additionalEntriesRequested *= 2;
     logInfo(
       "freePage(int)",
       "global memory is completely empty, so use opportunity to increase total size from " <<

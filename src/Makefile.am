@@ -30,6 +30,8 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
 								libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
 
 Tarch_SOURCES = tarch/tarch.cpp \
+	tarch/Enumerator.cpp \
+    tarch/NonCriticalAssertions.cpp \
 	tarch/UnitTests.cpp \
 	tarch/la/tests/DynamicMatrixTest.cpp \
 	tarch/la/tests/MatrixVectorTest.cpp \
@@ -139,7 +141,6 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/timing/Watch.cpp \
 	tarch/timing/Measurement.cpp \
 	tarch/timing/GlidingAverageMeasurement.cpp \
-	tarch/timing/TPSCalculator.cpp \
 	tarch/services/Service.cpp \
 	tarch/services/ServiceRepository.cpp
 

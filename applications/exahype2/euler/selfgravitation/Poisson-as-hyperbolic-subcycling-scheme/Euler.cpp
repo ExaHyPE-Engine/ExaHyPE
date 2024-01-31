@@ -1,6 +1,6 @@
 #include "Euler.h"
 
-#include "exahype2/NonCriticalAssertions.h"
+#include "../../../../../src/tarch/NonCriticalAssertions.h"
 #include "exahype2/RefinementControl.h"
 
 
@@ -97,7 +97,7 @@ double applications::exahype2::euler::selfgravitation::Euler::maxEigenvalue(
   // assertion( Q[0]>0.0 );
 
   if (Q[0] <= 0.0 or Q[0] != Q[0]) {
-    ::exahype2::triggerNonCriticalAssertion(__FILE__, __LINE__, "Q[0]>0", "density negative");
+    ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "Q[0]>0", "density negative");
     assertion(false);
   }
 
@@ -146,7 +146,7 @@ void applications::exahype2::euler::selfgravitation::Euler::flux(
     std::ostringstream msg;
     msg << "density is negative"
         << ".faceCentre=" << faceCentre << ",volumeH=" << volumeH << ",normal=" << normal << ",Q[0]=" << Q[0];
-    ::exahype2::triggerNonCriticalAssertion(__FILE__, __LINE__, "Q[0]>0", msg.str());
+    ::tarch::triggerNonCriticalAssertion(__FILE__, __LINE__, "Q[0]>0", msg.str());
     assertion(false);
     exit(-1);
   }

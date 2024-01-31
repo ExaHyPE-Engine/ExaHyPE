@@ -45,6 +45,9 @@ namespace swift2 {
      *
      * In prin
      *
+     * @todo Mladen This docu is messed up, and we have to take into account
+     *       here that we have to accommodate multiscale effects.
+     *
      */
     template <typename Particle>
     void adoptInteractionRadiusAndTriggerRerun(

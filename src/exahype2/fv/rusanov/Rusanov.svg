@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
-
 <svg
    width="210mm"
    height="297mm"
@@ -9,7 +7,7 @@
    id="svg5"
    inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
    sodipodi:docname="Rusanov.svg"
-   inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+   inkscape:export-filename="Rusanov00.png"
    inkscape:export-xdpi="90"
    inkscape:export-ydpi="90"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -50,7 +48,7 @@
     <g
        id="g1478"
        transform="translate(18.520834)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90">
       <rect
@@ -92,7 +90,7 @@
     <g
        id="g1324"
        transform="translate(-13.229167,-1.5258789e-5)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90">
       <rect
@@ -139,7 +137,7 @@
        x="-119.0625"
        y="74.083336"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -150,7 +148,7 @@
        x="-119.0625"
        y="66.145836"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -161,7 +159,7 @@
        x="-119.0625"
        y="58.208336"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -172,7 +170,7 @@
        x="-119.0625"
        y="50.270836"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -183,13 +181,13 @@
        x="-119.0625"
        y="42.333336"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <g
        id="g1331"
        transform="translate(0,18.520836)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90">
       <rect
@@ -235,7 +233,7 @@
     </g>
     <g
        id="g1317"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90">
       <rect
@@ -418,7 +416,7 @@
        id="g1317-2"
        transform="translate(76.729164)"
        style="fill:#666666"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90">
       <rect
@@ -604,7 +602,7 @@
        height="5.2916665"
        x="34.395832"
        y="66.145836"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -614,7 +612,7 @@
        height="5.2916665"
        x="34.395832"
        y="113.77084"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -624,7 +622,7 @@
        height="5.2916665"
        x="82.020836"
        y="66.145828"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -634,20 +632,20 @@
        height="5.2916665"
        x="82.020828"
        y="113.77084"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+       inkscape:export-filename="Rusanov00.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <g
        id="g1444"
        style="fill:#ff0000"
        transform="matrix(0.91143794,0.2567869,-0.41143759,0.56884768,104.31496,99.340324)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90">
       <g
          id="g1478-3"
          transform="translate(-18.520834,58.208334)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          style="fill:#ff0000">
@@ -690,7 +688,7 @@
       <g
          id="g1324-2"
          transform="translate(-50.270835,58.208319)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          style="fill:#ff0000">
@@ -738,7 +736,7 @@
          x="-177.27083"
          y="37.041668"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -749,7 +747,7 @@
          x="-177.27083"
          y="29.104168"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -760,7 +758,7 @@
          x="-177.27083"
          y="21.166668"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -771,7 +769,7 @@
          x="-177.27083"
          y="13.229168"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -782,13 +780,13 @@
          x="-177.27083"
          y="5.2916679"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <g
          id="g1331-2"
          transform="translate(-37.041668,76.72917)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          style="fill:#ff0000">
@@ -835,7 +833,7 @@
       </g>
       <g
          id="g1317-20"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          transform="translate(-37.041668,58.208334)"
@@ -1023,7 +1021,7 @@
          height="5.2916665"
          x="-2.6458359"
          y="124.35417"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1033,7 +1031,7 @@
          height="5.2916665"
          x="-2.6458359"
          y="171.97917"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1043,7 +1041,7 @@
          height="5.2916665"
          x="44.979168"
          y="124.35416"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1053,7 +1051,7 @@
          height="5.2916665"
          x="44.97916"
          y="171.97917"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
     </g>
@@ -1061,13 +1059,13 @@
        id="g1444-6"
        style="fill:#00ff00"
        transform="matrix(0.91143794,0.2567869,-0.41143759,0.56884768,103.99764,89.347383)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90">
       <g
          id="g1478-3-1"
          transform="translate(-18.520834,58.208334)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          style="fill:#00ff00">
@@ -1110,7 +1108,7 @@
       <g
          id="g1324-2-5"
          transform="translate(-50.270835,58.208319)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          style="fill:#00ff00">
@@ -1158,7 +1156,7 @@
          x="-177.27083"
          y="37.041668"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1169,7 +1167,7 @@
          x="-177.27083"
          y="29.104168"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1180,7 +1178,7 @@
          x="-177.27083"
          y="21.166668"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1191,7 +1189,7 @@
          x="-177.27083"
          y="13.229168"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1202,13 +1200,13 @@
          x="-177.27083"
          y="5.2916679"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <g
          id="g1331-2-4"
          transform="translate(-37.041668,76.72917)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          style="fill:#00ff00">
@@ -1255,7 +1253,7 @@
       </g>
       <g
          id="g1317-20-6"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          transform="translate(-37.041668,58.208334)"
@@ -1443,7 +1441,7 @@
          height="5.2916665"
          x="-2.6458359"
          y="124.35417"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1453,7 +1451,7 @@
          height="5.2916665"
          x="-2.6458359"
          y="171.97917"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1463,7 +1461,7 @@
          height="5.2916665"
          x="44.979168"
          y="124.35416"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1473,7 +1471,7 @@
          height="5.2916665"
          x="44.97916"
          y="171.97917"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
     </g>
@@ -1481,13 +1479,13 @@
        id="g1444-6-1"
        style="fill:#0000ff"
        transform="matrix(0.91143794,0.2567869,-0.41143759,0.56884768,103.98206,78.990147)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90">
       <g
          id="g1478-3-1-0"
          transform="translate(-18.520834,58.208334)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          style="fill:#0000ff">
@@ -1530,7 +1528,7 @@
       <g
          id="g1324-2-5-9"
          transform="translate(-50.270835,58.208319)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          style="fill:#0000ff">
@@ -1578,7 +1576,7 @@
          x="-177.27083"
          y="37.041668"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1589,7 +1587,7 @@
          x="-177.27083"
          y="29.104168"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1600,7 +1598,7 @@
          x="-177.27083"
          y="21.166668"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1611,7 +1609,7 @@
          x="-177.27083"
          y="13.229168"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1622,13 +1620,13 @@
          x="-177.27083"
          y="5.2916679"
          transform="rotate(-90)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <g
          id="g1331-2-4-7"
          transform="translate(-37.041668,76.72917)"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          style="fill:#0000ff">
@@ -1675,7 +1673,7 @@
       </g>
       <g
          id="g1317-20-6-6"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90"
          transform="translate(-37.041668,58.208334)"
@@ -1863,7 +1861,7 @@
          height="5.2916665"
          x="-2.6458359"
          y="124.35417"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1873,7 +1871,7 @@
          height="5.2916665"
          x="-2.6458359"
          y="171.97917"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1883,7 +1881,7 @@
          height="5.2916665"
          x="44.979168"
          y="124.35416"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
       <rect
@@ -1893,7 +1891,7 @@
          height="5.2916665"
          x="44.97916"
          y="171.97917"
-         inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov00.png"
+         inkscape:export-filename="Rusanov00.png"
          inkscape:export-xdpi="90"
          inkscape:export-ydpi="90" />
     </g>
@@ -1905,7 +1903,7 @@
        x="-158.75"
        y="121.70834"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -1916,7 +1914,7 @@
        x="-164.04167"
        y="121.70833"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -1927,7 +1925,7 @@
        x="-169.33334"
        y="121.70833"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -1938,7 +1936,7 @@
        x="-174.625"
        y="121.70834"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -1949,7 +1947,7 @@
        x="-179.91667"
        y="121.70832"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -1960,7 +1958,7 @@
        x="-185.20834"
        y="121.70832"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -1971,7 +1969,7 @@
        x="-190.5"
        y="121.70834"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -1982,7 +1980,7 @@
        x="-195.79167"
        y="121.70832"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -1993,7 +1991,7 @@
        x="-201.08334"
        y="121.70832"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -2004,7 +2002,7 @@
        x="-206.375"
        y="121.70837"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -2015,7 +2013,7 @@
        x="-211.66667"
        y="121.70834"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <rect
@@ -2026,7 +2024,7 @@
        x="-216.95834"
        y="121.70834"
        transform="rotate(-90)"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90" />
     <text
@@ -2035,7 +2033,7 @@
        x="119.95042"
        y="221.13338"
        id="text3233"
-       inkscape:export-filename="/home/tobias/git/Peano/src/exahype2/fv/rusanov/Rusanov01.png"
+       inkscape:export-filename="Rusanov01.png"
        inkscape:export-xdpi="90"
        inkscape:export-ydpi="90"><tspan
          sodipodi:role="line"

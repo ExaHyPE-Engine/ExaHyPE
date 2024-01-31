@@ -11,7 +11,7 @@ template <
   bool EvaluateNonconservativeProduct,
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep>
-void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseInsituStateless(CellData& patchData, peano4::utils::LoopParallelism loopParallelism) {
+void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseInsituStateless(CellData& patchData, peano4::utils::LoopPlacement loopParallelism) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov");
@@ -895,7 +895,7 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep>
 void exahype2::fv::rusanov::timeStepWithRusanovPatchwiseInsituStateless(
-  CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopParallelism loopParallelism
+  CellData& patchData, tarch::timing::Measurement& measurement, peano4::utils::LoopPlacement loopParallelism
 ) {
   tarch::timing::Watch watch("exahype2::fv::rusanov", "timeStepWithRusanovPatchwiseInsituStateless", false, true);
   timeStepWithRusanovPatchwiseInsituStateless<
