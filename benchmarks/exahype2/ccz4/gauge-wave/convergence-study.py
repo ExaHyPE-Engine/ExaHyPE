@@ -263,7 +263,7 @@ project.set_load_balancing(
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
-if args.SO_flag==True:
+if args.SO_flag:
     additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
                                                            add_user_defined_actions=False,
                                                            )
@@ -274,6 +274,9 @@ if args.SO_flag==True:
                                                                                     my_solver._store_face_data_default_guard(),
                                                                                     )
 
+#
+# @todo Han: I don't think this is good that we switch off enclave solvers always
+#
     additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
                                                                             is_enclave_solver = False,
                                                                             ))
