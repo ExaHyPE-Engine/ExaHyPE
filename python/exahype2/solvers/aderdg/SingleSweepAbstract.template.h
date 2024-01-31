@@ -6,23 +6,25 @@
 // **********************************************************************************************
 #pragma once
 
+#include "Constants.h"
+
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PrecisionControl.h"
-#include "exahype2/NonCriticalAssertions.h"
-
 #include "exahype2/aderdg/solvers/ADERDGSolver.h"
 
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/NonCriticalAssertions.h"
 
 #include "peano4/utils/Globals.h"
 
-#include "Constants.h"
-
 #include "exahype2/aderdg/kernels/Kernels.h"
-{% if USE_KERNEL_GENERATOR==True %}
+{% if USE_KERNEL_GENERATOR %}
 #include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
+{% if USE_LIMITER %}
+#include "generated/kernels/limiter/fv/Quadrature.h"
+{% endif %}
 {% endif %}
 
 {% if USE_HALF_PRECISION==True %}
@@ -74,6 +76,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
       Prediction,
       PredictionOnHangingCells,
       Correction,
+      LimiterStatusSpreadingToNeighbours,
+      LimiterStatusSpreadingToSecondNeighbours,
+      FVRecomputation,
       Plotting,
       Suspended
     };
@@ -177,7 +182,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      *
      */
     virtual void initialCondition(
-      {{SOLUTION_STORAGE_PRECISION}}* __restrict__                        Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{SOLUTION_STORAGE_PRECISION}}* __restrict__                          Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
 			const tarch::la::Vector<Dimensions,double>&  h,
 			const tarch::la::Vector<Dimensions,int>&     index,
@@ -436,6 +441,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
     double     _maxTimeStepSizeThisTimeStep;
 
     int        _cellUpdates;
+
+    int        _numberOfTroubledCellsThisTimeStep;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 

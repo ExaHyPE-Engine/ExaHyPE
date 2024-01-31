@@ -44,7 +44,7 @@ class RungeKuttaDG(object):
     An abstract class for any RKDG solver of any order
 
     This is the base class of all Runge-Kutta DG solvers. It defines what kind of action
-    sets do exist, i.e. what in principle can be done while we run through the grid. It
+    sets do exist, i.e., what in principle can be done while we run through the grid. It
     also provides some kind of very basic infrastructure, i.e. what the name of a solver
     is, what data is to be held per face or cell, or where in the multiscale mesh
     we actually have to hold data.
@@ -75,7 +75,7 @@ class RungeKuttaDG(object):
     On the boundary, I store both the left and right solution projections. Per RK step, we
     project the linear combination onto the face. This is in line with the action set
     ComputeFinalLinearCombination which simply copies over the old time step
-    into the linear combination field in the very first Runge Kutta step.
+    into the linear combination field in the very first Runge-Kutta step.
 
     Our DG implementation is not tied to one particular Riemann solver, even though most
     users will likely use Rusanov. Therefore, it is not clear which data is to be projected
@@ -99,7 +99,7 @@ class RungeKuttaDG(object):
     This will ensure that the baseline configuration of all data is in place.
     After that, you can modify the properties.
 
-    create_action_sets() establishes the action sets, i.e. activities that are to
+    create_action_sets() establishes the action sets, i.e., activities that are to
     be triggered whenever you run a time step, you plot, you initialise the grid.
     Same here: If you want to alter the configuration of the code, call
     create_action_sets() of the superclass first, before you do fancy stuff. This
@@ -135,7 +135,7 @@ class RungeKuttaDG(object):
 
     ## Mandatory step of subclasses
 
-    There are different nuances of subclasses/algorithmic realisations, i.e. few solvers inherit
+    There are different nuances of subclasses/algorithmic realisations, i.e., few solvers inherit
     directly from RungeKuttaDG. However, even those subclasses still require you do provide some
     additional information.
 
@@ -152,10 +152,10 @@ class RungeKuttaDG(object):
 
     ## Semantics of FaceLabel
 
-    - The update time stamp is the one we udpate in each and every
+    - The update time stamp is the one we update in each and every
       Runge-Kutta step.
 
-    - The new time stamp is the valid one, i.e. the one that
+    - The new time stamp is the valid one, i.e., the one that
       corresponds to the face's EstimateProjection after a time step.
 
     - The old time stamp is the one that corresponds to the (old)
@@ -175,6 +175,7 @@ class RungeKuttaDG(object):
         min_cell_h,
         max_cell_h,
         plot_grid_properties,
+        pde_terms_without_state: bool,
         baseline_action_set_descend_invocation_order=0,
     ):
         """
@@ -191,7 +192,7 @@ class RungeKuttaDG(object):
            Order of the Discontinuous Galerkin approximation.
 
         rk_order: int
-           Runge-Kutta order, i.e. time stepping order.
+           Runge-Kutta order, i.e., time stepping order.
 
         polynomials: Polynomials
            Picks which kind of polynomial to use.
@@ -255,16 +256,21 @@ class RungeKuttaDG(object):
         self._basis = polynomial_basis
         self._face_projections = face_projections
 
-        self._volumetric_solver_call = "#error Please set the solver property _volumetric_kernel in the Python class"
-        self._Riemann_solver_call = (
-            "#error Please set the solver property _Riemann_solver in the Python class"
+        self._volumetric_compute_kernel_call = "#error Please set the solver property _volumetric_compute_kernel_call in the Python class"
+        self._volumetric_compute_kernel_call_stateless = "#error Please set the solver property _volumetric_compute_kernel_call_stateless in the Python class"
+        self._Riemann_compute_kernel_call = (
+            "#error Please set the solver property _Riemann_compute_kernel_call in the Python class"
         )
+        self._Riemann_compute_kernel_call_stateless = (
+            "#error Please set the solver property _Riemann_compute_kernel_call_stateless in the Python class"
+        )
+        self._pde_terms_without_state = pde_terms_without_state
         self._add_solver_contributions_call = "#error Please set the solver property _add_solver_contributions_call in the Python class"
         self._multiply_with_inverted_mass_matrix_call = "#error Please set the solver property _multiply_with_inverted_mass_matrix_call in the Python class"
         self._kernel_namespace = "#error Please set the solver property _kernel_namespace in the Python class"
 
         """
-        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
+        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and
         auxiliary variables in the equation to be computed. Unknowns are variables that change over
         time whereas auxiliary variables can be space-dependent but don't vary over time.
         These can be specified either as simple ints or by a dictionary
@@ -272,7 +278,7 @@ class RungeKuttaDG(object):
         in which the user specifies the multiplicity of the variable (the velocity has one component
         per dimension for example.)
         If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
-        allows the user to specifiy a variable by name and automatically maps this to the right position
+        allows the user to specify a variable by name and automatically maps this to the right position
         in an array for better legibility. Otherwise they must manually remember the position of each
         variable manually.
 
@@ -294,7 +300,7 @@ class RungeKuttaDG(object):
             self._unknowns = unknowns
         else:
             raise Exception(
-                "not a valid type for parameter unknowns, needs to be int or dictionary"
+                "Not a valid type for parameter unknowns, needs to be int or dictionary."
             )
 
         if type(auxiliary_variables) is dict:
@@ -307,7 +313,7 @@ class RungeKuttaDG(object):
             self._auxiliary_variables = auxiliary_variables
         else:
             raise Exception(
-                "not a valid type for parameter auxiliary_variables, needs to be int or dictionary"
+                "Not a valid type for parameter auxiliary_variables, needs to be int or dictionary."
             )
 
         self._min_cell_h = min_cell_h
@@ -320,7 +326,7 @@ class RungeKuttaDG(object):
 
         if min_cell_h > max_cell_h:
             raise Exception(
-                "Error: min_cell_h ("
+                "min_cell_h ("
                 + str(min_cell_h)
                 + ") is bigger than max_cell_h ("
                 + str(max_cell_h)
@@ -374,6 +380,7 @@ class RungeKuttaDG(object):
         self.create_data_structures()
         self.create_action_sets()
 
+
     def __str__(self):
         result = (
             """
@@ -381,7 +388,10 @@ Name:                   """
             + self._name
             + """
 Type:                   """
-            + self.__class__.__name__
+            + self.__class__.__module__
+            + """
+Stateless PDE terms:    """
+            + str(self._pde_terms_without_state)
             + """
 RK/DG order:            """
             + str(self._rk_order)
@@ -400,11 +410,36 @@ h_cell_min:             """
 h_cell_max:             """
             + str(self._max_cell_h)
             + """
+Initial conditions:     """
+            + str(self._initial_conditions_implementation)
+            + """
+Boundary conditions:    """
+            + str(self._boundary_conditions_implementation)
+            + """
+Refinement criterion:   """
+            + str(self._refinement_criterion_implementation)
+            + """
+Eigenvalues:            """
+            + str(self._eigenvalues_implementation)
+            + """
+Flux:                   """
+            + str(self._flux_implementation)
+            + """
+NCP:                    """
+            + str(self._ncp_implementation)
+            + """
+Source term:            """
+            + str(self._source_term_implementation)
+            + """
+Point source:           """
+            + str(self._point_sources_implementation)
+            + """
 """
         )
         return result
 
     __repr__ = __str__
+
 
     def get_min_number_of_spacetree_levels(self, domain_size):
         coarsest_tree_level = 0
@@ -412,23 +447,26 @@ h_cell_max:             """
             coarsest_tree_level += 1
         return coarsest_tree_level
 
+
     def get_max_number_of_spacetree_levels(self, domain_size):
         finest_tree_level = 0
         while domain_size * 3 ** (-finest_tree_level) > self._min_cell_h:
             finest_tree_level += 1
         return finest_tree_level
 
+
     def get_coarsest_number_of_cells(self, domain_size):
         return 3 ** self.get_min_number_of_spacetree_levels(domain_size)
 
+
     def get_finest_number_of_cells(self, domain_size):
         return 3 ** self.get_max_number_of_spacetree_levels(domain_size)
+
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
             """
 ### ExaHyPE 2 solver
-
 """
             + str(self)
             + """
@@ -463,6 +501,7 @@ We use RK("""
 """
         )
 
+
     @property
     def user_action_set_includes(self):
         """
@@ -470,6 +509,7 @@ We use RK("""
         routines from other header files.
         """
         return self._user_action_set_includes
+
 
     @property
     def user_solver_includes(self):
@@ -479,6 +519,7 @@ We use RK("""
         """
         return self._user_solver_includes
 
+
     def add_user_action_set_includes(self, value):
         """
         Add further includes to this property, if your action sets require some additional
@@ -486,12 +527,14 @@ We use RK("""
         """
         self._user_action_set_includes += value
 
+
     def add_user_solver_includes(self, value):
         """
         Add further includes to this property, if your solver requires some additional
         routines from other header files.
         """
         self._user_solver_includes += value
+
 
     @abstractmethod
     def create_data_structures(self):
@@ -710,7 +753,7 @@ We use RK("""
                 )
             )
         else:
-            assert False, "storage variant {} not supported".format(
+            assert False, "Storage variant {} not supported".format(
                 self._face_data_storage
             )
 
@@ -809,8 +852,10 @@ We use RK("""
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
 
+
     def _query_fine_grid_cell_in_action_set_if_it_holds_solution(self):
         return self._store_cell_data_default_guard()
+
 
     @abstractmethod
     def create_action_sets(self):
@@ -922,7 +967,7 @@ We use RK("""
         )
         self._action_set_project_linear_combination_onto_faces.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 3
-        )  # depends on lienar combination of estimates
+        )  # depends on linear combination of estimates
         self._action_set_solve_volume_integral.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 3
         )  # the two 3s could run in parallel
@@ -968,6 +1013,7 @@ We use RK("""
                         + "::SolverState::GridConstruction"
                 )
 
+
     def _provide_face_data_to_compute_kernels_default_guard(self):
         return (
                         "not marker.willBeRefined() "
@@ -977,6 +1023,7 @@ We use RK("""
                         + self._name
                         + "::SolverState::GridConstruction"
                )
+
 
     def _store_cell_data_default_guard(self):
         """!
@@ -991,6 +1038,7 @@ We use RK("""
             + self._name
             + "::SolverState::GridConstruction"
         )
+
 
     def _load_cell_data_default_guard(self):
         """!
@@ -1011,6 +1059,7 @@ We use RK("""
             + "::SolverState::GridInitialisation"
         )
 
+
     def _store_face_data_default_guard(self):
         """!
         Extend the guard via ands only. Never use an or, as subclasses might
@@ -1024,6 +1073,7 @@ We use RK("""
             + self._name
             + "::SolverState::GridConstruction"
         )
+
 
     def _load_face_data_default_guard(self):
         """!
@@ -1044,11 +1094,14 @@ We use RK("""
             + "::SolverState::GridInitialisation"
         )
 
+
     def _unknown_identifier(self):
         return self._name + "Q"
 
+
     def get_name_of_global_instance(self):
         return "InstanceOf" + self._name
+
 
     def add_to_Peano4_datamodel(self, datamodel, verbose):
         """
@@ -1056,15 +1109,12 @@ We use RK("""
         so it is properly built up
         """
         if verbose:
-            print("Patch data")
+            print("Polynomial basis")
             print("----------")
-            #      print( str(self._patch) )
-            print("Patch overlap data")
+            print(str(self._basis))
+            print("Face projections")
             print("----------")
-            #      print( str(self._patch_overlap_old) )
-            print("Patch overlap data")
-            print("----------")
-        #      print( str(self._patch_overlap_new) )
+            print(str(self._face_projections))
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._current_time_step)
         datamodel.add_cell(self._rhs_estimates)
@@ -1073,6 +1123,7 @@ We use RK("""
         datamodel.add_face(self._estimate_projection)
         datamodel.add_face(self._old_solution_projection)
         datamodel.add_face(self._Riemann_solution)
+
 
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         """
@@ -1091,6 +1142,7 @@ We use RK("""
         step.use_face(self._old_solution_projection)
         step.use_face(self._Riemann_solution)
 
+
     def _get_default_includes(self):
         return """
 #include "tarch/la/Vector.h"
@@ -1103,7 +1155,6 @@ We use RK("""
 
     def add_actions_to_init_grid(self, step):
         """!
-
         Add the action sets to the grid initialisation
 
         The AMR stuff has to be the very first thing. Actually, the AMR routines'
@@ -1129,6 +1180,7 @@ We use RK("""
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
 
+
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
         """
         @todo:
@@ -1143,6 +1195,7 @@ We use RK("""
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
+
     def set_plot_description(self, description):
         """
         Use this one to set a description within the output patch file that tells
@@ -1150,6 +1203,7 @@ We use RK("""
         a comma-separated list here.
         """
         self.plot_description = description
+
 
     def add_actions_to_plot_solution(self, step, output_path):
         """!
@@ -1224,30 +1278,31 @@ We use RK("""
 
         pass
 
+
     def add_actions_to_perform_time_step(self, step):
         """
         The tricky part here is that we have to get the order right.
 
         - Update of the labels: This can be done as very first step, as it
           might feed into follow-up steps.
-        - linear combination: This has to be the first step of a Runge-Kutta
+        - Linear combination: This has to be the first step of a Runge-Kutta
           scheme. Without this first step, there's absolutely nothing we can
           do properly.
-        - couple resolutions and AMR: Once we have the linear combination,
+        - Couple resolutions and AMR: Once we have the linear combination,
           we can couple different resolutions.
-        - project linear combination onto faces: This should be done as soon
+        - Project linear combination onto faces: This should be done as soon
           as possible but after we've determined the linear combination. After
           all, we need the solution representation on the faces asap.
-        - solve volume integral: can run in parallel to the projection onto
+        - Solve volume integral: can run in parallel to the projection onto
           the faces.
-        - handle boundary: doesn't really matter when we insert it, as it plugs
+        - Handle boundary: doesn't really matter when we insert it, as it plugs
           into the first face load, while all the other stuff so far are volumetric
           operations.
           It is important that we do the inter-grid transfer operators before we
           apply the boundary conditions.
-        - solve Riemann problem: the constraint here is that it has to come after
+        - Solve Riemann problem: the constraint here is that it has to come after
           the boundary handling.
-        - add volume and face solution: last
+        - Add volume and face solution: last
 
         If we use enclave tasking, we have to be careful when we insert the merger.
         See SeparateSweepsWithEnclaveTasking.add_actions_to_perform_time_step() for
@@ -1275,13 +1330,15 @@ We use RK("""
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
 
+
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
 
+
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         """
-        The ExaHyPE2 project will call this operation when it sets
+        The ExaHyPE project will call this operation when it sets
         up the overall environment.
 
         This routine is typically not invoked by a user.
@@ -1349,11 +1406,14 @@ We use RK("""
             output.add(generated_shortcut_file)
             output.makefile.add_h_file("VariableShortcuts.h", generated=True)
 
+
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
 
+
     def add_solver_constants(self, datastring):
         self._solver_constants += datastring
+
 
     def _init_dictionary_with_default_parameters(self, d):
         """
@@ -1459,6 +1519,7 @@ We use RK("""
 
         d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
 
+        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["KERNEL_NAMESPACE"] = self._kernel_namespace
 
         d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
@@ -1468,11 +1529,17 @@ We use RK("""
         self._basis.init_dictionary_with_default_parameters(d, False)
 
         # Has to come last, as we already use the other entries
-        d["VOLUMETRIC_SOLVER_CALL"] = jinja2.Template(
-            self._volumetric_solver_call, undefined=jinja2.DebugUndefined
+        d["VOLUMETRIC_COMPUTE_KERNEL_CALL"] = jinja2.Template(
+            self._volumetric_compute_kernel_call, undefined=jinja2.DebugUndefined
         ).render(**d)
-        d["RIEMANN_SOLVER_CALL"] = jinja2.Template(
-            self._Riemann_solver_call, undefined=jinja2.DebugUndefined
+        d["VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS"] = jinja2.Template(
+            self._volumetric_compute_kernel_call_stateless, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["RIEMANN_COMPUTE_KERNEL_CALL"] = jinja2.Template(
+            self._Riemann_compute_kernel_call, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["RIEMANN_COMPUTE_KERNEL_CALL_STATELESS"] = jinja2.Template(
+            self._Riemann_compute_kernel_call_stateless, undefined=jinja2.DebugUndefined
         ).render(**d)
         d["ADD_SOLVER_CONTRIBUTIONS_CALL"] = jinja2.Template(
             self._add_solver_contributions_call, undefined=jinja2.DebugUndefined
@@ -1482,13 +1549,16 @@ We use RK("""
             undefined=jinja2.DebugUndefined,
         ).render(**d)
 
+
     @property
     def unknowns(self):
         return self._unknowns
 
+
     @property
     def auxiliary_variables(self):
         return self._auxiliary_variables
+
 
     @unknowns.setter
     def unknowns(self, value):
@@ -1496,14 +1566,17 @@ We use RK("""
         self.create_data_structures()
         self.create_action_sets()
 
+
     @auxiliary_variables.setter
     def auxiliary_variables(self, value):
         self._auxiliary_variables = value
         self.create_data_structures()
         self.create_action_sets()
 
+
     def number_of_Runge_Kutta_steps(self):
         return RungeKutta_steps(self._rk_order)
+
 
     def set_implementation(
         self,
@@ -1521,7 +1594,7 @@ We use RK("""
         """
         If you pass in User_Defined, then the generator will create C++ stubs
         that you have to befill manually. If you pass in None_Implementation, it
-        will create nop, i.e. no implementation or defaults. Any other string
+        will create nop, i.e., no implementation or defaults. Any other string
         is copied 1:1 into the implementation. If you pass in None, then the
         set value so far won't be overwritten.
         """
@@ -1554,13 +1627,16 @@ We use RK("""
         self.create_data_structures()
         self.create_action_sets()
 
+
     @property
     def postprocess_updated_cell_after_Runge_Kutta_step(self):
         return self._postprocess_updated_cell_after_Runge_Kutta_step
 
+
     @property
     def postprocess_updated_cell_after_final_linear_combination(self):
         return self._postprocess_updated_cell_after_final_linear_combination
+
 
     @postprocess_updated_cell_after_Runge_Kutta_step.setter
     def postprocess_updated_cell_after_Runge_Kutta_step(self, kernel):
@@ -1573,10 +1649,10 @@ We use RK("""
 
              my_solver.postprocess_updated_cell = " ""
              {
-               constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+               constexpr int itmax = ({{DG_ORDER}} + 1) * ({{DG_ORDER}} + 1) * ({{DG_ORDER}} + 1);
                int index = 0;
-               for (int i=0;i<itmax;i++) {
-                 applications::exahype2::ccz4::enforceCCZ4constraints( dQdt+index );
+               for (int i = 0; i < itmax; i++) {
+                 applications::exahype2::ccz4::enforceCCZ4constraints(dQdt + index);
                  index += {{NUMBER_OF_UNKNOWNS}};
                }
              }
@@ -1595,10 +1671,10 @@ We use RK("""
         spot more variables that are on offer. Whenever I use the brackets below,
         these are symbolic constants which will be befilled with the proper constants
         when the postprocessing code snippet is inserted into the generated code.
-        The other variables are directly available, i.e. no text replacement is done
+        The other variables are directly available, i.e., no text replacement is done
         here.
 
-        - {{DG_ORDER}}  Spatial discretisation order.
+        - {{DG_ORDER}} Spatial discretisation order.
         - timeStamp
         - timeStepSize
         - dQdt
@@ -1611,6 +1687,7 @@ We use RK("""
         self.create_data_structures()
         self.create_action_sets()
 
+
     @postprocess_updated_cell_after_final_linear_combination.setter
     def postprocess_updated_cell_after_final_linear_combination(self, kernel):
         """
@@ -1622,10 +1699,10 @@ We use RK("""
 
              my_solver.postprocess_updated_cell = " ""
              {
-               constexpr int itmax = ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1) * ({{DG_ORDER}}+1);
+               constexpr int itmax = ({{DG_ORDER}} +1 ) * ({{DG_ORDER}} + 1) * ({{DG_ORDER}} + 1);
                int index = 0;
-               for (int i=0;i<itmax;i++) {
-                 applications::exahype2::ccz4::enforceCCZ4constraints( dQdt+index );
+               for (int i = 0; i < itmax; i++) {
+                 applications::exahype2::ccz4::enforceCCZ4constraints(dQdt + index);
                  index += {{NUMBER_OF_UNKNOWNS}};
                }
              }
@@ -1644,10 +1721,10 @@ We use RK("""
         spot more variables that are on offer. Whenever I use the brackets below,
         these are symbolic constants which will be befilled with the proper constants
         when the postprocessing code snippet is inserted into the generated code.
-        The other variables are directly available, i.e. no text replacement is done
+        The other variables are directly available, i.e., no text replacement is done
         here.
 
-        - {{DG_ORDER}}  Spatial discretisation order.
+        - {{DG_ORDER}} Spatial discretisation order.
 
 
         ## Runge-Kutta steps
@@ -1657,6 +1734,7 @@ We use RK("""
         self._postprocess_updated_cell_after_final_linear_combination = kernel
         self.create_data_structures()
         self.create_action_sets()
+
 
     def switch_to_heap_storage(
         self,

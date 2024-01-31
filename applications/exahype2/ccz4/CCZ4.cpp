@@ -1,8 +1,5 @@
 #include "CCZ4.h"
 #include "exahype2/RefinementControl.h"
-#include "exahype2/NonCriticalAssertions.h"
-//#include "exahype2/CellAccess.h"
-
 #include <algorithm>
 
 #include "Constants.h"
@@ -11,6 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "tarch/NonCriticalAssertions.h"
 
 #ifdef IncludeTwoPunctures
 TP::TwoPunctures* _tp = new TP::TwoPunctures();

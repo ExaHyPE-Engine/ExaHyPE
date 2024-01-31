@@ -98,10 +98,10 @@ class InsertParticlesFromHDF5File(ActionSet):
       const double GridSize_x = GridSize(0);
 
       /* Compute the pressure from the EoS */
-      const double Pressure = ::swift2::legacy::eos::gas_pressure_from_internal_energy( Density, InternalEnergy );
+      const double Pressure = ::swift2::kernels::legacy::eos::gas_pressure_from_internal_energy( Density, InternalEnergy );
 
       /* Sound speed */
-      const double Soundspeed = ::swift2::legacy::eos::gas_soundspeed_from_internal_energy( InternalEnergy );
+      const double Soundspeed = ::swift2::kernels::legacy::eos::gas_soundspeed_from_internal_energy( InternalEnergy );
 
       /* Now set the values */
       newParticle->setV              ( Velocity );
@@ -116,8 +116,6 @@ class InsertParticlesFromHDF5File(ActionSet):
        * @TODO some of these should be initialised elsewhere to keep this
        * initialisation script general for any hydro scheme, etc.
        */
-
-      newParticle->setSmoothingLengthPrevious( SmoothingLength );
 
       newParticle->setSearchRadius(GridSize_x / 2.0);
 
@@ -139,19 +137,13 @@ class InsertParticlesFromHDF5File(ActionSet):
       newParticle->setUDot  (0.0);
       newParticle->setHDot  (0.0);
       newParticle->setWcount(0.0);
-      newParticle->setNcount(0  );
-      newParticle->setF     (0.0);
+      newParticle->setF(0.0);
       newParticle->setRho_dh(0.0);
       newParticle->setWcount_dh(0.0);
 
-      newParticle->setHLeft (hmin);
-      newParticle->setHRight(hmax);
 
 //      newParticle->setTimeStepSize(GLOBAL_TIME_STEP_SIZE);
-      newParticle->setHasConverged(false);
-      newParticle->setHasNoNeighbours(false);
-      newParticle->setResidual(0.0);
-      newParticle->setIterCount(0);
+      newParticle->setSmoothingLengthIterCount(0);
       newParticle->setIsBoundaryParticle(false);
 
       // Artificial viscosity scheme
@@ -171,7 +163,8 @@ class InsertParticlesFromHDF5File(ActionSet):
       toolbox::particles::insertParticleIntoCell(
         marker,
         newParticle,
-        fineGridVerticeshydroPartSet
+        fineGridVerticeshydroPartSet,
+        _spacetreeId
       );
     }
 
@@ -184,9 +177,15 @@ class InsertParticlesFromHDF5File(ActionSet):
 
     __Template_EndTraversal = jinja2.Template(
         """
-  logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree "
-                                         << _spacetreeId
-                                         << " (boundary vertices might host redundant particle data)" );
+  if (_particleNumberOnThisTree==0) {
+    logWarning( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId );
+  }
+  else {
+    logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)" );
+  }  
+  #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
+  assertion( _particleNumberOnThisTree>0 );
+  #endif
 """
     )
 
@@ -210,6 +209,7 @@ class InsertParticlesFromHDF5File(ActionSet):
     def get_includes(self):
         result = jinja2.Template(
             """
+#include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
@@ -219,8 +219,8 @@ class InsertParticlesFromHDF5File(ActionSet):
 
 #include "Constants.h"
 
-#include "swift2/legacy/kernel_hydro.h"
-#include "swift2/legacy/equation_of_state.h"
+#include "swift2/kernels/legacy/kernel_hydro.h"
+#include "swift2/kernels/legacy/equation_of_state.h"
 
 #include <fstream>
 #include <string>
@@ -255,10 +255,6 @@ toolbox::particles::FileReaderHDF5 """
             + """\" );
 """
         )
-
-    # def get_destructor_body(self):
-    #  return """
-    # """
 
     def get_attributes(self):
         return """

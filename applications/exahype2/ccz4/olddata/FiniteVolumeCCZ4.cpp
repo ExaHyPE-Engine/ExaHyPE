@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "tarch/NonCriticalAssertions.h"
 
 #ifdef IncludeTwoPunctures
 TP::TwoPunctures* _tp = new TP::TwoPunctures();

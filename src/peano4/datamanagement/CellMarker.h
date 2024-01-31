@@ -65,26 +65,59 @@ public:
   CellMarker(const peano4::grid::GridTraversalEvent& event);
 
   /**
-   * Has the cell been refined when we kicked off this mesh traversal?
-   * This implies that the cell is refined in this sweep, as cells do
-   * not change their state throughout the traversal.
+   * Has the cell been refined when we kicked off this mesh traversal
+   *
+   * If the attribute holds, this implies that the cell is refined in this
+   * sweep, as cells do not change their state throughout the traversal. It
+   * does not mean that the cell will be refined in the next mesh traversal
+   * however. To find this out, you have to study willBeRefined().
    *
    * @see willBeRefined()
    */
   bool hasBeenRefined() const;
 
   /**
-   * Will the cell be refined in the subsequent iteration? If hasBeenRefined()
+   * Will the cell be refined in the subsequent iteration
+   *
+   *
+   * If hasBeenRefined()
    * returns false but willBeRefined() holds, we have a cell which Peano 4
-   * will refine between the current and the next grid sweep. If it is the
-   * other way round, Peano 4 coarsens.
+   * will refine in the current mesh sweep. It might however
+   * not yet be refined. This analysis makes sense once we take into account that
+   * refinement in Peano first have to be triggered. In the subsequent mesh
+   * traversal, the affected vertices then switch to refining and the new
+   * mesh elements are actually added.
+   *
+   * The function which ultimately defines if this flag is set or not is
+   * peano4::grid::willVerticesBeRefined().
+   *
+   * If willBeRefined() is false but hasBeenRefined() is true, the current
+   * cell is refined, but it will be coarsened in the very mesh traversal in
+   * which we run through the mesh.
    */
   bool willBeRefined() const;
 
   /**
+   * Centre of a cell
+   *
+   * If you want to know the position of one of the cell's vertices, you have
+   * to reconstruct this one manually. It is particularly simple if you already
+   * know the number of the vertex as a bitset:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~
+   * marker.x() - 0.5 * marker.h() + tarch::la::multiplyComponents(tarch::la::Vector<Dimensions,double>(targetVertex),marker.h())
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   *
    * @return Centre of cell.
    */
   tarch::la::Vector<Dimensions, double> x() const;
+
+  /**
+   * See getInvokingCellCentre(). This routine gives you the centre of its
+   * parent cell.
+   */
+  tarch::la::Vector<Dimensions, double> getInvokingCellsFatherCentre() const;
 
   /**
    * Is x contained within cell identified by marker object
@@ -114,12 +147,13 @@ public:
    * @param tolerance Absolute tolerance when we compare two values.
    *
    */
-  bool isContained(
-    const tarch::la::Vector<Dimensions, double>& x, double tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE
-  ) const;
+  bool isContained(const tarch::la::Vector<Dimensions, double>& x, double tolerance = tarch::la::NUMERICAL_ZERO_DIFFERENCE) const;
 
-  bool overlaps(const tarch::la::Vector<Dimensions, double>& offset, const tarch::la::Vector<Dimensions, double>& size)
-    const;
+  static bool isContained(
+    const tarch::la::Vector<Dimensions, double>& x, const tarch::la::Vector<Dimensions, double>& cellCentre, const tarch::la::Vector<Dimensions, double>& h, double tolerance
+  );
+
+  bool overlaps(const tarch::la::Vector<Dimensions, double>& offset, const tarch::la::Vector<Dimensions, double>& size) const;
 
   /**
    * @return Size of cell
@@ -225,22 +259,8 @@ public:
    * the message went through. In systems with heavy MPI usage, this can
    * help to avoid deadlocks.
    */
-  static void send(
-    const CellMarker&     buffer,
-    int                   destination,
-    int                   tag,
-    std::function<void()> startCommunicationFunctor,
-    std::function<void()> waitFunctor,
-    MPI_Comm              communicator
-  );
-  static void receive(
-    CellMarker&           buffer,
-    int                   source,
-    int                   tag,
-    std::function<void()> startCommunicationFunctor,
-    std::function<void()> waitFunctor,
-    MPI_Comm              communicator
-  );
+  static void send(const CellMarker& buffer, int destination, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator);
+  static void receive(CellMarker& buffer, int source, int tag, std::function<void()> startCommunicationFunctor, std::function<void()> waitFunctor, MPI_Comm communicator);
 
   static void sendAndPollDanglingMessages(const CellMarker& message, int destination, int tag, MPI_Comm communicator);
   static void receiveAndPollDanglingMessages(CellMarker& message, int source, int tag, MPI_Comm communicator);

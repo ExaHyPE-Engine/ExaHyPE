@@ -40,7 +40,7 @@ args = parser.parse_args()
 # Generate SWIFT project
 ########################################################################################
 
-project_namespace = ["benchmarks", "swift2", "dastgen_test"]
+project_namespace = ["tests", "swift2", "dastgenTest"]
 
 project = swift2.Project(
     namespace=project_namespace, project_name="dastgen_test", executable="dastgen_test"
@@ -85,6 +85,8 @@ project.set_global_simulation_parameters(
 )
 
 project.set_Peano4_installation(args.peanodir, build_mode)
+project._project.output.makefile.add_cpp_file("DastgenTest.cpp", generated=False)
+
 
 
 ###############################################################################

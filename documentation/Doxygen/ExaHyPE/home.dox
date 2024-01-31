@@ -26,6 +26,7 @@
 \li \subpage page_exahype_amr
 \li \subpage page_exahype_cpp_kernels
 \li \subpage page_exahype_solvers
+\li \subpage exahype2_enumerator
 
 @image html logos/ExaHyPE-logo.png
 

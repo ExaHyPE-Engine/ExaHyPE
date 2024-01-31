@@ -63,6 +63,7 @@ class DataModel(object):
 
 #include <string>
 
+{ATTRIBUTE_INCLUDES}
 {ASPECT_INCLUDES}
 
 {OPEN_NAMESPACES}
@@ -171,6 +172,10 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
         writes the header file for your data model.
         """
         d = {}
+        d["ATTRIBUTE_INCLUDES"] = ""
+        for attribute in self._attributes:
+            d["ATTRIBUTE_INCLUDES"] += attribute.get_includes()
+
         d["UNQUALIFIED_CLASS_NAME"] = dastgen2.get_unqualified_class_name(
             self._full_qualified_name
         )
@@ -208,16 +213,24 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
 
         d["ASPECT_ATTRIBUTES"] = ""
         d["ASPECT_METHOD_DECLARATIONS"] = ""
+        # Inlcudes to peano4 should not exist in tarch
+        # As tarch do not uses the definition Dimensions, but peano4 needs it (2 or 3 for example)
         d["ASPECT_INCLUDES"] = ""
         for i in self._aspects:
+            
             d["ASPECT_ATTRIBUTES"] += i.get_attributes() + "\n"
             d["ASPECT_METHOD_DECLARATIONS"] += (
                 i.get_method_declarations(self._full_qualified_name) + "\n"
             )
-            d["ASPECT_INCLUDES"] += i.get_include() + "\n"
+            include = i.get_include()
+            # Do not include peano4 aspects in tarch files, due to the dimensions definitions
+            filtered_includes = ""
+            for line in include.split("\n"):
+                if not("tarch" in d["FULL_QUALIFIED_CLASS_NAME"] and line.startswith('#include "peano4')):
+                    filtered_includes += line + "\n"
 
+            d["ASPECT_INCLUDES"] += filtered_includes+ "\n"
         d["CONSTRUCTOR_ARGUMENTS"] = self._get_constructor_arguments()
-
         if self.__use_default_copy_constructor():
             d["METHOD_DECLARATIONS"] += (
                 "    "

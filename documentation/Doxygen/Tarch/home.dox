@@ -10,6 +10,7 @@
 \li \subpage tarch_patch_files
 \li \subpage tarch_services
 \li \subpage tarch_accelerator_SYCL
+\li \subpage tarch_NoncriticalAssertions
 
 
 

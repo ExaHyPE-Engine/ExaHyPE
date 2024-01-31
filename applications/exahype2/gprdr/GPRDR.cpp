@@ -5,14 +5,13 @@
 #include "ODE.h"
 
 #include "exahype2/RefinementControl.h"
-#include "exahype2/NonCriticalAssertions.h"
-
 #include "peano4/utils/Loop.h"
 
 
 
 
 #include <algorithm>
+#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   examples::exahype2::gprdr::GPRDR::_log( "examples::exahype2::gprdr::GPRDR" );

@@ -6,7 +6,7 @@
 
 @todo This docu should move closer to the source code
 
-Peano's block-structured output format {#capter:blockstructured-output-format}
+Peano's block-structured output format {#chapter:blockstructured-output-format}
 ======================================
 
 Peano has introduced its own block-structured output format. Its idea is
