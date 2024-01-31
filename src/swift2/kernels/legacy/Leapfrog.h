@@ -70,6 +70,23 @@ namespace swift2 {
 
 
       /**
+       * @todo No masking yet
+       */
+      template <typename Particle>
+      void hydroPredictExtraWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        hydroPredictExtra(marker, localParticle);
+      }
+
+
+      /**
+       * @todo No masking in here yet
+       */
+      template <typename Particle>
+      void leapfrogDriftWithGlobalTimeStepSizeWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        leapfrogDriftWithGlobalTimeStepSize(marker, localParticle);
+      }
+
+      /**
        *  Kick steps. There are two kick steps in the KDK scheme, in which we
        *  update the particle velocity by a half-timestep using:
        *
@@ -127,6 +144,14 @@ namespace swift2 {
         }
       }
 
+      /**
+       * @todo No maksing
+       */
+      template <typename Particle>
+      void leapfrogKickWithGlobalTimeStepSizeWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        leapfrogKickWithGlobalTimeStepSize(marker, localParticle);
+      }
+
 
       /**
        * @brief Kick the additional variables
@@ -151,6 +176,14 @@ namespace swift2 {
       }
 
       /**
+       * @Todo No masking yet
+       */
+      template <typename Particle>
+      void leapfrogKickExtraWithGlobalTimeStepSizeWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        leapfrogKickExtraWithGlobalTimeStepSize(marker, localParticle);
+      }
+
+      /**
        * @brief Sets the values to be predicted in the drifts to their values at a
        * kick time.
        */
@@ -162,6 +195,14 @@ namespace swift2 {
         if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_reset_predicted_values(&localParticle);
         }
+      }
+
+      /**
+       * @todo No masking yet
+       */
+      template <typename Particle>
+      void resetPredictedValuesWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        resetPredictedValues(marker, localParticle);
       }
     }
   } // namespace timestepping

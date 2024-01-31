@@ -373,10 +373,35 @@ class SPHLeapfrogFixedSearchRadius(Particle):
         return
 
     def _setup_algorithm_steps_dict(self):
+        """!
+
+        Sets up a dict of the algorithm steps for this scheme so they can be accessed at various points.
+
+        There are three types of iterators:
+
+        - The one that's used to run over all particle assigned to a vertex. It
+          is called iterate_over_particles_assigned_to_vertex.
+        - There is one to iterate over all particle pairs associated with a
+          cell. This one is called iterate_over_particles_assigned_to_cell.
+
+        From hereon, we can define some "derived" iterators:
+
+        - One special iterator runs over all particles associated with a vertex
+          and allows them to move. This one is titled
+          iterate_over_particles_assigned_to_vertex_for_move and equals
+          iterate_over_particles_assigned_to_vertex. However, it embeds the
+          latter into some bookkeeping for the validation of the
+          vertex-particle assocation.
+        - Another special iterator runs over all particles but allows them to
+          reduce into some global space. If you use vectorisation, this one
+          cannot be vectorised by definition.
+
+        Both special iterators are constructed to default values unless you
+        explicitly set them beforehand.
+
         """
-        Sets up a dict of the algorithm steps for this scheme
-        so they can be accessed at various points.
-        """
+        iterate_over_particles_assigned_to_vertex_for_move = None
+        iterate_over_particles_assigned_to_vertex_with_global_reduction = None
 
         if (
             self._particle_interaction_kernel_realisation
@@ -398,7 +423,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 + self.name
                 + ">);"
             )
-            iterate_over_particles_assigned_to_vertex_for_move = (
+            iterate_over_particles_assigned_to_vertex_with_global_reduction = (
                 "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
                 + self.name
                 + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
@@ -419,17 +444,54 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 + self.name
                 + ">);"
             )
-            iterate_over_particles_assigned_to_vertex_for_move = (
-                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
-                + self.name
-                + ">, ::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel<globaldata::"
+        elif (
+            self._particle_interaction_kernel_realisation
+            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
+        ):
+            iterate_over_particles_assigned_to_vertex = (
+                "::swift2::kernels::forAllParticlesVectorised( marker, assignedParticles, numberOfAssignedParticles, {0}WithMasking<globaldata::"
                 + self.name
                 + ">);"
-                #  + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::"
-                #  + self.name
+            )
+            iterate_over_particles_assigned_to_cell = (
+                "::swift2::kernels::forAllParticlePairsVectorised( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, {0}WithMasking<globaldata::"
+                + self.name
+                + ">);"
+            )
+        elif (
+            self._particle_interaction_kernel_realisation
+            == SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS
+        ):
+            iterate_over_particles_assigned_to_vertex = (
+                "::swift2::kernels::forAllParticlesVectoriseWithCheckPreamble( marker, assignedParticles, numberOfAssignedParticles, {0}<globaldata::"
+                + self.name
+                + ">);"
+            )
+            iterate_over_particles_assigned_to_cell = (
+                "::swift2::kernels::forAllParticlePairsVectoriseWithCheckPreamble( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, {0}<globaldata::"
+                + self.name
+                + ">);"
             )
         else:
             raise NotImplemented()
+
+        if iterate_over_particles_assigned_to_vertex_for_move is None:
+            iterate_over_particles_assigned_to_vertex_for_move = (
+                """
+                auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
+                ::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"""
+                + self.name
+                + """>);
+                ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, _spacetreeId);
+                """
+                )
+            ## @todo This is not nice. We should still use the vectorised version if the vertex is gathered.
+        if iterate_over_particles_assigned_to_vertex_with_global_reduction is None:
+            iterate_over_particles_assigned_to_vertex_with_global_reduction = (
+                "::swift2::kernels::forAllParticles( marker, assignedParticles, {0}<globaldata::"
+                + self.name
+                + ">);"
+            )
 
         # @todo Mladen, can we remove this one please?
         flagBoundaryParticlesStep = AlgorithmStep(
@@ -534,7 +596,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 iterate_over_particles_assigned_to_vertex.format(
                     "::swift2::kernels::legacy::endDensityCalculation"
                 )
-                + iterate_over_particles_assigned_to_vertex.format(
+                + iterate_over_particles_assigned_to_vertex_with_global_reduction.format(
                     "::swift2::kernels::legacy::updateSmoothingLengthAndRerunIfRequired"
                 )
             ),
@@ -604,7 +666,7 @@ class SPHLeapfrogFixedSearchRadius(Particle):
             name="ReduceGlobalQuantities",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-            touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex.format(
+            touch_vertex_last_time_kernel=iterate_over_particles_assigned_to_vertex_with_global_reduction.format(
                 "::swift2::statistics::reduceVelocityAndSearchRadius"
             ),
             prepare_traversal_kernel="""

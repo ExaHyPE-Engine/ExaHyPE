@@ -35,60 +35,68 @@ class UpdateParallelState(ActionSet):
     To accommodate the fact that a particle moves and switches from local
     to virtual, we update its state in touchVertexFirstTime().
 
-    When we hit a vertex and its particles for the last time, we can
-    analyse the particles' parallel state. If the new state still is
-    virtual, we throw the particle away. Otherwise we keep it and make
-    the (real) parallel state equal to the new state. By comparing the
-    parallel state which results from the previous grid sweeps and the new
-    one, we can keep statistics how many particles are local, how many
-    have flown into the domain, and how many have left the domain,
-
 
     ## Validity/correctness
 
     Particles may not change their position throughout the mesh traversal. They
     can change their position in touchVertexLastTime(). This effectively means
-    they change x in-between two grid sweeps.
+    they change x in-between two grid sweeps. Consequently, their state might
+    be wrong in-between two sweeps.
 
-    It does not matter if you update particle positions in an action set prior
-    or after this one is called. At the time you do something within
-    touchVertexLastTime(), this action has already set the state markers
-    accordingly and hence can make a decision.
+    This routine has to be injected ***after*** additional particles are
+    added to the mesh. That can happen throughout boundary merges or due to
+    resorts. This action set has to be used after each mesh sweep that
+    alters particle positions.
 
-    As a consequence, we can check that a particle can never switch from
-    virtual to local here. Virtual particles should not move and therefore
-    should not "enter" the domain. Local particles in contrast can move and
-    hence leave the domain. That is, on a a neighbouring rank, a particle
-    might be moved into "our" area. In this case, we eliminate our local
-    virtual copy and then add the incoming particle as new local one.
-    This merger however is the resonsibility of the actual particle set,
-    and not of the actions here.
+    The action set throws away halo particles in touchVertexFirstTime().
+    Therefore, if you don't use it after each and every mesh sweep, you
+    might get redundant data at the boundary (due to repeated particle
+    inflow) or outdated data. Both is automatically avoided in the boundary
+    merges, which eliminate replica.
 
 
-    ## Usage
+    ## Merges along domain boundary
+    
+    We would like all state updates to be localised within this action set.
+    However, we cannot do everything here: We also have to update the 
+    parallel state when we merge along the domain boundary. This happens
+    in the particle set's merge(). The documentation around merge() is 
+    summarise here, as we have multiple particle set implementations, but
+    all of them are realised through Jinja templates. So it is better to
+    have stuff in one place only.
+    
+    The merge in principle is trivial: If a neighbour sends you in a 
+    virtual particle, don't do anything with it. Just ignore it. If it
+    is local at the neighbour, we add it to our local vertex.
+    
+    @image html UpdateParallelState_merge.png
+    
+    The sketch above illustrates why it is important to neglect virtual
+    particles sent in: In the sketch, the left subdomain sends its 
+    particle (green) over to the right, where it is marked as virtual 
+    (red). The right one now sends this particle back (dark green) and 
+    we would hold redundant information.
+    
+    The sketch also illustrates why we throw away virtual particles after
+    the mesh sweep: If the particle moves on the owning rank - and it can
+    only move there - the neighbour would have two virtual copies (as it 
+    cannot match old one to new one). So we better throw away all old stuff
+    by default.
+    
+    With that data flow in mind, particles crossing domain boundaries are
+    automatically given the correct state. We wouldn't have to implement
+    and local/non-local logic in the merge(). This could all be done in 
+    this action set. However, we still need some logic here. 
 
-    This operation should always been called after you've resorted the particles
-    due to position changes or alterations of the search radii. Furthermore,
-    the sketch above shows why it is important that virtual particles are
-    always removed after a mesh traversal. This implies that all is good and
-    fine as long as you use UpdateParallelState in each and every mesh
-    traversal.
+    The reason is simple: A merge happens in each and every mesh sweep, 
+    even if particles do not move. When a particle flies into a domain 
+    (it doesn't have to fly, most of the time it has been there anyway)
+    and is a local one at the neighbour, we cannot imply toggle it to 
+    virtual here, as it might be owned redundantly if it sits directly
+    on the domain boundaries. We have to rerun the "is local
+    here" analysis after each merge.
 
-    If you want to use the particle resorting only every now and then, you have
-    to take into account that you might have duplicate (invalid) halo data in
-    the one traversal directly after you have changed the particle positions.
-    As long as you insert a dummy iteration after the change which finalises
-    the sorting, these invalid data are not an issue. They are also no issues
-    if a re-arrangement is followed by a mesh sweep which does not use halo
-    data. However, if you use halo data, then you have to take into account
-    that the halo data might be wrong for one iteration (see bottom sketch above).
-
-    See add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption()
-    in swift2.graphcompiler.AMRLogic for a realisation of the above rationale.
-    In contrast, map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access()
-    uses dummy sweeps.
-
-
+    
     ## Statistics
 
     The mapping keeps some statistics on any state update. These statistics
@@ -119,6 +127,7 @@ class UpdateParallelState(ActionSet):
   _numberOfRemainingLocalParticles = 0;
   _numberOfExpiredHaloParticles    = 0;
   _numberOfLeavingParticles        = 0;
+  _numberOfIncomingParticles       = 0;
 """
     )
 
@@ -127,7 +136,8 @@ class UpdateParallelState(ActionSet):
   vertexdata::{{PARTICLES_CONTAINER}}::updateNumberOfLocalAndExpiredParticles(
     _numberOfRemainingLocalParticles,
     _numberOfExpiredHaloParticles,
-    _numberOfLeavingParticles
+    _numberOfLeavingParticles,
+    _numberOfIncomingParticles
   );
 """
     )
@@ -136,21 +146,22 @@ class UpdateParallelState(ActionSet):
         """
 for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   const bool particleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
-  assertion2(
-    not particleWillBeLocal
-    or
-    p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-    p->toString(),
-    marker.toString()
-  );
+
+  if (particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual ) {
+    p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
+    _numberOfIncomingParticles++;
+    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
+    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), true,  marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
+  }
+
   // Has just left the domain. So we set it to virtual now. Next iteration,
   // the neighbour who has received this particle due to the movement will
   // send us an update, i.e. after this iteration we can throw it away.
   if (not particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local ) {
     p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
     _numberOfLeavingParticles++;
-    toolbox::particles::assignmentchecks::removeParticleFromVertex( "{{PARTICLE}}", p->getX(), true, marker.x(), marker.h(), _treeNumber );
-    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber );
+    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), true, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
+    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
   }
 }
 """
@@ -171,7 +182,8 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   }
   else {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
-    toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), false, _treeNumber );
+    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
+    toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), false, _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
     _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
     #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
@@ -229,6 +241,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   int  _numberOfRemainingLocalParticles;
   int  _numberOfExpiredHaloParticles;
   int  _numberOfLeavingParticles;
+  int  _numberOfIncomingParticles;
 """
 
     def get_body_of_prepareTraversal(self):

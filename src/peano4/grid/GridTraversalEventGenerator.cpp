@@ -257,6 +257,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
           peano4::utils::dLinearised(entryIn3x3Patch,3),
           owningTree == _id
         );
+        event.setIsVertexParentOfSubtree( fineGridVertices[kScalar].getHasBeenParentOfSubtreeVertexInPreviousTreeSweep() );
       } enddforx
     }
   } enddforx

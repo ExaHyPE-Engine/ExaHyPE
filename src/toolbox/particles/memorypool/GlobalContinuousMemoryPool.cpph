@@ -239,10 +239,18 @@ int toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory:
       );
     }
     additionalEntriesRequested += size;
+    logDebug( "addPage(int)", "additional-entries-requested=" << additionalEntriesRequested );
   }
 
   logTraceOutWith1Argument( "addPage(int)", freePage );
   return freePage;
+}
+
+
+template <class T>
+bool toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::requestCompleteScatter() {
+    // @todo Oder true?
+  return _globalMemory.additionalEntriesRequested>0;
 }
 
 
@@ -260,7 +268,6 @@ void toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory
   }
 
   if (pages.empty() and additionalEntriesRequested>0) {
-    additionalEntriesRequested *= 2;
     logInfo(
       "freePage(int)",
       "global memory is completely empty, so use opportunity to increase total size from " <<

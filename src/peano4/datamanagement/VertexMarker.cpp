@@ -10,6 +10,22 @@ std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::Verte
 }
 
 
+tarch::la::Vector<Dimensions, double>  peano4::datamanagement::reconstructXOfParentVertex(
+  const VertexMarker&             marker,
+  const std::bitset<Dimensions>&  parentVertexPositionWithinParentCell
+) {
+  return marker.x()
+       - tarch::la::multiplyComponents(
+           tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+           marker.h()
+         )
+       + tarch::la::multiplyComponents(
+           tarch::la::Vector<Dimensions,double>( parentVertexPositionWithinParentCell ),
+           3.0*marker.h()
+         );
+}
+
+
 peano4::datamanagement::VertexMarker::VertexMarker(
   const peano4::grid::GridTraversalEvent&   event,
   int                                       select
@@ -24,6 +40,7 @@ peano4::datamanagement::VertexMarker::VertexMarker(
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
   _isAdjacentToParallelDomainBoundary     = event.getIsVertexAdjacentToParallelDomainBoundary();
   _isAdjacentCellLocal                    = event.getIsAdjacentCellLocal();
+  _isParentOfSubtree                      = event.getIsVertexParentOfSubtree();
 
   _isHanging = 0;
   for (int i=0; i<TwoPowerD; i++) {
@@ -44,6 +61,16 @@ peano4::datamanagement::VertexMarker::VertexMarker(
   }
 
   _isParentVertexLocal = event.getIsParentVertexLocal();
+}
+
+
+bool peano4::datamanagement::VertexMarker::isParentOfSubtree(int i) const {
+  return _isParentOfSubtree[i];
+}
+
+
+bool peano4::datamanagement::VertexMarker::isParentOfSubtree() const {
+  return isParentOfSubtree(_select);
 }
 
 
@@ -209,7 +236,7 @@ tarch::la::Vector<Dimensions, double> peano4::datamanagement::VertexMarker::getI
 }
 
 
-tarch::la::Vector<Dimensions, double> peano4::datamanagement::VertexMarker::getInvokingCellsFatherCentre() const {
+tarch::la::Vector<Dimensions, double> peano4::datamanagement::VertexMarker::getInvokingParentCellsCentre() const {
   tarch::la::Vector<Dimensions, double> result = _cellCentre;
   for (int d=0; d<Dimensions; d++) {
     assertion1( _relativePositionOfCellWithinFatherCell(d)>=0, toString() );

@@ -14,7 +14,7 @@ from .AMRLogic import (
 from .AMRLogic import (
     add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers,
 )
-from .Optimisation import Optimisation
+from .ParticleSorting import ParticleSorting
 from .SpeciesStepOrdering import concatenate_steps_of_species
 from .Utils import (
     does_one_species_require_gather,
@@ -584,7 +584,7 @@ def translate_one_step_of_species_into_mesh_traversal(
 
 def map_onto_separate_mesh_traversals_constructing_task_graph(
     sequence_of_steps,
-    optimisation: Optimisation,
+    particle_sorting: ParticleSorting,
     step_type: StepType,
     verbose,
 ):
@@ -640,16 +640,16 @@ def map_onto_separate_mesh_traversals_constructing_task_graph(
         current_number_of_species_set = current_entry_from_total_sequence_of_steps[2]
 
         assert (
-            optimisation == Optimisation.NONE
+            optimisation == ParticleSorting.NONE
             or current_species_set.generator.gather_particles
         ), "GRAPH COMPILER DEBUG [map_onto_separate_mesh_traversals_constructing_task_tree]: ERROR have been asked to vectorise for species {}, but species does not support gathered data structures".format(
             current_species_set.particle_model.name
         )
-        if optimisation == Optimisation.NONE:
+        if optimisation == ParticleSorting.NONE:
             use_lists_to_construct_active_sets = False
             add_additional_dummy_sweep = False
         elif (
-            optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE
+            optimisation == ParticleSorting.INSERT_RESORT_SWEEPS_AND_VECTORISE
             or step_type == StepType.INITIALISATION
         ):
             use_lists_to_construct_active_sets = True
@@ -659,7 +659,7 @@ def map_onto_separate_mesh_traversals_constructing_task_graph(
                 or current_step_of_species.effect
                 == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
             )
-        elif optimisation == Optimisation.SORT_ON_THE_FLY:
+        elif optimisation == ParticleSorting.SORT_ON_THE_FLY:
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = False
         else:
@@ -720,7 +720,7 @@ def map_onto_separate_mesh_traversals_constructing_task_graph(
             alter_particle_position,
             get_species_set(sequence_of_steps),
             sort_with_lifts_and_drops=(
-                optimisation == Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE
+                optimisation == ParticleSorting.INSERT_RESORT_SWEEPS_AND_VECTORISE
                 or step_type == StepType.INITIALISATION
             ),
             verbose=verbose,
@@ -761,7 +761,7 @@ def map_particle_steps_onto_task_graph(
     """
     return map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
-        optimisation=Optimisation.NONE,
+        optimisation=ParticleSorting.NONE,
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
@@ -787,7 +787,7 @@ def map_particle_steps_onto_task_graph_insert_dummy_sweeps_and_vectorise(
     """
     return map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
-        optimisation=Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
+        optimisation=ParticleSorting.INSERT_RESORT_SWEEPS_AND_VECTORISE,
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
@@ -809,7 +809,7 @@ def map_initialisation_steps_onto_task_graph(
     """
     return map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
-        optimisation=Optimisation.NONE,
+        optimisation=ParticleSorting.NONE,
         step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
@@ -831,7 +831,7 @@ def map_initialisation_steps_onto_task_graph_for_coalesced_memory_access(
     """
     return map_onto_separate_mesh_traversals_constructing_task_graph(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
-        optimisation=Optimisation.INSERT_RESORT_SWEEPS_AND_VECTORISE,
+        optimisation=ParticleSorting.INSERT_RESORT_SWEEPS_AND_VECTORISE,
         step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
