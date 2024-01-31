@@ -18,17 +18,17 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
-double**   exahype2::solvers::aderdg::ADERDGSolver::weights                                 = kernels::{{POLYNOMIAL_TYPE}}::weights;
-double**   exahype2::solvers::aderdg::ADERDGSolver::nodes                                   = kernels::{{POLYNOMIAL_TYPE}}::nodes;
-double***  exahype2::solvers::aderdg::ADERDGSolver::Kxi                                     = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
-double***  exahype2::solvers::aderdg::ADERDGSolver::dudx                                    = kernels::{{POLYNOMIAL_TYPE}}::dudx;
-double***  exahype2::solvers::aderdg::ADERDGSolver::iK1                                     = kernels::{{POLYNOMIAL_TYPE}}::iK1;
-double***  exahype2::solvers::aderdg::ADERDGSolver::equidistantGridProjector                = kernels::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
-double***  exahype2::solvers::aderdg::ADERDGSolver::FCoeff                                  = kernels::{{POLYNOMIAL_TYPE}}::FCoeff;
-double**** exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector                       = kernels::{{POLYNOMIAL_TYPE}}::fineGridProjector;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunction                 = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionFirstDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionSecondDerivative = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
+double**   exahype2::solvers::aderdg::ADERDGSolver::weights                                           = kernels::{{POLYNOMIAL_TYPE}}::weights;
+double**   exahype2::solvers::aderdg::ADERDGSolver::nodes                                             = kernels::{{POLYNOMIAL_TYPE}}::nodes;
+double***  exahype2::solvers::aderdg::ADERDGSolver::Kxi                                               = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
+double***  exahype2::solvers::aderdg::ADERDGSolver::dudx                                              = kernels::{{POLYNOMIAL_TYPE}}::dudx;
+double***  exahype2::solvers::aderdg::ADERDGSolver::iK1                                               = kernels::{{POLYNOMIAL_TYPE}}::iK1;
+double***  exahype2::solvers::aderdg::ADERDGSolver::equidistantGridProjector                          = kernels::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
+double***  exahype2::solvers::aderdg::ADERDGSolver::FCoeff                                            = kernels::{{POLYNOMIAL_TYPE}}::FCoeff;
+double**** exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector                                 = kernels::{{POLYNOMIAL_TYPE}}::fineGridProjector;
+kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunction                  = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
+kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionFirstDerivative   = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
+kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionSecondDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
@@ -46,8 +46,7 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
   _maxTimeStepSize(0.0),
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0),
-  _cellUpdates(0),
-  _numberOfTroubledCellsThisTimeStep(0) {
+  _cellUpdates(0) {
 
   {{CONSTRUCTOR_IMPLEMENTATION}}
 
@@ -56,10 +55,6 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}    
   generated::kernels::AderDG::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
   generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
-
-  {% if USE_LIMITER %}
-  generated::kernels::limiter::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
-  {% endif %}
   {% endfor %}
   {% endif %}
   
@@ -106,10 +101,6 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}  
   generated::kernels::AderDG::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
   generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
-
-  {% if USE_LIMITER %}
-  generated::kernels::limiter::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
-  {% endif %}
   {% endfor %}
   {% endif %}
 }
@@ -361,16 +352,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::Correction;
       break;
     case SolverState::Correction:
-      _solverState = _numberOfTroubledCellsThisTimeStep == 0 ?
-        SolverState::Prediction : SolverState::LimiterStatusSpreadingToNeighbours;
-      break;
-    case SolverState::LimiterStatusSpreadingToNeighbours:
-      _solverState = SolverState::LimiterStatusSpreadingToSecondNeighbours;
-      break;
-    case SolverState::LimiterStatusSpreadingToSecondNeighbours:
-      _solverState = SolverState::FVRecomputation;
-      break;
-    case SolverState::FVRecomputation:
       _solverState = SolverState::Prediction;
       break;
   }
@@ -399,7 +380,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
     _cellUpdates    = 0;
 
-    _numberOfTroubledCellsThisTimeStep = 0;
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
@@ -539,23 +519,14 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
     case SolverState::Correction:
 			return "correction";
       break;
-    case SolverState::LimiterStatusSpreadingToNeighbours:
-			return "limiter status spreading to neighbours";
-      break;
-    case SolverState::LimiterStatusSpreadingToSecondNeighbours:
-			return "limiter status spreading to second neighbours";
-      break;
-    case SolverState::FVRecomputation:
-			return "fv recomputation";
     }
   return "<undef>";
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return isLastGridSweepOfTimeStep()
-      or _solverState==SolverState::GridInitialisation
-      or _solverState==SolverState::Plotting;
+  return (_solverState!=SolverState::Prediction
+      and _solverState!=SolverState::PredictionOnHangingCells);
 }
 
 
@@ -565,7 +536,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return (_solverState==SolverState::Correction && _numberOfTroubledCellsThisTimeStep==0) || _solverState==SolverState::FVRecomputation;
+  return _solverState==SolverState::Correction;
 }
 
 
