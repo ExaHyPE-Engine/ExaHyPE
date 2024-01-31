@@ -8,6 +8,6 @@ import swift2.input
 import swift2.scenario
 import swift2.particle
 import swift2.actionsets
-import swift2.boundaryconditions
+import swift2.api
 
 print("Swift 2")

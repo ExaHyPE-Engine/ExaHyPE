@@ -476,16 +476,6 @@ Particle properties:
                 check_template_vertex_operation_local_particles_after_sweep.format(**d)
             )
 
-            if step.includes is None:
-                step.includes = ""
-            step.includes += (
-                """
-                #include "swift2/dependencychecks/DependencyChecks.h"
-                #include "toolbox/particles/assignmentchecks/TracingAPI.h"
-                #include "toolbox/particles/assignmentchecks/Utils.h"
-                """        
-            )
-
         return steps
 
     def _add_dependency_checks(self):

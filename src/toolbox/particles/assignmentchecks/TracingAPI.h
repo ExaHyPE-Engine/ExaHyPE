@@ -125,6 +125,8 @@ namespace toolbox {
          * spatially).
          */
         struct ParticleIdentifier {
+          static double Precision;
+
           friend class Database;
 
           std::string                           particleName;
@@ -227,8 +229,10 @@ namespace toolbox {
             tarch::multicore::MultiReadSingleWriteSemaphore  _semaphore;
 
             std::vector<MeshSweepData> _data;
-         public:
+          public:
+            static constexpr int SearchWholeDatabase = 0;
             static constexpr int AnyTree = -1;
+            static constexpr int DoNotFollowParticleMovementsInDatabase = -2;
 
             Database();
 
@@ -247,105 +251,105 @@ namespace toolbox {
              * details.
              *
              * Cannot be const as we have a semaphore to be thread-safe.
+             *
+             * @param fitToExistingParticles is the search tolerance that we
+             *   use when we crawl through the database.
              */
             ParticleIdentifier createParticleIdentifier(
               const std::string&                            particleName,
               const tarch::la::Vector<Dimensions, double>&  particleX,
-              bool                                          fitToExistingParticles = true
+              double                                        searchTolerance = ParticleIdentifier::Precision
             );
 
             /**
              * Add a new snapshot for a new mesh sweep
              */
-          void startMeshSweep(const std::string&  meshSweepName);
+            void startMeshSweep(const std::string&  meshSweepName);
 
-          /**
-           * We enumerate the mesh sweeps. This routine returns the number of
-           * the current one.
-           */
-          int getCurrentMeshSweep();
+            /**
+             * We enumerate the mesh sweeps. This routine returns the number of
+             * the current one.
+             */
+            int getCurrentMeshSweep();
 
-          static constexpr int SearchWholeDatabase = 0;
-          static constexpr int DoNotFollowParticleMovementsInDatabase = -1;
+             /**
+              * Return last entry matching identifier
+             *
+             * This routine runs backwards (from new to old) through the
+             * database and searches for a particle entry with the specified
+             * position and name. If there's none or the last logged entry for
+             * this particle is an erase event, then the routine returns an
+             * invalid event.
+             *
+             * We expect that identifier has been constructed through
+             * createParticleIdentifier() to accommodate floating-point inaccuracies.
+             *
+             * Cannot be const as we have a semaphore to be thread-safe.
+             *
+             * If the routine encounters a move particle, it changes the
+             * identifier and invokes itself recursively for this identifier.
+             * This way, we can follow a particle through the database even
+             * though it has changed its position in space. If the find
+             * information on a previous position, this previous position is held
+             * as raw floating point data, i.e. might differ from the position
+             * use in the database to identify previous particle states by
+             * floating point accuracy. So we have to make them match before we
+             * continue to search recursively.
+             *
+             * @param spacetreeId Either a valid spacetree or AnyTree if you don't care
+             */
+            Event getEntry(
+              const ParticleIdentifier&  identifier,
+              int                        spacetreeId,
+              int                        firstNRecentEntriesToSkip = SearchWholeDatabase
+            );
 
-          /**
-           * Return last entry matching identifier
-           *
-           * This routine runs backwards (from new to old) through the
-           * database and searches for a particle entry with the specified
-           * position and name. If there's none or the last logged entry for
-           * this particle is an erase event, then the routine returns an
-           * invalid event.
-           *
-           * We expect that identifier has been constructed through
-           * createParticleIdentifier() to accommodate floating-point inaccuracies.
-           *
-           * Cannot be const as we have a semaphore to be thread-safe.
-           *
-           * If the routine encounters a move particle, it changes the
-           * identifier and invokes itself recursively for this identifier.
-           * This way, we can follow a particle through the database even
-           * though it has changed its position in space. If the find
-           * information on a previous position, this previous position is held
-           * as raw floating point data, i.e. might differ from the position
-           * use in the database to identify previous particle states by
-           * floating point accuracy. So we have to make them match before we
-           * continue to search recursively.
-           *
-           * @param spacetreeId Either a valid spacetree or AnyTree if you don't care
-           */
-          Event getEntry(
-            const ParticleIdentifier&  identifier,
-            int                        spacetreeId,
-            int                        firstNRecentEntriesToSkip = SearchWholeDatabase
-          );
+            /**
+             * Print history of one particle
+             *
+             * Cannot be const as we have a semaphore to be thread-safe.
+             *
+             * The particle runs backwards through the database and plots all
+             * fitting identifiers. When we encounter a move, we memorise it.
+             * Once at the end of the database, we look if there has been a
+             * move before. If so, we call the search again for this previous
+             * particle position. When we construct the particle identifier
+             * for the tail recursion, we have to take into account that the
+             * previous position is stored as raw position data, but the
+             * database's entries might be slightly off due to truncation
+             * errors.
+             *
+             * If there are multiple moves, we only take the first one into
+             * account. Multiple moves might occur if several particles
+             * "hop through" the same spatial position in the database. Only
+             * the most recent one however is relevant for identifier.
+             */
+            std::string particleHistory(const ParticleIdentifier& identifier);
 
-          /**
-           * Print history of one particle
-           *
-           * Cannot be const as we have a semaphore to be thread-safe.
-           *
-           * The particle runs backwards through the database and plots all
-           * fitting identifiers. When we encounter a move, we memorise it.
-           * Once at the end of the database, we look if there has been a
-           * move before. If so, we call the search again for this previous
-           * particle position. When we construct the particle identifier
-           * for the tail recursion, we have to take into account that the
-           * previous position is stored as raw position data, but the
-           * database's entries might be slightly off due to truncation
-           * errors.
-           *
-           * If there are multiple moves, we only take the first one into
-           * account. Multiple moves might occur if several particles
-           * "hop through" the same spatial position in the database. Only
-           * the most recent one however is relevant for identifier.
-           */
-          std::string particleHistory(const ParticleIdentifier& identifier);
+            std::string lastMeshSweepSnapshot();
 
-          std::string lastMeshSweepSnapshot();
+            /**
+             * Count total number of entries for a particle
+             *
+             * Cannot be const as we have a semaphore to be thread-safe.
+             */
+            int totalEntries(const ParticleIdentifier& identifier);
 
-          /**
-           * Count total number of entries for a particle
-           *
-           * Cannot be const as we have a semaphore to be thread-safe.
-           */
-          int totalEntries(const ParticleIdentifier& identifier);
+            /**
+             * Add a new event to the database
+             *
+             * If there is not yet an entry for identifier in the current
+             * snapshot, we create one. Afterwards, we append event to this
+             * new dataset for particle identifier.
+             */
+            void addEvent(ParticleIdentifier identifier, const Event& event);
 
-          /**
-           * Add a new event to the database
-           *
-           * If there is not yet an entry for identifier in the current
-           * snapshot, we create one. Afterwards, we append event to this
-           * new dataset for particle identifier.
-           */
-          void addEvent(ParticleIdentifier identifier, const Event& event);
-
-          /**
-           * Dump the whole database
-           *
-           * Cannot be const as we have a semaphore to be thread-safe.
-           */
-          std::string toString();
+            /**
+             * Dump the whole database
+             *
+             * Cannot be const as we have a semaphore to be thread-safe.
+             */
+            std::string toString();
         };
       } // namespace internal
 
@@ -374,9 +378,28 @@ namespace toolbox {
       /**
        * Record the movement of a particle
        *
-       * If oldParticleX equals newParticleX, the function degenerates to nop
-       * and nothing is traced. Otherwise, we run some consistency checks and
-       * then put a move event into our database.
+       * We insert a new entry which memorises the particle movements. However,
+       * we don't want to hold arbitrary small wiggles. So we construct the old
+       * and the new particle identifier (name + position) and if they are
+       * different, subject the ParticleIdentifier comparison operator and its
+       * precision, then we log the new event.
+       * If oldParticleX however equals newParticleX, the function degenerates to nop
+       * and nothing is traced.
+       *
+       * This means that we might skip a few (tiny) particle movements. So if
+       * we finally search for the origin particle, we have to pick a bigger
+       * tolerance. After all, we might have skipped quite a lot of moves. In
+       * theory, it should be enough if we increased the tolerance by a factor
+       * of two. In practice, this is still too restrictive. We did
+       * make good experiences with increasing the tolerance by one order of
+       * magnitude.
+       *
+       * As we work with this tolerances and therefore skip particles, we have
+       * to be careful which old particle x we dump into the database. We
+       * could use oldParticleX, but we have just discussed above that we
+       * search for a corresponding entry which might be off slightly.
+       * Therefore, we do not bookmark oldParticleX -> newParticleX, but
+       * instead store found old particleX -> newParticleX.
        */
       void moveParticle(
          const std::string&                            particleName,

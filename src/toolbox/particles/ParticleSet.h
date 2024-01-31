@@ -167,6 +167,13 @@ public:
    */
   static bool hasParticlesToBeSievedIntoVertices(int originatingTree);
 
+  /**
+   * Return global sum of the particles that did remain within their partition at a time.
+   *
+   * Should only be called on global master after the reduction.
+   */
+  static int getNumberOfRemainingLocalParticles();
+
 private:
   static tarch::logging::Log _log;
 
