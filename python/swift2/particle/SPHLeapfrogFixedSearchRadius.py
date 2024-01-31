@@ -237,8 +237,6 @@ particle._setup_initialisation_steps()
         # the dict containing all possible algorithm steps
         self.algorithm_steps_dict = get_algorithm_step_dict(self)
 
-        # First fill up the dict with all possible algorithm steps
-        self._setup_algorithm_steps_dict()
         # Now store an independent instance of the algorithm steps in the object
         # We need an independent instance for situations where we modify the
         # algorithm steps later. For example when we are adding debugging or
@@ -298,14 +296,16 @@ particle._setup_initialisation_steps()
 
         Definitions of the algorithm steps stored in the algorithm_steps_dict are
         placed in get_algorithm_steps_dict(self). The dict is set up during
-        instantiation of this class.
+        instantiation of this class, and reads in all available algorithm steps
+        defined in AlgorithmStepLibrary.py.
 
         Leapfrog consists basically of four steps per particle. We first
         determine the force. Then we update the velocity by half a timestep and move
         the particle by a full timestep. Then the force is re-computed and the
         second half of the velocity update is done.
         Some variations of this KDK form re-arrange the steps executed per timestep
-        to avoid a second force loop.
+        to avoid a second force loop. We can't do this here because we're not planning
+        on running with fixed time step sizes throughout the run.
         """
 
         steps = [
@@ -324,26 +324,13 @@ particle._setup_initialisation_steps()
         self._algorithm_steps = [copy.deepcopy(i) for i in steps]
         return
 
-    def algorithm_steps(self):
-        """!
-
-        Return algorithm steps: A list of AlgorithmStep objects to be executed in
-        that order for this particle.
-
-        Make sure that self._setup_algorithm_steps_dict() and
-        self._setup_algorithm_steps() have been called before using this function.
-
-        """
-
-        return self._algorithm_steps
-
     def _setup_initialisation_steps(self):
-        """
+        """!
         Define the algorithm steps to be taken during initialization here.
         This follows the same logic as _setup_algorithm_steps. See documentation
         there for more info.
 
-        Make sure self._setup_algorithm_steps_dict() has been called before.
+        Make sure get_algorithm_steps_dict(self) has been called before.
         """
         initsteps = [
             self.algorithm_steps_dict["FlagBoundaryParticles"],
@@ -360,13 +347,6 @@ particle._setup_initialisation_steps()
         self._initialisation_steps = [copy.deepcopy(i) for i in initsteps]
 
         return
-
-    def initialisation_steps(self):
-        """
-        Return the list of algorithm steps to be executed during initialisation.
-        Make sure self._setup_algorithm_steps_dict() and self._setup_initialisation_steps() have been called before.
-        """
-        return self._initialisation_steps
 
     @property
     def alpha_av(self):

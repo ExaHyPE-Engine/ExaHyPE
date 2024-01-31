@@ -159,6 +159,12 @@ class SPHParticle(Particle):
 
         # now set these parameters as dastgen attributes
         #  self.set_parameters()
+        # NOTE: derived classes should do this at this point. But not this
+        # super class - the reason being that when instantiated as an object
+        # of the subclass type, this line will call the subclass' set_parameters()
+        # method, which will try to set parameters that aren't set yet.
+        # So don't call this here, but make sure to include a super class' invocation
+        # of set_parameters() in your subclass' set_parameters() definition.
 
         # Construct particle properties
         # --------------------------------
@@ -225,7 +231,7 @@ class SPHParticle(Particle):
         initialisation, e.g. by invoking
 
         ```
-        particle = SPHLeapfrogFixedSearchRadius(initial_time_step_size=ABC, ...)
+        particle = SPHParticle(initial_time_step_size=ABC, ...)
         particle.initial_time_step_size = XYZ
         ```
 
@@ -289,40 +295,6 @@ class SPHParticle(Particle):
         return
 
     @abc.abstractmethod
-    def _setup_algorithm_steps_dict(self):
-        """!
-
-        Sets up a dict of the algorithm steps for this scheme so they can be accessed at various points.
-
-        There are three types of iterators:
-
-        - The one that's used to run over all particle assigned to a vertex. It
-          is called iterate_over_particles_assigned_to_vertex.
-        - There is one to iterate over all particle pairs associated with a
-          cell. This one is called iterate_over_particles_assigned_to_cell.
-
-        From hereon, we can define some "derived" iterators:
-
-        - One special iterator runs over all particles associated with a vertex
-          and allows them to move. This one is titled
-          iterate_over_particles_assigned_to_vertex_for_move and equals
-          iterate_over_particles_assigned_to_vertex. However, it embeds the
-          latter into some bookkeeping for the validation of the
-          vertex-particle assocation.
-        - Another special iterator runs over all particles but allows them to
-          reduce into some global space. If you use vectorisation, this one
-          cannot be vectorised by definition.
-
-        Both special iterators are constructed to default values unless you
-        explicitly set them beforehand.
-
-        Every derived class must implement this function depending on its own
-        requirements.
-        """
-
-        return
-
-    @abc.abstractmethod
     def _setup_algorithm_steps(self):
         """!
         Set up the internal list of algorithm steps for this particle.
@@ -335,20 +307,18 @@ class SPHParticle(Particle):
         executed in that order.
 
         Definitions of the algorithm steps stored in the algorithm_steps_dict are
-        placed in _setup_algorithm_steps_dict(self). The dict is set up during
-        instantiation of this class.
+        placed in get_algorithm_steps_dict(self). The dict is set up during
+        instantiation of this class, and reads in all available algorithm steps
+        defined in AlgorithmStepLibrary.py.
 
         Leapfrog consists basically of four steps per particle. We first
         determine the force. Then we update the velocity by half a timestep and move
         the particle by a full timestep. Then the force is re-computed and the
         second half of the velocity update is done.
         Some variations of this KDK form re-arrange the steps executed per timestep
-        to avoid a second force loop.
-
-        Every derived class must implement this function depending on its own
-        requirements.
+        to avoid a second force loop. We can't do this here because we're not planning
+        on running with fixed time step sizes throughout the run.
         """
-
         return
 
     def algorithm_steps(self):
@@ -376,8 +346,8 @@ class SPHParticle(Particle):
         Every derived class must implement this function depending on its own
         requirements.
         """
-
         return
+
 
     def initialisation_steps(self):
         """

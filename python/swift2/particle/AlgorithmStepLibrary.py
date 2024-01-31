@@ -16,7 +16,7 @@ class ParticleIteratorTemplate(str):
     def __init__(self, template):
         """!
         template: str
-            the string containing the particle iterator template
+            the string containing the particle interacion iterator template
         """
         self.template = template
         return
@@ -179,6 +179,8 @@ def get_algorithm_step_dict(particle):
     ) = _get_particle_iterator_templates(PARTICLE, realisation)
 
     # @todo Mladen, can we remove this one please?
+    #--------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     flagBoundaryParticlesStep = AlgorithmStep(
         name="FlagBoundaryParticles",
         dependencies=AlgorithmStep.Dependencies.SELF,
@@ -188,10 +190,12 @@ def get_algorithm_step_dict(particle):
         includes="""
                    #include "Constants.h"
                    #include "swift2/kernels/ParticleSelfInteraction.h"
-                   """,
+        """,
     )
     algorithm_steps_dict["FlagBoundaryParticles"] = flagBoundaryParticlesStep
 
+    #--------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     kick1 = AlgorithmStep(
         name="Kick1",
         dependencies=AlgorithmStep.Dependencies.SELF,
@@ -211,6 +215,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Kick1"] = kick1
 
+    #--------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     drift = AlgorithmStep(
         name="Drift",
         dependencies=AlgorithmStep.Dependencies.SELF,
@@ -226,12 +232,14 @@ def get_algorithm_step_dict(particle):
             #include "swift2/kernels/legacy/Leapfrog.h"
             #include "swift2/timestepping/GlobalTimeStepping.h"
             #include "swift2/timestepping/TimeStepping.h"
-            """,
+        """,
         touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
         touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
     )
     algorithm_steps_dict["Drift"] = drift
 
+    #--------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     # From the SPH side of things, this doesn't need to be an AlgorithmStep
     # on its own. We could merge it together with the drifts. However, in order
     # to ensure that the particles which have just been moved in the preceeding
@@ -241,7 +249,7 @@ def get_algorithm_step_dict(particle):
         name="PredictHydro",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        #            touch_vertex_first_time_kernel = iterate_over_particles_assigned_to_vertex.format("""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
+        # touch_vertex_first_time_kernel = iterate_over_particles_assigned_to_vertex.format("""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
         touch_vertex_first_time_kernel=v_iter.insert(
             "::swift2::kernels::legacy::hydroPredictExtra"
         ),
@@ -254,6 +262,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["PredictHydro"] = predictHydro
 
+    #--------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     densityWithConstantSearchRadius = AlgorithmStep(
         name="DensityLoopWithConstantSearchRadius",
         dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
@@ -272,10 +282,12 @@ def get_algorithm_step_dict(particle):
         includes="""
             #include "swift2/kernels/legacy/SmoothingLength.h"
             #include "swift2/kernels/legacy/Density.h"
-                 """,
+        """,
     )
     algorithm_steps_dict["Density"] = densityWithConstantSearchRadius
 
+    #--------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     force = AlgorithmStep(
         name="ForceLoop",
         dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
@@ -298,6 +310,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Force"] = force
 
+    #--------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     kick2 = AlgorithmStep(
         name="Kick2",
         dependencies=AlgorithmStep.Dependencies.SELF,
@@ -322,6 +336,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Kick2"] = kick2
 
+    #--------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     reduceGlobals = AlgorithmStep(
         name="ReduceGlobalQuantities",
         dependencies=AlgorithmStep.Dependencies.SELF,
@@ -332,16 +348,16 @@ def get_algorithm_step_dict(particle):
         prepare_traversal_kernel=f"""
                                    globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                    globaldata::{PARTICLE}::getSpecies().clearVelocity();
-                                   """,
+        """,
         unprepare_traversal_kernel=f"""
                                    globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
                                    ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
-                                   """,
+        """,
         includes="""
                                    #include "Constants.h"
                                    #include "swift2/statistics/Reports.h"
                                    #include "swift2/statistics/Statistics.h"
-                                   """,
+        """,
     )
     algorithm_steps_dict["ReduceGlobalQuantities"] = reduceGlobals
 
