@@ -122,7 +122,6 @@ class SPHParticle(Particle):
             max_h,
         )
 
-
         # Initialize default parameters.
         # ---------------------------------------
 
@@ -149,7 +148,9 @@ class SPHParticle(Particle):
         # But it's good enough for the elementary tests and benchmarks
         # we have for now.
         self._h_hydro_min = 1e-6
-        self._h_hydro_max = 1.0 / 3.0 / 2.  # Approximated value for coarsest grid level
+        self._h_hydro_max = (
+            1.0 / 3.0 / 2.0
+        )  # Approximated value for coarsest grid level
         self._h_tolerance = 1e-4
 
         # Project namespace to have consistent use of exported Constants in kernels
@@ -213,8 +214,6 @@ class SPHParticle(Particle):
         self.data.add_attribute(self.part_id)
 
         return
-
-
 
     def set_parameters(self):
         """!
@@ -379,7 +378,6 @@ class SPHParticle(Particle):
         """
 
         return
-
 
     def initialisation_steps(self):
         """

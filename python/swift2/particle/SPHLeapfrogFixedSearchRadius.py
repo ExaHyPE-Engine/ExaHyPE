@@ -229,7 +229,6 @@ particle._setup_initialisation_steps()
         self.data.add_attribute(self.v_sig_AV)
         self.data.add_attribute(self.soundSpeed)
 
-
         # Algorithm Steps ---------------------------------------------------------------
         # actual list containing the algorithm steps
         self._algorithm_steps = []
@@ -251,7 +250,6 @@ particle._setup_initialisation_steps()
         self._add_dependency_checks()
 
         return
-
 
     def set_parameters(self):
         """
@@ -339,7 +337,6 @@ particle._setup_initialisation_steps()
 
         return self._algorithm_steps
 
-
     def _setup_initialisation_steps(self):
         """
         Define the algorithm steps to be taken during initialization here.
@@ -371,7 +368,6 @@ particle._setup_initialisation_steps()
         """
         return self._initialisation_steps
 
-
     @property
     def alpha_av(self):
         """
@@ -397,7 +393,6 @@ particle._setup_initialisation_steps()
         if beta_av <= 0:
             raise ValueError("Value for the beta_av viscosiy parameter not valid.")
         self._beta_av = beta_av
-
 
     def get_cpp_namespace_from_project_namespace(self):
         """
