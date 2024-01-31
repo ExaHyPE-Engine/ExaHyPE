@@ -3,3 +3,4 @@
 """
 
 import swift2.api.graphcompiler
+import swift2.api.boundaryconditions

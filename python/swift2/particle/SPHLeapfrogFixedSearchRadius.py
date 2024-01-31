@@ -117,6 +117,43 @@ class SPHLeapfrogFixedSearchRadius(Particle):
     maximum search radius of a particle this way. This is on purpose: We have
     made bad experience with such modifications.
 
+    ## Boundary conditions
+
+    Boundary conditions for Swift are @ref swift_boundary_conditions "discussed on a separate page".
+    If you decide that you want to plug into the drift mechanism of
+    this SPH flavour, you typically add something similar to the 
+    code snippet below to your code:
+    
+    ~~~~~~~~~~~~~~~~~~~~~~
+particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += " " "
+if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
+  ::swift2::kernels::forAllParticles( 
+    marker, 
+    assignedParticles, 
+    [&](const peano4::datamanagement::VertexMarker& marker, globaldata::" " " + name + " " "&  assignedParticle)->void {
+      ::swift2::boundaryconditions::applyFixedBoundaryCondition(
+        assignedParticle,
+        marker,
+        DomainOffset,
+        DomainSize,
+        0.1,
+        _spacetreeId
+      );
+    }
+  );
+}
+" " "
+particle.algorithm_steps_dict["Drift"].includes += " " "
+#include "swift2/boundaryconditions/FixedBoundary.h"
+#include "swift2/boundaryconditions/Utils.h"
+" " "
+particle._setup_algorithm_steps()
+particle._setup_initialisation_steps()
+    ~~~~~~~~~~~~~~~~~~~~~~
+    
+    The spaced-out syntax is just there to ensure that the Python documentation
+    syntax is not broken. 
+    
 
     ## Attributes
 
@@ -506,9 +543,8 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 "::".join(self._swift_project_namespace) + "::DomainOffset",
             ),
             includes="""
-                                       #include "Constants.h"
-                                       #include "swift2/kernels/ParticleSelfInteraction.h"
-                                       """,
+                #include "swift2/kernels/ParticleSelfInteraction.h"
+            """,
         )
         self.algorithm_steps_dict["FlagBoundaryParticles"] = flagBoundaryParticlesStep
 
@@ -544,7 +580,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 "::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSize"
             ),
             includes="""
-                #include "Constants.h"
                 #include "swift2/kernels/legacy/Leapfrog.h"
                 #include "swift2/timestepping/GlobalTimeStepping.h"
                 #include "swift2/timestepping/TimeStepping.h"
@@ -568,7 +603,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 "::swift2::kernels::legacy::hydroPredictExtra"
             ),
             includes="""
-                #include "Constants.h"
                 #include "swift2/kernels/legacy/Leapfrog.h"
                                        """,
             touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
@@ -654,7 +688,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 self.name,
             ),  # TODO: temporary solution for initialization step
             includes="""
-                #include "Constants.h"
                 #include "swift2/kernels/legacy/Leapfrog.h"
                 #include "swift2/timestepping/GlobalTimeStepping.h"
                 #include "swift2/timestepping/TimeStepping.h"
@@ -682,7 +715,6 @@ class SPHLeapfrogFixedSearchRadius(Particle):
                 "{PARTICLE}", self.name
             ),
             includes="""
-                                       #include "Constants.h"
                                        #include "swift2/statistics/Reports.h"
                                        #include "swift2/statistics/Statistics.h"
                                        """,

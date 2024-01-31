@@ -332,28 +332,17 @@ particle_force = """
 """
 
 particle.enter_cell_kernel = particle_force
-
-global_invariants = """
-assertion4( 
-  (
-    toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLocalParticles()==1
-  )
-  and 
-  (
-    toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfNewIncomingParticles()
-    -
-    toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLeavingParticles()
-    ==0
-  ),
-  toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLocalParticles(),
-  toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfLeavingParticles(),
-  toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfExpiredHaloParticles(),
-  toolbox::particles::ParticleSet< globaldata::Planet >::getGlobalNumberOfNewIncomingParticles()
-);
-"""
-particle.touch_particles_of_set_first_time_kernel += global_invariants
-particle.touch_particles_of_set_last_time_kernel  += global_invariants
 #! [tutorials swift2 planet-orbit Particle force]
+
+
+#global_invariants = """
+#assertion1( 
+#  toolbox::particles::ParticleSet< globaldata::Planet >::getNumberOfRemainingLocalParticles()==1,
+#  toolbox::particles::ParticleSet< globaldata::Planet >::getNumberOfRemainingLocalParticles()
+#);
+#"""
+#particle.touch_particles_of_set_first_time_kernel += global_invariants
+#particle.touch_particles_of_set_last_time_kernel  += global_invariants
 
 
 

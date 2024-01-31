@@ -8,7 +8,7 @@ void swift2::timestepping::computeExplicitEulerWithGlobalTimeStepSize(
 ) {
   double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
 
-  if ( ::swift2::kernels::localParticleCanBeMoved(marker, particle) ) {
+  if ( ::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel(marker, particle) ) {
     particle.setX( particle.getX() + timeStepSize * particle.getV() );
     particle.setV( particle.getV() + timeStepSize * particle.getA() );
     particle.setMoveState(Particle::MoveState::Moved);
@@ -23,7 +23,7 @@ void swift2::timestepping::computeExplicitEulerCromerWithGlobalTimeStepSize(
 ) {
   double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
 
-  if ( ::swift2::kernels::localParticleCanBeMoved(marker, particle) ) {
+  if ( ::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel(marker, particle) ) {
     particle.setV( particle.getV() + timeStepSize * particle.getA() );
     particle.setX( particle.getX() + timeStepSize * particle.getV() );
     particle.setMoveState(Particle::MoveState::Moved);
