@@ -348,7 +348,6 @@ class SPHParticle(Particle):
         """
         return
 
-
     def initialisation_steps(self):
         """
         Return the list of algorithm steps to be executed during initialisation.

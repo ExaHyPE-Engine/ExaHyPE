@@ -18,152 +18,152 @@ from enum import Enum
 class SPHLeapfrogFixedSearchRadius(SPHParticle):
     """!
 
-    SPH particle with fixed search radius
+        SPH particle with fixed search radius
 
-    Same as LeapfrogFixedSearchRadius but augmented for full SPH.
-    Implements the Minimal SPH scheme.
+        Same as LeapfrogFixedSearchRadius but augmented for full SPH.
+        Implements the Minimal SPH scheme.
 
-    Simple particle with a fixed search radius h which moves according
-    to leapfrog KDK scheme.
-    By default, it uses global time stepping,
-    i.e. the combination of maximum velocity and minimal mesh size determines
-    the time step size of the subsequent time step. Besides the default
-    variables x and h, the particle has the following properties:
+        Simple particle with a fixed search radius h which moves according
+        to leapfrog KDK scheme.
+        By default, it uses global time stepping,
+        i.e. the combination of maximum velocity and minimal mesh size determines
+        the time step size of the subsequent time step. Besides the default
+        variables x and h, the particle has the following properties:
 
-    - a vector a which is the acceleration;
-    - a vector v which is the velocity.
+        - a vector a which is the acceleration;
+        - a vector v which is the velocity.
 
-    You can add further properties via
+        You can add further properties via
 
-         myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
+             myparticle.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("myFancyArray","Dimensions") )
 
-    in your code. Or you can create a subclass which adds additional fields
-    after it has called the baseline constructor.
+        in your code. Or you can create a subclass which adds additional fields
+        after it has called the baseline constructor.
 
-    You will need to add further properties for any SPH project.
+        You will need to add further properties for any SPH project.
 
-    ## Force calculation
+        ## Force calculation
 
-    particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
-    particles. It has access to three important objects:
+        particle_particle_interaction_over_particle_sets_kernel is a C++ string which defines a force between two
+        particles. It has access to three important objects:
 
-    - localParticles is a container (list) over pointers to local particles
-    - activeParticles is a container (list) over pointers to active particles
-    - marker is a cell marker which identifies the current cell.
+        - localParticles is a container (list) over pointers to local particles
+        - activeParticles is a container (list) over pointers to active particles
+        - marker is a cell marker which identifies the current cell.
 
-    Please consult the guidebook for a definition of local and active particles
-    but take into account that the local particles always are a subset of the
-    active particles.
+        Please consult the guidebook for a definition of local and active particles
+        but take into account that the local particles always are a subset of the
+        active particles.
 
-    Besides the actual particle-to-particle calculation, i.e. a force
-    calculation, users can also provide kernels that kick in when you touch
-    particles for the first time before you actually compute any
-    particle-particle interaction, and there is a plug-in point what you do
-    just once the particle-particle interaction has terminated. The latter
-    point is reached before we do the actual time stepping. In both plug-in
-    points, you have a vertex marker which gives you the position of the
-    vertex to which a particular is associated, and you have the localParticles.
-    This is a vector of pointers in this particular case.
+        Besides the actual particle-to-particle calculation, i.e. a force
+        calculation, users can also provide kernels that kick in when you touch
+        particles for the first time before you actually compute any
+        particle-particle interaction, and there is a plug-in point what you do
+        just once the particle-particle interaction has terminated. The latter
+        point is reached before we do the actual time stepping. In both plug-in
+        points, you have a vertex marker which gives you the position of the
+        vertex to which a particular is associated, and you have the localParticles.
+        This is a vector of pointers in this particular case.
 
-    The force calculation does exist in two variants: There's the default one
-    and then we have one that is aggressively optimised. The latter one requires
-    us to have properly sorted particle-mesh associations.
+        The force calculation does exist in two variants: There's the default one
+        and then we have one that is aggressively optimised. The latter one requires
+        us to have properly sorted particle-mesh associations.
 
-    ## Precision
+        ## Precision
 
-    By default, all particle attributes are modelled as doubles or arrays of
-    doubles. This might be overly precise. You can alter the precision through
-    our LLVM compiler modifications if you invoke the following commands on a
-    particle species:
+        By default, all particle attributes are modelled as doubles or arrays of
+        doubles. This might be overly precise. You can alter the precision through
+        our LLVM compiler modifications if you invoke the following commands on a
+        particle species:
 
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
-    particle.mass.valid_mantissa_bits         = args.mantissa_size
-    particle.velocity.valid_mantissa_bits     = args.mantissa_size
-    particle.acceleration.valid_mantissa_bits = args.mantissa_size
-    particle.density.valid_mantissa_bits      = args.mantissa_size
-    particle.pressure.valid_mantissa_bits     = args.mantissa_size
-    particle.smoothL.valid_mantissa_bits      = args.mantissa_size
-    particle.u.valid_mantissa_bits            = args.mantissa_size
-    particle.uDot.valid_mantissa_bits         = args.mantissa_size
-    particle.f.valid_mantissa_bits            = args.mantissa_size
-    particle.wcount_dh.valid_mantissa_bits    = args.mantissa_size
-    particle.rho_dh.valid_mantissa_bits       = args.mantissa_size
-    particle.wcount.valid_mantissa_bits       = args.mantissa_size
-    particle.hDot.valid_mantissa_bits         = args.mantissa_size
-    particle.balsara.valid_mantissa_bits      = args.mantissa_size
-    particle.rot_v.valid_mantissa_bits        = args.mantissa_size
-    particle.div_v.valid_mantissa_bits        = args.mantissa_size
-    particle.v_sig_AV.valid_mantissa_bits     = args.mantissa_size
-    particle.soundSpeed.valid_mantissa_bits   = args.mantissa_size
-    particle.v_full.valid_mantissa_bits       = args.mantissa_size
-    particle.u_full.valid_mantissa_bits       = args.mantissa_size
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~
+        particle.mass.valid_mantissa_bits         = args.mantissa_size
+        particle.velocity.valid_mantissa_bits     = args.mantissa_size
+        particle.acceleration.valid_mantissa_bits = args.mantissa_size
+        particle.density.valid_mantissa_bits      = args.mantissa_size
+        particle.pressure.valid_mantissa_bits     = args.mantissa_size
+        particle.smoothL.valid_mantissa_bits      = args.mantissa_size
+        particle.u.valid_mantissa_bits            = args.mantissa_size
+        particle.uDot.valid_mantissa_bits         = args.mantissa_size
+        particle.f.valid_mantissa_bits            = args.mantissa_size
+        particle.wcount_dh.valid_mantissa_bits    = args.mantissa_size
+        particle.rho_dh.valid_mantissa_bits       = args.mantissa_size
+        particle.wcount.valid_mantissa_bits       = args.mantissa_size
+        particle.hDot.valid_mantissa_bits         = args.mantissa_size
+        particle.balsara.valid_mantissa_bits      = args.mantissa_size
+        particle.rot_v.valid_mantissa_bits        = args.mantissa_size
+        particle.div_v.valid_mantissa_bits        = args.mantissa_size
+        particle.v_sig_AV.valid_mantissa_bits     = args.mantissa_size
+        particle.soundSpeed.valid_mantissa_bits   = args.mantissa_size
+        particle.v_full.valid_mantissa_bits       = args.mantissa_size
+        particle.u_full.valid_mantissa_bits       = args.mantissa_size
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    This is an example. You can also add ony a few of these fields, and picking
-    a value for args.mantissa_size is obviously up to you. We refrain from
-    illustrating that you can also alter the precision of the position and
-    maximum search radius of a particle this way. This is on purpose: We have
-    made bad experience with such modifications.
+        This is an example. You can also add ony a few of these fields, and picking
+        a value for args.mantissa_size is obviously up to you. We refrain from
+        illustrating that you can also alter the precision of the position and
+        maximum search radius of a particle this way. This is on purpose: We have
+        made bad experience with such modifications.
 
-    ## Boundary conditions
+        ## Boundary conditions
 
-    Boundary conditions for Swift are @ref swift_boundary_conditions "discussed on a separate page".
-    If you decide that you want to plug into the drift mechanism of
-    this SPH flavour, you typically add something similar to the
-    code snippet below to your code:
+        Boundary conditions for Swift are @ref swift_boundary_conditions "discussed on a separate page".
+        If you decide that you want to plug into the drift mechanism of
+        this SPH flavour, you typically add something similar to the
+        code snippet below to your code:
 
-    ~~~~~~~~~~~~~~~~~~~~~~
-particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += " " "
-if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
-  ::swift2::kernels::forAllParticles(
-    marker,
-    assignedParticles,
-    [&](const peano4::datamanagement::VertexMarker& marker, globaldata::" " " + name + " " "&  assignedParticle)->void {
-      ::swift2::boundaryconditions::applyFixedBoundaryCondition(
-        assignedParticle,
+        ~~~~~~~~~~~~~~~~~~~~~~
+    particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += " " "
+    if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
+      ::swift2::kernels::forAllParticles(
         marker,
-        DomainOffset,
-        DomainSize,
-        0.1,
-        _spacetreeId
+        assignedParticles,
+        [&](const peano4::datamanagement::VertexMarker& marker, globaldata::" " " + name + " " "&  assignedParticle)->void {
+          ::swift2::boundaryconditions::applyFixedBoundaryCondition(
+            assignedParticle,
+            marker,
+            DomainOffset,
+            DomainSize,
+            0.1,
+            _spacetreeId
+          );
+        }
       );
     }
-  );
-}
-" " "
-particle.algorithm_steps_dict["Drift"].includes += " " "
-#include "swift2/boundaryconditions/FixedBoundary.h"
-#include "swift2/boundaryconditions/Utils.h"
-" " "
-particle._setup_algorithm_steps()
-particle._setup_initialisation_steps()
-    ~~~~~~~~~~~~~~~~~~~~~~
+    " " "
+    particle.algorithm_steps_dict["Drift"].includes += " " "
+    #include "swift2/boundaryconditions/FixedBoundary.h"
+    #include "swift2/boundaryconditions/Utils.h"
+    " " "
+    particle._setup_algorithm_steps()
+    particle._setup_initialisation_steps()
+        ~~~~~~~~~~~~~~~~~~~~~~
 
-    The spaced-out syntax is just there to ensure that the Python documentation
-    syntax is not broken.
+        The spaced-out syntax is just there to ensure that the Python documentation
+        syntax is not broken.
 
 
-    ## Attributes
+        ## Attributes
 
-    name: String
-    To be in line with other conventions, I recommend you start with an
-    uppercase letter. This has to be a valid C++ identifier, i.e. don't
-    use any special symbols besides an underscore.
+        name: String
+        To be in line with other conventions, I recommend you start with an
+        uppercase letter. This has to be a valid C++ identifier, i.e. don't
+        use any special symbols besides an underscore.
 
-    ## Vectorisation
+        ## Vectorisation
 
-    This type can be used with aggressively optimised kernels if you follow
-    @ref page_swift_performance_optimisation Performance optimisation and use
-    the map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access
-    graph compiler from the Sequential suite; or literally any other
-    flavour which yields coalesced memory.
+        This type can be used with aggressively optimised kernels if you follow
+        @ref page_swift_performance_optimisation Performance optimisation and use
+        the map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access
+        graph compiler from the Sequential suite; or literally any other
+        flavour which yields coalesced memory.
 
-    @param particle_interaction_kernel_realisation: ParticleKernelRealisation
-      Switch through various interaction variants.
+        @param particle_interaction_kernel_realisation: ParticleKernelRealisation
+          Switch through various interaction variants.
 
 
-    @see peano4::datamanagement::CellMarker
-    @see peano4::datamanagement::VertexMarker
+        @see peano4::datamanagement::CellMarker
+        @see peano4::datamanagement::VertexMarker
 
     """
 

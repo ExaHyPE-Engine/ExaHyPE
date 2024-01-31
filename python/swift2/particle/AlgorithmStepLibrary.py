@@ -179,8 +179,8 @@ def get_algorithm_step_dict(particle):
     ) = _get_particle_iterator_templates(PARTICLE, realisation)
 
     # @todo Mladen, can we remove this one please?
-    #--------------------------------------------------------------------------
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     flagBoundaryParticlesStep = AlgorithmStep(
         name="FlagBoundaryParticles",
         dependencies=AlgorithmStep.Dependencies.SELF,
@@ -194,8 +194,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["FlagBoundaryParticles"] = flagBoundaryParticlesStep
 
-    #--------------------------------------------------------------------------
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     kick1 = AlgorithmStep(
         name="Kick1",
         dependencies=AlgorithmStep.Dependencies.SELF,
@@ -215,8 +215,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Kick1"] = kick1
 
-    #--------------------------------------------------------------------------
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     drift = AlgorithmStep(
         name="Drift",
         dependencies=AlgorithmStep.Dependencies.SELF,
@@ -238,8 +238,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Drift"] = drift
 
-    #--------------------------------------------------------------------------
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     # From the SPH side of things, this doesn't need to be an AlgorithmStep
     # on its own. We could merge it together with the drifts. However, in order
     # to ensure that the particles which have just been moved in the preceeding
@@ -262,8 +262,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["PredictHydro"] = predictHydro
 
-    #--------------------------------------------------------------------------
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     densityWithConstantSearchRadius = AlgorithmStep(
         name="DensityLoopWithConstantSearchRadius",
         dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
@@ -286,8 +286,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Density"] = densityWithConstantSearchRadius
 
-    #--------------------------------------------------------------------------
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     force = AlgorithmStep(
         name="ForceLoop",
         dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
@@ -310,8 +310,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Force"] = force
 
-    #--------------------------------------------------------------------------
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     kick2 = AlgorithmStep(
         name="Kick2",
         dependencies=AlgorithmStep.Dependencies.SELF,
@@ -336,8 +336,8 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Kick2"] = kick2
 
-    #--------------------------------------------------------------------------
-    #--------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
+    # --------------------------------------------------------------------------
     reduceGlobals = AlgorithmStep(
         name="ReduceGlobalQuantities",
         dependencies=AlgorithmStep.Dependencies.SELF,
