@@ -157,11 +157,11 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     def get_includes(self):
         return (
             """
-#include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/enumerator/enumerator.h"
 #include "exahype2/fd/PatchUtils.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "tarch/multicore/Tasks.h"
+#include "tarch/NonCriticalAssertions.h"
 """
             + self._solver._get_default_includes()
             + self._solver.user_action_set_includes
@@ -564,9 +564,9 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)
         self._action_set_update_cell = UpdateCell(self)
 
-        self._action_set_update_cell.priority = self._baseline_action_set_priority + 4
-        self._action_set_merge_enclave_task_outcome.priority = (
-            self._baseline_action_set_priority + 4
+        self._action_set_update_cell.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 4
+        self._action_set_merge_enclave_task_outcome.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 4
         )
         #
         # have a single guard (technically)

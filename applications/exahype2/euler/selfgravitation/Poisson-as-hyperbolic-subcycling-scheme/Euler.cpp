@@ -1,7 +1,8 @@
 #include "Euler.h"
 
-#include "../../../../../src/tarch/NonCriticalAssertions.h"
 #include "exahype2/RefinementControl.h"
+
+#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log applications::exahype2::euler::selfgravitation::Euler::_log("examples::exahype2::selfgravitation::Euler");

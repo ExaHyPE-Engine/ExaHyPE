@@ -18,7 +18,8 @@ set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/CustomMakeRules.cmake")
 project(${META_PROJECT_NAME}
   DESCRIPTION ${META_PROJECT_DESCRIPTION}
   HOMEPAGE_URL ${META_AUTHOR_DOMAIN}
-  LANGUAGES C CXX)
+  LANGUAGES C CXX
+)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -173,19 +174,11 @@ if(WITH_MULTITHREADING)
   string(TOUPPER ${WITH_MULTITHREADING} WITH_MULTITHREADING_UPPER)
   target_compile_definitions(project_options INTERFACE Shared${WITH_MULTITHREADING_UPPER})
   target_compile_definitions(project_options INTERFACE SharedMemoryParallelisation)
-  endif()
+endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
-
-  # Workaround for Intel oneAPI. TODO: Fix this:
-  # "PLEASE append the compiler options "-save-temps -v", rebuild the application to get the full command which is failing"
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
-    target_compile_options(project_options INTERFACE -fopenmp)
-    target_link_libraries(project_options INTERFACE -fopenmp)
-  else()
-    target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
-  endif()
+  target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
   target_link_libraries(project_options INTERFACE TBB::tbb)

@@ -14,9 +14,8 @@
 #include "tarch/multicore/smartScheduling.h"
 #endif
 
-
 #include "tarch/multicore/Lock.h"
-#include "../../../../src/tarch/NonCriticalAssertions.h"
+#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );

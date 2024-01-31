@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .ADERDG import ADERDG, PrecisionType, Polynomials
 
-from .PDETerms import PDETerms
+from exahype2.solvers.PDETerms import PDETerms
 
 from .kernelgenerator import generate_limiter_kernels
 from .kernels import get_face_overlap_merge_implementation

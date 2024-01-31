@@ -14,13 +14,13 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 class SeparateSweeps(RungeKuttaDG):
   """
   Probably the simplest solver you could think off.
-  We run over the grid twice per Runge Kutta step. In the first step,
+  We run over the grid twice per Runge-Kutta step. In the first step,
   we compute the linear reconstruction, project this one onto the faces
   and also compute the volumetric prediction. In the second step, we
   solve the Riemann problem and add it to the prediction.
 
-  In the attribute terminology, I call the two runs over the grid sweeps,
-  i.e., I work with two grid sweeps per Runge Kutta step.
+  In the attribute terminology, we call the two runs over the grid sweeps,
+  i.e., we work with two grid sweeps per Runge-Kutta step.
   """
 
   def __init__(self,
@@ -36,7 +36,7 @@ class SeparateSweeps(RungeKuttaDG):
                pde_terms_without_state):
     """
     The super call invokes the creation of the data sets, where the guards have
-    to be known already. So I bring those guys forward and then call the superclass
+    to be known already. So we bring those guys forward and then call the superclass
     constructor.
     """
     self._name     = name

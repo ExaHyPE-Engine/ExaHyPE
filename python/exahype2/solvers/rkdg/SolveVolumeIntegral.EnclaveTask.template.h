@@ -6,9 +6,9 @@
 // **********************************************************************************************
 #pragma once
 
-#include "../../../../src/tarch/NonCriticalAssertions.h"
 #include "peano4/datamanagement/CellMarker.h"
 #include "tarch/multicore/Tasks.h"
+#include "tarch/NonCriticalAssertions.h"
 
 #include "exahype2/fv/rusanov/rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"

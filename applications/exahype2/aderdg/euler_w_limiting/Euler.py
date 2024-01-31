@@ -60,6 +60,7 @@ project.set_load_balancing( "toolbox::loadbalancing::strategies::SpreadOutHierar
 project.set_Peano4_installation( "../../../../", build_mode )
 peano4_project = project.generate_Peano4_project("False")
 
+peano4_project.output.makefile.add_cpp_file("eulerSolver.cpp")
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=32)
 
 

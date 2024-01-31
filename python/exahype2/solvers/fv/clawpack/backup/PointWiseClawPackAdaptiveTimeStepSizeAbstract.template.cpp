@@ -2,7 +2,7 @@
 {% include "AbstractSolverAdaptiveTimeStepSize.template.cpp" %}
 
 
-#include "../../../../../../src/tarch/NonCriticalAssertions.h"
+#include "tarch/NonCriticalAssertions.h"
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():

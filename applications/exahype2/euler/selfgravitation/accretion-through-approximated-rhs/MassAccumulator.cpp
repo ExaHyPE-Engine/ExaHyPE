@@ -2,11 +2,11 @@
 
 #include <cmath>
 
-#include "../../../../../src/tarch/NonCriticalAssertions.h"
 #include "tarch/Assertions.h"
 #include "tarch/la/Vector.h"
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/services/ServiceRepository.h"
 
 
