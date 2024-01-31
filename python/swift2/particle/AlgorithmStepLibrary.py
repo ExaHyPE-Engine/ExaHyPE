@@ -5,9 +5,12 @@ from swift2.particle.SPHParticle import SPHParticle
 class ParticleIteratorTemplate(str):
     """!
     A mini-wrapper around a string for particle iterator.
-    Exists for convenience: adds self.insert_function() method,
+    Exists for convenience: adds self.insert() method,
     which inserts the function which the iterators are supposed to call
     on a particle or particle pair.
+
+    The function insertion works via string replacement. It will
+    look for the string '*FUNCTION*' to be replaced.
     """
 
     def __init__(self, template):
@@ -18,7 +21,7 @@ class ParticleIteratorTemplate(str):
         self.template = template
         return
 
-    def insert_function(self, function):
+    def insert(self, function):
         """!
         insert a function into the template string.
 
@@ -32,100 +35,12 @@ class ParticleIteratorTemplate(str):
 
 def _get_particle_iterator_templates(particle_name, kernel_realisation):
     """!
-    Construct iterator call templates given the desired particle interaction
-    kernel realisation. These signatures are strings containing c++ code
-    snippets of the correct iterator call signature.
+    Construct particle interaction iterator call templates given the
+    desired particle interaction kernel realisation. These signature
+    templates are strings containing c++ code snippets of the correct
+    iterator call signature.
 
-    @param particle_name: str
-        the particle class name.
-    @param particle_interaction_kernel_realisation: SPHParticle.ParticleKernelRealisation
-        enum for kernel realisation.
-
-    returns:
-
-    strings containing particle iterator code snippets.
-
-    iterate_over_particles_assigned_to_vertex_for_move:
-        snippet to use for particle interactons which will move assigned to a vertex
-    iterate_over_particles_assigned_to_cell:
-        snippet to use for particle-particle interactions assigned to a cell
-    iterate_over_particles_assigned_to_vertex:
-        snippet to use for particle interactions assigned to a vertex
-    iterate_over_particles_assigned_to_vertex_with_global_reduction
-        snippet to use for particle interactions assigned to a vertex which also
-        contain a global reduction
-    """
-
-    PARTICLE = particle_name
-
-    iterate_over_particles_assigned_to_vertex_for_move = None
-    iterate_over_particles_assigned_to_vertex = None
-    iterate_over_particles_assigned_to_cell = None
-    iterate_over_particles_assigned_to_vertex_with_global_reduction = None
-
-    if (kernel_realisation == SPHParticle.ParticleKernelRealisation.NO_OPTIMISATION):
-        iterate_over_particles_assigned_to_vertex = f"""::swift2::kernels::forAllParticles(marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"""
-        iterate_over_particles_assigned_to_cell = (                         "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, *FUNCTION*<globaldata::" + particle_name + ">, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::" + particle_name + ">, ::swift2::kernels::alwaysUpdateParticlePairs<globaldata::" + particle_name + ">);")
-        iterate_over_particles_assigned_to_vertex_with_global_reduction = ( "::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::" + particle_name + ">, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::" + particle_name + ">);")
-    elif ( kernel_realisation == SPHParticle.ParticleKernelRealisation.USE_OUTER_GUARDS):
-        iterate_over_particles_assigned_to_vertex = ( "::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::" + particle_name + ">);")
-        iterate_over_particles_assigned_to_cell = ( "::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, *FUNCTION*<globaldata::" + particle_name + ">);")
-    elif ( kernel_realisation == SPHParticle.ParticleKernelRealisation.VECTORISE_ALL):
-        iterate_over_particles_assigned_to_vertex = ( "::swift2::kernels::forAllParticlesVectorised( marker, assignedParticles, numberOfAssignedParticles, *FUNCTION*WithMasking<globaldata::" + particle_name + ">);")
-        iterate_over_particles_assigned_to_cell = ( "::swift2::kernels::forAllParticlePairsVectorised( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, *FUNCTION*WithMasking<globaldata::" + particle_name + ">);")
-    elif ( kernel_realisation == SPHParticle.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS):
-        iterate_over_particles_assigned_to_vertex = ( "::swift2::kernels::forAllParticlesVectoriseWithCheckPreamble( marker, assignedParticles, numberOfAssignedParticles, *FUNCTION*<globaldata::" + particle_name + ">);")
-        iterate_over_particles_assigned_to_cell = ( "::swift2::kernels::forAllParticlePairsVectoriseWithCheckPreamble( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, *FUNCTION*<globaldata::" + particle_name + ">);"
-        )
-    else:
-        raise NotImplementedError(f"Requested kernel realisation {particle_interaction_kernel_realisatio} not implemented")
-
-    if iterate_over_particles_assigned_to_vertex_for_move is None:
-        iterate_over_particles_assigned_to_vertex_for_move = (
-            """
-            auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
-            ::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::"""
-            + particle_name
-            + """>);
-            ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, _spacetreeId);
-            """
-            )
-        ## @todo This is not nice. We should still use the vectorised version if the vertex is gathered.
-
-
-    #  Set defaults or raise error if there shouldn't be defaults and we missed something.
-
-    if iterate_over_particles_assigned_to_vertex_for_move is None:
-        raise ValueError("We shouldn't be here.")
-
-    if iterate_over_particles_assigned_to_cell is None:
-        raise ValueError("We shouldn't be here.")
-
-    if iterate_over_particles_assigned_to_vertex is None:
-        raise ValueError("We shouldn't be here.")
-
-    if iterate_over_particles_assigned_to_vertex_with_global_reduction is None:
-        iterate_over_particles_assigned_to_vertex_with_global_reduction = (
-            "::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::" + particle_name + ">);"
-        )
-
-    #  finally, wrap the templates into ParticleIteratorTemplate objects
-    vertex_for_move = ParticleIteratorTemplate(iterate_over_particles_assigned_to_vertex_for_move)
-    cell = ParticleIteratorTemplate(iterate_over_particles_assigned_to_cell)
-    vertex = ParticleIteratorTemplate(iterate_over_particles_assigned_to_vertex_with_global_reduction)
-    vertex_with_global_reduction = ParticleIteratorTemplate(iterate_over_particles_assigned_to_vertex_with_global_reduction)
-
-    return vertex_for_move, cell, vertex, vertex_with_global_reduction
-
-
-
-
-def get_algorithm_step_dict(particle):
-    """!
-
-    Sets up a dict of the algorithm steps for this scheme so they can be accessed at various points.
-
-    There are three types of iterators:
+    In total, there are four types of iterators. The essential two are:
 
     - The one that's used to run over all particle assigned to a vertex. It
       is called iterate_over_particles_assigned_to_vertex.
@@ -147,6 +62,101 @@ def get_algorithm_step_dict(particle):
     Both special iterators are constructed to default values unless you
     explicitly set them beforehand.
 
+    The iterators require a function to be passed as an argument to
+    act on the particles. In the template snippets being generated here,
+    the functions shall be replaced by a placeholder string '*FUNCTION*'.
+
+    Finally, the code snippets being returned are stored as a
+    ParticleIteratorTemplate object.
+
+    @param particle_name: str
+        the particle class name.
+    @param particle_interaction_kernel_realisation: SPHParticle.ParticleKernelRealisation
+        enum for kernel realisation.
+
+
+    4 ParticleIteratorTemplate objects containing particle iterator code snippets.
+
+    @return vertex_for_move: snippet (in a ParticleIteratorTemplate object) to
+        use for particle interactons which will move assigned to a vertex
+    @return cell: snippet (in a ParticleIteratorTemplate object) to use for
+        particle-particle interactions assigned to a cell
+    @return vertex: snippet (in a ParticleIteratorTemplate object) to use for
+        particle interactions assigned to a vertex
+    @return vertex_with_global_reduction: snippet (in a ParticleIteratorTemplate
+        object) to use for particle interactions assigned to a vertex which also
+        contain a global reduction
+    """
+
+    PARTICLE = particle_name
+
+    iterate_over_particles_assigned_to_vertex_for_move = None
+    iterate_over_particles_assigned_to_vertex = None
+    iterate_over_particles_assigned_to_cell = None
+    iterate_over_particles_assigned_to_vertex_with_global_reduction = None
+
+    if (kernel_realisation == SPHParticle.ParticleKernelRealisation.NO_OPTIMISATION):
+        iterate_over_particles_assigned_to_vertex_for_move = None
+        iterate_over_particles_assigned_to_vertex = f"""::swift2::kernels::forAllParticles(marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"""
+        iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInCellKernel<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateParticlePairs<globaldata::{PARTICLE}>);"
+        iterate_over_particles_assigned_to_vertex_with_global_reduction = f"::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>, ::swift2::kernels::alwaysUpdateInVertexKernel<globaldata::{PARTICLE}>);"
+    elif ( kernel_realisation == SPHParticle.ParticleKernelRealisation.USE_OUTER_GUARDS):
+        iterate_over_particles_assigned_to_vertex_for_move = None
+        iterate_over_particles_assigned_to_vertex = f"::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>);"
+        iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairs( marker, localParticles, activeParticles, *FUNCTION*<globaldata::{PARTICLE}>);"
+        iterate_over_particles_assigned_to_vertex_with_global_reduction = None
+    elif ( kernel_realisation == SPHParticle.ParticleKernelRealisation.VECTORISE_ALL):
+        iterate_over_particles_assigned_to_vertex_for_move = None
+        iterate_over_particles_assigned_to_vertex = f"::swift2::kernels::forAllParticlesVectorised( marker, assignedParticles, numberOfAssignedParticles, *FUNCTION*WithMasking<globaldata::{PARTICLE}>);"
+        iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairsVectorised( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, *FUNCTION*WithMasking<globaldata::{PARTICLE}>);"
+        iterate_over_particles_assigned_to_vertex_with_global_reduction = None
+    elif ( kernel_realisation == SPHParticle.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS):
+        iterate_over_particles_assigned_to_vertex_for_move = None
+        iterate_over_particles_assigned_to_vertex = f"::swift2::kernels::forAllParticlesVectoriseWithCheckPreamble( marker, assignedParticles, numberOfAssignedParticles, *FUNCTION*<globaldata::{PARTICLE}>);"
+        iterate_over_particles_assigned_to_cell = f"::swift2::kernels::forAllParticlePairsVectoriseWithCheckPreamble( marker, localParticles, activeParticles, numberOfParticlesPerLocalVertex, _numberOfActiveParticlesPerVertex, *FUNCTION*<globaldata::{PARTICLE}>);"
+        iterate_over_particles_assigned_to_vertex_with_global_reduction = None
+    else:
+        raise NotImplementedError(f"Requested kernel realisation {particle_interaction_kernel_realisatio} not implemented")
+
+    #  Set defaults or raise error if there shouldn't be defaults and we missed something.
+
+    if iterate_over_particles_assigned_to_vertex_for_move is None:
+        iterate_over_particles_assigned_to_vertex_for_move = f"""
+            auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
+            ::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>);
+            ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, _spacetreeId);
+            """
+        ## @todo This is not nice. We should still use the vectorised version if the vertex is gathered.
+
+    if iterate_over_particles_assigned_to_cell is None:
+        raise ValueError("We shouldn't be here.")
+
+    if iterate_over_particles_assigned_to_vertex is None:
+        raise ValueError("We shouldn't be here.")
+
+    if iterate_over_particles_assigned_to_vertex_with_global_reduction is None:
+        iterate_over_particles_assigned_to_vertex_with_global_reduction = (
+            f"::swift2::kernels::forAllParticles( marker, assignedParticles, *FUNCTION*<globaldata::{PARTICLE}>);"
+        )
+
+
+    #  finally, wrap the templates into ParticleIteratorTemplate objects
+    vertex_for_move = ParticleIteratorTemplate(iterate_over_particles_assigned_to_vertex_for_move)
+    cell = ParticleIteratorTemplate(iterate_over_particles_assigned_to_cell)
+    vertex = ParticleIteratorTemplate(iterate_over_particles_assigned_to_vertex_with_global_reduction)
+    vertex_with_global_reduction = ParticleIteratorTemplate(iterate_over_particles_assigned_to_vertex_with_global_reduction)
+
+    return vertex_for_move, cell, vertex, vertex_with_global_reduction
+
+
+
+
+def get_algorithm_step_dict(particle):
+    """!
+
+    Sets up a dict of the algorithm steps for this scheme so they can be accessed
+    at various points and by various models.
+
     """
 
     algorithm_steps_dict = {}
@@ -154,11 +164,10 @@ def get_algorithm_step_dict(particle):
     realisation = particle._particle_interaction_kernel_realisation
     project_namespace = particle._swift_project_namespace
 
-    NAME = particle.name
+    PARTICLE = particle.name
     NAMESPACE ="::".join(project_namespace)
 
-
-    v_iter_for_move, c_iter, v_iter, v_iter_with_global_reduction = _get_particle_iterator_templates(NAME, realisation)
+    v_iter_for_move, c_iter, v_iter, v_iter_with_global_reduction = _get_particle_iterator_templates(PARTICLE, realisation)
 
     # @todo Mladen, can we remove this one please?
     flagBoundaryParticlesStep = AlgorithmStep(
@@ -166,9 +175,7 @@ def get_algorithm_step_dict(particle):
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel="",
-        touch_vertex_last_time_kernel="""::swift2::kernels::flagBoundaryParticles(assignedParticles, {0}, {1}, {2});""".format(
-            NAMESPACE + "::HYDRO_PART_NUMBER", NAMESPACE + "::DomainSize", NAMESPACE + "::DomainOffset",
-        ),
+        touch_vertex_last_time_kernel= f"::swift2::kernels::flagBoundaryParticles(assignedParticles, {NAMESPACE}::HYDRO_PART_NUMBER, {NAMESPACE}::DomainSize, {NAMESPACE}::DomainOffset);",
         includes="""
                    #include "Constants.h"
                    #include "swift2/kernels/ParticleSelfInteraction.h"
@@ -181,9 +188,9 @@ def get_algorithm_step_dict(particle):
         name="Kick1",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-        touch_vertex_first_time_kernel=v_iter.insert_function( "::swift2::timestepping::resetMovedParticleMarker"),
-        touch_vertex_last_time_kernel=v_iter.insert_function( "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"),
-        prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format( NAME,),
+        touch_vertex_first_time_kernel=v_iter.insert( "::swift2::timestepping::resetMovedParticleMarker"),
+        touch_vertex_last_time_kernel=v_iter.insert( "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"),
+        prepare_traversal_kernel=f"::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{PARTICLE}>();",
         includes="""
             #include "swift2/kernels/legacy/Leapfrog.h"
             #include "swift2/timestepping/GlobalTimeStepping.h"
@@ -192,66 +199,52 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Kick1"] = kick1
 
+
     drift = AlgorithmStep(
         name="Drift",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
-        touch_vertex_first_time_kernel=v_iter.insert_function(
-            "::swift2::timestepping::resetMovedParticleMarker"
-        ),
-        touch_vertex_last_time_kernel=v_iter_for_move.insert_function(
-            "::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSize"
-        ),
+        touch_vertex_first_time_kernel=v_iter.insert("::swift2::timestepping::resetMovedParticleMarker"),
+        touch_vertex_last_time_kernel=v_iter_for_move.insert( "::swift2::kernels::legacy::leapfrogDriftWithGlobalTimeStepSize"),
         includes="""
             #include "Constants.h"
             #include "swift2/kernels/legacy/Leapfrog.h"
             #include "swift2/timestepping/GlobalTimeStepping.h"
             #include "swift2/timestepping/TimeStepping.h"
-                                       """,
+            """,
         touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
         touch_vertex_last_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce",
     )
     algorithm_steps_dict["Drift"] = drift
+
 
     # From the SPH side of things, this doesn't need to be an AlgorithmStep
     # on its own. We could merge it together with the drifts. However, in order
     # to ensure that the particles which have just been moved in the preceeding
     # drift sweep are sorted correctly into the cells and vertices, we need an
     # extra sweep.
-    predictHydro = AlgorithmStep(
-        name="PredictHydro",
-        dependencies=AlgorithmStep.Dependencies.SELF,
+    predictHydro = AlgorithmStep( name="PredictHydro", dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         #            touch_vertex_first_time_kernel = iterate_over_particles_assigned_to_vertex.format("""::swift2::timestepping::resetMovedParticleMarker(assignedParticles);""",
-        touch_vertex_first_time_kernel=v_iter.insert_function(
-            "::swift2::kernels::legacy::hydroPredictExtra"
-        ),
+        touch_vertex_first_time_kernel=v_iter.insert( "::swift2::kernels::legacy::hydroPredictExtra"),
         includes="""
             #include "Constants.h"
             #include "swift2/kernels/legacy/Leapfrog.h"
-                                   """,
+           """,
         touch_vertex_first_time_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
         cell_kernel_dependency_policy="TouchAtLeastOnce_AllPreviousStepsUpdateAtLeastOnce_MayOverwritePreviousCellUpdatesFromSameSweep",
     )
     algorithm_steps_dict["PredictHydro"] = predictHydro
 
+
     densityWithConstantSearchRadius = AlgorithmStep(
         name="DensityLoopWithConstantSearchRadius",
         dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE_AND_MIGHT_RERUN,
-        prepare_traversal_kernel="""
-                                   globaldata::{PARTICLE}::getSpecies().clearRerunPreviousGridSweepFlag();
-                                   """.replace(
-            "{PARTICLE}", NAME
-        ),
-        touch_vertex_first_time_kernel=v_iter.insert_function(
-            "::swift2::kernels::legacy::prepareDensity"
-        ),
-        cell_kernel=c_iter.insert_function( "::swift2::kernels::legacy::densityKernel"),
-        touch_vertex_last_time_kernel=(
-            v_iter.insert_function( "::swift2::kernels::legacy::endDensityCalculation")
-            + v_iter_with_global_reduction.insert_function( "::swift2::kernels::legacy::updateSmoothingLengthAndRerunIfRequired")
-        ),
+        prepare_traversal_kernel=f"""globaldata::{PARTICLE}::getSpecies().clearRerunPreviousGridSweepFlag();""",
+        touch_vertex_first_time_kernel=v_iter.insert("::swift2::kernels::legacy::prepareDensity"),
+        cell_kernel=c_iter.insert( "::swift2::kernels::legacy::densityKernel"),
+        touch_vertex_last_time_kernel=(v_iter.insert( "::swift2::kernels::legacy::endDensityCalculation") + v_iter_with_global_reduction.insert( "::swift2::kernels::legacy::updateSmoothingLengthAndRerunIfRequired")),
         includes="""
             #include "swift2/kernels/legacy/SmoothingLength.h"
             #include "swift2/kernels/legacy/Density.h"
@@ -259,27 +252,18 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Density"] = densityWithConstantSearchRadius
 
+
     force = AlgorithmStep(
         name="ForceLoop",
         dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_first_time_kernel=(
-            v_iter.insert_function(
-                "::swift2::kernels::legacy::resetSmoothingLengthIterationCounter"
-            )
-            + v_iter.insert_function(
-                "::swift2::kernels::legacy::prepareHydroForce"
-            )
-            + v_iter.insert_function(
-                "::swift2::kernels::legacy::resetAcceleration"
-            )
+            v_iter.insert( "::swift2::kernels::legacy::resetSmoothingLengthIterationCounter")
+            + v_iter.insert( "::swift2::kernels::legacy::prepareHydroForce")
+            + v_iter.insert( "::swift2::kernels::legacy::resetAcceleration")
         ),
-        cell_kernel=c_iter.insert_function(
-            "::swift2::kernels::legacy::forceKernel"
-        ),
-        touch_vertex_last_time_kernel=v_iter.insert_function(
-            "::swift2::kernels::legacy::endHydroForceCalculation"
-        ),
+        cell_kernel=c_iter.insert( "::swift2::kernels::legacy::forceKernel"),
+        touch_vertex_last_time_kernel=v_iter.insert( "::swift2::kernels::legacy::endHydroForceCalculation"),
         includes="""
           #include "swift2/kernels/legacy/Swift.h"
           #include "swift2/kernels/legacy/HydroForce.h"
@@ -287,52 +271,47 @@ def get_algorithm_step_dict(particle):
     )
     algorithm_steps_dict["Force"] = force
 
+
     kick2 = AlgorithmStep(
         name="Kick2",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
         touch_vertex_last_time_kernel=(
-            v_iter.insert_function(
+            v_iter.insert(
                 "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
             )
-            + v_iter.insert_function(
+            + v_iter.insert(
                 "::swift2::kernels::legacy::leapfrogKickExtraWithGlobalTimeStepSize"
             )
-            + v_iter.insert_function(
+            + v_iter.insert(
                 "::swift2::kernels::legacy::resetPredictedValues"
             )
         ),
-        prepare_traversal_kernel="""::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{}>();""".format(
-            NAME,
-        ),  # TODO: temporary solution for initialization step
+        prepare_traversal_kernel=f"::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{PARTICLE}>();",
+        # TODO: temporary solution for initialization step
         includes="""
             #include "Constants.h"
             #include "swift2/kernels/legacy/Leapfrog.h"
             #include "swift2/timestepping/GlobalTimeStepping.h"
             #include "swift2/timestepping/TimeStepping.h"
-                                   """,
+        """,
     )
     algorithm_steps_dict["Kick2"] = kick2
+
 
     reduceGlobals = AlgorithmStep(
         name="ReduceGlobalQuantities",
         dependencies=AlgorithmStep.Dependencies.SELF,
         effect=AlgorithmStep.Effect.ALTER_GLOBAL_STATE,
-        touch_vertex_last_time_kernel=v_iter_with_global_reduction.insert_function(
-            "::swift2::statistics::reduceVelocityAndSearchRadius"
-        ),
-        prepare_traversal_kernel="""
+        touch_vertex_last_time_kernel=v_iter_with_global_reduction.insert( "::swift2::statistics::reduceVelocityAndSearchRadius"),
+        prepare_traversal_kernel=f"""
                                    globaldata::{PARTICLE}::getSpecies().clearSearchRadius();
                                    globaldata::{PARTICLE}::getSpecies().clearVelocity();
-                                   """.replace(
-            "{PARTICLE}", NAME
-        ),
-        unprepare_traversal_kernel="""
+                                   """,
+        unprepare_traversal_kernel=f"""
                                    globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
                                    ::swift2::statistics::reportSearchRadiusVTDt<globaldata::{PARTICLE}>( "{PARTICLE}" );
-                                   """.replace(
-            "{PARTICLE}", NAME
-        ),
+                                   """,
         includes="""
                                    #include "Constants.h"
                                    #include "swift2/statistics/Reports.h"
