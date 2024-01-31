@@ -4,7 +4,7 @@
 
  We solve the Poisson equation 
  
- @f$ -\Delta u = 4 \pi^2 \prod_{d} d \sin (2 \pi x_d) @f$
+ @f$ -\Delta u = 4 \pi^2 \prod_{d} \sin (2 \pi x_d) @f$
  
  over the unit square or cube @f$ \Omega = [0,1]^d @f$, subject to Dirichlet boundary conditions @f$ u |_{\partial \Omega} = 0 @f$.
  The exact solution of this problem is @f$ u_{\mathrm{exact}} = \prod_d \sin (2 \pi x_d) @f$
@@ -127,15 +127,14 @@
   \sum_{\text{cells } K} \int _{K} f \cdot v \ d\boldsymbol{x}  
 \f}
 
-In the facet integrals @f$ \int_{\partial K} @f$ of the above expression, the notation @f$ \hat{\nabla u} @f$ indicates that 
-the term @f$ ( \nabla u, n) @f$, which resulted from the integration by parts, is not defined on @f$ \partial K @f$ as
-the solution is allowed to be discontinuous over the cells' boundaries in the DG approach. We thus need to define the integrand
-on the facets and link it with the solution in the cells. In Peano, we need two components for this:
+In the facet integrals @f$ \int_{\partial K} @f$ of the above expression, @f$ n @f$ denotes the outward normal of the cell @f$ K @f$. The term @f$ ( \nabla u, n) @f$, which results from the integration by parts, needs to be evaluated on the cell boundary @f$ \partial K @f$ where it is not defined since the solution is allowed to be discontinuous across cells' boundaries in the DG approach. Hence, we need to replace @f$ \nabla u @f$ by some @f$ \hat{\nabla u} @f$ as discussed in the following. First, we introduce the vector @f$ n_F@f$ on each facet. If the facet is oriented such that its normal @f$ n @f$ points in coordinate direction @f$ j @f$ then @f$ n_F@f$ is the unit vector with 1 at position @f$ j @f$ and zeros everywhere else. For example, in two dimensions we have that @f$ n_F \in \{(1,0)^T, (0,1)^T\} @f$. Observe that @f$ n_F @f$ and @f$ n @f$ only differ by a sign: @f$ n = \pm n_F @f$ or more explicitly @f$ n = n_F (n\cdot n_F) @f$.
 
-- First, we introduce projections @f$ q^- @f$ and @f$ q^+ @f$ of the normal gradient @f$ ( \nabla u, n) @f$ in the cell onto facets,
+In Peano, we need proceed as follows to deal with the term @f$ ( \nabla u, n) = ( \nabla u, n_F) (n\cdot n_F) @f$:
+
+- First, we introduce projections @f$ q^- @f$ and @f$ q^+ @f$ of the normal gradient @f$ ( \nabla u, n_F) @f$ in the cell onto facets,
   so that
 \f{equation}{
-  q^\pm = ( \nabla u, n)|_{\partial K}
+  q^\pm = ( \nabla u, n_F)|_{\partial K}
 \f}
   Mathematically, the projections can be constructed through L-2 projection or extrapolation
   of the cell values. From the perspective of each individual cell, the projections are distributed
@@ -146,7 +145,7 @@ on the facets and link it with the solution in the cells. In Peano, we need two 
 
 
 - Then, on each facet of @f$ \partial K @f$, we define @f$ q^f = \mathcal{R} \left( q^-, q^+ \right) @f$ and 
-  replace the term @f$ (\hat{\nabla u},n) @f$ 
+  replace the term @f$ (\hat{\nabla u},n_F) @f$ 
   with @f$ q^f @f$ in the integrand.
   The simplest choice of @f$ \mathcal{R} @f$ is @f$ q^f = \left( q^- + q^+ \right) / 2 @f$.
   So, the weak formulation becomes
@@ -155,7 +154,7 @@ on the facets and link it with the solution in the cells. In Peano, we need two 
   \left( 
   \int _{K} ( \nabla u, \nabla v) \ d\boldsymbol{x}  
   - 
-  \int_{\partial K} q^f v\, ds
+  \int_{\partial K} q^f  v(n\cdot n_F)\, ds
   \right)
   =
   \sum_{\text{cells } K} \int _{K} f \cdot v \ d\boldsymbol{x} 
@@ -341,9 +340,7 @@ so each of them is covered only once. This results in the jump and average terms
 
 where the "-"s and "+"s are the values from the two cells sharing the facet, evaluated on this facet. For the vertical facets, the "+" and "-" cells are
 the right and the left one, respectively, and for the horizontal ones, they correspond to the upper and the lower cells.
-Additionally, @f$ n_F @f$ here is the unit normal vector associated with the facet @f$ F @f$ and oriented from its "-" cell to the "+" cell for interior facets.
-For boundary faces, @f$ n_F @f$ coincides with the exterior unit normal.
-In our framework, we will use the discussed earlier projection variables for the "+" and "-" values.
+Additionally, @f$ n_F @f$ here is the unit normal vector associated with the facet @f$ F @f$ and oriented from its "-" cell to the "+" cell for interior facets. In our framework, we will use the discussed earlier projection variables for the "+" and "-" values.
 
 Note that the above equivalence of integral terms is consistent with how we defined the averaging flux
 @f$ \mathcal{R}\left( q^- , q^+ \right) = \left( q^- + q^+ \right) / 2 @f$. If we want to use another relation for
@@ -367,8 +364,8 @@ In these terms, the full formulation for our problem reads as follows
   \sum_{\text{boundary facets } F_b}
   \int _{F_b}
   \biggl[
-    - (\nabla u, n_F) \, v 
-    + \theta \, u \, (\nabla v, n_F)
+    - (n\cdot n_F) (\nabla u, n_F) \, v 
+    + \theta \, (n\cdot n_F) u \, (\nabla v, n_F)
     + \gamma_F u v
   \biggr] \ ds
   =
@@ -383,6 +380,10 @@ To implement this formulation in a solver, we will use the same notation and fol
 the "naive discretization" discussed earlier.
 
 First, in addition to the gradient projections @f$ q^\pm @f$, we introduce the projections of the solution:
+\f{equation}{
+  u^\pm :=  (n\cdot n_F) u |_{\partial K}
+\f}
+or, more explicitly,
 \f{equation}{
   u^+ := - u |_{\text{left and bottom facet}}, \quad u^- := u |_{\text{right and top facet}}.
 \f}
