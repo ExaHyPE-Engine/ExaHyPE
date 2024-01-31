@@ -75,17 +75,19 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   min_h = args.meshsize,
   max_h = args.meshsize,
   assembly_matrix= matrices.get_cell_system_matrix_for_laplacian(), 
-  assembly_matrix_scaling = 0, 
+  assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian_scaling(), 
   mass_matrix = matrices.get_cell_mass_matrix(), 
-  mass_matrix_scaling = 0, 
+  mass_matrix_scaling = matrices.get_cell_mass_matrix_scaling(), 
   face_from_cell_projection = matrices.get_cell_to_face_matrix(), 
+  face_from_cell_projection_scaling = matrices.get_cell_to_face_matrix_scaling(),
   cell_from_face_projection = matrices.get_face_to_cell_matrix(), 
+  cell_from_face_projection_scaling = matrices.get_face_to_cell_matrix_scaling(),
   riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
   boundary_matrix = matrices.get_boundary_matrix(),
   cell_relaxation = 0.8,
   face_relaxation = 0.8,
   approximate_system_matrix = matrices.get_A_tilde(),
-  approximate_system_matrix_scaling = 0,
+  approximate_system_matrix_scaling = matrices.get_A_tilde_scaling(),
 )
 
 #! [Instantiate solver]

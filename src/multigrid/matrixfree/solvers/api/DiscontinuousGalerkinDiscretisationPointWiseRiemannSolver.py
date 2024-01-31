@@ -119,11 +119,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
 
   ## Algorithmical blueprint
-  
-  @todo Sean, Alex: The notation has to be globally consistent. 
 
   1. Enter cell: Whenever a cell is entered, we create a temporary 
-    \f$ N(p+1)^d \f$ array (on the heap). 
+    \f$ K^c(p+1)^d \f$ array (on the heap). 
     
     1. Into this temporary array
         \f$ r \f$, we write \f$ Mb \f$. This is the mass matrix (right-hand side
@@ -234,7 +232,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               mass_matrix,
               mass_matrix_scaling,
               face_from_cell_projection,
+              face_from_cell_projection_scaling,
               cell_from_face_projection,
+              cell_from_face_projection_scaling,
               riemann_matrix,
               boundary_matrix,
               cell_relaxation,
@@ -269,7 +269,16 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       case, the generated C++ code will not compile, but you will be allowed
       to fill it in manually.
 
+    @param assembly_matrix_scaling: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
+      This is a matrix of ints that prescribes how we scale each element in the assembly_matrix
+      ie for each i,j, we do: assembly_matrix[i,j] *= ( h )^( assembly_matrix_scaling[i,j] )
+
+
     @param mass_matrix: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
+    
+    @param mass_matrix_scaling: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
+      This is a matrix of ints that prescribes how we scale each element in the mass_matrix
+      ie for each i,j, we do: mass_matrix[i,j] *= ( h )^( mass_matrix_scaling[i,j] )
 
     @param face_from_cell: \f$ \mathbb{R}^{2d * 2K^f_{f \gets c} * (p+1)^{d-1} \times K^c * (p+1)^{d}}\f$ 
       This matrix projects the cell solution onto all of the faces. Note the 
@@ -294,13 +303,15 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       In two dimensions, all of the negative projections should be 0 on faces 0 and 1. Ditto for the 
       positive projections on faces 2 and 3.
 
-      
-
     @param cell_from_face: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times 2d K^f * (p+1)^{d-1}}\f$ 
       This matrix projects the face solution onto the cells. Note the 
       extra factor of @f$ 2d @f$, similar to face_from_cell matrix. Some clever indexing
       is required in the backend here. The enumeration of the cols should follow a similar
       pattern to the rows of face_from_cell.
+
+    @param cell_from_face_scaling: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times 2d K^f * (p+1)^{d-1}}\f$ 
+      This is a matrix of ints that prescribes how we scale each element in the cell_from_face
+      ie for each i,j, we do: cell_from_face[i,j] *= ( h )^( cell_from_face_scaling[i,j] )
 
     @param Riemann_matrix: \f$ \mathbb{R}^{ K^f (p+1)^{d-1} \times 2K^f_{f \gets c} (p+1)^{d-1}} @f$
       The matrix that combines the left/right projections on the cell and outputs a value 
@@ -312,6 +323,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     @param approximate_system_matrix: @f$ \mathbb{R}^{K^c (p+1)^d \times K^c (p+1)^d} @f$
       Approximation @f$ \tilde{A} @f$ which will be internally inverted, so it 
       has to be non-singular.
+
+    @param approximate_system_matrix_scaling: @f$ \mathbb{R}^{K^c (p+1)^d \times K^c (p+1)^d} @f$
       
     """  
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).__init__(name, min_h, max_h)
@@ -327,7 +340,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._mass_matrix               = mass_matrix
     self._mass_matrix_scaling       = mass_matrix_scaling
     self._face_from_cell_projection = face_from_cell_projection
+    self._face_from_cell_projection_scaling = face_from_cell_projection_scaling
     self._cell_from_face_projection = cell_from_face_projection
+    self._cell_from_face_projection_scaling = cell_from_face_projection_scaling
     self._riemann_matrix            = riemann_matrix
     self._boundary_matrix           = boundary_matrix
     self._approximate_system_matrix = approximate_system_matrix
@@ -433,10 +448,13 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "ASSEMBLY_MATRIX"             : self._assembly_matrix,
         "ASSEMBLY_MATRIX_SCALING"     : self._assembly_matrix_scaling,
         "FACE_FROM_CELL_PROJECTION"   : self._face_from_cell_projection,
+        "FACE_FROM_CELL_PROJECTION_SCALING": self._face_from_cell_projection_scaling,
         "CELL_FROM_FACE_PROJECTION"   : self._cell_from_face_projection,
+        "CELL_FROM_FACE_PROJECTION_SCALING"   : self._cell_from_face_projection_scaling,
         "RIEMANN_MATRIX"              : self._riemann_matrix,
         "BOUNDARY_MATRIX"             : self._boundary_matrix,
         "APPROX_SYSTEM_MATRIX"        : self._approximate_system_matrix,
+        "APPROX_SYSTEM_MATRIX_SCALING": self._approximate_system_matrix_scaling,
         "CELL_RELAXATION"             : self._cell_relaxation,
         "FACE_RELAXATION"             : self._face_relaxation,
 

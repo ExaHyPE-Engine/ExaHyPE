@@ -24,7 +24,7 @@ class UpdateCell(ActionSet):
   
 
     // next, we need to project solution on face onto the cell...
-    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix() * faceSol;
+    auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
     // loop over each face
     for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
     {

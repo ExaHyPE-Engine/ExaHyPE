@@ -326,15 +326,20 @@ class GLMatrixFree(GaussLobatto):
                poly_degree,
                unknowns_per_cell_node=1,
                solutions_per_face_node=2,  # number of solutions   we hold per node. Default to 2 since we have u and q
-               projections_per_face_node=2 # number of projections we hold per node. Default to 2 since we have u and q
+               projections_per_face_node=2, # number of projections we hold per node. Default to 2 since we have u and q
                use_unit_interval=False):
     super( GLMatrixFree, self ).__init__(Dimensions,
                                          poly_degree,
                                          unknowns_per_cell_node
                                          )
+    self._solutions_per_face_node   = solutions_per_face_node
+    self._projections_per_face_node = projections_per_face_node
     
   def get_A_tilde(self):
     return self.get_cell_identity_matrix()
+
+  def get_A_tilde_scaling(self):
+    return np.zeros_like( self.get_A_tilde(), dtype=int )
 
   def get_face_to_cell_matrix(self):
     '''
@@ -348,7 +353,29 @@ class GLMatrixFree(GaussLobatto):
 
 
     '''
-    raise NotImplementedError
+    return np.zeros((
+      self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
+      self._solutions_per_face_node* ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions
+    ))
+
+  def get_cell_to_face_matrix(self):
+    """
+    @Alex todo
+
+    We wanna project the cell solution onto the face projections vector
+    We wanna include redundant rows now.
+
+    How many projections are stored on each face?
+    Well, it's 2 * self._projections_per_face_node on each node.
+
+    So the output of this matrix should have:                                               extra factor to account for all the faces
+    2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions rows
+    self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions                                  cols
+    """
+    return np.zeros((
+      2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions,
+      self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions 
+    ))
 
   def get_boundary_matrix(self):
     '''
@@ -359,5 +386,32 @@ class GLMatrixFree(GaussLobatto):
     we are fixing the value of the solution vector on the boundary with the value of 
     the projections here. you can assume everything was set to 0 intitialliy
     '''
-    raise NotImplementedError
+    return np.zeros( ( 
+      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1),
+      self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1)
+     ), dtype=int )
     
+
+  def get_cell_mass_matrix_scaling(self):
+    """
+    @Alex todo!
+    """
+    return np.zeros_like( self.get_cell_mass_matrix(), dtype=int )
+
+  def get_cell_system_matrix_for_laplacian_scaling(self):
+    """
+    @Alex todo!
+    """
+    return np.zeros_like( self.get_cell_system_matrix_for_laplacian(), dtype=int )
+
+  def get_cell_to_face_matrix_scaling(self):
+    """
+    @Alex todo!
+    """
+    return np.zeros_like( self.get_cell_to_face_matrix(), dtype=int )
+
+  def get_face_to_cell_matrix_scaling(self):
+    """
+    @Alex todo!
+    """
+    return np.zeros_like( self.get_face_to_cell_matrix(), dtype=int )

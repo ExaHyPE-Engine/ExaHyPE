@@ -20,7 +20,7 @@ class ProjectOntoFaces(ActionSet):
     // no tricky indexing needed here, since the whole of the cell
     // solution vector is in scope here.
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection * TwoTimesD, double > faceProjections = 
-      repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix() * fineGridCell{{SOLVER_NAME}}.getSolution();
+      repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
 
     // write these values into the faces themselves
     for (int f=0; f<TwoTimesD; f++)
