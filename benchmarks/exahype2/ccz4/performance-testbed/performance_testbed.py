@@ -13,17 +13,6 @@ from peano4.toolbox.blockstructured.DynamicAMR        import DynamicAMR
 from Probe_file_gene          import tracer_seeds_generate
 from ComputeFirstDerivatives  import ComputeFirstDerivativesFD4RK
 
-def CoordListFromFile(file,scale):
-  f=open(file)
-  data=[]
-  tem=f.readlines()
-  for line in tem:
-    data.append(list(map(float,line.split(' ')[1:])))
-  print(len(data))
-  data=np.array(data)
-  return data*scale
-
-
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
@@ -285,7 +274,7 @@ if __name__ == "__main__":
       exe += args.exe_name
     if not args.tra_name=="de":
       exe += "_" + args.tra_name
-    project = exahype2.Project( ["applications", "exahype2", "ccz4"], "ccz4", executable=exe)
+    project = exahype2.Project( ["benchmarks", "exahype2", "ccz4"], "ccz4", executable=exe)
 
 ########################################################################################
 #Pick solver

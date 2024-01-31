@@ -3,9 +3,12 @@
 @page benchmarks_exahype2_ccz4_single_black_hole_performance Single black hole performance test
 
 
-Benchmark which solves the single black hole described in a CCZ4 simulation. 
-This benchmars is specially designed to examine its performance under various setup
-and optimization.
+Benchmark which solves the static and non-spin single black hole described in a CCZ4 simulation. 
+All extensions and fancy features are removed for simplicity. This benchmark is specially compacted 
+to be as close as possible to the corresponding application, so reconstruction via addtional step and
+AMR are enabled.
+This benchmark can be used as a starting point to understand the application and examine its performance 
+under various setup and optimization.
 
 # Run the benchmark
 
@@ -20,7 +23,7 @@ make -j
 then enter this subdirectory and add the python path as
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-cd ./benchmarks/exahype2/ccz4/SBH_benchmark/
+cd ./benchmarks/exahype2/ccz4/performance-testbed/
 export PYTHONPATH=../../../../python
 export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -28,7 +31,7 @@ export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 generate the executable and run
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-python3 SBH_performance_test.py -et 0.01
+python3 performance_testbed.py -et 0.01
 ./peano_test
 ~~~~~~~~~~~~~~~~~~~~~~~
 
