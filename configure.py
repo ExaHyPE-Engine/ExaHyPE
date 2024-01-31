@@ -162,9 +162,9 @@ elif (
     and ("nvc" in args.cc or "nvc++ in args.cc")
     and "nvc++" in args.cxx
 ):
-    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
-    cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch
-    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch
+    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
+    cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
+    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
     if args.asm:
         cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
         cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mpp"
@@ -174,9 +174,9 @@ elif (
     and ("nvc" in args.cc or "nvc++ in args.cc")
     and "nvc++" in args.cxx
 ):
-    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
-    cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch + " -stdpar=gpu"
-    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch
+    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
+    cxxflags += " -cuda -mp=gpu -stdpar=gpu -gpu=cc" + args.arch.split('_')[1]
+    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
     if args.asm:
         cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
         cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
