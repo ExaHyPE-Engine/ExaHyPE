@@ -189,12 +189,13 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier toolbox::part
           and
           tarch::la::equals(event.first.particleX, result.particleX, searchTolerance)
         ) {
-          // bit-wise copy
           logDebug(
             "createParticleIdentifier()",
             "found entry for " << particleX << " given tolerance of " << searchTolerance << ": will copy data over bit-wisely which biases identifier by "
             << (event.first.particleX - result.particleX)
           );
+          // This is a bit-wise copy and biases the result towards an
+          // existing entry.
           result = event.first;
           assertion(currentSnapshot->count(result) > 0);
           return result;
