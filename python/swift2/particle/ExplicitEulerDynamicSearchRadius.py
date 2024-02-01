@@ -82,7 +82,7 @@ class ExplicitEulerDynamicSearchRadius(Particle):
         PARTICLE = self.name
         CFL_FACTOR = self.cfl_factor
         TIME_STEP_SIZE = self.initial_time_step_size
-        NR_INTERACTION_PARTNERS
+        NR_INTERACTION_PARTNERS = self.number_of_interaction_partners
 
         return [
             AlgorithmStep(
