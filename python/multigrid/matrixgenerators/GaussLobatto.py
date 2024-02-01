@@ -437,7 +437,18 @@ class GLMatrixFree(GaussLobatto):
 
     # Add Zeros for redundant projections
     Zeros = np.zeros_like(P_left)
-    return np.concatenate((Zeros, P_left, Zeros, P_bottom, P_right, Zeros, P_top, Zeros), axis=0)
+    # return np.concatenate((Zeros, P_left, Zeros, P_bottom, P_right, Zeros, P_top, Zeros), axis=0)
+    
+
+    output_matrices = [ matrix_0, matrix_1, matrix_2 ]
+    output_scalings = [ integer_0, integer_1, integer_2 ]
+
+    assert( len(output_matrices) == len(output_scalings) )
+
+    for matrix in output_matrices:
+      assert matrix.shape == output_matrices[0].shape
+
+    return output_matrices, output_scalings
   
     # SCALING: Consider our case with 32x4 matrix:
     # [[ 0.  0.  0.  0.]  -- redundant
