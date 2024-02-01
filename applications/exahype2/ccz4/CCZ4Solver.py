@@ -657,6 +657,14 @@ def add_tracer_to_FD4_solver(
     """!
 
     I realise this as a separate routine, as we need it for all FD4 flavours
+    
+    This is a wrapper around all the tracer handling. It adds the tracer to the
+    exahype2.Project, but it also instantiates the solution to tracer mapping
+    as well as the database bookkeeping.
+    
+    tracer_unknowns: Integer
+      You can set this variable to None. In this case, all variables are 
+      dumped.
 
     """
     number_of_attributes = (
@@ -835,6 +843,9 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         """!
 
         Add tracer to project
+        
+        This is a delegate to add_tracer_to_FD4_solver() which passes the 
+        object in as first argument.
         
         Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
         some of the arguments. Most of them are simply piped through to this 

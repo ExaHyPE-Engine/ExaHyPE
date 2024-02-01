@@ -53,7 +53,6 @@ class InsertParticlesByCoordinates(
             super(InsertParticlesByCoordinates, self).get_constructor_body()
             + """
   _particleNumberOnThisTree = 0;
-  _spacetreeId              = treeNumber;
 """
         )
 
@@ -62,6 +61,5 @@ class InsertParticlesByCoordinates(
             super(InsertParticlesByCoordinates, self).get_attributes()
             + """
   int _particleNumberOnThisTree;
-  int _spacetreeId;
 """
         )
