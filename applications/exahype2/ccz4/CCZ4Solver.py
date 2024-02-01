@@ -155,7 +155,7 @@ class AbstractCCZ4Solver(object):
             "CCZ4mu": 0.2
         }
 
-    def enable_seond_order(self):
+    def enable_second_order(self):
         self.integer_constants.update({"CCZ4SO":1})
         self.Default_Time_Step_Size_Relaxation=self.Default_Time_Step_Size_Relaxation/2
 
@@ -657,6 +657,14 @@ def add_tracer_to_FD4_solver(
     """!
 
     I realise this as a separate routine, as we need it for all FD4 flavours
+    
+    This is a wrapper around all the tracer handling. It adds the tracer to the
+    exahype2.Project, but it also instantiates the solution to tracer mapping
+    as well as the database bookkeeping.
+    
+    tracer_unknowns: Integer
+      You can set this variable to None. In this case, all variables are 
+      dumped.
 
     """
     number_of_attributes = (
@@ -778,7 +786,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         """
         AbstractCCZ4Solver.__init__(self)
         if (second_order):
-            AbstractCCZ4Solver.enable_seond_order(self)
+            AbstractCCZ4Solver.enable_second_order(self)
         exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(
             self,
             name=name,
@@ -836,6 +844,9 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
 
         Add tracer to project
         
+        This is a delegate to add_tracer_to_FD4_solver() which passes the 
+        object in as first argument.
+        
         Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
         some of the arguments. Most of them are simply piped through to this 
         class.
@@ -885,7 +896,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
         """
         AbstractCCZ4Solver.__init__(self)
         if (second_order):
-            AbstractCCZ4Solver.enable_seond_order(self)
+            AbstractCCZ4Solver.enable_second_order(self)
         exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep.__init__(
             self,
             name=name,

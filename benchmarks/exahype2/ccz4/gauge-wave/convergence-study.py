@@ -216,6 +216,9 @@ if args.tracer:
         name="Tracer",
         coordinates=[[-0.4251, 0, 0], [0, 0, 0], [0.4251, 0, 0]],
         project=project,
+        number_of_entries_between_two_db_flushes = 100,
+        data_delta_between_two_snapsots = 1e-8,
+        time_delta_between_two_snapsots = 0.1,
     )
 
 
@@ -263,17 +266,25 @@ project.set_load_balancing(
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
-if args.SO_flag==True:
+if args.SO_flag:
     additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
                                                            add_user_defined_actions=False,
                                                            )
+    
+    #
+    # We misuse the projection. See @ref benchmarks_exahype2_ccz4_gauge_wave for details
+    #
     project_patch_onto_faces  = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(my_solver)
-    project_patch_onto_faces.guards  = [ my_solver._store_cell_data_default_guard() for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
+    project_patch_onto_faces.guards     = [ "false" for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
+    project_patch_onto_faces.guards[-1] = my_solver._store_cell_data_default_guard()
 
     roll_over_projected_faces = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(my_solver, 
                                                                                     my_solver._store_face_data_default_guard(),
                                                                                     )
 
+#
+# @todo Han: I don't think this is good that we switch off enclave solvers always
+#
     additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
                                                                             is_enclave_solver = False,
                                                                             ))

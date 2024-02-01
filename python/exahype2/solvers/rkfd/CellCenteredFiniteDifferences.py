@@ -821,12 +821,11 @@ The finest mesh width of """
         self._action_set_handle_boundary.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 3
         )
-        # self._action_set_update_cell                                                      = self._baseline_action_set_descend_invocation_order + 4
-        self._action_set_project_patch_onto_faces.descend_invocation_order = (
-            self._baseline_action_set_descend_invocation_order + 5
-        )
         self._action_set_compute_final_linear_combination.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 5
+        )
+        self._action_set_project_patch_onto_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 6
         )
         self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 6
         self._action_set_postprocess_solution.descend_invocation_order = (

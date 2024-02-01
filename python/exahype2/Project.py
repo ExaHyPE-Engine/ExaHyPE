@@ -458,8 +458,6 @@ thus appreciate any citation of the original release paper
         - peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop to each and every time step,
           particles can move at any point. We always resort them immediately.
 
-        Both action sets are assigned the standard priority of sort_priority_within_action_sets.
-
 
         ## Arguments
 
@@ -479,14 +477,8 @@ thus appreciate any citation of the original release paper
           do so if they dump the tracer data independently into another database
           anyway.
 
-        sort_priority_within_action_sets: Integer
-          You have to clarify what the priority of the tracer is within the
-          action sets. By default, all ExaHyPE solvers start with priority
-          0 and then up to n. So you are fine with using the default of -1
-          which means that the tracer precedes any solver. However, there
-          might be cases where you wanna move the priorities manually.
-
-        Returns the particle set that you can use to modify further
+        Returns the particle set that you can use to modify further.
+        
         """
         particle = peano4.toolbox.particles.Particle(name)
 
@@ -525,16 +517,14 @@ thus appreciate any citation of the original release paper
         update_particle_association_action_set = (
             peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
         )
-        update_particle_association_action_set.priority = (
-            sort_priority_within_action_sets
-        )
+        update_particle_association_action_set.descend_invocation_order = sort_descend_invocation_order_within_action_sets
         update_particle_association_action_set.parallel = True
 
         update_particle_parallel_state_action_set = (
-            peano4.toolbox.particles.UpdateParallelState(particles)
+            peano4.toolbox.particles.api.UpdateParallelState(particles)
         )
-        update_particle_parallel_state_action_set.priority = (
-            sort_priority_within_action_sets
+        update_particle_parallel_state_action_set.descend_invocation_order = (
+            sort_descend_invocation_order_within_action_sets
         )
         update_particle_parallel_state_action_set.parallel = True
 
@@ -565,7 +555,7 @@ thus appreciate any citation of the original release paper
             particle_plotter.add_attribute_to_plot(
                 particle_number, 2, "tarch::la::convertScalar<double>(p->getNumber())"
             )
-            particle_plotter.priority = plot_priority_within_action_sets
+            particle_plotter.descend_invocation_order = plot_descend_invocation_order_within_action_sets
             self.plot_solution.add_action_set(particle_plotter)
 
         self.plot_solution.add_action_set(update_particle_association_action_set)
