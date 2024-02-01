@@ -13,7 +13,7 @@
  
  - Peano's @ref page_multigrid_terminology "multigrid terminology";
  - DG basics (from a math point of view, though no in-depth knowledge is required);
- - How to @ref page_installation "install and build Peano" and notably how to enable it's @ref documentation_multigrid_petsc "PETSc backend".
+ - How to @ref page_installation "install and build Peano" and notably how to enable its @ref documentation_multigrid_petsc "PETSc backend".
  
  
  This simple example discusses the steps and code snippets from the file benchmarks/multigrid/petsc/poisson/dg.py.
@@ -106,7 +106,7 @@
  <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation</a>
  and discuss 2D Poisson equation with @f$ \mathcal{L}(u) = -\Delta u = - \nabla ^2 u = - \partial_x^2 u - \partial_y^2 u @f$.
  The extension to higher dimensions is straightforward.
- Our weak formulation becomes
+ Multiplying by a test-function @f$ v @f$ and integrating by parts, our weak formulation becomes
 
 \f{eqnarray*}{
   \int _\Omega \mathcal{L}(u) \cdot v \ d\boldsymbol{x} 
@@ -121,13 +121,13 @@
   \left( 
   \int _{K} ( \nabla u, \nabla v) \ d\boldsymbol{x} 
   - 
-  \int _{\partial K} (\hat{\nabla u},n) \cdot v \ ds 
+  \int _{\partial K} (\widehat{\nabla u},n) \cdot v \ ds 
   \right)
   =
   \sum_{\text{cells } K} \int _{K} f \cdot v \ d\boldsymbol{x}  
 \f}
 
-In the facet integrals @f$ \int_{\partial K} @f$ of the above expression, @f$ n @f$ denotes the outward normal of the cell @f$ K @f$. The term @f$ ( \nabla u, n) @f$, which results from the integration by parts, needs to be evaluated on the cell boundary @f$ \partial K @f$ where it is not defined since the solution is allowed to be discontinuous across cells' boundaries in the DG approach. Hence, we need to replace @f$ \nabla u @f$ by some @f$ \hat{\nabla u} @f$ as discussed in the following. First, we introduce the vector @f$ n_F@f$ on each facet. If the facet is oriented such that its normal @f$ n @f$ points in coordinate direction @f$ j @f$ then @f$ n_F@f$ is the unit vector with 1 at position @f$ j @f$ and zeros everywhere else. For example, in two dimensions we have that @f$ n_F \in \{(1,0)^T, (0,1)^T\} @f$. Observe that @f$ n_F @f$ and @f$ n @f$ only differ by a sign: @f$ n = \pm n_F @f$ or more explicitly @f$ n = n_F (n\cdot n_F) @f$.
+In the facet integrals @f$ \int_{\partial K} @f$ of the above expression, @f$ n @f$ denotes the outward normal of the cell @f$ K @f$. The term @f$ ( \nabla u, n) @f$, which results from the integration by parts, needs to be evaluated on the cell boundary @f$ \partial K @f$ where it is not defined since the solution is allowed to be discontinuous across cells' boundaries in the DG approach. Hence, we need to replace @f$ \nabla u @f$ by some @f$ \widehat{\nabla u} @f$ as discussed in the following. First, we introduce the vector @f$ n_F@f$ on each facet. On boundary facets we set @f$ n_F = n @f$ such that @f$ n_F @f$ is the outward normal vector. For all interior facets there are two outward normals, one associated with each of the two neighbouring cells, and we need to make a choice. If the facet is oriented such that its normal points in coordinate direction @f$ j @f$ then @f$ n_F@f$ is the unit vector with 1 at position @f$ j @f$ and zeros everywhere else. For example, in two dimensions we have that @f$ n_F \in \{(1,0)^T, (0,1)^T\} @f$ on interior facets. Observe that in this case @f$ n_F @f$ and @f$ n @f$ only differ by a sign: @f$ n = \pm n_F @f$ or more explicitly @f$ n = n_F (n\cdot n_F) @f$.
 
 In Peano, we need proceed as follows to deal with the term @f$ ( \nabla u, n) = ( \nabla u, n_F) (n\cdot n_F) @f$:
 
@@ -145,9 +145,9 @@ In Peano, we need proceed as follows to deal with the term @f$ ( \nabla u, n) = 
 
 
 - Then, on each facet of @f$ \partial K @f$, we define @f$ q^f = \mathcal{R} \left( q^-, q^+ \right) @f$ and 
-  replace the term @f$ (\hat{\nabla u},n_F) @f$ 
+  replace the term @f$ (\widehat{\nabla u},n_F) @f$ 
   with @f$ q^f @f$ in the integrand.
-  The simplest choice of @f$ \mathcal{R} @f$ is @f$ q^f = \left( q^- + q^+ \right) / 2 @f$.
+  The simplest choice of @f$ \mathcal{R} @f$ is @f$ q^f = \left( q^- + q^+ \right) / 2 @f$, which corresponds to averaging the gradients of two neighbouring cells.
   So, the weak formulation becomes
 \f{eqnarray*}{
   \sum_{\text{cells } K} 
@@ -179,17 +179,17 @@ the discussed above weak formulation for an individual cell results in a set of 
     \end{array}
   \right)
   =
-  M b
+  M \bar{f}
 \f}
 
-The projections of the normal gradient can then be represented as follows
+where @f$ M @f$ is the mass matrix that arises from the right hand side of the weak formulation above. The projections of the normal gradient can then be represented as follows
 
 \f{equation}{
   \bar{q}^\pm = P_{f \gets c} \bar{u}
 \f}
 
 The bar notation of @f$ \bar{u} @f$, @f$ \bar{q}^f @f$, @f$ \bar{q}^\pm @f$ here denotes vectors of nodal values of 
-corresponding unknowns for a representative cell and its faces as illustrated below.
+corresponding unknowns for a single representative cell and its faces as illustrated below.
 
 @image html two-d-1st-order-stencil.png width=25%
 
@@ -197,13 +197,12 @@ Here, @f$ \bar{u} = \left( u_0, u_1, u_2, u_3 \right) @f$ (4 unknowns), @f$ \bar
 and @f$ \bar{q}^\pm = \left( q^+_0, ..., q^+_3 , q^-_4, ..., q^-_7 \right) @f$ (8 unknowns). Note that the vector @f$ \bar{q}^\pm @f$
 is composed only of those projections @f$ q^+_i @f$ and @f$ q^-_i @f$ to which the values from the given cell are projected.
 As such, we do not count her, for example, @f$ q^-_0 @f$ and @f$ q^+_4 @f$, as they will be assigned values when accessed from neighbouring cells.
-In the right-hand side, @f$ b @f$ is the vector of nodal values of the given function @f$ f @f$, so we can also write @f$ b = \bar{f} @f$.
+On the right-hand side, @f$ \bar{f} @f$ is the vector of nodal values of the given function @f$ f @f$.
 
 The ingredients required for a DG solver are the following:
  
-  - Each cell holds @f$ (p+1)^d @f$ nodes. We specify this 
-    through the variable <code> polynomial_degree </code>. The solver class
-    will then take care of the +1 internally. In our 2D 1st order example, @f$ p = 1 @f$, @f$ d = 2 @f$,
+  - Each cell holds @f$ (p+1)^d @f$ nodes, where the polynomial degree @f$ p @f$ is stored in the
+    variable <code> polynomial_degree </code>. In our 2D 1st order example, @f$ p = 1 @f$, @f$ d = 2 @f$,
     so each cell has 4 nodes.
     <br><br>
 
@@ -217,8 +216,8 @@ The ingredients required for a DG solver are the following:
     and notably the section "Data storage" therein.
     <br><br>
 
-  - On the facets, we have introduced one helper variable @f$ q^f @f$ replacing the
-    normal component of the gradient vector. For this, we set 
+  - On the facets, we have introduced one helper variable @f$ q^f @f$ to represent an approximation of the 
+    normal component of the gradient vector. Since this is a scalar variable, we set 
      
             face_unknowns = 1
 
@@ -244,7 +243,7 @@ The ingredients required for a DG solver are the following:
 
   - The operator @f$ A_{c \gets f} @f$ takes the @f$ 2d(p+1)^{d-1} @f$ values of @f$ q^f @f$ on the faces and couples them
     with @f$ (p+1)^{d} @f$ cell values of @f$ u @f$.
-    This is responsible for the face integral term @f$ \int_{\partial K} q^f \, ds @f$ in our weak formulation.
+    This is responsible for the face integral term @f$ \int_{\partial K} q^f v \, ds @f$ in our weak formulation.
     Thus, it represents a @f$ (p+1)^{d} \times 2d(p+1)^{d-1} @f$ matrix, which is passed on as <code> face_to_cell_matrix </code>
     with scaling power of @f$ h @f$ specified in <code> face_to_cell_matrix_scaling </code>.
     
@@ -262,7 +261,7 @@ The ingredients required for a DG solver are the following:
     <br>
 
   - The operator @f$ P_{f \leftarrow c} @f$ takes the values from a cell, compute the gradient and projects it onto
-    the faces. Hence, @f$ P_{f \leftarrow c} \in \mathbb{R}^{2d(p+1)^{d-1} \times (p+1)^{d}} @f$.
+    the faces. Hence, @f$ P_{f \leftarrow c} @f$ is a @f$ 2d(p+1)^{d-1} \times (p+1)^{d} @f$ matrix.
     The 2d equals the number of faces of a cell, while the face is a submanifold
     and therefore hosts @f$ (p+1)^{d-1} @f$ values.
     The result is written into @f$ q^+ @f$ or @f$ q^- @f$ on the faces, depending on the relative position of the facet within the cell.
@@ -324,7 +323,7 @@ In order to make the DG discretization of the Poisson equation well-defined, we 
 and we will use the formulation summarized in <a href="https://doi.org/10.1002/nla.1816">https://doi.org/10.1002/nla.1816</a>.
 
 First, we need to introduce some notation. It can be shown that the sum of face integrals in the weak
-form discussed in the previous paragraph, i.e. @f$ - \sum_{\text{cells } K} \int _{\partial K} (\hat{\nabla u},n) \cdot v \ ds @f$,
+form discussed in the previous paragraph, i.e. @f$ - \sum_{\text{cells } K} \int _{\partial K} (\widehat{\nabla u},n) \cdot v \ ds @f$,
 is equivalent to the following, for the interior facets:
 
 \f{equation}{
@@ -364,8 +363,8 @@ In these terms, the full formulation for our problem reads as follows
   \sum_{\text{boundary facets } F_b}
   \int _{F_b}
   \biggl[
-    - (n\cdot n_F) (\nabla u, n_F) \, v 
-    + \theta \, (n\cdot n_F) u \, (\nabla v, n_F)
+    - (\nabla u, n_F) \, v 
+    + \theta \, u \, (\nabla v, n_F)
     + \gamma_F u v
   \biggr] \ ds
   =
@@ -379,11 +378,7 @@ on the choice of penalty parameters.
 To implement this formulation in a solver, we will use the same notation and follow the same steps as for
 the "naive discretization" discussed earlier.
 
-First, in addition to the gradient projections @f$ q^\pm @f$, we introduce the projections of the solution:
-\f{equation}{
-  u^\pm :=  (n\cdot n_F) u |_{\partial K}
-\f}
-or, more explicitly,
+First, in addition to the gradient projections @f$ q^\pm @f$, we introduce the projections of the solution
 \f{equation}{
   u^+ := - u |_{\text{left and bottom facet}}, \quad u^- := u |_{\text{right and top facet}}.
 \f}
@@ -407,7 +402,7 @@ The discretized weak formulation takes the following form
     \end{array}
   \right)
   =
-  M b
+  M \bar{f}
 \f}
 
 @image html two-d-1st-order-penalty-stencil.png width=35%
