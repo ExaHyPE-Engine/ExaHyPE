@@ -339,6 +339,8 @@ In this expression @f$ A_{c\leftarrow c}^{\text{global}} @f$, @f$ A_{c\leftarrow
 @f$ P_{f\leftarrow c}^{\text{global}} @f$ and @f$ M^{\text{global}} @f$  are the globally assembled versions of the cell-local matrices @f$ A_{c\leftarrow c} @f$, @f$ A_{c\leftarrow f} @f$,
 @f$ P_{f\leftarrow c} @f$ and @f$ M @f$ defined above. The matrix @f$ R_{f\leftarrow f}^{\text{global}} @f$ arises from the construction @f$ q^f = \mathcal{R}(q^-,q^+) @f$ on the facets.
 
+It should be stressed that the construction of the global matrix (or, in a matrix-free approach, the machinery for applying it to a given vector) is handled by Peano, so the matrix equation is written down in abstract form here for future reference and to highlight its general structure. The user only needs to specify the *local* building block as explained above.
+
 ## Interior penalty method for the Poisson equation
  
 In order to make the DG discretization of the Poisson equation well-defined, we need to modify the weak formulation by introducing two additional terms,
