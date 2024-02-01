@@ -319,20 +319,6 @@ protected:
   tarch::la::Vector<Dimensions, double> _debugX;
   tarch::la::Vector<Dimensions, double> _debugH;
 #endif
-
-#if PeanoDebug >= 1 and !defined(Parallel) and !defined(SharedMemoryParallelisation)
-  /**
-   * Counter to ensure no particles get lost
-   *
-   * We reset the particle counter in each clearParticleStateStatistics().
-   * Therefore, we can each (prior to the reset) if the total particle count
-   * is still the same. However, this works if and only if no parallelisation
-   * is switched on. As soon as the parallelisation kicks in, particles can be
-   * hosted redundantly and travel, so counting the number of local/real
-   * particles is not that trivial anymore.
-   */
-  static int _numberOfParticlesInLastClear;
-#endif
 };
 
 
