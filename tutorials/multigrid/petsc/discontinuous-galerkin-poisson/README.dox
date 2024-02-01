@@ -551,7 +551,7 @@ Now, let us review the components required to build the solver:
 ### Treatment of boundary faces and boundary conditions
 While on the interior faces we construct @f$ q^f=\mathcal{R}(q^-,q^+)@f$, @f$ u^f =\mathcal{R}(u^-,u^+)@f$ from pairs of values @f$ q^\pm @f$, @f$ u^\pm @f$ obtained from the two neighbouring cells, the boundary faces need to be treated differently. For this we set @f$ q^f = q^+ @f$, @f$ u^f = u^+ @f$ for the left and bottom facets and @f$ q^f = q^- @f$, @f$ u^f = u^- @f$ for the right and top facets.
 
-Since Peano stores pairs of variables @f$ u^\pm @f$ and @f$ p^\pm @f$ on *all* faces, this means that the linear system no longer contains the variables @f$ q^- @f$, @f$ u^- @f$ for the left and bottom facets and @f$ q^+ @f$, @f$ u^+ @f$ for the right and top facets. Since these variables do not have any physical meaning and are decoupled from the solution, they can be set to arbitrary values. To prevent the system matrix from becoming singular, we simply insert 1s into the relevant positions of the global matrix. This implies that if the corresponding entries of the right hand side vector are set to zero, the redundant variables will also be zero This treatment of boundary values is implemented
+Since Peano stores pairs of variables @f$ u^\pm @f$ and @f$ q^\pm @f$ on *all* faces, this means that the linear system no longer contains equations for the variables @f$ q^- @f$, @f$ u^- @f$ for the left and bottom facets and @f$ q^+ @f$, @f$ u^+ @f$ for the right and top facets. This is expressing the fact that these variables do not have any physical meaning and are decoupled from the solution. As a consequence, they can be set to arbitrary values. To prevent the system matrix from becoming singular, we simply insert 1s into the relevant positions of the global matrix. This implies that if the corresponding entries of the right hand side vector are set to zero, the redundant variables will also be zero. This treatment of boundary values is implemented
 in python/multigrid/petsc/actionsets/ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod.py
 
 To see understand the treatment of boundary conditions it is instructive to consider the general case where @f$ u|_{\partial \Omega} = g @f$ for some arbitrary function @f$ g @f$. As described in <a href="https://doi.org/10.1002/nla.1816">Bastian, Blatt, Scheichl: Num. Lin. Alg. with Appl., 19(2), pp.367-388 (2012)</a>, the boundary condition is enforced weakly by adding the following expression to the right hand of the weak formulation:
@@ -586,7 +586,7 @@ P_{f\leftarrow c}^{\text{global}} & 0 & -\text{Id} \\
 M^{\text{global}}\bar{f}^{\text{global}} \\ 0 \\ 0
 \end{pmatrix}
 \f}
-where construction of the *global* matrices are is handled by Peano. The matrix @f$ R_{f\leftarrow f}^{\text{global}} @f$ takes into account the correct treatment of boundary conditions as discussed above.
+where construction of the *global* matrices are is handled by Peano. The matrix @f$ R_{f\leftarrow f}^{\text{global}} @f$ takes into account the correct treatment of redundant variables on boundary faces as discussed above.
 
 ## The simplest Riemann solver: averaging
 
