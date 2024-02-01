@@ -316,6 +316,29 @@ The ingredients required for a DG solver are the following:
     side at the correct positions in space. 
   --> 
 
+### Global matrix representation
+Denoting the *global* dof-vectors vectors @f$ \bar{u}^{\text{global}} @f$, @f$ \bar{q}^{f,\text{global}} @f$ and @f$ \bar{q}^{\pm,\text{global}} @f$, the weak formulation is equivalent to the matrix equation
+
+\f{equation}{
+\begin{pmatrix}
+A_{c\leftarrow c}^{\text{global}} & A_{c\leftarrow f}^{\text{global}} & 0 \\
+P_{f\leftarrow c}^{\text{global}} & 0 & -\text{Id} \\
+0 & -\text{Id} & R_{f\leftarrow f}^{\text{global}}
+\end{pmatrix}
+\begin{pmatrix}
+\bar{u}^{\text{global}} \\
+\bar{q}^{f,\text{global}} \\
+\bar{q}^{\pm,\text{global}} \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+M^{\text{global}}\bar{f}^{\text{global}} \\ 0 \\ 0
+\end{pmatrix}
+\f}
+In this expression @f$ A_{c\leftarrow c}^{\text{global}} @f$, @f$ A_{c\leftarrow f}^{\text{global}} @f$,
+@f$ P_{f\leftarrow c}^{\text{global}} @f$ and @f$ M^{\text{global}} @f$  are the globally assembled versions of the cell-local matrices @f$ A_{c\leftarrow c} @f$, @f$ A_{c\leftarrow f} @f$,
+@f$ P_{f\leftarrow c} @f$ and @f$ M @f$ defined above. The matrix @f$ R_{f\leftarrow f}^{\text{global}} @f$ arises from the construction @f$ q^f = \mathcal{R}(q^-,q^+) @f$ on the facets.
+
 ## Interior penalty method for the Poisson equation
  
 In order to make the DG discretization of the Poisson equation well-defined, we need to modify the weak formulation by introducing two additional terms,
