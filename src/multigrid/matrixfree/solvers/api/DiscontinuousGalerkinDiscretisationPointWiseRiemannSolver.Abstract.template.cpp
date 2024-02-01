@@ -25,6 +25,9 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
 Pass in matrix of doubles and matrix of ints, as well as cell width.
 
 Each element inputMatrix[i,j] <- inputMatrix[i,j] * h^( scaleFactors[i,j] )
+
+Would do this in-place but we don't wanna modify the static copy
+of the matrix within the method more than once...
 */
 template<int Rows, int Cols>
 tarch::la::Matrix<Rows,Cols,double> scaleMatrix(

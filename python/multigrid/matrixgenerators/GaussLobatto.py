@@ -377,11 +377,6 @@ class GLMatrixFree(GaussLobatto):
     
     return A_CF_result
 
-    # return np.zeros((
-    #   self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
-    #   self._solutions_per_face_node* ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions
-    # ))
-
   def get_cell_to_face_matrix(self):
     """
     @Alex todo
@@ -478,11 +473,6 @@ class GLMatrixFree(GaussLobatto):
     #  [ 0.  0.  0.  0.]  -- redundant
     #  [ 0.  0.  0.  0.]  -- redundant
 
-    # return np.zeros((
-    #   2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions,
-    #   self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions 
-    # ))
-
   def get_boundary_matrix(self):
     '''
     @Alex shape of this should be 
@@ -505,7 +495,6 @@ class GLMatrixFree(GaussLobatto):
     @Alex todo!
     """
     return 2 * np.ones_like( self.get_cell_mass_matrix(), dtype=int )
-    # return np.zeros_like( self.get_cell_mass_matrix(), dtype=int )
 
   def get_cell_system_matrix_for_laplacian_scaling(self):
     """
@@ -521,18 +510,17 @@ class GLMatrixFree(GaussLobatto):
     result = np.zeros_like( self.get_cell_to_face_matrix(), dtype=int )
     # Only works for 2D 1st order
     # will depend on the order of redundant blocks, needs checking
+    assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
     result[ [4,5,12,13,16,17,24,25], : ] = -1 * np.array([1, 1, 1, 1], dtype=int )
-
     return result
 
   def get_face_to_cell_matrix_scaling(self):
     """
-    @Alex todo!
     """
 
     result = np.zeros_like( self.get_face_to_cell_matrix(), dtype=int )
     # Only works for 2D 1st order
+    assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
     for i in range(0, result.shape[1], 2):
       result[:, i:(i+2)] = np.array([1, 1, 1, 1], dtype=int )
-    
     return result
