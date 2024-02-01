@@ -126,7 +126,7 @@ if (
 """
 
         touch_vertex_first_time_compute_kernel = """
-  for (auto* p: localParticles) {
+  for (auto* p: assignedParticles) {
     p->setMoveState(globaldata::{{PARTICLE}}::MoveState::NotMovedYet);
   }
 """
