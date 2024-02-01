@@ -338,8 +338,8 @@ class GLMatrixFree(GaussLobatto):
   def get_A_tilde(self):
     return self.get_cell_identity_matrix()
 
-  def get_A_tilde_scaling(self):
-    return np.zeros_like( self.get_A_tilde(), dtype=int )
+  # def get_A_tilde_scaling(self):
+  #   return np.zeros_like( self.get_A_tilde(), dtype=int )
 
   def get_face_to_cell_matrix(self):
     '''
@@ -375,7 +375,8 @@ class GLMatrixFree(GaussLobatto):
 
     A_CF_result = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
     
-    return A_CF_result
+    # return A_CF_result
+    raise NotImplementedError # @Alex todo! see return pattern below
 
   def get_cell_to_face_matrix(self):
     """
@@ -501,37 +502,37 @@ class GLMatrixFree(GaussLobatto):
      ), dtype=int )
     
 
-  def get_cell_mass_matrix_scaling(self):
-    """
-    @Alex todo!
-    """
-    return 2 * np.ones_like( self.get_cell_mass_matrix(), dtype=int )
+  # def get_cell_mass_matrix_scaling(self):
+  #   """
+  #   @Alex todo!
+  #   """
+  #   return 2 * np.ones_like( self.get_cell_mass_matrix(), dtype=int )
 
-  def get_cell_system_matrix_for_laplacian_scaling(self):
-    """
-    @Alex todo!
-    """
-    return np.zeros_like( self.get_cell_system_matrix_for_laplacian(), dtype=int ) # yes, should be zero
+  # def get_cell_system_matrix_for_laplacian_scaling(self):
+  #   """
+  #   @Alex todo!
+  #   """
+  #   return np.zeros_like( self.get_cell_system_matrix_for_laplacian(), dtype=int ) # yes, should be zero
 
-  def get_cell_to_face_matrix_scaling(self):
-    """
-    @Alex todo!
-    """
+  # def get_cell_to_face_matrix_scaling(self):
+  #   """
+  #   @Alex todo!
+  #   """
 
-    result = np.zeros_like( self.get_cell_to_face_matrix(), dtype=int )
-    # Only works for 2D 1st order
-    # will depend on the order of redundant blocks, needs checking
-    assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
-    result[ [4,5,12,13,16,17,24,25], : ] = -1 * np.array([1, 1, 1, 1], dtype=int )
-    return result
+  #   result = np.zeros_like( self.get_cell_to_face_matrix(), dtype=int )
+  #   # Only works for 2D 1st order
+  #   # will depend on the order of redundant blocks, needs checking
+  #   assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
+  #   result[ [4,5,12,13,16,17,24,25], : ] = -1 * np.array([1, 1, 1, 1], dtype=int )
+  #   return result
 
-  def get_face_to_cell_matrix_scaling(self):
-    """
-    """
+  # def get_face_to_cell_matrix_scaling(self):
+  #   """
+  #   """
 
-    result = np.zeros_like( self.get_face_to_cell_matrix(), dtype=int )
-    # Only works for 2D 1st order
-    assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
-    for i in range(0, result.shape[1], 2):
-      result[:, i:(i+2)] = np.array([1, 1, 1, 1], dtype=int )
-    return result
+  #   result = np.zeros_like( self.get_face_to_cell_matrix(), dtype=int )
+  #   # Only works for 2D 1st order
+  #   assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
+  #   for i in range(0, result.shape[1], 2):
+  #     result[:, i:(i+2)] = np.array([1, 1, 1, 1], dtype=int )
+  #   return result
