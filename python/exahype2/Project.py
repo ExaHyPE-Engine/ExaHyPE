@@ -347,6 +347,11 @@ thus appreciate any citation of the original release paper
 
     def set_output_path(self, path):
         self._output_path = path
+        if not os.path.exists(self._output_path):
+            try:
+                os.makedirs(self._output_path)
+            except:
+                print("Couldn't create the defined output path, please ensure that this path exists")
         if not self._output_path.endswith("/"):
             self._output_path += "/"
             
