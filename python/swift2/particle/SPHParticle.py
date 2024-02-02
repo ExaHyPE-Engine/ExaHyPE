@@ -311,6 +311,10 @@ class SPHParticle(Particle):
         instantiation of this class, and reads in all available algorithm steps
         defined in AlgorithmStepLibrary.py.
 
+        @todo Mladen, I think a discuss of leapfrog does not belong into 
+              SPHParticle. I'm also not sure if this function should throw
+              a NotImplemented assertion? Same for _setup_initialisation_steps
+              
         Leapfrog consists basically of four steps per particle. We first
         determine the force. Then we update the velocity by half a timestep and move
         the particle by a full timestep. Then the force is re-computed and the

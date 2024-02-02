@@ -127,6 +127,8 @@ class ExplicitEulerFixedSearchRadius(Particle):
             touch_particles_of_set_last_time_kernel
         )
 
+        self.__setup_algorithm_steps()
+        self.__setup_initialisation_steps()
         pass
 
     def __setup_algorithm_steps(self):
@@ -210,7 +212,6 @@ class ExplicitEulerFixedSearchRadius(Particle):
         So we
 
         """
-        self.__setup_algorithm_steps()
         return [
             self._algorithm_steps["ForceCalculation"],
             self._algorithm_steps["UpdatePositionAndVelocity"],
@@ -224,7 +225,6 @@ class ExplicitEulerFixedSearchRadius(Particle):
         the initial stats right before we jump into the time stepping.
 
         """
-        self.__setup_algorithm_steps()
         return [
             self._algorithm_steps["ReduceVelocityAndDetermineTimeStepSize"],
         ]

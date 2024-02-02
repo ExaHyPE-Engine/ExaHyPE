@@ -75,6 +75,8 @@ class LeapfrogFixedSearchRadius(Particle):
             touch_particles_of_set_last_time_kernel
         )
 
+        self.__setup_algorithm_steps()
+        self.__setup_algorithm_steps()
         pass
 
     def __setup_algorithm_steps(self):
@@ -168,7 +170,6 @@ class LeapfrogFixedSearchRadius(Particle):
         Some variations of this KDK form re-arrange the steps executed per timestep
         to avoid a second force loop.
         """
-        self.__setup_algorithm_steps()
         return [
             self._algorithm_steps["ForceCalculation"],
             self._algorithm_steps["Kick"],
@@ -185,7 +186,6 @@ class LeapfrogFixedSearchRadius(Particle):
         the initial stats right before we jump into the time stepping.
 
         """
-        self.__setup_algorithm_steps()
         return [
             self._algorithm_steps["ReduceVelocityAndDetermineTimeStepSize"],
         ]

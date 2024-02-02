@@ -58,9 +58,14 @@ it in place through the Python script, or leave it to the user to type
 in make.
 
 
-# Configure the particle
+# Particle implementation
 
-A particle in Swift is defined by its numerics. In this simple example,
+## Instantiate particle (and select species)
+
+A particle in Swift is defined by its type which implicitly select
+its numerics. 
+Once instantiated, we say the particle has a ***species***.
+In this simple example,
 we don't really have an interaction radius, so we can take the simplest
 particle with a fixed interaction radius.
 
@@ -157,6 +162,8 @@ one that runs through the particle pairs.
 
 @snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Plot
 
+
+
 # A better code structure
 
 The code above is fully functional. One however might argue that the mixture of
@@ -168,6 +175,48 @@ have a Peano project in Python, we can add further C++ files to its make file.
 That is, we can implement the Physics independently and then add these files to 
 the project manually. This way, we work with Python in the Python scripts and 
 with C++ only in proper C++ classes.
+
+
+
+
+# In-situ analysis features to implement automatic testing/constraints
+
+In-situ analysis of simulations is very important for many sophisticated 
+experiments.
+Swift 2 offers various ways to realise such on-the-fly data analysis.
+We do not really use such an analysis here, but we use the in-situ plug-in
+points to phrase our one fundamental constraint in this example: 
+The particle should not disappear!
+So we basically assess that the orbit is stable (and that there are no bugs).
+
+
+The elegant way to realise in-situ checks is to plug into one of the action
+sets. 
+This is easy once we model the particular particle of interest with our 
+own class.
+In this case, we follow the following steps:
+
+1. Create a subclass.
+2. Overwrite algorithm_steps(), making it call the base class implementation.
+3. Take the last step of algorithm_step() - or another fitting one - and 
+   add code snippets to its attribute unprepare_traversal_kernel.
+
+
+We don't work with a subclass here, but we can still realise this paradigm
+by plugging into a private variable (so to some degree by bypassing the 
+visibility conventions):  
+
+
+@snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Validation
+
+The particles are associated to vertices, and the sets of particles (tied to
+vertices) are organised through instances of toolbox.particles.ParticleSet
+and subclasses thereof.
+This class allows us to query how many local particles we have.
+As we plug into the wrap-up phase of the global reduction, we know that this
+quantity is valid at this point.
+If we worked with MPI, we should guard this check such that it is only 
+performed on the global master.
 
 
  */

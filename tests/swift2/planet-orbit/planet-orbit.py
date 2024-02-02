@@ -106,7 +106,7 @@ project = swift2.Project(
     project_name="planetorbit",
     executable="orbit-" + str(args.cell_size),
 )
-#! [tutorials swift2 planet-orbit create project]
+#! [tutorials swift2 planet-orbit Create project]
 
 
 """
@@ -405,21 +405,21 @@ initialisation_snippet = (
   /* Overall minus sign for plotting */
   particle->setEnergyTot( -( E_kin + E_pot ) );
 
-  logInfo( "Init()", " =====================================" );
+  logInfo( "Init()", "=====================================" );
   logInfo( "Init()", "Initial energy:");
   logInfo( "Init()", "Kinetic energy  :" << E_kin);
   logInfo( "Init()", "Potential energy:" << E_pot);
   logInfo( "Init()", "Total energy    :" << E_kin + E_pot);
   logInfo( "Init()", "Search Radius   :" << particle->getSearchRadius() );
   logInfo( "Init()", "Initial velocity:" << particle->getV() );
-  logInfo( "Init()", " =====================================" );
+  logInfo( "Init()", "=====================================" );
 
 
 """
 )
 
 #
-# I either insert sun and earth or only the earth
+# Insert Earth into system
 #
 project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesByCoordinates(
@@ -467,6 +467,16 @@ particle_plotter.add_attribute_to_plot(energy_pot_attr, 1)
 particle_plotter.add_attribute_to_plot(energy_tot_attr, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 #! [tutorials swift2 planet-orbit Plot]
+
+
+
+
+#! [tutorials swift2 planet-orbit Validation]
+particle._algorithm_steps["ReduceGlobalQuantities"].unprepare_traversal_kernel += f"""
+assertionEquals( vertexdata::{particle.name}Set::getNumberOfRemainingLocalParticles(), 1 );
+"""
+#! [tutorials swift2 planet-orbit Validation]
+
 
 
 ###############################################################################
