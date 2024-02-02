@@ -1022,6 +1022,27 @@ fi
 
 
 #
+# OPENBLAS
+#
+if test "$use_openblas" != false; then
+  # Find the lapack header
+  AC_CHECK_HEADER([cblas.h], [
+  ], [
+    AC_MSG_ERROR([OpenBLAS headers not found])
+  ])
+  # Check for libraries
+  AC_CHECK_LIB([openblas], [cblas_daxpby], [
+    OPENBLAS_LIBS="ac_cv_search_cblas_daxpby"
+  ], [
+    AC_MSG_ERROR([OpenBLAS library not found. Did you forget to include -lopenblas to LDFLAGS?])
+  ])
+  AC_SUBST([OPENBLAS_LIBS])
+  OPENBLAS_INCLUDE_DIR=$(dirname $OPENBLAS_LIBS)
+  AC_SUBST([OPENBLAS_INCLUDE_DIR])
+fi
+
+
+#
 # LIBXSMM
 #
 if test "$use_libxsmm" != false; then
@@ -1155,11 +1176,13 @@ if test "$use_lapack" != false; then
   ], [
     AC_MSG_ERROR([LAPACK headers not found])
   ])
-  # Check for libraries
-  AC_CHECK_LIB([lapack], [LAPACKE_dgetrf], [
+  # Check for libraries. The lapack libraries are 
+  # libopenblas, but if this doesn't work, try 
+  # configuring with -llapack
+  AC_CHECK_LIB([openblas], [LAPACKE_dgetrf], [
     LAPACK_LIBS="ac_cv_search_LAPACKE_dgetrf"
   ], [
-    AC_MSG_ERROR([LAPACK library not found. Did you forget to include -lopenblas to LDFLAGS?])
+    AC_MSG_ERROR([LAPACK library not found.])
   ])
   AC_SUBST([LAPACK_LIBS])
   LAPACK_INCLUDE_DIR=$(dirname $LAPACK_LIBS)
