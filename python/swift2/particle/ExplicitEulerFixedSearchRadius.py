@@ -118,17 +118,18 @@ class ExplicitEulerFixedSearchRadius(Particle):
 
         self.cfl_factor = cfl_factor
         self.initial_time_step_size = initial_time_step_size
-
-        self.enter_cell_kernel = enter_cell_kernel
-        self.touch_particles_of_set_first_time_kernel = (
-            touch_particles_of_set_first_time_kernel
-        )
-        self.touch_particles_of_set_last_time_kernel = (
-            touch_particles_of_set_last_time_kernel
-        )
-
+        
         self.__setup_algorithm_steps()
-        self.__setup_initialisation_steps()
+
+
+        #self.enter_cell_kernel = enter_cell_kernel
+        #self.touch_particles_of_set_first_time_kernel = (
+        #    touch_particles_of_set_first_time_kernel
+        #)
+        #self.touch_particles_of_set_last_time_kernel = (
+        #    touch_particles_of_set_last_time_kernel
+        # )
+
         pass
 
     def __setup_algorithm_steps(self):
@@ -142,7 +143,7 @@ class ExplicitEulerFixedSearchRadius(Particle):
         PARTICLE = self.name
         CFL_FACTOR = self.cfl_factor
         TIME_STEP_SIZE = self.initial_time_step_size
-
+        
         self._algorithm_steps = {
             "ForceCalculation": AlgorithmStep(
                 name="ForceCalculation",

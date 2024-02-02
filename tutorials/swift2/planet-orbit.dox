@@ -190,26 +190,25 @@ The particle should not disappear!
 So we basically assess that the orbit is stable (and that there are no bugs).
 
 
-The elegant way to realise in-situ checks is to plug into one of the action
-sets. 
-This is easy once we model the particular particle of interest with our 
-own class.
-In this case, we follow the following steps:
-
-1. Create a subclass.
-2. Overwrite algorithm_steps(), making it call the base class implementation.
-3. Take the last step of algorithm_step() - or another fitting one - and 
-   add code snippets to its attribute unprepare_traversal_kernel.
-
-
-We don't work with a subclass here, but we can still realise this paradigm
-by plugging into a private variable (so to some degree by bypassing the 
-visibility conventions):  
+The elegant way to realise in-situ checks is to plug into one of the particle
+steps. 
+In the example below, we take the particle's final reduction step and check, 
+once this one is completed, if our global constraints are still fulfilled:
 
 
 @snippet{lineno} tests/swift2/planet-orbit/planet-orbit.py tutorials swift2 planet-orbit Validation
 
-The particles are associated to vertices, and the sets of particles (tied to
+
+Following the discussion above, it would be more elegant to derive from the
+baseline class and then to add these steps.
+We don't work with a subclass here, and therefore realise our validation
+by plugging into a private variable.
+To some degree, we bypass Python's visibility conventions.
+The nice property of this hacky realisation is that it works for different
+solver types, as long as they name their algorithmic steps the same.
+
+
+Particles are associated to vertices, and the sets of particles (tied to
 vertices) are organised through instances of toolbox.particles.ParticleSet
 and subclasses thereof.
 This class allows us to query how many local particles we have.
@@ -217,6 +216,16 @@ As we plug into the wrap-up phase of the global reduction, we know that this
 quantity is valid at this point.
 If we worked with MPI, we should guard this check such that it is only 
 performed on the global master.
+
+
+Technically, we realise the validation with a non-critical assertion. 
+This is @ref tarch_logging "a special type of an assertion": 
+If violated, it does ***not*** stop the simulation immediately.
+Instead, it allows the code to finish the current time step,
+then asks it to dump the result, and eventually quits the code.
+For many logical errors, this is better, as we get a snapshot of the last 
+system state.
+ 
 
 
  */

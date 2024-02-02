@@ -335,16 +335,6 @@ particle.enter_cell_kernel = particle_force
 #! [tutorials swift2 planet-orbit Particle force]
 
 
-#global_invariants = """
-#assertion1( 
-#  toolbox::particles::ParticleSet< globaldata::Planet >::getNumberOfRemainingLocalParticles()==1,
-#  toolbox::particles::ParticleSet< globaldata::Planet >::getNumberOfRemainingLocalParticles()
-#);
-#"""
-#particle.touch_particles_of_set_first_time_kernel += global_invariants
-#particle.touch_particles_of_set_last_time_kernel  += global_invariants
-
-
 
 
 #! [tutorials swift2 planet-orbit Initial conditions]
@@ -473,7 +463,7 @@ project.algorithm_step_plot.add_action_set(particle_plotter)
 
 #! [tutorials swift2 planet-orbit Validation]
 particle._algorithm_steps["ReduceGlobalQuantities"].unprepare_traversal_kernel += f"""
-assertionEquals( vertexdata::{particle.name}Set::getNumberOfRemainingLocalParticles(), 1 );
+nonCriticalAssertion( vertexdata::{particle.name}Set::getNumberOfRemainingLocalParticles() == 1 );
 """
 #! [tutorials swift2 planet-orbit Validation]
 

@@ -67,19 +67,23 @@ class LeapfrogFixedSearchRadius(Particle):
         self.data.add_attribute(self.velocity)
         self.data.add_attribute(self.accelerator)
 
-        self.enter_cell_kernel = enter_cell_kernel
-        self.touch_particles_of_set_first_time_kernel = (
-            touch_particles_of_set_first_time_kernel
-        )
-        self.touch_particles_of_set_last_time_kernel = (
-            touch_particles_of_set_last_time_kernel
-        )
-
-        self.__setup_algorithm_steps()
         self.__setup_algorithm_steps()
         pass
+    
+    @property 
+    def touch_particles_of_set_first_time_kernel(self, value):
+      return self._algorithm_steps[ "ForceCalculation" ].touch_vertex_first_time_kernel
 
-    def __setup_algorithm_steps(self):
+    @touch_particles_of_set_first_time_kernel.setter
+    def touch_particles_of_set_first_time_kernel(self, value):
+      #  assert self.enter_cell_kernel!="" and self.enter_cell_kernel!=None
+      self._algorithm_steps[ "ForceCalculation" ].touch_vertex_first_time_kernel = value
+    
+    def __setup_algorithm_steps(self,
+                                touch_particles_of_set_first_time_kernel,
+                                enter_cell_kernel,
+                                touch_particles_of_set_last_time_kernel
+                                ):
         """!
 
         Create a repository of algorithmic steps which are then
