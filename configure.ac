@@ -1182,7 +1182,7 @@ if test "$use_lapack" != false; then
   AC_CHECK_LIB([lapack], [LAPACKE_dgetrf], [
     LAPACK_LIBS="ac_cv_search_LAPACKE_dgetrf"
   ], [
-    AC_MSG_ERROR([LAPACK library not found])
+    AC_MSG_ERROR([LAPACK library not found. Did you forget to include -lopenblas to LDFLAGS?])
   ])
   AC_SUBST([LAPACK_LIBS])
   LAPACK_INCLUDE_DIR=$(dirname $LAPACK_LIBS)
