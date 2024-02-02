@@ -201,11 +201,9 @@ once this one is completed, if our global constraints are still fulfilled:
 
 Following the discussion above, it would be more elegant to derive from the
 baseline class and then to add these steps.
-We don't work with a subclass here, and therefore realise our validation
-by plugging into a private variable.
-To some degree, we bypass Python's visibility conventions.
-The nice property of this hacky realisation is that it works for different
-solver types, as long as they name their algorithmic steps the same.
+We don't work with a subclass here.
+"Fortunately", the Euler and leap frog solver here both provide a routine 
+(property setter) to append additional source code to the final reduction.
 
 
 Particles are associated to vertices, and the sets of particles (tied to
