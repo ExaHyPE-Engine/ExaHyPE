@@ -40,9 +40,19 @@ bool swift2::TaskNumber::operator<(const TaskNumber& rhs) const {
 }
 
 
-bool swift2::TaskNumber::operator==(const TaskNumber& rhs) const {
+bool swift2::TaskNumber::equals(const TaskNumber& rhs) const {
   return _taskCounter == rhs._taskCounter and _taskAssociation == rhs._taskAssociation
          and _taskSpecies == rhs._taskSpecies;
+}
+
+
+bool operator==(const swift2::TaskNumber& lhs, const swift2::TaskNumber& rhs) {
+  return lhs.equals(rhs);
+}
+
+
+bool operator!=(const swift2::TaskNumber& lhs, const swift2::TaskNumber& rhs) {
+  return not lhs.equals(rhs);
 }
 
 
