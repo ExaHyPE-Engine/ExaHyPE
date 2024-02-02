@@ -331,10 +331,8 @@ particle_force = """
 );
 """
 
-particle.enter_cell_kernel = particle_force
+particle.cell_kernel = particle_force
 #! [tutorials swift2 planet-orbit Particle force]
-
-
 
 
 #! [tutorials swift2 planet-orbit Initial conditions]
@@ -451,7 +449,6 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
     "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
 )
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
-# particle_plotter.add_attribute_to_plot(a_attr       , Dimensions)
 particle_plotter.add_attribute_to_plot(energy_kin_attr, 1)
 particle_plotter.add_attribute_to_plot(energy_pot_attr, 1)
 particle_plotter.add_attribute_to_plot(energy_tot_attr, 1)
@@ -462,9 +459,9 @@ project.algorithm_step_plot.add_action_set(particle_plotter)
 
 
 #! [tutorials swift2 planet-orbit Validation]
-particle._algorithm_steps["ReduceGlobalQuantities"].unprepare_traversal_kernel += f"""
+particle.add_to_reduction( f"""
 nonCriticalAssertion( vertexdata::{particle.name}Set::getNumberOfRemainingLocalParticles() == 1 );
-"""
+""")
 #! [tutorials swift2 planet-orbit Validation]
 
 
