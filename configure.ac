@@ -1091,29 +1091,6 @@ if test "$use_libxsmmJIT" != false; then
     cd ../..
   fi
   echo "Finished building LIBXSMM JIT"
-
-  echo "Checking whether OpenBLAS needs to be installed or built"
-  if @<:@ ! -d submodules @:>@; then
-    mkdir submodules
-    echo "Created OpenBLAS directory in submodules"
-  fi
-  if @<:@ ! -e submodules/OpenBLAS/.git @:>@; then
-    echo "Initializing OpenBLAS in submodules/OpenBLAS, this may take a long while."
-    cd submodules
-    git clone https://github.com/xianyi/OpenBLAS.git
-    cd OpenBLAS
-    cd ../..
-  fi
-
-  # Build OpenBLAS
-    REBUILD_OpenBLAS=true
-  if @<:@ "$REBUILD_OpenBLAS" = true @:>@; then
-    echo "Building OpenBLAS"
-    cd submodules/OpenBLAS
-    make --silent
-    cd ../..
-  fi
-  echo "Finished building OpenBLAS"
 fi
 
 
