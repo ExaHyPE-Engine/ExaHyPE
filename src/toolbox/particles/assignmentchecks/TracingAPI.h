@@ -132,7 +132,29 @@ namespace toolbox {
           std::string                           particleName;
           tarch::la::Vector<Dimensions, double> particleX;
 
-          bool operator==(const ParticleIdentifier& rhs) const;
+          /**
+           * Equals predicate
+           *
+           * I originally declared this function as
+           *
+           * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           * bool operator==(const ParticleIdentifier& rhs) const;
+           * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           *
+           * Some variants of C++ however require an external operator (not
+           * embedded into class or namespace) to compare two objects. We have
+           * seen issues with Intel 2023, e.g., while 2024 was absolutely fine.
+           * It might also be due to a lack of C++2x flags. Anyway, I decided
+           * to define an equals operation and to define the operator== and
+           * operator!= using this function.
+           *
+           * To some degree, this is actually the cleaner solution, as it
+           * highlights the difference to the < operator. This equality
+           * routine and the comparison operator are not compatible, as the
+           * present routine is purely floating point error-aware, while the
+           * comparison operator uses bit-wise inequality.
+           */
+          bool numericalEquals( const ParticleIdentifier& rhs ) const;
           bool operator<(const ParticleIdentifier& rhs) const;
 
           std::string toString() const;
@@ -586,4 +608,14 @@ namespace toolbox {
 } // namespace toolbox
 
 
+/**
+ * Comparison operator
+ *
+ * Some older variants of C++ require an external operator (not embedded
+ * into class or namespace) to compare two objects. We have seen issues
+ * with Intel 2023, e.g., while 2024 was absolutely fine. Delegates to
+ * member function.
+ */
+bool operator==(const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs, const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs );
+bool operator!=(const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs, const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs );
 
