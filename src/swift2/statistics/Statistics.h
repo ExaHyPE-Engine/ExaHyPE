@@ -26,6 +26,14 @@ namespace swift2 {
         reduceVelocityAndSearchRadius_without_check(&localParticle);
       }
     }
+
+    /**
+     * @todo This version is not yet available and likely will never vectorise anyway
+     */
+    template <typename Particle>
+    void reduceVelocityAndSearchRadiusWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+      reduceVelocityAndSearchRadius(marker, localParticle);
+    }
   } // namespace statistics
 } // namespace swift2
 

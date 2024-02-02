@@ -8,7 +8,7 @@ void swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize(
 ) {
   double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
 
-  if ( ::swift2::kernels::localParticleCanBeMoved(marker, particle) ) {
+  if ( ::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel(marker, particle) ) {
     particle.setX( particle.getX() + timeStepSize * particle.getV() );
     assertion1(tarch::la::isEntryFinite(particle.getX()), particle.toString());
     particle.setMoveState(Particle::MoveState::Moved);

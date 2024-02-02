@@ -30,6 +30,22 @@ namespace swift2 {
         reset_moved_particle_marker(particle);
       }
     }
+
+    /**
+     * Reset moved marker
+     *
+     * This is an alternative to resetMovedParticleMarker. We do not check
+     * any predicate at all.
+     *
+     * @todo Mladen I think we can skip the if here, but I'm not sure.
+     */
+    template <typename Particle>
+    void resetMovedParticleMarkerWithMasking(
+      const peano4::datamanagement::VertexMarker&  marker,
+      Particle&                                    particle
+    ) {
+      reset_moved_particle_marker(particle);
+    }
   }
 }
 

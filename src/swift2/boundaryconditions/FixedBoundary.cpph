@@ -1,0 +1,40 @@
+#include "toolbox/particles/assignmentchecks/TracingAPI.h"
+
+
+template <typename Particle>
+void swift2::boundaryconditions::applyFixedBoundaryCondition(
+  Particle&                                     particle,
+  const peano4::datamanagement::VertexMarker&   marker,
+  const tarch::la::Vector<Dimensions, double>&  domainOffset,
+  const tarch::la::Vector<Dimensions, double>&  domainSize,
+  double                                        relativeDomainHalo,
+  int                                           treeId
+) {
+  const double maxDt          = particle.getSpecies().getMaxTimeStepSize();
+  const double maxV           = particle.getSpecies().getMaxVelocity();
+
+  const tarch::la::Vector<Dimensions, double> oldX = particle.getX();
+  auto [newX, newV] = getUpdateDueToFixedBoundaryCondition(
+    particle.getX(),
+    particle.getV(),
+    maxV,
+    maxDt,
+    tarch::la::min( marker.h() ),
+    domainOffset,
+    domainSize,
+    relativeDomainHalo
+  );
+
+  if ( not tarch::la::equals(particle.getX(),newX) ) {
+    toolbox::particles::assignmentchecks::moveParticle(
+      toolbox::particles::assignmentchecks::pruneTypeName<Particle>(),
+      particle.getX(),
+      newX,
+      treeId,
+      "swift2::boundaryconditions::applyFixedBoundaryCondition()"
+    );
+  }
+
+  particle.setX( newX );
+  particle.setV( newV );
+}

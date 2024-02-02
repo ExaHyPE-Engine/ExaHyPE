@@ -40,7 +40,10 @@ class Step:
       This name is used to create the underlying action set later on
     """
 
-    def __init__(self, name, add_user_defined_actions=True):
+    def __init__(self, 
+                 name, 
+                 add_user_defined_actions=True, 
+                 ):
         """
         By default, the step generates at least one action set for the user.
         However, you can disable this behaviour by passing False to

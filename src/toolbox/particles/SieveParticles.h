@@ -6,7 +6,10 @@
 #include <list>
 #include <map>
 
+#include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+
+#include "peano4/datamanagement/VertexMarker.h"
 
 
 namespace toolbox {
@@ -126,9 +129,8 @@ public:
    * particleList, as it returns the particles that are to be sieved and
    * removes them from the current set.
    *
-   * All the particles in the result set have the "correct" parallel state,
-   * i.e. are correctly set to either Virtual or Local. For this, the sieve
-   * analyses the marker handed in.
+   * In line with peano4.toolbox.particles.Particle, we do not alter the
+   * parallel state. That's the job of peano4.toolbox.particles.api.UpdateParticle.
    *
    * All the particles in the result set are assigned the correct mesh
    * size h of the corresponding mesh into which we sieve it.

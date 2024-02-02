@@ -9,6 +9,7 @@ import exahype2
 
 from exahype2.solvers.LagrangeBasisWithDiagonalMassMatrix import GaussLegendreBasis
 
+
 class SolverVariant(Enum):
     WithVirtualFunctions = 0
     Stateless = 1
@@ -26,8 +27,8 @@ def create_abstract_solver_declarations(
     Template = jinja2.Template(
         """
   public:
-    {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
-    #error eigenvalue implementation cannot be none
+    {% if EIGENVALUES_IMPLEMENTATION=="<none>" or EIGENVALUES_IMPLEMENTATION=="<empty>" %}
+    #error Eigenvalue implementation cannot be none or empty
     {% endif %}
 
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}

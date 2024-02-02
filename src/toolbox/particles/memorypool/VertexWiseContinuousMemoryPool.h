@@ -99,6 +99,17 @@ struct toolbox::particles::memorypool::VertexWiseContinuousMemoryPool {
      * used by shallow clears().
      */
     void clearAndReset();
+
+    /**
+     * Recommend complete scatter
+     *
+     * A memory pool can recommend a complete scatter. The memory pool should do
+     * this if the memory is managed becomes too scattered, or any pre-allocated
+     * memory region is too small. We always return false in the present
+     * implementation.
+     */
+    static bool requestCompleteScatter();
+
   private:
     static tarch::logging::Log  _log;
 

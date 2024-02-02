@@ -198,11 +198,11 @@ are hence correct.
 Once we have assigned particles a new position (or a new search radius), we
 have to re-sort them. This is required to preserve the
 @ref page_toolbox_particles_mesh_consistency "particle-mesh consistency".
-It is important to keep in mind that particle sorting requires two mesh sweeps.
+It is important to keep in mind that particle sorting requires at least two mesh sweeps.
 That is, once you change a particle position, the new valid particle-vertex
 association might not be in place in the next mesh sweep. Therefore, the
 active and local sets might be corrupted in the next sweep. They will be
-fine two sweeps later. This fact requires some further attention:
+fine once all drops have finished. This fact requires some further attention:
 
 
 If a particle has changed its position or search radius in mesh sweep n, it
@@ -214,11 +214,9 @@ where they have to lift particles to the next coarser level. In the iteration
 n+1, a particle hence might reside on a coarser level and will be dropped.
 However, if we plug into touchCellFirstTime(), these drops have not yet
 happened. That is, the particle currently resides on the wrong level and
-consequently messes up our active and passive particle sets. It is the job
-of the user to use proper action sets which can deal with changing particles,
-but we still may not update these particles until they end up on the right
-level.
+consequently messes up our active and passive particle sets. 
 
+There are work-arounds. For example, you can check via 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 if (
@@ -237,9 +235,12 @@ if (
 ensure somewhere later that marker is set
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-solve the issue, as they mask out particles which will be dropped later and
-then eventually end up in the local set of a finer cell. The illustration
-below shows what would happen without the third if statement:
+that you don't double-count particles. However, at the end of the day it is
+all a mess. If you need particle-particle interactions after a move, insert
+some "empty" mesh traversals to get the sorting right.
+
+
+Here is an illustration what can go wrong:
 
 @image html Particle-drop.png
 

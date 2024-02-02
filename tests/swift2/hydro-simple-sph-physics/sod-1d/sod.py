@@ -123,7 +123,7 @@ project = swift2.Project(
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
 
-name = "hydroPart"
+name = "HydroPart"
 
 dimensions = 2  # peano needs this for whatever reason...
 hydro_dimensions = 1  # dimensions for the hydro
@@ -139,6 +139,29 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     min_h=args.cell_size,
     max_h=args.cell_size,
 )
+
+particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += """
+if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
+  ::swift2::kernels::forAllParticles( 
+    marker, 
+    assignedParticles, 
+    [&](const peano4::datamanagement::VertexMarker& marker, globaldata::""" + name + """&  assignedParticle)->void {
+      ::swift2::boundaryconditions::applyFixedBoundaryCondition(
+        assignedParticle,
+        marker,
+        DomainOffset,
+        DomainSize,
+        0.1,
+        _spacetreeId
+      );
+    }
+  );
+}
+"""
+particle.algorithm_steps_dict["Drift"].includes += """
+#include "swift2/boundaryconditions/FixedBoundary.h"
+#include "swift2/boundaryconditions/Utils.h"
+"""
 
 
 ########################################################################################
@@ -243,10 +266,10 @@ project.algorithm_step_initial_conditions.add_action_set(
 )
 
 
-project.additional_action_sets_per_solver_step.append(
-    swift2.boundaryconditions.Fixed(particle_set=particle_set)
-)
-
+#project.additional_action_sets_per_solver_step.append(
+#    swift2.api.boundaryconditions.Fixed(particle_set=particle_set,
+#                                        damp_particles_as_they_approach_boundary=True)
+#)
 
 ###############################################################################
 # Set up the plotter

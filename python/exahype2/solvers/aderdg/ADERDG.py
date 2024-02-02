@@ -1,5 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
+
+import dastgen2
 import peano4.toolbox.blockstructured
 import peano4.datamodel
 import peano4.output
@@ -17,17 +19,6 @@ from abc import abstractmethod
 
 from enum import IntEnum
 import jinja2
-from exahype2.solvers.aderdg.actionsets.Prediction_generic import Prediction_generic
-from exahype2.solvers.aderdg.actionsets.Prediction_kernelgenerator import (
-    Prediction_kernelgenerator
-)
-from exahype2.solvers.aderdg.actionsets.PredictionOnHangingCell_kernelgenerator import (
-    PredictionOnHangingCell_kernelgenerator
-)
-from exahype2.solvers.aderdg.actionsets.Correction_generic import Correction_generic
-from exahype2.solvers.aderdg.actionsets.Correction_kernelgenerator import (
-    Correction_kernelgenerator
-)
 
 """
 used to have a central way for all of this class' descendants to differentiate between gauss-legendre
@@ -50,16 +41,21 @@ PrecisionType = {
     "SP": "float",
     "float": "float",
     "single": "float",
+    "fp32": "float",
     "DP": "double",
     "double": "double",
+    "fp64": "double",
     "quadruple": "long double",
     "long double": "long double",
+    "fp128": "long double",
     "half_c++23": "std::float16_t",
     "float16_t": "std::float16_t",
     "std::float16_t": "std::float16_t",
+    "fp16": "std::float16_t",
     "bfloat": "std::bfloat16_t",
     "bfloat16_t": "std::bfloat16_t",
-    "std::bfloat16_t": "std::bfloat16_t"
+    "std::bfloat16_t": "std::bfloat16_t",
+    "bf16": "std::bfloat16_t"
 }
 
 
@@ -166,14 +162,38 @@ class ADERDG(object):
         self._predictor_recompute = False
         self._initialize_patches = False
 
-        self._predictor_computation_precisions = [PrecisionType["double"]]
-        self._corrector_computation_precision = PrecisionType["double"]
+        self._predictor_computation_precisions      = [PrecisionType["double"]]
+        self._corrector_computation_precision       = PrecisionType["double"]
         self._solution_persistent_storage_precision = PrecisionType["double"]
-        self._use_half_precision = False
+        self._precompute_picard_precision = False
+        self._use_half_precision          = False
 
         #determines whether to hold respectively the cells and faces on the stack or heap (with smart pointers)
         self._hold_cell_data_on_heap_with_smart_pointer = False
         self._hold_face_data_on_heap_with_smart_pointer = False
+
+        """
+        All of the following are mostly used for limiting, they are set of but some classes that inherit from this
+        may turn them on.
+          Hold previous time step: if this is specified as true, the previous time step will be stored persistently.
+            The old value gets overwritten with the new value at the beginning of the predictor step. 
+            This allows rollback of the solution to a previous state if for some reason the computations
+            yield incorrect results.
+            Used for limiting, where troubled cells are rolled back and recomputed with a more robust
+            scheme and neighbouring cells need their old solution to project values with.
+          PMC: if not none, a user-defined physical admissibility criterion should be checked at the end of
+            the correction step which verifies whether or not the produced solution is physically sensible.
+          number_of_pac_observables: number of variables which the physical admisibility criterion should consider
+          number_of_dmp_observables: if greater than zero, a discrete maximum principle should be checked at the
+            end of the corrector step. This essentially verifies whether shocks have formed.
+          use_troubled_markers: use markers to communicate whether cells are troubled, these are then
+            copied to faces to communicate this status to the neighbours.
+        """
+        self._hold_previous_time_step           = False
+        self._use_troubled_marker               = False
+        self._use_limiting                      = False
+        self._number_of_dmp_observables         = 0
+        self._physical_admissibility_criterion  = PDETerms.None_Implementation
 
         """
         if this is turned to true, the solver will provide the user with a function to compute the exact solution
@@ -303,20 +323,20 @@ class ADERDG(object):
             self._unknown_identifier(),
             self._solution_persistent_storage_precision,
         )
-        # self._current_update = peano4.datamodel.Patch(
-        #     (self._order + 1, self._order + 1, self._order + 1),
-        #     self._unknowns + self._auxiliary_variables,
-        #     self._unknown_identifier() + "lduh",
-        #     self._solution_persistent_storage_precision,
-        # )
+        self._previous_time_step = peano4.datamodel.Patch(
+            (self._order + 1, self._order + 1, self._order + 1),
+            self._unknowns + self._auxiliary_variables,
+            self._unknown_identifier() + "_old",
+            self._solution_persistent_storage_precision,
+        )
         self._rhs_estimates_projection = peano4.datamodel.Patch(
-            (2, self._order + 1, self._order + 1),
+            (2, self._order+1, self._order+1),
             self._unknowns + self._auxiliary_variables,
             self._unknown_identifier() + "Estimates",
             self._corrector_computation_precision,
         )
         self._flux_estimates_projection = peano4.datamodel.Patch(
-            (2, self._order + 1, self._order + 1),
+            (2, self._order+1, self._order+1),
             self._unknowns,
             self._unknown_identifier() + "FluxEstimates",
             self._corrector_computation_precision,
@@ -324,23 +344,20 @@ class ADERDG(object):
 
         #if user has specified that they want the data on the heap
         if self._hold_cell_data_on_heap_with_smart_pointer:
-         self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-          # self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayOnHeap(
+          self._current_time_step.generator         = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
               self._current_time_step,
               self._solution_persistent_storage_precision
           )
-          # self._current_update.generator            = peano4.datamodel.PatchToDoubleArrayOnHeap(
-          #     self._current_update,
-          #     self._solution_persistent_storage_precision
-          # )
+          self._previous_time_step.generator            = peano4.datamodel.PatchToDoubleArrayOnHeap(
+              self._previous_time_step,
+              self._solution_persistent_storage_precision
+          )
         if self._hold_face_data_on_heap_with_smart_pointer:
           self._rhs_estimates_projection.generator  = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-          # self._rhs_estimates_projection.generator  = peano4.datamodel.PatchToDoubleArrayOnHeap(
               self._rhs_estimates_projection,
               self._corrector_computation_precision
           )
           self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayWithSmartPointer(
-          # self._flux_estimates_projection.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(
               self._flux_estimates_projection,
               self._corrector_computation_precision
           )
@@ -369,11 +386,11 @@ class ADERDG(object):
             self._store_cell_data_default_guard(),
         )
 
-        # self._current_update.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
-        #     self._provide_cell_data_to_compute_kernels_default_guard(),
-        #     self._load_cell_data_default_guard(),
-        #     self._store_cell_data_default_guard(),
-        # )
+        self._previous_time_step.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
+            self._provide_cell_data_to_compute_kernels_default_guard(),
+            self._load_cell_data_default_guard(),
+            self._store_cell_data_default_guard(),
+        )
 
         self._rhs_estimates_projection.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
             self._provide_cell_data_to_compute_kernels_default_guard(),
@@ -398,9 +415,9 @@ class ADERDG(object):
 #include "../repositories/SolverRepository.h"
 """
 
-#         self._current_update.generator.includes += """
-# #include "../repositories/SolverRepository.h"
-# """
+        self._previous_time_step.generator.includes += """
+#include "../repositories/SolverRepository.h"
+"""
 
         self._rhs_estimates_projection.generator.includes += """
 #include "../repositories/SolverRepository.h"
@@ -436,7 +453,7 @@ class ADERDG(object):
         )
 
         self._action_set_handle_boundary = (
-            exahype2.solvers.aderdg.actionsets.Handle_boundary(
+            exahype2.solvers.aderdg.actionsets.HandleDGBoundary(
                 self, self._store_boundary_data_default_guard()
             )
         )
@@ -484,24 +501,12 @@ class ADERDG(object):
         #   extrapolated solution to the faces.
         # correction uses the extrapolated face solutions from the predictor and the neighboring
         #   cells to compute a solution at the next timestep
-        if self._use_kernel_generator:
-            self._action_set_prediction                   = Prediction_kernelgenerator(
-                self, self._store_cell_data_default_guard()
-            )
-            self._action_set_prediction_on_hanging_cells  = PredictionOnHangingCell_kernelgenerator(
-                self, self._store_cell_data_default_guard()
-            )
-            self._action_set_correction                   = Correction_kernelgenerator(
-                self, self._store_cell_data_default_guard()
-            )
-
-        else:
-            self._action_set_prediction = Prediction_generic(
-                self, self._store_cell_data_default_guard()
-            )
-            self._action_set_correction = Correction_generic(
-                self, self._store_cell_data_default_guard()
-            )
+        self._action_set_prediction                   = exahype2.solvers.aderdg.actionsets.Prediction(
+            self, self._store_cell_data_default_guard(), on_hanging_cells=False)
+        self._action_set_prediction_on_hanging_cells  = exahype2.solvers.aderdg.actionsets.Prediction(
+            self, self._store_cell_data_default_guard(), on_hanging_cells=True)
+        self._action_set_correction                   = exahype2.solvers.aderdg.actionsets.Correction(
+            self, self._store_cell_data_default_guard())
 
         self._action_set_update_face_label.descend_invocation_order = 0
         self._action_set_update_cell_label.descend_invocation_order = 0
@@ -691,7 +696,8 @@ class ADERDG(object):
         """
         datamodel.add_cell(self._cell_label)
         datamodel.add_cell(self._current_time_step)
-        # datamodel.add_cell(self._current_update)
+        if(self._hold_previous_time_step):
+          datamodel.add_cell(self._previous_time_step)
         datamodel.add_face(self._face_label)
         datamodel.add_face(self._rhs_estimates_projection)
         datamodel.add_face(self._flux_estimates_projection)
@@ -699,7 +705,8 @@ class ADERDG(object):
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         step.use_cell(self._cell_label)
         step.use_cell(self._current_time_step)
-        # step.use_cell(self._current_update)
+        if(self._hold_previous_time_step):
+          step.use_cell(self._previous_time_step)
         step.use_face(self._face_label)
         step.use_face(self._rhs_estimates_projection)
         step.use_face(self._flux_estimates_projection)
@@ -864,6 +871,7 @@ class ADERDG(object):
             predictorStoragePrecision=self._corrector_computation_precision,
             correctorComputePrecision=self._corrector_computation_precision,
             correctorStoragePrecision=self._solution_persistent_storage_precision,
+            precomputePicardPrecision=self._precompute_picard_precision
         )
 
         """" 
@@ -1088,21 +1096,14 @@ class ADERDG(object):
         d["CFL_ADER"] = self._cflAder[self._order]  # /(2*(self._order+1)+1)
 
         d["NUMBER_OF_DOFS_PER_CELL_2D"] = (self._order + 1) * (self._order + 1)
-        d["NUMBER_OF_DOFS_PER_CELL_3D"] = (
-            (self._order + 1) * (self._order + 1) * (self._order + 1)
-        )
+        d["NUMBER_OF_DOFS_PER_CELL_3D"] = (self._order + 1) * (self._order + 1) * (self._order + 1)
 
-        d[
-            "USE_KERNEL_GENERATOR"
-        ] = (
-            self._use_kernel_generator
-        )  # ("True" if self._use_kernel_generator else "False")
-        d["USE_GAUSS_LOBATTO"] = (
-            "true" if self._polynomials is Polynomials.Gauss_Lobatto else "false"
-        )
-        d["POLYNOMIAL_TYPE"] = (
-            "lobatto" if self._polynomials is Polynomials.Gauss_Lobatto else "legendre"
-        )
+        d["USE_KERNEL_GENERATOR"] = self._use_kernel_generator
+        d["USE_LIMITER"]          = self._use_limiting
+        d["USE_HALF_PRECISION"]   = self._use_half_precision
+
+        d["USE_GAUSS_LOBATTO"] = ( "true" if self._polynomials is Polynomials.Gauss_Lobatto else "false" )
+        d["POLYNOMIAL_TYPE"] = ( "lobatto" if self._polynomials is Polynomials.Gauss_Lobatto else "legendre" )
 
         d["SOLUTION_STORAGE_PRECISION"] = self._solution_persistent_storage_precision
 
@@ -1112,10 +1113,10 @@ class ADERDG(object):
         d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions[:]
         if self._corrector_computation_precision not in d["COMPUTATION_PRECISIONS"]:
             d["COMPUTATION_PRECISIONS"].append(self._corrector_computation_precision)
+        if self._precompute_picard_precision!=False and self._precompute_picard_precision not in d["COMPUTATION_PRECISIONS"]:
+            d["COMPUTATION_PRECISIONS"].append(self._precompute_picard_precision)
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])
         d["NUMBER_OF_PRECISIONS"] = len(d["COMPUTATION_PRECISIONS"])
-
-        d["USE_HALF_PRECISION"]   = self._use_half_precision
 
         d["ASSERTION_WITH_1_ARGUMENTS"] = "nonCriticalAssertion1"
         d["ASSERTION_WITH_2_ARGUMENTS"] = "nonCriticalAssertion2"
@@ -1135,19 +1136,11 @@ class ADERDG(object):
         d["SOLVER_CONSTANTS"] = self._solver_constants
         d["SOLVER_INCLUDES"] = self.get_user_solver_includes()
 
-        d[
-            "BOUNDARY_CONDITIONS_IMPLEMENTATION"
-        ] = self._boundary_conditions_implementation
-        d[
-            "REFINEMENT_CRITERION_IMPLEMENTATION"
-        ] = self._refinement_criterion_implementation
+        d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
+        d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
         d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
-        d[
-            "ADAPTIVE_PRECISION_IMPLEMENTATION"
-        ] = self._precision_criterion_implementation
-        d[
-            "ERROR_MEASUREMENT_IMPLEMENTATION"
-        ] = self._error_measurement_implementation
+        d["ADAPTIVE_PRECISION_IMPLEMENTATION"] = self._precision_criterion_implementation
+        d["ERROR_MEASUREMENT_IMPLEMENTATION"] = self._error_measurement_implementation
         d["RIEMANN_SOLVER_IMPLEMENTATION"] = self._riemann_solver_implementation
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
@@ -1179,9 +1172,7 @@ class ADERDG(object):
         d["COMPUTE_NEW_TIME_STEP_SIZE"] = jinja2.Template(
             self._compute_new_time_step_size, undefined=jinja2.DebugUndefined
         ).render(**d)
-        d["ARCHITECTURE_ALIGNMENT"] = Configuration.alignmentPerArchitectures[
-            self._architecture
-        ]
+        d["ARCHITECTURE_ALIGNMENT"] = Configuration.alignmentPerArchitectures[self._architecture]
 
         if self._compute_and_display_solver_error:
             d["ABSTRACT_SOLVER_USER_DECLARATIONS"] += create_abstract_solver_user_declarations_for_error_measurement()
@@ -1192,16 +1183,16 @@ class ADERDG(object):
                 create_finish_time_step_implementation_for_error_measurement(), undefined=jinja2.DebugUndefined
             ).render(**d)
 
-        d["USE_FLUX"] = self._flux_implementation
-        d["USE_NCP"] = self._ncp_implementation
-        d["USE_SOURCE"] = self._source_term_implementation
-        d["USE_MATERIAL_PARAMETERS"] = self._material_param_implementation
-        d["USE_POINT_SOURCE"] = self._point_sources_implementation
-        d["NUMBER_OF_POINT_SOURCES"] = self._number_of_point_sources
+        d["USE_FLUX"]                 = self._flux_implementation
+        d["USE_NCP"]                  = self._ncp_implementation
+        d["USE_SOURCE"]               = self._source_term_implementation
+        d["USE_MATERIAL_PARAMETERS"]  = self._material_param_implementation
+        d["USE_POINT_SOURCE"]         = self._point_sources_implementation
+        d["NUMBER_OF_POINT_SOURCES"]  = self._number_of_point_sources
 
-        d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
-        d["VARIABLE_NAMES"] = self._variable_names
-        d["VARIABLE_POSITIONS"] = self._variable_pos
+        d["USE_VARIABLE_SHORTCUT"]  = self._use_var_shortcut
+        d["VARIABLE_NAMES"]         = self._variable_names
+        d["VARIABLE_POSITIONS"]     = self._variable_pos
 
         self._basis.init_dictionary_with_default_parameters(d)
 
@@ -1289,6 +1280,7 @@ class ADERDG(object):
         predictor_computation_precisions=["double"],
         corrector_computation_precision="double",
         solution_persistent_storage_precision="double",
+        precompute_picard_precision=False,
         precision_criterion_implementation=PDETerms.None_Implementation,
         riemann_solver_implementation=PDETerms.None_Implementation,
         hold_cell_data_on_heap_with_smart_pointer = False,
@@ -1298,7 +1290,7 @@ class ADERDG(object):
         use_CERK_guess=False,
         use_split_CK=False,
         predictor_recompute=False,
-        initialize_patches=False,
+        initialize_patches=False
     ):
         if polynomials is Polynomials.Gauss_Legendre:
             self._basis = GaussLegendreBasis(self._order + 1)
@@ -1325,6 +1317,8 @@ class ADERDG(object):
             corrector_computation_precision,
         ]
         precisions.extend(predictor_computation_precisions)
+        if precompute_picard_precision!=False:
+            precisions.append(precompute_picard_precision)
         for value in precisions:
             if value not in PrecisionType.keys():
                 raise AssertionError(
@@ -1344,6 +1338,10 @@ class ADERDG(object):
         self._solution_persistent_storage_precision = PrecisionType[
             solution_persistent_storage_precision
         ]
+
+        self._precompute_picard_precision = PrecisionType[
+            precompute_picard_precision
+        ] if precompute_picard_precision != False else False
 
         if precision_criterion_implementation is not PDETerms.None_Implementation:
             self._precision_criterion_implementation = (

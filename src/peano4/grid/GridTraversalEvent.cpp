@@ -7,13 +7,14 @@
 
 
 
-peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, std::bitset<ThreePowerD>  __isAdjacentCellLocal, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing){
+peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoPowerD>  __isParentVertexLocal, std::bitset<TwoPowerD>  __isVertexParentOfSubtree, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, bool  __isParentCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, std::bitset<ThreePowerD>  __isAdjacentCellLocal, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, bool  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing){
 setX( __x);
 setH( __h);
 setHasBeenRefined( __hasBeenRefined);
 setWillBeRefined( __willBeRefined);
 setIsVertexLocal( __isVertexLocal);
 setIsParentVertexLocal( __isParentVertexLocal);
+setIsVertexParentOfSubtree( __isVertexParentOfSubtree);
 setIsFaceLocal( __isFaceLocal);
 setIsCellLocal( __isCellLocal);
 setIsParentCellLocal( __isParentCellLocal);
@@ -39,6 +40,7 @@ peano4::grid::GridTraversalEvent::GridTraversalEvent( const GridTraversalEvent& 
   setWillBeRefined( copy.getWillBeRefined() );
   setIsVertexLocal( copy.getIsVertexLocal() );
   setIsParentVertexLocal( copy.getIsParentVertexLocal() );
+  setIsVertexParentOfSubtree( copy.getIsVertexParentOfSubtree() );
   setIsFaceLocal( copy.getIsFaceLocal() );
   setIsCellLocal( copy.getIsCellLocal() );
   setIsParentCellLocal( copy.getIsParentCellLocal() );
@@ -73,6 +75,8 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << "isVertexLocal=" << getIsVertexLocal();
   out << ","; 
   out << "isParentVertexLocal=" << getIsParentVertexLocal();
+  out << ","; 
+  out << "isVertexParentOfSubtree=" << getIsVertexParentOfSubtree();
   out << ","; 
   out << "isFaceLocal=" << getIsFaceLocal();
   out << ","; 
@@ -278,6 +282,35 @@ void   peano4::grid::GridTraversalEvent::setIsParentVertexLocal(int index, bool 
 
 void   peano4::grid::GridTraversalEvent::flipIsParentVertexLocal(int index) {
   _isParentVertexLocal[index] = not   _isParentVertexLocal[index];
+}
+
+
+std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getIsVertexParentOfSubtree() const {
+
+  std::bitset<TwoPowerD> result;
+  for (int i=0; i<TwoPowerD; i++) result[i] =   _isVertexParentOfSubtree[i];
+  return result;
+}
+
+
+void   peano4::grid::GridTraversalEvent::setIsVertexParentOfSubtree(const std::bitset<TwoPowerD>&  value) {
+
+  for (int i=0; i<TwoPowerD; i++)   _isVertexParentOfSubtree[i]=value[i];
+}
+
+
+bool   peano4::grid::GridTraversalEvent::getIsVertexParentOfSubtree(int index) const {
+  return   _isVertexParentOfSubtree[index];
+}
+
+
+void   peano4::grid::GridTraversalEvent::setIsVertexParentOfSubtree(int index, bool value) {
+  _isVertexParentOfSubtree[index] = value;
+}
+
+
+void   peano4::grid::GridTraversalEvent::flipIsVertexParentOfSubtree(int index) {
+  _isVertexParentOfSubtree[index] = not   _isVertexParentOfSubtree[index];
 }
 
 
@@ -562,7 +595,7 @@ void   peano4::grid::GridTraversalEvent::setInvokingSpacetreeIsNotInvolvedInAnyD
 #ifdef Parallel
 
 #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-MPI_Datatype peano4::grid::GridTraversalEvent::Datatype;
+MPI_Datatype peano4::grid::GridTraversalEvent::Datatype = MPI_DATATYPE_NULL;
 #endif
 
 
@@ -596,9 +629,55 @@ MPI_Datatype peano4::grid::GridTraversalEvent::getMultiscaleDataExchangeDatatype
 }
 
 
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridTraversalEvent::freeForkDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridTraversalEvent::freeGlobalCommunciationDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridTraversalEvent::freeJoinDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridTraversalEvent::freeBoundaryExchangeDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
+[[clang::map_mpi_datatype]]
+void peano4::grid::GridTraversalEvent::freeMultiscaleDataExchangeDatatype() {
+  if (Datatype != MPI_DATATYPE_NULL){
+    MPI_Type_free(&Datatype);
+    Datatype = MPI_DATATYPE_NULL;
+  }
+}
+
+
 int peano4::grid::GridTraversalEvent::getSenderRank() const {
   return _senderDestinationRank;
 }
+
 
 
 void peano4::grid::GridTraversalEvent::initDatatype() {
@@ -606,6 +685,7 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   peano4::grid::GridTraversalEvent  instances[2];
 
   int NumberOfAttributes = 0;
+  NumberOfAttributes++;
   NumberOfAttributes++;
   NumberOfAttributes++;
   NumberOfAttributes++;
@@ -637,6 +717,9 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   counter++;
   subtypes[counter] = MPI_DOUBLE;
   blocklen[counter] = Dimensions;
+  counter++;
+  subtypes[counter] = MPI_UNSIGNED_LONG;
+  blocklen[counter] = 1;
   counter++;
   subtypes[counter] = MPI_UNSIGNED_LONG;
   blocklen[counter] = 1;
@@ -711,6 +794,8 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   counter++;
   MPI_Get_address( &(instances[0]._isParentVertexLocal), &disp[counter] );
   counter++;
+  MPI_Get_address( &(instances[0]._isVertexParentOfSubtree), &disp[counter] );
+  counter++;
   MPI_Get_address( &(instances[0]._isFaceLocal), &disp[counter] );
   counter++;
   MPI_Get_address( &(instances[0]._isCellLocal), &disp[counter] );
@@ -771,17 +856,11 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
 
 void peano4::grid::GridTraversalEvent::shutdownDatatype() {
   #if !defined(__MPI_ATTRIBUTES_LANGUAGE_EXTENSION__)
-  MPI_Datatype type;
-  type = getForkDatatype();
-  MPI_Type_free( &type );
-  type = getJoinDatatype();
-  MPI_Type_free( &type );
-  type = getBoundaryExchangeDatatype();
-  MPI_Type_free( &type );
-  type = getMultiscaleDataExchangeDatatype();
-  MPI_Type_free( &type );
-  type = getGlobalCommunciationDatatype();
-  MPI_Type_free( &type );
+  freeForkDatatype();
+  freeJoinDatatype();
+  freeBoundaryExchangeDatatype();
+  freeMultiscaleDataExchangeDatatype();
+  freeGlobalCommunciationDatatype();
   #else
   MPI_Datatype type = Datatype;
   MPI_Type_free( &type );
