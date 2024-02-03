@@ -149,6 +149,8 @@ if args.solver == "fv":
         patch_size=9,
         min_volume_h=args.cell_size / 5,
         max_volume_h=args.cell_size / 5,
+        use_heap_storage=True,
+        pde_terms_without_state=True,
     )
     my_solver.set_implementation(
         initial_conditions="""
@@ -165,7 +167,7 @@ if "fd4-rk" in args.solver:
             rk_order=order,
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
-            use_heap_storage=False,
+            use_heap_storage=True,
             pde_terms_without_state=True,
             second_order=args.SO_flag
         )
@@ -176,6 +178,8 @@ if "fd4-rk" in args.solver:
             rk_order=order,
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
+            use_heap_storage=True,
+            pde_terms_without_state=True,
             second_order=args.SO_flag
         )
     my_solver.set_implementation(
@@ -194,6 +198,8 @@ if "rk" in args.solver and "dg" in args.solver:
         rk_order=time_order,
         min_cell_h=args.cell_size * space_order,
         max_cell_h=args.cell_size * space_order,
+        use_heap_storage=True,
+        pde_terms_without_state=True,
     )
     my_solver.set_implementation(
         initial_conditions="""
@@ -219,6 +225,8 @@ if args.tracer:
         number_of_entries_between_two_db_flushes = 100,
         data_delta_between_two_snapsots = 1e-8,
         time_delta_between_two_snapsots = 0.1,
+        clear_database_after_flush = False,
+        tracer_unknowns = None
     )
 
 

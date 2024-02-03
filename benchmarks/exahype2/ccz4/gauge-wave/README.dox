@@ -2,9 +2,11 @@
 
 @page benchmarks_exahype2_ccz4_gauge_wave CCZ4 Gauge wave test
 
+Very simple benchmark with a time-invariant solution subject to a shift that we can use to assess the convergence order.
+
 The CCZ4 Gauge wave test is a relatively simple setup, where we employ a 
 regular mesh over the unit square. The computational domain is centered 
-around the origina of the coordinate system. It is supplemented with periodic boundary
+around the origin of the coordinate system. It is supplemented with periodic boundary
 conditions all all sides. In theory, the wave we simulate should be a 
 standing wave leaving the domain on the right and re-entering it on the left.
 If the wave shape or its amplitude change over time, this is due to numerical
@@ -55,7 +57,7 @@ all be reinstantiated.
 To get rid of the output files, type in
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-     rm *patch-file *vtu *.pvd *.bak
+     rm *patch-file *vtu *.pvd *.bak *.csv *.md
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -82,10 +84,11 @@ Peano's pre-manufactured postprocessing scripts to get a first impression of the
 solution's behaviour. The call to the script is similar to 
 
 ~~~~~~~~~~~~~~~~~~~~~~~
-     python3 Peano/python/peano4/toolbox/particles/postprocessing/convert.py -d 3 -v 13 -t seismogram Tracer-fv-0.3-rank-0-snapshot-0.csv
+     python3 Peano/python/peano4/toolbox/particles/postprocessing/convert.py -d 3 -v 13 -t seismogram Tracer-...csv
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 with appropriate pathes and filenames set.
+
 
 
 ## Some results
