@@ -172,8 +172,8 @@ void tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::VertexDataW
   assertion(numberOfValues<=_recordsPerVertex);
 
   for( int i=0; i<numberOfValues; i++) {
-    assertion1( values[i] != std::numeric_limits<double>::infinity(), values[i] );
-    assertion1( values[i] == values[i], values[i] );  // test for not a number
+    assertion2( values[i] != std::numeric_limits<double>::infinity(), values[i], i );
+    assertion2( values[i] == values[i], values[i], i );  // test for not a number
   }
 
   while (_lastWriteCommandVertexNumber<index-1) {
