@@ -46,11 +46,11 @@ parser.add_argument(
     dest="solver",
     choices=[
         "fv",
-        "fd4-rk1",
-        "fd4-rk2",
-        "fd4-rk3",
-        "fd4-rk4",
-        "dg0-rk1",
+        "fd4-rk1", "sofd4-rk1",
+        "fd4-rk2", "sofd4-rk2",
+        "fd4-rk3", "sofd4-rk3",
+        "fd4-rk4", "sofd4-rk4",
+        "dg0-rk1", 
         "dg0-rk2",
         "dg0-rk3",
         "dg0-rk4",
@@ -75,14 +75,6 @@ parser.add_argument(
     action="store_true",
     default=False,
     help="switch on the enclave tasking solver",
-)
-parser.add_argument(
-    "-so",
-    "--second-order",
-    dest="SO_flag",
-    action="store_true",
-    default=False,
-    help="add the additional_step for the second order formulation",
 )
 parser.add_argument(
     "-et",
@@ -158,8 +150,9 @@ if args.solver == "fv":
       ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
     """
     )
-if "fd4-rk" in args.solver:
+if "fd4-rk" in args.solver or "sofd4-rk" in args.solver:
     order = int(args.solver[-1])
+    second_order_formulation = "sofd4" in args.solver
     if args.enclave==True:
         my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             name="CCZ4FD4RK" + str(order) + "-enclave",
@@ -167,9 +160,7 @@ if "fd4-rk" in args.solver:
             rk_order=order,
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
-            use_heap_storage=True,
-            pde_terms_without_state=True,
-            second_order=args.SO_flag
+            second_order = second_order_formulation
         )
     else:
         my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
@@ -178,9 +169,7 @@ if "fd4-rk" in args.solver:
             rk_order=order,
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
-            use_heap_storage=True,
-            pde_terms_without_state=True,
-            second_order=args.SO_flag
+            second_order = second_order_formulation
         )
     my_solver.set_implementation(
         initial_conditions="""
@@ -274,7 +263,7 @@ project.set_load_balancing(
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
-if args.SO_flag:
+if "sofd4" in args.solver:
     additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
                                                            add_user_defined_actions=False,
                                                            )
