@@ -417,10 +417,25 @@ thus appreciate any citation of the original release paper
         thus is always sieved through to the finest grid level.
 
         @see peano4.toolbox.particles.Particle
+        
+        
+        ## Projection of data onto particles and database dumping
+        
+        The projection onto the particle has to be realised separatedly, as
+        it depends on the solver variant chosen. The same holds for the 
+        dump of particle data into a database if this shall happen 
+        on-the-fly. 
+        
+        Most bigger applications add their solvers an add_tracer() operation,
+        which takes all of this domain knowledge into account. This 
+        add_tracer() then forwards to this routine, adding further 
+        behaviour.
+        
+        See the class application.exahype2.ccz.CCZ4Solver and its derived
+        variants for examples.
 
-        Besides those pre-defined attributes, we add one more vector field
-        to each particle which we simply call data. Data stores, as one
-        large array, all the properties that we want to track per tracer.
+
+        ## Moving particles
 
         Tracers in ExaHyPE can move, though they do not have to move. Even if
         they move, they never have a native velocity, i.e. their velocity will
@@ -432,8 +447,11 @@ thus appreciate any citation of the original release paper
         particle update routines. Obviously, nothing stops you from adding
         a separate velocity field to the tracer object and thus to redefine
         this behaviour.
+        
+        
+        ## ExaHyPE-specific particle attributes
 
-        Finally, we add each
+        We add each
         particle a number which is a tuple consisting of the tree number
         (on which tree has a particle been generationed plus what was the
         tree-local number of this particle at the time). Through this
@@ -447,9 +465,10 @@ thus appreciate any citation of the original release paper
 
         @see peano4.toolbox.particles.PlotParticlesInVTKFormat.add_attribute_to_plot()
 
+
         ## Action set order
 
-        We add the particle ordering with priority -1. This should do the job
+        We add the particle ordering with descend order -1. This should do the job
         for most setups, but we might be wrong. The following action sets are
         automatically added:
 
