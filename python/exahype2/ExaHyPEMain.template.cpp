@@ -428,7 +428,6 @@ void step() {
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     watch.stop();
     timeStepMeasurement.setValue(watch.getCalendarTime());
-    logInfo("main()", "time per time step (current/average/steps per second): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() << " / " << timeStepMeasurement.getValue() << " / " << (1.0 / timeStepMeasurement.getValue() ) );
 
     OTTER_TASK_WAIT_FOR(step_task, children);
     OTTER_TASK_END(step_task);
