@@ -725,7 +725,7 @@ def add_tracer_to_FD4_solver(
         output_precision=10,
         data_delta_between_two_snapsots = data_delta_between_two_snapsots,
         time_delta_between_two_snapsots = time_delta_between_two_snapsots,
-        clear_database_after_flush         = True,
+        clear_database_after_flush      = clear_database_after_flush,
     )
     dump_into_database_action_set.descend_invocation_order = (
         solver._action_set_compute_final_linear_combination.descend_invocation_order + 2
@@ -973,7 +973,8 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
             number_of_entries_between_two_db_flushes,
             data_delta_between_two_snapsots,
             time_delta_between_two_snapsots,
-            tracer_unknowns,
+            clear_database_after_flush = clear_database_after_flush,
+            tracer_unknowns = tracer_unknowns,
         )
 
 
