@@ -716,6 +716,7 @@ def add_tracer_to_FD4_solver(
         solver._action_set_compute_final_linear_combination.descend_invocation_order + 1
     )
     project.add_action_set_to_timestepping(tracing_action_set)
+    project.add_action_set_to_initialisation(tracing_action_set)
 
     dump_into_database_action_set = exahype2.tracer.DumpTracerIntoDatabase(
         particle_set=tracer_particles,
