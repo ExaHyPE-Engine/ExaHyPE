@@ -207,13 +207,17 @@ project.add_solver(my_solver)
 # Tracer setting
 ########################################################################################
 if args.tracer:
+    if args.asserts:
+        time_delta_between_two_snapsots = 1e-4
+    else:
+        time_delta_between_two_snapsots = 0.1
     my_solver.add_tracer(
         name="Tracer",
         coordinates=[[-0.4251, 0, 0], [0, 0, 0], [0.4251, 0, 0]],
         project=project,
         number_of_entries_between_two_db_flushes = 100,
         data_delta_between_two_snapsots = 1e-8,
-        time_delta_between_two_snapsots = 0.1,
+        time_delta_between_two_snapsots = time_delta_between_two_snapsots,
         clear_database_after_flush = False,
         tracer_unknowns = None
     )
