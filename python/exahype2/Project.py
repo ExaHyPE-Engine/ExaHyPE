@@ -66,6 +66,7 @@ class Project(object):
         self._output_path = "./"
         self._plotter_precision = 5
         self._tracer_particles = []
+        self._tracer_particle_sets = []
 
         self.create_grid = peano4.solversteps.Step("CreateGrid", False)
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
@@ -408,6 +409,11 @@ thus appreciate any citation of the original release paper
         """!
 
         Add a tracer to the project
+        
+        Tracers have to be the very last thing you add to your project.
+        At this point, all solvers have to be added to the project.
+        However, you have to add the tracers prior to any user-defined
+        routines. See docu of register_new_user_defined_algorithmic_step().
 
         We rely on the particle toolbox. Therefore, our particles have
         already a position x, a search radius (which we don't usually
@@ -581,6 +587,7 @@ thus appreciate any citation of the original release paper
         self.plot_solution.add_action_set(update_particle_parallel_state_action_set)
 
         self._tracer_particles.append(particle)
+        self._tracer_particle_sets.append(particles)
 
         return particles
 
@@ -733,19 +740,23 @@ thus appreciate any citation of the original release paper
                                                    ):
         """! Add all the use operations to new algorithmic step
         
-Use this routine whenever you have created your own 
-@ref page_architecture "algorithmic step". Please note that the routine should
-be called after you have created all of your solvers. Otherwise, we'll miss out
-a few of your solvers and the data access patterns will/might be corrupted.
+        Use this routine whenever you have created your own 
+        @ref page_architecture "algorithmic step". Please note that the routine
+        should be called after you have created all of your solvers. Otherwise, 
+        we'll miss out a few of your solvers and the data access patterns 
+        will/might be corrupted. Also all tracers have to be added at this 
+        point already.
 
-The routine has no side-effects, i.e. does not alter the underlying project.
-It only manipulates the step. Therefore, you can even call it after you have 
-distilled the Peano project from the ExaHyPE project, i.e. after you have 
-called exahype2.Project.generate_Peano4_project().
+        The routine has no side-effects, i.e. does not alter the underlying 
+        project. It only manipulates the step. Therefore, you can even call it 
+        after you have distilled the Peano project from the ExaHyPE project, 
+        i.e. after you have called exahype2.Project.generate_Peano4_project().
 
-step: peano4.solversteps.Step
+        @param step: peano4.solversteps.Step
   
         """
         for solver in self._solvers:
             solver.add_use_data_statements_to_Peano4_solver_step(step)
 
+        for tracer_set in self._tracer_particle_sets:
+            step.use_vertex(tracer_set)
