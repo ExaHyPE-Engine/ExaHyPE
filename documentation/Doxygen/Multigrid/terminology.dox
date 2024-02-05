@@ -87,7 +87,8 @@ function spaces.
 - If we have to deal with individual shape/trial functions, we abstain from 
   Greek letters (@f$ \phi, \psi @f$ and @f$ \varphi @f$ are frequently found
   in literature) but instead favour @f$ v, q, \dots @f$.
-  
+- We write integrators as @f$ \int ... d\boldsymbol{x} @f$ and surface 
+  integrals as @f$ \int ... d\boldsymbol{x} @f$.   
 
 
 ## Specifiers
@@ -116,7 +117,7 @@ specification:
   a valid @f$ u @f$ left and right, @f$ u^- @f$ denotes this left function, 
   while @f$ u^+ @f$ denotes the right one.
 
-- The modifier @f$ \hat{u} @f$ on a function denotes that this function does 
+- The modifier @f$ \hat{u} @f$ or @f$ \widehat{ \nabla u} @f$ on a function denotes that this function does 
   not exist at the point where we evaluate it. However, there is are two 
   valid function values - typically left and right - and this is the average.
 

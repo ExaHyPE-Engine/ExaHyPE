@@ -2,11 +2,12 @@
 
 @page multigrid_tutorials Tutorials
 
+\li \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
+\li \subpage tutorials_multigrid_matrixfree_mixed_DG_poisson
+
 \li \subpage tutorials_documentation_multigrid_petsc_continuous_galerkin_poisson
 \li \subpage tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson
 \li \subpage tutorials_documentation_multigrid_petsc_mixed_galerkin_poisson
 \li \subpage tutorials_documentation_multigrid_petsc_hybrid_galerkin_poisson
-
-\li \subpage tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson
 
 */
