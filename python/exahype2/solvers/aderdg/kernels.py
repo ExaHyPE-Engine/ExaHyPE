@@ -907,9 +907,36 @@ def create_array_and_convert_from_type(from_name, to_name, type_to, array_size):
     )
     return template
 
+
+def create_constructor_implementation_for_error_measurement():
+    return """
+  if(tarch::mpi::Rank::getInstance().isGlobalMaster()){
+    _errorDatabase = new toolbox::blockstructured::GlobalDatabase(0);
+    _errorDatabase->setOutputFileName( "{{SOLVER_NAME}}_error" );
+    _errorDatabase->setDataName( "l0 error,l2 error,l_inf error" );
+    // _errorDatabase->setOutputPrecision( 8 );
+    _errorDatabase->setDataDeltaBetweenTwoSnapshots( 1e+16, false );
+    _errorDatabase->setTimeDeltaBetweenTwoSnapshots( 0.0 );
+    _errorDatabase->clearDatabaseAfterFlush( true );
+  }
+"""
+
+def create_destructor_implementation_for_error_measurement():
+    return """
+  if(tarch::mpi::Rank::getInstance().isGlobalMaster()){
+      delete(_errorDatabase);
+  }
+"""
+
+def create_abstract_solver_includes_for_error_measurement():
+    return """
+#include "toolbox/blockstructured/GlobalDatabase.h"
+"""
+
 def create_abstract_solver_user_declarations_for_error_measurement():
     return """
 public:
+  toolbox::blockstructured::GlobalDatabase* _errorDatabase;
   double _errors[3] = {0.0,0.0,0.0};
   void setError(double* err);
     """
@@ -929,17 +956,15 @@ def create_finish_time_step_implementation_for_error_measurement():
     return """
 
   if ( 
-    _solverState==SolverState::Correction 
-    and _minTimeStampThisTimeStep+getAdmissibleTimeStepSize()>=MinTerminalTime
+    _solverState==SolverState::GridInitialisation or
+    _solverState==SolverState::Correction
   ) {
 
     #ifdef Parallel
-    double l1Error    = _errors[0];
-    double l2Error    = _errors[1];
-    double linfError  = _errors[2];
+    double errorsThisTimeStamp[3] = {_errors[0], _errors[1], _errors[2]};
 
     tarch::mpi::Rank::getInstance().allReduce(
-        &l1Error,
+        &errorsThisTimeStamp[0],
         &_errors[0],
         1,
         MPI_DOUBLE,
@@ -948,7 +973,7 @@ def create_finish_time_step_implementation_for_error_measurement():
     );
 
     tarch::mpi::Rank::getInstance().allReduce(
-        &l2Error,
+        &errorsThisTimeStamp[1],
         &_errors[1],
         1,
         MPI_DOUBLE,
@@ -957,7 +982,7 @@ def create_finish_time_step_implementation_for_error_measurement():
     );
 
     tarch::mpi::Rank::getInstance().allReduce(
-        &linfError,
+        &errorsThisTimeStamp[2],
         &_errors[2],
         1,
         MPI_DOUBLE,
@@ -968,27 +993,23 @@ def create_finish_time_step_implementation_for_error_measurement():
 
 
     if (
-      tarch::mpi::Rank::getInstance().isGlobalMaster() 
-      and
-      _maxCellH>0.0
+      tarch::mpi::Rank::getInstance().isGlobalMaster()
     ) {
-      logInfo( "FinalTimeStep()", "Solver {{SOLVER_NAME}}:" );
-      logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
-      logInfo( "FinalTimeStep()", "l1_error     = " << _errors[0] );
-      logInfo( "FinalTimeStep()", "l2_error     = " << _errors[1] );
-      logInfo( "FinalTimeStep()", "linf_error   = " << _errors[2] );
-      logInfo( "FinalTimeStep(...)", "phase " + toString(_solverState) );
+      _errorDatabase->addGlobalSnapshot(_minTimeStampThisTimeStep, 3, _errors);
     }
+
+    std::fill_n(_errors, 3, 0.0);
 
   }
 """
 
-def add_final_action_for_error_measurement():
+def add_postprocessing_for_error_measurement():
 
     return """
   if (
-    fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()+repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize()>=MinTerminalTime
-    and repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
+       repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
+    or repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
+    and not marker.willBeRefined() and not marker.hasBeenRefined()
   ) {
 
     double errors[3];
@@ -1011,8 +1032,8 @@ def add_final_action_for_error_measurement():
       repositories::{{SOLVER_INSTANCE}}.Order,
       repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-      repositories::{{SOLVER_INSTANCE}}.NumberOfVariables,
-      repositories::{{SOLVER_INSTANCE}}.NumberOfParameters,
+      repositories::{{SOLVER_INSTANCE}}.NumberOfUnknowns,
+      repositories::{{SOLVER_INSTANCE}}.NumberOfAuxiliaryVariables,
       fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
       errors
     );

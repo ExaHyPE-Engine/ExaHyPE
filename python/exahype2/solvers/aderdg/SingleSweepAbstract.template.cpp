@@ -96,6 +96,8 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
 
+  {{DESTRUCTOR_IMPLEMENTATION}}
+
   {% if USE_KERNEL_GENERATOR==True %}
   //free the generated nodes, weights and matrices
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}  
