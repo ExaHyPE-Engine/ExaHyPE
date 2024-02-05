@@ -111,25 +111,18 @@ void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
 
 
 template <typename T>
-void toolbox::particles::ParticleSet<T>::printParticleStateStatistics() {
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo(
-      "printParticleStateStatistics()",
-      "particle state updates"
+std::string toolbox::particles::ParticleSet<T>::printParticleStateStatistics() {
+  std::ostringstream msg;
+  msg << "particle state updates"
       << ": #remaining=" << _numberOfRemainingLocalParticles
       << ", #expired="   << _numberOfExpiredHaloParticles
       << ", #leaving="   << _numberOfLeavingLocalParticles
       << ", #incoming="  << _numberOfIncomingParticles
-    );
-    logInfo(
-    "printParticleStateStatistics()",
-    "boundary merge statistics"
-      << ": #redundantly shared particles=" << _numberOfRedundantlySharedLocalParticles
+      << ", #redundantly shared particles=" << _numberOfRedundantlySharedLocalParticles
       << ", #added particles=" << _numberOfAddedParticlesAlongBoundary
       << ", #replaced particles=" << _numberOfReplacedParticlesAlongBoundary
-      << ": #dropped incoming virtual particles=" << _numberOfDroppedIncomingVirtualParticles
-    );
-  }
+      << ": #dropped incoming virtual particles=" << _numberOfDroppedIncomingVirtualParticles;
+  return msg.str();
 }
 
 
@@ -185,20 +178,17 @@ void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
 
 
 template <typename T>
-void toolbox::particles::ParticleSet<T>::printReassignmentStatistics() {
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-    logInfo(
-      "reduceAndPrintReassignmentStatistics()",
-      "subdomain-local sorting statistics"
-        << ": #lifts=" << _numberOfLifts
-        << ", #drops=" << _numberOfDrops
-        << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet
-        << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
-        << ", #skipped-drops-from-sieve-set=" << _numberOfSkippedDropsFromSieveSet
-        << ", #drops-into-horizontal-tree-decomposition=" << _numberOfDropsIntoHorizontalTreeDecomposition
-        << ", #reassignments=" << _numberOfReassignments
-    );
-  }
+std::string toolbox::particles::ParticleSet<T>::printReassignmentStatistics() {
+  std::ostringstream msg;
+  msg << "sort statistics"
+      << ": #lifts=" << _numberOfLifts
+      << ", #drops=" << _numberOfDrops
+      << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet
+      << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
+      << ", #skipped-drops-from-sieve-set=" << _numberOfSkippedDropsFromSieveSet
+      << ", #drops-into-horizontal-tree-decomposition=" << _numberOfDropsIntoHorizontalTreeDecomposition
+      << ", #reassignments=" << _numberOfReassignments;
+  return msg.str();
 }
 
 template <typename T>

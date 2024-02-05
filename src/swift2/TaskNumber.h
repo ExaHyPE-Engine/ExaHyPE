@@ -28,13 +28,13 @@ namespace swift2 {
    * Peano tarch::multicore.
    */
   struct TaskNumber {
-  public:
-    enum class TaskAssociation {
-      TouchVertexFirstTime = 0,
-      TouchCellFirstTime   = 1,
-      TouchVertexLastTime  = 2,
-      NumberOfEntries      = 3
-    };
+    public:
+      enum class TaskAssociation {
+        TouchVertexFirstTime = 0,
+        TouchCellFirstTime   = 1,
+        TouchVertexLastTime  = 2,
+        NumberOfEntries      = 3
+      };
 
     /**
      * Construct new task number
@@ -65,7 +65,7 @@ namespace swift2 {
      * Total order on object. Required to store task numbers in sets.
      */
     bool operator<(const TaskNumber& rhs) const;
-    bool operator==(const TaskNumber& rhs) const;
+    bool equals(const TaskNumber& rhs) const;
 
   private:
     int             _taskCounter;
@@ -132,6 +132,11 @@ namespace swift2 {
     const ::swift2::TaskNumber& task, PendingDependencies& pendingDependencies
   );
 } // namespace swift2
+
+
+
+bool operator==(const swift2::TaskNumber& lhs, const swift2::TaskNumber& rhs);
+bool operator!=(const swift2::TaskNumber& lhs, const swift2::TaskNumber& rhs);
 
 
 #include "TaskNumber.cpph"

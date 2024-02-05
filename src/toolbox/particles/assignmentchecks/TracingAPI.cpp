@@ -18,7 +18,7 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::ParticleIden
 
 double toolbox::particles::assignmentchecks::internal::ParticleIdentifier::Precision = 1e-8;
 
-bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::operator==(const ParticleIdentifier& rhs) const {
+bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::numericalEquals(const ParticleIdentifier& rhs) const {
   return (particleName == rhs.particleName) and tarch::la::equals(particleX, rhs.particleX, Precision);
 }
 
@@ -263,7 +263,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
           lock.free();
           const ParticleIdentifier previousIdentifier = _database.createParticleIdentifier(identifier.particleName, event->previousParticleX);
           assertion3(
-            previousIdentifier!=identifier,
+            not (previousIdentifier==identifier),
             previousIdentifier.toString(),
             identifier.toString(),
             event->toString()
@@ -696,3 +696,13 @@ void toolbox::particles::assignmentchecks::moveParticle(
 ) {}
 
 #endif
+
+
+bool operator==(const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs, const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs ) {
+  return lhs.numericalEquals(rhs);
+}
+
+
+bool operator!=(const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& lhs, const toolbox::particles::assignmentchecks::internal::ParticleIdentifier& rhs ) {
+  return not lhs.numericalEquals(rhs);
+}

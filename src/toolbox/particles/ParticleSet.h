@@ -95,10 +95,10 @@ public:
    * Reduces and prints the global statistics
    */
   static void reduceParticleStateStatistics();
-  static void printParticleStateStatistics();
+  static std::string printParticleStateStatistics();
 
   static void reduceReassignmentStatistics();
-  static void printReassignmentStatistics();
+  static std::string printReassignmentStatistics();
 
   static void updateLiftDropStatistics(
     int numberOfLiftsInThisTree,

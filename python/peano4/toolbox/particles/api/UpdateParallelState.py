@@ -186,8 +186,8 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), false, _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
     _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
-    #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
-    assertion(false);
+    #if !defined(Parallel)
+    assertion(::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1);
     #endif
   }
 }
@@ -225,6 +225,9 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
             """
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
+
+#include "peano4/parallel/SpacetreeSet.h"
+
 #include "toolbox/particles/MultiscaleTransitions.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
 

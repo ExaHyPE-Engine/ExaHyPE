@@ -118,6 +118,8 @@ class ExplicitEulerFixedSearchRadius(Particle):
 
         self.cfl_factor = cfl_factor
         self.initial_time_step_size = initial_time_step_size
+        
+        self.__setup_algorithm_steps()
 
         self.enter_cell_kernel = enter_cell_kernel
         self.touch_particles_of_set_first_time_kernel = (
@@ -125,9 +127,35 @@ class ExplicitEulerFixedSearchRadius(Particle):
         )
         self.touch_particles_of_set_last_time_kernel = (
             touch_particles_of_set_last_time_kernel
-        )
-
+         )
         pass
+    
+    @property 
+    def touch_particles_of_set_first_time_kernel(self):
+      return self._algorithm_steps[ "ForceCalculation" ].touch_vertex_first_time_kernel
+
+    @touch_particles_of_set_first_time_kernel.setter
+    def touch_particles_of_set_first_time_kernel(self, value):
+      self._algorithm_steps[ "ForceCalculation" ].touch_vertex_first_time_kernel = value
+    
+    @property 
+    def touch_particles_of_set_last_time_kernel(self):
+      return self._algorithm_steps[ "ForceCalculation" ].touch_vertex_last_time_kernel
+
+    @touch_particles_of_set_first_time_kernel.setter
+    def touch_particles_of_set_last_time_kernel(self, value):
+      self._algorithm_steps[ "ForceCalculation" ].touch_vertex_last_time_kernel = value
+    
+    @property 
+    def cell_kernel(self):
+      return self._algorithm_steps[ "ForceCalculation" ].cell_kernel
+
+    @cell_kernel.setter
+    def cell_kernel(self, value):
+        self._algorithm_steps[ "ForceCalculation" ].cell_kernel = value
+    
+    def add_to_reduction(self, value):
+      self._algorithm_steps["ReduceGlobalQuantities"].unprepare_traversal_kernel += value
 
     def __setup_algorithm_steps(self):
         """!
@@ -140,15 +168,15 @@ class ExplicitEulerFixedSearchRadius(Particle):
         PARTICLE = self.name
         CFL_FACTOR = self.cfl_factor
         TIME_STEP_SIZE = self.initial_time_step_size
-
+        
         self._algorithm_steps = {
             "ForceCalculation": AlgorithmStep(
                 name="ForceCalculation",
                 dependencies=AlgorithmStep.Dependencies.NEIGHBOURS,
                 effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-                touch_vertex_first_time_kernel=self.touch_particles_of_set_first_time_kernel,
-                cell_kernel=self.enter_cell_kernel,
-                touch_vertex_last_time_kernel=self.touch_particles_of_set_last_time_kernel,
+                touch_vertex_first_time_kernel="",
+                cell_kernel="",
+                touch_vertex_last_time_kernel="",
             ),
             "UpdatePositionAndVelocity": AlgorithmStep(
                 name="UpdatePositionAndVelocity",
@@ -210,7 +238,6 @@ class ExplicitEulerFixedSearchRadius(Particle):
         So we
 
         """
-        self.__setup_algorithm_steps()
         return [
             self._algorithm_steps["ForceCalculation"],
             self._algorithm_steps["UpdatePositionAndVelocity"],
@@ -224,7 +251,6 @@ class ExplicitEulerFixedSearchRadius(Particle):
         the initial stats right before we jump into the time stepping.
 
         """
-        self.__setup_algorithm_steps()
         return [
             self._algorithm_steps["ReduceVelocityAndDetermineTimeStepSize"],
         ]
