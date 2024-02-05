@@ -89,18 +89,18 @@ tarch::la::Matrix<Rows,Rows,Scalar> tarch::la::invert(
   const tarch::la::Matrix<Rows,Rows,Scalar>&  R
 ){
   // make a copy
-  tarch::la::Matrix<Rows,Rows,Scalar> M = R;
+  [[maybe_unused]] tarch::la::Matrix<Rows,Rows,Scalar> M = R;
 
   // aux variables
   int returnCode;
   int ipiv[Rows];
 
-  // step 1 - compute LU factorisation. M -> P * L * U, where P a permutation matrix
+  // step 1 - compute LU factorisation. Modify M in-place.
   returnCode = LAPACKE_dgetrf( LAPACK_ROW_MAJOR, Rows, Rows, M.data(), Rows, ipiv );
   // check return code. 
   assertion(returnCode==0);
 
-  // step 2 - use the result of the above to compute the inverse.
+  // step 2 - use the result of the above to compute the inverse. Modify M in-place.
   returnCode = LAPACKE_dgetri( LAPACK_ROW_MAJOR, Rows, M.data(), Rows, ipiv );
  // check return code
   assertion(returnCode==0);

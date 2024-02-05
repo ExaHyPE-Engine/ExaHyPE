@@ -55,7 +55,13 @@ namespace tarch {
     * These functions accept a pointer to a double array, which we get
     * from tarch::la::Matrix::data().
     *
-    *
+    * This routine has two steps:
+    * Step 1 - compute LU factorisation. M -> P * L * U, where P a permutation matrix. This uses LAPACKE_dgetrf,
+    * and we check the return code is 0 before proceeding. Return code 0 means success, but return code >= 0 means 
+    * that factorisation has occurred, but the matrix is singular.
+    * 
+    * Step 2 - use the factored matrix as input to LAPACKE_dgetri. Again we assert that the return code was 0.
+    * 
     */
     template<int Rows, typename Scalar>
     Matrix<Rows,Rows,Scalar> invert(
