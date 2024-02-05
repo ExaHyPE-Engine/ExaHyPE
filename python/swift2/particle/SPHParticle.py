@@ -310,18 +310,6 @@ class SPHParticle(Particle):
         placed in get_algorithm_steps_dict(self). The dict is set up during
         instantiation of this class, and reads in all available algorithm steps
         defined in AlgorithmStepLibrary.py.
-
-        @todo Mladen, I think a discuss of leapfrog does not belong into 
-              SPHParticle. I'm also not sure if this function should throw
-              a NotImplemented assertion? Same for _setup_initialisation_steps
-              
-        Leapfrog consists basically of four steps per particle. We first
-        determine the force. Then we update the velocity by half a timestep and move
-        the particle by a full timestep. Then the force is re-computed and the
-        second half of the velocity update is done.
-        Some variations of this KDK form re-arrange the steps executed per timestep
-        to avoid a second force loop. We can't do this here because we're not planning
-        on running with fixed time step sizes throughout the run.
         """
         return
 
