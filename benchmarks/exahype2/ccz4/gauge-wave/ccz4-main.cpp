@@ -39,17 +39,18 @@
 #include "toolbox/blockstructured/UnitTests.h"
 #include "toolbox/loadbalancing/loadbalancing.h"
 
-//! [Additional mesh sweep case step]
+//! [Additional mesh sweep include]
 #if defined(USE_ADDITIONAL_MESH_TRAVERSAL)
   #include "observers/AdditionalMeshTraversal.h"
 #endif
+//! [Additional mesh sweep include]
 
 using namespace benchmarks::exahype2::ccz4;
 
 tarch::logging::Log _log("::");
 
 
-tarch::timing::Measurement   tpsMeasurement;
+tarch::timing::Measurement   timePerMeshSwepMeasurement;
 tarch::timing::Measurement   gridConstructionMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 tarch::timing::Measurement   plotMeasurement;
@@ -200,15 +201,13 @@ bool selectNextAlgorithmicStep() {
       );
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
-    }
-    else if (repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime) {
+    } else if (repositories::getMinTimeStamp() < MinTerminalTime and repositories::getMaxTimeStamp() < MaxTerminalTime) {
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::TimeStep)
       );
       continueToSolve         = true;
       haveJustWrittenSnapshot = false;
-    }
-    else {
+    } else {
       if (not haveJustWrittenSnapshot and TimeInBetweenPlots > 0.0 and repositories::mayPlot()) {
         peano4::parallel::Node::getInstance().setNextProgramStep(
           repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::PlotSolution)
@@ -238,7 +237,7 @@ void step() {
 #else
   if (tarch::mpi::Rank::getInstance().isGlobalMaster())
 #endif
-  logInfo("step()", "run " << repositories::StepRepository::toString(stepName) << " with solver's upcoming state " << repositories::getSolverStateDescriptions() );
+  logInfo("step()", "run " << repositories::StepRepository::toString(stepName));
 
   static tarch::timing::Watch watch("::", "step()", false);
 
@@ -539,9 +538,8 @@ int main(int argc, char** argv) {
           step();
           watch.stop();
 
-          const double timestepsPerSecond = double(1 / watch.getCalendarTime()); // Inverse of the time per timestep
-          tpsMeasurement.setValue(timestepsPerSecond);
-          logInfo("main()", "TPS: " << std::fixed << std::setprecision(2) << timestepsPerSecond);
+          timePerMeshSwepMeasurement.setValue(watch.getCalendarTime());
+          logInfo("main()", "time per mesh sweep (current/average): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() << " / " << timePerMeshSwepMeasurement.getValue() );
         }
 
         logInfo("main()", "terminated successfully");
@@ -552,16 +550,16 @@ int main(int argc, char** argv) {
         );
         logInfo(
           "main()",
-          "plotting:                  " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString()
+          "plotting:                    " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString()
         );
         logInfo(
           "main()",
-          "time stepping:             " << timeStepMeasurement.getAccumulatedValue(
+          "time stepping:               " << timeStepMeasurement.getAccumulatedValue(
           ) << "s\t" << timeStepMeasurement.toString()
         );
         logInfo(
           "main()",
-          "average TPS:               " << tpsMeasurement.getValue() << "\t" << tpsMeasurement.toString()
+          "average time per mesh sweep: " << timePerMeshSwepMeasurement.getValue() << "\t" << timePerMeshSwepMeasurement.toString()
         );
       } else if (isPeanoComputeNode) {
         while (peano4::parallel::Node::getInstance().continueToRun()) {

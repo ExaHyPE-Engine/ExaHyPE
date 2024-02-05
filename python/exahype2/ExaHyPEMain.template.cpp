@@ -51,7 +51,7 @@ using namespace {{NAMESPACE | join("::")}};
 tarch::logging::Log _log("::");
 
 
-tarch::timing::Measurement   tpsMeasurement;
+tarch::timing::Measurement   timePerMeshSwepMeasurement;
 tarch::timing::Measurement   gridConstructionMeasurement;
 tarch::timing::Measurement   timeStepMeasurement;
 tarch::timing::Measurement   plotMeasurement;
@@ -517,9 +517,8 @@ int main(int argc, char** argv) {
           step();
           watch.stop();
 
-          const double timestepsPerSecond = double(1 / watch.getCalendarTime()); // Inverse of the time per timestep
-          tpsMeasurement.setValue(timestepsPerSecond);
-          logInfo("main()", "time per mesh sweep: " << std::fixed << std::setprecision(2) << timestepsPerSecond);
+          timePerMeshSwepMeasurement.setValue(watch.getCalendarTime());
+          logInfo("main()", "time per mesh sweep (current/average): " << std::fixed << std::setprecision(2) << watch.getCalendarTime() << " / " << timePerMeshSwepMeasurement.getValue() );
         }
 
         logInfo("main()", "terminated successfully");
@@ -539,7 +538,7 @@ int main(int argc, char** argv) {
         );
         logInfo(
           "main()",
-          "average time per mesh sweep: " << tpsMeasurement.getValue() << "\t" << tpsMeasurement.toString()
+          "average time per mesh sweep: " << timePerMeshSwepMeasurement.getValue() << "\t" << timePerMeshSwepMeasurement.toString()
         );
       } else if (isPeanoComputeNode) {
         while (peano4::parallel::Node::getInstance().continueToRun()) {
