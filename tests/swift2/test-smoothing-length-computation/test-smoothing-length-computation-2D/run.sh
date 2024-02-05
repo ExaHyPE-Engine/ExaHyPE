@@ -26,10 +26,10 @@ rand=$RANDOM
 for neighbors in 8 ; do
     echo running for $neighbors neighbors
     # echo 'generate and compile code ...'
-    python3 ./test_smoothing_length_computation_2D.py -cs $CELL_SIZE -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE > /dev/null
+    python3 ./test_smoothing_length_computation_2D.py -cs $CELL_SIZE -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE --asserts > /dev/null
     echo 'running test ...'
     ./testSML > output-$neighbors.log
     echo 'comparing results ...'
-    python3 ./compare_results.py -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE -d 2
+    python3 ./compare_results.py -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE -d 2 | tee results-$neighbors.txt
     echo '---------------------'
 done

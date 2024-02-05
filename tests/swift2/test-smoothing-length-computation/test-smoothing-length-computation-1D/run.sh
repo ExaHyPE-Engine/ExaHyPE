@@ -26,6 +26,6 @@ for neighbors in 3 5 10; do
     echo 'running test ...'
     ./testSML > output-$neighbors.log
     echo 'comparing results ...'
-    python3 ./compare_results.py -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE -d 1 | tee results-$n.py
+    python3 ./compare_results.py -ic $IC_FILENAME -n $neighbors -ht $H_TOLERANCE -d 1 | tee results-$neighbors.txt
     echo '---------------------'
 done
