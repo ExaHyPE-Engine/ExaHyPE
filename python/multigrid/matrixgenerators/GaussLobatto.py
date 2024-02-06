@@ -368,15 +368,51 @@ class GLMatrixFree(GaussLobatto):
     A_CF_u_right  = self.block_matrix._A_CF[(0,5)]["right"][(0,0)] # + block_matrix._A_CF[(0,5)]["right"][(0,1)]
     A_CF_u_top    = self.block_matrix._A_CF[(0,5)]["top"][(0,0)] # + block_matrix._A_CF[(0,5)]["top"][(1,0)]
 
-    A_CF_left = np.concatenate((A_CF_q_left, A_CF_u_left), axis=1)
-    A_CF_bottom = np.concatenate((A_CF_q_bottom, A_CF_u_bottom), axis=1)
-    A_CF_right = np.concatenate((A_CF_q_right, A_CF_u_right), axis=1)
-    A_CF_top = np.concatenate((A_CF_q_top, A_CF_u_top), axis=1)
+    # A_CF_left = np.concatenate((A_CF_q_left, A_CF_u_left), axis=1)
+    # A_CF_bottom = np.concatenate((A_CF_q_bottom, A_CF_u_bottom), axis=1)
+    # A_CF_right = np.concatenate((A_CF_q_right, A_CF_u_right), axis=1)
+    # A_CF_top = np.concatenate((A_CF_q_top, A_CF_u_top), axis=1)
 
-    A_CF_result = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
+    # A_CF_result = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
     
     # return A_CF_result
-    raise NotImplementedError # @Alex todo! see return pattern below
+
+    Zeros = np.zeros((self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
+                      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 * self.Dimensions)) # should be 16x4 for 2D 1st order
+    
+    matrix_0 = Zeros
+    matrix_1 = Zeros
+    # Keep specific for debugging
+    assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
+
+    matrix_0[ :, [2,3] ] = A_CF_q_left
+    matrix_0[ :, [6,7] ] = A_CF_q_bottom
+    matrix_0[ :, [10,11] ] = A_CF_q_right
+    matrix_0[ :, [14,15] ] = A_CF_q_top
+
+    matrix_1[ :, [0,1] ] = A_CF_u_left
+    matrix_1[ :, [4,5] ] = A_CF_u_bottom
+    matrix_1[ :, [8,9] ] = A_CF_u_right
+    matrix_1[ :, [12,13] ] = A_CF_u_top
+    
+    
+    output_matrices = [ matrix_0, matrix_1 ]
+    output_scalings = [ 0, 1 ]
+
+    assert( len(output_matrices) == len(output_scalings) )
+
+    for matrix in output_matrices:
+      assert matrix.shape == output_matrices[0].shape
+
+    return output_matrices, output_scalings
+  
+  # SCALING: Consider our case with 4x16 matrix:
+    #
+    #    by h        by h        by 1        by 1        by h        by h        by 1        by 1        by h        by h        by 1        by 1        by h        by h        by 1        by 1      
+    # [[ 0.33333333  0.16666667  0.33333333  0.16666667 -0.33333333 -0.16666667  0.33333333  0.16666667  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.33333333 -0.16666667]
+    #  [ 0.          0.         -0.33333333 -0.16666667 -0.16666667 -0.33333333  0.16666667  0.33333333 -0.33333333 -0.16666667  0.33333333  0.16666667  0.          0.         -0.16666667 -0.33333333]
+    #  [ 0.16666667  0.33333333  0.16666667  0.33333333  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.16666667 -0.33333333  0.33333333  0.16666667  0.33333333  0.16666667]
+    #  [ 0.          0.         -0.16666667 -0.33333333  0.          0.         -0.16666667 -0.33333333 -0.16666667 -0.33333333  0.16666667  0.33333333  0.16666667  0.33333333  0.16666667  0.33333333]]
 
   def get_cell_to_face_matrix(self):
     """
@@ -390,7 +426,7 @@ class GLMatrixFree(GaussLobatto):
 
     So the output of this matrix should have:                                               extra factor to account for all the faces
     2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions rows (= 32)
-    self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions                                  cols
+    self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions                                  cols (= 4)
 
     @Sean: need to discuss the order of the redundant blocks
     """
@@ -431,18 +467,36 @@ class GLMatrixFree(GaussLobatto):
 
     # Components of the resulting matrix  
     # SCALING: Resulting matrix is made by concatenating P_q matrices and P_u matrices in the following order
-    P_left = np.concatenate((P_qp_u_left, P_up_u_left), axis=0)
-    P_bottom = np.concatenate((P_qp_u_bottom, P_up_u_bottom), axis=0)
-    P_right = np.concatenate((P_qm_u_right, P_um_u_right), axis=0)
-    P_top = np.concatenate((P_qm_u_top, P_um_u_top), axis=0)
+    # P_left = np.concatenate((P_qp_u_left, P_up_u_left), axis=0)
+    # P_bottom = np.concatenate((P_qp_u_bottom, P_up_u_bottom), axis=0)
+    # P_right = np.concatenate((P_qm_u_right, P_um_u_right), axis=0)
+    # P_top = np.concatenate((P_qm_u_top, P_um_u_top), axis=0)
 
     # Add Zeros for redundant projections
-    Zeros = np.zeros_like(P_left)
+    # Zeros = np.zeros_like(P_left)
     # return np.concatenate((Zeros, P_left, Zeros, P_bottom, P_right, Zeros, P_top, Zeros), axis=0)
     
+    Zeros = np.zeros((2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions,
+                      self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions)) # should be 32x4 for 2D 1st order
+    
+    # Keep specific for debugging
+    assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
+    # q^\pm - gradient projections, scaled by h^-1
+    matrix_0 = Zeros
+    matrix_0[ [4,5],   : ] = P_qp_u_left
+    matrix_0[ [12,13], : ] = P_qp_u_bottom
+    matrix_0[ [16,17], : ] = P_qm_u_right
+    matrix_0[ [24,25], : ] = P_qm_u_top
+    # u^\pm - solution projections, scaled by h^0
+    matrix_1 = Zeros
+    matrix_1[ [6,7],   : ] = P_up_u_left
+    matrix_1[ [14,15], : ] = P_up_u_bottom
+    matrix_1[ [18,19], : ] = P_um_u_right
+    matrix_1[ [26,27], : ] = P_um_u_top
 
-    output_matrices = [ matrix_0, matrix_1, matrix_2 ]
-    output_scalings = [ integer_0, integer_1, integer_2 ]
+
+    output_matrices = [ matrix_0, matrix_1 ]
+    output_scalings = [ -1, 0 ]
 
     assert( len(output_matrices) == len(output_scalings) )
 
@@ -479,7 +533,7 @@ class GLMatrixFree(GaussLobatto):
     #  [-1. -0.  1. -0.]  -- scale by 1/h
     #  [-0. -1. -0.  1.]  -- scale by 1/h
     #  [-0. -0.  1. -0.]  -- scale by 1
-    #  [-0. -0. -0.  1.]] -- scale by 1
+    #  [-0. -0. -0.  1.]  -- scale by 1
     #  [ 0.  0.  0.  0.]  -- redundant
     #  [ 0.  0.  0.  0.]  -- redundant
     #  [ 0.  0.  0.  0.]  -- redundant
@@ -496,7 +550,7 @@ class GLMatrixFree(GaussLobatto):
 
     @Sean: check the shape
     '''
-    return np.zeros( ( 
+    return np.eye( ( 
       self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1),
       self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1)
      ), dtype=int )
