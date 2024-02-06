@@ -292,6 +292,19 @@
       static tarch::logging::Log _log;
 
       MemoryPool  _memoryPool;
+
+      /**
+       * Extracted into routine of its own, as I need it for both boundary and periodic boundary merges
+       *
+       * Even if we replace a current particle with an incoming one, we keep
+       * the current particle's (debug) location. This way, we ensure that all
+       * debug data remain correct also for periodic BCs.
+       */
+      void mergeWithNeighbourParticle(
+        DoFType*                                     neighbourParticle,
+        const peano4::datamanagement::VertexMarker&  marker,
+        int                                          spacetreeId
+      );
 };
 
 {% for item in NAMESPACE -%}
