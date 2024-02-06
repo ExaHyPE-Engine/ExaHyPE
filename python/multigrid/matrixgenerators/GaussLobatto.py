@@ -336,12 +336,9 @@ class GLMatrixFree(GaussLobatto):
     self._projections_per_face_node = projections_per_face_node
     
   def get_A_tilde(self):
-    return self.get_cell_identity_matrix()
+    return [self.get_cell_identity_matrix()], [0]
 
-  # def get_A_tilde_scaling(self):
-  #   return np.zeros_like( self.get_A_tilde(), dtype=int )
-
-  def get_face_to_cell_matrix(self):
+  def get_cell_from_face_matrix(self):
     '''
     @Alex the shape of this should be:
     unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions rows (= 4)
@@ -414,9 +411,8 @@ class GLMatrixFree(GaussLobatto):
     #  [ 0.16666667  0.33333333  0.16666667  0.33333333  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.16666667 -0.33333333  0.33333333  0.16666667  0.33333333  0.16666667]
     #  [ 0.          0.         -0.16666667 -0.33333333  0.          0.         -0.16666667 -0.33333333 -0.16666667 -0.33333333  0.16666667  0.33333333  0.16666667  0.33333333  0.16666667  0.33333333]]
 
-  def get_cell_to_face_matrix(self):
+  def get_face_from_cell_matrix(self):
     """
-    @Alex todo
 
     We wanna project the cell solution onto the face projections vector
     We wanna include redundant rows now.
@@ -428,7 +424,6 @@ class GLMatrixFree(GaussLobatto):
     2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions rows (= 32)
     self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions                                  cols (= 4)
 
-    @Sean: need to discuss the order of the redundant blocks
     """
 
     ### Compute the normal gradient projections
@@ -550,43 +545,23 @@ class GLMatrixFree(GaussLobatto):
 
     @Sean: check the shape
     '''
-    return np.eye( ( 
-      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1),
-      self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1)
-     ), dtype=int )
-    
+    return np.eye( 
+      # ( 
+      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1)
+      # ,
+      # self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1))
+     , dtype=int )
+  
+  def get_cell_system_matrix_for_laplacian(self):
+    """!
+    Return the superclass's matrix, alongside a array of length
+    1 for scale factor. Hardcoding the number
+    """
+    return [super(GLMatrixFree,self).get_cell_system_matrix_for_laplacian()], [0]
 
-  # def get_cell_mass_matrix_scaling(self):
-  #   """
-  #   @Alex todo!
-  #   """
-  #   return 2 * np.ones_like( self.get_cell_mass_matrix(), dtype=int )
-
-  # def get_cell_system_matrix_for_laplacian_scaling(self):
-  #   """
-  #   @Alex todo!
-  #   """
-  #   return np.zeros_like( self.get_cell_system_matrix_for_laplacian(), dtype=int ) # yes, should be zero
-
-  # def get_cell_to_face_matrix_scaling(self):
-  #   """
-  #   @Alex todo!
-  #   """
-
-  #   result = np.zeros_like( self.get_cell_to_face_matrix(), dtype=int )
-  #   # Only works for 2D 1st order
-  #   # will depend on the order of redundant blocks, needs checking
-  #   assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
-  #   result[ [4,5,12,13,16,17,24,25], : ] = -1 * np.array([1, 1, 1, 1], dtype=int )
-  #   return result
-
-  # def get_face_to_cell_matrix_scaling(self):
-  #   """
-  #   """
-
-  #   result = np.zeros_like( self.get_face_to_cell_matrix(), dtype=int )
-  #   # Only works for 2D 1st order
-  #   assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
-  #   for i in range(0, result.shape[1], 2):
-  #     result[:, i:(i+2)] = np.array([1, 1, 1, 1], dtype=int )
-  #   return result
+  def get_cell_mass_matrix(self):
+    """!
+    Return the superclass's matrix, alongside a array of length
+    1 for scale factor. Hardcoding the number
+    """
+    return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]

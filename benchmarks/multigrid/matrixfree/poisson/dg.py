@@ -65,6 +65,16 @@ matrices = multigrid.matrixgenerators.GLMatrixFree(
 
 #! [Instantiate solver]
 
+assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
+mass_matrix, mass_matrix_scaling         = matrices.get_cell_mass_matrix()
+face_from_cell_projection, \
+face_from_cell_projection_scaling        = matrices.get_face_from_cell_matrix()
+cell_from_face_projection, \
+cell_from_face_projection_scaling        = matrices.get_cell_from_face_matrix()
+approximate_system_matrix, \
+approximate_system_matrix_scaling        = matrices.get_A_tilde()
+
+
 solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
   name = "DGPoisson",
   dimensions = args.dimensions,
@@ -74,20 +84,20 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   projections_per_face_node = args.ppfn,
   min_h = args.meshsize,
   max_h = args.meshsize,
-  assembly_matrix= matrices.get_cell_system_matrix_for_laplacian(), 
-  assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian_scaling(), 
-  mass_matrix = matrices.get_cell_mass_matrix(), 
-  mass_matrix_scaling = matrices.get_cell_mass_matrix_scaling(), 
-  face_from_cell_projection = matrices.get_cell_to_face_matrix(), 
-  face_from_cell_projection_scaling = matrices.get_cell_to_face_matrix_scaling(),
-  cell_from_face_projection = matrices.get_face_to_cell_matrix(), 
-  cell_from_face_projection_scaling = matrices.get_face_to_cell_matrix_scaling(),
+  assembly_matrix= assembly_matrix, 
+  assembly_matrix_scaling = assembly_matrix_scaling, 
+  mass_matrix = mass_matrix, 
+  mass_matrix_scaling = mass_matrix_scaling, 
+  face_from_cell_projection = face_from_cell_projection, 
+  face_from_cell_projection_scaling = face_from_cell_projection_scaling,
+  cell_from_face_projection = cell_from_face_projection, 
+  cell_from_face_projection_scaling = cell_from_face_projection_scaling,
   riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
   boundary_matrix = matrices.get_boundary_matrix(),
   cell_relaxation = 0.8,
   face_relaxation = 0.8,
-  approximate_system_matrix = matrices.get_A_tilde(),
-  approximate_system_matrix_scaling = matrices.get_A_tilde_scaling(),
+  approximate_system_matrix = approximate_system_matrix,
+  approximate_system_matrix_scaling = approximate_system_matrix_scaling,
 )
 
 #! [Instantiate solver]

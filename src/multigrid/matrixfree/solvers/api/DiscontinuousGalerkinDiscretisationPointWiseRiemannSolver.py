@@ -371,8 +371,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "projection",    str(self._unknowns_per_face_projection) ))
 
     # assertions for matrix shapes
-    assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
-    assert assembly_matrix.shape == mass_matrix.shape
+    # assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
+    # assert assembly_matrix.shape == mass_matrix.shape
 
     # assert  face_from_cell_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
     # assert (face_from_cell_projection.T).shape ==  self._cell_from_face_projection.shape
