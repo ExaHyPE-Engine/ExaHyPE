@@ -131,6 +131,7 @@ if icfile.endswith(".hdf5"):
     hfile = h5py.File(icfile, "r")
     gas = hfile["PartType0"]
     coords = gas["Coordinates"][:]
+    coords = coords[:, :ndim]
     ids = gas["ParticleIDs"][:]
     hfile.close()
 
@@ -140,12 +141,11 @@ elif icfile.endswith(".vtu"):
 
     reader = ParticleVTUReader(vtufile=vtufile, verbose=False)
     partData = reader.load()
-    coords = partData.x
+    coords = partData.x[:,:ndim]
     ids = partData.partid
 
 else:
     raise ValueError("Unrecognized file type {icfile}, looking for .vtu or .hdf5 file.")
-
 
 # Sort by particle ID
 sort_ic = np.argsort(ids)
@@ -157,7 +157,7 @@ coords = coords[sort_ic]
 # -------------------------
 
 tree = KDTree(coords)
-distances, indexes = tree.query(coords, k=nneigh + 30 * ndim)
+distances, indexes = tree.query(coords, k=nneigh + 10 * ndim)
 neighbours = coords[indexes]
 
 npart = coords.shape[0]

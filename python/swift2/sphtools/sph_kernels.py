@@ -23,7 +23,7 @@ sph_kernel_list = [
 
 
 class _forbidInvalidKernelsDict(dict):
-    """
+    """!
     Modify the default dict to raise an error if a user tries to
     access kernels which aren't defined. Undefined kernels are
     specified via blocked_keys kwarg during initialization.
@@ -118,20 +118,20 @@ sph_kernel_H_over_h[0]["wendland_C6"] = None  # not defined in 1D
 
 # Kernel Normalizations
 # 3D values
-sph_kernel_normalization[2]["cubic_spline"] = np.pi * 16.0
-sph_kernel_normalization[2]["quartic_spline"] = 15625.0 * np.pi / 512.0
-sph_kernel_normalization[2]["quintic_spline"] = 2187.0 * np.pi / 40.0
-sph_kernel_normalization[2]["wendland_C2"] = 21.0 * np.pi / 2.0
-sph_kernel_normalization[2]["wendland_C4"] = 495.0 * np.pi / 32.0
-sph_kernel_normalization[2]["wendland_C6"] = 1365.0 * np.pi / 64.0
+sph_kernel_normalization[2]["cubic_spline"] = 16.0 / np.pi
+sph_kernel_normalization[2]["quartic_spline"] = 15625.0 / (np.pi * 512.0)
+sph_kernel_normalization[2]["quintic_spline"] = 2187.0 / (np.pi * 40.0)
+sph_kernel_normalization[2]["wendland_C2"] = 21.0 / (np.pi * 2.0)
+sph_kernel_normalization[2]["wendland_C4"] = 495.0 / (np.pi * 32.0)
+sph_kernel_normalization[2]["wendland_C6"] = 1365.0 / (np.pi * 64.0)
 
 # 2D values
-sph_kernel_normalization[1]["cubic_spline"] = 80.0 * np.pi / 7.0
-sph_kernel_normalization[1]["quartic_spline"] = 46875.0 * np.pi / 2398.0
-sph_kernel_normalization[1]["quintic_spline"] = 15309.0 * np.pi / 478.0
-sph_kernel_normalization[1]["wendland_C2"] = 7.0 * np.pi
-sph_kernel_normalization[1]["wendland_C4"] = 9.0 * np.pi
-sph_kernel_normalization[1]["wendland_C6"] = 78.0 * np.pi / 7.0
+sph_kernel_normalization[1]["cubic_spline"] = 80.0 / (np.pi * 7.0)
+sph_kernel_normalization[1]["quartic_spline"] = 46875.0 / (np.pi * 2398.0)
+sph_kernel_normalization[1]["quintic_spline"] = 15309.0 / (np.pi * 478.0)
+sph_kernel_normalization[1]["wendland_C2"] = 7.0 / np.pi
+sph_kernel_normalization[1]["wendland_C4"] = 9.0 / np.pi
+sph_kernel_normalization[1]["wendland_C6"] = 78.0 / (np.pi * 7.0)
 
 # 1D values
 sph_kernel_normalization[0]["cubic_spline"] = 8.0 / 3.0
@@ -147,10 +147,10 @@ def _sph_kernel_eval_cubic_spline(q: float):
     Evaluates the cubic spline kernel
     """
     if q < 0.5:
-        res = 3 * q**2 * (q - 1) + 0.5
+        res = 3. * q**2. * (q - 1.) + 0.5
     elif q < 1.0:
         #  res =  q * (q * (3 - q) - 3) + 1
-        res = -(q**3) + 3 * q**2 - 3 * q + 1
+        res = -(q**3.) + 3. * q**2. - 3. * q + 1.
     else:
         res = 0.0
     return res
@@ -488,3 +488,32 @@ def sph_kernel_get_H(h: Union[float, np.ndarray], kernel: str, ndim: int):
     """
 
     return h * sph_kernel_H_over_h[ndim - 1][kernel]
+
+
+def sph_kernel_root(kernel: str, ndim: int):
+    """!
+    Evaluate kernel root, i.e. W(0, h).
+    We don't actually need `h` here, because the quantity used in the kernels,
+    `q = r/h` is also zero by construction.
+
+    Parameters
+    ----------
+
+    kernel: str
+        which kernel to use
+
+    ndim: int
+        what dimension to use. [1-3]
+
+
+    Returns
+    -------
+
+    W: float
+        evaluated kernel
+
+    """
+
+    return sph_kernel_W(0., 1., kernel, ndim)
+
+

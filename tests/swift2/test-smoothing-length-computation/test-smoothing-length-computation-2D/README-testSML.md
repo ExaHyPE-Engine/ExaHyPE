@@ -67,68 +67,6 @@ paper for previous Peano code generations (generation 2).
 ## Information provided by used packages
 
 
-
-### Particle handling 
-                                                                            
-The particle handling is based upon the idea of particles in dual trees (PIDT)
-as published in the paper below:                                              
-                                                                            
-       @article{Weinzierl:2016:PIDT, 
-         title = {Two particle-in-grid realisations on spacetrees}, 
-         journal = {Parallel Computing}, 
-         volume = {52}, 
-         pages = {42-64}, 
-         year = {2016}, 
-         issn = {0167-8191}, 
-         doi = {https://doi.org/10.1016/j.parco.2015.12.007}, 
-         url = {https://www.sciencedirect.com/science/article/pii/S0167819115001635}, 
-         author = {T. Weinzierl and B. Verleye and P. Henri and D. Roose}, 
-         keywords = {Particle-in-cell, Spacetree, Particle sorting, AMR, Lagrangian-Eulerian methods, Communication-avoiding}, 
-         abstract = {The present paper studies two particle management strategies for dynamically adaptive Cartesian grids at hands of a particle-in-cell code. One holds the particles within the grid cells, the other within the grid vertices. The fundamental challenge for the algorithmic strategies results from the fact that particles may run through the grid without velocity constraints. To facilitate this, we rely on multiscale grid representations. They allow us to lift and drop particles between different spatial resolutions. We call this cell-based strategy particle in tree (PIT). Our second approach assigns particles to vertices describing a dual grid (PIDT) and augments the lifts and drops with multiscale linked cells. Our experiments validate the two schemes at hands of an electrostatic particle-in-cell code by retrieving the dispersion relation of Langmuir waves in a thermal plasma. They reveal that different particle and grid characteristics favour different realisations. The possibility that particles can tunnel through an arbitrary number of grid cells implies that most data is exchanged between neighbouring ranks, while very few data is transferred non-locally. This constraints the scalability as the code potentially has to realise global communication. We show that the merger of an analysed tree grammar with PIDT allows us to predict particle movements among several levels and to skip parts of this global communication a priori. It is capable to outperform several established implementations based upon trees and/or space-filling curves.}
-       }
-
-
-
-### SWIFT 2
-
-This code uses the second generation of the SWIFT code controlled through
-its Python API. Under the hood it uses Peano 4. We do not yet have a release
-paper for this second generation of SWIFT yet, and  thus appreciate any
-citation of the original SWIFT paper
-
-       @article{Schaller:2020:SWIFT,
-         title = {t.b.d.}
-       }
-
-
-
-We assume that you use a domain of (0,1)x(0,1). 
-    
-
-Peano 4 will cut this domain equidistantly and recursively into three parts along each coordinate axis. This yields a spacetree.
-
-The coarsest mesh chosen has a mesh width of h_max=0.5.
-As Peano realises three-partitioning, the actual maximum mesh size will be h_max=0.3333333333333333.
-This corresponds to at least 1 spacetree levels.
-The coarsest regular mesh hence will host 9 octants.
-
-Once this resultion is reached, the mesh will stop the initial load balancing, insert the 
-particles and then kick off the simulation. The mesh might be refined and erased subsequently,
-but it will never become coarser than these constraints.
-
-Each particle provides its own additional meshing constraints:
-
-Species | max_h | coarsest level | min_h | finest level
---------|-------|----------------|-------|-------------
-hydroPart | 0.3333333333333333 | 1 | 0.3333333333333333 | 1
-
-
-The meshing quantities abive are species-specific. Once you have multiple 
-particle species, the actual grid results from a combination of their 
-properties, and some species particles might reside on different resolution 
-levels.
-
-
 ### Data structure modelling
 
 Peano models its data structures via a tool called DaStGen. The actual DaStGen 
@@ -167,6 +105,68 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
         } 
 
 
+### Particle handling 
+                                                                            
+The particle handling is based upon the idea of particles in dual trees (PIDT)
+as published in the paper below:                                              
+                                                                            
+       @article{Weinzierl:2016:PIDT, 
+         title = {Two particle-in-grid realisations on spacetrees}, 
+         journal = {Parallel Computing}, 
+         volume = {52}, 
+         pages = {42-64}, 
+         year = {2016}, 
+         issn = {0167-8191}, 
+         doi = {https://doi.org/10.1016/j.parco.2015.12.007}, 
+         url = {https://www.sciencedirect.com/science/article/pii/S0167819115001635}, 
+         author = {T. Weinzierl and B. Verleye and P. Henri and D. Roose}, 
+         keywords = {Particle-in-cell, Spacetree, Particle sorting, AMR, Lagrangian-Eulerian methods, Communication-avoiding}, 
+         abstract = {The present paper studies two particle management strategies for dynamically adaptive Cartesian grids at hands of a particle-in-cell code. One holds the particles within the grid cells, the other within the grid vertices. The fundamental challenge for the algorithmic strategies results from the fact that particles may run through the grid without velocity constraints. To facilitate this, we rely on multiscale grid representations. They allow us to lift and drop particles between different spatial resolutions. We call this cell-based strategy particle in tree (PIT). Our second approach assigns particles to vertices describing a dual grid (PIDT) and augments the lifts and drops with multiscale linked cells. Our experiments validate the two schemes at hands of an electrostatic particle-in-cell code by retrieving the dispersion relation of Langmuir waves in a thermal plasma. They reveal that different particle and grid characteristics favour different realisations. The possibility that particles can tunnel through an arbitrary number of grid cells implies that most data is exchanged between neighbouring ranks, while very few data is transferred non-locally. This constraints the scalability as the code potentially has to realise global communication. We show that the merger of an analysed tree grammar with PIDT allows us to predict particle movements among several levels and to skip parts of this global communication a priori. It is capable to outperform several established implementations based upon trees and/or space-filling curves.}
+       }
+
+
+
+### SWIFT 2
+
+This code uses the second generation of the SWIFT code controlled through
+its Python API. Under the hood it uses Peano 4. We do not yet have a release
+paper for this second generation of SWIFT yet, and  thus appreciate any
+citation of the original SWIFT paper
+
+       @article{Schaller:2020:SWIFT,
+         title = {t.b.d.}
+       }
+
+
+
+We assume that you use a domain of (0,1)x(0,1).
+    
+
+Peano 4 will cut this domain equidistantly and recursively into three parts along each coordinate axis. This yields a spacetree.
+
+The coarsest mesh chosen has a mesh width of h_max=0.5.
+As Peano realises three-partitioning, the actual maximum mesh size will be h_max=0.3333333333333333.
+This corresponds to at least 1 spacetree levels.
+The coarsest regular mesh hence will host 9 octants.
+
+Once this resultion is reached, the mesh will stop the initial load balancing, insert the
+particles and then kick off the simulation. The mesh might be refined and erased subsequently,
+but it will never become coarser than these constraints.
+
+Each particle provides its own additional meshing constraints:
+
+Species | max_h | coarsest level | min_h | finest level
+--------|-------|----------------|-------|-------------
+hydroPart | 0.3333333333333333 | 1 | 0.3333333333333333 | 1
+
+
+The meshing quantities abive are species-specific. Once you have multiple
+particle species, the actual grid results from a combination of their
+properties, and some species particles might reside on different resolution
+levels.
+
+
+
 
 
 
@@ -189,7 +189,7 @@ Particle properties:
 - particles per cell:         20
 - h_min:                      0.5
 - h_max:                      0.5
-- attributes: 51
+- attributes: 50
 
     
 
@@ -202,34 +202,34 @@ Particle properties:
     
 ## Makefile settings
 
-CXX             = /home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/gcc-12.1.0/intel-oneapi-compilers-2023.1.0-3l3jkurzh3w6whgb5aqsicgrtdj2d5ns/compiler/2023.1.0/linux/bin/icpx
-CXXFLAGS        = -std=c++20 -qopenmp -Wno-ignored-attributes -Wno-unknown-attributes -Wno-unused-command-line-argument -Wno-gcc-compat -I//home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/oneapi-2023.1.0/hdf5-1.12.2-dut7av7dksyytzu73v2dg2hxy2374oim/include -DHYDRO_DIMENSION=2 -DHYDRO_GAMMA_5_3 -DQUARTIC_SPLINE_KERNEL
+CXX             = /home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/gcc-12.3.0/intel-oneapi-compilers-2024.0.2-ljpvfeltnfqqgz3eu54wvci3kmsd45u4/compiler/2024.0/bin/icpx
+CXXFLAGS        = -std=c++20 -qopenmp  -Wno-unused-command-line-argument  -Wno-gcc-compat  -Wno-tautological-constant-compare  -Wno-ignored-attributes  -Wno-unknown-attributes  -I//home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/oneapi-2024.0.2/hdf5-1.12.2-nwvya6efp6jrgreywa6g2h4vcy7ygqct/include -DHYDRO_DIMENSION=2 -DHYDRO_GAMMA_5_3 -DQUARTIC_SPLINE_KERNEL
 FC              = 
 FCFLAGS         = 
-LDFLAGS         = -L//home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/oneapi-2023.1.0/hdf5-1.12.2-dut7av7dksyytzu73v2dg2hxy2374oim/lib -qopenmp
+LDFLAGS         = -L//home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/oneapi-2024.0.2/hdf5-1.12.2-nwvya6efp6jrgreywa6g2h4vcy7ygqct/lib -qopenmp
 GPUOBJS         = 
 LIBS            = -lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++
 DIM             = 2
 CONFIGUREPATH   = ../../../..
 EXECUTABLENAME  = testSML
 FORTRAN_MODULES = []
-MODE            = RELEASE
+MODE            = ASSERTS
 
 ## Compiler version
 
-Intel(R) oneAPI DPC++/C++ Compiler 2023.1.0 (2023.1.0.20230320)
+Intel(R) oneAPI DPC++/C++ Compiler 2024.0.2 (2024.0.2.20231213)
 Target: x86_64-unknown-linux-gnu
 Thread model: posix
-InstalledDir: /home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/gcc-12.1.0/intel-oneapi-compilers-2023.1.0-3l3jkurzh3w6whgb5aqsicgrtdj2d5ns/compiler/2023.1.0/linux/bin-llvm
-Configuration file: /home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/gcc-12.1.0/intel-oneapi-compilers-2023.1.0-3l3jkurzh3w6whgb5aqsicgrtdj2d5ns/compiler/2023.1.0/linux/bin-llvm/../bin/icpx.cfg
+InstalledDir: /home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/gcc-12.3.0/intel-oneapi-compilers-2024.0.2-ljpvfeltnfqqgz3eu54wvci3kmsd45u4/compiler/2024.0/bin/compiler
+Configuration file: /home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/gcc-12.3.0/intel-oneapi-compilers-2024.0.2-ljpvfeltnfqqgz3eu54wvci3kmsd45u4/compiler/2024.0/bin/compiler/../icpx.cfg
 
-$ ./configure --enable-particles --enable-swift --enable-loadbalancing --enable-blockstructured --with-hdf5=/home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/oneapi-2023.1.0/hdf5-1.12.2-dut7av7dksyytzu73v2dg2hxy2374oim 'CXXFLAGS= -std=c++20 -qopenmp -Wno-ignored-attributes -Wno-unknown-attributes -Wno-unused-command-line-argument -Wno-gcc-compat -I//home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/oneapi-2023.1.0/hdf5-1.12.2-dut7av7dksyytzu73v2dg2hxy2374oim/include' 'LDFLAGS=-L//home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/oneapi-2023.1.0/hdf5-1.12.2-dut7av7dksyytzu73v2dg2hxy2374oim/lib -qopenmp' 'LIBS=-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++'
+$ ./configure --enable-particles --enable-swift --enable-loadbalancing --enable-blockstructured --with-hdf5=/home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/oneapi-2024.0.2/hdf5-1.12.2-nwvya6efp6jrgreywa6g2h4vcy7ygqct 'CXXFLAGS= -std=c++20 -qopenmp  -Wno-unused-command-line-argument  -Wno-gcc-compat  -Wno-tautological-constant-compare  -Wno-ignored-attributes  -Wno-unknown-attributes  -I//home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/oneapi-2024.0.2/hdf5-1.12.2-nwvya6efp6jrgreywa6g2h4vcy7ygqct/include' 'LDFLAGS=-L//home/mivkov/local/spack/opt/spack/linux-ubuntu22.04-icelake/oneapi-2024.0.2/hdf5-1.12.2-nwvya6efp6jrgreywa6g2h4vcy7ygqct/lib -qopenmp' 'LIBS=-lhdf5_hl_cpp -lhdf5_cpp -lhdf5_hl -lhdf5 -lstdc++'
 
 ## Summary
 
 File has been generated by
 
-python3  ./test_smoothing_length_computation_2D.py -cs 0.5 -ic test_sml_2D.hdf5 -n 8 -ht 1e-6
+python3  ./test_smoothing_length_computation_2D.py -cs 0.5 -ic test_sml_2D.hdf5 -n 20 -ht 1e-6 --asserts
 
 www.peano-framework.org
 (C) 2021-  Tobias Weinzierl

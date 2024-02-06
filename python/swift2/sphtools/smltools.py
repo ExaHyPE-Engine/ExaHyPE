@@ -8,8 +8,9 @@ from .sph_kernels import (
     sph_kernel_dWdr,
     sph_kernel_get_H,
     sph_kernel_get_H,
+    sph_kernel_root,
 )
-from numpy import ndarray, sqrt, cbrt, pi
+from numpy import ndarray, sqrt, cbrt, pi, sum
 
 
 def _neighbour_loop(r: ndarray, h: float, kernel: str, ndim: int):
@@ -105,13 +106,15 @@ def find_smoothing_length(
 
     # get distances between particles
     dx = xn - xp
-    r2 = dx[:, 0] ** 2 + dx[:, 1] ** 2 + dx[:, 2] ** 2
+    r2 = sum(dx[:, :ndim]**2, axis=1)
     r = sqrt(r2)
+
+    kernel_root = sph_kernel_root(kernel, ndim)
 
     # Set up boundaries. We assume that the correct
     # number of neighbour (candidates) has been passed.
     h_max = r.max()
-    h_min = h_max * 1e-12
+    h_min = h_max * 1e-6
 
     # Get initial guess for smoothing length
     dx_average = r.max() / xn.shape[0]
@@ -145,38 +148,44 @@ def find_smoothing_length(
         h_dim_minus_one = h ** (ndim - 1.0)
         wcount, wcount_dh = _neighbour_loop(r, h, kernel, ndim)
 
-        n_sum = wcount * h_dim
-        f = n_sum - n_target
-        f_prime = wcount_dh * h_dim + ndim * wcount * h_dim_minus_one
+        if wcount < 1e-5:
+            if verbose:
+                print(f"Caught no neighbours case, h={h}")
+            h_new = 2. * h
 
-        # improve bisection bounds
-        if n_sum < n_target:
-            left_old = left
-            left = max(left, h)
-        elif n_sum > n_target:
-            right_old = right
-            right = min(right, h)
+        else:
+            n_sum = wcount * h_dim
+            f = n_sum - n_target
+            f_prime = wcount_dh * h_dim + ndim * wcount * h_dim_minus_one
 
-        if left > right:
-            print("Error in bisection bounds. Resetting them.")
-            left = left_old
-            right = right_old
+            # improve bisection bounds
+            if n_sum < n_target:
+                left_old = left
+                left = max(left, h)
+            elif n_sum > n_target:
+                right_old = right
+                right = min(right, h)
 
-        if h >= h_max and f < 0:
-            print("Particle with coordinates", xp, "reached h_max. Returning that.")
-            return h_max
+            if left > right:
+                print("Error in bisection bounds. Resetting them.")
+                left = left_old
+                right = right_old
 
-        if h <= h_min and f > 0:
-            print("Particle with coordinates", xp, "reached h_min. Returning that.")
-            return h_min
+            if h >= h_max and f < 0:
+                print("Particle with coordinates", xp, "reached h_max. Returning that.")
+                return h_max
 
-        h_new = h - f / f_prime
+            if h <= h_min and f > 0:
+                print("Particle with coordinates", xp, "reached h_min. Returning that.")
+                return h_min
 
-        # don't overstep boundaries, and don't change too fast
-        h_new = min(2.0 * h, h_new)
-        h_new = max(0.5 * h, h_new)
-        h_new = max(h_new, left)
-        h_new = min(h_new, right)
+            h_new = h - f / f_prime
+
+            # don't overstep boundaries, and don't change too fast
+            h_new = min(2.0 * h, h_new)
+            h_new = max(0.5 * h, h_new)
+            h_new = max(h_new, left)
+            h_new = min(h_new, right)
 
         if verbose:
             print("h_new=", h_new)
@@ -215,11 +224,12 @@ def find_smoothing_length(
         "iterations",
     )
 
+    quit()
     return h
 
 
 def eta_from_number_of_neighbours(N: float, kernel: str, ndim: int):
-    """
+    """!
     Compute the resolution eta from a given (approximate) number of neighbours.
     Note that the neighbour number does not need be an integer.
     See Price 2012, https://ui.adsabs.harvard.edu/abs/2012JCoPh.231..759P, eq. 12
@@ -257,7 +267,7 @@ def eta_from_number_of_neighbours(N: float, kernel: str, ndim: int):
 
 
 def number_of_neighbours_from_eta(eta: float, kernel: str, ndim: int):
-    """
+    """!
     Compute the (approximate) number of neighbours from a given resolution eta.
     Note that the neighbour number does not need be an integer.
     See Price 2012, https://ui.adsabs.harvard.edu/abs/2012JCoPh.231..759P, eq. 12
