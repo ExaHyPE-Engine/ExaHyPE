@@ -23,7 +23,8 @@ namespace applications::exahype2::CompressibleNavierStokes {
 #if Dimensions == 3
     w,
 #endif
-    e
+    e,
+    Z
   };
 
   enum Derivatives {
@@ -40,8 +41,13 @@ namespace applications::exahype2::CompressibleNavierStokes {
     dwdy,
     dwdz,
 #endif
+    dTdx,
+    dTdy
+#if Dimensions == 3
+    ,
+    dTdz
+#endif
   };
-
   class NavierStokesSolver;
 } // namespace applications::exahype2::CompressibleNavierStokes
 
@@ -91,6 +97,7 @@ public:
     int                                          normal,
     Offloadable
   ) {
+
 #ifdef GPUOffloadingOff
     assertion(normal >= 0);
     assertion(normal < Dimensions);
@@ -107,10 +114,11 @@ public:
     assertion(!std::isnan(Q[e]));
 #endif
 
+    const double irho = 1.0 / Q[rho];
 #if Dimensions == 2
-    const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho]);
+    const double pressure = (Gamma - 1) * (Q[e] - 0.5 * irho * (Q[u] * Q[u] + Q[v] * Q[v]) - Q[Z]);
 #else
-    const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v] + Q[w] * Q[w]) / Q[rho]);
+    const double pressure = (Gamma - 1) * (Q[e] - 0.5 * irho * (Q[u] * Q[u] + Q[v] * Q[v] + Q[w] * Q[w]) - Q[Z]);
 #endif
     assertion(pressure > 0);
 
@@ -120,7 +128,6 @@ public:
     const double max_lambda_viscous    = std::max(
       4.0 / 3.0 * Viscosity / Q[rho], Gamma * Viscosity / (PrandtlNumber * Q[rho])
     );
-
     return std::max(max_lambda_convective, max_lambda_viscous);
   }
 
@@ -144,9 +151,10 @@ public:
     double* __restrict__ F,
     Offloadable
   ) {
+
 #ifdef GPUOffloadingOff
-    assertion(normal >= 0);
-    assertion(normal < Dimensions);
+    assertion3(normal >= 0, faceCentre, t, normal);
+    assertion3(normal < Dimensions, faceCentre, t, normal);
     assertion(Q[rho] > 0);
     assertion(Q[e] > 0);
     assertion((v + normal) < (NumberOfUnknowns + NumberOfAuxiliaryVariables));
@@ -157,12 +165,14 @@ public:
     assertion(!std::isnan(Q[w]));
 #endif
     assertion(!std::isnan(Q[e]));
+    assertion(!std::isnan(Q[Z]));
 #endif
 
+    const double irho = 1.0 / Q[rho];
 #if Dimensions == 2
-    const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho]);
+    const double pressure = (Gamma - 1) * (Q[e] - 0.5 * irho * (Q[u] * Q[u] + Q[v] * Q[v]) - Q[Z]);
 #else
-    const double pressure = (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v] + Q[w] * Q[w]) / Q[rho]);
+    const double pressure = (Gamma - 1) * (Q[e] - 0.5 * irho * (Q[u] * Q[u] + Q[v] * Q[v] + Q[w] * Q[w]) - Q[Z]);
 #endif
 
 #ifdef GPUOffloadingOff
@@ -170,29 +180,14 @@ public:
 #endif
 
     F[rho] = Q[u + normal];
-    F[e]   = Q[u + normal] * (Q[e] + pressure) / Q[rho];
-
-    if (normal == 0) {
-      F[u] = Q[u] * Q[u] / Q[rho] + pressure;
-      F[v] = Q[v] * Q[u] / Q[rho];
+    F[u]   = irho * Q[u] * Q[u + normal];
+    F[v]   = irho * Q[v] * Q[u + normal];
 #if Dimensions == 3
-      F[w] = Q[w] * Q[u] / Q[rho];
+    F[w] = irho * Q[w] * Q[u] + normal;
 #endif
-    } else {
-#if Dimensions == 3
-      if (normal == 1) {
-#endif
-        F[u] = Q[u] * Q[v] / Q[rho];
-        F[v] = Q[v] * Q[v] / Q[rho] + pressure;
-#if Dimensions == 3
-        F[w] = Q[w] * Q[v] / Q[rho];
-      } else {
-        F[u] = Q[u] * Q[w] / Q[rho];
-        F[v] = Q[v] * Q[w] / Q[rho];
-        F[w] = Q[w] * Q[w] / Q[rho] + pressure;
-      }
-#endif
-    }
+    F[u + normal] += pressure;
+    F[e] = irho * Q[u + normal] * (Q[e] + pressure);
+    F[Z] = irho * Q[u + normal] * Q[Z];
   }
 
   virtual void nonconservativeProduct(
@@ -226,27 +221,42 @@ public:
     assertion(!std::isnan(Q[u]));
     assertion(!std::isnan(Q[v]));
     assertion(!std::isnan(Q[e]));
-    assertion(!std::isnan(Q[dudx]));
-    assertion(!std::isnan(Q[dudy]));
-    assertion(!std::isnan(Q[dvdx]));
-    assertion(!std::isnan(Q[dvdy]));
+    assertion(!std::isnan(Q[Z]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dudx]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dudy]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dvdx]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dvdy]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dTdx]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dTdy]));
 #if Dimensions == 3
     assertion(!std::isnan(Q[w]));
-    assertion(!std::isnan(Q[dudz]));
-    assertion(!std::isnan(Q[dvdz]));
-    assertion(!std::isnan(Q[dwdx]));
-    assertion(!std::isnan(Q[dwdy]));
-    assertion(!std::isnan(Q[dwdz]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dudz]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dvdz]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dwdx]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dwdy]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dwdz]));
+    assertion(!std::isnan(Q[NumberOfUnknowns + dTdz]));
 #endif
 #endif
 
+    double kappa = Viscosity * c_p / PrandtlNumber;
+    double c_v   = c_p / Gamma;
     double derivative[NumberOfAuxiliaryVariables];
+
+    auto irho2 = 1.0 / (Q[rho] * Q[rho]);
+    auto irho3 = irho2 / Q[rho];
+    auto a     = -Q[e] * irho3 + (Q[u] * Q[u] + Q[v] * Q[v]) * irho3;
+    auto b     = -Q[u] * irho2;
+    auto c     = -Q[v] * irho2;
 
     if (normal == x) {
       derivative[dudx] = deltaQ[u];
       derivative[dvdx] = deltaQ[v];
       derivative[dudy] = Q[NumberOfUnknowns + dudy] - 0.5 * deltaQ[NumberOfUnknowns + dudy];
       derivative[dvdy] = Q[NumberOfUnknowns + dvdy] - 0.5 * deltaQ[NumberOfUnknowns + dvdy];
+      derivative[dTdx]
+        = (a * deltaQ[rho] + b * derivative[dudx] + c * derivative[dvdx] - irho2 * (deltaQ[Z] - 2 * Q[Z] * deltaQ[rho]));
+      // derivative[dTdx] = Q[NumberOfUnknowns + dTdx] - 0.5 * deltaQ[NumberOfUnknowns + dTdx];
 
 #if Dimension == 3
       derivative[dwdx] = deltaQ[w];
@@ -257,9 +267,9 @@ public:
       // -mu{2(du/dx) - 2/3 (du/dx + dv/dy)}
       BTimesDeltaQ[u] = -Viscosity * (2.0 * derivative[dudx] - 2.0 / 3.0 * (derivative[dudx] + derivative[dvdy]
 #if Dimension == 3
-      +derivative[dwdz]
+        +derivative[dwdz]
 #endif
-      )) / Q[rho];
+        )) / Q[rho];
 
       // -mu{dv/dx + du/dy}
       BTimesDeltaQ[v] = -Viscosity * (derivative[dvdx] + derivative[dudy]) / Q[rho];
@@ -280,15 +290,20 @@ public:
         derivative[dudx] = Q[NumberOfUnknowns + dudx] - 0.5 * deltaQ[NumberOfUnknowns + dudx];
         derivative[dvdx] = Q[NumberOfUnknowns + dvdx] - 0.5 * deltaQ[NumberOfUnknowns + dvdx];
 
+        derivative[dTdy]
+          = (a * deltaQ[rho] + b * derivative[dudy] + c * derivative[dvdy] - irho2 * (deltaQ[Z] - 2 * Q[Z] * deltaQ[rho]));
+
+        // derivative[dTdy] = Q[NumberOfUnknowns + dTdy] - 0.5 * deltaQ[NumberOfUnknowns + dTdy];
+
         // -mu{dv/dx + du/dy}
         BTimesDeltaQ[u] = -Viscosity * (derivative[dvdx] + derivative[dudy]) / Q[rho];
 
         // -mu{2(dv/dy) - 2/3 (du/dx + dv/dy)}
         BTimesDeltaQ[v] = -Viscosity * (2.0 * derivative[dvdy] - 2.0 / 3.0 * (derivative[dudx] + derivative[dvdy]
 #if Dimension == 3
-      +derivative[dwdz]
+        +derivative[dwdz]
 #endif
-      )) / Q[rho];
+        )) / Q[rho];
 #if Dimension == 3
         BTimesDeltaQ[w] = -Viscosity * (derivative[dvdz] + derivative[dwdy]) / Q[rho];
       } else {
@@ -301,6 +316,7 @@ public:
         derivative[dudz] = Q[NumberOfUnknowns + dudz] - 0.5 * deltaQ[NumberOfUnknowns + dudz];
         derivative[dwdy] = Q[NumberOfUnknowns + dwdy] - 0.5 * deltaQ[NumberOfUnknowns + dwdy];
         derivative[dwdx] = Q[NumberOfUnknowns + dwdx] - 0.5 * deltaQ[NumberOfUnknowns + dwdx];
+        derivative[dTdz] = Q[NumberOfUnknowns + dTdz] - 0.5 * deltaQ[NumberOfUnknowns + dTdz];
 
         BTimesDeltaQ[u] = -Viscosity * (derivative[dudz] + derivative[dwdx]) / Q[rho];
         BTimesDeltaQ[v] = -Viscosity * (derivative[dvdz] + derivative[dwdy]) / Q[rho];
@@ -311,18 +327,31 @@ public:
 #endif
     }
     BTimesDeltaQ[rho] = 0;
+    BTimesDeltaQ[Z]   = 0;
 #if Dimensions == 2
-    BTimesDeltaQ[e] = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v]) / Q[rho];
+    BTimesDeltaQ[e] = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v]) / Q[rho] - kappa * derivative[dTdx + normal];
 #else
-    BTimesDeltaQ[e]       = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v] + Q[w] * BTimesDeltaQ[w]) / Q[rho];
+    BTimesDeltaQ[e] = (Q[u] * BTimesDeltaQ[u] + Q[v] * BTimesDeltaQ[v] + Q[w] * BTimesDeltaQ[w]) / Q[rho]
+                      - kappa * derivative[dTdx + normal];
 #endif
   }
+
+
+  virtual void sourceTerm(
+    const double* __restrict__ Q,
+    const tarch::la::Vector<Dimensions, double>& volumeCentre,
+    const tarch::la::Vector<Dimensions, double>& volumeH,
+    double                                       t,
+    double                                       dt,
+    double* __restrict__ S
+  ) override;
 
   static inline void extrapolateHalo(double* __restrict__ Q) {
 #if Dimensions == 2
     tarch::la::Vector<Dimensions, int> topLeftCell  = {0, NumberOfFiniteVolumesPerAxisPerPatch + 1};
     tarch::la::Vector<Dimensions, int> topRightCell = {
-      NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+      NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1
+    };
     tarch::la::Vector<Dimensions, int> bottomLeftCell  = {0, 0};
     tarch::la::Vector<Dimensions, int> bottomRightCell = {NumberOfFiniteVolumesPerAxisPerPatch + 1, 0};
 
@@ -477,11 +506,14 @@ public:
       );
 
       tarch::la::Vector<Dimensions, int> frontRightCell = {
-        NumberOfFiniteVolumesPerAxisPerPatch + 1, i, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+        NumberOfFiniteVolumesPerAxisPerPatch + 1, i, NumberOfFiniteVolumesPerAxisPerPatch + 1
+      };
       tarch::la::Vector<Dimensions, int> frontRightCellN1 = {
-        NumberOfFiniteVolumesPerAxisPerPatch, i, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+        NumberOfFiniteVolumesPerAxisPerPatch, i, NumberOfFiniteVolumesPerAxisPerPatch + 1
+      };
       tarch::la::Vector<Dimensions, int> frontRightCellN2 = {
-        NumberOfFiniteVolumesPerAxisPerPatch + 1, i, NumberOfFiniteVolumesPerAxisPerPatch};
+        NumberOfFiniteVolumesPerAxisPerPatch + 1, i, NumberOfFiniteVolumesPerAxisPerPatch
+      };
 
       const int frontRightCellSerialised = peano4::utils::dLinearised(
         frontRightCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
@@ -494,11 +526,14 @@ public:
       );
 
       tarch::la::Vector<Dimensions, int> frontTopCell = {
-        i, NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+        i, NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1
+      };
       tarch::la::Vector<Dimensions, int> frontTopCellN1 = {
-        i, NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch};
+        i, NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch
+      };
       tarch::la::Vector<Dimensions, int> frontTopCellN2 = {
-        i, NumberOfFiniteVolumesPerAxisPerPatch, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+        i, NumberOfFiniteVolumesPerAxisPerPatch, NumberOfFiniteVolumesPerAxisPerPatch + 1
+      };
 
       const int frontTopCellSerialised = peano4::utils::dLinearised(
         frontTopCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
@@ -567,11 +602,14 @@ public:
       );
 
       tarch::la::Vector<Dimensions, int> topRightCell = {
-        NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1, i};
+        NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1, i
+      };
       tarch::la::Vector<Dimensions, int> topRightCellN1 = {
-        NumberOfFiniteVolumesPerAxisPerPatch, NumberOfFiniteVolumesPerAxisPerPatch + 1, i};
+        NumberOfFiniteVolumesPerAxisPerPatch, NumberOfFiniteVolumesPerAxisPerPatch + 1, i
+      };
       tarch::la::Vector<Dimensions, int> topRightCellN2 = {
-        NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch, i};
+        NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch, i
+      };
 
       const int topRightCellSerialised = peano4::utils::dLinearised(
         topRightCell, NumberOfFiniteVolumesPerAxisPerPatch + 2
@@ -637,19 +675,23 @@ public:
     // Corners
     tarch::la::Vector<Dimensions, int> topLeftBackCell  = {0, NumberOfFiniteVolumesPerAxisPerPatch + 1, 0};
     tarch::la::Vector<Dimensions, int> topRightBackCell = {
-      NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1, 0};
+      NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1, 0
+    };
     tarch::la::Vector<Dimensions, int> bottomLeftBackCell  = {0, 0, 0};
     tarch::la::Vector<Dimensions, int> bottomRightBackCell = {NumberOfFiniteVolumesPerAxisPerPatch + 1, 0, 0};
 
     tarch::la::Vector<Dimensions, int> topLeftFrontCell = {
-      0, NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+      0, NumberOfFiniteVolumesPerAxisPerPatch + 1, NumberOfFiniteVolumesPerAxisPerPatch + 1
+    };
     tarch::la::Vector<Dimensions, int> topRightFrontCell = {
       NumberOfFiniteVolumesPerAxisPerPatch + 1,
       NumberOfFiniteVolumesPerAxisPerPatch + 1,
-      NumberOfFiniteVolumesPerAxisPerPatch + 1};
+      NumberOfFiniteVolumesPerAxisPerPatch + 1
+    };
     tarch::la::Vector<Dimensions, int> bottomLeftFrontCell  = {0, 0, NumberOfFiniteVolumesPerAxisPerPatch + 1};
     tarch::la::Vector<Dimensions, int> bottomRightFrontCell = {
-      NumberOfFiniteVolumesPerAxisPerPatch + 1, 0, NumberOfFiniteVolumesPerAxisPerPatch + 1};
+      NumberOfFiniteVolumesPerAxisPerPatch + 1, 0, NumberOfFiniteVolumesPerAxisPerPatch + 1
+    };
 
     tarch::la::Vector<Dimensions, int> topLeftBackCellN1 = topLeftBackCell;
     topLeftBackCellN1(0)++;
@@ -850,6 +892,11 @@ public:
   static inline void calculateDerivatives(double* __restrict__ Q) {
 
 #if Dimensions == 2
+
+    auto pressure = [](double* __restrict__ Q) {
+      return (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v]) / Q[rho] - Q[Z]);
+    };
+
     for (int x = 0; x < NumberOfFiniteVolumesPerAxisPerPatch + 1; x++)
       for (int y = 0; y < NumberOfFiniteVolumesPerAxisPerPatch + 1; y++) {
         const tarch::la::Vector<Dimensions, int> currentCell    = {x, y};
@@ -868,8 +915,8 @@ public:
 
         // u_x
         Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns]
-          = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1]
-            + Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1];
+          = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + u]
+            + Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + u];
         // u_y
         Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 1]
           = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 1]
@@ -882,8 +929,25 @@ public:
         Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 3]
           = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2]
             + Q[yNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 2];
+        // T_x
+        Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 4]
+          = -pressure(&Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]
+            ) / (R * Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)])
+            + pressure(&Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]
+              ) / (R * Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]);
+        // T_y
+        Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 4]
+          = -pressure(&Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]
+            ) / (R * Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)])
+            + pressure(&Q[yNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]
+              ) / (R * Q[yNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]);
       }
 #else
+
+    double pressure = {[](double* __restrict__ Q) {
+      return (Gamma - 1) * (Q[e] - 0.5 * (Q[u] * Q[u] + Q[v] * Q[v] + Q[w] * Q[w]) / Q[rho] - Q[Z]);
+    }};
+
     for (int x = 0; x < NumberOfFiniteVolumesPerAxisPerPatch + 1; x++)
       for (int y = 0; y < NumberOfFiniteVolumesPerAxisPerPatch + 1; y++)
         for (int z = 0; z < NumberOfFiniteVolumesPerAxisPerPatch + 1; z++) {
@@ -941,6 +1005,24 @@ public:
           Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 8]
             = -Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 3]
               + Q[zNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + 3];
+          // T_x
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 9]
+            = -pressure(&Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]
+              ) / (R * Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)])
+              + pressure(&Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]
+                ) / (R * Q[xNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]);
+          // T_y
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 10]
+            = -pressure(&Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]
+              ) / (R * Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)])
+              + pressure(&Q[yNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]
+                ) / (R * Q[yNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]);
+          // T_z
+          Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables) + NumberOfUnknowns + 11]
+            = -pressure(&Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]
+              ) / (R * Q[currentCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)])
+              + pressure(&Q[zNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]
+                ) / (R * Q[zNeighbourCellSerialized * (NumberOfUnknowns + NumberOfAuxiliaryVariables)]);
         }
 #endif
   }

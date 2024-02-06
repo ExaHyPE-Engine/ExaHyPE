@@ -25,12 +25,11 @@ class Storage(Enum):
 
 class FV(object):
     """!
-
     Abstract finite volume solver step sizes that works on patch-based AMR with a halo layer of one.
 
     FV is the base class of all FV solvers. It defines what kind of action sets do
-    exist, i.e. what in principle can be done while we run through the grid. It also
-    provides some kind of very basic infrastructure, i.e. what the name of a solver
+    exist, i.e., what in principle can be done while we run through the grid. It also
+    provides some kind of very basic infrastructure, i.e., what the name of a solver
     is, what data is to be held per face or cell, or where in the multiscale mesh
     we actually have to hold data.
 
@@ -45,7 +44,7 @@ class FV(object):
     A finite volume solver in ExaHyPE 2 (actually any solver) is first of all a
     static collection of data logically tied to grid entities and some operations
     over the mesh that are just there. All data and action sets however have guards,
-    i.e. boolean guards that define
+    i.e., boolean guards that define
 
     - are data to be stored in-between traversals,
     - are action sets really invoked in a particular traversal or can they be
@@ -54,8 +53,8 @@ class FV(object):
     In the baseline FV class, these guards are usually set to default values.
     That is, all action sets per time step are invoked always (the guard is
     true) and all data are always stored on the finest mesh. If you want to alter
-    this behaviour, i.e. store data not always or skip steps, you can overwrite
-    the corresponding attributes of the attributes, i.e. the guards of the
+    this behaviour, i.e., store data not always or skip steps, you can overwrite
+    the corresponding attributes of the attributes, i.e., the guards of the
     associated data.
 
     See the discussion on "Control flow between this class and subclasses" below.
@@ -150,8 +149,6 @@ class FV(object):
          _action_set_postprocess_solution
 
     You can use this attribute to add postprocessing routines to the code.
-
-
     """
 
     def __init__(
@@ -164,11 +161,11 @@ class FV(object):
         min_volume_h,
         max_volume_h,
         plot_grid_properties,
+        pde_terms_without_state: bool,
         kernel_namespace,
         baseline_action_set_descend_invocation_order=0,
     ):
         """!
-
         Create solver
 
         name: string
@@ -214,7 +211,7 @@ class FV(object):
         self._overlap = overlap
 
         """
-        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and 
+        self._unknowns and self._auxiliary_variables respectively hold the number of unknowns and
         auxiliary variables in the equation to be computed. Unknowns are variables that change over
         time whereas auxiliary variables can be space-dependent but don't vary over time.
         These can be specified either as simple ints or by a dictionary
@@ -222,7 +219,7 @@ class FV(object):
         in which the user specifies the multiplicity of the variable (the velocity has one component
         per dimension for example.)
         If they are specified by a dictionary then the code generates a "VariableShortcuts" file which
-        allows the user to specifiy a variable by name and automatically maps this to the right position
+        allows the user to specify a variable by name and automatically maps this to the right position
         in an array for better legibility. Otherwise they must manually remember the position of each
         variable manually.
 
@@ -244,7 +241,7 @@ class FV(object):
             self._unknowns = unknowns
         else:
             raise Exception(
-                "not a valid type for parameter unknowns, needs to be int or dictionary"
+                "Not a valid type for parameter unknowns, needs to be int or dictionary."
             )
 
         if type(auxiliary_variables) is dict:
@@ -257,7 +254,7 @@ class FV(object):
             self._auxiliary_variables = auxiliary_variables
         else:
             raise Exception(
-                "not a valid type for parameter auxiliary_variables, needs to be int or dictionary"
+                "Not a valid type for parameter auxiliary_variables, needs to be int or dictionary."
             )
 
         self._solver_constants = ""
@@ -266,7 +263,7 @@ class FV(object):
 
         if min_volume_h > max_volume_h:
             raise Exception(
-                "Error: min_volume_h ("
+                "min_volume_h ("
                 + str(min_volume_h)
                 + ") is bigger than max_volume_h ("
                 + str(max_volume_h)
@@ -302,6 +299,8 @@ class FV(object):
         self._postprocess_updated_patch = ""
 
         self._compute_kernel_call = "#error Not yet defined"
+        self._compute_kernel_call_stateless = "#error Not yet defined"
+        self._pde_terms_without_state = pde_terms_without_state
 
         self._compute_eigenvalue = False
         self._abstract_solver_user_declarations = ""
@@ -330,6 +329,7 @@ class FV(object):
         self.create_data_structures()
         self.create_action_sets()
 
+
     def __str__(self):
         result = (
             """
@@ -337,14 +337,17 @@ Name:                   """
             + self._name
             + """
 Type:                   """
-            + self.__class__.__name__
+            + self.__class__.__module__
+            + """
+Stateless PDE terms:    """
+            + str(self._pde_terms_without_state)
             + """
 Patch size:             """
             + str(self._patch_size)
-            + """  
+            + """
 Overlap:                """
             + str(self._overlap)
-            + """  
+            + """
 Unknowns:               """
             + str(self._unknowns)
             + """
@@ -357,11 +360,33 @@ h_volume_min:           """
 h_volume_max:           """
             + str(self._max_volume_h)
             + """
+Initial conditions:     """
+            + str(self._initial_conditions_implementation)
+            + """
+Boundary conditions:    """
+            + str(self._boundary_conditions_implementation)
+            + """
+Refinement criterion:   """
+            + str(self._refinement_criterion_implementation)
+            + """
+Eigenvalues:            """
+            + str(self._eigenvalues_implementation)
+            + """
+Flux:                   """
+            + str(self._flux_implementation)
+            + """
+NCP:                    """
+            + str(self._ncp_implementation)
+            + """
+Source term:            """
+            + str(self._source_term_implementation)
+            + """
 """
         )
         return result
 
     __repr__ = __str__
+
 
     def get_min_number_of_spacetree_levels(self, domain_size):
         coarsest_tree_level = 0
@@ -371,6 +396,7 @@ h_volume_max:           """
         ):
             coarsest_tree_level += 1
         return coarsest_tree_level
+
 
     def get_max_number_of_spacetree_levels(self, domain_size):
         finest_tree_level = 0
@@ -388,20 +414,26 @@ h_volume_max:           """
     def get_coarsest_number_of_patches(self, domain_size):
         return 3 ** self.get_min_number_of_spacetree_levels(domain_size)
 
+
     def get_finest_number_of_patches(self, domain_size):
         return 3 ** self.get_max_number_of_spacetree_levels(domain_size)
+
 
     def get_coarsest_number_of_finite_volumes(self, domain_size):
         return self.get_coarsest_number_of_patches(domain_size) * self._patch_size
 
+
     def get_finest_number_of_finite_volumes(self, domain_size):
         return self.get_finest_number_of_patches(domain_size) * self._patch_size
+
 
     def get_coarsest_volume_size(self, domain_size):
         return domain_size / self.get_coarsest_number_of_finite_volumes(domain_size)
 
+
     def get_finest_volume_size(self, domain_size):
         return domain_size / self.get_finest_number_of_finite_volumes(domain_size)
+
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
@@ -418,7 +450,7 @@ Real type of this solver: """
 
 We assume that you use a domain size of (0,"""
             + str(domain_size)
-            + """)^d. Peano 4 will cut this domain equidistantly 
+            + """)^d. Peano 4 will cut this domain equidistantly
 and recursively into three parts along each coordinate axis. This yields a spacetree.
 
 The spacetree will at least have """
@@ -463,6 +495,7 @@ The finest mesh width of """
 """
         )
 
+
     @property
     def user_action_set_includes(self):
         """
@@ -470,6 +503,7 @@ The finest mesh width of """
         routines from other header files.
         """
         return self._user_action_set_includes
+
 
     @property
     def user_solver_includes(self):
@@ -479,6 +513,7 @@ The finest mesh width of """
         """
         return self._user_solver_includes
 
+
     def add_user_action_set_includes(self, value):
         """
         Add further includes to this property, if your action sets require some additional
@@ -486,12 +521,14 @@ The finest mesh width of """
         """
         self._user_action_set_includes += value
 
+
     def add_user_solver_includes(self, value):
         """
         Add further includes to this property, if your solver requires some additional
         routines from other header files.
         """
         self._user_solver_includes += value
+
 
     @abstractmethod
     def create_data_structures(self):
@@ -573,7 +610,7 @@ The finest mesh width of """
                 self._patch, "double"
             )
         else:
-            assert False, "storage variant {} not supported".format(
+            assert False, "Storage variant {} not supported".format(
                 self._cell_data_storage
             )
 
@@ -620,7 +657,7 @@ The finest mesh width of """
                 )
             )
         else:
-            assert False, "storage variant {} not supported".format(
+            assert False, "Storage variant {} not supported".format(
                 self._face_data_storage
             )
 
@@ -640,11 +677,11 @@ The finest mesh width of """
 
         self._patch_overlap_old.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
+#include "repositories/SolverRepository.h"
 """
         self._patch_overlap_new.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
+#include "repositories/SolverRepository.h"
 """
 
         self._patch.generator.load_store_compute_flag = "::peano4::grid::constructLoadStoreComputeFlag({},{},{})".format(
@@ -696,10 +733,10 @@ The finest mesh width of """
         self._cell_label = exahype2.grid.create_cell_label(self._name)
         self._face_label = exahype2.grid.create_face_label(self._name)
 
+
     @abstractmethod
     def create_action_sets(self):
         """!
-
         Create all the action sets
 
         Overwrite in subclasses if you wanna create different
@@ -734,8 +771,7 @@ The finest mesh width of """
         if you changed the number of unknowns, e.g. However, if we recreated
         the action set, we'd miss out on any changed interpolation/restriction
         scheme. Therefore, I have to hold the interpolation and restriction
-        scheme seperatae.
-
+        scheme separate.
         """
         self._action_set_initial_conditions = (
             exahype2.solvers.fv.actionsets.InitialCondition(
@@ -792,7 +828,7 @@ The finest mesh width of """
         )
 
         # This one is different: it is the hook-in point for other solvers, so we create it
-        # only once if it does not exist
+        # only once if it does not exist.
         if self._action_set_postprocess_solution == None:
             self._action_set_postprocess_solution = (
                 exahype2.solvers.fv.actionsets.EmptyPostprocessSolution(self)
@@ -839,25 +875,26 @@ The finest mesh width of """
             self._baseline_action_set_descend_invocation_order
         )
 
+
     def _provide_cell_data_to_compute_kernels_default_guard(self):
         """! Default logic when to create cell data or not
-            
+
         ExaHyPE allows you to define when you want to load or store data, and
-        you can also define if you need some grid data for your computations. 
-        You might have some temporary data per cell which is neither stored 
+        you can also define if you need some grid data for your computations.
+        You might have some temporary data per cell which is neither stored
         nor loaded, but that has to be there while you compute. Or there might
         be cells which don't need to store a particular piece of data. See
         ::peano4::grid::LoadStoreComputeFlag for some details. This predicate
         here is a default. Particular solvers will take it as a starting point
-        to make more detailed rules: an enclave solver for example might 
-        decide to take the information where to store data, but to toggle the 
+        to make more detailed rules: an enclave solver for example might
+        decide to take the information where to store data, but to toggle the
         storage on and off depending on the solver phase.
-    
         """
         return "not marker.willBeRefined() and repositories::{}.getSolverState()!={}::SolverState::GridConstruction".format(
                    self.get_name_of_global_instance(),
                    self._name
                )
+
 
     def _provide_face_data_to_compute_kernels_default_guard(self):
         return (
@@ -868,14 +905,12 @@ The finest mesh width of """
                         + self._name
                         + "::SolverState::GridConstruction"
                 )
-                
+
 
     def _store_cell_data_default_guard(self):
         """!
-
         Extend the guard via ands only. Never use an or, as subclasses might
         extend it as well, and they will append further ends.
-
         """
         return (
             "not marker.willBeRefined() "
@@ -885,13 +920,12 @@ The finest mesh width of """
             + self._name
             + "::SolverState::GridConstruction"
         )
+
 
     def _load_cell_data_default_guard(self):
         """!
-
         Extend the guard via ands only. Never use an or, as subclasses might
         extend it as well, and they will append further ends.
-
         """
         return (
             "not marker.hasBeenRefined() "
@@ -907,12 +941,11 @@ The finest mesh width of """
             + "::SolverState::GridInitialisation"
         )
 
+
     def _store_face_data_default_guard(self):
         """!
-
         Extend the guard via ands only. Never use an or, as subclasses might
         extend it as well, and they will append further ends.
-
         """
         return (
             "not marker.willBeRefined() "
@@ -923,12 +956,11 @@ The finest mesh width of """
             + "::SolverState::GridConstruction"
         )
 
+
     def _load_face_data_default_guard(self):
         """!
-
         Extend the guard via ands only. Never use an or, as subclasses might
         extend it as well, and they will append further ends.
-
         """
         return (
             "not marker.hasBeenRefined() "
@@ -943,19 +975,20 @@ The finest mesh width of """
             + self._name
             + "::SolverState::GridInitialisation"
         )
+
 
     def _unknown_identifier(self):
         return self._name + "Q"
 
+
     def get_name_of_global_instance(self):
         return "InstanceOf" + self._name
 
+
     def add_to_Peano4_datamodel(self, datamodel, verbose):
         """
-
-        Add all required data to the Peano4 project's datamodel
-        so it is properly built up
-
+        Add all required data to the Peano project's datamodel
+        so it is properly built up.
         """
         if verbose:
             print("Patch data")
@@ -974,6 +1007,7 @@ The finest mesh width of """
         datamodel.add_face(self._patch_overlap_update)
         datamodel.add_face(self._face_label)
 
+
     def add_use_data_statements_to_Peano4_solver_step(self, step):
         """
         Tell Peano what data to move around
@@ -984,7 +1018,6 @@ The finest mesh width of """
 
         It is important that the cell label comes first, as some other
         data might make their load/store decisions depend on the label.
-
         """
         step.use_cell(self._patch)
         step.use_cell(self._cell_label)
@@ -993,9 +1026,10 @@ The finest mesh width of """
         step.use_face(self._patch_overlap_update)
         step.use_face(self._face_label)
 
+
     def _get_default_includes(self):
         return """
-#include "tarch/la/Vector.h" 
+#include "tarch/la/Vector.h"
 
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
@@ -1003,9 +1037,9 @@ The finest mesh width of """
 #include "repositories/SolverRepository.h"
 """
 
+
     def add_actions_to_init_grid(self, step):
         """!
-
         Add all the action sets to init grid
 
         The AMR stuff has to be the very first thing. Actually, the AMR routines'
@@ -1043,8 +1077,6 @@ The finest mesh width of """
           order when we backtrace, the postprocessing will have completed before
           we invoke _action_set_project_patch_onto_faces, i.e. any update will
           be projected onto the faces.
-
-
         """
         assert (
             self._action_set_copy_new_faces_onto_old_faces.descend_invocation_order
@@ -1064,12 +1096,11 @@ The finest mesh width of """
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
 
+
     def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
         """
-
         The boundary information is set only once. It is therefore important that
         we ues the face label and initialise it properly.
-
         """
         step.add_action_set(self._action_set_initial_conditions_for_grid_construction)
         step.add_action_set(self._action_set_update_face_label)
@@ -1079,16 +1110,17 @@ The finest mesh width of """
         else:
             step.add_action_set(self._action_set_AMR_commit_without_further_analysis)
 
+
     @property
     def plot_description(
         self,
     ):
         return self._plot_description
 
+
     @plot_description.setter
     def plot_description(self, description):
         """!
-
         Add a proper description to the plots
 
         Use this one to set a description within the output patch file that tells
@@ -1097,27 +1129,25 @@ The finest mesh width of """
         """
         self._plot_description = description
 
+
     def add_actions_to_plot_solution(self, step, output_path):
         """!
-
         Add action sets to plot solution step
 
+        Consult the discussion in add_actions_to_init_grid() around the order
+        of the individual action sets.
 
-         Consult the discussion in add_actions_to_init_grid() around the order
-         of the individual action sets.
+        It is important that we have the coupling/dynamic AMR part in here, as
+        there might be pending AMR refinement requests that now are realised.
+        For the same reason, we need the update of the face label and the update
+        of the cell label in here: The AMR might just propagate over into the
+        plotting, i.e. we might create new grid entities throughout the plot.
+        These entities (faces and cells) have to be initialised properly.
+        Otherwise, their un-initialised data will propagate through to the next
+        time step.
 
-         It is important that we have the coupling/dynamic AMR part in here, as
-         there might be pending AMR refinement requests that now are realised.
-         For the same reason, we need the update of the face label and the update
-         of the cell label in here: The AMR might just propagate over into the
-         plotting, i.e. we might create new grid entities throughout the plot.
-         These entities (faces and cells) have to be initialised properly.
-         Otherwise, their un-initialised data will propagate through to the next
-         time step.
-
-         To make the restriction work, we have to project the solutions onto the
-         faces.
-
+        To make the restriction work, we have to project the solutions onto the
+        faces.
         """
         d = {}
         self._init_dictionary_with_default_parameters(d)
@@ -1165,8 +1195,8 @@ The finest mesh width of """
                 self._baseline_action_set_descend_invocation_order
             )
             step.add_action_set(plot_grid_properties_action_set)
-
         pass
+
 
     def add_actions_to_perform_time_step(self, step):
         """!
@@ -1197,13 +1227,15 @@ The finest mesh width of """
         step.add_action_set(self._action_set_AMR)
         step.add_action_set(self._action_set_postprocess_solution)
 
+
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
 
+
     def add_implementation_files_to_project(self, namespace, output, dimensions):
         """
-        The ExaHyPE2 project will call this operation when it sets
+        The ExaHyPE project will call this operation when it sets
         up the overall environment.
 
         This routine is typically not invoked by a user.
@@ -1271,11 +1303,14 @@ The finest mesh width of """
             output.add(generated_shortcut_file)
             output.makefile.add_h_file("VariableShortcuts.h", generated=True)
 
+
     def set_solver_constants(self, datastring):
         self._solver_constants = datastring
 
+
     def add_solver_constants(self, datastring):
         self._solver_constants += datastring + "\n"
+
 
     def _init_dictionary_with_default_parameters(self, d):
         """
@@ -1305,23 +1340,20 @@ The finest mesh width of """
 
         if self._min_volume_h > self._max_volume_h:
             raise Exception("min/max h are inconsistent")
+
         d["MAX_VOLUME_H"] = self._max_volume_h
         d["MIN_VOLUME_H"] = self._min_volume_h
-
         d["SOLVER_CONSTANTS"] = self._solver_constants
-
         d["SOLVER_INCLUDES"] = self.user_solver_includes
-
-        d[
-            "BOUNDARY_CONDITIONS_IMPLEMENTATION"
-        ] = self._boundary_conditions_implementation
-        d[
-            "REFINEMENT_CRITERION_IMPLEMENTATION"
-        ] = self._refinement_criterion_implementation
+        d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
+        d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
         d["INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
 
         d["COMPUTE_KERNEL_CALL"] = jinja2.Template(
             self._compute_kernel_call, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["COMPUTE_KERNEL_CALL_STATELESS"] = jinja2.Template(
+            self._compute_kernel_call_stateless, undefined=jinja2.DebugUndefined
         ).render(**d)
 
         d["ABSTRACT_SOLVER_USER_DECLARATIONS"] = jinja2.Template(
@@ -1361,23 +1393,28 @@ The finest mesh width of """
         ).render(**d)
         d["COMPUTE_MAX_EIGENVALUE"] = self._compute_eigenvalue
 
+        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["KERNEL_NAMESPACE"] = self._kernel_namespace
 
         d["USE_VARIABLE_SHORTCUT"] = self._use_var_shortcut
         d["VARIABLE_NAMES"] = self._variable_names
         d["VARIABLE_POSITIONS"] = self._variable_pos
 
+
     @property
     def unknowns(self):
         return self._unknowns
+
 
     @property
     def patch_size(self):
         return self._patch_size
 
+
     @property
     def auxiliary_variables(self):
         return self._auxiliary_variables
+
 
     @patch_size.setter
     def patch_size(self, value):
@@ -1385,11 +1422,13 @@ The finest mesh width of """
         self.create_data_structures()
         self.create_action_sets()
 
+
     @unknowns.setter
     def unknowns(self, value):
         self._unknowns = value
         self.create_data_structures()
         self.create_action_sets()
+
 
     @auxiliary_variables.setter
     def auxiliary_variables(self, value):
@@ -1397,9 +1436,11 @@ The finest mesh width of """
         self.create_data_structures()
         self.create_action_sets()
 
+
     @property
     def preprocess_reconstructed_patch(self):
         return self._preprocess_reconstructed_patch
+
 
     @preprocess_reconstructed_patch.setter
     def preprocess_reconstructed_patch(self, kernel):
@@ -1440,7 +1481,7 @@ The finest mesh width of """
 
         We recommend that you use the AoS enumerator exahype2::enumerator::AoSLexicographicEnumerator.
         This one has to be given 1 as number of cells/patches, it requires the size
-        of the patch, its halo size, you have to pass it the unkowns and the correct
+        of the patch, its halo size, you have to pass it the unknowns and the correct
         number of auxiliary parameters. If you want the preprocessing also to alter
         the actual input, you need a second enumerator. In this second one, all
         parameters are the same besides the halo size, which you have to set to 0:
@@ -1451,18 +1492,20 @@ The finest mesh width of """
         self.create_data_structures()
         self.create_action_sets()
 
+
     @property
     def name(self):
         return self._name
+
 
     @property
     def postprocess_updated_patch(self):
         return self._postprocess_updated_patch
 
+
     @postprocess_updated_patch.setter
     def postprocess_updated_patch(self, kernel):
         """
-
         Define a postprocessing routine over the data
 
         The postprocessing kernel often looks similar to the following code:
@@ -1503,7 +1546,7 @@ The finest mesh width of """
         update a cell.
 
         The postprocessing action set is launched when the cell update is committed,
-        i.e. after the cell task has terminated or a task result came back from the
+        i.e., after the cell task has terminated or a task result came back from the
         GPU. Consequently, the snippet injected here might not have access to global
         variables (if it executes on a GPU) while the postprocessing action set
         always has access to the global program state.
@@ -1513,15 +1556,16 @@ The finest mesh width of """
 
         kernel: String
           C++ code that holds the postprocessing kernel
-
         """
         self._postprocess_updated_patch = kernel
         self.create_data_structures()
         self.create_action_sets()
 
+
     @property
     def overlap(self):
         return self._overlap
+
 
     @overlap.setter
     def overlap(self, value):
@@ -1535,9 +1579,11 @@ The finest mesh width of """
         self.create_data_structures()
         self.create_action_sets()
 
+
     @property
     def interpolation(self):
         return self._interpolation
+
 
     @interpolation.setter
     def interpolation(self, value):
@@ -1545,15 +1591,18 @@ The finest mesh width of """
         self.create_data_structures()
         self.create_action_sets()
 
+
     @property
     def restriction(self):
         return self._restriction
+
 
     @restriction.setter
     def restriction(self, value):
         self._restriction = value
         self.create_data_structures()
         self.create_action_sets()
+
 
     def switch_to_heap_storage(
         self,
@@ -1568,7 +1617,7 @@ The finest mesh width of """
         """
         assert isinstance(cell_data_storage, Storage)
         assert isinstance(face_data_storage, Storage)
-        
+
         self._cell_data_storage = cell_data_storage
         self._face_data_storage = face_data_storage
 

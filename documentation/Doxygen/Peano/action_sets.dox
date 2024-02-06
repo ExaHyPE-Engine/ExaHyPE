@@ -99,7 +99,9 @@ The markers of relevance are
 
 ## Sequence and parallelisation of actions
 
-Each action set within an observer (algorithmic step) has two relevant 
+An algorithmic step (Observer) within Python corresonds 1:1 to a class of the
+type peano4::grid::TraversalObserver, and it holds a set of actions. Actions 
+are represented by the Python class peano4.solversteps.ActionSet. Each action set within an observer (algorithmic step) has two relevant 
 properties:
 
 - descend_invocation_order
@@ -109,5 +111,6 @@ See the documentation in peano4.solversteps.ActionSet for further details.
 These flags (set in the constructor) give the user control over the order
 of the actions for each even throughout the traversal. They also allow you
 to specify if events can run in parallel.
+
 
 */

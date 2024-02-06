@@ -32,78 +32,40 @@ Sorting_InsertSweeps = "insert-sorts"
 Sorting_OnTheFly = "sort-on-the-fly"
 SortingVariants = [Sorting_InsertSweeps, Sorting_OnTheFly]
 
-VectorisationOffNoOptimisation = "no-optimisation"
-VectorisationOffOuterGuards = "outer-guards"
-VectorisationOfAllComparisons = "vectorise-all"
-VectorisationOfDistanceChecks = "vectorise-distance-checks"
-VectorisationVariants = [
-    VectorisationOfAllComparisons,
-    VectorisationOfDistanceChecks,
+KernelOptimisation_NoOptimisation = "no-optimisation"
+KernelOptimisation_OuterGuards = "outer-guards"
+KernelOptimisation_VectoriseAll = "vectorise-all"
+KernelOptimisation_VectoriseDistanceChecks = "vectorise-distance-checks"
+
+BasicKernelOptimisationVariants = [
+    KernelOptimisation_NoOptimisation,
+    KernelOptimisation_OuterGuards,
+]
+AllKernelOptimisationVariants = [
+    KernelOptimisation_NoOptimisation,
+    KernelOptimisation_OuterGuards,
+    KernelOptimisation_VectoriseAll,
+    KernelOptimisation_VectoriseDistanceChecks,
 ]
 
 
 Choices = (
     [
-        x + "." + Storage_Scattered + "." + y
-        for x in ParallelisationVariants
-        for y in [VectorisationOffNoOptimisation, VectorisationOffOuterGuards]
+        parallelisation_variant + "." + storage + "." + sorting + "." + kernel_optimisation
+        for parallelisation_variant in ParallelisationVariants
+        for storage                 in [Storage_Scattered]
+        for sorting                 in SortingVariants
+        for kernel_optimisation     in BasicKernelOptimisationVariants
     ]
-    + [
-        x + "." + y + "." + z
-        for x in ParallelisationVariants
-        for y in StorageVariants
-        for z in SortingVariants
-    ]
-    + [
-        x + "." + y + "." + z + "." + v
-        for x in ParallelisationVariants
-        for y in StorageVariants
-        for z in SortingVariants
-        for v in VectorisationVariants
+    +
+    [
+        parallelisation_variant + "." + storage + "." + sorting + "." + kernel_optimisation
+        for parallelisation_variant in ParallelisationVariants
+        for storage                 in StorageVariants
+        for sorting                 in SortingVariants
+        for kernel_optimisation     in AllKernelOptimisationVariants
     ]
 )
-
-
-def use_continuous_per_vertex_data_layout(realisation):
-    """!
-
-    @param realisation: String from Choices
-
-    """
-    return realisation.split(".")[1] == Storage_ContinuousPerVertex
-
-
-def use_globally_continuous_data_layout(realisation):
-    """!
-
-    @param realisation: String from Choices
-
-    """
-    return realisation.split(".")[1] == Storage_GlobalContinuous
-
-
-def use_on_the_fly_sorting(realisation):
-    """!
-
-    @param realisation: String from Choices
-
-    """
-    return (
-        len(realisation.split(".")) > 2
-        and realisation.split(".")[2] == Sorting_OnTheFly
-    )
-
-
-def use_separate_sorting_sweeps(realisation):
-    """!
-
-    @param realisation: String from Choices
-
-    """
-    return (
-        len(realisation.split(".")) > 2
-        and realisation.split(".")[2] == Sorting_InsertSweeps
-    )
 
 
 if __name__ == "__main__":
@@ -237,53 +199,66 @@ if __name__ == "__main__":
     project = swift2.Project(
         namespace=project_namespace, project_name="Noh", executable=args.output_file
     )
-
+    
     if (
-        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
-        and args.realisation.split(".")[1] == Storage_Scattered
-    ):
-        pass
-    elif args.realisation.split(".")[
-        0
-    ] == Parallelisation_DomainDecomposition and use_separate_sorting_sweeps(
-        args.realisation
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
+        and 
+        args.realisation.split(".")[1] == Storage_Scattered
+        and 
+        args.realisation.split(".")[2] == Sorting_InsertSweeps
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
-        )
-    elif args.realisation.split(".")[
-        0
-    ] == Parallelisation_DomainDecomposition and use_on_the_fly_sorting(
-        args.realisation
-    ):
-        project.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_for_coalesced_memory_access
-        )
-        project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_SpawnTasksPerSweep
-        and args.realisation.split(".")[1] == Storage_Scattered
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
+        and 
+        args.realisation.split(".")[1] == Storage_Scattered
+        and 
+        args.realisation.split(".")[2] == Sorting_OnTheFly
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.map_particle_steps_onto_task_tree
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.map_initialisation_steps_onto_task_tree
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_TaskGraph
-        and args.realisation.split(".")[1] == Storage_Scattered
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
+        and 
+        (
+            args.realisation.split(".")[1] == Storage_ContinuousPerVertex
+            or
+            args.realisation.split(".")[1] == Storage_GlobalContinuous
+        )
+        and 
+        args.realisation.split(".")[2] == Sorting_InsertSweeps
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.map_particle_steps_onto_task_graph
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.map_initialisation_steps_onto_task_graph
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory
+        )
+    elif (
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
+        and 
+        (
+            args.realisation.split(".")[1] == Storage_ContinuousPerVertex
+            or
+            args.realisation.split(".")[1] == Storage_GlobalContinuous
+        )
+        and 
+        args.realisation.split(".")[2] == Sorting_OnTheFly
+    ):
+        project.algorithm_steps_task_graph_compiler = (
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory
+        )
+        project.initialisation_steps_task_graph_compiler = (
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory
         )
     else:
         assert False, "realisation " + args.realisation + " not supported"
@@ -312,22 +287,24 @@ if __name__ == "__main__":
         )
     )
 
-    particle_interaction_kernel_realisation = (
-        swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
-    )
-
-    if VectorisationOffNoOptimisation in args.realisation:
+    if args.realisation.split(".")[3] == KernelOptimisation_NoOptimisation:
         particle_interaction_kernel_realisation = (
             swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
         )
-    elif VectorisationOfDistanceChecks in args.realisation:
+    elif args.realisation.split(".")[3] == KernelOptimisation_OuterGuards:
+        particle_interaction_kernel_realisation = (
+            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
+        )
+    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseDistanceChecks:
         particle_interaction_kernel_realisation = (
             swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS
         )
-    elif VectorisationOfAllComparisons in args.realisation:
+    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseAll:
         particle_interaction_kernel_realisation = (
             swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
         )
+    else:
+        raise NotImplemented()
 
     particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
         name=name,
@@ -421,14 +398,15 @@ if __name__ == "__main__":
     # the particle_set to the project
     particle_set = project.add_particle_species(particle)
 
-    if use_continuous_per_vertex_data_layout(args.realisation):
+
+    if args.realisation.split(".")[1]==Storage_ContinuousPerVertex:
         particle_set.generator = (
             peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
                 particle_set
             )
         )
         print("Benchmark: Use continuous per vertex data layout")
-    elif use_globally_continuous_data_layout(args.realisation):
+    elif args.realisation.split(".")[1]==Storage_GlobalContinuous:
         particle_set.generator = (
             peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
         )

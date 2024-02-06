@@ -13,6 +13,8 @@ SWIFT2Sources = \
   TaskNumber.cpp \
   UnitTests.cpp \
   UserInterface.cpp \
+  boundaryconditions/FixedBoundary.cpp \
+  boundaryconditions/Utils.cpp \
   kernels/legacy/Density.cpp \
   kernels/legacy/HydroForce.cpp \
   kernels/legacy/SmoothingLength.cpp \

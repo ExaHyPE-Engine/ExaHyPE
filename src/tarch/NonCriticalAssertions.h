@@ -109,7 +109,7 @@ namespace tarch {
    *
    * peano4::shutdownParallelEnvironment().
    */
-  void shutdownNonCritialAssertionEnvironment();
+  void shutdownNonCriticalAssertionEnvironment();
 
   /**
    * Register the assertion tag from the global communicator.

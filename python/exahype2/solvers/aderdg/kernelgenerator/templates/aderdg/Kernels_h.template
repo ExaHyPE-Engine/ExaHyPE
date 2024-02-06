@@ -136,6 +136,23 @@ namespace {{namespaceName}} {
     const double timeStamp,
     const double dt
   );
+
+  template <typename cStoreType, typename pCompType>
+  pCompType picard_iteration(
+    {{solverName}}& solver,
+    pCompType* __restrict__ lQi,
+    pCompType* __restrict__ rhs,
+    pCompType* __restrict__ lFi,
+    pCompType* __restrict__ lSi,   // for NCP or Source
+    pCompType* __restrict__ gradQ, // for NCP or Source or viscousFlux
+    pCompType* __restrict__ new_lQi_slice,
+    const pCompType* __restrict__ dudxT_by_dx,
+    const cStoreType* const __restrict__ luh,
+    const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+    const tarch::la::Vector<Dimensions,double>&  dx,
+    const double timeStamp,
+    const double dt
+  );
 {% endif %}
 
   template<typename cStoreType, typename compType>

@@ -7,7 +7,9 @@ import peano4
 import jinja2
 
 class RollOverUpdatedFace(AbstractRKFDActionSet):
-  """
+  """!
+  
+    Roll over QUpdate data on face into QNew
 
     This action set takes the updated data per face and writes it into
     new. So it takes the outcome from ProjectPatchOntoFaces and writes 

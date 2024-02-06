@@ -26,11 +26,11 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     and
     {{PREDICATES[PREDICATE_NO]}}
   ) {
-    #if Dimensions==2
+#if Dimensions==2
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}} * {{NUMBER_OF_UNKNOWNS}};
-    #elif Dimensions==3
+#elif Dimensions==3
     double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}} * {{NUMBER_OF_UNKNOWNS}};
-    #endif
+#endif
 
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
     if ( taskNumber>=0 ) {
@@ -41,9 +41,11 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   {% endfor %}
 """
 
+
     def __init__(self, solver):
         super(MergeEnclaveTaskOutcome, self).__init__(solver)
         self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
+
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -60,10 +62,12 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
             pass
         return result
 
+
     def get_action_set_name(self):
         return (
             __name__.replace(".py", "").replace(".", "_") + "_MergeEnclaveTaskOutcome"
         )
+
 
     def get_includes(self):
         return (
@@ -90,6 +94,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
 
     by default.
     """
+
 
     def __init__(
         self,
@@ -120,18 +125,22 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
             min_cell_h,
             max_cell_h,
             plot_grid_properties,
+            pde_terms_without_state,
         )
 
         self._solver_template_file_class_name = "SeparateSweeps"
         self._pde_terms_without_state = pde_terms_without_state
 
-        self._fused_volumetric_kernel_call_cpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_cpu in your Python solver class."
-        self._fused_volumetric_kernel_call_gpu = "#error Not yet defined. Set self._fused_volumetric_kernel_call_gpu in your Python solver class."
+        self._fused_volumetric_compute_kernel_call_stateless_cpu = "#error Not yet defined. Set self._fused_volumetric_compute_kernel_call_stateless_cpu in your Python solver class."
+        self._fused_volumetric_compute_kernel_call_stateless_gpu = "#error Not yet defined. Set self._fused_volumetric_compute_kernel_call_stateless_gpu in your Python solver class."
+        self._fused_Riemann_compute_kernel_call_stateless_cpu = "#error Not yet defined. Set self._fused_Riemann_compute_kernel_call_stateless_cpu in your Python solver class."
+        self._fused_Riemann_compute_kernel_call_stateless_gpu = "#error Not yet defined. Set self._fused_Riemann_compute_kernel_call_stateless_gpu in your Python solver class."
 
         self.enclave_task_priority = "tarch::multicore::Task::DefaultPriority-1"
 
         self.create_action_sets()
         self.create_data_structures()
+
 
     def create_data_structures(self):
         """
@@ -141,6 +150,7 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         The linear combination is to be computed if and only if
         """
         super(SeparateSweepsWithEnclaveTasking, self).create_data_structures()
+
 
     def create_action_sets(self):
         """
@@ -157,15 +167,12 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         self._action_set_solve_volume_integral.spawn_volume_kernel_as_task = True
 
         self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)
-        self._action_set_merge_enclave_task_outcome.priority = (
+        self._action_set_merge_enclave_task_outcome.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 1
         )
 
-    def add_implementation_files_to_project(self, namespace, output, dimensions):
-        """
-        Add the enclave task for the GPU
-        """
 
+    def add_implementation_files_to_project(self, namespace, output, dimensions):
         super(
             SeparateSweepsWithEnclaveTasking, self
         ).add_implementation_files_to_project(namespace, output, dimensions)
@@ -199,15 +206,10 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         output.add(generated_solver_files)
         output.makefile.add_cpp_file("tasks/" + task_name + ".cpp", generated=True)
 
-        if self._pde_terms_without_state:
-            # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
-            # this hack has to suffice
-            peanodir = templatefile_prefix.split("python/exahype2", 1)[0]
-            output.makefile.d["PEANODIR"] = peanodir
-            exahype2.gpu.add_exahype_objects(output.makefile)
 
     def _volumetric_solver_enclave_task_name(self):
         return "{}_VolumetricSolverEnclaveTask".format(self._name)
+
 
     def add_actions_to_perform_time_step(self, step):
         """
@@ -225,19 +227,24 @@ class SeparateSweepsWithEnclaveTasking(SeparateSweeps):
         )
         step.add_action_set(self._action_set_merge_enclave_task_outcome)
 
+
     def add_entries_to_text_replacement_dictionary(self, d):
-        super(
-            SeparateSweepsWithEnclaveTasking, self
-        ).add_entries_to_text_replacement_dictionary(d)
-        d["FUSED_VOLUMETRIC_KERNEL_CALL_CPU"] = jinja2.Template(
-            self._fused_volumetric_kernel_call_cpu, undefined=jinja2.DebugUndefined
+        super(SeparateSweepsWithEnclaveTasking, self).add_entries_to_text_replacement_dictionary(d)
+
+        d["FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_CPU"] = jinja2.Template(
+            self._fused_volumetric_compute_kernel_call_stateless_cpu, undefined=jinja2.DebugUndefined
         ).render(**d)
-        d["FUSED_VOLUMETRIC_KERNEL_CALL_GPU"] = jinja2.Template(
-            self._fused_volumetric_kernel_call_gpu, undefined=jinja2.DebugUndefined
+        d["FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_GPU"] = jinja2.Template(
+            self._fused_volumetric_compute_kernel_call_stateless_gpu, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FUSED_RIEMANN_COMPUTE_KERNEL_CALL_STATELESS_CPU"] = jinja2.Template(
+            self._fused_Riemann_compute_kernel_call_stateless_cpu, undefined=jinja2.DebugUndefined
+        ).render(**d)
+        d["FUSED_RIEMANN_COMPUTE_KERNEL_CALL_STATELESS_GPU"] = jinja2.Template(
+            self._fused_Riemann_compute_kernel_call_stateless_gpu, undefined=jinja2.DebugUndefined
         ).render(**d)
 
         d["SEMAPHORE_LABEL"] = exahype2.grid.UpdateCellLabel.get_attribute_name(
             self._name
         )
-        d["STATELESS_PDE_TERMS"] = self._pde_terms_without_state
         d["ENCLAVE_TASK_PRIORITY"] = self.enclave_task_priority
