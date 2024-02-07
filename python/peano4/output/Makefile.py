@@ -154,6 +154,7 @@ the SISC paper
         self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
         self.d["CMAKE_LIBS"] = []
         self.d["USING_CMAKE"] = False
+        self.d["APP_SUBDIRECTORY"] = ""
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = ""
         self.d["CMAKE_MAKE_COMMAND"] = ""
         self.set_mode(CompileMode.Debug)
@@ -614,7 +615,7 @@ then this message can typically be ignored.
         for i in module_files:
             self.add_Fortran_module(i)
 
-    def generate(self, overwrite, directory):
+    def generate(self, overwrite, directory, subdirectory=""):
         """
         Generates build files and other project-related files based on templates.
 
@@ -643,6 +644,7 @@ then this message can typically be ignored.
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
         self.d["GENERATOR"] = sys.argv[0]
         self.d["USING_CMAKE"] = cmake_build_dir != ""
+        self.d["APP_SUBDIRECTORY"] = subdirectory
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
         # In the CMake backend we add a command that allows to build the generated application in the applicaiton directory

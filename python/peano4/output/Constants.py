@@ -180,8 +180,8 @@ class Constants(object):
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + ";\n"
     pass
 
-  def generate(self, overwrite, directory):
-    filename = directory + "/Constants.h"
+  def generate(self, overwrite, directory, subdirectory=""):
+    filename = directory + "/" + subdirectory + "Constants.h"
     if write_file(overwrite,self.default_overwrite,filename):
       print( "write " + filename )
 

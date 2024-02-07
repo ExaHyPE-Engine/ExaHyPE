@@ -35,8 +35,8 @@ class Project(object):
     @see generate_Peano4_project()
     """
 
-    def __init__(self, namespace, project_name, executable, directory="."):
-        self._project = peano4.Project(namespace, project_name, directory)
+    def __init__(self, namespace, project_name, executable, directory=".", subdirectory=""):
+        self._project = peano4.Project(namespace, project_name, directory, subdirectory)
         self._project.output.makefile.add_cmake_core_library("ExaHyPE2Core")
 
         self._solvers = []
@@ -399,7 +399,7 @@ thus appreciate any citation of the original release paper
                 templatefile_prefix + "SolverRepository.template.cpp",
                 "SolverRepository",
                 self._project.namespace + ["repositories"],
-                "repositories",
+                self._project.subdirectory + "repositories",
                 self.solverRepositoryDictionary,
                 True,
             )
@@ -407,7 +407,7 @@ thus appreciate any citation of the original release paper
 
         self._project.output.add(generated_solver_files)
         self._project.output.makefile.add_cpp_file(
-            "repositories/SolverRepository.cpp", generated=True
+            self._project.subdirectory + "repositories/SolverRepository.cpp", generated=True
         )
 
     def add_tracer(
@@ -703,7 +703,7 @@ thus appreciate any citation of the original release paper
             solver.add_actions_to_perform_time_step(self.perform_time_step)
 
             solver.add_implementation_files_to_project(
-                self._project.namespace, self._project.output, self._dimensions
+                self._project.namespace, self._project.output, self._dimensions, self._project.subdirectory
             )
 
         self.__generate_solver_repository()

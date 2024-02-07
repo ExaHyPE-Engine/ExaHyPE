@@ -19,8 +19,8 @@ modes = {
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("-j",   "--parallel-builds",          dest="j",                       type=int,   default=1, help="Parallel builds. Set to 0 to disable compile or to -1 to use all cores")
-parser.add_argument("-pd",  "--peano-dir",                dest="peanodir",                            default="../../../../../", help="Peano4 directory")
-parser.add_argument("-cd",  "--configure-dir",            dest="configuredir",                        default="../../../../../", help="Location of configure" )
+parser.add_argument("-pd",  "--peano-dir",                dest="peanodir",                            default="/nobackup/lcgk69/Peano/", help="Peano4 directory")
+parser.add_argument("-cd",  "--configure-dir",            dest="configuredir",                        default="/nobackup/lcgk69/Peano/", help="Location of configure" )
 parser.add_argument("-v",   "--verbose",                  dest="verbose",                 action="store_true", default=True, help="Verbose")
 parser.add_argument("-d",   "--dimensions",               dest="dimensions",              type=int,   default=2, help="Dimensions")
 parser.add_argument("-upvd","--unknowns_per_vertex_dof",  dest="unknowns_per_vertex_dof", type=int,   default=3, help="unknowns per vertex dof")
@@ -50,23 +50,6 @@ matrices = DLinear(args.dimensions,
                    1) # unknowns_per_vertex_dof?
 
 #
-# Create a project and configure it to end up in a subnamespace (and thus
-# subdirectory).
-#
-euler_project = exahype2.Project(
-  namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
-  project_name  = "Euler",
-  directory     = ".",
-  executable    = "selfgravitation-euler"
-)
-poisson_project = petsc.Project(
-  namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
-  project_name  = "Poisson",
-  directory     = ".",
-  executable    = "selfgravitation-poisson"
-)
-
-#
 # Add the Finite Volumes solver
 #
 max_h          = args.h / args.patch_size
@@ -79,7 +62,7 @@ auxiliary_variables = 0
 euler_solver   = None
 poisson_solver = None
 
-# @todo: Trying to think in a modularised way:
+# @note: Trying to think in a modularised way:
 # there is MG code somewhere which I have to use and
 # assuming that we need different local stiffness matrices for LHS for different types of solvers
 matrices = None
@@ -114,32 +97,67 @@ if args.type=="global-adaptive":
   # matrices = DLinearAdaptiveTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
 matrices = DLinear(args.dimensions, args.unknowns_per_vertex_dof)
 
-# @todo: Or is it about an individual CollocatedLowOrderDiscretisation for every type of solver?
-poisson_solver = petsc.solvers.CollocatedLowOrderDiscretisation(
-    "Poisson",
-    1,
-    args.dimensions,
-    args.h,
-    args.h,
-    matrices.get_cell_system_matrix_for_laplacian(),
-    matrices.get_cell_mass_matrix(),
-    1,
-    1,
-  )
+# # @note: Is it about an individual CollocatedLowOrderDiscretisation for every type of solver?
+# poisson_solver = petsc.solvers.CollocatedLowOrderDiscretisation(
+#     "Poisson",
+#     1,
+#     args.dimensions,
+#     args.h,
+#     args.h,
+#     matrices.get_cell_system_matrix_for_laplacian(),
+#     matrices.get_cell_mass_matrix(),
+#     1,
+#     1,
+#   )
 
-assert (
-    poisson_solver.name != euler_solver.name
-), "names the solvers should not be the same"
+# assert (
+#     poisson_solver.name != euler_solver.name
+# ), "names the solvers should not be the same"
 
 euler_solver.set_implementation(refinement_criterion=exahype2.solvers.PDETerms.User_Defined_Implementation)
 
-euler_project.add_solver(euler_solver)
-poisson_project.add_solver(poisson_solver)
+# peano4_project = peano4.Project(
+#   namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
+#   project_name  = "EulerPoisson",
+#   directory     = ".",
+#   executable    = "selfgravitation-with-petsc",
+# )
 
 #
-# Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
-# for the Poisson updates.
+# Create a project and configure it to end up in a subnamespace (and thus subdirectory).
 #
+#euler_project = exahype2.Project(
+#  namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
+#  # subnamespace  = ["euler"],
+#  project_name  = "Euler",
+#  directory     = ".",
+##  subdirectory  = "euler",
+#  executable    = "selfgravitation-euler"
+#)
+
+euler_project = exahype2.Project(
+  namespace     = ["applications", "exahype2", "euler", "selfgravitation", "euler"],
+  project_name  = "Euler",
+  directory     = ".",
+  subdirectory = "euler",
+  executable    = "selfgravitation-euler"
+)
+
+# poisson_project = petsc.Project(
+#   namespace     = ["applications", "exahype2", "euler", "selfgravitation"],
+#   # subnamespace  = ["poisson"],
+#   project_name  = "Poisson",
+#   # subdirectory  = "poisson",
+#   executable    = "selfgravitation-poisson"
+# )
+
+euler_project.add_solver(euler_solver)
+# poisson_project.add_solver(poisson_solver)
+
+# #
+# # Time step synchronisation. Ensure the Euler solver doesn't run ahead but waits
+# # for the Poisson updates.
+# #
 # euler_solver._action_set_update_cell.guard += " and tarch::la::greaterEquals( fineGridCell" + \
 #   poisson_solver.name + "CellLabel.getTimeStamp(), fineGridCell" + euler_solver.name + \
 #   "CellLabel.getTimeStamp() )"
@@ -190,9 +208,9 @@ euler_solver.add_user_action_set_includes( """
 #  repositories::instanceOf{}.reportGradientDelta( delta );
 # """.format(args.patch_size, poisson_solver.name)
 
-#
-# Ensure the Poisson solver does never overtake the Euler
-#
+# #
+# # Ensure the Poisson solver does never overtake the Euler
+# #
 # poisson_solver._compute_new_time_step_size += """
 # if (fineGridCell""" + poisson_solver.name + "CellLabel.getTimeStamp() > fineGridCell" + euler_solver.name + """CellLabel.getTimeStamp() ) {
 #   timeStamp = fineGridCell""" + euler_solver.name + """CellLabel.getTimeStamp(); // reset time step size
@@ -223,11 +241,11 @@ euler_project.set_global_simulation_parameters(
   time_in_between_plots = args.plot_snapshot_interval,      # snapshots
   periodic_BC = [False, False, False]
 )
-poisson_project.set_global_simulation_parameters(
-  dimensions            = args.dimensions,
-  offset                = offset,
-  domain_size           = size,
-)
+# poisson_project.set_global_simulation_parameters(
+#   dimensions            = args.dimensions,
+#   offset                = offset,
+#   domain_size           = size,
+# )
 
 #
 # So here's the parallel stuff. This is new compared to the serial
@@ -235,60 +253,41 @@ poisson_project.set_global_simulation_parameters(
 #
 euler_project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 euler_project.set_Peano4_installation(args.peanodir, modes[args.mode])
-poisson_project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()")
-poisson_project.set_Peano4_installation(args.peanodir, modes[args.mode])
+# poisson_project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()")
+# poisson_project.set_Peano4_installation(args.peanodir, modes[args.mode])
 
 #
-# Create the first Peano4 project for Euler
+# This is the plain variant
 #
-euler_peano4_project = euler_project.generate_Peano4_project(args.verbose)
+# #
+# # Create an 'empty' Peano4 project
+# #
+peano4_project = euler_project.generate_Peano4_project(args.verbose)
 
-#
-# Create the second Peano4 project for Poisson
-#
-poisson_peano4_project = poisson_project.generate_Peano4_project(args.verbose)
+# peano4_project = peano4.Project()
+# peano4_project.add_subproject( euler_project.generate_Peano4_project(args.verbose),
+                              # subnamespace = ["euler"]
+                              # )
+
+# peano4_project.add_subproject(
+#   poisson_project.generate_Peano4_project(args.verbose),
+#   # subnamespace = ["poisson"],
+# )
 
 
-poisson_peano4_project.output.makefile.add_h_file("""{}.h""".format(poisson_solver.name))
-poisson_peano4_project.output.makefile.add_cpp_file("""{}.cpp""".format(poisson_solver.name))
-
-poisson_peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
-if args.j==0:
-  poisson_peano4_project.generate()
-else:
-  poisson_peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
-print("Poisson Peano4 Project built successfully")
-
-euler_peano4_project.output.makefile.add_h_file("""{}.h""".format(euler_solver.name))
-euler_peano4_project.output.makefile.add_cpp_file("""{}.cpp""".format(euler_solver.name))
-
-euler_peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
-if args.j==0:
-  euler_peano4_project.generate()
-else:
-  euler_peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
-print("Euler Peano4 Project built successfully")
-
-#
-# Merge two Peano4 projects into one and build
-#
-peano4_project = peano4.Project.merge(
-   poisson_peano4_project,
-   euler_peano4_project,
-   project_name="EulerPoisson",
-   executable="selfgravitation-with-petsc",
-)
-
-# peano4_project.output.makefile.add_h_file("Poisson.h")
-# peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
-# peano4_project.output.makefile.add_h_file("Euler.h")
-# peano4_project.output.makefile.add_cpp_file("Euler.cpp")
+# peano4_project.output.makefile.add_h_file("""{}.h""".format(euler_solver.name))
+# peano4_project.output.makefile.add_cpp_file("""{}.cpp""".format(euler_solver.name))
+# peano4_project.output.makefile.add_h_file("""{}.h""".format(poisson_solver.name))
+# peano4_project.output.makefile.add_cpp_file("""{}.cpp""".format(poisson_solver.name))
 
 peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+peano4_project.output.makefile.add_header_search_path("euler")
 if args.j==0:
   peano4_project.generate()
 else:
   peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
-print("The combined Euler-Poisson Peano4 project built successfully")
+print("Euler Peano4 Project built successfully") #Poisson
+
+# print("The combined Euler-Poisson Peano4 project built successfully")
 
 # print("Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")
