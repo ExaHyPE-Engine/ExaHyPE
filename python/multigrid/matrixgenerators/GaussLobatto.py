@@ -374,11 +374,13 @@ class GLMatrixFree(GaussLobatto):
     
     # return A_CF_result
 
-    Zeros = np.zeros((self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
-                      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 * self.Dimensions)) # should be 16x4 for 2D 1st order
+    # Zeros = np.zeros((self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
+                      # self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 * self.Dimensions)) # should be 16x4 for 2D 1st order
     
-    matrix_0 = Zeros
-    matrix_1 = Zeros
+    matrix_0 = np.zeros((self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
+                      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 * self.Dimensions))
+    matrix_1 = np.zeros((self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
+                      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 * self.Dimensions))
     # Keep specific for debugging
     assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
 
@@ -471,19 +473,18 @@ class GLMatrixFree(GaussLobatto):
     # Zeros = np.zeros_like(P_left)
     # return np.concatenate((Zeros, P_left, Zeros, P_bottom, P_right, Zeros, P_top, Zeros), axis=0)
     
-    Zeros = np.zeros((2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions,
-                      self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions)) # should be 32x4 for 2D 1st order
-    
     # Keep specific for debugging
     assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
     # q^\pm - gradient projections, scaled by h^-1
-    matrix_0 = Zeros
+    matrix_0 =  np.zeros((2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions,
+                      self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions)) # should be 32x4 for 2D 1st order
     matrix_0[ [4,5],   : ] = P_qp_u_left
     matrix_0[ [12,13], : ] = P_qp_u_bottom
     matrix_0[ [16,17], : ] = P_qm_u_right
     matrix_0[ [24,25], : ] = P_qm_u_top
     # u^\pm - solution projections, scaled by h^0
-    matrix_1 = Zeros
+    matrix_1 =  np.zeros((2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions,
+                      self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions)) # should be 32x4 for 2D 1st order
     matrix_1[ [6,7],   : ] = P_up_u_left
     matrix_1[ [14,15], : ] = P_up_u_bottom
     matrix_1[ [18,19], : ] = P_um_u_right
