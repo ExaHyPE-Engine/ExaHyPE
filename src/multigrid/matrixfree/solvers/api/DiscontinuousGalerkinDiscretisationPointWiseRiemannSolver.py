@@ -10,6 +10,7 @@ from .actionsets.InitDofs         import InitDofsDG
 from .actionsets.UpdateCell       import UpdateCell
 from .actionsets.UpdateCell       import InteriorPenalty
 from .actionsets.ProjectOntoFaces import ProjectOntoFaces
+from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   """!
@@ -392,6 +393,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     solution and right-hand side. 
     
     """
+    observer.add_action_set( PlotDGDataInPeanoBlockFormat(self) )
     pass
 
   def add_to_create_grid(self, observer):
@@ -457,6 +459,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "APPROX_SYSTEM_MATRIX_SCALING": self._approximate_system_matrix_scaling,
         "CELL_RELAXATION"             : self._cell_relaxation,
         "FACE_RELAXATION"             : self._face_relaxation,
+        "POLY_DEGREE"                 : self._poly_degree
 
         }
 

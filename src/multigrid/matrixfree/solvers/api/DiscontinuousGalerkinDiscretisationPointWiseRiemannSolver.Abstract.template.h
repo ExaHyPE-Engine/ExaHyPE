@@ -44,6 +44,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr int        UnknownsPerCellNode    = {{UNKNOWNS_PER_CELL_NODE}};
     static constexpr int        SolutionsPerFaceNode   = {{SOLUTIONS_PER_FACE_NODE}};
 
+    static constexpr int        PolyDegree             = {{POLY_DEGREE}};
   public:
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();

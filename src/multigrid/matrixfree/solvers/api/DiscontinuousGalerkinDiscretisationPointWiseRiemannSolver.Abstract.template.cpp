@@ -1,7 +1,5 @@
 #include "{{CLASSNAME}}.h"
-
-#include <cmath>     // for std::pow
-#include <algorithm> // for std::transform
+#include <cmath> // for std::pow
 
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
@@ -19,30 +17,6 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
     isOnBoundary |= tarch::la::greaterEquals( x(d), DomainOffset(d)+DomainSize(d) );
   }
   return isOnBoundary;
-}
-
-/*
-Pass in matrix of doubles and matrix of ints, as well as cell width.
-
-Each element inputMatrix[i,j] <- inputMatrix[i,j] * h^( scaleFactors[i,j] )
-
-Would do this in-place but we don't wanna modify the static copy
-of the matrix within the method more than once...
-*/
-template<int Rows, int Cols>
-tarch::la::Matrix<Rows,Cols,double> scaleMatrix(
-  const tarch::la::Matrix<Rows,Cols,double>&    inputMatrix,
-  const tarch::la::Matrix<Rows,Cols,int>&       scaleFactors,
-  const tarch::la::Vector<Dimensions, double>&  x,
-  const tarch::la::Vector<Dimensions, double>&  h
-) {
-  tarch::la::Matrix<Rows,Cols,double> matrix;
-  std::transform( inputMatrix.data(), inputMatrix.data() + inputMatrix.size(),
-                  scaleFactors.data(),
-                  matrix.data(),      // write results of the binary op back to "matrix"
-                  [&](double m, int s){ return m * std::pow(h(0),s); }
-  );
-  return matrix;
 }
 
 template<int Rows, int Cols>

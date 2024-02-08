@@ -20,7 +20,21 @@ void benchmarks::multigrid::matrixfree::poisson::DGPoisson::initCell(
   const tarch::la::Vector<Dimensions, double>&  h,
   tarch::la::Vector< CellUnknowns, double >&  value,
   tarch::la::Vector< CellUnknowns, double >&  rhs
-) {return;}
+) {
+  
+  logTraceInWith4Arguments("initCell", x, h, value, rhs);
+  static constexpr double twoPiSquared = Dimensions * tarch::la::PI * tarch::la::PI;
+  double rhsVal = twoPiSquared;
+  for (int i=0; i<Dimensions; i++)
+    rhsVal *= std::sin( tarch::la::PI * x[i] );
+
+  for (int i=0; i<CellUnknowns; i++)
+  {
+    rhs[i]   = rhsVal;
+    value[i] = 0;
+  }
+  logTraceOutWith4Arguments("initCell", x, h, value, rhs);
+}
 
 void benchmarks::multigrid::matrixfree::poisson::DGPoisson::initFace(
   const tarch::la::Vector<Dimensions, double>&  x,
