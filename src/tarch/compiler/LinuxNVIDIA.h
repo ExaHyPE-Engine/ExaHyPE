@@ -27,6 +27,10 @@
 
 #undef OpenMPTaskGroup
 
+#undef OpenMPDependenciesInTaskWait
+
+#undef OpenMPDependencyIterators
+
 #define PragmaPush _Pragma("diag_push")
 #define SilenceUnknownAttribute _Pragma("diag_suppress unrecognized_attribute")
 #define PragmaPop _Pragma("diag_pop")

@@ -8,6 +8,7 @@
 
 #include "config.h"
 #include "peano4/utils/Globals.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/accelerator/accelerator.h"
 #include "tarch/la/Vector.h"
 
@@ -487,8 +488,10 @@ std::string toString(peano4::utils::LoopPlacement);
 #endif
 
 
-#if defined(SharedOMP)
+#if defined(SharedOMP) and defined(OpenMPTaskGroup)
 #include "omp/Loop.h"
+#elif defined(SharedOMP) and !defined(OpenMPTaskGroup)
+#include "omp/LoopWithoutTaskLoop.h"
 #elif defined(SharedTBB)
 #include "tbb/Loop.h"
 #elif defined(SharedCPP)
