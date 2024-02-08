@@ -30,6 +30,10 @@
 
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
+#define OpenMPDependenciesInTaskWait
+
+#define OpenMPDependencyIterators
+
 #define OpenMPTaskGroup
 
 #define PragmaPush _Pragma("clang diagnostic push")

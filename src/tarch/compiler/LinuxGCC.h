@@ -25,6 +25,10 @@
 
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions inline
 
+#define OpenMPDependenciesInTaskWait
+
+#define OpenMPDependencyIterators
+
 #define OpenMPTaskGroup
 
 #define PragmaPush _Pragma("GCC diagnostic push")
