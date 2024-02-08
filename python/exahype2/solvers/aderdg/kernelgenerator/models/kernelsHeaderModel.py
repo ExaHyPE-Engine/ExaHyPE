@@ -27,6 +27,8 @@ from .abstractModelBaseClass import AbstractModelBaseClass
 class KernelsHeaderModel(AbstractModelBaseClass):
 
     def generateCode(self):
+        
+        print(self.context["solverName"])
 
         self.context["solverNamespace"] = self.context["solverName"].split("::")[0]
         self.context["solverNamespaceList"] = self.context["solverName"].split("::")

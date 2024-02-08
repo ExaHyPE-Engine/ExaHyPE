@@ -17,7 +17,7 @@ void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseFunctors(
   const NonconservativeProductFunctor& nonconservativeProductFunctor,
   const SourceFunctor&                 sourceFunctor,
   const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
-  peano4::utils::LoopParallelism       loopParallelism
+  peano4::utils::LoopPlacement         loopParallelism
 ) {
   static_assert(HaloSize == 1);
 
@@ -568,7 +568,7 @@ void exahype2::fv::rusanov::timeStepWithRusanovVolumewiseFunctors(
   const SourceFunctor&                 sourceFunctor,
   const MaxEigenvalueFunctor&          maxEigenvalueFunctor,
   tarch::timing::Measurement&          measurement,
-  peano4::utils::LoopParallelism       loopParallelism
+  peano4::utils::LoopPlacement         loopParallelism
 ) {
   tarch::timing::Watch watch("exahype2::fv::rusanov", "timeStepWithRusanovVolumewiseFunctors", false, true);
   timeStepWithRusanovVolumewiseFunctors<

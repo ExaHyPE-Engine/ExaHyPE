@@ -417,7 +417,7 @@ if __name__ == "__main__":
           //NaN detector here/////////////////////////////////
           /*for(int i=0;i<59;i++){
             if ( std::isnan(oldQWithHalo[cellSerialised*(59+n_a_v)+i]) ) {
-              ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "[Quantity should no be NaN]", "NaN detected at t=" + std::to_string(t) + " for quantity "+std::to_string(i)+" at position ["+std::to_string(currentPosition[0])+", "+std::to_string(currentPosition[1])+", "+std::to_string(currentPosition[2])+"]");}
+              ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "[Quantity should no be NaN]", "NaN detected at t=" + std::to_string(t) + " for quantity "+std::to_string(i)+" at position ["+std::to_string(currentPosition[0])+", "+std::to_string(currentPosition[1])+", "+std::to_string(currentPosition[2])+"]");}
           }*/
           ///////////////////////////////////////////////////
 

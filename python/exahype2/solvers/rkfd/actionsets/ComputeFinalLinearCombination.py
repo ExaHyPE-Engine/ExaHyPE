@@ -29,6 +29,10 @@ class ComputeFinalLinearCombination(AbstractRKFDActionSet):
   - The estimates do not alter the auxiliary variables.
   - We can thus just keep the previous auxiliary variables implicitly.  
   
+  In the FD4 world, we can integrate the ComputeFinalLinearCombination
+  action set directly into the very last mesh sweep. At this point, all
+  the right-hand side estimates are in place.
+  
   """
   
   TemplateProject = """

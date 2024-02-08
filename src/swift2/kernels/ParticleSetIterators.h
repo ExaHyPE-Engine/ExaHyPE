@@ -216,10 +216,11 @@ namespace swift2 {
      * peano4/utils/Loop.h, which ensure that we use bespoke loop constructs
      * depending on the multithreading backend chosen.
      *
-     * @see peano4/utils/Loop.h
+     * This routine is not be used/does not work if f alters the global state,
+     * i.e. if f performs a global reduction.
      */
     template <typename ParticleContainer>
-    void forAllParticles_vectorise(
+    void forAllParticlesVectorised(
       const peano4::datamanagement::VertexMarker&                  marker,
       ParticleContainer&                                           assignedParticles,
       int                                                          numberOfAssignedParticles,
@@ -240,9 +241,12 @@ namespace swift2 {
      * Logically, it would be nice to work with a bitset here. However, bitsets
      * are large, and it is not clear if operations on them would map onto
      * AVX instructions.
+     *
+     * This routine is not be used/does not work if f alters the global state,
+     * i.e. if f performs a global reduction.
      */
     template <typename ParticleContainer>
-    void forAllParticles_vectoriseWithCheckPreamble(
+    void forAllParticlesVectoriseWithCheckPreamble(
       const peano4::datamanagement::VertexMarker&                  marker,
       ParticleContainer&                                           assignedParticles,
       int                                                          numberOfAssignedParticles,
@@ -364,8 +368,56 @@ namespace swift2 {
       UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
           particlePairPredicate = ::swift2::kernels::localParticleCanBeUpdatedInCellKernelFromAnyOtherParticle<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type>
     );
-  }
-}
+
+
+    /**
+     * Brute-force vectorised update
+     *
+     * The idea behind this routine is that we run over the particle pairs in a
+     * brute force manner. It works if and only if the user works with
+     * coalesced memory access and therefore knows the number of local
+     * particles. We assume/hope that f is vectorisable. To avoid simultaneous
+     * writes to one particle, we loop over the active particles first and then
+     * over the local ones. That is, we compute the impact of one active
+     * particle onto all local particles.
+     *
+     * The interaction between fine and coarse particles requires special
+     * attention: If a particle pair arises from different resolution levels,
+     * we have to add the arising force bi-directionally. However, the
+     * underlying check ("are we on the same level") is not vector-friendly.
+     * What we do therefore is to extract this check out into a separate
+     * nested loop which we add as a epilogue.
+     *
+     * @todo Pawel I think this is a second place where we can, in the second
+     *       variant, use a bitset.
+     */
+    template <typename LocalParticleContainer, typename ActiveParticleContainer>
+    void forAllParticlePairsVectorised(
+      const peano4::datamanagement::CellMarker&  marker,
+      LocalParticleContainer&                    localParticles,
+      ActiveParticleContainer&                   activeParticles,
+      const std::vector<int>&                    numberOfLocalParticlesPerVertex,
+      const std::vector<int>&                    numberOfActiveParticlesPerVertex,
+      ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
+          f
+    );
+
+    /**
+     * @todo dummy function at the moment. Only wraps around forAllParticlePairsVectorised()
+     */
+    template <typename LocalParticleContainer, typename ActiveParticleContainer>
+    void forAllParticlePairsVectoriseWithCheckPreamble(
+      const peano4::datamanagement::CellMarker&  marker,
+      LocalParticleContainer&                    localParticles,
+      ActiveParticleContainer&                   activeParticles,
+      const std::vector<int>&                    numberOfLocalParticlesPerVertex,
+      const std::vector<int>&                    numberOfActiveParticlesPerVertex,
+      ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
+          f
+    );
+
+  } // namespace kernels
+} // namespace swift2
 
 
 #include "ParticleSetIterators.cpph"

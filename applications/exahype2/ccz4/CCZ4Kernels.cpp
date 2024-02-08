@@ -359,9 +359,9 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
     constraints[1]  =   Mom[0];     //60
     constraints[2]  =   Mom[1];     //61
     constraints[3]  =   Mom[2];     //62
-    constraints[4]  =   R;          //63
-    constraints[5]  =   Kupdown;    //64
-    constraints[6]  =   nablaZcontracted;   //65
+    //constraints[4]  =   R;          //63
+    //constraints[5]  =   Kupdown;    //64
+    //constraints[6]  =   nablaZcontracted;   //65
     //constraints[4]  =   1.0/invdet-1.0;
     //constraints[5]  =   traceA;
 }

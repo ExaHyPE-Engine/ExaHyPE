@@ -256,6 +256,9 @@ grid_traversal_event.add_attribute(
     dastgen2.attributes.BooleanArray("isParentVertexLocal", "TwoPowerD", compress=True)
 )
 grid_traversal_event.add_attribute(
+    dastgen2.attributes.BooleanArray("isVertexParentOfSubtree", "TwoPowerD", compress=True)
+)
+grid_traversal_event.add_attribute(
     dastgen2.attributes.BooleanArray("isFaceLocal", "TwoTimesD", compress=True)
 )
 grid_traversal_event.add_attribute(dastgen2.attributes.Boolean("isCellLocal"))

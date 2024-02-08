@@ -163,7 +163,7 @@ class InsertParticlesFromHDF5File(ActionSet):
       toolbox::particles::insertParticleIntoCell(
         marker,
         newParticle,
-        fineGridVerticeshydroPartSet,
+        fineGridVertices{{PARTICLE}}Set,
         _spacetreeId
       );
     }

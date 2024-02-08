@@ -5,8 +5,8 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "peano4"
-version = "0.0.1"
+name = "Peano"
+version = "4.0.0"
 authors = [
   { name="Tobias Weinzierl", email="tobias.weinzierl@durham.ac.uk" },
   { name="Sean Baccas" },
@@ -31,7 +31,7 @@ authors = [
   { name="Budanaz Yakup" },
   { name="Han Zhang" },
 ]
-description = "Peano4 Python Modules"
+description = "Peano Python API"
 readme="README"
 requires-python = ">=3.7"
 classifiers = [
@@ -40,11 +40,13 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "jinja2",
+    "Jinja2",
     "numpy",
     "sympy",
     "matplotlib",
     "h5py",
+    "scipy",
+    "mpmath",
     "VTUinterface",
 ]
 

@@ -1,0 +1,43 @@
+#include "TracingAPI.h"
+
+
+template <typename ParticleContainer>
+std::vector< toolbox::particles::assignmentchecks::ParticlePosition > toolbox::particles::assignmentchecks::recordParticlePositions(const ParticleContainer& container) {
+  std::vector< toolbox::particles::assignmentchecks::ParticlePosition > result( container.size() );
+
+  int entry = 0;
+  for (auto& p: container) {
+    result[entry] = p->getX();
+    entry++;
+  }
+
+  return result;
+}
+
+
+template <typename ParticleContainer>
+void toolbox::particles::assignmentchecks::traceParticleMovements(
+  const ParticleContainer&                container,
+  const std::vector< ParticlePosition >&  recordedPositions,
+  int                                     spacetreeId
+) {
+  assertionEquals( container.size(), recordedPositions.size() );
+
+  typename ParticleContainer::const_iterator       pParticle         = container.begin();
+  std::vector< ParticlePosition >::const_iterator  pRecordedPosition = recordedPositions.begin();
+
+  while (pParticle!=container.end()) {
+    moveParticle(
+      pruneTypeName< typename std::remove_pointer<typename ParticleContainer::value_type>::type >(),
+      *pRecordedPosition,
+      (*pParticle)->getX(),
+      spacetreeId,
+      "toolbox::particles::assignmentchecks::traceParticleMovements()"
+    );
+
+    pParticle++;
+    pRecordedPosition++;
+  }
+}
+
+
