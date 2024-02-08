@@ -174,7 +174,7 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
 
   #if !defined(OpenMPDependenciesInTaskWait)
   if (taskNumber != NoDependencies) {
-    #pragma omp task untied depend(in: outDependencyPointer[0])
+    #pragma omp task untied depend(in: outDependencyPointer[:1])
     {
       // empty task
     }
@@ -186,18 +186,18 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
   }
   #endif
 
-#pragma omp atomic
+  #pragma omp atomic
   numberOfSpawnedTasks++;
 
   if (taskNumber == NoDependencies and inDependencies.empty()) {
-#pragma omp task priority(job->getPriority()) untied
+    #pragma omp task priority(job->getPriority()) untied
     {
       while (job->run()) {
-#pragma omp taskyield
+        #pragma omp taskyield
       }
       delete job;
 
-#pragma omp atomic
+      #pragma omp atomic
       numberOfSpawnedTasks--;
     }
   }
@@ -209,80 +209,57 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
     // #pragma omp task priority(job->getPriority()) untied depend(out : *outDependencyPointer)
     //
     // but some toolchains don't support that synax.
-    #pragma omp task priority(job->getPriority()) untied depend(out : outDependencyPointer[0])
+    #pragma omp task priority(job->getPriority()) untied depend(out : outDependencyPointer[:1])
     {
       while (job->run()) {
-#pragma omp taskyield
+        #pragma omp taskyield
       }
       delete job;
 
-#pragma omp atomic
+      #pragma omp atomic
       numberOfSpawnedTasks--;
     }
   } else if (taskNumber == NoDependencies and not inDependencies.empty()) {
-    #if !defined(OpenMPDependencyIterators)
-      //
-      // very primiate workaround, where we construct empty funneling-in tasks
-      //
-      int helperDependency;
-      for (auto& inDependencyTaskNumber: inDependencies) {
-         int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
-	 #pragma omp task priority(job->getPriority()) untied depend(in: inDependencyPointer[0]) depend(out:helperDependency)
-         {  // empty task
-         }
+    int helperDependency;
+    for (auto& inDependencyTaskNumber: inDependencies) {
+       int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
+       #pragma omp task priority(job->getPriority()) untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
+       {  
+         // empty task
+       }
+    }
+    #pragma omp task priority(job->getPriority()) untied depend(in: helperDependency)
+    {
+      while (job->run()) {
+        #pragma omp taskyield
       }
-      #pragma omp task priority(job->getPriority()) untied depend(in: helperDependency)
-      {
-        while (job->run()) {
-          #pragma omp taskyield
-        }
-        delete job;
+      delete job;
 
-        #pragma omp atomic
-        numberOfSpawnedTasks--;
-      }
-    #else
-#error This code is not yet correct as we require clarification re the OpenMP syntax. Use -UOpenMPDependencyIterators please
-      int              numberOfInDependencies = inDependencies.size();
-      std::vector<int> arrayOfInDependencies(numberOfInDependencies);
-      std::copy(inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin());
-
-      #pragma omp task priority(job->getPriority()) untied depend(iterator(j = 0 : numberOfInDependencies), in : arrayOfInDependencies[j])
-      {
-        while (job->run()) {
-          #pragma omp taskyield
-        }
-        delete job;
-
-        #pragma omp atomic
-        numberOfSpawnedTasks--;
-      }
-    #endif
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
   } else if (taskNumber != NoDependencies and not inDependencies.empty()) {
-    #if !defined(OpenMPDependencyIterators)
-      //
-      // See above
-      //
-      int helperDependency;
-      for (auto& inDependencyTaskNumber: inDependencies) {
-         int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
-         #pragma omp task priority(job->getPriority()) untied depend(in: inDependencyPointer[0]) depend(out:helperDependency)
-         {  // empty task
-         }
+    //
+    // See above
+    //
+    int helperDependency;
+    for (auto& inDependencyTaskNumber: inDependencies) {
+      int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
+      #pragma omp task priority(job->getPriority()) untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
+      {  
+        // empty task
       }
-      #pragma omp task priority(job->getPriority()) untied depend(in: helperDependency) depend(out: outDependencyPointer[0])
-      {
-        while (job->run()) {
-          #pragma omp taskyield
-        }
-        delete job;
+    }
+    #pragma omp task priority(job->getPriority()) untied depend(in: helperDependency) depend(out: outDependencyPointer[:1])
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
 
-        #pragma omp atomic
-        numberOfSpawnedTasks--;
-      }
-   #else
-#error see error above: iterators not yet fully supported
-   #endif
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
   } else {
     assertionMsg(false, "should never be called");
   }
@@ -329,33 +306,26 @@ void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<ta
 
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
   if (not inDependencies.empty()) {
-    #if !defined(OpenMPDependenciesInTaskWait)
-      //
-      // very primiate workaround, where we construct empty funneling-in tasks
-      //
-      int helperDependency;
-      for (auto& inDependencyTaskNumber: inDependencies) {
-         int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
-         #pragma omp task untied depend(in: inDependencyPointer[0]) depend(out:helperDependency)
-         {  // empty task
-         }
+    //
+    // very primiate workaround, where we construct empty funneling-in tasks
+    //
+    int helperDependency;
+    for (auto& inDependencyTaskNumber: inDependencies) {
+      int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
+      #pragma omp task untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
+      {  
+        // empty task
       }
-      #pragma omp task untied depend(in: helperDependency)
-      {}
-      #pragma omp taskwait
-    #else
-#error iterators not yet supported
-    int              numberOfInDependencies = inDependencies.size();
-    std::vector<int> arrayOfInDependencies(numberOfInDependencies);
-    std::copy(inDependencies.begin(), inDependencies.end(), arrayOfInDependencies.begin());
-#pragma omp taskwait depend(iterator(j = 0 : numberOfInDependencies), in : arrayOfInDependencies[j])
-    #endif
+    }
+    #pragma omp task untied depend(in: helperDependency)
+    {}
+    #pragma omp taskwait
   }
 }
 
 
-void        tarch::multicore::native::waitForAllTasks() {
-#pragma omp taskwait
+void tarch::multicore::native::waitForAllTasks() {
+  #pragma omp taskwait
 }
 
 #endif

@@ -46,8 +46,6 @@
 
 #define OpenMPDependenciesInTaskWait
 
-#define OpenMPDependencyIterators
-
 #define OpenMPTaskGroup
 
 #define PragmaPush
