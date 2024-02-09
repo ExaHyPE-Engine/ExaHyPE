@@ -9,6 +9,7 @@ import peano4.toolbox.particles
 import numpy as np
 
 # See comments in README.dox
+from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStep
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStep
@@ -46,11 +47,11 @@ parser.add_argument(
     dest="solver",
     choices=[
         "fv",
-        "fd4-rk1",
-        "fd4-rk2",
-        "fd4-rk3",
-        "fd4-rk4",
-        "dg0-rk1",
+        "fd4-rk1", "sofd4-rk1",
+        "fd4-rk2", "sofd4-rk2",
+        "fd4-rk3", "sofd4-rk3",
+        "fd4-rk4", "sofd4-rk4",
+        "dg0-rk1", 
         "dg0-rk2",
         "dg0-rk3",
         "dg0-rk4",
@@ -62,8 +63,7 @@ parser.add_argument(
         "dg4-rk4",
         "dg4-rk1",
         "dg4-rk2",
-        "dg4-rk3",
-        "second-order",
+        "dg4-rk3"
     ],
     required=True,
     help="Pick solver type",
@@ -75,14 +75,6 @@ parser.add_argument(
     action="store_true",
     default=False,
     help="switch on the enclave tasking solver",
-)
-parser.add_argument(
-    "-so",
-    "--second-order",
-    dest="SO_flag",
-    action="store_true",
-    default=False,
-    help="add the additional_step for the second order formulation",
 )
 parser.add_argument(
     "-et",
@@ -143,12 +135,14 @@ project = exahype2.Project(
 #
 my_solver = None
 
-if args.solver == "fv":
+if args.solver == "fv" and args.enclave:
     my_solver = CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
         name="CCZ4FV",
         patch_size=9,
         min_volume_h=args.cell_size / 5,
         max_volume_h=args.cell_size / 5,
+        use_heap_storage=args.use_heap_storage,
+        pde_terms_without_state=True,
     )
     my_solver.set_implementation(
         initial_conditions="""
@@ -156,8 +150,24 @@ if args.solver == "fv":
       ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
     """
     )
-if "fd4-rk" in args.solver:
+if args.solver == "fv" and not args.enclave:
+    my_solver = CCZ4Solver_FV_GlobalAdaptiveTimeStep(
+        name="CCZ4FV",
+        patch_size=9,
+        min_volume_h=args.cell_size / 5,
+        max_volume_h=args.cell_size / 5,
+        use_heap_storage=args.use_heap_storage,
+        pde_terms_without_state=True,
+    )
+    my_solver.set_implementation(
+        initial_conditions="""
+    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) Q[i] = 0.0; 
+      ::applications::exahype2::ccz4::gaugeWave(Q, volumeCentre, 0);
+    """
+    )
+if "fd4-rk" in args.solver or "sofd4-rk" in args.solver:
     order = int(args.solver[-1])
+    second_order_formulation = "sofd4" in args.solver
     if args.enclave==True:
         my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             name="CCZ4FD4RK" + str(order) + "-enclave",
@@ -165,9 +175,7 @@ if "fd4-rk" in args.solver:
             rk_order=order,
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
-            use_heap_storage=False,
-            pde_terms_without_state=True,
-            second_order=args.SO_flag
+            second_order = second_order_formulation
         )
     else:
         my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
@@ -176,7 +184,7 @@ if "fd4-rk" in args.solver:
             rk_order=order,
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
-            second_order=args.SO_flag
+            second_order = second_order_formulation
         )
     my_solver.set_implementation(
         initial_conditions="""
@@ -185,7 +193,7 @@ if "fd4-rk" in args.solver:
     """
     )
 
-if "rk" in args.solver and "dg" in args.solver:
+if "rk" in args.solver and "dg" in args.solver and not args.enclave_solver:
     space_order = int(args.solver[2])
     time_order = int(args.solver[6])
     my_solver = CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
@@ -194,6 +202,8 @@ if "rk" in args.solver and "dg" in args.solver:
         rk_order=time_order,
         min_cell_h=args.cell_size * space_order,
         max_cell_h=args.cell_size * space_order,
+        use_heap_storage=args.use_heap_storage,
+        pde_terms_without_state=True,
     )
     my_solver.set_implementation(
         initial_conditions="""
@@ -212,10 +222,19 @@ project.add_solver(my_solver)
 # Tracer setting
 ########################################################################################
 if args.tracer:
+    if args.asserts:
+        time_delta_between_two_snapsots = 1e-4
+    else:
+        time_delta_between_two_snapsots = 0.1
     my_solver.add_tracer(
         name="Tracer",
         coordinates=[[-0.4251, 0, 0], [0, 0, 0], [0.4251, 0, 0]],
         project=project,
+        number_of_entries_between_two_db_flushes = 100,
+        data_delta_between_two_snapsots = 1e-8,
+        time_delta_between_two_snapsots = time_delta_between_two_snapsots,
+        clear_database_after_flush = False,
+        tracer_unknowns = None
     )
 
 
@@ -263,17 +282,25 @@ project.set_load_balancing(
 
 peano4_project = project.generate_Peano4_project(verbose=args.verbose)
 
-if args.SO_flag==True:
+if "sofd4" in args.solver:
     additional_mesh_traversal = peano4.solversteps.Step( name = "AdditionalMeshTraversal",
                                                            add_user_defined_actions=False,
                                                            )
+    
+    #
+    # We misuse the projection. See @ref benchmarks_exahype2_ccz4_gauge_wave for details
+    #
     project_patch_onto_faces  = exahype2.solvers.rkfd.actionsets.ProjectPatchOntoFaces(my_solver)
-    project_patch_onto_faces.guards  = [ my_solver._store_cell_data_default_guard() for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
+    project_patch_onto_faces.guards     = [ "false" for x in range(0,my_solver.number_of_Runge_Kutta_steps()+1) ]
+    project_patch_onto_faces.guards[-1] = my_solver._store_cell_data_default_guard()
 
     roll_over_projected_faces = exahype2.solvers.rkfd.actionsets.RollOverUpdatedFace(my_solver, 
                                                                                     my_solver._store_face_data_default_guard(),
                                                                                     )
 
+#
+# @todo Han: I don't think this is good that we switch off enclave solvers always
+#
     additional_mesh_traversal.add_action_set( ComputeFirstDerivativesFD4RK(solver=my_solver,
                                                                             is_enclave_solver = False,
                                                                             ))

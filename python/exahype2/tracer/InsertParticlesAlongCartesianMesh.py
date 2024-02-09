@@ -33,12 +33,14 @@ class InsertParticlesAlongCartesianMesh(peano4.toolbox.particles.InsertParticles
                particle_set,
                distance_between_particles,
                computational_domain_offset,
-               """
+               f"""
       particle->setNumber(0,_spacetreeId);
       particle->setNumber(1,_particleNumberOnThisTree);      
+      particle->setMoveState(globaldata::{particle_set.particle_model.name}::MoveState::NotMovedYet);
+
       _particleNumberOnThisTree++;
       
-      logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->toString() << " into " << marker.toString() );
+      logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->getX() );
       """, # initialisation_call,
                noise,
                additional_includes + """  
