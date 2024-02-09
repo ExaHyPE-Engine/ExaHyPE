@@ -329,7 +329,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
             eigenvalues=construct_FV_eigenvalues(),
         )
 
-        self.postprocess_updated_patch += consruct_FV_postprocessing_kernel()
+        self.postprocess_updated_patch += construct_FV_postprocessing_kernel()
 
     def add_tracer(
         self,
