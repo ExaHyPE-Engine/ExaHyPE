@@ -25,7 +25,7 @@ for REALISATION in domain-decomposition.scattered.sort-on-the-fly.no-optimisatio
                    domain-decomposition.global-continuous.insert-sorts.vectorise-all domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks
 do
   echo build $REALISATION
-  N_PART=512
+  N_PART=2408
   PLOT_DELTA=0.0
   END_TIME=0.001
   python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION
