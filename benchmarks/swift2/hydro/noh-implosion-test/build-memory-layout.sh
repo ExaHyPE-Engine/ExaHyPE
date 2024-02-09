@@ -20,10 +20,11 @@ for REALISATION in domain-decomposition.scattered.sort-on-the-fly.no-optimisatio
                    domain-decomposition.continuous-per-vertex.insert-sorts.no-optimisation domain-decomposition.continuous-per-vertex.insert-sorts.outer-guards \
                    domain-decomposition.continuous-per-vertex.insert-sorts.vectorise-all domain-decomposition.continuous-per-vertex.insert-sorts.vectorise-distance-checks \
                    domain-decomposition.global-continuous.sort-on-the-fly.no-optimisation domain-decomposition.global-continuous.sort-on-the-fly.outer-guards \
-                   domain-decomposition.global-continuous.sort-on-the-fly.vectorise-all domain-decomposition.global-continuous.sort-on-the-fly.ovectorise-distance-checks \
+                   domain-decomposition.global-continuous.sort-on-the-fly.vectorise-all domain-decomposition.global-continuous.sort-on-the-fly.vectorise-distance-checks \
                    domain-decomposition.global-continuous.insert-sorts.no-optimisation domain-decomposition.global-continuous.insert-sorts.outer-guards \
                    domain-decomposition.global-continuous.insert-sorts.vectorise-all domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks
 do
+  echo build $REALISATION
   N_PART=240
   PLOT_DELTA=0.0
   END_TIME=0.001
