@@ -313,6 +313,18 @@ class InitDofsDG(ActionSet):
       else 
       {
         fineGridFace{{SOLVER_NAME}}.setType( facedata::{{SOLVER_NAME}}::Type::Interior );
+
+        // vectors to be passed into face
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > sol;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection, double > projection;
+
+        // send to init
+        repositories::{{SOLVER_INSTANCE}}.initFace(marker.x(), marker.h(), sol, projection);
+
+        // put into mesh
+        fineGridFace{{SOLVER_NAME}}.setSolution(sol);
+        fineGridFace{{SOLVER_NAME}}.setProjection(projection);
+
       }
     } break;
 
@@ -325,6 +337,17 @@ class InitDofsDG(ActionSet):
       else 
       {
         fineGridFace{{SOLVER_NAME}}.setType( facedata::{{SOLVER_NAME}}::Type::Boundary );
+
+        // vectors to be passed into face
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > sol;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection, double > projection;
+
+        // send to init
+        repositories::{{SOLVER_INSTANCE}}.initFace(marker.x(), marker.h(), sol, projection);
+
+        // put into mesh
+        fineGridFace{{SOLVER_NAME}}.setSolution(sol);
+        fineGridFace{{SOLVER_NAME}}.setProjection(projection);
       }
     } break;
     

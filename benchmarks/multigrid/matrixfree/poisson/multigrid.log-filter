@@ -27,8 +27,11 @@ trace  benchmarks                          -1     black always-on
 trace  benchmarks::multigrid::matrixfree::poisson::observers::InitSolution2multigrid_matrixfree_actionsets_InitDofs0  -1     white always-on
 trace  benchmarks::multigrid::matrixfree::poisson::observers::InitSolution2src_multigrid_matrixfree_solvers_api_actionsets_InitDofs0  -1     white always-on
 trace  benchmarks::multigrid::matrixfree::poisson::observers::Solve2src_multigrid_matrixfree_solvers_api_actionsets_CollocatedSolver0  -1     white always-on
+trace  benchmarks::multigrid::matrixfree::poisson::observers::Solve2src_multigrid_matrixfree_solvers_api_actionsets_UpdateCell0  -1     white always-on
+trace  benchmarks::multigrid::matrixfree::poisson::observers::Solve2src_multigrid_matrixfree_solvers_api_actionsets_UpdateCell1  -1     white always-on
+trace  benchmarks::multigrid::matrixfree::poisson::AbstractDGPoisson  -1     white always-on
+trace  benchmarks::multigrid::matrixfree::poisson::observers::Plot2src_multigrid_matrixfree_solvers_api_actionsets_PlotDGDataInPeanoBlockFormat0  -1     white always-on
 trace  exahype2                            -1     black always-on
 trace  toolbox                             -1     black always-on
 
 #info  toolbox::loadbalancing              -1  black time-step
-

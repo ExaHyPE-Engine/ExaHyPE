@@ -23,10 +23,10 @@ void benchmarks::multigrid::matrixfree::poisson::DGPoisson::initCell(
 ) {
   
   logTraceInWith4Arguments("initCell", x, h, value, rhs);
-  static constexpr double twoPiSquared = Dimensions * tarch::la::PI * tarch::la::PI;
-  double rhsVal = twoPiSquared;
+  static constexpr double fourDPiSquared = 4 * Dimensions * tarch::la::PI * tarch::la::PI;
+  double rhsVal = fourDPiSquared;
   for (int i=0; i<Dimensions; i++)
-    rhsVal *= std::sin( tarch::la::PI * x[i] );
+    rhsVal *= std::sin( 2 * tarch::la::PI * x[i] );
 
   for (int i=0; i<CellUnknowns; i++)
   {
@@ -41,4 +41,7 @@ void benchmarks::multigrid::matrixfree::poisson::DGPoisson::initFace(
   const tarch::la::Vector<Dimensions, double>&  h,
   tarch::la::Vector< FaceUnknownsSolution,   double >&  solution,
   tarch::la::Vector< FaceUnknownsProjection, double >&  projection
-) {return;}
+) {
+  for (int i=0; i < solution.size(); i++)   solution[i]   = 0;
+  for (int i=0; i < projection.size(); i++) projection[i] = 0;
+}

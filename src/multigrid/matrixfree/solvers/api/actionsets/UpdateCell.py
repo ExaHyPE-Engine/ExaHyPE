@@ -10,7 +10,12 @@ class UpdateCell(ActionSet):
   templateTCFT="""
   if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
   {
-    logTraceIn("UpdateCell");
+    logTraceInWith4Arguments("UpdateCell::TCFT", 
+      fineGridCell{{SOLVER_NAME}}.getSolution(),
+      fineGridCell{{SOLVER_NAME}}.getRhs(),
+      marker.toString(),
+      repositories::{{SOLVER_INSTANCE}}.getMassMatrix( marker.x(), marker.h() )
+    );
 
     // write Mb into it, i.e. mass matrix * rhs
     tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > r =
@@ -22,19 +27,26 @@ class UpdateCell(ActionSet):
     for (int s=0; s<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution; s++)
       faceSol( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution + s ) = fineGridFaces{{SOLVER_NAME}}(f).getSolution(s);
   
-
+    logTraceInWith1Argument("UpdateCell::Projection", faceSol);
     // next, we need to project solution on face onto the cell...
     auto projection = repositories::{{SOLVER_INSTANCE}}.getCellFromFaceMatrix(marker.x(), marker.h()) * faceSol;
     // loop over each face
     for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
     {
       // project the face solution onto the cell; add to r
-      r += projection(f);
+      r -= projection(f);
     }
+
+    // also subtract A^cc u^c
+
+    r = r - repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
+
+    logTraceOutWith2Arguments("UpdateCell::Projection", r, projection);
 
     // fetch inverted assembly matrix from abstract solver class. left-multiply r.
     r = repositories::{{SOLVER_INSTANCE}}.getInvertedApproxSystemMatrix(marker.x(),marker.h()) * r;
 
+    logTraceInWith1Argument("UpdateCell::UpdateSol", fineGridCell{{SOLVER_NAME}}.getSolution());
     // scale current entries in solution vector by (1-OmegaCell)
     for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++)
     {
@@ -43,8 +55,9 @@ class UpdateCell(ActionSet):
       // add on r values whilst we are here
       fineGridCell{{SOLVER_NAME}}.setSolution(i, sol + r(i) );
     }
+    logTraceOutWith1Argument("UpdateCell::UpdateSol", fineGridCell{{SOLVER_NAME}}.getSolution());
 
-    logTraceOut("UpdateCell");
+    logTraceOut("UpdateCell::TCFT");
   }
   """
 

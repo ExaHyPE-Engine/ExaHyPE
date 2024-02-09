@@ -51,11 +51,12 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
   assertion(_dataWriter!=nullptr);
   assertion1(_dataWriter!=nullptr,_treeNumber);
   
-  //_dataWriter->close();
-  _rhsWriter->close();
+  _dataWriter->close();
+  //_rhsWriter->close();
   _writer->writeToFile();
   
   delete _dataWriter;
+  delete _rhsWriter;
   delete _writer;
 
   _dataWriter = nullptr;
@@ -81,29 +82,32 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
 
   Template_TouchCellFirstTime = """ 
 if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior) {
+
+  logTraceInWith1Argument("Plot::TCFT", fineGridCell{{SOLVER_NAME}}.getSolution());
+  
   int patchIndex = _writer->plotPatch(
     marker.x()-0.5 * marker.h(),
     marker.h()
   );
 
-//  int valuePatchVertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
-  int rhsPatchVertexIndex    = _rhsWriter->getFirstVertexWithinPatch(patchIndex);
+  int valuePatchVertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
+//  int rhsPatchVertexIndex    = _rhsWriter->getFirstVertexWithinPatch(patchIndex);
   
   double* value = fineGridCell{{SOLVER_NAME}}.getSolution().data();
-  double* rhs   = fineGridCell{{SOLVER_NAME}}.getRhs().data();
+  // double* rhs   = fineGridCell{{SOLVER_NAME}}.getRhs().data();
   
   int currentDoF = 0;
   /*
   d-dimensional forloop
   */
   dfor(k,repositories::{{SOLVER_INSTANCE}}.PolyDegree+1) {
-    //_dataWriter->plotVertex( valuePatchVertexIndex, value+currentDoF );
-    _rhsWriter->plotVertex(   rhsPatchVertexIndex,   rhs+currentDoF   );
-    //valuePatchVertexIndex++;
-    rhsPatchVertexIndex++;
+    _dataWriter->plotVertex( valuePatchVertexIndex, value+currentDoF );
+    // _rhsWriter->plotVertex(   rhsPatchVertexIndex,   rhs+currentDoF   );
+    valuePatchVertexIndex++;
+    // rhsPatchVertexIndex++;
     currentDoF++;
   }
-
+  logTraceOut("Plot::TCFT");
 }
 """
 
@@ -124,20 +128,20 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
     0.0
   );
     
-//  _dataWriter = _writer->createVertexDataWriter( 
-//    "value", 
-//    repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,  // nodes per axis                                          
-//    repositories::{{SOLVER_INSTANCE}}.CellUnknowns,
-//    "Solution",
-//    "Solution as delivered through MF Solver"
-//  );
-  _rhsWriter = _writer->createVertexDataWriter( 
-    "rhs", 
+  _dataWriter = _writer->createVertexDataWriter( 
+    "value", 
     repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,  // nodes per axis                                          
     repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode,
-    "Right-hand side",
-    "Nodal right-hand side value"
+    "Solution",
+    "Solution as delivered through MF Solver"
   );
+//  _rhsWriter = _writer->createVertexDataWriter( 
+//    "rhs", 
+//    repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,  // nodes per axis                                          
+//    repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode,
+//    "Right-hand side",
+//    "Nodal right-hand side value"
+//  );
 """
 
 
