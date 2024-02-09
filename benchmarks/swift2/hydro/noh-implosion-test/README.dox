@@ -129,7 +129,7 @@
  rationale here is that most codes would deploy one MPI rank per NUMA domain
  to avoid NUMA effects/penalties.
  
- Before we start, we have to build the executables:
+ Before we start, we have to build the executables (build-memory-layout.sh):
  
  \include build-memory-layout.sh
  
