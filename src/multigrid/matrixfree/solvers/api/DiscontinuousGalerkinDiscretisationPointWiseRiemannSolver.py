@@ -8,7 +8,6 @@ import os
 from .Solver import Solver
 from .actionsets.InitDofs         import InitDofsDG
 from .actionsets.UpdateCell       import UpdateCell
-from .actionsets.UpdateCell       import InteriorPenalty
 from .actionsets.ProjectOntoFaces import ProjectOntoFaces
 from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
@@ -410,15 +409,14 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     pass
 
   def add_to_solve(self, observer):
-    # 1st priority, run sequentially
+    pass
+
+  def add_to_updatecell(self, observer):
     observer.add_action_set( UpdateCell(self, 0, False) ) 
 
-    # I think this means we run InteriorPenalty at same time as 
-    # UpdateCell, with ProjectFaces waiting until they're done.
-    observer.add_action_set( InteriorPenalty(self, 0, True) ) 
-    # 2nd priority, run sequentially
-    observer.add_action_set( ProjectOntoFaces(self, 1, False) ) 
-    pass
+  def add_to_riemann_solve(self, observer):
+    observer.add_action_set( ProjectOntoFaces(self, 0, False) ) 
+
   
   def add_implementation_files_to_project(self, namespace, output):
     """

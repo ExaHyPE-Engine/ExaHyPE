@@ -2,6 +2,8 @@
 
 #include "observers/CreateGrid.h"
 #include "observers/InitSolution.h"
+#include "observers/UpdateCell.h"
+#include "observers/RiemannSolve.h"
 #include "observers/Solve.h"
 #include "observers/Plot.h"
 
@@ -68,10 +70,25 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::InitSolution:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::UpdateCell )
           );
         }
         break;
+
+      case repositories::StepRepository::Steps::UpdateCell:
+      {
+        peano4::parallel::Node::getInstance().setNextProgramStep(
+          repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::RiemannSolve )
+        );
+      } break;
+
+      case repositories::StepRepository::Steps::RiemannSolve:
+      {
+        peano4::parallel::Node::getInstance().setNextProgramStep(
+          repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+        );
+      } break;
+
       case repositories::StepRepository::Steps::Solve:
         {
           if ( solverSteps++ >= 20 )
@@ -83,6 +100,9 @@ bool selectNextAlgorithmicStep() {
           else
           {
             logInfo("selectNextAlgorithmicStep", "Continuining to solve...");
+            peano4::parallel::Node::getInstance().setNextProgramStep(
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::UpdateCell )
+            );
           }
         }
         break;
@@ -149,6 +169,30 @@ void step() {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-solution" );
 
         observers::InitSolution  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        initMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+
+    case repositories::StepRepository::Steps::UpdateCell:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "update-cell" );
+
+        observers::UpdateCell  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        initMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+
+    case repositories::StepRepository::Steps::RiemannSolve:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "riemann-solve" );
+
+        observers::RiemannSolve  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();

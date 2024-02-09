@@ -61,6 +61,10 @@ class Project:
     self.algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
     self.algorithm_step_init_solution  = peano4.solversteps.Step( "InitSolution", False )
     self.algorithm_step_solve          = peano4.solversteps.Step( "Solve", False )
+
+    # these are for DG - might not be suitable for collocated
+    self.algorithm_step_update_cell    = peano4.solversteps.Step( "UpdateCell", False )
+    self.algorithm_step_riemann_solve  = peano4.solversteps.Step( "RiemannSolve", False )
     self.algorithm_step_plot           = peano4.solversteps.Step( "Plot", False )
 
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
@@ -152,6 +156,8 @@ you require to run this Peano4 application with PETSc.
     self._project.solversteps.add_step(self.algorithm_step_create_grid)
     self._project.solversteps.add_step(self.algorithm_step_init_solution)
     self._project.solversteps.add_step(self.algorithm_step_solve)
+    self._project.solversteps.add_step(self.algorithm_step_update_cell)
+    self._project.solversteps.add_step(self.algorithm_step_riemann_solve)
     self._project.solversteps.add_step(self.algorithm_step_plot)
 
     self.__configure_makefile()
@@ -202,12 +208,19 @@ you require to run this Peano4 application with PETSc.
     solver.add_use_statements(self.algorithm_step_create_grid)
     solver.add_use_statements(self.algorithm_step_init_solution)
     solver.add_use_statements(self.algorithm_step_solve)
+    solver.add_use_statements(self.algorithm_step_update_cell)
+    solver.add_use_statements(self.algorithm_step_riemann_solve)
     solver.add_use_statements(self.algorithm_step_plot)
 
 
     solver.add_to_create_grid  (self.algorithm_step_create_grid)
     solver.add_to_init_solution(self.algorithm_step_init_solution)
     solver.add_to_solve        (self.algorithm_step_solve)
+
+    # these are for DG
+    solver.add_to_updatecell   (self.algorithm_step_update_cell)
+    solver.add_to_riemann_solve(self.algorithm_step_riemann_solve)
+
     solver.add_to_plot         (self.algorithm_step_plot)
 
     solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
