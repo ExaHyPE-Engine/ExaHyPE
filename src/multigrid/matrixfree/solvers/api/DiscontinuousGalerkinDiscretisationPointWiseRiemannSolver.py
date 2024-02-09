@@ -445,6 +445,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "NODES_PER_FACE"              : (self._poly_degree + 1) ** (self._dimensions-1),
         "UNKNOWNS_PER_CELL_NODE"      : self._unknowns_per_cell_node,
         "SOLUTIONS_PER_FACE_NODE"     : self._solutions_per_face_node,
+        "PROJECTIONS_PER_FACE_NODE"   : self._projections_per_face_node,
         "MASS_MATRIX"                 : self._mass_matrix,
         "MASS_MATRIX_SCALING"         : self._mass_matrix_scaling,
         "ASSEMBLY_MATRIX"             : self._assembly_matrix,

@@ -43,6 +43,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     static constexpr int        UnknownsPerCellNode    = {{UNKNOWNS_PER_CELL_NODE}};
     static constexpr int        SolutionsPerFaceNode   = {{SOLUTIONS_PER_FACE_NODE}};
+    static constexpr int        ProjectionsPerFaceNode = {{PROJECTIONS_PER_FACE_NODE}};
 
     static constexpr int        PolyDegree             = {{POLY_DEGREE}};
   public:
@@ -119,7 +120,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     );
 
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix();
-    virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getBoundaryConditionMatrix();
+    virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix();
 
 
 

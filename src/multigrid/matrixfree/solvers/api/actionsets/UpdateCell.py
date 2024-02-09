@@ -143,7 +143,36 @@ class InteriorPenalty(ActionSet):
   templateTFFT="""
   if ( fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Boundary )
   {
-    // todo...
+    logTraceInWith1Argument( "InteriorPenalty", fineGridFace{{SOLVER_NAME}}.getProjection() );
+    // Essentially what we do here is fix the solution on the boundary to be 
+    // the inner-side projection.
+
+    // skip halfway along the projection vector if we are on face 0 or 1
+    int startIndexProjection = 
+      marker.getSelectedFaceNumber() < Dimensions ?
+      repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+      0;
+
+    auto boundaryMatrix = repositories::{{SOLVER_INSTANCE}}.getBoundaryConditionMatrix();
+
+    /*
+    Here we do slightly messy matrix multiplication. We would just multiply the boundary matrix
+    by the projection vector, and place that into the solution, but here we only want to capture
+    half of the projection vector; the other half lies outside the computational domain and
+    should be fixed to 0.
+    */
+    for (int row=0; row<boundaryMatrix.rows(); row++)
+    {
+      double rowSolution = 0;
+      for (int col=0; col<boundaryMatrix.cols(); col++)
+      {
+        rowSolution += boundaryMatrix( row, col ) * fineGridFace{{SOLVER_NAME}}.getProjection( col + startIndexProjection );
+      }
+      // place this solution into the face
+      fineGridFace{{SOLVER_NAME}}.setSolution( row, rowSolution );
+    }
+
+    logTraceOut( "InteriorPenalty");
   }
 
 """

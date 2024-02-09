@@ -197,9 +197,12 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolutio
 {% endif %}
 
 {% if BOUNDARY_MATRIX!=[] %}
-tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getBoundaryConditionMatrix()
+tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getBoundaryConditionMatrix()
 {
-  static tarch::la::Matrix<  FaceUnknownsSolution, FaceUnknownsProjection, double > result = {
+  /*
+  Warning - the shape of this is a bodge. Fixing it to be identity.
+  */
+  static tarch::la::Matrix<  FaceUnknownsSolution, FaceUnknownsSolution, double > result = {
       {{BOUNDARY_MATRIX[0]| join(", ")}}
       {% for ROW in BOUNDARY_MATRIX[1:] %}
         ,{{ROW | join(", ")}}
