@@ -16,9 +16,8 @@ for REALISATION in domain-decomposition.scattered.sort-on-the-fly.no-optimisatio
                    domain-decomposition.global-continuous.insert-sorts.no-optimisation domain-decomposition.global-continuous.insert-sorts.outer-guards \
                    domain-decomposition.global-continuous.insert-sorts.vectorise-all domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks
 do
-  #python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION
-  EXECUTABLE=noh2D.$REALISATION-asserts
+  EXECUTABLE=noh2D.$REALISATION
   echo $EXECUTABLE
-  ./$EXECUTABLE
+  ./$EXECUTABLE > $EXECUTABLE.out
 done
 
