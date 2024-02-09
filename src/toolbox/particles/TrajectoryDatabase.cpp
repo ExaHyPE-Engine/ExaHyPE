@@ -292,7 +292,14 @@ bool toolbox::particles::TrajectoryDatabase::dumpDatabaseSnapshot() {
   for (auto p: _data) {
     totalSize += p.second.size();
   }
-  return tarch::la::greater(_maxTimestamp,0.0) and totalSize >= _thresholdForNextDatabaseFlush;
+
+  bool result = tarch::la::greater(_maxTimestamp,0.0) and totalSize >= _thresholdForNextDatabaseFlush;
+
+  if (result and not _clearDatabaseAfterFlush) {
+    _thresholdForNextDatabaseFlush += _deltaBetweenTwoDatabaseFlushes;
+  }
+
+  return result;
 }
 
 
@@ -328,7 +335,6 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
     logInfo( "addSnapshot(...)", "flushed database file (temporary flush - simulation has not terminated yet)" );
-    _thresholdForNextDatabaseFlush += _deltaBetweenTwoDatabaseFlushes;
   }
 }
 
@@ -384,7 +390,6 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
     logInfo( "addSnapshot(...)", "flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)" );
-    _thresholdForNextDatabaseFlush = _deltaBetweenTwoDatabaseFlushes;
   }
 }
 

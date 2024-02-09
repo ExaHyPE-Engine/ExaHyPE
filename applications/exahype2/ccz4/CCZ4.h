@@ -8,7 +8,7 @@
 //
 #pragma once
 
-#include "AbstractFiniteVolumeCCZ4.h"
+#include "AbstractCCZ4.h"
 #include "tarch/logging/Log.h"
 
 
@@ -21,18 +21,18 @@
 namespace applications {
   namespace exahype2 {
     namespace ccz4 {
-      class FiniteVolumeCCZ4;
+      class CCZ4;
     }
   }
 }
 
 
-class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ4 {
+class applications::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
   private:
     static tarch::logging::Log   _log;
 
   public:
-    FiniteVolumeCCZ4();
+    CCZ4();
     
     /**
      * Refinement criterion
@@ -130,11 +130,7 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
       int                                          normal
     ) override;
     
-
-
     
-     
-     
     
     virtual void nonconservativeProduct(
       const double * __restrict__ Q, // Q[59+0],
@@ -177,7 +173,7 @@ class applications::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolum
        ::exahype2::Solver::Offloadable
      ) {
       memset(S, 0, NumberOfUnknowns*sizeof(double));
-      source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+      source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
     }
     #if defined(GPUOffloadingOMP)
     #pragma omp end declare target

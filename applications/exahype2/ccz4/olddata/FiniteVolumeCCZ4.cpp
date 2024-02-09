@@ -1,6 +1,6 @@
 #include "FiniteVolumeCCZ4.h"
 #include "exahype2/RefinementControl.h"
-#include "exahype2/fv/CellAccess.h"
+//#include "exahype2/CellAccess.h"
 
 #include <algorithm>
 
@@ -331,7 +331,7 @@ void applications::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   // see documentation in header file
   //
   if (CCZ4ReSwi==1) { //radius based
-    if (radius<0.2) {
+    if (radius<0.1) {
       result=::exahype2::RefinementCommand::Refine;
     }
   }

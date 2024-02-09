@@ -280,6 +280,34 @@ Depending on the SLURM configuration, people might have to request
 GPUs explicitly when they want a Grace Hopper node.
 
 
+## SuperMUC-NG Phase 2
+
+<img src="https://www.lrz.de/bilder/logos/lrz-logos/lrz_logo_en.png" />
+
+On SuperMUC-NG Phase 2, we can basically rely on the standard Intel toolchain:
+
+~~~~~~~~~~~~~~~~~~~~~~
+module load intel
+module load gcc
+./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes --gcc-toolchain=/dss/lrzsys/sys/spack/release/24.1.0/opt/x86_64/gcc/13.2.0-gcc-itoa7pi/" LDFLAGS="--gcc-toolchain=/dss/lrzsys/sys/spack/release/24.1.0/opt/x86_64/gcc/13.2.0-gcc-itoa7pi/ -fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles
+~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+Some remark on this setup:
+
+- The Intel module is at least 2024. 
+- The default Intel module is built against an older GCC version. In this 
+  version, some filesystem routines and classes are still contained within
+  std::experimental. Peano expects STL classes within std however. Therefore,
+  we swap the STL manually. This might become obsolete with future compiler
+  modules.
+- The toolchain also has to be known to the linker explicitly, so have to 
+  specify the path in the LDFLAGS, too. 
+- Surprisingly, the code runs, once built also with system-level GCC versions.
+  However, you have to load a recent GCC (13.0.0 here) manually before you 
+  launch any Peano application.
+
 
 
  */

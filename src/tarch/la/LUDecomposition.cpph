@@ -83,6 +83,32 @@ double tarch::la::det(
   return R(0,0)*R(1,1)-R(0,1)*R(1,0);
 }
 
+#ifdef UseLapack
+template<int Rows, typename Scalar>
+tarch::la::Matrix<Rows,Rows,Scalar> tarch::la::invert(
+  const tarch::la::Matrix<Rows,Rows,Scalar>&  R
+){
+  // make a copy
+  [[maybe_unused]] tarch::la::Matrix<Rows,Rows,Scalar> M = R;
+
+  // aux variables
+  int returnCode;
+  int ipiv[Rows];
+
+  // step 1 - compute LU factorisation. Modify M in-place.
+  returnCode = LAPACKE_dgetrf( LAPACK_ROW_MAJOR, Rows, Rows, M.data(), Rows, ipiv );
+  // check return code. 
+  assertion(returnCode==0);
+
+  // step 2 - use the result of the above to compute the inverse. Modify M in-place.
+  returnCode = LAPACKE_dgetri( LAPACK_ROW_MAJOR, Rows, M.data(), Rows, ipiv );
+ // check return code
+  assertion(returnCode==0);
+
+  return M;
+}
+
+#else
 
 template<typename Scalar>
 tarch::la::Matrix<2,2,Scalar> tarch::la::invert(
@@ -134,3 +160,5 @@ tarch::la::Matrix<3,3,Scalar> tarch::la::invert(
   
   return result;
 }
+
+#endif

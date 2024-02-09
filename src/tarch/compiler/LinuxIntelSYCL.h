@@ -30,6 +30,8 @@
 
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
+#define OpenMPDependenciesInTaskWait
+
 #undef OpenMPTaskGroup
 
 #define PragmaPush
