@@ -12,6 +12,7 @@
 #include "tarch/multicore/smartScheduling.h"
 #endif
 
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
 
@@ -340,7 +341,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
     _solverState = SolverState::PlottingInitialCondition;
   }
   else {
-    assertion( mayPlot()  or ::exahype2::hasNonCriticalAssertionBeenViolated() );
+    assertion( mayPlot()  or ::tarch::hasNonCriticalAssertionBeenViolated() );
 
     _solverState = SolverState::Plotting;
   }
