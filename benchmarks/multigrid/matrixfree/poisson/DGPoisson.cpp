@@ -1,5 +1,5 @@
 #include "DGPoisson.h"
-
+#include "peano4/utils/Loop.h"
 
 benchmarks::multigrid::matrixfree::poisson::DGPoisson::DGPoisson() {
 }
@@ -23,16 +23,26 @@ void benchmarks::multigrid::matrixfree::poisson::DGPoisson::initCell(
 ) {
   
   logTraceInWith4Arguments("initCell", x, h, value, rhs);
-  static constexpr double fourDPiSquared = 4 * Dimensions * tarch::la::PI * tarch::la::PI;
-  double rhsVal = fourDPiSquared;
-  for (int i=0; i<Dimensions; i++)
-    rhsVal *= std::sin( 2 * tarch::la::PI * x[i] );
 
-  for (int i=0; i<CellUnknowns; i++)
+  auto bottomLeft = x - 0.5 * h;
+
+  static constexpr double fourDPiSquared = 4 * Dimensions * tarch::la::PI * tarch::la::PI;
+  
+  // we only have one cell unknown, so we can reuse this macro
+  int counter = 0;
+  dfor( k, PolyDegree + 1 )
   {
-    rhs[i]   = rhsVal;
-    value[i] = 0;
+    // convert k to double
+    tarch::la::Vector<Dimensions, double> kDouble = tarch::la::convertScalar<double, Dimensions, int>(k);
+    auto dofPosition = bottomLeft + h(0)*kDouble;
+    double rhsVal = fourDPiSquared;
+    for (int i=0; i<Dimensions; i++)
+      rhsVal *= std::sin( 2 * tarch::la::PI * dofPosition[i] );
+    rhs[counter]   = rhsVal;
+    value[counter] = 0;
+    counter++;
   }
+
   logTraceOutWith4Arguments("initCell", x, h, value, rhs);
 }
 
