@@ -15,7 +15,7 @@
  scripts. Furthermore, the Python path has to be set properly:
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- export PYTHONPATH=~/git/Peano/python
+ export PYTHONPATH=~/../../../../python
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  The benchmark suite is designed to study three different things:
@@ -32,6 +32,7 @@
  
  # Clean-up data
  
+ No matter which setup you run:
  Once you have created your executables, you might want to get rid of all the
  generated glue code that sits in your directory.
  To clean up all generated data, type in 
@@ -42,7 +43,9 @@
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
  # The impact of the mesh on the global runtime
- 
+
+ @todo This is all to be rewritten 
+  
  The present setup does work with constant cut-off radii. That is, once the 
  particles are created, they do not change their interaction range. This is not
  what you will find in a lot of "realistic" SPH simulations, where the cut-off
@@ -125,6 +128,11 @@
  to restrict the studies to one NUMA node only on a production-level chip. The
  rationale here is that most codes would deploy one MPI rank per NUMA domain
  to avoid NUMA effects/penalties.
+ 
+ Before we start, we have to build the executables:
+ 
+ \include build-memory-layout.sh
+ 
  
  On a low-spec machine, I usually use the setup
  
