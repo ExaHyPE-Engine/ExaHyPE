@@ -1,9 +1,5 @@
-//
-// Included by peano4/utils/Loop.h. Do not use directly
-//
-// See docu in Loop.h in superdirectory.
-//
-//
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 
 /**
  * Parallel for
@@ -16,7 +12,6 @@
   for( int counter = 0; counter < max; counter++ ) {
 
 #define endParallelFor }
-
 
 
 #define parallelDforWithDynamicScheduling2d(counter, max, loopParallelism) \
@@ -54,9 +49,6 @@
     tarch::la::Vector<5, int> counter = { counter##0, counter##1, counter##2, counter##3, counter##4 };
 
 #define endParallelDfor }}
-
-
-
 
 
 #define simtForWithSchedulerInstructions(counter, max, loopParallelism) \
