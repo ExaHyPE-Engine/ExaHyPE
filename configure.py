@@ -298,9 +298,11 @@ if args.swift:
     if args.cmake:
         configure_args.append("-DENABLE_SWIFT=ON")
         configure_args.append("-DENABLE_PARTICLES=ON")
+        configure_args.append("-DENABLE_LOADBALANCING=ON")
     else:
         configure_args.append("--enable-swift")
         configure_args.append("--enable-particles")
+        configure_args.append("--enable-loadbalancing")
 
 if args.particles:
     if args.cmake:
