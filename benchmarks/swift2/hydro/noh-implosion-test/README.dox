@@ -63,14 +63,14 @@
  After completion, we zip the outcome via 
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
- tar -czvf MyMachine-$OMP_NUM_THREADS-threads.tar.gz 
+ tar -czvf MyMachine-$OMP_NUM_THREADS-threads.tar.gz *.out 
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
  
   
  The zipped outcome can be visualised by a call similar to
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 plots_compare_implemetation_variants.py -o Hamilton8-2400 Hamilton8-2400-8-threads.tar.gz Hamilton8-2400-16-threads.tar.gz Hamilton8-2400-32-threads.tar.gz Hamilton8-2400-64-threads.tar.gz
+python3 plots_compare_implemetation_variants.py -o MyMachine MyMachine-8-threads.tar.gz MyMachine-16-threads.tar.gz ...
  ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  @image html Hamilton8-2400.png 
