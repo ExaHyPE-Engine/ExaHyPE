@@ -13,43 +13,35 @@ in combination with the actual script. This page is more on the how to use the
 class to construct a working solver.
 
 
-# Mathematical basics of mixed DG
 
 @include{doc} tutorials/multigrid/generic-mixed-DG.dox
 
 
-# Code design
-
-There are two high-level concepts how we can realise a mixed formulation:
-
-1. We can realise the solver for the primary variable and the secondary 
-   (@f$ p @f$) one as completely independent solvers, which are coupled only 
-   within the cells. That is, we solve for @f$ u @f$ treating @f$ p @f$ as a 
-   "material" parameter, and we solve, at the same time for @f$ p @f$ treating
-   @f$ u @f$ as material parameter. As we do it concurrently, we get a
-   system splitting similar to a Jacobi smoother.   
-   
-   In such a mindset, we would not couple the two Riemann problems on
-   the faces either.
-2. We realise the solver as one solver for a system of partial differential
-   equations. This is a monolithic approach. 
-
- 
 # Project setup
  
 Creating a project is a one-liner:
 
-@snippet benchmarks/multigrid/matrixfree/poisson/dg.py Create project
- 
+@snippet tests/multigrid/matrixfree/poisson/dg.py Create project
+
 
 # Create the solver
 
 The solver construction also is a "one-liner" using the following observations:
 
-- We solve a scalar equation system. Consequently, we have @f$ K_c=1 @f$.
-- Our Riemann solver will take the projections of the gradients and average it. In this simple case, @f$ K_c=1 @f$.
+- We solve a scalar equation system plus a vector-valued PDE in one rush. 
+  Therefore, @f$ K_c=d+1 @f$ (unknowns_per_cell_node).
+- Within each cell, we have to project the solution onto the face plus one of
+  the @f$ p @f$ values. Therefore, projections_per_face_node=2.
+- We solve the numerical flux on the face to obtain both a @f$ \hat u @f$ value
+  and a @f$ \widehat{(n,p)} @f$ value. We set solutions_per_face_node=2.
 
-@snippet benchmarks/multigrid/matrixfree/poisson/dg.py Instantiate solver
+@snippet tests/multigrid/matrixfree/poisson/dg.py Instantiate solver
+
+
+## Matrices
+
+
+## The Riemann problem (numerical flux)
 
 The instantiation relies heavily on several matrices. Here, we can reuse 
 the same utility routines that we also use for the @ref tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson "DG with PETSc"
@@ -78,6 +70,27 @@ Only two matrices are new:
 
 
 @todo Alex can you add this?
+
+
+
+# Alternative code designs (not realised)
+
+There are two high-level concepts how we can realise a mixed formulation:
+
+1. We can realise the solver for the primary variable and the secondary 
+   (@f$ p @f$) one as completely independent solvers, which are coupled only 
+   within the cells. That is, we solve for @f$ u @f$ treating @f$ p @f$ as a 
+   "material" parameter, and we solve, at the same time for @f$ p @f$ treating
+   @f$ u @f$ as material parameter. As we do it concurrently, we get a
+   system splitting similar to a Jacobi smoother.   
+   
+   In such a mindset, we would not couple the two Riemann problems on
+   the faces either.
+2. We realise the solver as one solver for a system of partial differential
+   equations. This is a monolithic approach. 
+
+ 
+ 
 
 
 # Implement the functionality

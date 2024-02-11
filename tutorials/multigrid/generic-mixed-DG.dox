@@ -1,4 +1,4 @@
-
+# Mathematical basics of mixed DG
 
 We aim to solve
 
@@ -54,7 +54,7 @@ side - the best notation always depends on the context what you want to show:
 \f}
 
 
-
+## Weak formulation
 
 If we want to solve the arising system of equations (with multiple equations due
 to the mixed approach), we have to 
@@ -79,7 +79,7 @@ we know that they all have local support. Integration hence yields
      & = & 
      \int_{K} ( p, \nabla v _u ) dx - 
      \sum _{\partial K}
-     \int_{\partial K} (n, \hat p) \cdot v_u \ dS(x)  
+     \int_{\partial K} \widehat{(n, p)} \cdot v_u \ dS(x)  
    = \int_K f \cdot v_u \ dx
 \f}
 
@@ -105,3 +105,18 @@ is just the sum over the cells.
 Within each cell, the shape functions are infinitely smooth.
 We can apply integration by parts.
 This leaves us with boundary terms over the faces.
+
+
+## The Riemann solver
+
+There are different Riemann solvers that we can use for a mixed formulation. A
+simple one is discussed in <a href="www.maths.dur.ac.uk/lms/2014/NPDE14/talks/0509cockburn.pdf">
+Cockburn's LMS EPSRC Durham Symposium</a> on page 28:
+
+Here, the @f$ \widehat{u} @f$ on the face is a weighted average of the left and the right @f$ u @f$.
+After that, it computes the jump, i.e. difference, of the @f$ (n, v_p ) @f$ on the face, relaxes this value and adds
+it to the @f$ \widehat{u} @f$ we have computed before. 
+The @f$ \widehat{(n,p)} @f$ is computed the other way round.
+
+So @f$ \widehat{u} @f$ depends on @f$ u^+ + u^- @f$ subject to some weights plus @f$ (n,p^+) - (n,p^-) @f$ weighted.
+@f$ \widehat{(n,p)} @f$ depends on @f$ (n,p^+) + (n,p^-) @f$ subject to some weights plus @f$ u^+ - u^- @f$ weighted.

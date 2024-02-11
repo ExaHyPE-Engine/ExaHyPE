@@ -524,7 +524,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
 
   @image html degree_of_freedom_semantics.png
 
-  - Nodes are enumerated following our @ref multigrid_enumeration "dimension-generic conventions".
+  - Nodes are enumerated following our @ref page_multigrid_terminology "dimension-generic conventions".
   - Data are stored as an Array of Structs (AoS), i.e. first all the unknowns
     of the first node, then all of the second, and so forth.
     
@@ -539,7 +539,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
     and then the outcome of the flux or associated reconstruction. That is, all the @f$ x^- @f$
     are held en bloc first before we hold @f$ x^+ @f$.
   - Per @f$ x^\pm @f$, the storage of the nodes and unknowns
-    follows again the @ref multigrid_enumeration "dimension-generic conventions".
+    follows again the @ref page_multigrid_terminology "dimension-generic conventions".
     
   It is important to recognise that we store three types of quantities 
   per unknown: Its left projection, its right projection, and its 
@@ -601,7 +601,7 @@ class DiscontinuousGalerkinDiscretisation(Solver):
  
 ## Cell to face projection
 
-Consult @ref multigrid_enumeration "Peano's enumeration for multigrid" page
+Consult @ref page_multigrid_terminology "Peano's enumeration for multigrid" page
 for info on the ordering. For 2d with a layout as below
    
 @image documentation/Doxygen/Multigrid/face-ordering.png

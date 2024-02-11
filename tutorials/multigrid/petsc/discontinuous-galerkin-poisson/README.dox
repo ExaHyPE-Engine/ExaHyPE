@@ -135,7 +135,7 @@ In Peano, we need proceed as follows to deal with the term @f$ ( \nabla u, n) = 
 \f}
   Mathematically, the projections can be constructed through L-2 projection or extrapolation
   of the cell values. From the perspective of each individual cell, the projections are distributed
-  as shown in the picture in @ref multigrid_enumeration "enumeration discussion": 
+  as shown in the picture in @ref page_multigrid_terminology "enumeration discussion": 
   left and bottom facets are assigned the "+" projection, and top and right 
   facets receive the "-" projections. As a result, each facet stores both @f$ q^+ @f$ and @f$ q^- @f$
   coming from its two neighboring cells (the case of boundary facets will be discussed separately). 
@@ -246,7 +246,7 @@ The ingredients required for a DG solver are the following:
     
     In the 2D 1st order case, this is a @f$ 4 \times 8 @f$ matrix, where the first two columns correspond to the integral over the left facet,
     the next two columns correspond to the bottom facet, followed by the next two columns for the right facet, and the last two columns for the top.
-    See @ref multigrid_enumeration "this page" for more details on the enumeration order.
+    See @ref page_multigrid_terminology "this page" for more details on the enumeration order.
     <br><br>
 
   - The right-hand side operator @f$ M @f$ is a @f$ (p+1)^d \times (p+1)^d @f$ matrix which is
@@ -263,7 +263,7 @@ The ingredients required for a DG solver are the following:
     and therefore hosts @f$ (p+1)^{d-1} @f$ values.
     The result is written into @f$ q^+ @f$ or @f$ q^- @f$ on the faces, depending on the relative position of the facet within the cell.
     Read through <a href="file:///home/tobias/git/Peano/doxygen-html/html/dd/dfd/classpetsc_1_1solvers_1_1DiscontinuousGalerkinDiscretisation_1_1DiscontinuousGalerkinDiscretisation.html#details">the DG solver's</a>
-    data storage section and also consult Peano's @ref multigrid_enumeration "enumeration discussion"
+    data storage section and also consult Peano's @ref page_multigrid_terminology "enumeration discussion"
     for information on the ordering.
     In the interface above, @f$ P_{f \leftarrow c} @f$ is specified by <code> cell_to_face_matrix </code> with scaling <code> cell_to_face_matrix_scaling </code>.
     As we compute derivatives, the matrix needs to be scaled by @f$ 1/h @f$, so

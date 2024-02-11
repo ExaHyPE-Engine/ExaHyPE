@@ -46,10 +46,96 @@ An alternative approach would have been to write one generic, monolithic solver
 with a lot of features which cover all eventualities and then can be specialised.
 </div>
 
-The degree of freedom layout and the storage of the unknowns are 
-@ref multigrid_enumeration "discussed on a page of thereown". This page also 
-reiterates that we work w.l.o.g. with an AoS data layout plus tensor product
-function spaces.
+
+# Enumeration Order
+
+Here we provide some details on the way Peano enumerates its vertices and faces. 
+It is an enumeration pattern that works in any number of dimensions.
+In many situations that we aim to solve, each of our faces and cells will have multiple 
+degrees of freedom upon them, and we shall reuse this enumeration order to allow
+users to figure out their spatial ordering.
+
+## Vertex Enumeration
+
+First we describe how the vertices are enumerated in 2D and 3D, before describing how
+we reuse this pattern in higher dimensions.
+
+See: 
+
+@image html src/peano4/datamanagement/VertexEnumerator.png
+
+Our general pattern is:
+
+\li x axis, y axis then z axis, greedily assigning indices until each axis is saturated
+\li Left, bottom and then front first
+
+
+We describe this pattern, first in 2D. Let our vertices lie in the (x,y) plane. Assign vertices as follows:
+
+1. We assign index 0 to the vertex which has the "most negative" x and y coordinates, ie the vertex in the bottom left\n 
+2. We then move along the x axis, assigning indices until this axis is saturated (ie we move to the right, and assign index 1). We then return to the vertex at which we began at the start of this step. \n
+3. We then take one step along the y axis, assigning index 2. \n 
+4. We repeat step 2, until this axis is saturated (ie, move to the right and assign index 3). Return to the index where we began this step. 
+
+In 2D we are now done.
+
+In 3D, it's much the same. We undertake steps 1-4 as above, before returning to vertex 0. Then, take a step in the z direction, and 
+repeat steps 1-4 again. 
+
+Note that if we have some 4th dimension w, all we need to do is repeat these steps again along this dimension, greedily assigning indices
+along the x axis first, and then the y axis etc.
+
+This pattern is exactly the same as described in peano4::datamanagement::VertexEnumerator.
+
+## Face Enumeration
+
+
+The face enumeration follows peano4::datamanagement::FaceEnumerator.
+
+@image html src/peano4/datamanagement/FaceEnumerator.png
+
+We proceed with a similar pattern to vertices, except we use the direction of 
+the normal of a face plus the left/right decision as primary metric.
+First, we assign the index 0 to the face whose unit normal points in the negative x direction.
+We assign the next index to the face whose unit normal points in the negative y direction,
+before assigning the next to the face that points in the negative z direction.
+
+Following this, we assign subsequent indices to the faces who unit normal vectors point in the
+positive x, y and then z directions. This extends to any number of dimensions, as long as the 
+dimensions are strictly ordered (x, y, z, etc)
+
+
+## Degree of freedom enumeration on cells
+
+Here we once again have a similar pattern. 
+
+1. Start with the DoF that is positioned with the most negative (x,y,z) coordinates.\n
+2. Move along the x axis, assigning indices until saturated. Once complete, return to the index first encountered at the start of this step.\n
+3. Take one step along the y axis, and repeat step 2. Once complete, return to the index first encountered at the start of this step. \n
+4. Repeat steps 2 and 3 until the (x,y) plane of this layer is saturated.\n 
+5. Return to where we began. Take one step in the z direction, and repeat steps 2-4 until saturated.
+
+The final product should look something like this:
+
+@image html dof-ordering-within-cell.png
+
+
+
+## Degree of freedom enumeration on faces
+
+Faces usually hold three types of unknowns:
+
+1. Left projections (left along the respective Cartesian coordinate axis parallel to the face's normal);
+2. Right projections;
+3. Solutions to a flux formulation or averages.
+
+All the data on a face are organised in one big memory chunk per face. The 
+first part of this chunk holds left data, the next one right data, and
+finally the third type of information. Left and right data chunk have the same
+size.
+
+@image html face-ordering.png
+
 
 # Mathematical notation
 
@@ -129,6 +215,55 @@ specification:
   use @f$ u|_f @f$. This means that we don't project it. We literally evaluate
   it. In this sense @f$ u^+ = u_c|_f @f$ where the @f$ u_c @f$ is the solution 
   over the right adjacent cell of a face.
+
+
+# Operator notation 
+
+## Face to cell (or "cell from face")
+
+When you project from the faces to the cell data, you will get 2d chunks of 
+face data which are dumped into one big array. 
+All the data is then projected in one rush into the cells. 
+If both the cell and the face hold @f$ p+1 @f$ unknows per coordinate axis,
+and each cell node (cmp @ref page_multigrid_terminology "the generic multigrid terminology")
+holds @f$ K^c @f$ unknowns, while each face node holds @f$ K^f @f$
+unknowns, the projection is formalised through 
+
+@f$
+  x^c = P_{c \leftarrow f} x^f
+@f$
+
+with @f$ P_{c \leftarrow f} \in \mathbb{R} ^{ K^c(p+1)^d \times 2dK^f(p+1)^{d-1} } @f$.
+The chunks within the @f$ 2dK^f(p+1)^{d-1} @f$ vector on the right are
+grouped following the face enumeration convention from above.
+
+
+## Cell to face (or "face from cell")
+
+When you project from a cell to its faces, you use 
+
+@f$
+  x^\pm = P_{f \leftarrow c} x^c
+@f$
+
+with @f$ P_{f \leftarrow c} \in \mathbb{R} ^{ 2dK^f(p+1)^{d-1} \times K^c(p+1)^d } @f$.
+This time, the @f$ 2d @f$ chunks within the left-hand vector are either
+the @f$ x^+ @f$ or the @f$ x^- @f$ quantities on the cell, i.e. left or
+right projections. It is Peano's multigrid backend which has to ensure that
+you see only those chunks that are visible "from within the cell".
+
+
+## Face-face operation
+
+When you phrase operations on the faces, you typically get the left and 
+the right projection in and you return an approximation of either the 
+flux or the real value along the face. Conceptually, we often write this
+as 
+
+@f$ 
+  x^f = A_{ff} \begin{bmatrix} x^- \\ x^+ \end{bmatrix}
+@f$ 
+
 
  */
  
