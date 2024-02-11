@@ -53,12 +53,12 @@ The derivative calculation is done [here](https://gitlab.lrz.de/hpcsoftware/Pean
 
 ## Simulation of Masonry Sand
 
-![](sand-theta=35-video.gif)
+![](sand-theta_35-video.gif)
 
 ### Without Friction
 
-![](zero-friction-theta=35-video.gif)
+![](zero-friction-theta_35-video.gif)
 
 ## Simulation of Carborundum
 
-![](carborundum-theta=35-video.gif)
+![](carborundum-theta_35-video.gif)
