@@ -6,9 +6,9 @@ sys.path.insert(0, os.path.abspath("../Equations"))
 from Equations import Euler
 
 class Euler_gaussian_bell(Scenario):
-    
+
     """
-    Scenario reproduced from Ioratti, Dumbser & Loubère, https://doi.org/10.1007/s10915-020-01209-w (p. 27)
+    Scenario reproduced from Ioratti, Dumbser & Loubère, https://doi.org/10.1007/s10915-020-01209-w (p. 44)
     """
 
     _plot_dt     = 0.0
@@ -48,7 +48,6 @@ class Euler_gaussian_bell(Scenario):
     Therefore we find the point x - v*t, and then shift this by instances
     of 1.0 until we find the point within the domain. 
   */
-  const double t_capped = t  - (int) t / 1;
   tarch::la::Vector<Dimensions,double> pos = { (x[0] - t) + (int)(t + .5 - x[0]), 
                                                (x[1] - t) + (int)(t + .5 - x[1]) };
 

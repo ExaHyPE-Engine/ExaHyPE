@@ -32,7 +32,7 @@ class Scenario:
           size    = [self._domain_size, self._domain_size, self._domain_size][0:self._dimensions],
           min_end_time = self._end_time,
           max_end_time = self._end_time,
-          first_plot_time_stamp = self._plot_dt,
+          first_plot_time_stamp = 0.0,
           time_in_between_plots = self._plot_dt,
           periodic_BC = [self._periodic_bc, self._periodic_bc, self._periodic_bc][0:self._dimensions],
         )

@@ -33,18 +33,18 @@ class SWE_W_Bathimetry(Equations):
   def ncp(self):
     return """
     constexpr double grav = 9.81;
-    BgradQ[0] = 0.0;
+    BTimesDeltaQ[0] = 0.0;
     switch (normal) {
     case 0:
-      BgradQ[1] = grav * Q[0] * (deltaQ[0] + deltaQ[3]);
-      BgradQ[2] = 0.0;
+      BTimesDeltaQ[1] = grav * Q[0] * (deltaQ[0] + deltaQ[3]);
+      BTimesDeltaQ[2] = 0.0;
       break;
     case 1:
-      BgradQ[1] = 0.0;
-      BgradQ[2] = grav * Q[0] * (deltaQ[0] + deltaQ[3]);
+      BTimesDeltaQ[1] = 0.0;
+      BTimesDeltaQ[2] = grav * Q[0] * (deltaQ[0] + deltaQ[3]);
       break;
     }
-    BgradQ[3] = 0.0;
+    BTimesDeltaQ[3] = 0.0;
 """
 
 
