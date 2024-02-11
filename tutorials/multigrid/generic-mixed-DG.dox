@@ -120,3 +120,10 @@ The @f$ \widehat{(n,p)} @f$ is computed the other way round.
 
 So @f$ \widehat{u} @f$ depends on @f$ u^+ + u^- @f$ subject to some weights plus @f$ (n,p^+) - (n,p^-) @f$ weighted.
 @f$ \widehat{(n,p)} @f$ depends on @f$ (n,p^+) + (n,p^-) @f$ subject to some weights plus @f$ u^+ - u^- @f$ weighted.
+
+
+\f{eqnarray*}{
+  \hat u & = & \frac{ 1 }{\tau^+ + \tau^-} \left( \tau^+ u^+ + \tau^- u^- + (n,p^+) - (n,p^-) \right) 
+    \\
+  \widehat{(n,p)} & = & \frac{ 1 }{\tau^+ + \tau^-} \left( \tau^+ u^+ - \tau^- u^- + (n,p^+) + (n,p^-) \right) 
+\f}

@@ -40,74 +40,64 @@ The solver construction also is a "one-liner" using the following observations:
 
 ## Matrices
 
+We have @f$ (p+1)^d @f$ @ref page_multigrid_terminology nodes in the cell.
+Consequently, the matrix-matrix part of the global assembly is from
+@f$ \mathbb{R}^{ (d+1)(p+1)^d \times (d+1)(p+1)^d } @f$.
+Conceptionally, this matrix resembles
 
-## The Riemann problem (numerical flux)
+@f$ 
+\begin{bmatrix}
+  X & X & X \\
+  0 & X & 0 \\
+  0 & 0 & X 
+\end{bmatrix}
+\begin{bmatrix}
+  u \\ p_x \\ p_y
+\end{bmatrix}
+=
+\left(
+h^d
+\begin{bmatrix}
+  0 & X & X \\
+  0 & 0 & 0 \\
+  0 & 0 & 0 
+\end{bmatrix}
++
+h^{d-1}
+\begin{bmatrix}
+  X & 0 & 0 \\
+  0 & X & 0 \\
+  0 & 0 & X 
+\end{bmatrix}
+\right)
+\begin{bmatrix}
+  u \\ p_x \\ p_y
+\end{bmatrix}
+=
+\begin{bmatrix}
+  0 \\ f_x \\ f_y
+\end{bmatrix}
+@f$ 
 
-The instantiation relies heavily on several matrices. Here, we can reuse 
-the same utility routines that we also use for the @ref tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson "DG with PETSc"
-code.  
+but we store the entries as AoS according to @ref page_multigrid_terminology "our storage format".
+The sparsity pattern thus is subject to some permutations.
+The structure discussion above emphasises that the first line of the equation 
+system holds entries with different scaling.
+The @f$ p @f$ entries enter with a @f$ h^d @f$ scaling, while the @f$ u @f$ 
+terms have a scaling of @f$ h^{d-1} @f$.
+The PDE over the secondary variables is structurally simpler:
+All the entries on the left-hand side have a scaling of @f$ h^{d-1} @f$.
 
-@todo Sean, Alex This is taken from the dg.py script. I honestly have no clue where these come from and who wrote that, but we should simply "reuse" the same matrices that we've used with PETSc. Alex has written functions to generate them and we should use exactly the same routines here.
-@todo Alex Please fix scaling
 
 @snippet benchmarks/multigrid/matrixfree/poisson/dg.py Construct matrices
 
-Only two matrices are new:
 
-- The @f$ \tilde{A} @f$ matrix from multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
-  (called approximate_system_matrix) has to be an approximation to 
-  @f$ A^{cc} @f$ that we can invert. In the present example, we use the 
-  simplest robust one possible and set @f$ \tilde{A} = diag(A^{cc}) @f$. This 
-  means that we end up with a global Jacobi solver.
-- The Riemann solver matrix here can either be specified, or we set it to None.
-  If we set it to None, we will get an empty routine in the generated C++ 
-  code that we have to befill (see below). In our case, we simply average 
-  between the left and right projection of the gradient and hence can hard-code
-  the operator. It is not scaled with the mesh size, i.e. it is scaled with 
-  @f$ h^0 @f$.
-    
-@todo Alex Do we already ahve this averaging matrix somewhere?
+@todo Tobias and Alex should discuss.
 
 
-@todo Alex can you add this?
+## The Riemann problem (numerical flux)
 
-
-
-# Alternative code designs (not realised)
-
-There are two high-level concepts how we can realise a mixed formulation:
-
-1. We can realise the solver for the primary variable and the secondary 
-   (@f$ p @f$) one as completely independent solvers, which are coupled only 
-   within the cells. That is, we solve for @f$ u @f$ treating @f$ p @f$ as a 
-   "material" parameter, and we solve, at the same time for @f$ p @f$ treating
-   @f$ u @f$ as material parameter. As we do it concurrently, we get a
-   system splitting similar to a Jacobi smoother.   
-   
-   In such a mindset, we would not couple the two Riemann problems on
-   the faces either.
-2. We realise the solver as one solver for a system of partial differential
-   equations. This is a monolithic approach. 
-
- 
- 
-
-
-# Implement the functionality
- 
-Upon the first run of the Python script, we get two new C++ classes, i.e. four
-files: AbstractMyDG.h, AbstractMyDG.cpp, MyDG.h, MyDG.cpp. The interesting file
-for the user is MyDG.cpp
-
-
-@todo Sean The parts below needs more details. Direction of travel is clear I hope.
-
-
- 
- We create a solver of the type multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.
- This solver is given the name MyDG in the present example.
- 
- 
+@todo Tobias, please write.
  
  
 */
