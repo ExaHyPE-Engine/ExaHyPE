@@ -14,7 +14,8 @@ from noh import (
   SortingVariants,
   AllKernelOptimisationVariants,
   Storage_Scattered,
-  BasicKernelOptimisationVariants
+  BasicKernelOptimisationVariants,
+  KernelOptimisation_NoOptimisation,
 )
 
 Symbols = ["-o", "-s", "-v", "-^"]
@@ -148,6 +149,33 @@ if __name__ == "__main__":
     plt.yscale("log")
     plt.savefig(args.output + "-domain-decomposition-log.pdf")
     plt.savefig(args.output + "-domain-decomposition-log.png")
+
+
+    # ===========================
+    # Without any optimisation
+    # ===========================
+    sub_choices = [
+        parallelisation_variant + "." + storage + "." + sorting + "." + kernel_optimisation
+        for parallelisation_variant in [Parallelisation_DomainDecomposition]
+        for storage                 in [Storage_Scattered] + StorageVariants
+        for sorting                 in SortingVariants
+        for kernel_optimisation     in [KernelOptimisation_NoOptimisation]
+    ]
+    plt.clf()
+    for archive_file in args.file:
+        print("Study file {}".format(archive_file))
+        plot_for_subset_of_variants(sub_choices,
+                                    tarfile.open(archive_file, "r:gz"),
+                                    plt)
+    add_legend_and_labels(plt,
+                          construct_labels( [x.replace(Parallelisation_DomainDecomposition + ".","") for x in sub_choices] ),
+                          )
+    print("Write to file {}.pdf and {}.png".format(args.output, args.output))
+    plt.savefig(args.output + "-compare-only-storage.pdf")
+    plt.savefig(args.output + "-compare-only-storage.png")
+    plt.yscale("log")
+    plt.savefig(args.output + "-compare-only-storage-log.pdf")
+    plt.savefig(args.output + "-compare-only-storage-log.png")
 
     
     
