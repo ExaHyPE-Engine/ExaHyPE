@@ -420,12 +420,12 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-list(APPEND DRIECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications")
-foreach(item IN LISTS DRIECTORIES_TO_LINK_OVER)
+list(APPEND DIRECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications" "cmake")
+foreach(item IN LISTS DIRECTORIES_TO_LINK_OVER)
   if(NOT EXISTS "${CMAKE_BINARY_DIR}/${item}")
     execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}")
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
   endif()
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
 endforeach()
 
 file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
@@ -435,6 +435,14 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DI
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
   execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/documentation" "${CMAKE_BINARY_DIR}/documentation")
 endif()
+
+install(FILES
+  ${CMAKE_SOURCE_DIR}/LICENSE
+  ${CMAKE_SOURCE_DIR}/CONTRIBUTING.md
+  ${CMAKE_SOURCE_DIR}/CODE_OF_CONDUCT.md
+  ${CMAKE_BINARY_DIR}/CMakeCache.txt
+  DESTINATION "${CMAKE_INSTALL_PREFIX}"
+)
 
 add_subdirectory(src)
 
