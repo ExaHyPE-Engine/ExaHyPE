@@ -214,9 +214,11 @@ class SPHParticle(Particle):
         # Extra ------------------------------------------------------------------------
         self.has_no_neighbours = dastgen2.attributes.Boolean("hasNoNeighbours")
         self.is_boundary_part = dastgen2.attributes.Boolean("isBoundaryParticle")
+        self.sml_converged = dastgen2.attributes.Boolean("smoothingLengthConverged", initval="false")
         self.part_id = dastgen2.attributes.Integer("partid")
         self.data.add_attribute(self.has_no_neighbours)
         self.data.add_attribute(self.is_boundary_part)
+        self.data.add_attribute(self.sml_converged)
         self.data.add_attribute(self.part_id)
 
         return

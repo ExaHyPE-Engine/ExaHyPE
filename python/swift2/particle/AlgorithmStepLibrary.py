@@ -286,8 +286,10 @@ def get_algorithm_step_dict(particle):
         ),
         cell_kernel=c_iter.insert("::swift2::kernels::legacy::densityKernel"),
         touch_vertex_last_time_kernel=(
-            v_iter.insert("::swift2::kernels::legacy::endDensityCalculation")
-            + v_iter_with_global_reduction.insert(
+            #  v_iter.insert("::swift2::kernels::legacy::endDensityCalculation")
+            #  + v_iter_with_global_reduction.insert(
+            v_iter_with_global_reduction.insert(
+
                 "::swift2::kernels::legacy::updateSmoothingLengthAndRerunIfRequired"
             )
         ),

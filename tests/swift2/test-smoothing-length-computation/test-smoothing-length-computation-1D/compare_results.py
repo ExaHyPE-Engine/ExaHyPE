@@ -126,7 +126,7 @@ print(" --- comparison tolerance:       ", comparison_tolerance)
 
 if icfile.endswith(".hdf5"):
     # Doing a hdf5 run.
-    vtufile = "particles-0.vtu"
+    vtufile = "particles-1.vtu"
 
     hfile = h5py.File(icfile, "r")
     gas = hfile["PartType0"]

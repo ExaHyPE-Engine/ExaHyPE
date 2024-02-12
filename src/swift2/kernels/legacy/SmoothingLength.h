@@ -44,6 +44,10 @@ namespace swift2 {
       void updateSmoothingLengthAndRerunIfRequiredWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
         updateSmoothingLengthAndRerunIfRequired( marker, localParticle );
       }
+
+    template <typename Particle>
+    void hydro_end_density_copy(Particle* localParticle);
+
     }
   }
 }

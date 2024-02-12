@@ -40,7 +40,7 @@ coords = np.zeros((npart_tot, 3))
 v = np.zeros((npart_tot, 3))
 ids = np.linspace(1, npart_tot, npart_tot)
 m = np.ones(npart_tot)
-h = np.ones(npart_tot) * 2.0 * boxSize/npart # just a first guess.
+h = np.ones(npart_tot) * 10.0 * boxSize/npart # just a first guess.
 u = np.ones(npart_tot)
 
 rng = np.random.RandomState(seed=seed)

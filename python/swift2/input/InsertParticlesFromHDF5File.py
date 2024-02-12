@@ -48,6 +48,8 @@ class InsertParticlesFromHDF5File(ActionSet):
      * List of particles that overlap with the current cell.
      */
 
+    using namespace ::swift2::kernels::legacy::kernelHydro; // for kernel_gamma
+
     std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReaderHDF5.getParticlesWithinVoxel( marker.x(), marker.h(), true );
 
     /* Retrieve the rest of fields for same set of particles */
@@ -97,6 +99,7 @@ class InsertParticlesFromHDF5File(ActionSet):
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0);
 
+
       /* Compute the pressure from the EoS */
       const double Pressure = ::swift2::kernels::legacy::eos::gas_pressure_from_internal_energy( Density, InternalEnergy );
 
@@ -117,7 +120,10 @@ class InsertParticlesFromHDF5File(ActionSet):
        * initialisation script general for any hydro scheme, etc.
        */
 
-      newParticle->setSearchRadius(GridSize_x / 2.0);
+      // newParticle->setSearchRadius(GridSize_x / 2.0);
+      newParticle->setSearchRadius(8. * SmoothingLength * kernel_gamma );
+
+      std::cout << " =========== SETTING SEARCH RADIUS " << newParticle->getSearchRadius()  << GridSize << newParticle->getSearchRadius()/GridSize_x << std::endl;
 
       newParticle->setPressure  ( Pressure );
       newParticle->setSoundSpeed( Soundspeed );
@@ -182,7 +188,7 @@ class InsertParticlesFromHDF5File(ActionSet):
   }
   else {
     logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)" );
-  }  
+  }
   #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
   assertion( _particleNumberOnThisTree>0 );
   #endif

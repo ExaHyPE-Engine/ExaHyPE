@@ -55,16 +55,19 @@ namespace swift2 {
       template <typename Particle>
       void resetSmoothingLengthIterationCounter(const peano4::datamanagement::VertexMarker& marker, Particle& particle) {
         if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle)) {
+          particle.setSmoothingLengthConverged(false);
           particle.setSmoothingLengthIterCount(0);
         }
       }
 
       /**
-       * @todo Mladen This one works without the check. Is this correct?
+       * At this point, we just reset some flags and counters that are only required
+       * during a single time step. So we don't need to pass any checks whether to
+       * work on a particle.
        */
       template <typename Particle>
       void resetSmoothingLengthIterationCounterWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& particle) {
-        particle.setSmoothingLengthIterCount(0);
+        resetSmoothingLengthIterationCounter(marker, particle);
       }
 
 
