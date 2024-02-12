@@ -384,15 +384,15 @@ class GLMatrixFree(GaussLobatto):
     # Keep specific for debugging
     assert( self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here...")
 
-    matrix_0[ :, [2,3] ] = A_CF_q_left
-    matrix_0[ :, [6,7] ] = A_CF_q_bottom
-    matrix_0[ :, [10,11] ] = A_CF_q_right
-    matrix_0[ :, [14,15] ] = A_CF_q_top
+    matrix_0[ :, [2,3] ] = A_CF_u_left
+    matrix_0[ :, [6,7] ] = A_CF_u_bottom
+    matrix_0[ :, [10,11] ] = A_CF_u_right
+    matrix_0[ :, [14,15] ] = A_CF_u_top
 
-    matrix_1[ :, [0,1] ] = A_CF_u_left
-    matrix_1[ :, [4,5] ] = A_CF_u_bottom
-    matrix_1[ :, [8,9] ] = A_CF_u_right
-    matrix_1[ :, [12,13] ] = A_CF_u_top
+    matrix_1[ :, [0,1] ] = A_CF_q_left
+    matrix_1[ :, [4,5] ] = A_CF_q_bottom
+    matrix_1[ :, [8,9] ] = A_CF_q_right
+    matrix_1[ :, [12,13] ] = A_CF_q_top
     
     
     output_matrices = [ matrix_0, matrix_1 ]
