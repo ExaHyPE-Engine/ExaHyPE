@@ -392,7 +392,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     solution and right-hand side. 
     
     """
-    observer.add_action_set( PlotDGDataInPeanoBlockFormat(self) )
+    observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution") )
+    observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs") )
     pass
 
   def add_to_create_grid(self, observer):

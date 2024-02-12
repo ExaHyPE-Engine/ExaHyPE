@@ -94,8 +94,8 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   cell_from_face_projection_scaling = cell_from_face_projection_scaling,
   riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
   boundary_matrix = matrices.get_boundary_matrix(),
-  cell_relaxation = 0.8,
-  face_relaxation = 0.8,
+  cell_relaxation = 0.5,
+  face_relaxation = 0.5,
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
 )

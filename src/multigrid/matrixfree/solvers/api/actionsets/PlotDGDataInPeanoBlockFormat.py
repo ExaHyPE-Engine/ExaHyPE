@@ -8,7 +8,9 @@ import jinja2
 class PlotDGDataInPeanoBlockFormat(ActionSet):
 
   def __init__(self,
-               solver
+               solver,
+               variable_name,
+               getter
                ):
     """
     
@@ -20,21 +22,12 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
     self.d = {}
     self.d["SOLVER_INSTANCE"]        = solver.instance_name()
     self.d["SOLVER_NAME"]            = solver.typename()
-    #self.d[ "FILENAME" ]            = filename
-    #self.d[ "CELL_UNKNOWN_NAME" ]   = cell_unknown.name
-    #self.d[ "GETTER" ]              = getter
-    #self.d[ "NUMBER_OF_UNKNOWNS_PER_CELL" ] = number_of_unknows_per_cell
-    #self.d[ "DESCRIPTION" ]         = description
-    #self.d[ "TIMESTAMP" ]           = time_stamp_evaluation
-    #self.d[ "GUARD_PREDICATE" ]    = guard_predicate
-    #self.d[ "META_DATA" ]          = ""
-    #self.additional_includes       = additional_includes
-        
+    self.d[ "VARIABLE" ]             = variable_name
+    self.d[ "GETTER" ]               = getter
 
   __Template_Constructor = """
   _writer          = nullptr;
   _dataWriter      = nullptr;
-  _rhsWriter       = nullptr;
   _treeNumber      = treeNumber;
 
   // An MPI lock (critical section) would be important!
@@ -52,15 +45,12 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
   assertion1(_dataWriter!=nullptr,_treeNumber);
   
   _dataWriter->close();
-  //_rhsWriter->close();
   _writer->writeToFile();
   
   delete _dataWriter;
-  delete _rhsWriter;
   delete _writer;
 
   _dataWriter = nullptr;
-  _rhsWriter  = nullptr;
   _writer      = nullptr;
 """
 
@@ -83,7 +73,7 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
   Template_TouchCellFirstTime = """ 
 if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior) {
 
-  logTraceInWith1Argument("Plot::TCFT", fineGridCell{{SOLVER_NAME}}.getSolution());
+  logTraceInWith1Argument("Plot::TCFT", fineGridCell{{SOLVER_NAME}}.{{GETTER}}());
   
   int patchIndex = _writer->plotPatch(
     marker.x()-0.5 * marker.h(),
@@ -91,10 +81,8 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
   );
 
   int valuePatchVertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
-//  int rhsPatchVertexIndex    = _rhsWriter->getFirstVertexWithinPatch(patchIndex);
   
-  double* value = fineGridCell{{SOLVER_NAME}}.getSolution().data();
-  // double* rhs   = fineGridCell{{SOLVER_NAME}}.getRhs().data();
+  double* value = fineGridCell{{SOLVER_NAME}}.{{GETTER}}().data();
   
   int currentDoF = 0;
   /*
@@ -102,9 +90,7 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
   */
   dfor(k,repositories::{{SOLVER_INSTANCE}}.PolyDegree+1) {
     _dataWriter->plotVertex( valuePatchVertexIndex, value+currentDoF );
-    // _rhsWriter->plotVertex(   rhsPatchVertexIndex,   rhs+currentDoF   );
     valuePatchVertexIndex++;
-    // rhsPatchVertexIndex++;
     currentDoF++;
   }
   logTraceOut("Plot::TCFT");
@@ -116,32 +102,25 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
   tarch::mpi::Lock lock( _semaphore );
   
   std::ostringstream snapshotFileName;
-  snapshotFileName << "{{SOLVER_NAME}}";
+  snapshotFileName << "{{SOLVER_NAME}}.{{VARIABLE}}";
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 ) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
 
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    Dimensions, snapshotFileName.str(), "{{VARIABLE}}",
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::NoIndexFile,
     0.0
   );
     
   _dataWriter = _writer->createVertexDataWriter( 
-    "value", 
+    "{{VARIABLE}}", 
     repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,  // nodes per axis                                          
     repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode,
     "Solution",
     "Solution as delivered through MF Solver"
   );
-//  _rhsWriter = _writer->createVertexDataWriter( 
-//    "rhs", 
-//    repositories::{{SOLVER_INSTANCE}}.PolyDegree+1,  // nodes per axis                                          
-//    repositories::{{SOLVER_INSTANCE}}.UnknownsPerCellNode,
-//    "Right-hand side",
-//    "Nodal right-hand side value"
-//  );
 """
 
 

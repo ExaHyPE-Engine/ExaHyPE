@@ -50,10 +50,10 @@ class UpdateCell(ActionSet):
     // scale current entries in solution vector by (1-OmegaCell)
     for (int i=0; i<fineGridCell{{SOLVER_NAME}}.getSolution().size(); i++)
     {
-      double sol = fineGridCell{{SOLVER_NAME}}.getSolution(i) * (1-repositories::{{SOLVER_INSTANCE}}.OmegaCell);
+      double sol = fineGridCell{{SOLVER_NAME}}.getSolution(i);
 
       // add on r values whilst we are here
-      fineGridCell{{SOLVER_NAME}}.setSolution(i, sol + r(i) );
+      fineGridCell{{SOLVER_NAME}}.setSolution(i, sol + repositories::{{SOLVER_INSTANCE}}.OmegaCell * r(i) );
     }
     logTraceOutWith1Argument("UpdateCell::UpdateSol", fineGridCell{{SOLVER_NAME}}.getSolution());
 

@@ -91,7 +91,7 @@ bool selectNextAlgorithmicStep() {
 
       case repositories::StepRepository::Steps::Solve:
         {
-          if ( solverSteps++ >= 20 )
+          if ( solverSteps++ >= 100 )
           {
             peano4::parallel::Node::getInstance().setNextProgramStep(
               repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
