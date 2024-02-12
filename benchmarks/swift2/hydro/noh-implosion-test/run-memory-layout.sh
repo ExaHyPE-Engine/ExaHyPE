@@ -18,6 +18,6 @@ for REALISATION in domain-decomposition.scattered.sort-on-the-fly.no-optimisatio
 do
   EXECUTABLE=noh2D.$REALISATION
   echo $EXECUTABLE
-  ./$EXECUTABLE > $EXECUTABLE.out
+  ./$EXECUTABLE > $EXECUTABLE-$OMP_NUM_TREADS.out
 done
 

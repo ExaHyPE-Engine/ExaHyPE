@@ -75,6 +75,14 @@ python3 plot-comparison-of-implementation-variants.py -o MyMachine MyMachine-8-t
 
  @image html Hamilton8-2400.png 
 
+ On SuperMUC, we see some irregularities for the biggest setups. Therefore, it
+ makes sense to exclude them from some visualisation:
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ python3 plot-comparison-of-implementation-variants.py -o SuperMUC   SuperMUC-112-threads.tar.gz  SuperMUC-56-threads.tar.gz SuperMUC-28-threads.tar.gz SuperMUC-14-threads.tar.gz
+ python3 plot-comparison-of-implementation-variants.py -o SuperMUC-small                          SuperMUC-56-threads.tar.gz SuperMUC-28-threads.tar.gz SuperMUC-14-threads.tar.gz
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
  # The impact of the mesh on the global runtime
 

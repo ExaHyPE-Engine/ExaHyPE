@@ -1,0 +1,18 @@
+#!/bin/bash
+#SBATCH -J MemLayout
+##SBATCH --account=abc123def  #your project ID
+#SBATCH --time=12:00:00
+#SBATCH --export=NONE
+##SBATCH --partition={test,general}
+#SBATCH --partition=general
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1  #one MPI job per GPU tile
+#SBATCH --array 1,2,4,7,8,14,25,56,128
+
+module load intel gcc intel-mpi
+
+export OMP_NUM_THREADS=$SLURM_ARRAY_TASK_ID
+
+./run-memory-layout.sh 
+
+tar -czvf SuperMUC-$OMP_NUM_TREADS-threads.tar.gz *$OMP_NUM_TREADS-threads.out
