@@ -3,7 +3,6 @@
 #SBATCH --account=pn52yu
 #SBATCH --time=12:00:00
 #SBATCH --export=NONE
-##SBATCH --partition={test,general}
 #SBATCH --partition=general
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1  #one MPI job per GPU tile
