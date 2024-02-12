@@ -6,25 +6,21 @@
 
 
 const swift2::TaskNumber swift2::TaskNumber::Max{
-  std::numeric_limits<int>::max(), swift2::TaskNumber::TaskAssociation::NumberOfEntries, MaxSpecies};
+  std::numeric_limits<int>::max(), swift2::TaskNumber::TaskAssociation::NumberOfEntries};
 
 
-const swift2::TaskNumber swift2::TaskNumber::NoDependencies{
-  tarch::multicore::NoDependencies, TaskAssociation::TouchVertexFirstTime, 0};
+const swift2::TaskNumber swift2::TaskNumber::NoDependencies{tarch::multicore::NoDependencies, TaskAssociation::TouchVertexFirstTime};
 
 
-swift2::TaskNumber::TaskNumber(int number0, TaskAssociation number1, int number2):
+swift2::TaskNumber::TaskNumber(int number0, TaskAssociation number1):
   _taskCounter(number0),
-  _taskAssociation(number1),
-  _taskSpecies(number2) {
+  _taskAssociation(number1) {
   if (_taskCounter == ::tarch::multicore::NoDependencies) {
     *this = NoDependencies;
   } else if (number0 != std::numeric_limits<int>::max()) {
     assertion1(number0 >= 0 or number0 == tarch::multicore::NoDependencies, toString());
     assertion1(number1 != TaskAssociation::NumberOfEntries, toString());
-    assertion1(number2 >= 0, toString());
     assertion1(number0 <= Max._taskCounter, toString());
-    assertion1(number2 <= Max._taskSpecies, toString());
   }
 }
 
@@ -34,15 +30,12 @@ bool swift2::TaskNumber::operator<(const TaskNumber& rhs) const {
          or _taskCounter == rhs._taskCounter and _taskAssociation == TaskAssociation::TouchVertexFirstTime
               and rhs._taskAssociation != TaskAssociation::TouchVertexFirstTime
          or _taskCounter == rhs._taskCounter and _taskAssociation == TaskAssociation::TouchCellFirstTime
-              and rhs._taskAssociation == TaskAssociation::TouchVertexLastTime
-         or _taskCounter == rhs._taskCounter and _taskAssociation == rhs._taskAssociation
-              and _taskSpecies < rhs._taskSpecies;
+              and rhs._taskAssociation == TaskAssociation::TouchVertexLastTime;
 }
 
 
 bool swift2::TaskNumber::equals(const TaskNumber& rhs) const {
-  return _taskCounter == rhs._taskCounter and _taskAssociation == rhs._taskAssociation
-         and _taskSpecies == rhs._taskSpecies;
+  return _taskCounter == rhs._taskCounter and _taskAssociation == rhs._taskAssociation;
 }
 
 
@@ -75,7 +68,7 @@ std::string swift2::TaskNumber::toString() const {
       result += "<undef>";
       break;
     }
-    result += "," + std::to_string(_taskSpecies) + ")";
+    result += ")";
     return result;
   }
 }
@@ -85,8 +78,8 @@ tarch::multicore::TaskNumber swift2::TaskNumber::flatten() const {
   if (_taskCounter == tarch::multicore::NoDependencies) {
     return tarch::multicore::NoDependencies;
   } else {
-    return _taskCounter * (Max._taskSpecies * static_cast<int>(Max._taskAssociation))
-           + static_cast<int>(_taskAssociation) * (Max._taskSpecies) + _taskSpecies;
+    return _taskCounter * static_cast<int>(Max._taskAssociation)
+           + static_cast<int>(_taskAssociation);
   }
 }
 
