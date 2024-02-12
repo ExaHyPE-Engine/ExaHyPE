@@ -28,9 +28,9 @@ Storage_ContinuousPerVertex = "continuous-per-vertex"
 Storage_GlobalContinuous = "global-continuous"
 StorageVariants = [Storage_ContinuousPerVertex, Storage_GlobalContinuous]
 
-Sorting_InsertSweeps = "insert-sorts"
-Sorting_OnTheFly = "sort-on-the-fly"
-SortingVariants = [Sorting_InsertSweeps, Sorting_OnTheFly]
+Sorting_MultiscaleSort = "multiscale-sort"
+Sorting_BucketSort = "bucket-sort"
+SortingVariants = [Sorting_MultiscaleSort, Sorting_BucketSort]
 
 KernelOptimisation_NoOptimisation = "no-optimisation"
 KernelOptimisation_OuterGuards = "outer-guards"
@@ -205,26 +205,26 @@ if __name__ == "__main__":
         and 
         args.realisation.split(".")[1] == Storage_Scattered
         and 
-        args.realisation.split(".")[2] == Sorting_InsertSweeps
+        args.realisation.split(".")[2] == Sorting_MultiscaleSort
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
         )
     elif (
         args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
         and 
         args.realisation.split(".")[1] == Storage_Scattered
         and 
-        args.realisation.split(".")[2] == Sorting_OnTheFly
+        args.realisation.split(".")[2] == Sorting_BucketSort
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
         )
     elif (
         args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
@@ -235,7 +235,7 @@ if __name__ == "__main__":
             args.realisation.split(".")[1] == Storage_GlobalContinuous
         )
         and 
-        args.realisation.split(".")[2] == Sorting_InsertSweeps
+        args.realisation.split(".")[2] == Sorting_MultiscaleSort
     ):
         project.algorithm_steps_task_graph_compiler = (
             swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory
@@ -252,7 +252,7 @@ if __name__ == "__main__":
             args.realisation.split(".")[1] == Storage_GlobalContinuous
         )
         and 
-        args.realisation.split(".")[2] == Sorting_OnTheFly
+        args.realisation.split(".")[2] == Sorting_BucketSort
     ):
         project.algorithm_steps_task_graph_compiler = (
             swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory
