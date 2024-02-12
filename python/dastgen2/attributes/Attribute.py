@@ -305,3 +305,6 @@ class Attribute(object):
 
         """
         return
+
+    def get_includes(self):
+        return ""

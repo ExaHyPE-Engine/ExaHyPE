@@ -48,14 +48,22 @@ class Particle(DaStGen2):
       implicitly determines the tree grid level that I use to hold a particle.
       The bigger the search, the higher up in the mesh I have to store a
       particle.
-    - Two states. These states should not be used by the user. They are
-      exclusively made for the actionset UpdateParallelState. A tree owns the
+    - A state. This state should not be manipulated by the user. A tree owns the
       particles that are contained within its local tree cells. Furthermore,
       a tree knows about the particles which are associated to a vertex that's
-      adjacent to a local mesh. These particles are virtual. We effectively
-      work with a halo of h/2 per mesh level. Details can be found in
-      UpdateParallelState. The flags are there to manage the lifecycle of these
-      virtual particles. Never read them or use them.
+      adjacent to a local mesh. The latter particles are virtual. We effectively
+      work with a halo of h/2 per mesh level. 
+      
+    The only action set that should alter the state is UpdateParallelState. 
+      
+    ## State updates  
+    
+    If a particle moves, we have to update its state, and we might have to 
+    update its vertex association. This discussion focuses on the state 
+    update. 
+    
+    Details can be found in
+      UpdateParallelState.
 
     """
 
@@ -76,14 +84,14 @@ class Particle(DaStGen2):
         self.name = name
 
         self.data.add_attribute(peano4.dastgen2.Peano4DoubleArray("x", "Dimensions"))
+        self.data.add_attribute(
+            peano4.dastgen2.Peano4DoubleArray("cellH", "Dimensions")
+        )
         self.data.add_attribute(dastgen2.attributes.Double("searchRadius"))
 
         #
-        # Both states are not to be used by algorithms. They are for the grid management.
+        # Never manipulate as user
         #
         self.data.add_attribute(
             dastgen2.attributes.Enumeration("ParallelState", ["Local", "Virtual"])
-        )
-        self.data.add_attribute(
-            dastgen2.attributes.Enumeration("NewParallelState", ["Local", "Virtual"])
         )

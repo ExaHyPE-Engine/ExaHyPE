@@ -20,7 +20,7 @@ void* tarch::internal::allocateRawData(int size, tarch::MemoryLocation location)
   void* result = nullptr;
   switch (location) {
     case tarch::MemoryLocation::Heap:
-      result = std::aligned_alloc(AlignmentOnHeap, size);
+      result = std::aligned_alloc(AlignmentOnHeap, tarch::padSizeToAlignment(size, AlignmentOnHeap)); // Aligned alloc requires size to be a multiple of the aligment
       break;
     case tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
       CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));

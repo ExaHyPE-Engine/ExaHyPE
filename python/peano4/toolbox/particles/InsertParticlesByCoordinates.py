@@ -39,7 +39,9 @@ class InsertParticlesByCoordinates(ActionSet):
           relevance for your application.
 
         """
-        super(InsertParticlesByCoordinates, self).__init__(descend_invocation_order=1, parallel=False)
+        super(InsertParticlesByCoordinates, self).__init__(
+            descend_invocation_order=1, parallel=False
+        )
 
         self.d = {}
         self.d["PARTICLE"] = particle_set.particle_model.name
@@ -72,7 +74,8 @@ class InsertParticlesByCoordinates(ActionSet):
       toolbox::particles::insertParticleIntoCell(
         marker,
         particle,
-        fineGridVertices{{PARTICLES_CONTAINER}}
+        fineGridVertices{{PARTICLES_CONTAINER}},
+        _spacetreeId
       );
     }
   }
@@ -120,6 +123,8 @@ class InsertParticlesByCoordinates(ActionSet):
         """
         result = (
             """
+_spacetreeId              = treeNumber;
+  
 #pragma clang optimize off
 tarch::multicore::Lock lock (_coordinatesSemaphore);
 if (_coordinates==nullptr) {
@@ -207,4 +212,6 @@ tarch::multicore::BooleanSemaphore     """
         return f"""
     static tarch::multicore::BooleanSemaphore     _coordinatesSemaphore;
     static tarch::la::Vector<Dimensions,double>*  _coordinates;
+    
+    int                                        _spacetreeId;
 """

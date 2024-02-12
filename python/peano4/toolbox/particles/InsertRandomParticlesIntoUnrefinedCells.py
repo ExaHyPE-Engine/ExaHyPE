@@ -124,6 +124,7 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
     def get_includes(self):
         result = jinja2.Template(
             """
+#include "tarch/multicore/multicore.h"
 #include "toolbox/particles/particles.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"

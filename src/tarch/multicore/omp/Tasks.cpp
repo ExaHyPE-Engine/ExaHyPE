@@ -14,10 +14,23 @@
 
 namespace {
   int numberOfSpawnedTasks = 0;
+
+  /**
+   * Dependency tracking in OpenMP is organised via addresses. These addresses
+   * are sole helpers, i.e. the underlying memory region doesn't have to be
+   * owned by the application code. So we basically use an arbitrary address
+   * and then use this as baseline for any dependency, taking into account that
+   * dependencies are all enumerated continuously.
+   *
+   * The pointer has to be an integer pointer (or any built-in type), as we
+   * want to do some pointer arithmetics with it. This would not work with a
+   * void pointer.
+   */
+  int* dependencyTrackingBaseAddress = &numberOfSpawnedTasks;
 } // namespace
 
 
-//#define OpenMPHighThroughputWaiting
+// #define OpenMPHighThroughputWaiting
 
 /**
  * Native mapping of a task loop onto a task loop
@@ -75,44 +88,20 @@ namespace {
  * I have a second variant of the code which I call "high-throughput waiting".
  * This version runs risk to
  */
-#if !defined(OpenMPHighThroughputWaiting)
-void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
-  assertion(not tasks.empty());
-
-  #if defined(OpenMPTaskGroup)
-  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
-  #endif
-  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-  #if !defined(OpenMPTaskGroup)
-  #pragma omp task priority(tarch::multicore::Task::DefaultPriority)
-  #endif
-    {
-      while (tasks[i]->run()) {
-        tarch::multicore::Core::getInstance().yield();
-      }
-      delete tasks[i];
-    }
-  }
-
-  #pragma omp taskwait // wait for all elements from tasks to complete
-                       // do not wait for the children of tasks
-                       // but do children if you have time (this does not
-                       // happen however)
-}
-#else
+#if defined(OpenMPHighThroughputWaiting)
 void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
   assertion(not tasks.empty());
 
   int numberOfLoopTasks = tasks.size(); // bookkeeping of how many loop tasks
                                         // we have in the system
 
-  #if defined(OpenMPTaskGroup)
-  #pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks) untied
-  #endif
+#if defined(OpenMPTaskGroup)
+#pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks) untied
+#endif
   for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
-  #if !defined(OpenMPTaskGroup)
-  #pragma omp task priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks)
-  #endif
+#if !defined(OpenMPTaskGroup)
+#pragma omp task priority(tarch::multicore::Task::DefaultPriority) shared(numberOfLoopTasks)
+#endif
     {
       while (tasks[i]->run()) {
         tarch::multicore::Core::getInstance().yield();
@@ -121,16 +110,15 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
     }
 
     int currentNumberOfLoopTasks;                   // reduce the bookkeeping
-    #pragma omp atomic capture                      // counter and create my
+#pragma omp atomic capture                          // counter and create my
     currentNumberOfLoopTasks = --numberOfLoopTasks; // own loop termination
                                                     // criterion
 
-    while (currentNumberOfLoopTasks>0) {
-      if (processPendingTasks(1,false)) { // I use FILO to increase cache hit probability
-        #pragma omp atomic read
+    while (currentNumberOfLoopTasks > 0) {
+      if (processPendingTasks(1, false)) { // I use FILO to increase cache hit probability
+#pragma omp atomic read
         currentNumberOfLoopTasks = numberOfLoopTasks;
-      }
-      else {
+      } else {
         currentNumberOfLoopTasks = 0; // This is not nice. It means that a
                                       // fast task might finish while ready
                                       // tasks literally become a available a
@@ -143,12 +131,36 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
     }
   }
 
-  #pragma omp taskwait // wait for all elements from tasks to complete
-                       // do not wait for the children of tasks
-                       // but do children if you have time (this does not
-                       // happen however)
+#pragma omp taskwait // wait for all elements from tasks to complete
+                     // do not wait for the children of tasks
+                     // but do children if you have time (this does not
+                     // happen however)
 
-  assertionEquals(numberOfLoopTasks,0);
+  assertionEquals(numberOfLoopTasks, 0);
+}
+#else
+void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::multicore::Task*>& tasks) {
+  assertion(not tasks.empty());
+
+#if defined(OpenMPTaskGroup)
+#pragma omp taskloop nogroup shared(tasks) grainsize(1) priority(tarch::multicore::Task::DefaultPriority) untied
+#endif
+  for (int i = 0; i < static_cast<int>(tasks.size()); i++) {
+#if !defined(OpenMPTaskGroup)
+#pragma omp task priority(tarch::multicore::Task::DefaultPriority)
+#endif
+    {
+      while (tasks[i]->run()) {
+        tarch::multicore::Core::getInstance().yield();
+      }
+      delete tasks[i];
+    }
+  }
+
+#pragma omp taskwait // wait for all elements from tasks to complete
+                     // do not wait for the children of tasks
+                     // but do children if you have time (this does not
+                     // happen however)
 }
 #endif
 
@@ -156,26 +168,103 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
 
 
-void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
-  tarch::multicore::native::spawnTask(job);
-}
 
+void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
+  int* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
 
-void  tarch::multicore::native::spawnTask(Task* job) {
+  #if !defined(OpenMPDependenciesInTaskWait)
+  if (taskNumber != NoDependencies) {
+    #pragma omp task untied depend(in: outDependencyPointer[:1])
+    {
+      // empty task
+    }
+    #pragma omp taskwait 
+  }
+  #else
+  if (taskNumber != NoDependencies) {
+    #pragma omp taskwait depend(in : *outDependencyPointer)
+  }
+  #endif
+
   #pragma omp atomic
   numberOfSpawnedTasks++;
 
-  #pragma omp task priority(job->getPriority()) untied
-  {
-    while (job->run()) {
-      #pragma omp taskyield
-    }
-    delete job;
+  if (taskNumber == NoDependencies and inDependencies.empty()) {
+    #pragma omp task priority(job->getPriority()) untied
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
 
-    #pragma omp atomic
-    numberOfSpawnedTasks--;
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
+  }
+
+
+  if (taskNumber != NoDependencies and inDependencies.empty()) {
+    // A nicer syntax would be 
+    //
+    // #pragma omp task priority(job->getPriority()) untied depend(out : *outDependencyPointer)
+    //
+    // but some toolchains don't support that synax.
+    #pragma omp task priority(job->getPriority()) untied depend(out : outDependencyPointer[:1])
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
+
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
+  } else if (taskNumber == NoDependencies and not inDependencies.empty()) {
+    int helperDependency;
+    for (auto& inDependencyTaskNumber: inDependencies) {
+       int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
+       #pragma omp task priority(job->getPriority()) untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
+       {  
+         // empty task
+       }
+    }
+    #pragma omp task priority(job->getPriority()) untied depend(in: helperDependency)
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
+
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
+  } else if (taskNumber != NoDependencies and not inDependencies.empty()) {
+    //
+    // See above
+    //
+    int helperDependency;
+    for (auto& inDependencyTaskNumber: inDependencies) {
+      int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
+      #pragma omp task priority(job->getPriority()) untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
+      {  
+        // empty task
+      }
+    }
+    #pragma omp task priority(job->getPriority()) untied depend(in: helperDependency) depend(out: outDependencyPointer[:1])
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
+
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
+  } else {
+    assertionMsg(false, "should never be called");
   }
 }
+
 
 /**
  * It is not clear what happens if I use tasksOfSameType directly within the task.
@@ -199,45 +288,44 @@ NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variab
  * if I try to map fuse onto a task of its own.
  *
  */
-void tarch::multicore::native::processFusedTask(
-  Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
-) {
+void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-#if !defined(__NVCOMPILER)
+  // #if !defined(__NVCOMPILER)
 #pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
-#endif
+  // #endif
   {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask);
+      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
     } else {
       delete myTask;
     }
   }
 }
 
-/**
- * There is no draining of the CPU queues in OpenMP, but we can invoke a
- * taskyield which issues a scheduling point and hence gives OpenMP the
- * opportunity to disrupt the local execution and instead progress pending
- * tasks.
- */
-void        tarch::multicore::native::drainTaskQueues() {
-#pragma omp taskyield
+
+void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
+  if (not inDependencies.empty()) {
+    //
+    // very primiate workaround, where we construct empty funneling-in tasks
+    //
+    int helperDependency;
+    for (auto& inDependencyTaskNumber: inDependencies) {
+      int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
+      #pragma omp task untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
+      {  
+        // empty task
+      }
+    }
+    #pragma omp task untied depend(in: helperDependency)
+    {}
+    #pragma omp taskwait
+  }
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
-  tarch::multicore::native::spawnTask(job);
+void tarch::multicore::native::waitForAllTasks() {
+  #pragma omp taskwait
 }
 
-
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
-  tarch::multicore::native::spawnTask(job);
-}
-
-
-void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
-
-void tarch::multicore::native::waitForTask( int taskNumber ){}
 #endif

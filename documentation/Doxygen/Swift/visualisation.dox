@@ -122,4 +122,26 @@ plt.show()
 A few scripts are included among the tests in `/tests/swift2/hydro-simple-sph-physics/`,
 which can be used as reference.
 
+
+# Particle database
+
+If you decide to dump particles into a csv database via the particles toolbox,
+you might want to use the peano4/toolbox/particles/postprocessing/convert.py to
+transform this database into a proper vtu file sequence or to inspect the actual
+particle trajectory files, which do not dump all data but only data that exceeds
+certain thresholds.
+
+
+# Particle rearrangement stats
+
+There is a script 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 ~/git/Peano/python/swift2/postprocessing/plot-lift-drop-statistics.py output.txt  -v
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+which allows you to visualise the mesh rearrangement statistics once you dump the 
+information output into a file.
+
+ 
 */

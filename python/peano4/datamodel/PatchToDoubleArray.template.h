@@ -80,7 +80,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   std::string toString() const;
   
   {% if DATA_ASSOCIATION == 1 -%}
-  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
+  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker, int spacetreeId);
   bool send(
     const peano4::datamanagement::VertexMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
@@ -96,7 +96,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   {% endif -%}
 
   {% if DATA_ASSOCIATION == 2 -%}
-  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker);
+  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker, int spacetreeId);
   bool send(
     const peano4::datamanagement::FaceMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}
@@ -112,7 +112,7 @@ struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   {% endif -%}
 
   {% if DATA_ASSOCIATION == 3 -%}
-  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker);
+  void merge(peano4::grid::TraversalObserver::SendReceiveContext context, const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker, int spacetreeId);
   bool send(
     const peano4::datamanagement::CellMarker& marker
     {% for arg in ADDITIONAL_LOAD_STORE_ARGUMENTS %}, const {{arg[1]}}& {{arg[2]}} {% endfor %}

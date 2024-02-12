@@ -1,8 +1,10 @@
-Peano4 Python Modules
+Peano Python API
 =====================
 
-Modules accompanying and required by Peano4. Install via
+Python API accompanying and required by Peano. Install via
 
-$ pip install -e .
+```shell
+pip install -e .
+```
 
-or add this directory to your PYTHONPATH.
+or add this directory to your `PYTHONPATH`.

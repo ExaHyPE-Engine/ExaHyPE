@@ -6,18 +6,17 @@
 // **********************************************************************************************
 #pragma once
 
+#include "Constants.h"
+
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PrecisionControl.h"
-#include "exahype2/NonCriticalAssertions.h"
-
 #include "exahype2/aderdg/solvers/ADERDGSolver.h"
 
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/NonCriticalAssertions.h"
 
 #include "peano4/utils/Globals.h"
-
-#include "Constants.h"
 
 #include "exahype2/aderdg/kernels/Kernels.h"
 {% if USE_KERNEL_GENERATOR %}

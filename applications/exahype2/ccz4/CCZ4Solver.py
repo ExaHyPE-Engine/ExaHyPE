@@ -98,7 +98,7 @@ class AbstractCCZ4Solver(object):
         "traceK": 1,
         "phi": 1,
         "P": 3,
-        "K0": 1,
+        "K0": 1
     }
 
     """!
@@ -135,6 +135,7 @@ class AbstractCCZ4Solver(object):
         """
         self.integer_constants = {
             "CCZ4LapseType": 0,
+            "CCZ4SO": 0,
         }
         self.double_constants = {
             "CCZ4ds": 1.0,
@@ -151,8 +152,13 @@ class AbstractCCZ4Solver(object):
             "CCZ4k3": 0.5,
             "CCZ4GLMc": 1.2,
             "CCZ4GLMd": 2.0,
-            "CCZ4mu": 0.2,
+            "CCZ4mu": 0.2
         }
+
+    def enable_second_order(self):
+        self.integer_constants.update({"CCZ4SO":1})
+        self.Default_Time_Step_Size_Relaxation=self.Default_Time_Step_Size_Relaxation/2
+
 
     def _add_standard_includes(self):
         """!
@@ -248,6 +254,7 @@ class AbstractCCZ4Solver(object):
         number_of_entries_between_two_db_flushes,
         data_delta_between_two_snapsots,
         time_delta_between_two_snapsots,
+        clear_database_after_flush,
         tracer_unknowns=None,
     ):
         """!
@@ -271,7 +278,7 @@ class AbstractCCZ4Solver(object):
           output_precision=10,
           data_delta_between_two_snapsots = data_delta_between_two_snapsots,
           time_delta_between_two_snapsots = time_delta_between_two_snapsots,
-          clearDatabaseAfterFlush         = True,
+          clear_database_after_flush         = True,
           ))
         ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -322,7 +329,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
             eigenvalues=construct_FV_eigenvalues(),
         )
 
-        self.postprocess_updated_patch += consruct_FV_postprocessing_kernel()
+        self.postprocess_updated_patch += construct_FV_postprocessing_kernel()
 
     def add_tracer(
         self,
@@ -332,7 +339,8 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
         number_of_entries_between_two_db_flushes,
         data_delta_between_two_snapsots,
         time_delta_between_two_snapsots,
-        tracer_unknowns=None,
+        clear_database_after_flush,
+        tracer_unknowns,
     ):
         """!
 
@@ -353,6 +361,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStep(
             number_of_entries_between_two_db_flushes,
             data_delta_between_two_snapsots,
             time_delta_between_two_snapsots,
+            clear_database_after_flush,
             tracer_unknowns,
         )
 
@@ -451,7 +460,8 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
         number_of_entries_between_two_db_flushes,
         data_delta_between_two_snapsots,
         time_delta_between_two_snapsots,
-        tracer_unknowns=None,
+        clear_database_after_flush,
+        tracer_unknowns,
     ):
         """!
 
@@ -473,6 +483,7 @@ class CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking(
             number_of_entries_between_two_db_flushes,
             data_delta_between_two_snapsots,
             time_delta_between_two_snapsots,
+            clear_database_after_flush,
             tracer_unknowns,
         )
 
@@ -487,7 +498,7 @@ def construct_FD4_ncp():
 
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 """
 
 
@@ -501,21 +512,21 @@ def construct_FV_ncp():
 
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+  ::applications::exahype2::ccz4::ncp(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 """
 
 
 def construct_FD4_source_term():
     return """
   memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
-  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
 """
 
 
 def construct_FV_source_term():
     return """
   memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
-  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+  ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
 """
 
 
@@ -567,7 +578,8 @@ def add_tracer_to_FV_solver(
     number_of_entries_between_two_db_flushes,
     data_delta_between_two_snapsots,
     time_delta_between_two_snapsots,
-    tracer_unknowns=None,
+    clear_database_after_flush,
+    tracer_unknowns,
 ):
     """!
 
@@ -632,7 +644,7 @@ def add_tracer_to_FV_solver(
         output_precision=10,
         data_delta_between_two_snapsots = data_delta_between_two_snapsots,
         time_delta_between_two_snapsots = time_delta_between_two_snapsots,
-        clearDatabaseAfterFlush         = True,
+        clear_database_after_flush         = clear_database_after_flush,
     )
     dump_into_database_action_set.descend_invocation_order = solver._action_set_update_cell.descend_invocation_order + 2
     project.add_action_set_to_timestepping(dump_into_database_action_set)
@@ -646,11 +658,20 @@ def add_tracer_to_FD4_solver(
     number_of_entries_between_two_db_flushes,
     data_delta_between_two_snapsots,
     time_delta_between_two_snapsots,
+    clear_database_after_flush,
     tracer_unknowns,
 ):
     """!
 
     I realise this as a separate routine, as we need it for all FD4 flavours
+    
+    This is a wrapper around all the tracer handling. It adds the tracer to the
+    exahype2.Project, but it also instantiates the solution to tracer mapping
+    as well as the database bookkeeping.
+    
+    @param tracer_unknowns: Integer
+      You can set this variable to None. In this case, all variables are 
+      dumped.
 
     """
     number_of_attributes = (
@@ -695,6 +716,7 @@ def add_tracer_to_FD4_solver(
         solver._action_set_compute_final_linear_combination.descend_invocation_order + 1
     )
     project.add_action_set_to_timestepping(tracing_action_set)
+    project.add_action_set_to_initialisation(tracing_action_set)
 
     dump_into_database_action_set = exahype2.tracer.DumpTracerIntoDatabase(
         particle_set=tracer_particles,
@@ -704,7 +726,7 @@ def add_tracer_to_FD4_solver(
         output_precision=10,
         data_delta_between_two_snapsots = data_delta_between_two_snapsots,
         time_delta_between_two_snapsots = time_delta_between_two_snapsots,
-        clearDatabaseAfterFlush         = True,
+        clear_database_after_flush      = clear_database_after_flush,
     )
     dump_into_database_action_set.descend_invocation_order = (
         solver._action_set_compute_final_linear_combination.descend_invocation_order + 2
@@ -749,6 +771,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         max_meshcell_h,
         use_heap_storage,
         pde_terms_without_state,
+        second_order=False
     ):
         """!
 
@@ -770,6 +793,8 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
 
         """
         AbstractCCZ4Solver.__init__(self)
+        if (second_order):
+            AbstractCCZ4Solver.enable_second_order(self)
         exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStepWithEnclaveTasking.__init__(
             self,
             name=name,
@@ -779,8 +804,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             auxiliary_variables=0,
             min_meshcell_h=min_meshcell_h,
             max_meshcell_h=max_meshcell_h,
-            time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
-            / 16.0,
+            time_step_relaxation=self.Default_Time_Step_Size_Relaxation,
             pde_terms_without_state = pde_terms_without_state,
         )
 
@@ -822,17 +846,25 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
         number_of_entries_between_two_db_flushes,
         data_delta_between_two_snapsots,
         time_delta_between_two_snapsots,
-        tracer_unknowns=None,
+        clear_database_after_flush,
+        tracer_unknowns,
     ):
         """!
 
         Add tracer to project
         
+        This is a delegate to add_tracer_to_FD4_solver() which passes the 
+        object in as first argument.
+        
         Consult exahype2.tracer.DumpTracerIntoDatabase for an explanation of
         some of the arguments. Most of them are simply piped through to this 
         class.
 
-        project: exahype2.Project
+        @param project: exahype2.Project
+        
+        @param tracer_unknowns: Integer
+          You can set this variable to None. In this case, all variables are 
+          dumped.
 
         """
         add_tracer_to_FD4_solver(
@@ -843,6 +875,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
             number_of_entries_between_two_db_flushes,
             data_delta_between_two_snapsots,
             time_delta_between_two_snapsots,
+            clear_database_after_flush,
             tracer_unknowns,
         )
 
@@ -852,7 +885,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
 ):
     """!
 
-    CCZ4 solver using fourth-order finite differences and global adaptive time stepping incl enclave tasking
+    CCZ4 solver using fourth-order finite differences and global adaptive time stepping without enclave tasking
 
     Consult CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking please.
 
@@ -865,6 +898,7 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
         rk_order,
         min_meshcell_h,
         max_meshcell_h,
+        second_order=False
     ):
         """!
 
@@ -875,6 +909,8 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
 
         """
         AbstractCCZ4Solver.__init__(self)
+        if (second_order):
+            AbstractCCZ4Solver.enable_second_order(self)
         exahype2.solvers.rkfd.fd4.GlobalAdaptiveTimeStep.__init__(
             self,
             name=name,
@@ -884,8 +920,8 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
             auxiliary_variables=0,
             min_meshcell_h=min_meshcell_h,
             max_meshcell_h=max_meshcell_h,
-            time_step_relaxation=AbstractCCZ4Solver.Default_Time_Step_Size_Relaxation
-            / 16.0,
+            time_step_relaxation=self.Default_Time_Step_Size_Relaxation
+            ,
         )
 
         self._add_standard_includes()
@@ -916,7 +952,8 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
         number_of_entries_between_two_db_flushes,
         data_delta_between_two_snapsots,
         time_delta_between_two_snapsots,
-        tracer_unknowns=None,
+        clear_database_after_flush,
+        tracer_unknowns,
     ):
         """!
 
@@ -937,7 +974,8 @@ class CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
             number_of_entries_between_two_db_flushes,
             data_delta_between_two_snapsots,
             time_delta_between_two_snapsots,
-            tracer_unknowns,
+            clear_database_after_flush = clear_database_after_flush,
+            tracer_unknowns = tracer_unknowns,
         )
 
 
@@ -1049,7 +1087,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 
     deltaQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  ::applications::exahype2::ccz4::ncpSecondOrderFormulation(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+  ::applications::exahype2::ccz4::ncpSecondOrderFormulation(BTimesDeltaQ, Q, deltaQSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 """,
             flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term="""
@@ -1112,7 +1150,8 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
         number_of_entries_between_two_db_flushes,
         data_delta_between_two_snapsots,
         time_delta_between_two_snapsots,
-        tracer_unknowns=None,
+        clear_database_after_flush,
+        tracer_unknowns,
     ):
         """!
 
@@ -1176,7 +1215,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
             output_precision=10,
             data_delta_between_two_snapsots = data_delta_between_two_snapsots,
             time_delta_between_two_snapsots = time_delta_between_two_snapsots,
-            clearDatabaseAfterFlush         = True,
+            clear_database_after_flush         = True,
         )
         dump_into_database_action_set.descend_invocation_order = (
             self._action_set_compute_final_linear_combination.descend_invocation_order + 2
@@ -1276,7 +1315,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
 
     dQdxSerialised[i+normal*NumberOfUnknowns] = dQdx[i];
   }
-  ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+  ::applications::exahype2::ccz4::ncp(BgradQ, Q, dQdxSerialised, normal%Dimensions, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu, CCZ4SO);
 """,
             flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term="""
@@ -1309,7 +1348,8 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
         number_of_entries_between_two_db_flushes,
         data_delta_between_two_snapsots,
         time_delta_between_two_snapsots,
-        tracer_unknowns=None,
+        clear_database_after_flush,
+        tracer_unknowns,
     ):
         """!
 
@@ -1361,7 +1401,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
             output_precision=10,
             data_delta_between_two_snapsots = data_delta_between_two_snapsots,
             time_delta_between_two_snapsots = time_delta_between_two_snapsots,
-            clearDatabaseAfterFlush         = True,
+            clear_database_after_flush      = clear_database_after_flush,
         )
         dump_into_database_action_set.descend_invocation_order = (
             self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.descend_invocation_order

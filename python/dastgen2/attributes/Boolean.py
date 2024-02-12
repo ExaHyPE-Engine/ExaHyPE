@@ -97,7 +97,13 @@ class Boolean(Attribute):
             if self._initval is not None and not for_constructor:
                 namestring += " = " + str(self._initval)
 
-        if self.compress:
+        if (
+            self.compress
+            and not self._is_static
+            and not self._is_const_static
+            and not self._is_const
+            and not self._is_constexpr
+        ):
             packstring = "[[clang::pack]]"
             return [(namestring, typestring, packstring)]
         else:

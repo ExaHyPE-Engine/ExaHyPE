@@ -27,12 +27,12 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 This project and everyone participating in it is governed by the
 [Code of Conduct](./CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
-to <tobias.weinzierl@durham.ac.uk>.
+to tobias.weinzierl (at) durham.ac.uk.
 
 
 ## Join The Project Team
 
-We use Slack for internal communication. If you want join our workspace, write an email to <tobias.weinzierl@durham.ac.uk>.
+We use Slack for internal communication. If you want join our workspace, write an email to tobias.weinzierl (at) durham.ac.uk.
 
 
 ## I Have a Question
@@ -77,7 +77,7 @@ A good bug report shouldn't leave others needing to chase you up for more inform
 <!-- omit in toc -->
 #### How Do I Submit a Good Bug Report?
 
-> You must never report security related issues, vulnerabilities or bugs including sensitive information in public. Instead sensitive bugs must be sent by email to <tobias.weinzierl@durham.ac.uk>.
+> You must never report security related issues, vulnerabilities or bugs including sensitive information in public. Instead sensitive bugs must be sent by email to tobias.weinzierl (at) durham.ac.uk.
 
 We use Slack to report bugs and errors. If you run into an issue with the project:
 

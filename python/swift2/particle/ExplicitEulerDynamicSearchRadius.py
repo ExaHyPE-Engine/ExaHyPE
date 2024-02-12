@@ -101,7 +101,6 @@ class ExplicitEulerDynamicSearchRadius(Particle):
                     self.name
                 ),
                 includes="""
-                                         #include "Constants.h"
                                          #include "swift2/kernels/ParticleSearchRadiusCalculation.h"
                                          """,
             ),
@@ -126,7 +125,6 @@ class ExplicitEulerDynamicSearchRadius(Particle):
                 ),
                 touch_vertex_last_time_kernel=self.touch_particles_of_set_last_time_kernel,
                 includes="""
-                                         #include "Constants.h"
                                          #include "swift2/kernels/ParticleParticleInteraction.h"
                                          """,
             ),
@@ -140,7 +138,6 @@ class ExplicitEulerDynamicSearchRadius(Particle):
                     self.name, self.cfl_factor, self.initial_time_step_size
                 ),
                 includes="""
-                                         #include "Constants.h"
                                          #include "swift2/timestepping/Euler.h"
                                          #include "swift2/timestepping/GlobalTimeStepping.h"
                                          #include "swift2/timestepping/TimeStepping.h"
@@ -165,7 +162,6 @@ class ExplicitEulerDynamicSearchRadius(Particle):
                     "{PARTICLE}", self.name
                 ),
                 includes="""
-                                         #include "Constants.h"
                                          #include "swift2/statistics/Reports.h"
                                          #include "swift2/statistics/Statistics.h"
                                          """,

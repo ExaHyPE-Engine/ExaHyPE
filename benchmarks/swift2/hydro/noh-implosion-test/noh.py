@@ -15,154 +15,57 @@ import shutil
 ########################################################################################
 
 Parallelisation_DomainDecomposition = "domain-decomposition"
-Parallelisation_Tasks = "tasks"
+Parallelisation_SpawnTasksPerSweep = "task-tree"
+Parallelisation_TaskGraph = "task-graph"
+ParallelisationVariants = [
+    Parallelisation_DomainDecomposition,
+    Parallelisation_SpawnTasksPerSweep,
+    Parallelisation_TaskGraph,
+]
 
 Storage_Scattered = "scattered"
 Storage_ContinuousPerVertex = "continuous-per-vertex"
 Storage_GlobalContinuous = "global-continuous"
+StorageVariants = [Storage_ContinuousPerVertex, Storage_GlobalContinuous]
 
 Sorting_InsertSweeps = "insert-sorts"
 Sorting_OnTheFly = "sort-on-the-fly"
+SortingVariants = [Sorting_InsertSweeps, Sorting_OnTheFly]
 
-Enable_VectorisationOfAllComparisons = "vectorise-all"
-Enable_VectorisationOfDistanceChecks = "vectorise-distance-checks"
+KernelOptimisation_NoOptimisation = "no-optimisation"
+KernelOptimisation_OuterGuards = "outer-guards"
+KernelOptimisation_VectoriseAll = "vectorise-all"
+KernelOptimisation_VectoriseDistanceChecks = "vectorise-distance-checks"
 
-Choices = [
-    Parallelisation_DomainDecomposition + "." + Storage_Scattered,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_InsertSweeps,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_OnTheFly,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_InsertSweeps,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_OnTheFly,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_InsertSweeps
-    + "."
-    + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_OnTheFly
-    + "."
-    + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_InsertSweeps
-    + "."
-    + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_OnTheFly
-    + "."
-    + Enable_VectorisationOfDistanceChecks,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_InsertSweeps
-    + "."
-    + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_ContinuousPerVertex
-    + "."
-    + Sorting_OnTheFly
-    + "."
-    + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_InsertSweeps
-    + "."
-    + Enable_VectorisationOfAllComparisons,
-    Parallelisation_DomainDecomposition
-    + "."
-    + Storage_GlobalContinuous
-    + "."
-    + Sorting_OnTheFly
-    + "."
-    + Enable_VectorisationOfAllComparisons,
-    #    "continuous-per-vertex-vectorise",
-    #    "global-continuous-vectorise",
-    #    "tasks",
+BasicKernelOptimisationVariants = [
+    KernelOptimisation_NoOptimisation,
+    KernelOptimisation_OuterGuards,
+]
+AllKernelOptimisationVariants = [
+    KernelOptimisation_NoOptimisation,
+    KernelOptimisation_OuterGuards,
+    KernelOptimisation_VectoriseAll,
+    KernelOptimisation_VectoriseDistanceChecks,
 ]
 
 
-def use_continuous_per_vertex_data_layout(realisation):
-    """!
-
-    @param realisation: String from Choices
-
-    """
-    return realisation.split(".")[1] == Storage_ContinuousPerVertex
-
-
-def use_globally_continuous_data_layout(realisation):
-    """!
-
-    @param realisation: String from Choices
-
-    """
-    return realisation.split(".")[1] == Storage_GlobalContinuous
-
-
-def use_vectorised_kernels(realisation):
-    """!
-
-    @param realisation: String from Choices
-
-    """
-    return (
-        len(realisation.split(".")) > 3
-        and realisation.split(".")[3] == Enable_Vectorisation
-    )
-
-
-def use_on_the_fly_sorting(realisation):
-    """!
-
-    @param realisation: String from Choices
-
-    """
-    return (
-        len(realisation.split(".")) > 2
-        and realisation.split(".")[2] == Sorting_OnTheFly
-    )
-
-
-def use_separate_sorting_sweeps(realisation):
-    """!
-
-    @param realisation: String from Choices
-
-    """
-    return (
-        len(realisation.split(".")) > 2
-        and realisation.split(".")[2] == Sorting_InsertSweeps
-    )
+Choices = (
+    [
+        parallelisation_variant + "." + storage + "." + sorting + "." + kernel_optimisation
+        for parallelisation_variant in ParallelisationVariants
+        for storage                 in [Storage_Scattered]
+        for sorting                 in SortingVariants
+        for kernel_optimisation     in BasicKernelOptimisationVariants
+    ]
+    +
+    [
+        parallelisation_variant + "." + storage + "." + sorting + "." + kernel_optimisation
+        for parallelisation_variant in ParallelisationVariants
+        for storage                 in StorageVariants
+        for sorting                 in SortingVariants
+        for kernel_optimisation     in AllKernelOptimisationVariants
+    ]
+)
 
 
 if __name__ == "__main__":
@@ -253,12 +156,12 @@ if __name__ == "__main__":
         help="Peano4 directory",
     )
     parser.add_argument(
-        "-asserts",
-        "--asserts",
-        dest="asserts",
-        action="store_true",
-        default=False,
-        help="Switch on assertions",
+        "-m",
+        "--mode",
+        dest="mode",
+        choices=["release", "stats", "trace", "asserts", "debug"],
+        default="release",
+        help="Pick build type",
     )
     parser.add_argument(
         "-rea",
@@ -296,33 +199,66 @@ if __name__ == "__main__":
     project = swift2.Project(
         namespace=project_namespace, project_name="Noh", executable=args.output_file
     )
-
+    
     if (
-        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
-        and args.realisation.split(".")[1] == Storage_Scattered
-    ):
-        pass
-    elif args.realisation.split(".")[
-        0
-    ] == Parallelisation_DomainDecomposition and use_separate_sorting_sweeps(
-        args.realisation
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
+        and 
+        args.realisation.split(".")[1] == Storage_Scattered
+        and 
+        args.realisation.split(".")[2] == Sorting_InsertSweeps
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_insert_dummy_sweeps_for_coalesced_memory_access
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
         )
-    elif args.realisation.split(".")[
-        0
-    ] == Parallelisation_DomainDecomposition and use_on_the_fly_sorting(
-        args.realisation
+    elif (
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
+        and 
+        args.realisation.split(".")[1] == Storage_Scattered
+        and 
+        args.realisation.split(".")[2] == Sorting_OnTheFly
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_for_coalesced_memory_access
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.graphcompiler.map_initialisation_steps_onto_separate_mesh_traversals_for_coalesced_memory_access
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_scattered_memory
+        )
+    elif (
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
+        and 
+        (
+            args.realisation.split(".")[1] == Storage_ContinuousPerVertex
+            or
+            args.realisation.split(".")[1] == Storage_GlobalContinuous
+        )
+        and 
+        args.realisation.split(".")[2] == Sorting_InsertSweeps
+    ):
+        project.algorithm_steps_task_graph_compiler = (
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory
+        )
+        project.initialisation_steps_task_graph_compiler = (
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory
+        )
+    elif (
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
+        and 
+        (
+            args.realisation.split(".")[1] == Storage_ContinuousPerVertex
+            or
+            args.realisation.split(".")[1] == Storage_GlobalContinuous
+        )
+        and 
+        args.realisation.split(".")[2] == Sorting_OnTheFly
+    ):
+        project.algorithm_steps_task_graph_compiler = (
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory
+        )
+        project.initialisation_steps_task_graph_compiler = (
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory
         )
     else:
         assert False, "realisation " + args.realisation + " not supported"
@@ -351,17 +287,24 @@ if __name__ == "__main__":
         )
     )
 
-    particle_interaction_kernel_realisation = (
-        swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.DEFAULT
-    )
-    if Enable_VectorisationOfDistanceChecks in args.realisation:
+    if args.realisation.split(".")[3] == KernelOptimisation_NoOptimisation:
         particle_interaction_kernel_realisation = (
-            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_DISTANCE_CHECKS_AND_UNARY_OPERATIONS
+            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.NO_OPTIMISATION
         )
-    elif Enable_VectorisationOfAllComparisons in args.realisation:
+    elif args.realisation.split(".")[3] == KernelOptimisation_OuterGuards:
+        particle_interaction_kernel_realisation = (
+            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.USE_OUTER_GUARDS
+        )
+    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseDistanceChecks:
+        particle_interaction_kernel_realisation = (
+            swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_WITH_SEPARATE_DISTANCE_CHECKS
+        )
+    elif args.realisation.split(".")[3] == KernelOptimisation_VectoriseAll:
         particle_interaction_kernel_realisation = (
             swift2.particle.SPHLeapfrogFixedSearchRadius.ParticleKernelRealisation.VECTORISE_ALL
         )
+    else:
+        raise NotImplemented()
 
     particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
         name=name,
@@ -374,7 +317,6 @@ if __name__ == "__main__":
         min_h=max_cell_size,
         max_h=max_cell_size,
         particle_interaction_kernel_realisation=particle_interaction_kernel_realisation,
-        asserts=args.asserts,
     )
 
     ########################################################################################
@@ -456,14 +398,15 @@ if __name__ == "__main__":
     # the particle_set to the project
     particle_set = project.add_particle_species(particle)
 
-    if use_continuous_per_vertex_data_layout(args.realisation):
+
+    if args.realisation.split(".")[1]==Storage_ContinuousPerVertex:
         particle_set.generator = (
             peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
                 particle_set
             )
         )
         print("Benchmark: Use continuous per vertex data layout")
-    elif use_globally_continuous_data_layout(args.realisation):
+    elif args.realisation.split(".")[1]==Storage_GlobalContinuous:
         particle_set.generator = (
             peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
         )
@@ -475,10 +418,16 @@ if __name__ == "__main__":
             )
         )
 
-    if args.asserts:
-        build_mode = peano4.output.CompileMode.Asserts
-    else:
+    if args.mode == "release":
         build_mode = peano4.output.CompileMode.Release
+    if args.mode == "stats":
+        build_mode = peano4.output.CompileMode.Stats
+    if args.mode == "asserts":
+        build_mode = peano4.output.CompileMode.Asserts
+    if args.mode == "trace":
+        build_mode = peano4.output.CompileMode.Trace
+    if args.mode == "debug":
+        build_mode = peano4.output.CompileMode.Debug
 
     # Set Peano4 simulation parameters ---------------------------------------------
     offset = [0, 0, 0]
@@ -551,7 +500,7 @@ if __name__ == "__main__":
             initialisation_call=initialisation_snippet,
             distance_between_particles_along_one_axis=1.0 / args.particle_number,
             additional_includes="""
-    #include "swift2/legacy/equation_of_state.h"
+    #include "swift2/kernels/legacy/equation_of_state.h"
     """,
         )
     )
@@ -579,7 +528,6 @@ if __name__ == "__main__":
     # which returns an object that holds global information about this particle
     # type.
     ###############################################################################
-    # particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( "particles", particle_set, time_stamp_evaluation=peano4.toolbox.particles.PlotParticlesInVTKFormat.CountTimeSteps )
     particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
         "particles",
         particle_set,
@@ -593,8 +541,6 @@ if __name__ == "__main__":
     particle_plotter.add_attribute_to_plot(particle.pressure, 1)
     particle_plotter.add_attribute_to_plot(particle.u, 1)
     particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-    particle_plotter.add_attribute_to_plot(particle.f, 1)
-    particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
     particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
     project.algorithm_step_plot.add_action_set(particle_plotter)
 

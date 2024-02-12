@@ -11,7 +11,7 @@
 #include "Constants.h"
 
 #include "tarch/multicore/Lock.h"
-#include "exahype2/NonCriticalAssertions.h"
+#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );

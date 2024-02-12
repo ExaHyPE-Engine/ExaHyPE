@@ -11,6 +11,27 @@
 namespace peano4 {
   namespace datamanagement {
     struct VertexMarker;
+
+    /**
+     * Reconstruct parent vertex position
+     *
+     * Whenever we run into a vertex event, this event is triggered from a
+     * cell's point of view. You can find out from the VertexMarker where
+     * within this cell the vertex is for which you got a vertex event.
+     * Likewisely, you can also reconstruct the spatial arrangement of
+     * this cell's parent cell. It is not a core vertex marker routine,
+     * which is frequently used, so we outsource it into a separate function
+     * of its own. At the moment, we are only aware of some debugging, tracing
+     * facilities which need this function.
+     *
+     * @param parentVertexPositionWithinParentCell follows Peano's
+     *   dimension-generic lexicographic enumeration. You can also pass in an
+     *   integer, which will automatically be packed into a bitset then.
+     */
+    tarch::la::Vector<Dimensions, double> reconstructXOfParentVertex(
+      const VertexMarker&             marker,
+      const std::bitset<Dimensions>&  parentVertexPositionWithinParentCell
+    );
   } // namespace datamanagement
 } // namespace peano4
 
@@ -84,11 +105,13 @@ private:
 
   int _select;
 
-  std::bitset<TwoPowerD> _hasBeenRefined;
-  std::bitset<TwoPowerD> _willBeRefined;
-  std::bitset<TwoPowerD> _isLocal;
-  std::bitset<TwoPowerD> _isHanging;
-  std::bitset<TwoPowerD> _isParentVertexLocal;
+  [[clang::pack]] std::bitset<TwoPowerD>    _hasBeenRefined;
+  [[clang::pack]] std::bitset<TwoPowerD>    _willBeRefined;
+  [[clang::pack]] std::bitset<TwoPowerD>    _isLocal;
+  [[clang::pack]] std::bitset<TwoPowerD>    _isHanging;
+  [[clang::pack]] std::bitset<TwoPowerD>    _isParentVertexLocal;
+  [[clang::pack]] std::bitset<ThreePowerD>  _isAdjacentCellLocal;
+  [[clang::pack]] std::bitset<TwoPowerD>    _isParentOfSubtree;
 
   bool _isParentCellLocal;
 
@@ -154,6 +177,9 @@ public:
    * @return Position in space of currently selected vertex.
    */
   tarch::la::Vector<Dimensions, double> x() const;
+
+  bool isParentOfSubtree(int i) const;
+  bool isParentOfSubtree() const;
 
   tarch::la::Vector<Dimensions, double> h() const;
 
@@ -244,13 +270,38 @@ public:
    * (0,1,2,3)^d and denotes the vertex position within a 3x3 or 3x3x3
    * respectively mesh.
    *
+   * You can reconstruct the left bottom vertex of the coarser cell through
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * marker.x() - tarch::la::multiplyComponents(
+   *   tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+   *   marker.h()
+   * )
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * If you want to know a particular position of a coarse grid vertex
+   * identified through the bitset target, you can do through
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * marker.x()
+   * -
+   * tarch::la::multiplyComponents(
+   *   tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()),
+   *   marker.h()
+   * )
+   * +
+   * tarch::la::multiplyComponents(
+   *   tarch::la::Vector<Dimensions,double>(target),
+   *   3.0*marker.h()
+   * )
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
    * @see coincidesWithCoarseGridVertex()
    */
   tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell() const;
   tarch::la::Vector<Dimensions, int> getRelativePositionWithinFatherCell(int i) const;
 
-
   /**
+   * Does vertex spatially coincide with coarser level's vertex
+   *
    * The vertex (0,0,0) coincides with a coarse grid vertex, the (3,0,0) does
    * so too, and so forth.
    *
@@ -311,4 +362,38 @@ public:
    *
    */
   tarch::la::Vector<Dimensions, int> getRelativeAdjacentCell(const tarch::la::Vector<Dimensions, double>& x) const;
+
+  /**
+   * Return centre of cell from which this vertex marker is constructed
+   *
+   * Peano runs through the mesh element-wisely. That is, each
+   * touchVertexFirstTime() and touchVertexLastTime() is called from a cell.
+   * It looks at its @f$ 2^d @f$ adjacent vertices and then invokes the vertex
+   * events for these vertices if necessary. This routine yields the centre of
+   * this cell.
+   */
+  tarch::la::Vector<Dimensions, double> getInvokingCellCentre() const;
+
+  /**
+   * See getInvokingCellCentre(). This routine gives you the centre of its
+   * parent cell.
+   */
+  tarch::la::Vector<Dimensions, double> getInvokingParentCellsCentre() const;
+
+  /**
+   * Are adjacent cells of selected vertex local
+   *
+   * ## Correctness
+   *
+   * I originally thought I could add the assertion
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *   assertion2( result.all() or isAdjacentToParallelDomainBoundary(), result, toString() );
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * However, this assertion fails at the global domain boundary, where some
+   * adjacent cells are not local (they are outside) and the vertices
+   * nevertheless are not parallel boundary vertices either.
+   */
+  std::bitset<TwoPowerD> areAdjacentCellsLocal() const;
 };

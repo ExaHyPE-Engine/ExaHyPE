@@ -1,6 +1,8 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
+import peano4.toolbox.particles.api
+
 from .Particle import Particle
 from .PlotParticlesInVTKFormat import PlotParticlesInVTKFormat
 from .ParticleAMR import ParticleAMR
@@ -28,19 +30,6 @@ from .UpdateParticle_SingleLevelInteraction_ContiguousParticles import (
 from .ParticleTreeAnalysis import create_cell_marker
 from .ParticleTreeAnalysis import ParticleTreeAnalysis
 
-
-from .UpdateParticleGridAssociation_Reassign import (
-    UpdateParticleGridAssociation_Reassign,
-)
-from .UpdateParticleGridAssociation_LiftDrop import (
-    UpdateParticleGridAssociation_LiftDrop,
-)
-from .UpdateParticleGridAssociation_BucketSort import (
-    UpdateParticleGridAssociation_BucketSort,
-)
-
-
-from .UpdateParallelState import UpdateParallelState
 
 from .GatherParticlesInMemoryPool import GatherParticlesInMemoryPool
 

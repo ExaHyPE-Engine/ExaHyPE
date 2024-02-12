@@ -32,12 +32,14 @@ class InsertParticlesByCoordinates(
         super(InsertParticlesByCoordinates, self).__init__(
             particle_set=particle_set,
             coordinates=coordinates,
-            initialisation_call="""
+            initialisation_call=f"""
       particle->setNumber(0,_spacetreeId);
       particle->setNumber(1,_particleNumberOnThisTree);
+      particle->setMoveState(globaldata::{particle_set.particle_model.name}::MoveState::NotMovedYet);
+
       _particleNumberOnThisTree++;
       
-      logInfo( "touchVertexFirstTime(...)", "insert particle " << particle->toString() << " into " << marker.toString() );
+      logInfo( "touchVertexFirstTime(...)", "insert particle at " << particle->getX() );
       """,
             additional_includes=additional_includes
             + """  
@@ -53,7 +55,6 @@ class InsertParticlesByCoordinates(
             super(InsertParticlesByCoordinates, self).get_constructor_body()
             + """
   _particleNumberOnThisTree = 0;
-  _spacetreeId              = treeNumber;
 """
         )
 
@@ -62,6 +63,5 @@ class InsertParticlesByCoordinates(
             super(InsertParticlesByCoordinates, self).get_attributes()
             + """
   int _particleNumberOnThisTree;
-  int _spacetreeId;
 """
         )

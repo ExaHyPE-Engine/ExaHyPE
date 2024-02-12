@@ -3,8 +3,8 @@
 #include "Constants.h"
 #include "exahype2/RefinementControl.h"
 
-#include "exahype2/NonCriticalAssertions.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   applications::exahype2::euler::sphericalaccretion::SSInfall::_log( "applications::exahype2::euler::sphericalaccretion::SSInfall" );
@@ -308,7 +308,7 @@ void applications::exahype2::euler::sphericalaccretion::SSInfall::initialConditi
   Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
 */
   if ( Q[0]<1e-12 ){
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density become 0 at volume: ["+std::to_string(volumeCentre(0))+", "+std::to_string(volumeCentre(1))+", "+std::to_string(volumeCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
+    ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density become 0 at volume: ["+std::to_string(volumeCentre(0))+", "+std::to_string(volumeCentre(1))+", "+std::to_string(volumeCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
   }
 
   for (int i=5; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
@@ -519,7 +519,7 @@ void applications::exahype2::euler::sphericalaccretion::SSInfall::boundaryCondit
 /*
   assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
   if ( Qinside[0]<1e-12 ){
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Qinside[0]>0", "density become 0 at face: ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Qinside[0])+" "+std::to_string(Qinside[1])+" "+std::to_string(Qinside[2])+" "+std::to_string(Qinside[3])+" "+std::to_string(Qinside[4])+".");
+    ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "Qinside[0]>0", "density become 0 at face: ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Qinside[0])+" "+std::to_string(Qinside[1])+" "+std::to_string(Qinside[2])+" "+std::to_string(Qinside[3])+" "+std::to_string(Qinside[4])+".");
   }
 */
 
@@ -647,7 +647,7 @@ double applications::exahype2::euler::sphericalaccretion::SSInfall::maxEigenvalu
 
   if ( p<0 ) {
     p=0;
-    //::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", "negative pressure "+std::to_string(p)+" detected at t=" + std::to_string(t) + " at face position ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
+    //::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", "negative pressure "+std::to_string(p)+" detected at t=" + std::to_string(t) + " at face position ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
   }
 
   // nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );

@@ -98,20 +98,54 @@ class ActionSet(object):
     to which action set.
 
 
-    descend_invocation_order: Integer
+    ## Order of invocation and concurrency level
+
+    There are two properties which feed into the order in which actions are 
+    executed:
+
+    - descend_invocation_order: 
       Each action set has a descend_invocation_order. The action sets are invoked later
       in order following their descend_invocation_order throughout the steps down within
       the tree. Their call order is inverted when we backtrace within the
       tree. The order allows you to add the action sets in a different
       order than they are actually used later on. See peano4.solversteps.Step.add_action_set().
 
-    parallel: Boolean
-      If two action sets have the same descend_invocation_order and if they all holds the
-      parallel flag, then the observer may run them in parallel.
+    - parallel:
+      Different action sets might be run in parallel if this flag is set.
+      
+    Assume there are four action sets A, B, C and D all tied to an algorithmic 
+    step. The following properties hold:
+    
+    - A: order=4,  parallel=False
+    - B: order=-1,  parallel=False
+    - C: order=6,  parallel=True
+    - D: order=6,  parallel=True
+
+    When the traversal hits touchVertexFirstTime(), it will call
+    
+    - B.touchVertexFirstTime() (as this one has the smallest order value), then
+    - A.touchVertexFirstTime(), and finally
+    - C.touchVertexFirstTime() and D.touchVertexFirstTime() in parallel.
+    
+    For touchCellFirstTime(), the same order is used. However, when we go up 
+    the tree, we invert the order. That is
+
+    - C.touchVertexLastTime() and D.touchVertexLastTime() are invoked in 
+      parallel before
+    - A.touchVertexLastTime(), which in turn precedes
+    - B.touchVertexLastTime().
+
+    @param parallel: Boolean
+      See section on "Order of invocation and concurrency level" in class
+      documentation.
+
+    @param descend_invocation_order: Integer
+      See section on "Order of invocation and concurrency level" in class
+      documentation.
 
     """
 
-    def __init__(self, descend_invocation_order=0, parallel=True):
+    def __init__(self, descend_invocation_order=0, parallel=False):
         self.descend_invocation_order = descend_invocation_order
         self.parallel = parallel
         pass

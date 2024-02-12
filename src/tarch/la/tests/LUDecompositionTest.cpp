@@ -15,6 +15,7 @@ tarch::la::tests::LUDecompositionTest::LUDecompositionTest():
 void tarch::la::tests::LUDecompositionTest::run() {
   testMethod (testLUNoPivoting);
   testMethod (testLU);
+  testMethod (testInversion);
 }
 
 
@@ -57,4 +58,31 @@ void tarch::la::tests::LUDecompositionTest::testLU() {
     }
   }
 */
+}
+
+void tarch::la::tests::LUDecompositionTest::testInversion(){
+  #ifdef UseLapack
+  
+  // checking if Lapack correctly configured. Invert
+  // a diagonal matrix.
+
+  Matrix<5,5,double> A = {
+    1,0,0,0,0,
+    0,2,0,0,0,
+    0,0,3,0,0,
+    0,0,0,4,0,
+    0,0,0,0,5
+  };
+
+  Matrix<5,5,double> AInverted = {
+    1,0,0,0,0,
+    0,1./2,0,0,0,
+    0,0,1./3,0,0,
+    0,0,0,1./4,0,
+    0,0,0,0,1./5
+  };
+
+  validateEquals( invert(A), AInverted );
+  
+  #endif
 }

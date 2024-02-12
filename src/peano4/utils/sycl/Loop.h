@@ -12,7 +12,7 @@
  * function calls, semaphores, etc. Therefore, this is maps onto a plain
  * for.
  */
-#define parallelForWithDynamicScheduling(counter, max, loopParallelism) \
+#define parallelForWithSchedulerInstructions(counter, max, loopParallelism) \
   for( int counter = 0; counter < max; counter++ ) {
 
 #define endParallelFor }
@@ -59,7 +59,7 @@
 
 
 
-#define simtForWithDynamicScheduling(counter, max, loopParallelism) \
+#define simtForWithSchedulerInstructions(counter, max, loopParallelism) \
   tarch::multicore::getHostSYCLQueue().submit([&](auto& handle) { \
     handle.parallel_for( \
       ::sycl::range<1>{static_cast<std::size_t>(max)}, \

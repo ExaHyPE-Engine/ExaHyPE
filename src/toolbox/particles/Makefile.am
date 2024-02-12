@@ -11,9 +11,11 @@ ToolboxParticles_SOURCES = \
   FileReader.cpp \
   FileReaderHDF5.cpp \
   MultiscaleTransitions.cpp \
+  ParticleSet.cpp \
   TrajectoryDatabase.cpp \
   UnitTests.cpp \
   particles.cpp \
+  assignmentchecks/TracingAPI.cpp \
   potentials/Springs.cpp \
   tests/MultiscaleTransitionsTest.cpp \
   tests/TestParticle.cpp

@@ -80,7 +80,7 @@ class Enumeration(Attribute):
             ("set" + accessor_name + "(" + accessor_name + " value)", "void"),
             # This method provides a way to get enums as strings.
             (
-                "cast" + accessor_name + "ToString(" + accessor_name + " value)",
+                "toString(" + accessor_name + " value)",
                 toStringQualifier + " std::string",
             ),
         ]
@@ -100,7 +100,7 @@ class Enumeration(Attribute):
             return "  return _" + self._name + ";\n"
         elif signature.startswith("set") and not self.use_data_store:
             return "  _" + self._name + " = value;\n"
-        elif signature.startswith("cast") and not self.use_data_store:
+        elif signature.startswith("toString") and not self.use_data_store:
             return self._get_to_string_method_body()
         else:
             assert False
@@ -111,7 +111,7 @@ class Enumeration(Attribute):
 
     def _get_to_string_method_body(self):
         """
-        This function generates the method body for the castAttrToString(value)
+        This function generates the method body for the toString(value)
         method. The idea is to have an easy way to access enum variants as
         strings for meaningful printouts, such as in the yourDataModel.toString()
         method.
@@ -145,4 +145,4 @@ class Enumeration(Attribute):
         if self.use_data_store:
             varname = "_dataStore._" + self._name
 
-        return "cast" + accessor_name + "ToString(" + varname + ")"
+        return "toString(" + varname + ")"

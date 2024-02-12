@@ -24,8 +24,8 @@
 #endif
 
 tarch::logging::Log tarch::mpi::Rank::_log("tarch::mpi::Rank");
-int     tarch::mpi::Rank::_maxTags     = -1;
-int     tarch::mpi::Rank::_tagCounter  = 0;
+int     tarch::mpi::Rank::_maxTags       = -1;
+int     tarch::mpi::Rank::_tagCounter    =  0;
 
 tarch::mpi::Rank  tarch::mpi::Rank::_singleton;
 
@@ -521,7 +521,7 @@ bool tarch::mpi::Rank::init([[maybe_unused]] int* argc, [[maybe_unused]] char***
   #endif
 
   _initIsCalled = true;
-  return true;
+  return _initIsCalled;
 }
 
 

@@ -6,11 +6,9 @@
 // **********************************************************************************************
 #include "{{CLASSNAME}}.h"
 
-// user includes
 {{SOLVER_INCLUDES}}
 
 #include "config.h"
-
 
 #if GPUOffloadingSYCL>0
 #include "tarch/multicore/sycl/SYCL.h"
@@ -42,8 +40,8 @@
 #include <string.h>
 #include <memory>
 
-tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"));
+tarch::logging::Log {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+int                 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"));
 
 
 int {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getEnclaveTaskTypeId() {
@@ -68,22 +66,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   );
 
   {% if STATELESS_PDE_TERMS %}
-  if ( repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
+  if (repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(
       marker.x(),
       marker.h(),
-      t,
-      dt
+      timeStamp,
+      timeStepSize
   )) {
-    ::exahype2::fd::{{KERNEL_NAMESPACE}}::{{FUSED_COMPUTE_KERNEL_CALL_CPU}}
-  }
-  else
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS}}
+  } else
   {% endif %}
 
-  ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_SOLVER_CALL}}
+  ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{VOLUMETRIC_COMPUTE_KERNEL_CALL}}
 }
 
-
-//_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker& marker,
@@ -96,15 +91,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     marker,
     t,
     dt,
-    #if Dimensions==2
+#if Dimensions==2
     tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory),
     {{NUMBER_OF_DOFS_PER_CELL_2D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_2D}}* {{NUMBER_OF_UNKNOWNS}},
-    #else
+#else
     tarch::allocateMemory({{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}), tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory),
     {{NUMBER_OF_DOFS_PER_CELL_3D}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
     {{NUMBER_OF_DOFS_PER_CELL_3D}}* {{NUMBER_OF_UNKNOWNS}},
-    #endif
+#endif
     [&]() -> void {
       applyKernelToCell(
         _marker,
@@ -117,24 +112,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
       tarch::freeMemory( _inputValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
     }
   )
-  #ifdef UseSmartMPI
+#ifdef UseSmartMPI
   , smartmpi::Task(_enclaveTaskTypeId)
-  #endif
+#endif
 {
   // @todo Name is not good. Should be SOLVE_VOLUME_INTEGRAL_ENCLAVE_TASK, so we can
   //       distinguish different task types once we map other steps onto tasks, too
-  setPriority( {{ENCLAVE_TASK_PRIORITY}} );
-  std::copy_n( copyOfLinearCombinationOfPreviousShots, _numberOfInputValues, _inputValues );
+  setPriority({{ENCLAVE_TASK_PRIORITY}});
+  std::copy_n(copyOfLinearCombinationOfPreviousShots, _numberOfInputValues, _inputValues);
 }
 
 
 #ifdef UseSmartMPI
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
-  #ifdef UseSmartMPI
+#ifdef UseSmartMPI
   return true;
-  #else
+#else
   return false;
-  #endif
+#endif
 }
 
 
@@ -329,6 +324,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 
 
 {% if STATELESS_PDE_TERMS %}
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   return repositories::{{SOLVER_INSTANCE}}.cellCanUseStatelessPDETerms(
     _marker.x(),
@@ -343,7 +339,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
  * Also merge the current task
  */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
-  logDebug( "fuse(...)", "asked to fuse " << (otherTasks.size()+1) << " tasks into one large GPU task" );
+  logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+    << " asked to fuse " << (otherTasks.size() + 1) << " tasks into one large GPU task on device " << targetDevice);
 
   ::exahype2::CellData cellData(otherTasks.size()+1);
   int currentTask = 0;
@@ -353,8 +350,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     cellData.cellSize[currentTask]    = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
     cellData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
     cellData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
-    cellData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_id;
-    cellData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+    cellData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_taskNumber;
+    cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     delete p;
     currentTask++;
   }
@@ -363,9 +360,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   cellData.cellSize[currentTask]    = _marker.h();
   cellData.t[currentTask]           = _t;
   cellData.dt[currentTask]          = _dt;
-  cellData.id[currentTask]          = _id;
-  cellData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
-
+  cellData.id[currentTask]          = _taskNumber;
+  cellData.QOut[currentTask]        = tarch::allocateMemory(_numberOfResultValues, tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
 
   //
   // ==============
@@ -374,45 +370,45 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   bool foundOffloadingBranch = false;
 
-  
   #if defined(GPUOffloadingOMP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::dg::rusanov::omp::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::omp::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
   #endif
 
   #if defined(GPUOffloadingHIP)
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    ::exahype2::dg::rusanov::hip::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::hip::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
   #endif
 
   #if defined(GPUOffloadingSYCL)
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
-
-    ::exahype2::dg::rusanov::sycl::{{FUSED_VOLUMETRIC_KERNEL_CALL_GPU}}
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::sycl::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_GPU}}
   }
   #endif
 
   if (not foundOffloadingBranch) {
-    ::exahype2::dg::rusanov::{{FUSED_VOLUMETRIC_KERNEL_CALL_CPU}}
+    logDebug("fuse(...)", "Rank " << tarch::mpi::Rank::getInstance().getRank()
+      << " cannot find offloading branch for device " << targetDevice << ". Process fused tasks on the CPU.");
+    ::exahype2::dg::{{KERNEL_NAMESPACE}}::{{FUSED_VOLUMETRIC_COMPUTE_KERNEL_CALL_STATELESS_CPU}}
   }
 
-  
   //
   // ==================
   // Bring back results
   // ==================
   //
   for (int i=0; i<cellData.numberOfCells; i++) {
-    tarch::freeMemory( cellData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory );
+    //tarch::freeMemory(cellData.QIn[i], tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory);
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(cellData.id[i], _numberOfResultValues, cellData.QOut[i], cellData.maxEigenvalue[i]);
   }
 
-  // Don't rerun, so return false
+  // Don't rerun, so return false.
   return false;
 }
+
 {% endif %}
