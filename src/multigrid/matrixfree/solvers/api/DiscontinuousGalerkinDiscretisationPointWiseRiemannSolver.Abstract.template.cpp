@@ -63,6 +63,7 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
+  logTraceInWith2Arguments("getMassMatrix", cellCentre, cellSize);
 {% if MASS_MATRIX!=[] %}
 static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
   {% for MATRIX in MASS_MATRIX %}
@@ -87,6 +88,7 @@ static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > ma
 {% endif %}
   static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
 
+  logTraceOutWith1Argument("getMassMatrix", result);
   return result;
 }
 
@@ -94,6 +96,7 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
+  logTraceInWith2Arguments("getLocalAssemblyMatrix", cellCentre, cellSize);
 {% if ASSEMBLY_MATRIX!=[] %}
 static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
   {% for MATRIX in ASSEMBLY_MATRIX %}
@@ -117,6 +120,7 @@ static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > ma
 
   static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
 
+  logTraceOutWith1Argument("getLocalAssemblyMatrix", result);
   return result;
 }
 
@@ -125,6 +129,7 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProject
   const tarch::la::Vector<Dimensions, double>&  cellSize
 )
 {
+  logTraceInWith2Arguments("getFaceFromCellMatrix", cellCentre, cellSize);
 {% if FACE_FROM_CELL_PROJECTION!=[] %}
 static std::vector< tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > > matrices = {
   {% for MATRIX in FACE_FROM_CELL_PROJECTION %}
@@ -147,6 +152,7 @@ static std::vector< tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellU
 {% endif %}
 
   static tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
+  logTraceOutWith1Argument("getFaceFromCellMatrix", result);
   return result;
 } 
 
@@ -155,6 +161,7 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAM
   const tarch::la::Vector<Dimensions, double>&  cellSize
 )
 {
+  logTraceInWith2Arguments("getCellFromFaceMatrix", cellCentre, cellSize);
 {% if CELL_FROM_FACE_PROJECTION!=[] %}
 static std::vector< tarch::la::Matrix<CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > > matrices = {
   {% for MATRIX in CELL_FROM_FACE_PROJECTION %}
@@ -177,6 +184,7 @@ static std::vector< tarch::la::Matrix<CellUnknowns, FaceUnknownsSolution * TwoTi
 {% endif %}
 
   static tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
+  logTraceOutWith1Argument("getCellFromFaceMatrix", result);
   return result;
 } 
 

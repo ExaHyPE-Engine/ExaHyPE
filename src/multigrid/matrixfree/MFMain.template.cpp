@@ -3,7 +3,8 @@
 #include "observers/CreateGrid.h"
 #include "observers/InitSolution.h"
 #include "observers/UpdateCell.h"
-#include "observers/RiemannSolve.h"
+#include "observers/ProjectOntoFace.h"
+#include "observers/UpdateFaceSolution.h"
 #include "observers/Solve.h"
 #include "observers/Plot.h"
 
@@ -78,11 +79,19 @@ bool selectNextAlgorithmicStep() {
       case repositories::StepRepository::Steps::UpdateCell:
       {
         peano4::parallel::Node::getInstance().setNextProgramStep(
-          repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::RiemannSolve )
+          repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::ProjectOntoFace )
         );
       } break;
 
-      case repositories::StepRepository::Steps::RiemannSolve:
+      case repositories::StepRepository::Steps::ProjectOntoFace:
+      {
+        peano4::parallel::Node::getInstance().setNextProgramStep(
+          repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::UpdateFaceSolution )
+        );
+      } break;
+
+
+      case repositories::StepRepository::Steps::UpdateFaceSolution:
       {
         peano4::parallel::Node::getInstance().setNextProgramStep(
           repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
@@ -188,17 +197,30 @@ void step() {
       }
       break;
 
-    case repositories::StepRepository::Steps::RiemannSolve:
+    case repositories::StepRepository::Steps::ProjectOntoFace:
       {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "riemann-solve" );
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "project-onto-face" );
 
-        observers::RiemannSolve  observer;
+        observers::ProjectOntoFace  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         initMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
+
+      case repositories::StepRepository::Steps::UpdateFaceSolution:
+      {
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "update-face-sol" );
+
+        observers::UpdateFaceSolution  observer;
+        watch.start();
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        initMeasurement.setValue( watch.getCalendarTime() );
+      }
+      break;
+    
     
     case repositories::StepRepository::Steps::Solve:
       {

@@ -34,7 +34,7 @@ class UpdateCell(ActionSet):
     for (int f=0; f<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; f++)
     {
       // project the face solution onto the cell; add to r
-      r -= projection(f);
+      r(f) -= projection(f);
     }
 
     // also subtract A^cc u^c
@@ -60,6 +60,163 @@ class UpdateCell(ActionSet):
     logTraceOut("UpdateCell::TCFT");
   }
   """
+
+
+  def __init__(self,
+               solver,
+               descend_invocation_order=0,
+               parallel=True):
+    super( UpdateCell, self ).__init__(
+      descend_invocation_order,
+      parallel
+    )
+    self.d = {}
+    self.d["SOLVER_INSTANCE"]    = solver.instance_name()
+    self.d["SOLVER_NAME"]        = solver.typename()
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      pass
+    return result
+
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_")
+    
+  def user_should_modify_template(self):
+    """!
+    
+    The action set that Peano will generate that corresponds to this class
+    should not be modified by users and can safely be overwritten every time
+    we run the Python toolkit.
+    
+    """
+    return False
+
+  def get_includes(self):
+    """!
+   
+    We need the solver repository in this action set, as we directly access
+    the solver object. We also need access to Peano's d-dimensional loops.
+         
+    """    
+    return """
+#include "repositories/SolverRepository.h"
+#include "peano4/utils/Loop.h"
+"""
+
+class ProjectOntoFaces(ActionSet):
+  """!
+  This is for DG solver.
+  """
+
+  templateTCFT="""
+  /*
+  all we need to do here is project updated solution u^c onto the faces
+  */
+
+  if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
+  {
+    // apply cell to face projection, store it in faceProjections
+    // no tricky indexing needed here, since the whole of the cell
+    // solution vector is in scope here.
+    tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection * TwoTimesD, double > faceProjections = 
+      repositories::{{SOLVER_INSTANCE}}. getFaceFromCellMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
+
+    logTraceInWith3Arguments("ProjectOntoFace", marker.toString(), faceProjections, fineGridCell{{SOLVER_NAME}}.getSolution());
+    
+    // write these values into the faces themselves
+    for (int f=0; f<TwoTimesD; f++)
+    {
+      logTraceInWith2Arguments("ProjectOntoFaces::FaceLoop", f, fineGridFaces{{SOLVER_NAME}}(f).getProjection())
+      for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection; p++)
+      {
+        fineGridFaces{{SOLVER_NAME}}(f).setProjection(
+          p,
+          faceProjections( f*repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection + p )
+        );
+      }
+      logTraceOutWith2Arguments("ProjectOntoFaces::FaceLoop", f, fineGridFaces{{SOLVER_NAME}}(f).getProjection())
+      
+    }
+
+    logTraceOut("ProjectOntoFace");
+  }
+"""
+
+
+  def __init__(self,
+               solver,
+               descend_invocation_order=0,
+               parallel=True):
+    super( ProjectOntoFaces, self ).__init__(
+      descend_invocation_order,
+      parallel
+    )
+    self.d = {}
+    self.d["SOLVER_INSTANCE"]    = solver.instance_name()
+    self.d["SOLVER_NAME"]        = solver.typename()
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      pass
+    return result
+
+  def get_action_set_name(self):
+    """!
+    
+    Configure name of generated C++ action set
+    
+    This action set will end up in the directory observers with a name that
+    reflects how the observer (initialisation) is mapped onto this action 
+    set. The name pattern is ObserverName2ActionSetIdentifier where this
+    routine co-determines the ActionSetIdentifier. We make is reflect the
+    Python class name.
+     
+    """
+    return __name__.replace(".py", "").replace(".", "_")
+    
+  def user_should_modify_template(self):
+    """!
+    
+    The action set that Peano will generate that corresponds to this class
+    should not be modified by users and can safely be overwritten every time
+    we run the Python toolkit.
+    
+    """
+    return False
+
+  def get_includes(self):
+    """!
+   
+    We need the solver repository in this action set, as we directly access
+    the solver object. We also need access to Peano's d-dimensional loops.
+         
+    """    
+    return """
+#include "repositories/SolverRepository.h"
+#include "peano4/utils/Loop.h"
+"""
+
+class UpdateFaceSolution(ActionSet):
+  """!
+  This is for DG solver.
+  """
+
 
   templateTFFT="""
   if ( fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior )
@@ -112,11 +269,13 @@ class UpdateCell(ActionSet):
 
 
 """
+
+
   def __init__(self,
                solver,
                descend_invocation_order=0,
                parallel=True):
-    super( UpdateCell, self ).__init__(
+    super( UpdateFaceSolution, self ).__init__(
       descend_invocation_order,
       parallel
     )
@@ -128,9 +287,6 @@ class UpdateCell(ActionSet):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = jinja2.Template(self.templateTFFT).render(**self.d)
-      pass 
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
       pass
     return result
 
@@ -169,4 +325,5 @@ class UpdateCell(ActionSet):
 #include "repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
 """
+
 

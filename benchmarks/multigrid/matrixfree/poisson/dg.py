@@ -37,21 +37,6 @@ project = matrixfree.Project( project_name = "DGPointwise",
 
 #! [Construct matrices]
 
-'''
-TODO: hand this over to Alex. The shapes here are an indicator for what needs to go where...
-'''
-
-# assembly_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
-# mass_matrix     = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
-
-# face_from_cell  = np.zeros(( 2* args.ppfn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions,   args.upcn * (args.poly_degree + 1) ** (args.dimensions) ))
-
-# # we are sending the solns on the face onto the cell
-# cell_from_face  = np.zeros(( args.upcn * (args.poly_degree + 1) ** (args.dimensions),     args.spfn * (args.poly_degree + 1) ** (args.dimensions-1) * 2*args.dimensions ) )
-
-# riemann_matrix  = np.zeros( (args.spfn * (args.poly_degree + 1) ** (args.dimensions-1), 2* args.ppfn * (args.poly_degree + 1) ** (args.dimensions-1)) )
-# approximate_system_matrix = np.eye( args.upcn * (args.poly_degree + 1) ** (args.dimensions) )
-
 matrices = multigrid.matrixgenerators.GLMatrixFree(
   args.dimensions,
   args.poly_degree,
@@ -94,8 +79,8 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   cell_from_face_projection_scaling = cell_from_face_projection_scaling,
   riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
   boundary_matrix = matrices.get_boundary_matrix(),
-  cell_relaxation = 0.5,
-  face_relaxation = 0.5,
+  cell_relaxation = 0.1,
+  face_relaxation = 1,
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
 )
