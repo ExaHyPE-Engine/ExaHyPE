@@ -17,4 +17,5 @@ export
 
 ./run-memory-layout.sh 
 
-tar -czvf SuperMUC-$OMP_NUM_TREADS-threads.tar.gz *$OMP_NUM_TREADS-threads.out
+tar -czvf SuperMUC-$OMP_NUM_THREADS-threads.tar.gz *$OMP_NUM_THREADS-threads.out
+
