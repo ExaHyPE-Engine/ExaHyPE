@@ -50,7 +50,7 @@ def search_and_copy_strings(input_file_path, predefined_strings, output_director
                             or "WITH_GPU" in line:
                             output_file.write("#" + line)
                         elif not line.startswith("//"):
-                            tokens = line.split("=")
+                            tokens = line.split("=", 1)
                             var_name_and_type = tokens[0]
                             # Replace ; with " " and also do not consider the last character which is
                             # a new line
