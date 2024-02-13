@@ -12,5 +12,3 @@ from .UpdateParticle_SingleLevelInteraction_ContiguousParticles import (
     UpdateParticle_SingleLevelInteraction_ContiguousParticles,
 )
 from .UpdateParticle_SingleLevelInteraction import UpdateParticle_SingleLevelInteraction
-from .DummyStep import DummyStep
-from .ScatterGlobalMemory import ScatterGlobalMemory

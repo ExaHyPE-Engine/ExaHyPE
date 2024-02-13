@@ -15,11 +15,11 @@ import shutil
 ########################################################################################
 
 Parallelisation_DomainDecomposition = "domain-decomposition"
-Parallelisation_SpawnTasksPerSweep = "task-tree"
+Parallelisation_TaskTree = "task-tree"
 Parallelisation_TaskGraph = "task-graph"
 ParallelisationVariants = [
     Parallelisation_DomainDecomposition,
-    Parallelisation_SpawnTasksPerSweep,
+    Parallelisation_TaskTree,
     Parallelisation_TaskGraph,
 ]
 
@@ -100,6 +100,14 @@ if __name__ == "__main__":
         required=True,
         type=int,
         help="Particle number (1D)",
+    )
+    parser.add_argument(
+        "-t",
+        "--trees",
+        dest="trees",
+        default=None,
+        type=int,
+        help="Number of trees to be used",
     )
     parser.add_argument(
         "-et",
@@ -259,6 +267,32 @@ if __name__ == "__main__":
         )
         project.initialisation_steps_task_graph_compiler = (
             swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory
+        )
+    elif (
+        args.realisation.split(".")[0] == Parallelisation_TaskTree
+        and 
+        args.realisation.split(".")[1] == Storage_Scattered
+        and 
+        args.realisation.split(".")[2] == Sorting_MultiscaleSort
+    ):
+        project.algorithm_steps_task_graph_compiler = (
+            swift2.api.graphcompiler.particle_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory
+        )
+        project.initialisation_steps_task_graph_compiler = (
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
+        )
+    elif (
+        args.realisation.split(".")[0] == Parallelisation_TaskTree 
+        and 
+        args.realisation.split(".")[1] == Storage_Scattered
+        and 
+        args.realisation.split(".")[2] == Sorting_BucketSort
+    ):
+        project.algorithm_steps_task_graph_compiler = (
+            swift2.api.graphcompiler.particle_steps_onto_task_tree_bucket_sort_scattered_memory
+        )
+        project.initialisation_steps_task_graph_compiler = (
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
         )
     else:
         assert False, "realisation " + args.realisation + " not supported"
@@ -448,10 +482,11 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation(args.peanodir, build_mode)
 
-    project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-        "new toolbox::loadbalancing::DefaultConfiguration()",
-    )
+    if args.trees!=0:
+        project.set_load_balancing(
+            "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+            "new toolbox::loadbalancing::DefaultConfiguration()",
+        )
 
     ###############################################################################
     # Initialisation snippet for the particle
