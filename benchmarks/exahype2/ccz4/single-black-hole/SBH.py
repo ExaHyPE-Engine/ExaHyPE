@@ -35,9 +35,10 @@ BlackHoleRegion = 0.1
 
 
 class KernelParallelisation(Enum):
-    NONE         = "::peano4::utils::LoopParallelism::None"
-    PARALLEL_FOR = "::peano4::utils::LoopParallelism::ParallelFor"
-    SUBTASKS     = "::peano4::utils::LoopParallelism::Subtasks"
+    NONE         = "::peano4::utils::LoopPlacement::Serial"
+    PARALLEL_FOR = "::peano4::utils::LoopPlacement::Nested"
+    SUBTASKS     = "::peano4::utils::LoopPlacement::SpreadOut"
+
 
 
 class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
