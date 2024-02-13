@@ -2,6 +2,7 @@
 
 #include "tarch/Assertions.h"
 
+#include <cstring>
 
 std::string tarch::toString(MemoryLocation value) {
   switch (value) {
