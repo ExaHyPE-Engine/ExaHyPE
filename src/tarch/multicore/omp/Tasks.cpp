@@ -200,10 +200,7 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
       #pragma omp atomic
       numberOfSpawnedTasks--;
     }
-  }
-
-
-  if (taskNumber != NoDependencies and inDependencies.empty()) {
+  } else if (taskNumber != NoDependencies and inDependencies.empty()) {
     // A nicer syntax would be 
     //
     // #pragma omp task priority(job->getPriority()) untied depend(out : *outDependencyPointer)
