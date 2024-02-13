@@ -3,6 +3,8 @@
 #include "tarch/Assertions.h"
 
 
+#include <cstring>
+
 std::string tarch::toString(MemoryLocation value) {
   switch (value) {
   case MemoryLocation::Heap:
@@ -35,3 +37,27 @@ int tarch::padSizeToAlignment(int size, int aligment){
   int padding = size % aligment == 0 ? 0 : aligment - (size % aligment);
   return size + padding;
 }
+
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
+double* tarch::memset(double* dest, double ch, size_t byteCount){
+  #if defined(OpenMPManuallyOffloadMemset)
+  for (size_t i=0; i<count/sizeof(double); i++){
+    dest[i] = ch;
+  }
+  return dest;
+  #else
+  return static_cast<double*>(
+    std::memset(
+      static_cast<void*>(dest),
+      //static_cast<int>(ch),
+      ch,
+      byteCount
+    )
+  );
+  #endif
+}
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif

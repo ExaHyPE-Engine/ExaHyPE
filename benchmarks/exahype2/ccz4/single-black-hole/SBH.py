@@ -35,9 +35,10 @@ BlackHoleRegion = 0.1
 
 
 class KernelParallelisation(Enum):
-    NONE         = "::peano4::utils::LoopParallelism::None"
-    PARALLEL_FOR = "::peano4::utils::LoopParallelism::ParallelFor"
-    SUBTASKS     = "::peano4::utils::LoopParallelism::Subtasks"
+    NONE         = "::peano4::utils::LoopPlacement::Serial"
+    PARALLEL_FOR = "::peano4::utils::LoopPlacement::Nested"
+    SUBTASKS     = "::peano4::utils::LoopPlacement::SpreadOut"
+
 
 
 class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
@@ -245,7 +246,7 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
               min_meshcell_h=min_cell_size / patch_size,
               max_meshcell_h=max_cell_size / patch_size,
               use_heap_storage=False, # See superclass docu
-              pde_terms_without_state=True
+              pde_terms_without_state=False
         )
 
         self._user_action_set_includes += """

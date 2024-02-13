@@ -12,7 +12,7 @@ so forth. Therefore, this benchmark combines two different solvers - a
 dissipative Finite Volume scheme and a higher order scheme - to obtain a
 compromise between accuracy and stability. 
 
-
+    
 
 
 # Build executable
