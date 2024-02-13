@@ -3,7 +3,6 @@
 #SBATCH --account=pn52yu
 #SBATCH --time=12:00:00
 #SBATCH --export=NONE
-##SBATCH --partition={test,general}
 #SBATCH --partition=general
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1  #one MPI job per GPU tile
@@ -17,4 +16,5 @@ export
 
 ./run-memory-layout.sh 
 
-tar -czvf SuperMUC-$OMP_NUM_TREADS-threads.tar.gz *$OMP_NUM_TREADS-threads.out
+tar -czvf SuperMUC-$OMP_NUM_THREADS-threads.tar.gz *$OMP_NUM_THREADS-threads.out
+

@@ -38,6 +38,6 @@ for REALISATION in domain-decomposition.scattered.bucket-sort.no-optimisation do
 do
   EXECUTABLE=noh2D.$REALISATION
   echo $EXECUTABLE
-  ./$EXECUTABLE > $EXECUTABLE"-"$OMP_NUM_THREADS".out"
+  ./$EXECUTABLE > $EXECUTABLE"-"$OMP_NUM_THREADS"-threads.out"
 done
 
