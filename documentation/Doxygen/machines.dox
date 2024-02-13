@@ -308,8 +308,12 @@ Some remark on this setup:
   However, you have to load a recent GCC (13.0.0 here) manually before you 
   launch any Peano application.
 
+## AMD cloud machine
+
+To login: ssh username@aac1.amd.com -p ####
+Choose one of the active ports: 7000 or 7010.
+Load the following modules: amdclang/17.0-6.0.0
 
 
- */
- 
- 
+*/
+
