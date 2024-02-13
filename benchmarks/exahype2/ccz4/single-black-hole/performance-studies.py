@@ -213,9 +213,7 @@ if __name__ == "__main__":
         my_primary_solver = FD4SolverWithoutLimiter(name          = "CCZ4SBH",
                                                     patch_size    = FD4PatchSize,
                                                     min_cell_size = args.cell_size, 
-                                                    max_cell_size = max_cell_size,
-                                                    parallelisation_of_interpolation = parallelise_interpolation,
-                                                    parallelisation_of_kernels       = fv_kernel_parallelisation
+                                                    max_cell_size = max_cell_size
                                                     )
         project.add_solver(my_primary_solver)
         added_limiter = False
