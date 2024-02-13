@@ -41,12 +41,10 @@ int tarch::padSizeToAlignment(int size, int aligment){
 #if defined(GPUOffloadingOMP)
 #pragma omp declare target
 #endif
-void* tarch::memset(void* dest, int ch, size_t count){
+double* tarch::memset(double* dest, double ch, size_t count){
   #if defined(OpenMPManuallyOffloadMemset)
-  // cast the pointer to int*
-  int* ptr = static_cast<int*>(dest);
-  for (size_t i=0; i<count; i++){
-    ptr[i] = ch;
+  for (size_t i=0; i<count/sizeof(double); i++){
+    dest[i] = ch;
   }
   return dest;
   #else

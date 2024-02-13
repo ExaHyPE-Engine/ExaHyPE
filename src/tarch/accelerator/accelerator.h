@@ -91,11 +91,13 @@ namespace tarch {
   * call, so if the OpenMPManuallyOffloadMemset macro
   * is defined (see LinuxAMD.h in compiler specific settings)
   * we use a manually decorated for-loop
+  * signature is chosen to match std::memset
+  * @param count byte count
   */
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
-  void* memset(void* dest, int ch, size_t count);
+  double* memset(double* dest, double ch, size_t count);
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif
