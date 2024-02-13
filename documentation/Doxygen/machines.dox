@@ -310,10 +310,29 @@ Some remark on this setup:
 
 ## AMD cloud machine
 
-To login: ssh username@aac1.amd.com -p ####
-Choose one of the active ports: 7000 or 7010.
-Load the following modules: amdclang/17.0-6.0.0
-CFLAGS="-O3 -march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" CC="amdclang" CXXFLAGS="-std=c++17 -w -O3 -march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" CXX="amdclang++" LDFLAGS="-march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" ./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
+<img src="https://download.amd.com/OneTrust/202401.1.0a/consent/17a54836-920d-4fc2-a8f6-3f4c299371d1/0e234106-67d9-4371-9d2e-fba9f77b42f1/logos/522af4e3-8eb6-419a-ab34-33424f162acd/b5753b26-66ca-48b2-9cf8-f49f6f86d4fc/8ea1ec5d-9e72-477e-af81-45810eb32c32/AMD-Logo-700x394.png" />
+
+This is a guideline for AMD Cloud machines that we use in hackathons, e.g. 
+Login here works with standards ssh
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ssh username@aac1.amd.com -p ####
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where you have to pick an active port (7000 or 7010). We only need one module
+for the core GPU tests:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+module load amdclang/17.0-6.0.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+and then use the following configuration:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure CFLAGS="-O3 -march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" CC="amdclang" CXXFLAGS="-std=c++17 -w -O3 -march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" CXX="amdclang++" LDFLAGS="-march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" ./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A good starting point for the GPU work is benchmarks/exahype2/ccz4/performance-testbed.
 
 */
 
