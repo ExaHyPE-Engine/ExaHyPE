@@ -82,7 +82,7 @@ if __name__ == "__main__":
         dest="cell_size",
         type=float,
         default=1.8,
-        help="Minimal cell size (AMR) or regular mesh cell size (without AMR)",
+        help="Minimal cell size (AMR) or regular mesh cell size (without AMR), default=1.8",
     )
     parser.add_argument(
         "-asserts",
