@@ -12,7 +12,7 @@
   #include "tarch/compiler/LinuxIntelSYCL.h"
 #elif defined(__INTEL_LLVM_COMPILER) && defined(__linux)
   #include "tarch/compiler/LinuxIntelICPX.h"
-#elif defined(__AMDGPU__) && defined(__linux)
+#elif defined(__HIP_PLATFORM_AMD__) && defined(__linux)
   #include "tarch/compiler/LinuxAMD.h"
 #elif defined(__clang__) && defined(__linux)
   #include "tarch/compiler/LinuxClang.h"
