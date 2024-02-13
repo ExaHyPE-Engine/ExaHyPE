@@ -86,10 +86,10 @@ namespace tarch {
   int padSizeToAlignment(int size, int aligment);
 
   /**
-  * AMD's standard library hasn't annotated 
-  *
-  *
-  *
+  * AMD's standard library hasn't annotated the memset
+  * call, so if the OpenMPManuallyOffloadMemset macro
+  * is defined (see LinuxAMD.h in compiler specific settings)
+  * we use a manually decorated for-loop
   */
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target

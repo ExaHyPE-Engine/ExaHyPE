@@ -1,11 +1,9 @@
 #include "accelerator.h"
 
 #include "tarch/Assertions.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 #include <cstring>
-
-
-#include "tarch/compiler/CompilerSpecificSettings.h"
 
 std::string tarch::toString(MemoryLocation value) {
   switch (value) {
@@ -44,17 +42,16 @@ int tarch::padSizeToAlignment(int size, int aligment){
 #pragma omp declare target
 #endif
 void* tarch::memset(void* dest, int ch, size_t count){
-  //#if defined(OpenMPManuallyOffloadMemset)
-  #pragma message ("test message")
+  #if defined(OpenMPManuallyOffloadMemset)
   // cast the pointer to int*
   int* ptr = static_cast<int*>(dest);
   for (size_t i=0; i<count; i++){
     ptr[i] = ch;
   }
   return dest;
-  //#else
-  //return std::memset(dest,ch,count);
-  //#endif
+  #else
+  return std::memset(dest,ch,count);
+  #endif
 }
 #if defined(GPUOffloadingOMP)
 #pragma omp end declare target
