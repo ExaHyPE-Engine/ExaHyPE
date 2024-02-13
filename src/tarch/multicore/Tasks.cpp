@@ -150,7 +150,8 @@ bool tarch::multicore::internal::fusePendingTasks(
     globalNonblockingTasks.tasks.pop_front();
   }
 
-  if (myTask != nullptr and myTask->canFuse()) {
+  constexpr bool FunnelThreads = true;
+  if (myTask != nullptr and myTask->canFuse() and (not FunnelThreads or omp_get_thread_num() == 0)) {
     auto pp = globalNonblockingTasks.tasks.begin();
     while (
       pp != globalNonblockingTasks.tasks.end() and (*pp)->getTaskType() == myTask->getTaskType()
