@@ -1001,6 +1001,27 @@ void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlap
   endSimtDfor
 }
 
+void toolbox::blockstructured::interpolateCellDataAssociatedToVolumesIntoOverlappingCell_fourthOrder(
+  int                                       numberOfDoFsPerAxisInSourcePatch,
+  int                                       numberOfDoFsPerAxisInDestinationPatch,
+  int                                       haloSourcePatch,
+  int                                       haloDestinationPatch,
+  int                                       unknowns,
+  const double* __restrict__                sourceValues,
+  double* __restrict__                      destinationValues,
+  ::peano4::utils::LoopPlacement          parallelisation
+) {
+  assertion( numberOfDoFsPerAxisInDestinationPatch>numberOfDoFsPerAxisInSourcePatch );
+
+  simtDforWithSchedulerInstructions( destinationVolume, numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch, parallelisation )
+    const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch+2*haloDestinationPatch) * unknowns;
+    for (int unknown=0; unknown<unknowns; unknown++) {
+      destinationValues[baseIndexDestination+unknown] = 0.0;
+    }
+  endSimtDfor
+}
+
+
 
 void toolbox::blockstructured::interpolateCell_AoS_linear_with_linear_extrapolation_and_linear_normal_interpolation(
   const peano4::datamanagement::CellMarker& marker,
