@@ -313,7 +313,7 @@ Some remark on this setup:
 To login: ssh username@aac1.amd.com -p ####
 Choose one of the active ports: 7000 or 7010.
 Load the following modules: amdclang/17.0-6.0.0
-
+CFLAGS="-O3 -march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" CC="amdclang" CXXFLAGS="-std=c++17 -w -O3 -march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" CXX="amdclang++" LDFLAGS="-march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" ./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
 
 */
 
