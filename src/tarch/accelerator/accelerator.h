@@ -85,5 +85,17 @@ namespace tarch {
 
   int padSizeToAlignment(int size, int aligment);
 
+  /**
+  * AMD's standard library hasn't annotated 
+  *
+  *
+  *
+  */
+  #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  #endif
   void* memset(void* dest, int ch, size_t count);
+  #if defined(GPUOffloadingOMP)
+  #pragma omp end declare target
+  #endif
 } // namespace tarch
