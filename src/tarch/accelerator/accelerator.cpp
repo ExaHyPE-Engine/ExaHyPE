@@ -43,7 +43,7 @@ int tarch::padSizeToAlignment(int size, int aligment){
 #endif
 double* tarch::memset(double* dest, double ch, size_t byteCount){
   #if defined(OpenMPManuallyOffloadMemset)
-  for (size_t i=0; i<count/sizeof(double); i++){
+  for (size_t i=0; i<byteCount/sizeof(double); i++){
     dest[i] = ch;
   }
   return dest;
