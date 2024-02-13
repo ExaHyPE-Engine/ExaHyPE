@@ -170,12 +170,14 @@ if "fd4-rk" in args.solver or "sofd4-rk" in args.solver:
     second_order_formulation = "sofd4" in args.solver
     if args.enclave==True:
         my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking(
-            name="CCZ4FD4RK" + str(order) + "-enclave",
+            name="CCZ4FD4RK" + str(order) + "Enclave",
             patch_size=9,
             rk_order=order,
             min_meshcell_h=args.cell_size / 3,
             max_meshcell_h=args.cell_size / 3,
-            second_order = second_order_formulation
+            second_order = second_order_formulation,
+            use_heap_storage=args.use_heap_storage,
+            pde_terms_without_state=False
         )
     else:
         my_solver = CCZ4Solver_FD4_GlobalAdaptiveTimeStep(
