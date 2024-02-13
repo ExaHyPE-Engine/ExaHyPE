@@ -482,6 +482,28 @@ fi
 
 
 #
+# OPENBLAS
+# This is needed by LAPACK and libxsmmjit, so we enable/disable
+# here, make sure we add "-lopenblas" to LIBS, and do not 
+# allow configuring --with-lapack or --with-libxsmm without
+# it
+#
+AC_ARG_WITH(openblas,
+  AS_HELP_STRING([--with-openblas],[enable OpenBLAS [default=false]]),
+  [ AC_MSG_CHECKING(for openblas)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_openblas=false ;;
+      *)     AC_MSG_RESULT(yes);   use_openblas=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for openblas); AC_MSG_RESULT(no); use_openblas=false ])
+AM_CONDITIONAL([UseOpenblas],[test "x$use_openblas" = xtrue])
+
+if test "$use_openblas" == true; then
+  AC_DEFINE([UseOpenblas], [UseOpenblas], [UseOpenblas])
+fi
+
+
+#
 # LIBXSMM
 #
 AC_ARG_WITH(libxsmm,
@@ -501,6 +523,8 @@ fi
 
 #
 # LIBXSMM JIT
+# 
+# Check to see if user enabled openblas...
 #
 AC_ARG_WITH(libxsmmjit,
   AS_HELP_STRING([--with-libxsmmjit],[enable LIBXSMM JIT [default=false]]),
@@ -513,7 +537,11 @@ AC_ARG_WITH(libxsmmjit,
 AM_CONDITIONAL([UselibxsmmJIT],[test "x$use_libxsmmJIT" = xtrue])
 
 if test "$use_libxsmmJIT" == true; then
+  if test "$use_openblas" == false; then
+  AC_MSG_ERROR([LIBXSMM JIT requires OpenBlas. Re-reun with --with-openblas])
+  else
   AC_DEFINE([UselibxsmmJIT], [UselibxsmmJIT], [UselibxsmmJIT])
+  fi
 fi
 
 
@@ -550,6 +578,28 @@ AM_CONDITIONAL([UseEigen],[test "x$use_Eigen" = xtrue])
 
 if test "$use_Eigen" == true; then
   AC_DEFINE([UseEigen], [UseEigen], [UseEigen])
+fi
+
+
+#
+# LAPACK
+#
+AC_ARG_WITH(lapack,
+  AS_HELP_STRING([--with-lapack],[enable LAPACK [default=false]]),
+  [ AC_MSG_CHECKING(for lapack)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    use_lapack=false ;;
+      *)     AC_MSG_RESULT(yes);   use_lapack=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for lapack); AC_MSG_RESULT(no); use_lapack=false ])
+AM_CONDITIONAL([UseLapack],[test "x$use_lapack" = xtrue])
+
+if test "$use_lapack" == true; then
+  if test "$use_openblas" == false; then
+  AC_MSG_ERROR([Lapack requires OpenBlas. Re-reun with --with-openblas])
+  else
+  AC_DEFINE([UseLapack], [UseLapack], [UseLapack])
+  fi
 fi
 
 
@@ -972,6 +1022,27 @@ fi
 
 
 #
+# OPENBLAS
+#
+if test "$use_openblas" != false; then
+  # Find the lapack header
+  AC_CHECK_HEADER([cblas.h], [
+  ], [
+    AC_MSG_ERROR([OpenBLAS headers not found])
+  ])
+  # Check for libraries
+  AC_CHECK_LIB([openblas], [cblas_daxpby], [
+    OPENBLAS_LIBS="ac_cv_search_cblas_daxpby"
+  ], [
+    AC_MSG_ERROR([OpenBLAS library not found. Did you forget to include -lopenblas to LDFLAGS?])
+  ])
+  AC_SUBST([OPENBLAS_LIBS])
+  OPENBLAS_INCLUDE_DIR=$(dirname $OPENBLAS_LIBS)
+  AC_SUBST([OPENBLAS_INCLUDE_DIR])
+fi
+
+
+#
 # LIBXSMM
 #
 if test "$use_libxsmm" != false; then
@@ -1041,29 +1112,6 @@ if test "$use_libxsmmJIT" != false; then
     cd ../..
   fi
   echo "Finished building LIBXSMM JIT"
-
-  echo "Checking whether OpenBLAS needs to be installed or built"
-  if @<:@ ! -d submodules @:>@; then
-    mkdir submodules
-    echo "Created OpenBLAS directory in submodules"
-  fi
-  if @<:@ ! -e submodules/OpenBLAS/.git @:>@; then
-    echo "Initializing OpenBLAS in submodules/OpenBLAS, this may take a long while."
-    cd submodules
-    git clone https://github.com/xianyi/OpenBLAS.git
-    cd OpenBLAS
-    cd ../..
-  fi
-
-  # Build OpenBLAS
-    REBUILD_OpenBLAS=true
-  if @<:@ "$REBUILD_OpenBLAS" = true @:>@; then
-    echo "Building OpenBLAS"
-    cd submodules/OpenBLAS
-    make --silent
-    cd ../..
-  fi
-  echo "Finished building OpenBLAS"
 fi
 
 
@@ -1116,6 +1164,29 @@ if test "$use_Eigen" != false; then
     cd eigen
     cd ../..
   fi
+fi
+
+
+#
+# LAPACK
+#
+if test "$use_lapack" != false; then
+  # Find the lapack header
+  AC_CHECK_HEADER([lapacke.h], [
+  ], [
+    AC_MSG_ERROR([LAPACK headers not found])
+  ])
+  # Check for libraries. The lapack libraries are 
+  # libopenblas, but if this doesn't work, try 
+  # configuring with -llapack
+  AC_CHECK_LIB([openblas], [LAPACKE_dgetrf], [
+    LAPACK_LIBS="ac_cv_search_LAPACKE_dgetrf"
+  ], [
+    AC_MSG_ERROR([LAPACK library not found.])
+  ])
+  AC_SUBST([LAPACK_LIBS])
+  LAPACK_INCLUDE_DIR=$(dirname $LAPACK_LIBS)
+  AC_SUBST([LAPACK_INCLUDE_DIR])
 fi
 
 
