@@ -87,17 +87,36 @@ namespace tarch {
   int padSizeToAlignment(int size, int aligment);
 
   /**
-  * AMD's standard library hasn't annotated the memset
-  * call, so if the OpenMPManuallyOffloadMemset macro
-  * is defined (see LinuxAMD.h in compiler specific settings)
-  * we use a manually decorated for-loop
-  * signature is chosen to match std::memset
-  * @param count byte count
+   * Alternative GPU-ready version of memset
+   *
+   * AMD's standard library hasn't annotated the memset call with target
+   * offload for OpenMP. So we have to provide a GPU-ready version ourselves.
+   * We do so if and only if the OpenMPManuallyOffloadMemset macro is set. It
+   * is typically set in the CompilerSpecificSettings.h. If that macro is not
+   * defined, we fall back to std::memset.
+   *
+   * The signature here is compatible with std::memset. The original interface
+   * is
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * char* memset(char* dest, int ch, size_t count);
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * which is just not nice. It should be
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * double* memset(double* dest, double ch, size_t countNumberOfDoubles);
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * but that's not what the C++ standard gives us. So we pick the nicest
+   * interface we could think of, but is still compatible.
+   *
+   * @param count Byte count.
   */
   #if defined(GPUOffloadingOMP)
   #pragma omp declare target
   #endif
-  double* memset(double* dest, double ch, size_t count);
+  double* memset(double* dest, double ch, size_t byteCount);
   #if defined(GPUOffloadingOMP)
   #pragma omp end declare target
   #endif
