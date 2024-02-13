@@ -84,4 +84,6 @@ namespace tarch {
   void freeMemory(void* data, MemoryLocation location);
 
   int padSizeToAlignment(int size, int aligment);
+
+  void* memset(void* dest, int ch, size_t count);
 } // namespace tarch

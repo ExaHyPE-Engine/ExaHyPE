@@ -35,3 +35,12 @@ int tarch::padSizeToAlignment(int size, int aligment){
   int padding = size % aligment == 0 ? 0 : aligment - (size % aligment);
   return size + padding;
 }
+
+void* tarch::memset(void* dest, int ch, size_t count){
+  // cast the pointer to int*
+  int* ptr = static_cast<int*>(dest);
+  for (size_t i=0; i<count; i++){
+    ptr[i] = ch;
+  }
+  return dest;
+}
