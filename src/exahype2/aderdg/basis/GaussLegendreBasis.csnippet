@@ -1,6 +1,9 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
+#endif
 // order 0
 double exahype2::aderdg::basis::legendre::weights_0[1]={
   1.0
@@ -15400,3 +15403,6 @@ exahype2::aderdg::UnivariateFunction* exahype2::aderdg::basis::legendre::basisFu
   basisFunctionSecondDerivative_14,
   basisFunctionSecondDerivative_15
 };
+#if defined(GPUOffloadingOMP)
+#pragma omp end declare target
+#endif
