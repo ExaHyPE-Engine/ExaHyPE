@@ -32,3 +32,5 @@
 #define PragmaPush _Pragma("clang diagnostic push")
 #define SilenceUnknownAttribute _Pragma("clang diagnostic ignored \"-Wunknown-attributes\"")
 #define PragmaPop _Pragma("clang diagnostic pop")
+
+#define OpenMPManuallyOffloadMemset
