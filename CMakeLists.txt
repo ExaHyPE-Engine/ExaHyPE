@@ -47,6 +47,12 @@ set(CMAKE_CXX_VISIBILITY_INLINES_HIDDEN YES)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(PEANO_DEFINITIONS "" CACHE INTERNAL "")
+set(USE_COMPONENT_DEFINITIONS "" CACHE INTERNAL "")
+set(PEANO_INCLUDES "" CACHE INTERNAL "")
+set(PEANO_INCLUDES ${PEANO_INCLUDES} ${CMAKE_INSTALL_PREFIX}/include CACHE INTERNAL "")
+
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
@@ -147,6 +153,7 @@ if(WITH_TOOLCHAIN STREQUAL "scorep")
 elseif(WITH_TOOLCHAIN STREQUAL "itac")
   target_link_libraries(project_options INTERFACE VT::VT)
   target_include_directories(project_options SYSTEM INTERFACE ${VT_INCLUDE_DIRS})
+  set(PEANO_INCLUDES ${PEANO_INCLUDESS} ${VT_INCLUDE_DIRS} CACHE INTERNAL "")
   target_link_directories(project_options INTERFACE ${VT_LIBRARIES_DIR})
   add_compile_definitions(UseITAC)
   add_compile_definitions(UseLogService=ITACLogger)
@@ -174,6 +181,7 @@ if(WITH_MULTITHREADING)
   string(TOUPPER ${WITH_MULTITHREADING} WITH_MULTITHREADING_UPPER)
   target_compile_definitions(project_options INTERFACE Shared${WITH_MULTITHREADING_UPPER})
   target_compile_definitions(project_options INTERFACE SharedMemoryParallelisation)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} Shared${WITH_MULTITHREADING_UPPER} SharedMemoryParallelisation CACHE INTERNAL "")
 endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
@@ -250,6 +258,7 @@ endif()
 if(WITH_GPU)
   string(TOUPPER ${WITH_GPU} WITH_GPU_UPPER)
   target_compile_definitions(project_options INTERFACE GPUOffloading${WITH_GPU_UPPER})
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} GPUOffloading${WITH_GPU_UPPER} CACHE INTERNAL "")
   if(WITH_GPU STREQUAL "omp")
     find_package(OpenMPTarget REQUIRED)
     target_link_libraries(project_options INTERFACE OpenMP::OpenMPTarget)
@@ -315,26 +324,26 @@ endif()
 
 # Note: linkers (ld, lld) ignore the flag -g when passed.
 # Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
-set(PEANO_CXX_FLAGS_RELEASE -O3)
-set(PEANO_CUDA_FLAGS_RELEASE -O3)
-set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
+set(PEANO_CXX_FLAGS_RELEASE -O3 CACHE INTERNAL "")
+set(PEANO_CUDA_FLAGS_RELEASE -O3 CACHE INTERNAL "")
+set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG CACHE INTERNAL "")
 
 #-O2 -fno-omit-frame-pointer
-set(PEANO_CXX_FLAGS_DEBUG -g -O0)
-set(PEANO_CUDA_FLAGS_DEBUG -g -O0)
-set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4)
+set(PEANO_CXX_FLAGS_DEBUG -g -O0 CACHE INTERNAL "")
+set(PEANO_CUDA_FLAGS_DEBUG -g -O0 CACHE INTERNAL "")
+set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4 CACHE INTERNAL "")
 
-set(PEANO_CXX_FLAGS_STATS ${PEANO_CXX_FLAGS_RELEASE})
-set(PEANO_CUDA_FLAGS_STATS ${PEANO_CUDA_FLAGS_RELEASE})
-set(PEANO_STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics)
+set(PEANO_CXX_FLAGS_STATS ${PEANO_CXX_FLAGS_RELEASE} CACHE INTERNAL "")
+set(PEANO_CUDA_FLAGS_STATS ${PEANO_CUDA_FLAGS_RELEASE} CACHE INTERNAL "")
+set(PEANO_STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics CACHE INTERNAL "")
 
-set(PEANO_CXX_FLAGS_ASSERTS ${PEANO_CXX_FLAGS_DEBUG})
-set(PEANO_CUDA_FLAGS_ASSERTS ${PEANO_CUDA_FLAGS_DEBUG})
-set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2)
+set(PEANO_CXX_FLAGS_ASSERTS ${PEANO_CXX_FLAGS_DEBUG} CACHE INTERNAL "")
+set(PEANO_CUDA_FLAGS_ASSERTS ${PEANO_CUDA_FLAGS_DEBUG} CACHE INTERNAL "")
+set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2 CACHE INTERNAL "")
 
-set(PEANO_CXX_FLAGS_TRACE -g -O2)
-set(PEANO_CUDA_FLAGS_TRACE ${PEANO_CXX_FLAGS_TRACE})
-set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
+set(PEANO_CXX_FLAGS_TRACE -g -O2 CACHE INTERNAL "")
+set(PEANO_CUDA_FLAGS_TRACE ${PEANO_CXX_FLAGS_TRACE} CACHE INTERNAL "")
+set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG CACHE INTERNAL "")
 
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
 option(WITH_TARGETDART "Build with targetDART support" OFF)
@@ -356,61 +365,74 @@ if(WITH_MPI)
   find_package(MPI REQUIRED)
   message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
   include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+  set(PEANO_INCLUDES ${PEANO_INCLUDES} ${MPI_INCLUDE_PATH} CACHE INTERNAL "")
   target_compile_definitions(project_options INTERFACE OMPI_SKIP_MPICXX) # To prevent compiler warnings
   target_compile_definitions(project_options INTERFACE Parallel)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} OMPI_SKIP_MPICXX Parallel CACHE INTERNAL "")
   target_link_libraries(project_options INTERFACE MPI::MPI_CXX)
 endif()
 
 if(WITH_OTTER)
   find_package(Otter CONFIG)
   target_compile_definitions(project_options INTERFACE UseOtter)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} UseOtter CACHE INTERNAL "")
   target_link_libraries(project_options INTERFACE Otter::Otter)
 endif()
 
 if(WITH_PETSC)
   find_package(PETSc REQUIRED)
   target_compile_definitions(project_options INTERFACE UsePETSc)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} UsePETSc CACHE INTERNAL "")
   target_link_libraries(project_options INTERFACE ${PETSc_LIBRARIES})
   target_include_directories(project_options INTERFACE ${PETSc_INCLUDE_DIRS})
+  set(PEANO_INCLUDES ${PEANO_INCLUDESS} ${PETSc_INCLUDE_DIRS} CACHE INTERNAL "")
 endif()
 
 if(WITH_TARGETDART)
   target_compile_definitions(project_options INTERFACE UseTargetDART)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} UseTargetDART CACHE INTERNAL "")
 endif()
 
 if(WITH_LIBXSMM)
   find_package(LIBXSMM REQUIRED)
   target_compile_definitions(project_options INTERFACE UseLibXSMM)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} UseLibXSMM CACHE INTERNAL "")
   target_link_libraries(project_options INTERFACE LIBXSMM::LIBXSMM)
 endif()
 
 if(WITH_VTK)
   find_package(VTK REQUIRED)
   target_compile_definitions(project_options INTERFACE UseVTK)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} UseVTK CACHE INTERNAL "")
   target_link_libraries(project_options INTERFACE VTK::CommonCore)
 endif()
 
 if(WITH_HDF5)
   find_package(HDF5 REQUIRED)
   target_compile_definitions(project_options INTERFACE UseHDF5)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} UseHDF5 CACHE INTERNAL "")
   target_link_libraries(project_options INTERFACE HDF5::HDF5)
 endif()
 
 if(WITH_NETCDF)
   find_package(NetCDF REQUIRED)
   target_compile_definitions(project_options INTERFACE UseNetCDF)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} UseNetCDF CACHE INTERNAL "")
   target_link_libraries(project_options INTERFACE ${NETCDF_LIBRARIES} ${NETCDF_LIBRARIES_CXX})
-  target_include_directories(project_options INTERFACE ${NETCDF_INCLUDES})
+  target_include_directories(project_options INTERFACE ${NETCDF_INCLUDES} CACHE INTERNAL "")
+  set(PEANO_INCLUDES ${PEANO_INCLUDESS} ${NETCDF_INCLUDES})
 endif()
 
 if(ENABLE_EXAHYPE)
   #target_compile_definitions(project_options INTERFACE UseExaHyPE)
-  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseExaHyPE)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} UseExaHyPE CACHE INTERNAL "")
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseExaHyPE CACHE INTERNAL "")
 endif()
 
 if(ENABLE_SWIFT)
   #target_compile_definitions(project_options INTERFACE UseSWIFT)
-  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseSWIFT)
+  set(PEANO_DEFINITIONS ${PEANO_DEFINITIONS} UseSWIFT CACHE INTERNAL "")
+  set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseSWIFT CACHE INTERNAL "")
 endif()
 
 include(CMakePackageConfigHelpers)
@@ -440,9 +462,22 @@ install(FILES
   ${CMAKE_SOURCE_DIR}/LICENSE
   ${CMAKE_SOURCE_DIR}/CONTRIBUTING.md
   ${CMAKE_SOURCE_DIR}/CODE_OF_CONDUCT.md
-  ${CMAKE_BINARY_DIR}/CMakeCache.txt
+  ${CMAKE_BINARY_DIR}/Config.cmake
   DESTINATION "${CMAKE_INSTALL_PREFIX}"
 )
+
+install(FILES
+  ${CMAKE_SOURCE_DIR}/src/config.h
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
+)
+
+set(PYTHON_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/parse_cmake_cache.py")
+
+add_custom_target(run_script ALL
+     COMMAND echo "${PYTHON3_EXECUTABLE} ${PYTHON_SCRIPT} ${CMAKE_BINARY_DIR}/CMakeCache.txt"
+     COMMAND ${PYTHON_EXECUTABLE} ${PYTHON_SCRIPT} "${CMAKE_BINARY_DIR}/CMakeCache.txt"
+     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+     COMMENT "Running Python script after build")
 
 add_subdirectory(src)
 

@@ -22,7 +22,7 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
     target_compile_options(ToolboxParticles${dimension}d_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
 
     if(USE_COMPONENT_DEFINITIONS)
-      set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxParticles)
+      set(USE_COMPONENT_DEFINITIONS ${USE_COMPONENT_DEFINITIONS} -DUseToolboxParticles CACHE INTERNAL "")
     endif()
 
     install(TARGETS ToolboxParticles${dimension}d_${mode_lower}
@@ -46,7 +46,7 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
 foreach(pattern IN LISTS HEADERS_TO_GLOB)
   install(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/toolbox
     FILES_MATCHING
     PATTERN ${pattern}
   )

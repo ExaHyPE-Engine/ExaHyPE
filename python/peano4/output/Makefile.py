@@ -11,6 +11,7 @@ from .Helper import write_file
 from .Helper import find_CMake_build_dir
 from .Helper import using_cuda_backend
 from .Helper import caller_distance_to_build_root
+from .Helper import building_standalone_application
 
 from .Overwrite import Overwrite
 
@@ -642,6 +643,8 @@ then this message can typically be ignored.
         self.d["GENERATED_FORTRAN_SOURCES"] = self.generated_fortranfiles
         self.d["GENERATOR"] = sys.argv[0]
         self.d["USING_CMAKE"] = cmake_build_dir != ""
+        self.d["STANDALONE"] = building_standalone_application()
+        self.d["PROJECT_ROOT_DIR"]  = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../..', ))
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
         # In the CMake backend we add a command that allows to build the generated application in the applicaiton directory
@@ -651,10 +654,12 @@ then this message can typically be ignored.
         if cmake_build_dir != "":
             dist = caller_distance_to_build_root()
             command = 'cd '
-            if dist != 0:
+            if dist != 0 and not building_standalone_application():
                 command += '../' * dist
+                self.d["CMAKE_MAKE_PATH"] = ".."
             else:
                 command += '.'
+                self.d["CMAKE_MAKE_PATH"] = "."
             self.d["CMAKE_MAKE_COMMAND"] = command
 
         # Anonymous function that generates the output_file_path from input_file_path template,
@@ -704,23 +709,33 @@ then this message can typically be ignored.
             )
         )
 
-        cmake_list_output_pair = (
-                os.path.join(file_dir, "CMakeLists.txt.template"),
-                os.path.join(directory, "CMakeLists.txt"),)
+        # The app can be standalone (using already compiled Peano4 libraries) or be built as a part of
+        # the existing build tree,
+        # If not standalone the it needs to be added a a subdirectory to CMake
+        # If standalone then a different CMakeLists.txt file need to be generated
+        standalone = building_standalone_application()
 
-        # Currently we support 1 generated application at a time.
-        # To add the generated application sub directory to the CMake build tree,
-        # we write it to a file called GeneratedSubdirectory.cmake in the build directory root.
-        if cmake_build_dir != "":
-          generated_paths_filepath = self.d["GENERATED_SUBDIRECTORY_FULLPATH"]
+        if standalone:
+            cmake_list_output_pair = (
+                    os.path.join(file_dir, "CMakeLists.txt.standalone.template"),
+                    os.path.join(directory, "CMakeLists.txt"),)
+        else:
+            cmake_list_output_pair = (
+                    os.path.join(file_dir, "CMakeLists.txt.template"),
+                    os.path.join(directory, "CMakeLists.txt"),)
+            # Currently we support 1 generated application at a time.
+            # To add the generated application sub directory to the CMake build tree,
+            # we write it to a file called GeneratedSubdirectory.cmake in the build directory root.
+            if cmake_build_dir != "":
+                generated_paths_filepath = self.d["GENERATED_SUBDIRECTORY_FULLPATH"]
 
-          print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
+                print("generated_paths_filepath " + self.d["CMAKE_BUILD_DIR"])
 
-          with open(generated_paths_filepath, "w") as subdir_cmake:
-              subdir_cmake.write(f"add_subdirectory({os.path.abspath(directory)})\n")
+                with open(generated_paths_filepath, "w") as subdir_cmake:
+                    subdir_cmake.write(f"add_subdirectory({os.path.abspath(directory)})\n")
 
-        for template, output_file in template_output_pairs:
-            generate_build_file(template, output_file)
+            for template, output_file in template_output_pairs:
+                generate_build_file(template, output_file)
 
         # Generate CMakeLists only if we are using the CMake backend (CMake build directory found)
         if cmake_build_dir != "":

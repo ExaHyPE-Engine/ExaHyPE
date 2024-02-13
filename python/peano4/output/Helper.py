@@ -27,6 +27,13 @@ def write_file(overwrite,overwrite_is_default,full_qualified_filename):
     return True
 
 
+def building_standalone_application():
+  if not find_CMake_build_dir.CMake_build_dir_check_done:
+    find_CMake_build_dir()
+
+  return find_CMake_build_dir.standalone
+
+
 def find_CMake_build_dir():
   """
   This function searches for the CMake build directory by iteratively checking parent directories.
@@ -42,26 +49,52 @@ def find_CMake_build_dir():
     return find_CMake_build_dir.saved_CMake_build_dir
 
   find_CMake_build_dir.CMake_build_dir_check_done = True
-  call_directory = os.getcwd()
+  call_directory = os.path.join(os.getcwd(), "..")
   file_dir = os.path.dirname(os.path.realpath(__file__))
   project_root_dir = os.path.abspath(os.path.join(file_dir, '..', '..', '..'))
+  print("P: ", project_root_dir, os.path.exists(os.path.join(project_root_dir, "Config.cmake")))
+  print("Q: ", os.path.commonpath([call_directory, project_root_dir]), call_directory, project_root_dir)
 
   if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
-    return ""
+    found_cache_file = os.path.exists(os.path.join(project_root_dir, "CMakeCache.txt")) or \
+      os.path.exists(os.path.join(project_root_dir, "Config.cmake"))
+    if found_cache_file:
+      find_CMake_build_dir.saved_CMake_build_dir = project_root_dir
+      if os.path.exists(os.path.join(project_root_dir, "Config.cmake")):
+        find_CMake_build_dir.standalone = True
+      print("P1: ", find_CMake_build_dir.saved_CMake_build_dir)
+      return find_CMake_build_dir.saved_CMake_build_dir
+    else:
+      find_CMake_build_dir.saved_CMake_build_dir = ""
+      print("P2: ", find_CMake_build_dir.saved_CMake_build_dir)
+      return find_CMake_build_dir.saved_CMake_build_dir
 
   # We will iterate upwards aka implement "cd .." until we reach the Peano root, or until we find CMakeCache.txt.
   current_iter_dir = call_directory
   while current_iter_dir != project_root_dir:
-    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt"))
+    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt")) or \
+      os.path.exists(os.path.join(current_iter_dir, "Config.cmake"))
+    if os.path.exists(os.path.join(current_iter_dir, "Config.cmake")):
+      find_CMake_build_dir.standalone = True
     if found_cache_file:
       find_CMake_build_dir.saved_CMake_build_dir = current_iter_dir
+      print("P3: ", find_CMake_build_dir.saved_CMake_build_dir)
       return current_iter_dir
+    print("P3.1:", current_iter_dir)
     current_iter_dir = os.path.abspath(os.path.join(current_iter_dir, ".."))
 
+  # At project root we gotta try one last time, only for Config.cmake tho
+  found_cache_file = os.path.exists(os.path.join(project_root_dir, "Config.cmake"))
+  if found_cache_file:
+    find_CMake_build_dir.saved_CMake_build_dir = current_iter_dir
+    find_CMake_build_dir.standalone = True
+
+  print("P4: ", find_CMake_build_dir.saved_CMake_build_dir)
   return find_CMake_build_dir.saved_CMake_build_dir
 
 find_CMake_build_dir.CMake_build_dir_check_done = False
 find_CMake_build_dir.saved_CMake_build_dir = ""
+find_CMake_build_dir.standalone = False
 
 
 def find_configure_log():
@@ -98,7 +131,11 @@ def using_cuda_backend():
   cmake_build_dir_path = find_CMake_build_dir()
   if cmake_build_dir_path != "":  # Check for CUDA while we are using CMake backend
     try:
-      with open(os.path.join(cmake_build_dir_path,"CMakeCache.txt")) as cache:
+      fname = os.path.join(cmake_build_dir_path,"CMakeCache.txt") \
+      if os.path.exists(os.path.join(cmake_build_dir_path,"CMakeCache.txt")) \
+      else os.path.join(cmake_build_dir_path,"Config.cmake")
+
+      with open(fname, "r") as cache:
         for line in cache:
           if "WITH_GPU:STRING=cuda" in line:
             using_cuda_backend.using_cuda_backend_cached_value = True
@@ -136,18 +173,29 @@ def caller_distance_to_build_root():
   project_root_dir = os.path.abspath(os.path.join(file_dir, '../../..', ))
 
   # Ensure we call the script under Peano folder.
+  print("C:", [call_directory, project_root_dir])
+
+  # This check means that the python modules (call_directory) are not inside (freshly cloned Peano git repository)
+  # If the modules are installed for example to opt the project root directory should be /opt but call directory can
+  # be .../Peano/applications/... this case must be handles, if Peano libraries are installed through spack or make install
+  # Then the project root should contain a CMakeCache.txt file as part of the instlalation process
   if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
-    return -1
+    return 0
 
   # We will iterate upwards aka implement "cd .." until we reach the Peano root, or until we find CMakeCache.txt.
   current_iter_dir = call_directory
   dist = 0
   while current_iter_dir != project_root_dir:
-    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt"))
+    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt")) or \
+      os.path.exists(os.path.join(current_iter_dir, "Config.cmake"))
     if found_cache_file:
       return dist
     current_iter_dir =os.path.abspath(os.path.join(current_iter_dir, ".."))
     dist += 1
+
+  # At project root, check one final time but only for config.cmake
+  if os.path.exists(os.path.join(project_root_dir, "Config.cmake")):
+    return 0
 
   return -1
 
@@ -197,7 +245,12 @@ def parse_cmake_cache_for_mpi_and_gpu_vendor():
 
   mpi_vendor = None
   gpu_vendor = None
-  with open(os.path.join(cmake_build_dir, "CMakeCache.txt"), "r") as f:
+
+  fname = os.path.join(cmake_build_dir, "CMakeCache.txt") if \
+    os.path.exists(os.path.join(cmake_build_dir, "CMakeCache.txt")) \
+    else os.path.join(cmake_build_dir, "Config.cmake")
+
+  with open(fname, "r") as f:
     for line in f:
       if "MPI_CXX_COMPILER:FILEPATH" in line:
         mpicxx = line.split("=")[1]  # Get path to mpicxx. E.g., /usr/bin/mpicxx

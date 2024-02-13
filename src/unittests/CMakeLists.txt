@@ -25,7 +25,7 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
     endif()
 
     if(USE_COMPONENT_DEFINITIONS)
-      target_compile_definitions(UnitTests${dimension}d_${mode_lower} PUBLIC ${USE_COMPONENT_DEFINITIONS})
+      target_compile_definitions(UnitTests${dimension}d_${mode_lower} PUBLIC ${USE_COMPONENT_DEFINITIONS} CACHE INTERNAL "")
     endif()
 
     install(TARGETS UnitTests${dimension}d_${mode_lower}
