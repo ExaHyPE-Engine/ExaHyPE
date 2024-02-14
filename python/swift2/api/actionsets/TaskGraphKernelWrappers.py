@@ -55,12 +55,13 @@ def construct_touch_vertex_first_time_call(
         "touchVertexFirstTime(...)", 
         "create task " << taskNumberToBeUsed.toString() << 
         " for " << marker.toString() <<
-        " depends on " << ::swift2::toString(parentTaskNumbers)
+        " depends on " << ::swift2::toString(parentTaskNumbers) <<
+        " with " << assignedParticles.size() << " particles on marker " << marker.toString() 
       );
       
       auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
           assignedParticles,
-          [=](decltype(assignedParticles)& assignedParticles)->void {
+          [=,this](decltype(assignedParticles)& assignedParticles)->void {
             """
             + touch_vertex_first_time_kernel
             + """
@@ -114,13 +115,16 @@ def construct_touch_cell_first_time_call(
         "touchCellFirstTime(...)", 
         "create task " << taskNumberToBeUsed.toString() << 
         " for " << marker.toString() <<
-        " depends on " << ::swift2::toString(adjacentVertexAndParentTask)
+        " depends on " << ::swift2::toString(adjacentVertexAndParentTask) <<
+        " with " << localParticles.size() << " local particles on marker " << marker.toString() 
       );
+      
+      // Ohne = ist der marker nimmer gueltig!
       
       auto* newTask = new ::swift2::CellTask< decltype(localParticles) >(
         localParticles,
         activeParticles,
-          [=](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
+          [=,this](decltype(localParticles)& localParticles, decltype(localParticles)& activeParticles)->void {
             """
         + touch_cell_first_time_kernel
         + """
@@ -174,12 +178,13 @@ def construct_touch_vertex_last_time_call(
         "touchVertexLastTime(...)", 
         "create task " << taskNumberToBeUsed.toString() << 
         " for " << marker.toString() <<
-        " depends on " << ::swift2::toString(adjacentCellTasks)
+        " depends on " << ::swift2::toString(adjacentCellTasks) <<
+        " with " << assignedParticles.size() << " particles on marker " << marker.toString() 
       );
       
       auto* newTask = new ::swift2::VertexTask< decltype(assignedParticles) >(
           assignedParticles,
-          [=](decltype(assignedParticles)& assignedParticles)->void {
+          [=,this](decltype(assignedParticles)& llassignedParticles)->void {
             """
         + touch_vertex_last_time_kernel
         + """
