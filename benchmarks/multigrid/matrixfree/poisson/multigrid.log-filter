@@ -24,9 +24,9 @@ info examples::exahype2::euler::observers  -1     white always-on
 trace  tarch                               -1     black always-on    
 trace  peano4                              -1     black always-on
 trace  benchmarks                          -1     black always-on
-trace  benchmarks::multigrid::matrixfree::poisson::observers::ProjectOntoFace2src_multigrid_matrixfree_solvers_api_actionsets_DGSolver0  -1     white always-on
-trace  benchmarks::multigrid::matrixfree::poisson::observers::Solve2src_multigrid_matrixfree_solvers_api_actionsets_UpdateCell0  -1     white always-on
-trace  benchmarks::multigrid::matrixfree::poisson::AbstractDGPoisson  -1     white always-on
+trace  benchmarks::multigrid::matrixfree::poisson::observers::ProjectOntoFace2src_multigrid_matrixfree_solvers_api_actionsets_DGSolver0  -1     black always-on
+trace  benchmarks::multigrid::matrixfree::poisson::observers::Solve2src_multigrid_matrixfree_solvers_api_actionsets_UpdateCell0  -1     black always-on
+trace  benchmarks::multigrid::matrixfree::poisson::AbstractDGPoisson  -1     black always-on
 trace  benchmarks::multigrid::matrixfree::poisson::observers::Plot2src_multigrid_matrixfree_solvers_api_actionsets_PlotDGDataInPeanoBlockFormat0  -1     white always-on
 trace  exahype2                            -1     black always-on
 trace  toolbox                             -1     black always-on

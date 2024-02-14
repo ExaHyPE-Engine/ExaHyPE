@@ -97,6 +97,13 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
 }
 """
 
+  templateTFFT="""
+  if (fineGridFace{{SOLVER_NAME}}.getType()!=facedata::{{SOLVER_NAME}}::Type::Coarse)
+  {
+    logTraceInWith3Arguments("TFFTOutput", marker.x(), fineGridFace{{SOLVER_NAME}}.getSolution(),fineGridFace{{SOLVER_NAME}}.getProjection());
+    logTraceOut("TFFTOutput");
+  }
+"""
 
   __Template_BeginTraversal = """
   tarch::mpi::Lock lock( _semaphore );
@@ -132,6 +139,8 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
       result = jinja2.Template( self.__Template_BeginTraversal).render(**self.d)             
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = jinja2.Template( self.__Template_EndTraversal).render(**self.d)             
+    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      result = jinja2.Template( self.templateTFFT).render(**self.d) 
     return result
 
 
