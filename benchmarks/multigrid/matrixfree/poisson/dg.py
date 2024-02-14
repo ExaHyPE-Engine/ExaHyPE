@@ -25,6 +25,8 @@ parser.add_argument("-upcn", "--unknowns_per_cell",   dest="upcn",            ty
 parser.add_argument("-spfn", "--solutions_per_face_node",  dest="spfn",            type=int, default=2, help="Number of solutions to store per face node")
 parser.add_argument("-ppfn", "--projections_per_face_node",dest="ppfn",            type=int, default=2, help="Number of projections to store per face node")
 parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
+parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Mesh size")
+parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Mesh size")
 parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
@@ -79,8 +81,8 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   cell_from_face_projection_scaling = cell_from_face_projection_scaling,
   riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
   boundary_matrix = matrices.get_boundary_matrix(),
-  cell_relaxation = 0.6,
-  face_relaxation = 1,
+  cell_relaxation = args.omega_c,
+  face_relaxation = args.omega_f,
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
 )
