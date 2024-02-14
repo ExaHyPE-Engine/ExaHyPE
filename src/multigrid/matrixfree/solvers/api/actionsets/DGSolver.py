@@ -141,7 +141,20 @@ class ProjectOntoFaces(ActionSet):
     for (int f=0; f<TwoTimesD; f++)
     {
       logTraceInWith2Arguments("ProjectOntoFaces::FaceLoop", f, fineGridFaces{{SOLVER_NAME}}(f).getProjection())
-      for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection; p++)
+      /*
+      This loop is crucial - we have a lot of redundant zeros and we don't wanna overwrite eg negative
+      projections when we are dealing with face 0. So, some tricky indexing needed
+      */
+      // skip halfway along the projection vector if we are on face 0 or 1
+      int startIndexProjection = 
+        marker.getSelectedFaceNumber() < Dimensions ?
+        repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
+        0;
+
+      // previously, this loop would go up to total number of projections.
+      // but we only want half this number, since we skip the projections
+      // that should be written to by the other face
+      for (int p=startIndexProjection; p<repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.NodesPerFace; p++)
       {
         fineGridFaces{{SOLVER_NAME}}(f).setProjection(
           p,
