@@ -70,8 +70,20 @@ bool selectNextAlgorithmicStep() {
      
       case repositories::StepRepository::Steps::InitSolution:
         {
+          /*
+          We set the cell solutions first. Then we wanna init the faces.
+          So, we do the following:
+
+          0. Init cell solution; goto ProjectOntoFace
+          1. UpdateCell
+          2. ProjectOntoFace
+          3. UpdateFaceSolution; goto UpdateCell
+
+          So after we have projected initial values onto the faces, by going
+          0->2->3, we can loop over 1->2->3 as many times we want
+          */
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::UpdateCell )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::ProjectOntoFace )
           );
         }
         break;
@@ -100,7 +112,7 @@ bool selectNextAlgorithmicStep() {
 
       case repositories::StepRepository::Steps::Solve:
         {
-          if ( solverSteps++ >= 100 )
+          if ( ++solverSteps >= 100 )
           {
             peano4::parallel::Node::getInstance().setNextProgramStep(
               repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
