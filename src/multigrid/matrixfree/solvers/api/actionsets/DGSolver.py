@@ -147,7 +147,7 @@ class ProjectOntoFaces(ActionSet):
       */
       // skip halfway along the projection vector if we are on face 0 or 1
       int startIndexProjection = 
-        marker.getSelectedFaceNumber() < Dimensions ?
+        f < Dimensions ?
         repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode :
         0;
 
