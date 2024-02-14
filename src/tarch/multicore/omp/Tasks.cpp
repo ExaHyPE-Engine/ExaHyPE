@@ -170,10 +170,13 @@ int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawned
 
 
 void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
+  static tarch::logging::Log _log( "tarch::multicore::native" );
+
   int* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
 
   #if !defined(OpenMPDependenciesInTaskWait)
   if (taskNumber != NoDependencies) {
+    logDebug( "spawnTask(...)", "wait for task " << taskNumber << " with empty task (ensure that a previous task with same number is not pending still)" );
     #pragma omp task untied depend(in: outDependencyPointer[:1])
     {
       // empty task
@@ -182,6 +185,7 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
   }
   #else
   if (taskNumber != NoDependencies) {
+    logDebug( "spawnTask(...)", "wait for task " << taskNumber << "/" << outDependencyPointer << " with taskwait (ensure that a previous task with same number is not pending still)" );
     #pragma omp taskwait depend(in : *outDependencyPointer)
   }
   #endif
@@ -215,6 +219,8 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
 
       #pragma omp atomic
       numberOfSpawnedTasks--;
+
+      logDebug( "spawnTask(...)", "task dependency " << taskNumber << "/" <<  outDependencyPointer << " is complete" );
     }
   } else if (taskNumber == NoDependencies and not inDependencies.empty()) {
     int helperDependency;
@@ -223,6 +229,7 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
        #pragma omp task priority(job->getPriority()) untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
        {  
          // empty task
+         logDebug( "spawnTask(...)", "incoming task dependency " << inDependencyTaskNumber << "/" <<  inDependencyPointer << " is complete" );
        }
     }
     #pragma omp task priority(job->getPriority()) untied depend(in: helperDependency)
@@ -245,6 +252,7 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
       #pragma omp task priority(job->getPriority()) untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
       {  
         // empty task
+        logDebug( "spawnTask(...)", "incoming task dependency " << inDependencyTaskNumber << "/" <<  inDependencyPointer << " is complete" );
       }
     }
     #pragma omp task priority(job->getPriority()) untied depend(in: helperDependency) depend(out: outDependencyPointer[:1])
@@ -256,6 +264,8 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
 
       #pragma omp atomic
       numberOfSpawnedTasks--;
+
+      logDebug( "spawnTask(...)", "task dependency " << taskNumber << "/" <<  outDependencyPointer << " is complete" );
     }
   } else {
     assertionMsg(false, "should never be called");
