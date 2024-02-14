@@ -24,6 +24,14 @@ namespace swift2 {
    * this point, active and passive set are written down as templates over an
    * unknown particle type. This task does not exploit any vectorisation in any
    * way.
+   *
+   * ## Design rationale
+   *
+   * One might initially think that this task class is not required, as we only
+   * wrap the TaskWithCopyOfFunctor. However, we add a few more bits and pieces
+   * such as the GPU-offload and fusion capabilities. Furthermore, it is nice to
+   * see the copy semantics preserved explicitly, i.e. which objects are explicitly
+   * preserved and handed over.
    */
   template <typename ParticleSet>
   class CellTask: public tarch::multicore::Task {
