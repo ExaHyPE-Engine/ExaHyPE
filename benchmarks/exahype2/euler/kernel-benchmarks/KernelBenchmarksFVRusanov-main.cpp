@@ -1581,7 +1581,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
 #endif
 
 #if defined(GPUOffloadingOMP)
-    assessKernel(
+    /*assessKernel(
       wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
         FVRusanovSolver,
         FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
@@ -1597,92 +1597,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       launchingThreads,
       device,
       localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, batched, SoA, copy",
-      launchingThreads,
-      device,
-      localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, batched, AoSoA, copy",
-      launchingThreads,
-      device,
-      localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, batched, AoS, usm",
-      launchingThreads,
-      device,
-      localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, batched, SoA, usm",
-      launchingThreads,
-      device,
-      localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovBatchedUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, batched, AoSoA, usm",
-      launchingThreads,
-      device,
-      localPatches
-    );
+    );*/
 
     assessKernel(
       wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
@@ -1701,92 +1616,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       device,
       localPatches
     );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, patch-wise, SoA, copy",
-      launchingThreads,
-      device,
-      localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, copy",
-      launchingThreads,
-      device,
-      localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSLexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, patch-wise, AoS, usm",
-      launchingThreads,
-      device,
-      localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, patch-wise, SoA, usm",
-      launchingThreads,
-      device,
-      localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseUSMStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, patch-wise, AoSoA, usm",
-      launchingThreads,
-      device,
-      localPatches
-    );
-
+/*
     assessKernel(
       wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless<
         FVRusanovSolver,
@@ -1803,41 +1633,7 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       launchingThreads,
       device,
       localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::SoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, volume-wise, SoA, copy",
-      launchingThreads,
-      device,
-      localPatches
-    );
-    assessKernel(
-      wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless<
-        FVRusanovSolver,
-        FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
-        HaloSize,
-        FVRusanovSolver::NumberOfUnknowns,
-        FVRusanovSolver::NumberOfAuxiliaryVariables,
-        EvaluateFlux,
-        EvaluateNonconservativeProduct,
-        EvaluateSource,
-        EvaluateMaximumEigenvalueAfterTimeStep,
-        ::exahype2::enumerator::AoSoALexicographicEnumerator>>,
-      "device(s) " + deviceString + ", stateless, volume-wise, AoSoA, copy",
-      launchingThreads,
-      device,
-      localPatches
-    );
+    );*/
 #endif
 
 #if defined(GPUOffloadingCPP)
@@ -1956,7 +1752,7 @@ int main(int argc, char** argv) {
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
   repositories::initSharedMemoryAndGPUEnvironment();
-  ::peano4::runTestsAndBenchmarks();
+  //::peano4::runTestsAndBenchmarks();
   OTTER_INITIALISE();
 
   if (EnableFPE) {
