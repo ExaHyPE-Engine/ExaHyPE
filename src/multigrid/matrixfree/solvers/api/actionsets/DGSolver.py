@@ -154,7 +154,7 @@ class ProjectOntoFaces(ActionSet):
       // previously, this loop would go up to total number of projections.
       // but we only want half this number, since we skip the projections
       // that should be written to by the other face
-      for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.NodesPerFace; p++)
+      for (int p=0; p<repositories::{{SOLVER_INSTANCE}}.NodesPerFace * repositories::{{SOLVER_INSTANCE}}.ProjectionsPerFaceNode; p++)
       {
         fineGridFaces{{SOLVER_NAME}}(f).setProjection(
           p + startIndexProjection,
