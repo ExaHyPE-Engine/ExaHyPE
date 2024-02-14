@@ -203,7 +203,7 @@ void tarch::multicore::native::processFusedTask(
   Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device
 ) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-#if !defined(__NVCOMPILER)
+#if !defined(__NVCOMPILER) and !defined(__AMDGPU__)
 #pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
 #endif
   {

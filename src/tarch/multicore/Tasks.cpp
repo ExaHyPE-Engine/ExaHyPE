@@ -150,8 +150,22 @@ bool tarch::multicore::internal::fusePendingTasks(
     globalNonblockingTasks.tasks.pop_front();
   }
 
-  constexpr bool FunnelThreads = true;
-  if (myTask != nullptr and myTask->canFuse() and (not FunnelThreads or omp_get_thread_num() == 0)) {
+  bool fuseTasks = myTask != nullptr and myTask->canFuse();
+
+  constexpr bool AllThreadsAreAllowedToOffload = true;
+  constexpr bool ThreadsAreAllowedToOffloadConcurrently = true;
+  static_assert(AllThreadsAreAllowedToOffload or not ThreadsAreAllowedToOffloadConcurrently);
+  fuseTasks &= AllThreadsAreAllowedToOffload or (omp_get_thread_num() == 0);
+
+  static tarch::multicore::BooleanSemaphore fusionSemaphore;
+  static int numberOfFusingThreads = 0;
+  {
+    tarch::multicore::Lock fusionLock(fusionSemaphore);
+    fuseTasks &= ThreadsAreAllowedToOffloadConcurrently or (numberOfFusingThreads == 0);
+    numberOfFusingThreads++;
+  }
+
+  if (fuseTasks) {
     auto pp = globalNonblockingTasks.tasks.begin();
     while (
       pp != globalNonblockingTasks.tasks.end() and (*pp)->getTaskType() == myTask->getTaskType()
@@ -169,6 +183,11 @@ bool tarch::multicore::internal::fusePendingTasks(
   } else if (myTask != nullptr and not myTask->canFuse()) {
     lock.free();
     tarch::multicore::native::spawnTask(myTask);
+  }
+
+  {
+    tarch::multicore::Lock fusionLock(fusionSemaphore);
+    numberOfFusingThreads--;
   }
 
   return myTask == nullptr ? 0 : tasksOfSameType.size() + 1;
