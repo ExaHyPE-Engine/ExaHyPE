@@ -148,7 +148,7 @@ def find_smoothing_length(
         h_dim_minus_one = h ** (ndim - 1.0)
         wcount, wcount_dh = _neighbour_loop(r, h, kernel, ndim)
 
-        if wcount < 1e-5:
+        if abs(wcount - kernel_root) < 1e-5 * kernel_root:
             if verbose:
                 print(f"Caught no neighbours case, h={h}")
             h_new = 2. * h
@@ -167,6 +167,7 @@ def find_smoothing_length(
                 right = min(right, h)
 
             if left > right:
+                # this might be a cause to crash, actually
                 print("Error in bisection bounds. Resetting them.")
                 left = left_old
                 right = right_old
@@ -197,11 +198,10 @@ def find_smoothing_length(
         diff = h - h_new
 
         # Are we done?
-        if abs(diff < h_tolerance * h):
+        if abs(diff) < h_tolerance * h:
             if verbose:
                 print("done h=", h_new)
             return h_new
-            break
 
         # We're not done...
         # Case where we have been oscillating around the solution
@@ -216,13 +216,7 @@ def find_smoothing_length(
         if verbose:
             print("------------------------------------")
 
-    print(
-        "Particle with coordinates",
-        xp,
-        "didn't converge smoothing length after",
-        iteration,
-        "iterations",
-    )
+    print( f"Particle with coordinates {xp} didn't converge smoothing length after {iteration} iterations")
 
     quit()
     return h
