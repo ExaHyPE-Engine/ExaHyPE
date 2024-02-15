@@ -37,7 +37,7 @@ namespace exahype2::enumerator {
    * @see enumerator.h for a generic description of attribute semantics.
    */
   struct SoALexicographicEnumerator {
-    constexpr GPUCallableInlineMethod SoALexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+    GPUCallableInlineMethod SoALexicographicEnumerator(int numberOfCells, int numberOfDoFsPerAxisInCell, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
       _numberOfCells(numberOfCells),
       _numberOfDoFsPerAxisInCell(numberOfDoFsPerAxisInCell),
       _haloSize(haloSize),

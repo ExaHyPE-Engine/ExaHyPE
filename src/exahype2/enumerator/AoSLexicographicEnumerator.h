@@ -63,18 +63,18 @@ namespace exahype2::enumerator {
      */
     GPUCallableInlineMethod int operator()(int cellIndex, const tarch::la::Vector<Dimensions, int>& volumeIndex, int unknown) const InlineMethod {
       if constexpr (Dimensions == 2) {
-        /*int result = (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
+        int result = (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
                  * (_unknowns + _numberOfAuxiliaryVariables)
                + (volumeIndex(1) + _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables)
-               + (volumeIndex(0) + _haloSize) * (_unknowns + _numberOfAuxiliaryVariables) + unknown;*/
-        int newResult = (cellIndex % _numberOfCells)
+               + (volumeIndex(0) + _haloSize) * (_unknowns + _numberOfAuxiliaryVariables) + unknown;
+        /*int newResult = (cellIndex % _numberOfCells)
                 * _numberOfDofsPerAxisPlusTwoTimesHaloSquaredTimesUnknownsPlusAuxiliaryVariables
                 + (volumeIndex(1) + _haloSize) * _numberOfDofsPerAxisPlusTwoTimesHaloTimesUnknownsPlusAuxiliaryVariables
                 + (volumeIndex(0) + _haloSize) * _unknownsPlusAuxiliaryVariables + unknown;
-            /*if (result != newResult) {
+            if (result != newResult) {
               printf("Wrong result\n");
             }*/
-            return newResult;
+            return result;
       } else {
         return (cellIndex % _numberOfCells) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_numberOfDoFsPerAxisInCell + 2 * _haloSize)
                  * (_numberOfDoFsPerAxisInCell + 2 * _haloSize) * (_unknowns + _numberOfAuxiliaryVariables)

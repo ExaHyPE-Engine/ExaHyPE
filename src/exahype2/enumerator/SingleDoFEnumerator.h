@@ -20,7 +20,7 @@ namespace exahype2::enumerator {
    *
    */
   struct SingleDoFEnumerator {
-    constexpr GPUCallableInlineMethod SingleDoFEnumerator(int unknowns, int numberOfAuxiliaryVariables):
+    GPUCallableInlineMethod SingleDoFEnumerator(int unknowns, int numberOfAuxiliaryVariables):
       _unknowns(unknowns),
       _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables) {}
 

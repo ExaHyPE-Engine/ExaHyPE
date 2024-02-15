@@ -1616,8 +1616,8 @@ void runBenchmarks(int numberOfPatches, int launchingThreads) {
       device,
       localPatches
     );
-/*
-    assessKernel(
+
+    /*assessKernel(
       wrapDeviceKernel<::exahype2::fv::rusanov::omp::timeStepWithRusanovVolumewiseStateless<
         FVRusanovSolver,
         FVRusanovSolver::NumberOfFiniteVolumesPerAxisPerPatch,
