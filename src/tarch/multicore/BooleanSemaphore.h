@@ -5,7 +5,6 @@
 namespace tarch {
   namespace multicore {
     class BooleanSemaphore;
-    class MultiReadSingleWriteSemaphore;
     class Lock;
   }
 
@@ -122,7 +121,6 @@ class tarch::multicore::BooleanSemaphore {
   private:
     friend class tarch::multicore::Lock;
     friend class RecursiveSemaphore;
-    friend class MultiReadSingleWriteSemaphore;
     friend class tarch::mpi::BooleanSemaphore;
 
     /**
@@ -136,13 +134,9 @@ class tarch::multicore::BooleanSemaphore {
     void leaveCriticalSection();
 
     /**
-     * Try to lock
-     *
      * Run into critical section and try to lock. If we are successful,
      * the routine returns true and the stuff is locked (so please call
      * leave later on). Otherwise, I return false.
-     *
-     * You have invoke leaveCriticalSection() if the result is true.
      */
     bool tryEnterCriticalSection();
 

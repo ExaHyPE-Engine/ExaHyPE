@@ -9,8 +9,9 @@
 
 #include <algorithm>
 
+#include "../../../../src/tarch/NonCriticalAssertions.h"
+
 #include "tarch/multicore/Lock.h"
-#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
@@ -208,7 +209,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::RungeKuttaSubStep{{item+1}};
       break;
   {% endfor %}
-    case SolverState::Suspended:
     case SolverState::Plotting:
     case SolverState::PlottingAfterGridInitialisation:
     case SolverState::GridInitialisation:
@@ -379,8 +379,6 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Plotting:
       return "plotting";
-    case SolverState::Suspended:
-      return "suspended";
     case SolverState::PlottingAfterGridInitialisation:
       return "plotting-after-grid-initialisation";
     case SolverState::RungeKuttaSubStep0AfterGridInitialisation:

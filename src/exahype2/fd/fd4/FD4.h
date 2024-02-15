@@ -79,30 +79,6 @@ namespace exahype2 {
       #endif
       ;
 
-      /**
-       * Helper routine to reconstruct the first derivatives
-       *
-       * This operation computes the first derivatives over a patch due to
-       *
-       * @Han Your call
-       *
-       * @param patchData Container for the actual data. The pointer to old
-       *   data points to the patch data plus its halo of size haloSize. The
-       *   new pointer is to be befilled, i.e. it contains garbage by default.
-       *   The fields timeStamp and timeStepSize here are not used, so you
-       *   can set them to anything you like. The function doesn't care.
-       */
-      void reconstruct_first_derivatives(
-        ::exahype2::CellData&   patchData,
-        int                     numberOfGridCellsPerPatchPerAxis,
-        int                     haloSize,
-        int                     unknowns,
-        int                     auxiliaryVariables
-      )
-      #if defined(UseManualInlining)
-      __attribute__((always_inline))
-      #endif
-      ;
 
       template <
         typename Solver,

@@ -1,4 +1,4 @@
-#include "tarch/multicore/multicore.h"
+#include "../multicore.h"
 
 #ifdef SharedOMP
 #include "RecursiveSemaphore.h"

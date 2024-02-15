@@ -65,8 +65,6 @@ Tarch_SOURCES = tarch/tarch.cpp \
 	tarch/multicore/multicore.cpp \
 	tarch/multicore/Core.cpp \
 	tarch/multicore/Lock.cpp \
-	tarch/multicore/MultiReadSingleWriteSemaphore.cpp \
-	tarch/multicore/MultiReadSingleWriteLock.cpp \
 	tarch/multicore/RecursiveLock.cpp \
 	tarch/multicore/RecursiveSemaphore.cpp \
 	tarch/multicore/smartScheduling.cpp \

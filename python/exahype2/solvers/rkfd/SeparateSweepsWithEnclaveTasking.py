@@ -3,8 +3,6 @@
 from .SeparateSweeps import SeparateSweeps
 from exahype2.solvers.PDETerms import PDETerms
 from exahype2.solvers.rkfd.actionsets.AbstractRKFDActionSet import AbstractRKFDActionSet
-from exahype2.solvers.rkfd.OneSweepPerRungeKuttaStep import ReconstructLinearCombination
-from exahype2.solvers.rkfd.OneSweepPerRungeKuttaStep import ComputeNewQPointer
 
 import peano4
 import exahype2
@@ -32,7 +30,49 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
     """
 
-    SolveRiemannProblemsOverPatch = jinja2.Template( ReconstructLinearCombination + """
+    SolveRiemannProblemsOverPatch = jinja2.Template(
+        """
+      double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+
+      // Set the variable
+      // double timeStepSize
+      {{COMPUTE_TIME_STEP_SIZE}}
+
+      {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+      if ({{PREDICATES[PREDICATE_NO]}}) {
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariablesOnReconstructedPatch( 1, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, {{HALO_SIZE}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}});
+        ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithoutAuxiliaryVariables( {{RK_STEPS}}, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}}, 0, {{NUMBER_OF_UNKNOWNS}}, 0 );
+    
+        dfor( dof, {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} ) {
+          for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
+            {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
+            {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]!=0 %}
+            oldQWithHalo[ enumeratorWithAuxiliaryVariablesOnReconstructedPatch(0,dof,unknown) ] += 
+              {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize * {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}} * 
+              fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value[ enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO-1}},dof,unknown) ];
+            {% endif %}
+            {% endfor %}
+          }      
+        }
+        
+        newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + enumeratorWithoutAuxiliaryVariables({{PREDICATE_NO}},0,0);
+      }
+      {% endfor %} 
+   
+      {{PREPROCESS_RECONSTRUCTED_PATCH}}
+
+      assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStamp, timeStepSize );
+      assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStamp, timeStepSize );
+
+      ::exahype2::fd::validatePatch(
+        oldQWithHalo,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}},
+        {{HALO_SIZE}}, // halo
+        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+      ); // previous time step has to be valid
+  
       if ( marker.willBeSkeletonCell() ) {
         tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
           marker,
@@ -117,11 +157,11 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     def get_includes(self):
         return (
             """
+#include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/enumerator/enumerator.h"
 #include "exahype2/fd/PatchUtils.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "tarch/multicore/Tasks.h"
-#include "tarch/NonCriticalAssertions.h"
 """
             + self._solver._get_default_includes()
             + self._solver.user_action_set_includes
@@ -138,7 +178,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
     Template = """
-  double* newQ = nullptr;
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ( 
     not marker.hasBeenRefined()
@@ -147,11 +186,18 @@ class MergeEnclaveTaskOutcome(AbstractRKFDActionSet):
     and
     {{PREDICATES[PREDICATE_NO]}}
   ) {
+    #if Dimensions==2
+    constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
+    #elif Dimensions==3
+    constexpr int NumberOfDoFsPerCell = {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}} * {{NUMBER_OF_GRID_CELLS_PER_PATCH_PER_AXIS}};
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}RhsEstimates.value + {{PREDICATE_NO}} * NumberOfDoFsPerCell * {{NUMBER_OF_UNKNOWNS}};
+    #endif
+    
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
-    """ + ComputeNewQPointer + """
     if ( taskNumber>=0 ) {
       double maxEigenvalue; // not used here
-      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, newQ, maxEigenvalue );
+      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, QOut, maxEigenvalue );
     }
   }
   {% endfor %}

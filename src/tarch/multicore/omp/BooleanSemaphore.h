@@ -1,6 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "tarch/multicore/multicore.h"
 #if !defined( _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_OMP_H_) && defined(SharedOMP)
 #define _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_OMP_H_
 
@@ -12,7 +11,6 @@ class tarch::multicore::BooleanSemaphore {
   private:
     friend class tarch::multicore::Lock;
     friend class tarch::mpi::BooleanSemaphore;
-    friend class MultiReadSingleWriteSemaphore;
 
     omp_lock_t lock;
 
