@@ -157,7 +157,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     def get_includes(self):
         return (
             """
-#include "exahype2/NonCriticalAssertions.h"
+#include "tarch/NonCriticalAssertions.h"
 #include "exahype2/enumerator/enumerator.h"
 #include "exahype2/fd/PatchUtils.h"
 #include "exahype2/EnclaveBookkeeping.h"

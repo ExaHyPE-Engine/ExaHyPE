@@ -88,7 +88,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
             min_volume_h=1.0/65536,
             max_volume_h=65536,
             use_heap_storage=False, # See superclass docu
-            pde_terms_without_state=True,
+            pde_terms_without_state=False,
         )
         self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
 
