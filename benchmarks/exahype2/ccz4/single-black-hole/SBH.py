@@ -246,7 +246,7 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
               min_meshcell_h=min_cell_size / patch_size,
               max_meshcell_h=max_cell_size / patch_size,
               use_heap_storage=False, # See superclass docu
-              pde_terms_without_state=True
+              pde_terms_without_state=False
         )
 
         self._user_action_set_includes += """
