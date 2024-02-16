@@ -21,9 +21,6 @@ parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       def
 parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
-parser.add_argument("-upcn", "--unknowns_per_cell",   dest="upcn",            type=int, default=1, help="Unknowns per cell node")
-parser.add_argument("-spfn", "--solutions_per_face",  dest="spfn",            type=int, default=1, help="Number of solutions to store per face node")
-parser.add_argument("-ppfn", "--projections_per_face",dest="ppfn",            type=int, default=1, help="Number of projections to store per face node")
 parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
@@ -60,9 +57,9 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   name = "DGPoisson",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
-  unknowns_per_cell_node = args.upcn,
-  solutions_per_face_node = args.spfn,
-  projections_per_face_node = args.ppfn,
+  unknowns_per_cell_node = args.dimensions + args.upcn,
+  solutions_per_face_node = 2,
+  projections_per_face_node = 2,
   min_h = args.meshsize,
   max_h = args.meshsize,
   assembly_matrix= assembly_matrix, 
