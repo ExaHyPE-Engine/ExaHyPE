@@ -2,9 +2,6 @@
 
 #include "observers/CreateGrid.h"
 #include "observers/InitSolution.h"
-#include "observers/UpdateCell.h"
-#include "observers/ProjectOntoFace.h"
-#include "observers/UpdateFaceSolution.h"
 #include "observers/Solve.h"
 #include "observers/Plot.h"
 
@@ -70,45 +67,11 @@ bool selectNextAlgorithmicStep() {
      
       case repositories::StepRepository::Steps::InitSolution:
         {
-          /*
-          We set the cell solutions first. Then we wanna init the faces.
-          So, we do the following:
-
-          0. Init cell solution; goto ProjectOntoFace
-          1. UpdateCell
-          2. ProjectOntoFace
-          3. UpdateFaceSolution; goto UpdateCell
-
-          So after we have projected initial values onto the faces, by going
-          0->2->3, we can loop over 1->2->3 as many times we want
-          */
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::ProjectOntoFace )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
           );
         }
         break;
-
-      case repositories::StepRepository::Steps::UpdateCell:
-      {
-        peano4::parallel::Node::getInstance().setNextProgramStep(
-          repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::ProjectOntoFace )
-        );
-      } break;
-
-      case repositories::StepRepository::Steps::ProjectOntoFace:
-      {
-        peano4::parallel::Node::getInstance().setNextProgramStep(
-          repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::UpdateFaceSolution )
-        );
-      } break;
-
-
-      case repositories::StepRepository::Steps::UpdateFaceSolution:
-      {
-        peano4::parallel::Node::getInstance().setNextProgramStep(
-          repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
-        );
-      } break;
 
       case repositories::StepRepository::Steps::Solve:
         {
@@ -122,7 +85,7 @@ bool selectNextAlgorithmicStep() {
           {
             logInfo("selectNextAlgorithmicStep", "Continuining to solve...");
             peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::UpdateCell )
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
             );
           }
         }
@@ -197,43 +160,6 @@ void step() {
       }
       break;
 
-    case repositories::StepRepository::Steps::UpdateCell:
-      {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "update-cell" );
-
-        observers::UpdateCell  observer;
-        watch.start();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        watch.stop();
-        initMeasurement.setValue( watch.getCalendarTime() );
-      }
-      break;
-
-    case repositories::StepRepository::Steps::ProjectOntoFace:
-      {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "project-onto-face" );
-
-        observers::ProjectOntoFace  observer;
-        watch.start();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        watch.stop();
-        initMeasurement.setValue( watch.getCalendarTime() );
-      }
-      break;
-
-      case repositories::StepRepository::Steps::UpdateFaceSolution:
-      {
-        tarch::logging::LogFilter::getInstance().switchProgramPhase( "update-face-sol" );
-
-        observers::UpdateFaceSolution  observer;
-        watch.start();
-        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        watch.stop();
-        initMeasurement.setValue( watch.getCalendarTime() );
-      }
-      break;
-    
-    
     case repositories::StepRepository::Steps::Solve:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
