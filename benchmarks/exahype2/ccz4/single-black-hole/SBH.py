@@ -1,3 +1,5 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import argparse
 
@@ -88,7 +90,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
             min_volume_h=1.0/65536,
             max_volume_h=65536,
             use_heap_storage=False, # See superclass docu
-            pde_terms_without_state=False,
+            pde_terms_without_state=True,
         )
         self.double_constants["BlackHoleFVRegion"] = BlackHoleRegion
 
