@@ -7,7 +7,9 @@ results from a linear combination of weighted polynomials spanning function
 spaces. The weights determine the continuous solution. We have quite some 
 freedom how to arrange the weights geometrically and to pick polynomials.
 The sketch below depits a Gauss-Legendre (left) and Gauss-Lobatto (right) 
-arrangement.
+arrangement. We also note that in general, we store variables one after 
+another, ie we store the values for \f$ u \f$ for each node on the facet,
+then each value for \f$ p_x \f$ etc.
 
 @image html GaussLobatto.png
 
