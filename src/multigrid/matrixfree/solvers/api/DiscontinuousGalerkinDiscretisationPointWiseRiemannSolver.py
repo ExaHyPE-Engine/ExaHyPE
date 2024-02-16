@@ -409,9 +409,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     pass
 
   def add_to_solve(self, observer):
-    observer.add_action_set( ProjectOntoFaces(self, 0, False) )
-    observer.add_action_set( UpdateFaceSolution(self, 1, False) )
-    observer.add_action_set( UpdateCell(self, 2, False) )
+    observer.add_action_set( UpdateFaceSolution(self, 0, False) )
+    observer.add_action_set( UpdateCell(self, 1, False) )
+    observer.add_action_set( ProjectOntoFaces(self, 2, False) )
 
   
   def add_implementation_files_to_project(self, namespace, output):
