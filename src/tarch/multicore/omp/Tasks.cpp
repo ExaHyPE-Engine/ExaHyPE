@@ -12,21 +12,61 @@
 
 #if defined(SharedOMP)
 
+
+#include <cstdint>
+
+
 namespace {
   int numberOfSpawnedTasks = 0;
 
   /**
    * Dependency tracking in OpenMP is organised via addresses. These addresses
-   * are sole helpers, i.e. the underlying memory region doesn't have to be
-   * owned by the application code. So we basically use an arbitrary address
-   * and then use this as baseline for any dependency, taking into account that
-   * dependencies are all enumerated continuously.
-   *
-   * The pointer has to be an integer pointer (or any built-in type), as we
-   * want to do some pointer arithmetics with it. This would not work with a
-   * void pointer.
+   * are sole helpers, i.e. the underlying memory region doesn't have to hold
+   * data. However, it has to be owned by the application code. Otherwise,
+   * OpenMP's behaviour is undefined. What we do it that we keep a std::vector
+   * on the heap, and use the underlying data(), i.e. its array, as source of
+   * our task addresses. Consequently, we only support a finite number of
+   * tasks. We don't know the total number a priori and I don't want to
+   * constrain the number of tasks, so I keep track of the maximum task number
+   * at runtime and grow the vector whenever no task is in pending.
    */
-  int* dependencyTrackingBaseAddress = &numberOfSpawnedTasks;
+  std::vector<uint8_t> dependencyTracking(1);
+
+  /**
+   * If this value is either negative if we have enough task numbers, or it
+   * indicates what the highest task number is that we'd like to have.
+   */
+  int requiredNumberOfTasksForDependencyTracking{-1};
+
+
+  /**
+   * Take the in-dependencies and map them onto a vector so we can iterate over them
+   *
+   * Further to that, we also remove indices which are not valid, i.e. are not
+   * representable within dependencyTracking. We exploit the knowledge that this
+   * can only happen if we are in drain mode.
+   */
+  std::vector<int> mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(
+    const std::set<int>&  inDependencies
+  ) {
+    if (requiredNumberOfTasksForDependencyTracking<=0) {
+      return std::vector<int>( inDependencies.begin(), inDependencies.end() );
+    }
+    else {
+      std::vector<int> result;
+      for (auto& p: inDependencies) {
+        if (p<dependencyTracking.size()) {
+          result.push_back(p);
+        }
+        else {
+          tarch::logging::Log _log( "tarch::multicore::omp" );
+          logInfo( "mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(...)", "ignore task " << p << " as it is not representable within dependency array and hence cannot exist" );
+        }
+      }
+      return result;
+    }
+  }
+
 } // namespace
 
 
@@ -172,27 +212,54 @@ int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawned
 void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
   static tarch::logging::Log _log( "tarch::multicore::native" );
 
-  int* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
+  assertion1( taskNumber>=0 or taskNumber==NoDependencies, taskNumber );
 
+  #pragma omp critical (grow_admin_data_structure)
+  {
+    // Has come before second branch and does not exclude this one! We could be
+    // completely drained, and at this moment request a big task number, so
+    // better take this into account before we grow the memory.
+    if (taskNumber>=dependencyTracking.size()) {
+      requiredNumberOfTasksForDependencyTracking = std::max( taskNumber, requiredNumberOfTasksForDependencyTracking );
+      logInfo( "spawnTask(...)", "not enough task numbers (" << dependencyTracking.size() << " vs " << requiredNumberOfTasksForDependencyTracking << "). Enter panic mode and drain task graph");
+    }
+    // See above: This is not an else.
+    if (numberOfSpawnedTasks==0 and requiredNumberOfTasksForDependencyTracking>0) {
+      logInfo( "spawnTask(...)", "administration array for task dependency is too small (" << dependencyTracking.size() << "). Grow to " << requiredNumberOfTasksForDependencyTracking );
+      assertion2(
+        requiredNumberOfTasksForDependencyTracking>dependencyTracking.size(),
+        requiredNumberOfTasksForDependencyTracking,
+        dependencyTracking.size()
+      );
+      dependencyTracking.resize(requiredNumberOfTasksForDependencyTracking+1);
+      requiredNumberOfTasksForDependencyTracking = -1;
+    }
+  }
+
+/*
   #if !defined(OpenMPDependenciesInTaskWait)
-  if (taskNumber != NoDependencies) {
+  if (taskNumber != NoDependencies and taskNumber<dependencyTracking.size()) {
+    assertion2(taskNumber<dependencyTracking.size(), taskNumber, dependencyTracking.size());
     logDebug( "spawnTask(...)", "wait for task " << taskNumber << " with empty task (ensure that a previous task with same number is not pending still)" );
-    #pragma omp task untied depend(in: outDependencyPointer[:1])
+    #pragma omp task untied depend(in: dependencyTracking[taskNumber])
     {
       // empty task
     }
     #pragma omp taskwait 
   }
   #else
-  if (taskNumber != NoDependencies) {
-    logDebug( "spawnTask(...)", "wait for task " << taskNumber << "/" << outDependencyPointer << " with taskwait (ensure that a previous task with same number is not pending still)" );
-    #pragma omp taskwait depend(in : *outDependencyPointer)
+  if (taskNumber != NoDependencies and taskNumber<dependencyTracking.size()) {
+    assertion2(taskNumber<dependencyTracking.size(), taskNumber, dependencyTracking.size());
+    logDebug( "spawnTask(...)", "wait for task " << taskNumber << " with taskwait (ensure that a previous task with same number is not pending still)" );
+    #pragma omp taskwait depend(in : dependencyTracking[taskNumber])
   }
   #endif
+*/
 
   #pragma omp atomic
   numberOfSpawnedTasks++;
 
+  // Default option for enclave tasks, e.g.
   if (taskNumber == NoDependencies and inDependencies.empty()) {
     #pragma omp task priority(job->getPriority()) untied
     {
@@ -204,35 +271,51 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
       #pragma omp atomic
       numberOfSpawnedTasks--;
     }
+  }
+  else if (taskNumber != NoDependencies and requiredNumberOfTasksForDependencyTracking>0) {
+    logInfo( "spawnTask(...)", "in drain mode. Wait for all dependencies of task " << taskNumber << " and then execute task straightaway" );
+    waitForTasks(inDependencies);
+    while (job->run()) {
+      #pragma omp taskyield
+    }
+    delete job;
+
+    #pragma omp atomic
+    numberOfSpawnedTasks--;
+  }
+/*
+  else if (taskNumber != NoDependencies and inDependencies.empty()) {
+    #pragma omp task priority(job->getPriority()) untied depend(out: dependencyTracking[taskNumber])
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
+
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+
+      logDebug( "spawnTask(...)", "task dependency " << taskNumber << " is complete" );
+    }
+  }
+*/
+  else if (taskNumber == NoDependencies) {
+    std::vector<int> inDependenciesAsVector = mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(inDependencies);
+    #pragma omp task priority(job->getPriority()) untied depend(iterator(j=0:inDependenciesAsVector.size()),in: dependencyTracking[inDependenciesAsVector[j]])
+    {
+      while (job->run()) {
+        #pragma omp taskyield
+      }
+      delete job;
+
+      #pragma omp atomic
+      numberOfSpawnedTasks--;
+    }
+    // @todo raus
   } else if (taskNumber != NoDependencies and inDependencies.empty()) {
-    // A nicer syntax would be 
-    //
-    // #pragma omp task priority(job->getPriority()) untied depend(out : *outDependencyPointer)
-    //
-    // but some toolchains don't support that synax.
-    #pragma omp task priority(job->getPriority()) untied depend(out : outDependencyPointer[:1])
-    {
-      while (job->run()) {
-        #pragma omp taskyield
-      }
-      delete job;
-
-      #pragma omp atomic
-      numberOfSpawnedTasks--;
-
-      logDebug( "spawnTask(...)", "task dependency " << taskNumber << "/" <<  outDependencyPointer << " is complete" );
-    }
-  } else if (taskNumber == NoDependencies and not inDependencies.empty()) {
-    int helperDependency;
-    for (auto& inDependencyTaskNumber: inDependencies) {
-       int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
-       #pragma omp task priority(job->getPriority()) untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
-       {  
-         // empty task
-         logDebug( "spawnTask(...)", "incoming task dependency " << inDependencyTaskNumber << "/" <<  inDependencyPointer << " is complete" );
-       }
-    }
-    #pragma omp task priority(job->getPriority()) untied depend(in: helperDependency)
+    logInfo( "spawnTask(...)", "spawn task " << taskNumber << " without dependencies" );
+    assertion3(taskNumber<dependencyTracking.size(), taskNumber, dependencyTracking.size(), requiredNumberOfTasksForDependencyTracking);
+    #pragma omp task priority(job->getPriority()) untied depend(out:dependencyTracking[taskNumber])
     {
       while (job->run()) {
         #pragma omp taskyield
@@ -242,20 +325,11 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
       #pragma omp atomic
       numberOfSpawnedTasks--;
     }
-  } else if (taskNumber != NoDependencies and not inDependencies.empty()) {
-    //
-    // See above
-    //
-    int helperDependency;
-    for (auto& inDependencyTaskNumber: inDependencies) {
-      int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
-      #pragma omp task priority(job->getPriority()) untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
-      {  
-        // empty task
-        logDebug( "spawnTask(...)", "incoming task dependency " << inDependencyTaskNumber << "/" <<  inDependencyPointer << " is complete" );
-      }
-    }
-    #pragma omp task priority(job->getPriority()) untied depend(in: helperDependency) depend(out: outDependencyPointer[:1])
+  } else if (taskNumber != NoDependencies) {
+    std::vector<int> inDependenciesAsVector = mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(inDependencies);
+    logInfo( "spawnTask(...)", "spawn task " << taskNumber << " with " << inDependenciesAsVector.size() << " dependencies" );
+    assertion(taskNumber<dependencyTracking.size());
+    #pragma omp task priority(job->getPriority()) untied depend(iterator(j=0:inDependenciesAsVector.size()),in: dependencyTracking[inDependenciesAsVector[j]]) depend(out:dependencyTracking[taskNumber])
     {
       while (job->run()) {
         #pragma omp taskyield
@@ -264,11 +338,13 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
 
       #pragma omp atomic
       numberOfSpawnedTasks--;
-
-      logDebug( "spawnTask(...)", "task dependency " << taskNumber << "/" <<  outDependencyPointer << " is complete" );
     }
   } else {
-    assertionMsg(false, "should never be called");
+    assertion3(
+      false, "should never be called",
+      taskNumber,
+      inDependencies.size()
+    );
   }
 }
 
@@ -292,14 +368,16 @@ NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variab
 (tarch/multicore/omp/Tasks.cpp: 289) NVC++/x86-64 Linux 22.3-0: compilation completed with severe errors
  * </pre>
  *
- * if I try to map fuse onto a task of its own.
+ * if I try to map fuse onto a task of its own. With newer compiler versions
+ * from NVIDIA, the error disappears, but the code results in a seg fault. So
+ * it is not fixed. They only removed the compiler error.
  *
  */
 void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
-  // #if !defined(__NVCOMPILER)
-#pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
-  // #endif
+  #if !defined(__NVCOMPILER)
+  #pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
+  #endif
   {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
@@ -313,20 +391,22 @@ void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<ta
 
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
   if (not inDependencies.empty()) {
-    //
-    // very primiate workaround, where we construct empty funneling-in tasks
-    //
-    int helperDependency;
-    for (auto& inDependencyTaskNumber: inDependencies) {
-      int* inDependencyPointer = dependencyTrackingBaseAddress + inDependencyTaskNumber;
-      #pragma omp task untied depend(in: inDependencyPointer[:1]) depend(out:helperDependency)
-      {  
-        // empty task
+    #if defined(OpenMPDependenciesInTaskWait)
+      std::vector<int> inDependenciesAsVector = mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(inDependencies);
+      #pragma omp taskwait depend(iterator(j=0:inDependenciesAsVector.size()),in: dependencyTracking[inDependenciesAsVector[j]])
+    #else
+      std::vector<int> inDependenciesAsVector = mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(inDependencies);
+      int helperDependency;
+      for (auto& inDependencyTaskNumber: inDependenciesAsVector) {
+        #pragma omp task untied depend(in: dependencyTracking[inDependencyTaskNumber]) depend(out:helperDependency)
+        {
+          // empty task
+        }
       }
-    }
-    #pragma omp task untied depend(in: helperDependency)
-    {}
-    #pragma omp taskwait
+      #pragma omp task untied depend(in: helperDependency)
+      {}
+      #pragma omp taskwait
+    #endif
   }
 }
 
