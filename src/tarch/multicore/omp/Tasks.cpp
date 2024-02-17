@@ -19,6 +19,8 @@
 namespace {
   int numberOfSpawnedTasks = 0;
 
+  using MemoryRegionToTrackTaskDependencies = std::vector<uint8_t>;
+
   /**
    * Dependency tracking in OpenMP is organised via addresses. These addresses
    * are sole helpers, i.e. the underlying memory region doesn't have to hold
@@ -30,43 +32,7 @@ namespace {
    * constrain the number of tasks, so I keep track of the maximum task number
    * at runtime and grow the vector whenever no task is in pending.
    */
-  std::vector<uint8_t> dependencyTracking(1);
-
-  /**
-   * If this value is either negative if we have enough task numbers, or it
-   * indicates what the highest task number is that we'd like to have.
-   */
-  int requiredNumberOfTasksForDependencyTracking{-1};
-
-
-  /**
-   * Take the in-dependencies and map them onto a vector so we can iterate over them
-   *
-   * Further to that, we also remove indices which are not valid, i.e. are not
-   * representable within dependencyTracking. We exploit the knowledge that this
-   * can only happen if we are in drain mode.
-   */
-  std::vector<int> mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(
-    const std::set<int>&  inDependencies
-  ) {
-    if (requiredNumberOfTasksForDependencyTracking<=0) {
-      return std::vector<int>( inDependencies.begin(), inDependencies.end() );
-    }
-    else {
-      std::vector<int> result;
-      for (auto& p: inDependencies) {
-        if (p<dependencyTracking.size()) {
-          result.push_back(p);
-        }
-        else {
-          tarch::logging::Log _log( "tarch::multicore::omp" );
-          logInfo( "mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(...)", "ignore task " << p << " as it is not representable within dependency array and hence cannot exist" );
-        }
-      }
-      return result;
-    }
-  }
-
+  MemoryRegionToTrackTaskDependencies memoryRegionToTrackTaskDependencies(1);
 } // namespace
 
 
@@ -214,52 +180,11 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
 
   assertion1( taskNumber>=0 or taskNumber==NoDependencies, taskNumber );
 
-  #pragma omp critical (grow_admin_data_structure)
-  {
-    // Has come before second branch and does not exclude this one! We could be
-    // completely drained, and at this moment request a big task number, so
-    // better take this into account before we grow the memory.
-    if (taskNumber>=dependencyTracking.size()) {
-      requiredNumberOfTasksForDependencyTracking = std::max( taskNumber, requiredNumberOfTasksForDependencyTracking );
-      logInfo( "spawnTask(...)", "not enough task numbers (" << dependencyTracking.size() << " vs " << requiredNumberOfTasksForDependencyTracking << "). Enter panic mode and drain task graph");
-    }
-    // See above: This is not an else.
-    if (numberOfSpawnedTasks==0 and requiredNumberOfTasksForDependencyTracking>0) {
-      logInfo( "spawnTask(...)", "administration array for task dependency is too small (" << dependencyTracking.size() << "). Grow to " << requiredNumberOfTasksForDependencyTracking );
-      assertion2(
-        requiredNumberOfTasksForDependencyTracking>dependencyTracking.size(),
-        requiredNumberOfTasksForDependencyTracking,
-        dependencyTracking.size()
-      );
-      dependencyTracking.resize(requiredNumberOfTasksForDependencyTracking+1);
-      requiredNumberOfTasksForDependencyTracking = -1;
-    }
-  }
-
-/*
-  #if !defined(OpenMPDependenciesInTaskWait)
-  if (taskNumber != NoDependencies and taskNumber<dependencyTracking.size()) {
-    assertion2(taskNumber<dependencyTracking.size(), taskNumber, dependencyTracking.size());
-    logDebug( "spawnTask(...)", "wait for task " << taskNumber << " with empty task (ensure that a previous task with same number is not pending still)" );
-    #pragma omp task untied depend(in: dependencyTracking[taskNumber])
-    {
-      // empty task
-    }
-    #pragma omp taskwait 
-  }
-  #else
-  if (taskNumber != NoDependencies and taskNumber<dependencyTracking.size()) {
-    assertion2(taskNumber<dependencyTracking.size(), taskNumber, dependencyTracking.size());
-    logDebug( "spawnTask(...)", "wait for task " << taskNumber << " with taskwait (ensure that a previous task with same number is not pending still)" );
-    #pragma omp taskwait depend(in : dependencyTracking[taskNumber])
-  }
-  #endif
-*/
-
   #pragma omp atomic
   numberOfSpawnedTasks++;
 
-  // Default option for enclave tasks, e.g.
+  // Default option for enclave tasks, e.g. Deserves special attention as it is
+  // a special case, where we can eliminate all the other overhead.
   if (taskNumber == NoDependencies and inDependencies.empty()) {
     #pragma omp task priority(job->getPriority()) untied
     {
@@ -272,79 +197,67 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
       numberOfSpawnedTasks--;
     }
   }
-  else if (taskNumber != NoDependencies and requiredNumberOfTasksForDependencyTracking>0) {
-    logInfo( "spawnTask(...)", "in drain mode. Wait for all dependencies of task " << taskNumber << " and then execute task straightaway" );
-    waitForTasks(inDependencies);
-    while (job->run()) {
-      #pragma omp taskyield
-    }
-    delete job;
-
-    #pragma omp atomic
-    numberOfSpawnedTasks--;
-  }
-/*
-  else if (taskNumber != NoDependencies and inDependencies.empty()) {
-    #pragma omp task priority(job->getPriority()) untied depend(out: dependencyTracking[taskNumber])
+  else {
+    #pragma omp critical (grow_admin_data_structure)
     {
-      while (job->run()) {
-        #pragma omp taskyield
+    /*
+      #if !defined(OpenMPDependenciesInTaskWait)
+      if (taskNumber != NoDependencies and taskNumber<memoryRegionToTrackTaskDependencies.size()) {
+        assertion2(taskNumber<memoryRegionToTrackTaskDependencies.size(), taskNumber, memoryRegionToTrackTaskDependencies.size());
+        logDebug( "spawnTask(...)", "wait for task " << taskNumber << " with empty task (ensure that a previous task with same number is not pending still)" );
+        #pragma omp task untied depend(in: memoryRegionToTrackTaskDependencies[taskNumber])
+        {
+          // empty task
+        }
+        #pragma omp taskwait
       }
-      delete job;
-
-      #pragma omp atomic
-      numberOfSpawnedTasks--;
-
-      logDebug( "spawnTask(...)", "task dependency " << taskNumber << " is complete" );
-    }
-  }
-*/
-  else if (taskNumber == NoDependencies) {
-    std::vector<int> inDependenciesAsVector = mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(inDependencies);
-    #pragma omp task priority(job->getPriority()) untied depend(iterator(j=0:inDependenciesAsVector.size()),in: dependencyTracking[inDependenciesAsVector[j]])
-    {
-      while (job->run()) {
-        #pragma omp taskyield
+      #else
+      if (taskNumber != NoDependencies and taskNumber<memoryRegionToTrackTaskDependencies.size()) {
+        assertion2(taskNumber<memoryRegionToTrackTaskDependencies.size(), taskNumber, memoryRegionToTrackTaskDependencies.size());
+        logDebug( "spawnTask(...)", "wait for task " << taskNumber << " with taskwait (ensure that a previous task with same number is not pending still)" );
+        #pragma omp taskwait depend(in : memoryRegionToTrackTaskDependencies[taskNumber])
       }
-      delete job;
+      #endif
+    */
 
-      #pragma omp atomic
-      numberOfSpawnedTasks--;
-    }
-    // @todo raus
-  } else if (taskNumber != NoDependencies and inDependencies.empty()) {
-    logInfo( "spawnTask(...)", "spawn task " << taskNumber << " without dependencies" );
-    assertion3(taskNumber<dependencyTracking.size(), taskNumber, dependencyTracking.size(), requiredNumberOfTasksForDependencyTracking);
-    #pragma omp task priority(job->getPriority()) untied depend(out:dependencyTracking[taskNumber])
-    {
-      while (job->run()) {
-        #pragma omp taskyield
+      // Has come before second branch and does not exclude this one! We could be
+      // completely drained, and at this moment request a big task number, so
+      // better take this into account before we grow the memory.
+      if (taskNumber>=memoryRegionToTrackTaskDependencies.size()) {
+        int newSize = taskNumber+1;
+        logInfo( "spawnTask(...)", "administration array for task dependency is too small (" << memoryRegionToTrackTaskDependencies.size() << "). Grow to " << newSize << " entries" );
+        memoryRegionToTrackTaskDependencies.resize(newSize);
       }
-      delete job;
 
-      #pragma omp atomic
-      numberOfSpawnedTasks--;
-    }
-  } else if (taskNumber != NoDependencies) {
-    std::vector<int> inDependenciesAsVector = mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(inDependencies);
-    logInfo( "spawnTask(...)", "spawn task " << taskNumber << " with " << inDependenciesAsVector.size() << " dependencies" );
-    assertion(taskNumber<dependencyTracking.size());
-    #pragma omp task priority(job->getPriority()) untied depend(iterator(j=0:inDependenciesAsVector.size()),in: dependencyTracking[inDependenciesAsVector[j]]) depend(out:dependencyTracking[taskNumber])
-    {
-      while (job->run()) {
-        #pragma omp taskyield
+      if (taskNumber == NoDependencies) {
+        assertion2(not inDependencies.empty(), taskNumber, inDependencies.size() );
+        std::vector<int> inDependenciesAsVector(inDependencies.begin(),inDependencies.end());
+        #pragma omp task priority(job->getPriority()) untied depend(iterator(j=0:inDependenciesAsVector.size()),in: memoryRegionToTrackTaskDependencies[inDependenciesAsVector[j]])
+        {
+          while (job->run()) {
+            #pragma omp taskyield
+          }
+          delete job;
+
+          #pragma omp atomic
+         numberOfSpawnedTasks--;
+        }
+      } else {
+        std::vector<int> inDependenciesAsVector(inDependencies.begin(),inDependencies.end());
+        logInfo( "spawnTask(...)", "spawn task " << taskNumber << " with " << inDependenciesAsVector.size() << " dependencies (size of task dependency tracking region=" << memoryRegionToTrackTaskDependencies.size() << ")" );
+        assertion(taskNumber<memoryRegionToTrackTaskDependencies.size());
+        #pragma omp task priority(job->getPriority()) untied depend(iterator(j=0:inDependenciesAsVector.size()),in: memoryRegionToTrackTaskDependencies[inDependenciesAsVector[j]]) depend(out:memoryRegionToTrackTaskDependencies[taskNumber])
+        {
+          while (job->run()) {
+            #pragma omp taskyield
+          }
+          delete job;
+
+          #pragma omp atomic
+          numberOfSpawnedTasks--;
+        }
       }
-      delete job;
-
-      #pragma omp atomic
-      numberOfSpawnedTasks--;
     }
-  } else {
-    assertion3(
-      false, "should never be called",
-      taskNumber,
-      inDependencies.size()
-    );
   }
 }
 
@@ -392,13 +305,13 @@ void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<ta
 void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDependencies) {
   if (not inDependencies.empty()) {
     #if defined(OpenMPDependenciesInTaskWait)
-      std::vector<int> inDependenciesAsVector = mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(inDependencies);
-      #pragma omp taskwait depend(iterator(j=0:inDependenciesAsVector.size()),in: dependencyTracking[inDependenciesAsVector[j]])
+      std::vector<int> inDependenciesAsVector(inDependencies.begin(),inDependencies.end());
+      #pragma omp taskwait depend(iterator(j=0:inDependenciesAsVector.size()),in: memoryRegionToTrackTaskDependencies[inDependenciesAsVector[j]])
     #else
       std::vector<int> inDependenciesAsVector = mapInDependenciesOntoVectorAndRemoveInvalidTaskNumbers(inDependencies);
       int helperDependency;
       for (auto& inDependencyTaskNumber: inDependenciesAsVector) {
-        #pragma omp task untied depend(in: dependencyTracking[inDependencyTaskNumber]) depend(out:helperDependency)
+        #pragma omp task untied depend(in: memoryRegionToTrackTaskDependencies[inDependencyTaskNumber]) depend(out:helperDependency)
         {
           // empty task
         }
@@ -413,6 +326,10 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
 
 void tarch::multicore::native::waitForAllTasks() {
   #pragma omp taskwait
+
+  for (int p: memoryRegionToTrackTaskDependencies) {
+    waitForTask(p);
+  }
 }
 
 #endif
