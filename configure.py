@@ -129,6 +129,9 @@ elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
     cxxflags += " -lstdc++fs --offload-arch=" + args.arch + " -D__AMDGPU__"
     cxxflags = re.sub(r"-std=c\+\+20", "-std=c++17", cxxflags)
     ldflags += " -lstdc++fs --offload-arch=" + args.arch
+    if args.asm:
+        cflags += " -save-temps"
+        cxxflags += " -save-temps"
 
 elif (
     args.gpu == "omp"
