@@ -122,7 +122,7 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
       self._source_term_implementation,
       compute_max_eigenvalue_of_next_time_step = True,
       solver_variant = SolverVariant.Accelerator,
-      kernel_variant = KernelVariant.VolumeWiseAoS
+      kernel_variant = KernelVariant.PatchWiseAoS
     )
 
     solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,True)

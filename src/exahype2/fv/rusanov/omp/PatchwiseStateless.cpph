@@ -810,11 +810,11 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement) {
+void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseHeapStateless(int targetDevice, CellData& patchData, tarch::timing::Measurement& measurement) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
-  logTraceIn("timeStepWithRusanovPatchwiseCopyStateless()");
+  logTraceIn("timeStepWithRusanovPatchwiseHeapStateless()");
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
@@ -869,7 +869,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless(int t
 #pragma omp target enter data map(to : dt[0 : numberOfCells]) device(targetDevice)
 #pragma omp target enter data map(alloc : maxEigenvalue[0 : numberOfCells]) device(targetDevice)
 
-  tarch::timing::Watch watch("exahype2::fv::rusanov::omp", "timeStepWithRusanovPatchwiseCopyStateless", false, true);
+  tarch::timing::Watch watch("exahype2::fv::rusanov::omp", "timeStepWithRusanovPatchwiseHeapStateless", false, true);
   internal::timeStepWithRusanovPatchwiseStateless<
     SolverType,
     NumberOfVolumesPerAxisInPatch,
@@ -959,7 +959,7 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless(int t
     delete[] tempEigenvalueZ;
   }
 
-  logTraceOut("timeStepWithRusanovPatchwiseCopyStateless()");
+  logTraceOut("timeStepWithRusanovPatchwiseHeapStateless()");
 }
 
 
@@ -974,11 +974,11 @@ template <
   bool EvaluateSource,
   bool EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless(int targetDevice, CellData& patchData) {
+void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseHeapStateless(int targetDevice, CellData& patchData) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::omp");
-  logTraceIn("timeStepWithRusanovPatchwiseCopyStateless()");
+  logTraceIn("timeStepWithRusanovPatchwiseHeapStateless()");
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
@@ -1120,5 +1120,5 @@ void exahype2::fv::rusanov::omp::timeStepWithRusanovPatchwiseCopyStateless(int t
     delete[] tempEigenvalueZ;
   }
 
-  logTraceOut("timeStepWithRusanovPatchwiseCopyStateless()");
+  logTraceOut("timeStepWithRusanovPatchwiseHeapStateless()");
 }
