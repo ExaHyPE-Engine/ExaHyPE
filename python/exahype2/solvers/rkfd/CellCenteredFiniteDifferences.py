@@ -269,10 +269,10 @@ Unknowns:               """
 Auxiliary variables:    """
             + str(self._auxiliary_variables)
             + """
-h_volume_min:           """
+h_meshcell_min:           """
             + str(self._min_meshcell_h)
             + """
-h_volume_max:           """
+h_meshcell_max:           """
             + str(self._max_meshcell_h)
             + """
 """
@@ -410,6 +410,15 @@ The finest mesh width of """
         return self._user_solver_includes
 
     def number_of_Runge_Kutta_steps(self):
+        """!
+        
+        Return number of steps required to realise the Runge-Kutta scheme
+        
+        Delegate to ButcherTableau.RungeKutta_steps, which tells us for a given
+        polynomial order _rk_order how many Runge Kutta steps we have to 
+        employ.
+        
+        """
         return RungeKutta_steps(self._rk_order)
 
     def add_user_action_set_includes(self, value):
@@ -812,12 +821,11 @@ The finest mesh width of """
         self._action_set_handle_boundary.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 3
         )
-        # self._action_set_update_cell                                                      = self._baseline_action_set_descend_invocation_order + 4
-        self._action_set_project_patch_onto_faces.descend_invocation_order = (
-            self._baseline_action_set_descend_invocation_order + 5
-        )
         self._action_set_compute_final_linear_combination.descend_invocation_order = (
             self._baseline_action_set_descend_invocation_order + 5
+        )
+        self._action_set_project_patch_onto_faces.descend_invocation_order = (
+            self._baseline_action_set_descend_invocation_order + 6
         )
         self._action_set_AMR.descend_invocation_order = self._baseline_action_set_descend_invocation_order + 6
         self._action_set_postprocess_solution.descend_invocation_order = (

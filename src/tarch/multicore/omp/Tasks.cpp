@@ -171,9 +171,6 @@ int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawned
 void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
   int* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
 
-  assertion(taskNumber == NoDependencies);
-  assertion(inDependencies.empty());
-
   #if !defined(OpenMPDependenciesInTaskWait)
   if (taskNumber != NoDependencies) {
     #pragma omp task untied depend(in: outDependencyPointer[:1])
