@@ -1,5 +1,8 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+//
+// Included by peano4/utils/Loop.h. Do not use directly
+//
 
 #define parallelForWithSchedulerInstructions(counter, max, loopParallelism) \
   tbb::parallel_for( \

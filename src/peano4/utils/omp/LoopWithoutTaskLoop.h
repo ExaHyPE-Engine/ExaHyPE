@@ -1,5 +1,8 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
+//
+// Included by peano4/utils/Loop.h. Do not use directly
+//
 
 // TODO: It does not work if to have multiple pragmas with if, so I only support taskloop
 //       as I assume that parallel for in nested parallelism would not work anyway.
