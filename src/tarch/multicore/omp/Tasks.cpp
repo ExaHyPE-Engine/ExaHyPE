@@ -201,10 +201,15 @@ void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& 
       #pragma omp atomic
       numberOfSpawnedTasks--;
     }
+<<<<<<< HEAD
+  } else if (taskNumber != NoDependencies and inDependencies.empty()) {
+    // A nicer syntax would be 
+=======
   }
 
   if (taskNumber != NoDependencies and inDependencies.empty()) {
     // A nicer syntax would be
+>>>>>>> refs/remotes/origin/p4
     //
     // #pragma omp task priority(job->getPriority()) untied depend(out : *outDependencyPointer)
     //
@@ -290,9 +295,15 @@ NVC++-S-0155-A possibly throwing copy constructor for a task firstprivate variab
  */
 void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<tarch::multicore::Task*>& tasksOfSameType, int device) {
   std::list<tarch::multicore::Task*> copyOfTasksOfSameType = tasksOfSameType;
+<<<<<<< HEAD
+  #if !defined(__NVCOMPILER)
+  #pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
+  #endif
+=======
 // #if !defined(__NVCOMPILER)
 #pragma omp task firstprivate(myTask, copyOfTasksOfSameType, device)
 // #endif
+>>>>>>> refs/remotes/origin/p4
   {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
