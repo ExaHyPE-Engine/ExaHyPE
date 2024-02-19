@@ -354,7 +354,7 @@ void applications::exahype2::ccz4::admconstraints(double* constraints, const dou
         }
     }
 
-    tarch::memset(constraints, 0, 6*sizeof(double));
+    tarch::memset(constraints, 0, 4*sizeof(double));
 
     constraints[0]  =   Ham;        //59
     constraints[1]  =   Mom[0];     //60
