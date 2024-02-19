@@ -1,7 +1,6 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "Loop.h"
-
-
-
 
 namespace {
   int dLinearisedNotOptimised( const tarch::la::Vector<Dimensions,int> & counter, int max ) {

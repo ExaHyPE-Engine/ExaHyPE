@@ -1,14 +1,12 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 //
 // Included by peano4/utils/Loop.h. Do not use directly
 //
 
-
-// @todo Have to take this into account if NVIDIA continues to refuse to write task loops
-// and defined(OpenMPTaskGroup)
-
-// @todo It does not work if to have multiple pragmas with if, so I only support taskloop
-//       as I assume that parallel for in nested parallelism would not work anyway
-
+// TODO: It does not work if to have multiple pragmas with if, so I only support taskloop
+//       as I assume that parallel for in nested parallelism would not work anyway.
+// TODO: Use variadic templates for n-dimensions. -> Might not work, but maybe there is some (similar) trick.
 
 #define parallelForWithSchedulerInstructions(counter, max, loopParallelism) \
   { \
@@ -62,8 +60,6 @@
     tarch::la::Vector<5, int> counter = { counter##0, counter##1, counter##2, counter##3, counter##4 };
 
 #define endParallelDfor }}
-
-
 
 
 #define simtForWithSchedulerInstructions(counter, max, loopParallelism) \
@@ -161,4 +157,3 @@
       tarch::la::Vector<5, int> counter = { counter##0, counter##1, counter##2, counter##3, counter##4 };
 
 #define endSimtDfor }}}
-
