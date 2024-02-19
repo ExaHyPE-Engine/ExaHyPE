@@ -518,14 +518,14 @@ def construct_FV_ncp():
 
 def construct_FD4_source_term():
     return """
-  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
 """
 
 
 def construct_FV_source_term():
     return """
-  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3, CCZ4SO);
 """
 
@@ -1091,7 +1091,7 @@ class CCZ4Solver_FD4_SecondOrderFormulation_GlobalAdaptiveTimeStepWithEnclaveTas
 """,
             flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term="""
-  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::sourceSecondOrderFormulation(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
 """,
             refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
@@ -1319,7 +1319,7 @@ class CCZ4Solver_RKDG_GlobalAdaptiveTimeStepWithEnclaveTasking(
 """,
             flux=exahype2.solvers.PDETerms.None_Implementation,
             source_term="""
-  memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
+  tarch::memset(S, 0.0, NumberOfUnknowns*sizeof(double)); 
   ::applications::exahype2::ccz4::source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
 """,
             refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
