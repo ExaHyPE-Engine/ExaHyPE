@@ -1,3 +1,5 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import argparse
 
@@ -489,7 +491,7 @@ if (
 
   repositories::InstanceOf{0}_FV.incNumberOfPatches();
   
-  if ( repositories::InstanceOf{0}_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) ) {{
+  //if ( repositories::InstanceOf{0}_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) ) {{
     ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
       repositories::InstanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
       repositories::InstanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
@@ -497,7 +499,7 @@ if (
       fineGridCell{0}_FVQ.value,
       fineGridCell{0}_FD4Q.value
     );
-  }}
+  /*}}
   else {{
     ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject_and_average(
       repositories::InstanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
@@ -506,7 +508,7 @@ if (
       fineGridCell{0}_FVQ.value,
       fineGridCell{0}_FD4Q.value
     );
-  }}
+  }}*/
 
   logTraceOut( "touchCellFirstTime(...)-inject" );
 }}
@@ -539,7 +541,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
             min_meshcell_h=min_cell_size / patch_size,
             max_meshcell_h=max_cell_size / patch_size,
             use_heap_storage=False, # See superclass docu
-            pde_terms_without_state=True
+            pde_terms_without_state=False
         )
 
         self._user_action_set_includes += """
