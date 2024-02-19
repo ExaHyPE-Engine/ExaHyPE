@@ -1,7 +1,23 @@
 import math
 
+
 class Avalanche:
-    def __init__(self, unknowns, auxiliary_variables, solver, Zeta=35.0, Zeta1=28.95, Zeta2=44.09, Zeta3=31.81, Beta=1.07, Gamma=2.01, BetaStar=0.06, Kappa=1.0, FrictionLengthScale=0.00035, Gravity=9.81):
+    def __init__(
+        self,
+        unknowns,
+        auxiliary_variables,
+        solver,
+        Zeta=35.0,
+        Zeta1=28.95,
+        Zeta2=44.09,
+        Zeta3=31.81,
+        Beta=1.07,
+        Gamma=2.01,
+        BetaStar=0.06,
+        Kappa=1.0,
+        FrictionLengthScale=0.00035,
+        Gravity=9.81,
+    ):
         """
         Kappa in the friction law is assumed to be 1 and is just initialised as a const double in the source function.
         The user can apply std::pow((Fr/BetaStar),Kappa) for evaluating T in the source function in case the value of Kappa is different from 1.
@@ -14,10 +30,10 @@ class Avalanche:
         self.auxiliary_variables = auxiliary_variables
         self.solver = solver
         self.Pi = math.pi
-        self.Zeta = Zeta*self.Pi/180 # coversion of degree to radian
-        self.Zeta1 = Zeta1*self.Pi/180
-        self.Zeta2 = Zeta2*self.Pi/180
-        self.Zeta3 = Zeta3*self.Pi/180
+        self.Zeta = Zeta * self.Pi / 180  # conversion of degree to radian
+        self.Zeta1 = Zeta1 * self.Pi / 180
+        self.Zeta2 = Zeta2 * self.Pi / 180
+        self.Zeta3 = Zeta3 * self.Pi / 180
         self.Beta = Beta
         self.Gamma = Gamma
         self.BetaStar = BetaStar
@@ -27,13 +43,25 @@ class Avalanche:
         self.Mu1 = math.tan(self.Zeta1)
         self.Mu2 = math.tan(self.Zeta2)
         self.Mu3 = math.tan(self.Zeta3)
-        self.Nu = (2.0/9.0)*(self.FrictionLengthScale/self.Beta)*(self.Gravity*math.sin(self.Zeta)/math.sqrt(self.Gravity*math.cos(self.Zeta)))*(((self.Mu2-self.Mu1)/(math.tan(self.Zeta)-self.Mu1))-1)
-        self.Hstart = self.FrictionLengthScale*(((self.Mu2-self.Mu1)/(math.tan(self.Zeta)-self.Mu3))-1)
-        self.Hstop = self.FrictionLengthScale*(((self.Mu2-self.Mu1)/(math.tan(self.Zeta)-self.Mu1))-1)
-
+        self.Nu = (
+            (2.0 / 9.0)
+            * (self.FrictionLengthScale / self.Beta)
+            * (
+                self.Gravity
+                * math.sin(self.Zeta)
+                / math.sqrt(self.Gravity * math.cos(self.Zeta))
+            )
+            * (((self.Mu2 - self.Mu1) / (math.tan(self.Zeta) - self.Mu1)) - 1)
+        )
+        self.Hstart = self.FrictionLengthScale * (
+            ((self.Mu2 - self.Mu1) / (math.tan(self.Zeta) - self.Mu3)) - 1
+        )
+        self.Hstop = self.FrictionLengthScale * (
+            ((self.Mu2 - self.Mu1) / (math.tan(self.Zeta) - self.Mu1)) - 1
+        )
 
     def implementation_of_initial_conditions(self):
-        initial_condition_string_template =  """
+        initial_condition_string_template = """
         const tarch::la::Vector<Dimensions, double>& granularMaterialCenter = {{0.15,0.35}};
         const bool nearCentre = tarch::la::norm2({volumeCentre}-granularMaterialCenter) < 0.1;
 
@@ -61,36 +89,71 @@ class Avalanche:
         elif "ADERDG" in self.solver:
             return initial_condition_string_template.format(volumeCentre="x")
 
-
     def implementation_of_boundary_conditions(self):
         return """
         ::exahype2::saintvenant::boundaryConditions(Qinside, Qoutside, faceCentre, t, normal, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables});
-        """.format(NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables)
-
+        """.format(
+            NumberOfUnknowns=self.unknowns,
+            NumberOfAuxiliaryVariables=self.auxiliary_variables,
+        )
 
     def implementation_of_flux(self):
         flux_string_template = """
         ::exahype2::saintvenant::flux(Q, {faceCentre}, t, dt, normal, F, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables},{Zeta}, {Gravity});
         """
         if "FV" in self.solver:
-            return flux_string_template.format(faceCentre="faceCentre", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables,Zeta=self.Zeta, Gravity=self.Gravity)
+            return flux_string_template.format(
+                faceCentre="faceCentre",
+                NumberOfUnknowns=self.unknowns,
+                NumberOfAuxiliaryVariables=self.auxiliary_variables,
+                Zeta=self.Zeta,
+                Gravity=self.Gravity,
+            )
         elif "RKDG" in self.solver:
-            return flux_string_template.format(faceCentre="volumeX", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables, Zeta=self.Zeta, Gravity=self.Gravity)
+            return flux_string_template.format(
+                faceCentre="volumeX",
+                NumberOfUnknowns=self.unknowns,
+                NumberOfAuxiliaryVariables=self.auxiliary_variables,
+                Zeta=self.Zeta,
+                Gravity=self.Gravity,
+            )
         elif "ADERDG" in self.solver:
-            return flux_string_template.format(faceCentre="volumeX", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables, Zeta=self.Zeta, Gravity=self.Gravity)
-
+            return flux_string_template.format(
+                faceCentre="volumeX",
+                NumberOfUnknowns=self.unknowns,
+                NumberOfAuxiliaryVariables=self.auxiliary_variables,
+                Zeta=self.Zeta,
+                Gravity=self.Gravity,
+            )
 
     def implementation_of_max_eigenvalue(self):
-        max_eigenvalue_string_template =  """
+        max_eigenvalue_string_template = """
         return ::exahype2::saintvenant::maxEigenvalue(Q, {faceCentre}, t, dt, normal, {NumberOfUnknowns}, {NumberOfAuxiliaryVariables}, {Zeta}, {Gravity});
         """
         if "FV" in self.solver:
-            return max_eigenvalue_string_template.format(faceCentre="faceCentre", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables,Zeta=self.Zeta, Gravity=self.Gravity)
+            return max_eigenvalue_string_template.format(
+                faceCentre="faceCentre",
+                NumberOfUnknowns=self.unknowns,
+                NumberOfAuxiliaryVariables=self.auxiliary_variables,
+                Zeta=self.Zeta,
+                Gravity=self.Gravity,
+            )
         elif "RKDG" in self.solver:
-            return max_eigenvalue_string_template.format(faceCentre="volumeX", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables, Zeta=self.Zeta, Gravity=self.Gravity)
+            return max_eigenvalue_string_template.format(
+                faceCentre="volumeX",
+                NumberOfUnknowns=self.unknowns,
+                NumberOfAuxiliaryVariables=self.auxiliary_variables,
+                Zeta=self.Zeta,
+                Gravity=self.Gravity,
+            )
         elif "ADERDG" in self.solver:
-            return max_eigenvalue_string_template.format(faceCentre="volumeX", NumberOfUnknowns=self.unknowns,NumberOfAuxiliaryVariables=self.auxiliary_variables, Zeta=self.Zeta, Gravity=self.Gravity)
-
+            return max_eigenvalue_string_template.format(
+                faceCentre="volumeX",
+                NumberOfUnknowns=self.unknowns,
+                NumberOfAuxiliaryVariables=self.auxiliary_variables,
+                Zeta=self.Zeta,
+                Gravity=self.Gravity,
+            )
 
     def implementation_of_ncp(self):
         implementation_of_ncp_string_template = """
@@ -148,12 +211,17 @@ class Avalanche:
         }}
         """
         if "FV" in self.solver:
-            return implementation_of_ncp_string_template.format(BTimesDeltaQ="BTimesDeltaQ",Nu=self.Nu, NumberOfUnknowns=self.unknowns)
+            return implementation_of_ncp_string_template.format(
+                BTimesDeltaQ="BTimesDeltaQ", Nu=self.Nu, NumberOfUnknowns=self.unknowns
+            )
         elif "RKDG" in self.solver:
-            return implementation_of_ncp_string_template.format(BTimesDeltaQ="BgradQ",Nu=self.Nu, NumberOfUnknowns=self.unknowns)
+            return implementation_of_ncp_string_template.format(
+                BTimesDeltaQ="BgradQ", Nu=self.Nu, NumberOfUnknowns=self.unknowns
+            )
         elif "ADERDG" in self.solver:
-            return implementation_of_ncp_string_template.format(BTimesDeltaQ="BgradQ",Nu=self.Nu, NumberOfUnknowns=self.unknowns)
-
+            return implementation_of_ncp_string_template.format(
+                BTimesDeltaQ="BgradQ", Nu=self.Nu, NumberOfUnknowns=self.unknowns
+            )
 
     def implementation_of_sources(self):
         """
@@ -232,8 +300,25 @@ class Avalanche:
             S[1] = 0.0;
             S[2] = 0.0;
         }}
-        """.format(Gravity=self.Gravity, Zeta=self.Zeta, Zeta1=self.Zeta1, Zeta2=self.Zeta2, Zeta3=self.Zeta3, Beta=self.Beta, Gamma=self.Gamma, BetaStar=self.BetaStar, Kappa=self.Kappa, FrictionLengthScale=self.FrictionLengthScale, Mu1=self.Mu1, Mu2=self.Mu2, Mu3=self.Mu3, Nu=self.Nu, Hstart=self.Hstart, Hstop=self.Hstop, NumberOfUnknowns=self.unknowns)
-
+        """.format(
+            Gravity=self.Gravity,
+            Zeta=self.Zeta,
+            Zeta1=self.Zeta1,
+            Zeta2=self.Zeta2,
+            Zeta3=self.Zeta3,
+            Beta=self.Beta,
+            Gamma=self.Gamma,
+            BetaStar=self.BetaStar,
+            Kappa=self.Kappa,
+            FrictionLengthScale=self.FrictionLengthScale,
+            Mu1=self.Mu1,
+            Mu2=self.Mu2,
+            Mu3=self.Mu3,
+            Nu=self.Nu,
+            Hstart=self.Hstart,
+            Hstop=self.Hstop,
+            NumberOfUnknowns=self.unknowns,
+        )
 
     def implementation_of_refinement_criterion(self):
         return """

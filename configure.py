@@ -73,11 +73,10 @@ if args.cc is None or args.cxx is None:
 Specify compatible C and C++ compilers by using --cc and --cxx or the environment flags CC and CXX."
     )
 
-cflags = "-O3 -march=native"
-cxxflags = "-std=c++20 -w -O3 -march=native"
-# cxxflags = '-std=c++20 -W -Wall -Wextra -O3 -march=native -mtune=native'
-nvccflags = "-O3"  # -march=native -mtune=native
-ldflags = "-march=native"
+cflags = "-O3 -march=native -mtune=native -fomit-frame-pointer"
+cxxflags = "-std=c++20 -w -O3 -march=native -mtune=native -fomit-frame-pointer"
+nvccflags = "-O3 -march=native -mtune=native -fomit-frame-pointer"
+ldflags = "-march=native -mtune=native"
 configure_args = []
 
 # Merge in any additional flags needed for the selected multithreading backend
@@ -298,9 +297,11 @@ if args.swift:
     if args.cmake:
         configure_args.append("-DENABLE_SWIFT=ON")
         configure_args.append("-DENABLE_PARTICLES=ON")
+        configure_args.append("-DENABLE_LOADBALANCING=ON")
     else:
         configure_args.append("--enable-swift")
         configure_args.append("--enable-particles")
+        configure_args.append("--enable-loadbalancing")
 
 if args.particles:
     if args.cmake:

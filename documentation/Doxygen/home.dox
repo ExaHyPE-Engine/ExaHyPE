@@ -7,6 +7,7 @@
 <!-- Do not add subsections here. Doxygen cannot handle them correctly -->
 
 \li @subpage page_installation
+\li @subpage page_version_control
 \li @subpage page_documentation
 \li @subpage page_architecture
 \li @subpage page_continuous_integration
@@ -42,7 +43,7 @@ emphasis on reusability, application-independent design and the support for rapi
 This third generation of the code ended around 2019 when we released the
 ExaHyPE code - a hyperbolic equation system solver engine which uses Peano's
 AMR meshes.
-The current guidebook discusses Peano 4, which reuses ideas and lessons learned
+The documentation discusses Peano 4, which reuses ideas and lessons learned
 from Peano 3 as well as lots of code buildling blocks, but can be seen as a
 major rewrite starting from scratch.
 

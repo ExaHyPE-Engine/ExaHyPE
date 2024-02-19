@@ -1,0 +1,56 @@
+/**
+
+\page page_version_control Version control
+
+The project is hosted on the gitlab of the Leibniz Supercomputing Centre. You 
+find the repository at https://gitlab.lrz.de/hpcsoftware/Peano. We try to give
+all interested colleagues access to the repository including some write 
+permissions, but we do protect some branches.
+
+- Our main branch is called p4, as we work with Peano 4. This one is protected
+  and only writable by the PI. 
+- p4 has a couple of high-level subbranches which are editable by a few key
+  users. Please assign merge requests to one of these key users if you want your 
+  changes to be merged.
+  - particles
+  - multigrid
+  - exahype
+  - applications
+  - infrastructure
+  - documentation
+- We have multiple subbranches under each top level branch. They are "owned"
+  by various colleagues.
+
+It is sometimes confusing to distinguish methodological extensions and 
+applications: Very often, the application needs trigger the introduction of new
+numerical techniques or infrastructure features. However, we find it useful to 
+maintain them in different branches, as infrastructure changes by definition 
+often affect a lot of different applications, so we want people to be very 
+careful. 
+
+
+
+# Naming conventions
+
+If you create a new branch, please follow either of the two naming approaches:
+
+1. Create a hierarchical representation such as particles-taskgraph-bugfix 
+   which highlights that this branch is a subbranch of taskgraph which in
+   turn is a subbranch of particles.
+2. Use your username followed by a slash as name. 
+
+Both approaches are fine and can be combined obviously. The second version puts
+additional emphasis on who "owns" a certain branch.
+
+
+# Popular subbranches
+
+- documentation is a subbranch which exclusively fixes documentation and 
+  tutorials. Nothing in here does actually "touch" real code.
+- gpu is a subbranch of infrastructure and collects all the extensions we need 
+  to support various GPU back-ends. Therefore, we call it infrastructure-gpu.
+- particles hosts our SPH work, i.e. Swift 2.
+
+
+ */
+
