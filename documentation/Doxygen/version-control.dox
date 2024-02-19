@@ -32,15 +32,16 @@ careful.
 
 # Naming conventions
 
-If you create a new branch, please follow either of the two naming approaches:
+If you create a new branch, please follow the two naming approaches:
 
 1. Create a hierarchical representation such as particles-taskgraph-bugfix 
    which highlights that this branch is a subbranch of taskgraph which in
    turn is a subbranch of particles.
-2. Use your username followed by a slash as name. 
+2. Use your username followed by a slash as name prefix. 
 
-Both approaches are fine and can be combined obviously. The second version puts
-additional emphasis on who "owns" a certain branch.
+The second version puts additional emphasis on who "owns" a certain branch,
+while the first one highlights the hierarchical relationships. Multi-user
+branches or top-level branches do not have a name prefix.
 
 
 # Popular subbranches
