@@ -41,12 +41,12 @@ classifiers = [
 ]
 dependencies = [
     "Jinja2",
-    "numpy",
-    "sympy",
-    "matplotlib",
-    "h5py",
-    "scipy",
     "mpmath",
+    "numpy",
+    "matplotlib",
+    "scipy",
+    "sympy",
+    "h5py",
     "VTUinterface",
 ]
 

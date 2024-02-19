@@ -7,7 +7,13 @@ You also can create a sole C++ application.
 The Python API yields such applications, too, i.e.,
 Python is not required to run the simulations but only to construct them.
 
-### Autotools
+## Prerequisite
+
+```shell
+pip3 install -e python
+```
+
+## Autotools
 
 ```shell
 CC=gcc CXX=g++ python3 configure.py && make -j && make check
@@ -20,7 +26,7 @@ libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-
 CFLAGS="-O3 -march=native" CC="gcc" CXXFLAGS="-std=c++20 -w -O3 -march=native" CXX="g++" LDFLAGS="-march=native" ./configure  && make -j && make check
 ```
 
-### CMake
+## CMake
 
 ```shell
 CC=gcc CXX=g++ python3 configure.py --cmake=build && cd build && make -j && make test

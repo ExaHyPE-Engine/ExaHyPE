@@ -42,7 +42,7 @@ emphasis on reusability, application-independent design and the support for rapi
 This third generation of the code ended around 2019 when we released the
 ExaHyPE code - a hyperbolic equation system solver engine which uses Peano's
 AMR meshes.
-The current guidebook discusses Peano 4, which reuses ideas and lessons learned
+The documentation discusses Peano 4, which reuses ideas and lessons learned
 from Peano 3 as well as lots of code buildling blocks, but can be seen as a
 major rewrite starting from scratch.
 
