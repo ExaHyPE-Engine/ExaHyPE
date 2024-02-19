@@ -6,8 +6,8 @@
 
 <!-- Do not add subsections here. Doxygen cannot handle them correctly -->
 
-\li @subpage page_version_control
 \li @subpage page_installation
+\li @subpage page_version_control
 \li @subpage page_documentation
 \li @subpage page_architecture
 \li @subpage page_continuous_integration
