@@ -6,6 +6,7 @@
 #include <functional>
 
 #include "tarch/multicore/Tasks.h"
+#include "peano4/datamanagement/CellMarker.h"
 
 
 namespace swift2 {
@@ -36,7 +37,7 @@ namespace swift2 {
   template <typename ParticleSet>
   class CellTask: public tarch::multicore::Task {
   public:
-    typedef std::function<void(ParticleSet& localParticles, ParticleSet& activeParticles)> Functor;
+    typedef std::function<void(const peano4::datamanagement::CellMarker&  marker, ParticleSet& localParticles, ParticleSet& activeParticles)> Functor;
 
     /**
      * Construct a vertex task
@@ -45,15 +46,26 @@ namespace swift2 {
      * multicore component via
      */
     CellTask(
-      const ParticleSet& localParticles, const ParticleSet& activeParticles, Functor functor, bool FuseAndPortToGPU
+      const peano4::datamanagement::CellMarker&  marker,
+      const ParticleSet&                         localParticles,
+      const ParticleSet&                         activeParticles,
+      Functor                                    functor,
+      bool                                       fuseAndPortToGPU
     );
     ~CellTask();
 
+    /**
+     * Run the task
+     *
+     * This routine invokes the actual task functor. After that, it sets the
+     * updated marker for the particles. We see that t
+     */
     virtual bool run() override;
 
   private:
     static int TaskTypeId;
 
+    const peano4::datamanagement::CellMarker  _marker;
     ParticleSet _localParticles;
     ParticleSet _activeParticles;
     Functor     _functor;
