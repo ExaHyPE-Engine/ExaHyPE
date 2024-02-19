@@ -17,8 +17,38 @@ permissions, but we do protect some branches.
   - exahype
   - applications
   - infrastructure
+  - documentation
 - We have multiple subbranches under each top level branch. They are "owned"
   by various colleagues.
+
+It is sometimes confusing to distinguish methodological extensions and 
+applications: Very often, the application needs trigger the introduction of new
+numerical techniques or infrastructure features. However, we find it useful to 
+maintain them in different branches, as infrastructure changes by definition 
+often affect a lot of different applications, so we want people to be very 
+careful. 
+
+
+
+# Naming conventions
+
+If you create a new branch, please follow either of the two naming approaches:
+
+1. Create a hierarchical representation such as particles-taskgraph-bugfix 
+   which highlights that this branch is a subbranch of taskgraph which in
+   turn is a subbranch of particles.
+2. Use your username followed by a slash as name. 
+
+Both approaches are fine and can be combined obviously.
+
+
+# Popular subbranches
+
+- documentation is a subbranch which exclusively fixes documentation and 
+  tutorials. Nothing in here does actually "touch" real code.
+- gpu is a subbranch of infrastructure and collects all the extensions we need 
+  to support various GPU back-ends. Therefore, we call it infrastructure-gpu.
+- particles hosts our SPH work, i.e. Swift 2.
 
 
  */
