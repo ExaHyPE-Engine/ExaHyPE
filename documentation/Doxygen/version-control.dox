@@ -1,0 +1,25 @@
+/**
+
+\page page_version_control Version control
+
+The project is hosted on the gitlab of the Leibniz Supercomputing Centre. You 
+find the repository at https://gitlab.lrz.de/hpcsoftware/Peano. We try to give
+all interested colleagues access to the repository including some write 
+permissions, but we do protect some branches.
+
+- Our main branch is called p4, as we work with Peano 4. This one is protected
+  and only writable by the PI. 
+- p4 has a couple of high-level subbranches which are editable by a few key
+  users. Please assign merge requests to one of these key users if you want your 
+  changes to be merged.
+  - particles
+  - multigrid
+  - exahype
+  - applications
+  - infrastructure
+- We have multiple subbranches under each top level branch. They are "owned"
+  by various colleagues.
+
+
+ */
+
