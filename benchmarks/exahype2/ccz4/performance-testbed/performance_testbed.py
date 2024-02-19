@@ -26,7 +26,7 @@ floatparams = {
 	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0,
-        "domain_r":1.0, "smoothing":0.0, "KOSigma":8.0 #, \
+        "domain_r":1.5, "smoothing":0.0, "KOSigma":8.0 #, \
 	#"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         #"f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":1.0, "bs":1.0#, \
@@ -44,7 +44,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
     parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, default=0.05,  help="upper limit for refinement. Refers to volume size, i.e. not to patch size" )
     parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0.02,  help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume size, i.e. not to patch size" )
-    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
+    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=9,    help="Patch size, i.e. number of volumes per patch per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
@@ -310,8 +310,8 @@ if __name__ == "__main__":
     else:
       solver_name    = solver_name
 
-    if args.SO_flag==True:
-      args.cfl=args.cfl/2
+    #if args.SO_flag==True:
+    #  args.cfl=args.cfl/2
 
     min_h = args.min_h
     if min_h <=0.0:
