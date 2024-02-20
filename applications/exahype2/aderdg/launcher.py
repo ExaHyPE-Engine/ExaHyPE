@@ -38,7 +38,7 @@ args = parser.parse_args()
 if args.s is None:
   while True:
       try:
-          s = input( "Which of the following scenarios would you like to try out?\n" + "- ".join(available_scenarios.keys()) )
+          s = input( "Which of the following scenarios would you like to try out?\n" + "- ".join(available_scenarios.keys()) + "\n" )
           scenario = available_scenarios[s]
       except KeyError:
           print("i'm afraid i can't do that Dave")
