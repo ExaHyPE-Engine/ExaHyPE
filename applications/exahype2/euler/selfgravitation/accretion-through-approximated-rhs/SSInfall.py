@@ -40,9 +40,7 @@ if __name__ == "__main__":
     parser.add_argument("-et",       "--end-time",            dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-tn",       "--tracer-name",         dest="tra_name",        type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn",      "--exe-name",            dest="exe_name",        type=str, default="",  help="name of output executable file" )
-    parser.add_argument("-od",       "--output-dir",          dest="path",            type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-pd",       "--peano-dir",           dest="peanodir",                  default="../../../../../", help="Peano4 directory")
-    parser.add_argument("-cd",       "--configure-dir",       dest="configuredir",              default="../../../../../", help="Location of configure" )
+    parser.add_argument("-outdir",   "--output-directory",    dest="path",            type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
     parser.add_argument("-tracer",   "--add-tracer",          dest="add_tracer",      type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
     parser.add_argument("-iseed",    "--initial-seed",        dest="seed",            type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
     parser.add_argument("-eigen",    "--eigenvalue-control",  dest="eigen",           choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
@@ -266,7 +264,7 @@ if __name__ == "__main__":
 #main starts here
 ########################################################################################
     userinfo = []
-    exe="ssinfall"
+    exe="peano4"
     
     if args.exe_name!="":
       exe += "_"
@@ -470,7 +468,7 @@ if __name__ == "__main__":
       12  # plotter precision
     )
 
-    project.set_Peano4_installation(args.peanodir, build_mode)
+    project.set_Peano4_installation("../../../../", build_mode)
 
 ########################################################################################
 #output dir and proble
@@ -549,7 +547,6 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_h_file("MassAccumulator.h")
     peano4_project.output.makefile.add_cpp_file("MassAccumulator.cpp")
 
-    peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )
 
