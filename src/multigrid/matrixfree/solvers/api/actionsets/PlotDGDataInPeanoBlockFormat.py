@@ -81,18 +81,19 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
   );
 
   int valuePatchVertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
-  
-  double* value = fineGridCell{{SOLVER_NAME}}.{{GETTER}}().data();
-  
   int currentDoF = 0;
   /*
   d-dimensional forloop
   */
   dfor(k,repositories::{{SOLVER_INSTANCE}}.PolyDegree+1) {
+    double* value = fineGridCell{{SOLVER_NAME}}.{{GETTER}}().data();
     _dataWriter->plotVertex( valuePatchVertexIndex, value+currentDoF );
     valuePatchVertexIndex++;
     currentDoF++;
   }
+
+
+
   logTraceOut("Plot::TCFT");
 }
 """
