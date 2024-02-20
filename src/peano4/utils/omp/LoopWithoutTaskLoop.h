@@ -3,15 +3,10 @@
 //
 // Included by peano4/utils/Loop.h. Do not use directly
 //
-
-// TODO: It does not work if to have multiple pragmas with if, so I only support taskloop
-//       as I assume that parallel for in nested parallelism would not work anyway.
-// TODO: Use variadic templates for n-dimensions. -> Might not work, but maybe there is some (similar) trick.
-
 #define parallelForWithSchedulerInstructions(counter, max, loopParallelism) \
   { \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp for default(shared) if ( __loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
+  _Pragma( "omp parallel for default(shared) if ( __loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
   for( int counter = 0; counter < max; counter++ ) {
 
 #define endParallelFor }}
@@ -21,7 +16,7 @@
   { \
   tarch::la::Vector<2,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp for collapse(2) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
+  _Pragma( "omp parallel for collapse(2) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) { \
     tarch::la::Vector<2, int> counter = { counter##0, counter##1 };
@@ -30,7 +25,7 @@
   { \
   tarch::la::Vector<3,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp for collapse(3) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
+  _Pragma( "omp parallel for collapse(3) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) { \
@@ -40,7 +35,7 @@
   { \
   tarch::la::Vector<4,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp for collapse(4) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
+  _Pragma( "omp parallel for collapse(4) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
@@ -51,7 +46,7 @@
   { \
   tarch::la::Vector<5,int> counter##Max(max); \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp for collapse(5) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
+  _Pragma( "omp parallel for collapse(5) default(shared) if (__loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
   for( int counter##0 = 0; counter##0 < counter##Max(0); counter##0++ ) \
   for( int counter##1 = 0; counter##1 < counter##Max(1); counter##1++ ) \
   for( int counter##2 = 0; counter##2 < counter##Max(2); counter##2++ ) \
@@ -65,7 +60,7 @@
 #define simtForWithSchedulerInstructions(counter, max, loopParallelism) \
   { \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp simd default(shared) if ( __loopParallelismUsedWithinMacroWithUniqueName!=::peano4::utils::LoopPlacement::Serial)" ) \
+  _Pragma( "omp simd if ( __loopParallelismUsedWithinMacroWithUniqueName!=::peano4::utils::LoopPlacement::Serial)" ) \
   for( int counter = 0; counter < max; counter++ ) {
 
 #define endSimtFor }}
