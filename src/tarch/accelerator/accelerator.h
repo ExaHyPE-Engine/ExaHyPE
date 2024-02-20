@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/multicore/multicore.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) and !defined(GPUOffloadingCUDA)
 #define GPUOffloadingOff
@@ -84,4 +85,39 @@ namespace tarch {
   void freeMemory(void* data, MemoryLocation location);
 
   int padSizeToAlignment(int size, int aligment);
+
+  /**
+   * Alternative GPU-ready version of memset
+   *
+   * AMD's standard library hasn't annotated the memset call with target
+   * offload for OpenMP. So we have to provide a GPU-ready version ourselves.
+   * We do so if and only if the OpenMPManuallyOffloadMemset macro is set. It
+   * is typically set in the CompilerSpecificSettings.h. If that macro is not
+   * defined, we fall back to std::memset.
+   *
+   * The signature here is compatible with std::memset. The original interface
+   * is
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * char* memset(char* dest, int ch, size_t count);
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * which is just not nice. It should be
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * double* memset(double* dest, double ch, size_t countNumberOfDoubles);
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * but that's not what the C++ standard gives us. So we pick the nicest
+   * interface we could think of, but is still compatible.
+   *
+   * @param count Byte count.
+  */
+  #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  #endif
+  double* memset(double* dest, double ch, size_t byteCount);
+  #if defined(GPUOffloadingOMP)
+  #pragma omp end declare target
+  #endif
 } // namespace tarch

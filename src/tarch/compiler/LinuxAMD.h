@@ -32,3 +32,9 @@
 #define PragmaPush _Pragma("clang diagnostic push")
 #define SilenceUnknownAttribute _Pragma("clang diagnostic ignored \"-Wunknown-attributes\"")
 #define PragmaPop _Pragma("clang diagnostic pop")
+
+/**
+* AMD has not annotated their memset with offloading statements.
+* So we write one manually, if the following macro is defined
+*/
+#define OpenMPManuallyOffloadMemset
