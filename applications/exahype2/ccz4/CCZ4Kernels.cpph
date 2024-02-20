@@ -39,6 +39,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
       const double CCZ4SO
       )
 {
+    const double CCZ4helper=1.0; //19-02-24: add control parameter CCZ4helper
     // Baojiu-01-08-22: alpha now is larger than 0.0001, in agreement with 2112.10567
     //const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16]))); 
     const double alpha = std::fmax(1e-4,Q[16]); 
@@ -384,7 +385,7 @@ void applications::exahype2::ccz4::source(double* S, const double* const Q,
 
     // matrix vector multiplication in a loop and add result to existing vector
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j];
+    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4helper*CCZ4sk*g_contr[i][j]*ov[j]; //19-02-24: add control parameter CCZ4helper
 
     const double myb[3] = {Q[20], Q[21], Q[22]};
 
@@ -519,6 +520,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
       const double CCZ4SO
       )
 {
+    const double CCZ4helper=1.0; //19-02-24: add control parameter CCZ4helper
     // Han 09-2022: add a parameter to switch off or on the advection here
     const double advec=0.0;
     const double advec_aux=0.0;
@@ -852,7 +854,7 @@ void applications::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, co
         ov[k] = 2*alpha*temp;
     }
     for (int i = 0; i < 3; i++)
-    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4sk*g_contr[i][j]*ov[j]; 
+    for (int j = 0; j < 3; j++) dtGhat[i] += CCZ4helper*CCZ4sk*g_contr[i][j]*ov[j]; //19-02-24: add control parameter CCZ4helper
 
     double dtbb[3];
     for (int i = 0; i < 3; i++)
