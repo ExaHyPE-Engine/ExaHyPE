@@ -99,5 +99,9 @@ double exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(
       result += weight * Q[currentVoxelIndex * unknownsPerVoxel + unknown];
     }
   enddforx
+  if (unknown==0){
+    std::cout << "exahype2::fv::internal::projectValueOntoParticle_piecewiseLinear(): Q_0(should close to 1.0 always)=" << result <<std::endl;
+  }
+
   return result;
 }

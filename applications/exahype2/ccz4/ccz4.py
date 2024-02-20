@@ -467,14 +467,14 @@ if __name__ == "__main__":
         #init_action_set = exahype2.tracer.InsertParticlesFromFile( 
         #                            particle_set=tracer_particles, filename="t-design.dat", scale_factor=abs(offset[0])*0.8)
         #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
-        init_action_set.priority = 0
+        init_action_set.descend_invocation_order = 0
         project.add_action_set_to_initialisation( init_action_set )
         
         tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                my_solver,
                                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear",
                                                                )
-        tracer_action_set.priority = my_solver._action_set_update_cell.priority+1
+        tracer_action_set.descend_invocation_order = my_solver._action_set_update_cell.descend_invocation_order+1
         project.add_action_set_to_timestepping(tracer_action_set)
         project.add_action_set_to_initialisation(tracer_action_set)
         
@@ -488,45 +488,45 @@ if __name__ == "__main__":
           position_delta_between_two_snapsots=1e16,
           time_delta_between_two_snapsots=0.02
           )
-        dump_action_set.priority = my_solver._action_set_update_cell.priority+2
+        dump_action_set.descend_invocation_order = my_solver._action_set_update_cell.descend_invocation_order+2
         project.add_action_set_to_timestepping(dump_action_set)
 
     if args.add_tracer==2:
         tracer_particles = project.add_tracer( name="Tracer",attribute_count=59 )
         init_action_set = exahype2.tracer.InsertParticlesByCoordinates( 
-            particle_set=tracer_particles, coordinates=[[2.0,0,0],[-2.0,0,0]])
-        init_action_set.priority = 0
+            particle_set=tracer_particles, coordinates=[[0.2,0,0],[-0.2,0,0]])
+        init_action_set.descend_invocation_order = 0
         project.add_action_set_to_initialisation( init_action_set )
         
         tracer_action_set=exahype2.tracer.FiniteVolumesTracing(tracer_particles,
                                                                my_solver,
                                                                project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseLinear_explicit_Euler",
-                                                               projection_kernel_arguments="""
-                                                                marker,
+                                                               projection_kernel_arguments="""marker,
                                                                 {{PATCH_SIZE}},
                                                                 {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
                                                                 fineGridCell{{SOLVER_NAME}}Q.value,
                                                                 fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-                                                                {17,18,19},
+                                                                {0,1,2},
                                                                 {-1,-1,-1},
                                                                 *p
                                                                """
                                                                )
-        tracer_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+1
+        tracer_action_set.descend_invocation_order = my_solver._action_set_compute_final_linear_combination.descend_invocation_order+1
         project.add_action_set_to_timestepping(tracer_action_set)
         project.add_action_set_to_initialisation(tracer_action_set)
         
         dump_action_set=exahype2.tracer.DumpTracerIntoDatabase(
           particle_set=tracer_particles,
           solver=my_solver,
-          filename=args.path+"Tracer-test",
-          number_of_entries_between_two_db_flushes=500,
+          filename=args.path+"Tracer-BHTracker",
+          number_of_entries_between_two_db_flushes=50000,
           output_precision=8,
           data_delta_between_two_snapsots=1e16,
           position_delta_between_two_snapsots=1e16,
-          time_delta_between_two_snapsots=0.02
+          time_delta_between_two_snapsots=0.02,
+          clear_database_after_flush      = False
           )
-        dump_action_set.priority = my_solver._action_set_compute_final_linear_combination.priority+2
+        dump_action_set.descend_invocation_order = my_solver._action_set_compute_final_linear_combination.descend_invocation_order+2
         project.add_action_set_to_timestepping(dump_action_set)
 
 ########################################################################################
