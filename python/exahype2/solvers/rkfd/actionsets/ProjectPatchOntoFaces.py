@@ -54,9 +54,15 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
     Instead, we ignore the face that the action set ComputeFinalLinearCombination
     would do all of this. Instead, we compute the final linear combination 
     from the rhs guesses (redundantly) and project the outcome onto the faces.
-    This means that we have p+1 different linear combinations if our 
-    Runge-Kutta scheme has p steps, but we can always work against the right-hand
-    side estimate from @f$ \partial _t Q = F(Q) @f$ only.
+    
+    ## Invocation order
+    
+    To be able to recompute the linear combination of rhs guesses from the
+    Runge-Kutta scheme, this projection has to be invoked before we determine
+    the final linear combination per cell and overwrite the solution in the
+    patch. This means its descend_invocation_order has to be higher than 
+    the one from the linear combination computation, as touchCellLastTime()
+    inverts this order. 
     
     ## Write data
     
@@ -129,8 +135,6 @@ class ProjectPatchOntoFaces(AbstractRKFDActionSet):
 
     """
 
-#To be written 
-#Und dann fehlt noch der gesamt parallele Datenaustausch
 
 
     __Template_TouchCellLastTime = """

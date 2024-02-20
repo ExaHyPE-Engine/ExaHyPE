@@ -5,7 +5,7 @@
 <!-- Add this one for href links to subitems -->
 \tableofcontents
 
-## Hamilton
+# Hamilton
 
 <img width="20%" src="https://nccadmin.webspace.durham.ac.uk/wp-content/themes/core/assets/img/theme/branding-assets/durham-university-logo.svg" />
 
@@ -75,7 +75,7 @@ ExaHyPE and Swift. This is however something I do in the main() routine of
 the respective applications.
 
 
-## NCC
+# NCC
 
 I recommend atm to use `gpu10`, `gpu11` or `gpu12`, i.e. the A100
 machines. By default, I usually work with NVC++ on this cluster, but the
@@ -88,7 +88,7 @@ module load mvapich2/2.3.5-2
 ./configure --enable-exahype --enable-loadbalancing-toolbox --with-multithreading=omp --with-mpi=mpicxx --with-gpu=omp CXX=clang++ CXXFLAGS="-fopenmp -fopenmp-targets=nvptx64-nvidia-cuda"
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-### OpenMP with NVC++
+## OpenMP with NVC++
 
 I use the setup
 
@@ -116,7 +116,7 @@ your experiments:
 export CUDA_VISIBLE_DEVICES=0
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-### SYCL offloading with oneAPI
+## SYCL offloading with oneAPI
 
 I used this to configure Peano with Intel's TBB enabled
 
@@ -152,7 +152,7 @@ before the terminal command to explicitly tell SYCL to run the code on GPU.
 In the case of a runtime error, it is also useful to add `SYCL_PI_TRACE=2`
 to check where the error was raised.
 
-## DINE
+# DINE
 
 <img width="20%" src="https://www.dur.ac.uk/images/cosma/cosma_white.png" />
 
@@ -187,7 +187,7 @@ There are a few things to consider whenever you use DINE:
   which you should use to store data files.
 
 
-## MAD07 (Ice Lake)
+# MAD07 (Ice Lake)
 
 <img width="20%" src="https://www.dur.ac.uk/images/cosma/cosma_white.png" />
 
@@ -226,7 +226,7 @@ Does that mean we have 2x28 and hyperthreading is enabled?
 
 
 
-## MAD08/MAD09 (Genoa)
+# MAD08/MAD09 (Genoa)
 
 <img width="20%" src="https://www.dur.ac.uk/images/cosma/cosma_white.png" />
 
@@ -265,7 +265,7 @@ Swift also requires you to pass
 to vectorisesome particular compute-heavy tasks (gravity).
 
 
-## Grace Hopper
+# Grace Hopper
 
 The Grace Hopper build configuration is similar to any other build:
 
@@ -280,8 +280,59 @@ Depending on the SLURM configuration, people might have to request
 GPUs explicitly when they want a Grace Hopper node.
 
 
+# SuperMUC-NG Phase 2
+
+<img src="https://www.lrz.de/bilder/logos/lrz-logos/lrz_logo_en.png" />
+
+On SuperMUC-NG Phase 2, we can basically rely on the standard Intel toolchain:
+
+~~~~~~~~~~~~~~~~~~~~~~
+module load intel
+module load gcc
+./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes --gcc-toolchain=/dss/lrzsys/sys/spack/release/24.1.0/opt/x86_64/gcc/13.2.0-gcc-itoa7pi/" LDFLAGS="--gcc-toolchain=/dss/lrzsys/sys/spack/release/24.1.0/opt/x86_64/gcc/13.2.0-gcc-itoa7pi/ -fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles
+~~~~~~~~~~~~~~~~~~~~~~
 
 
- */
- 
- 
+
+Some remark on this setup:
+
+- The Intel module is at least 2024. 
+- The default Intel module is built against an older GCC version. In this 
+  version, some filesystem routines and classes are still contained within
+  std::experimental. Peano expects STL classes within std however. Therefore,
+  we swap the STL manually. This might become obsolete with future compiler
+  modules.
+- The toolchain also has to be known to the linker explicitly, so have to 
+  specify the path in the LDFLAGS, too. 
+- Surprisingly, the code runs, once built also with system-level GCC versions.
+  However, you have to load a recent GCC (13.0.0 here) manually before you 
+  launch any Peano application.
+
+# AMD cloud machine
+
+<img size="50%" src="https://download.amd.com/OneTrust/202401.1.0a/consent/17a54836-920d-4fc2-a8f6-3f4c299371d1/0e234106-67d9-4371-9d2e-fba9f77b42f1/logos/522af4e3-8eb6-419a-ab34-33424f162acd/b5753b26-66ca-48b2-9cf8-f49f6f86d4fc/8ea1ec5d-9e72-477e-af81-45810eb32c32/AMD-Logo-700x394.png" />
+
+This is a guideline for AMD Cloud machines that we use in hackathons, e.g. 
+Login here works with standards ssh
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ssh username@aac1.amd.com -p myport
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where you have to pick an active port (7000 or 7010). We only need one module
+for the core GPU tests:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+moduel load aomp/amdclang
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+(and older version is ```module load amdclang/17.0-6.0.0```) and then use the following configuration:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure CFLAGS="-D__AMDGPU__  -O3 -march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" CC="amdclang" CXXFLAGS="-std=c++17 -w -O3 -march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" CXX="amdclang++" LDFLAGS="-march=native -fopenmp -lstdc++fs --offload-arch=gfx90a" ./configure --with-multithreading=omp --with-gpu=omp --enable-exahype --enable-loadbalancing --enable-blockstructured
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A good starting point for the GPU work is benchmarks/exahype2/ccz4/performance-testbed.
+
+*/
+

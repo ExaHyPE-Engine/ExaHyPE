@@ -98,6 +98,24 @@ namespace toolbox {
 
 
     bool particleAssignedToVertexWillBeLocal(const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker);
+
+    /**
+     * Mirror a particle along the periodic domain boundaries
+     *
+     * @param x Position of the particle as received along a periodic boundary
+     *   exchange.
+     * @param marker Marker of vertex which triggers the receive, i.e. the one
+     *   to which the incoming particle at x will be attached to.
+     *
+     * @param Position of particle as "seen" from receiving side
+     */
+    tarch::la::Vector<Dimensions, double> mirrorParticleAlongPeriodicDomains(
+        const tarch::la::Vector<Dimensions, double>& x,
+        const peano4::datamanagement::VertexMarker&  marker,
+        const tarch::la::Vector<Dimensions,double>   domainOffset,
+        const tarch::la::Vector<Dimensions,double>   domainSize,
+        const std::bitset<Dimensions>                periodicBC
+    );
   } // namespace particles
 } // namespace toolbox
 
