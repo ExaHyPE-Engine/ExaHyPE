@@ -209,9 +209,11 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier toolbox::part
 }
 
 
-toolbox::particles::assignmentchecks::internal::Database::Database() {
+toolbox::particles::assignmentchecks::internal::Database::Database( int maxParticleSnapshotsToKeepTrackOf ):
+  _maxParticleSnapshotsToKeepTrackOf( maxParticleSnapshotsToKeepTrackOf ) {
   _data.push_back(MeshSweepData("initial"));
 };
+
 
 void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(const std::string& meshSweepName) {
   logInfo("startMeshSweep()", "finish old mesh sweep with " << _data.rbegin()->size() << " event(s) and start new one for " << meshSweepName );
@@ -223,6 +225,47 @@ void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(co
 int toolbox::particles::assignmentchecks::internal::Database::getCurrentMeshSweep() {
   tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
   return _data.size()-1;
+}
+
+
+void toolbox::particles::assignmentchecks::internal::Database::removeOldSnapshots(
+  const ParticleIdentifier&  identifier,
+  int                        spacetreeId,
+  int                        numberOfSnapshots
+) {
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Write);
+
+  int currentSnapshot = 0;
+  while (currentSnapshot<numberOfSnapshots) {
+    if (_data[currentSnapshot].count(identifier) > 0) {
+      auto event = _data[currentSnapshot].at(identifier).begin();
+      while (event != _data[currentSnapshot].at(identifier).end()) {
+        bool treeIsAFit = event->treeId == spacetreeId
+                       or spacetreeId==AnyTree;
+        if (treeIsAFit) {
+          event = _data[currentSnapshot][identifier].erase(event);
+        }
+        else {
+          event++;
+        }
+      }
+
+      if (_data[currentSnapshot].count(identifier)==0) {
+        _data[currentSnapshot].erase(identifier);
+      }
+    }
+    currentSnapshot++;
+  }
+
+  currentSnapshot = 0;
+  auto p = _data.begin();
+  while (currentSnapshot<numberOfSnapshots) {
+    if (_data[currentSnapshot].count(identifier)>0 and _data[currentSnapshot][identifier].size()==0) {
+      logDebug( "removeOldSnapshots()", "snapshot " << currentSnapshot << " does not contain any entries for " << identifier.toString() << " anymore" );
+      _data[currentSnapshot].erase(identifier);
+    }
+    currentSnapshot++;
+  }
 }
 
 
@@ -251,6 +294,12 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
           and
           treeIsAFit
         ) {
+          lock.free();
+          int outdatedSnapshots = _data.size() - firstNRecentEntriesToSkip - countSnapshotsBackwards - 1;
+          if ( outdatedSnapshots > _maxParticleSnapshotsToKeepTrackOf ) {
+            logDebug( "getEntry(...)", "database holds too many entries for " << identifier.toString() << ". Delete " << outdatedSnapshots << " old snapshots" );
+            removeOldSnapshots(identifier, spacetreeId, outdatedSnapshots);
+          }
           return Event(Event::Type::NotFound);
         }
         else if (
@@ -272,7 +321,16 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
           return getEntry(previousIdentifier, spacetreeId, countSnapshotsBackwards);
         }
         else if (event->type != Event::Type::Erase and treeIsAFit) {
-          return *event;
+          Event result = *event;
+          lock.free();
+          int outdatedSnapshots = _data.size() - firstNRecentEntriesToSkip - countSnapshotsBackwards;
+          if (firstNRecentEntriesToSkip>_maxParticleSnapshotsToKeepTrackOf) {
+            addEvent(identifier, result);
+            int outdatedSnapshots = _data.size() - firstNRecentEntriesToSkip - countSnapshotsBackwards-1;
+            logDebug( "getEntry(...)", "database holds too many entries for " << identifier.toString() << ". Bring old snapshot forward, delete " << outdatedSnapshots << " old snapshots");
+            removeOldSnapshots(identifier, spacetreeId, outdatedSnapshots);
+          }
+          return result;
         }
         event++;
       }

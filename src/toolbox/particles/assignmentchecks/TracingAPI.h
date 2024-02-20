@@ -251,12 +251,37 @@ namespace toolbox {
             tarch::multicore::MultiReadSingleWriteSemaphore  _semaphore;
 
             std::vector<MeshSweepData> _data;
+
+            /**
+             * Of how many previous associations do we want to keep track
+             *
+             * If we do not clean up the database every now and then, we
+             * will run into situations where the memory footprint exceeds the
+             * available mem. More importantly, the validation steps will last
+             * for ages. So we clean up the database of old data every now and
+             * then. This threshold indicates how many old data entries to keep.
+             * Set it to std::numerics<int>::max() to disable this type of
+             * garbage collection on the history.
+             */
+            int _maxParticleSnapshotsToKeepTrackOf;
+
+            /**
+             * Remove the first numberOfSnapshots for identifier on spacetree spacetreeId
+             *
+             * This routine will acquire its own write lock.
+             */
+            void removeOldSnapshots(
+              const ParticleIdentifier&  identifier,
+              int                        spacetreeId,
+              int                        numberOfSnapshots
+            );
+
           public:
             static constexpr int SearchWholeDatabase = 0;
             static constexpr int AnyTree = -1;
             static constexpr int DoNotFollowParticleMovementsInDatabase = -2;
 
-            Database();
+            Database( int maxParticleSnapshotsToKeepTrackOf = 4 );
 
             /**
              * Create a particle identifier
