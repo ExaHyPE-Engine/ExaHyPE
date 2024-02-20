@@ -1,12 +1,12 @@
 // (Generated from multigrid/petsc/{{CPP_FILE_TEMPLATE}})
 #include "{{MAIN_NAME}}.h"
 
-#include "observers/{{PROJECT_NAME}}_Assemble.h"
-#include "observers/{{PROJECT_NAME}}_CreateGrid.h"
-#include "observers/{{PROJECT_NAME}}_EnumerateAndInitSolution.h"
-#include "observers/{{PROJECT_NAME}}_MapSolutionOntoMesh.h"
-#include "observers/{{PROJECT_NAME}}_Plot.h"
-#include "observers/{{PROJECT_NAME}}_Solve.h"
+#include "observers/Assemble.h"
+#include "observers/CreateGrid.h"
+#include "observers/EnumerateAndInitSolution.h"
+#include "observers/MapSolutionOntoMesh.h"
+#include "observers/Plot.h"
+#include "observers/Solve.h"
 
 #include "peano4/peano.h"
 #include "peano4/UnitTests.h"
@@ -75,50 +75,50 @@ bool selectNextAlgorithmicStep() {
     auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 
     switch ( stepName ) {
-      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGrid:
+      case repositories::StepRepository::Steps::CreateGrid:
         {
             peano4::parallel::Node::getInstance().setNextProgramStep(
-              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_EnumerateAndInitSolution )
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::EnumerateAndInitSolution )
             );
         }
         break;
      
-      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_EnumerateAndInitSolution:
+      case repositories::StepRepository::Steps::EnumerateAndInitSolution:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_InitPETSc )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitPETSc )
           );
         }
         break;
-      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_InitPETSc:
+      case repositories::StepRepository::Steps::InitPETSc:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_Assemble )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Assemble )
           );
         }
         break;
-      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Assemble:
+      case repositories::StepRepository::Steps::Assemble:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_Solve )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
           );
         }
         break;
-      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Solve:
+      case repositories::StepRepository::Steps::Solve:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_MapSolutionOntoMesh )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::MapSolutionOntoMesh )
           );
         }
         break;
-      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_MapSolutionOntoMesh:
+      case repositories::StepRepository::Steps::MapSolutionOntoMesh:
         {
           peano4::parallel::Node::getInstance().setNextProgramStep(
-            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::{{PROJECT_NAME}}_Plot )
+            repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
           );
         }
         break;
-      case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Plot:
+      case repositories::StepRepository::Steps::Plot:
         {
           continueToSolve = false;
         }
@@ -134,7 +134,7 @@ bool selectNextAlgorithmicStep() {
     static int globalNumberOfTrees = 0;
 
     peano4::parallel::Node::getInstance().setNextProgramStep(
-      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGrid)
+      repositories::StepRepository::toProgramStep(repositories::StepRepository::Steps::CreateGrid)
     );
 
     if (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps() > 5) {
@@ -165,11 +165,11 @@ void step() {
   static int creepingNumberOfLocalCells = 0;
 
   switch ( stepName ) {
-    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_CreateGrid:
+    case repositories::StepRepository::Steps::CreateGrid:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
 
-        observers::{{PROJECT_NAME}}_CreateGrid  observer;
+        observers::CreateGrid  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
@@ -177,18 +177,18 @@ void step() {
       }
       break;
     
-    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_EnumerateAndInitSolution:
+    case repositories::StepRepository::Steps::EnumerateAndInitSolution:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "enumerate-and-init-solution" );
 
-        observers::{{PROJECT_NAME}}_EnumerateAndInitSolution  observer;
+        observers::EnumerateAndInitSolution  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         enumerateMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_InitPETSc:
+    case repositories::StepRepository::Steps::InitPETSc:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-PETSc" );
 
@@ -202,11 +202,11 @@ void step() {
         initMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Assemble:
+    case repositories::StepRepository::Steps::Assemble:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "assemble" );
 
-        observers::{{PROJECT_NAME}}_Assemble  observer;
+        observers::Assemble  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
 
@@ -214,7 +214,7 @@ void step() {
         assembleMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Solve:
+    case repositories::StepRepository::Steps::Solve:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );
 
@@ -225,11 +225,11 @@ void step() {
         solveMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_MapSolutionOntoMesh:
+    case repositories::StepRepository::Steps::MapSolutionOntoMesh:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "map-solution-onto-mesh" );
 
-        observers::{{PROJECT_NAME}}_MapSolutionOntoMesh  observer;
+        observers::MapSolutionOntoMesh  observer;
         watch.start();
 
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
@@ -238,11 +238,11 @@ void step() {
         mapSolutionOntoMeshMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    case repositories::StepRepository::Steps::{{PROJECT_NAME}}_Plot:
+    case repositories::StepRepository::Steps::Plot:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot" );
 
-        observers::{{PROJECT_NAME}}_Plot  observer;
+        observers::Plot  observer;
         watch.start();
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
