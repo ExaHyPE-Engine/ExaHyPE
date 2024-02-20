@@ -1,7 +1,5 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-
-
 #pragma once
 
 #include <bitset>
@@ -89,7 +87,7 @@ namespace peano4 {
     void dDec(tarch::la::Vector<Dimensions, int>& counter, int max);
 
     /**
-     * d-dimensional counterpart of increment, where individula vector components have different max values
+     * d-dimensional counterpart of increment, where individual vector components have different max values
      *
      * This operation performs a d-dimensional increment on a given integer vector:
      * The first component of the vector is incremented. If the first component is
@@ -163,7 +161,7 @@ namespace peano4 {
      * This operation is called pretty often and, thus, might cause a significant
      * slowdown in the overall performance. Therefore, I introduced a aggressive
      * optimization based on lookup tables. This optimization is switched on if
-     * DLOOP_AGGRESSIVE is specified (default in peano project). Two preconditions
+     * DLOOP_AGGRESSIVE is specified (default in Peano project). Two preconditions
      * have to be fulfilled in this case: All parameters have to stay within
      * certain boundaries (all positive, max smaller or equal to 5)
      * and one has to call both setupLookupTableForDLinearised() and
@@ -261,7 +259,7 @@ namespace peano4 {
      * Creates a start vector. Each component is set either 0 or max-1 depending
      * on direction: If direction is true, then the value 0 is zero.
      *
-     * @return a start vector for an osciallating loop.
+     * @return a start vector for an oscillating loop.
      */
     tarch::la::Vector<Dimensions, int> dStartVector(int max, const LoopDirection& direction);
   }
@@ -283,7 +281,7 @@ std::string toString(peano4::utils::LoopPlacement);
  *     for (x(2)=0; x(2)<N; x(2)++)
  * \endcode
  * with d nested for loops. Thus, one has to code such loops for every d
- * manually. This macro offers a d-independend alternative, just write
+ * manually. This macro offers a d-independent alternative, just write
  * \code
  *   dfor (x,N) {
  *   ...
@@ -376,7 +374,7 @@ std::string toString(peano4::utils::LoopPlacement);
  *
  * ## OpenMP
  *
- * OpenMP relies on pragmas around the nexted for loops, which is tricky as
+ * OpenMP relies on pragmas around the nested for loops, which is tricky as
  * parallelDfor itself is a pragma. I hijack the construct
  *
  *              _Pragma( "my embedded pragma" )
@@ -944,7 +942,7 @@ std::string toString(peano4::utils::LoopPlacement);
 
 /**
  * This is a d-dimensional z-loop. A z-loop is a d-dimensional loop the
- * counter direction changes everytime an inner loop direction has changed.
+ * counter direction changes every time an inner loop direction has changed.
  * So this is the loop corresponding to a Peano curve. The for loop is passed
  * a counter name, the number of steps to perform in each direction and a
  * direction flag that identifies the initial direction. Note that this

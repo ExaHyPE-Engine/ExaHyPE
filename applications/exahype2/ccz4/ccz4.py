@@ -278,8 +278,8 @@ if __name__ == "__main__":
     else:
       solver_name    = solver_name
 
-    if args.SO_flag==True:
-      args.cfl=args.cfl/2
+    #if args.SO_flag==True:
+    #  args.cfl=args.cfl/2
 
     min_h = args.min_h
     if min_h <=0.0:
