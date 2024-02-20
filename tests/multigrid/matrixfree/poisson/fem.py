@@ -24,7 +24,7 @@ parser.add_argument("-m",   "--mode",               dest="mode",           choic
 args = parser.parse_args()
 
 project = matrixfree.Project( project_name = "CollocatedFEM", 
-                              namespace = [ "benchmarks", "multigrid", "matrixfree", "poisson" ]
+                              namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                                 )
 
 local_assembly_matrix = np.array([
