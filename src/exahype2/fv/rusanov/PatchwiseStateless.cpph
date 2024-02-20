@@ -76,7 +76,7 @@ namespace exahype2::fv::rusanov::internal {
       // ====================================================
       // Compute damping due to max eigenvalue
       // ====================================================
-      simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
+      simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
         volume(0) -= HaloSize;
         loopbodies::computeMaxEigenvalue<SolverType>(
           patchData.QIn[patchIndex],
@@ -94,7 +94,7 @@ namespace exahype2::fv::rusanov::internal {
       }
       endSimtDfor
 
-        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
         volume(1) -= HaloSize;
         loopbodies::computeMaxEigenvalue<SolverType>(
           patchData.QIn[patchIndex],
@@ -113,7 +113,7 @@ namespace exahype2::fv::rusanov::internal {
       endSimtDfor
 
 #if Dimensions == 3
-        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
         volume(2) -= HaloSize;
         loopbodies::computeMaxEigenvalue<SolverType>(
           patchData.QIn[patchIndex],
@@ -156,7 +156,7 @@ namespace exahype2::fv::rusanov::internal {
         // Normal (conservative) flux
         // ====================================================
         if constexpr (EvaluateFlux) {
-        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
           volume(0) -= HaloSize;
           loopbodies::computeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -174,7 +174,7 @@ namespace exahype2::fv::rusanov::internal {
         }
         endSimtDfor
 
-          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
+          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
           volume(1) -= HaloSize;
           loopbodies::computeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -193,7 +193,7 @@ namespace exahype2::fv::rusanov::internal {
         endSimtDfor
 
 #if Dimensions == 3
-          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
+          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
           volume(2) -= HaloSize;
           loopbodies::computeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -232,7 +232,7 @@ namespace exahype2::fv::rusanov::internal {
       }
 
       if constexpr (EvaluateNonconservativeProduct) {
-        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
+        simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInXDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
           volume(0) -= HaloSize;
           loopbodies::computeNonconservativeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -250,7 +250,7 @@ namespace exahype2::fv::rusanov::internal {
         }
         endSimtDfor
 
-          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
+          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
           volume(1) -= HaloSize;
           loopbodies::computeNonconservativeFlux<SolverType>(
             patchData.QIn[patchIndex],
@@ -269,7 +269,7 @@ namespace exahype2::fv::rusanov::internal {
         endSimtDfor
 
 #if Dimensions == 3
-          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInYDirection(NumberOfVolumesPerAxisInPatch), loopParallelism) {
+          simtDforWithSchedulerInstructions(volume, internal::rangeOverVolumesPlusHaloInZDirection(NumberOfVolumesPerAxisInPatch, HaloSize), loopParallelism) {
           volume(2) -= HaloSize;
           loopbodies::computeNonconservativeFlux<SolverType>(
             patchData.QIn[patchIndex],

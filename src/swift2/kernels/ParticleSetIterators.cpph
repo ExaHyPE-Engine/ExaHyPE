@@ -37,7 +37,7 @@ void swift2::kernels::forAllLocalParticles(
 
 
 template <typename ParticleContainer>
-void swift2::kernels::forAllParticles_vectorise(
+void swift2::kernels::forAllParticlesVectorised(
   const peano4::datamanagement::VertexMarker&                  marker,
   ParticleContainer&                                           assignedParticles,
   int                                                          numberOfAssignedParticles,
@@ -54,7 +54,7 @@ void swift2::kernels::forAllParticles_vectorise(
 
 
 template <typename ParticleContainer>
-void swift2::kernels::forAllParticles_vectoriseWithCheckPreamble(
+void swift2::kernels::forAllParticlesVectoriseWithCheckPreamble(
   const peano4::datamanagement::VertexMarker&                  marker,
   ParticleContainer&                                           assignedParticles,
   int                                                          numberOfAssignedParticles,
@@ -145,7 +145,6 @@ void swift2::kernels::forAllParticles_vectoriseWithCheckPreamble(
 }
 
 
-
 template <typename LocalParticleContainer, typename ActiveParticleContainer>
 void swift2::kernels::forAllParticlePairs(
   const peano4::datamanagement::CellMarker&  marker,
@@ -169,5 +168,54 @@ void swift2::kernels::forAllParticlePairs(
       }
     }
   }
+}
+
+
+template <typename LocalParticleContainer, typename ActiveParticleContainer>
+void swift2::kernels::forAllParticlePairsVectorised(
+  const peano4::datamanagement::CellMarker&  marker,
+  LocalParticleContainer&                    localParticles,
+  ActiveParticleContainer&                   activeParticles,
+  const std::vector<int>&                    numberOfLocalParticlesPerVertex,
+  const std::vector<int>&                    numberOfActiveParticlesPerVertex,
+  ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
+      f
+) {
+  assertionEquals( numberOfLocalParticlesPerVertex.size(), TwoPowerD );
+
+  for (auto& activeParticle : activeParticles) {
+    typename std::list< typename LocalParticleContainer::value_type >::const_iterator localParticlesIterator  = localParticles.begin();
+    for (int localParticleChunk = 0; localParticleChunk < TwoPowerD; localParticleChunk++ ) {
+      const int localParticlesChunkSize = numberOfLocalParticlesPerVertex[localParticleChunk];
+      typename LocalParticleContainer::value_type  firstParticleInLocalChunk = *localParticlesIterator;
+      std::advance( localParticlesIterator, localParticlesChunkSize );
+
+      simtFor(localParticleInChunkNumber, localParticlesChunkSize ) {
+        f(marker, *(firstParticleInLocalChunk + localParticleInChunkNumber), *activeParticle);
+      } endSimtFor
+    }
+  }
+
+  for (auto& activeParticle : activeParticles) {
+    for (auto& localParticle : localParticles) {
+      if (tarch::la::oneGreater(activeParticle->getCellH(), localParticle->getCellH())) {
+        f(marker, *activeParticle, *localParticle);
+      }
+    }
+  }
+}
+
+
+template <typename LocalParticleContainer, typename ActiveParticleContainer>
+void swift2::kernels::forAllParticlePairsVectoriseWithCheckPreamble(
+  const peano4::datamanagement::CellMarker&  marker,
+  LocalParticleContainer&                    localParticles,
+  ActiveParticleContainer&                   activeParticles,
+  const std::vector<int>&                    numberOfLocalParticlesPerVertex,
+  const std::vector<int>&                    numberOfActiveParticlesPerVertex,
+  ParticleBinaryOperator<typename std::remove_pointer<typename LocalParticleContainer::value_type>::type, typename std::remove_pointer<typename ActiveParticleContainer::value_type>::type>
+      f
+) {
+  swift2::kernels::forAllParticlePairsVectorised(marker, localParticles, activeParticles, numberOfLocalParticlesPerVertex, numberOfActiveParticlesPerVertex, f);
 }
 

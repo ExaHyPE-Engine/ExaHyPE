@@ -34,6 +34,16 @@ namespace swift2 {
           hydro_update_smoothing_length_and_rerun_if_required(&localParticle);
         }
       }
+
+      /**
+       * @todo No masking yet. This one is tricky, as it might alter the global
+       *       state. It is very likely that we have to introduce a new
+       *       iterator which handles the reduction for us.
+       */
+      template <typename Particle>
+      void updateSmoothingLengthAndRerunIfRequiredWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+        updateSmoothingLengthAndRerunIfRequired( marker, localParticle );
+      }
     }
   }
 }

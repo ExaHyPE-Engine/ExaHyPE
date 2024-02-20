@@ -7,7 +7,13 @@ You also can create a sole C++ application.
 The Python API yields such applications, too, i.e.,
 Python is not required to run the simulations but only to construct them.
 
-### Autotools
+## Prerequisite
+
+```shell
+pip3 install -e python
+```
+
+## Autotools
 
 ```shell
 CC=gcc CXX=g++ python3 configure.py && make -j && make check
@@ -17,10 +23,10 @@ which is equivalent to
 
 ```shell
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-CC="gcc -O3" CXX="g++ -std=c++20 -O3" ./configure && make -j && make check
+CFLAGS="-O3 -march=native" CC="gcc" CXXFLAGS="-std=c++20 -w -O3 -march=native" CXX="g++" LDFLAGS="-march=native" ./configure  && make -j && make check
 ```
 
-### CMake
+## CMake
 
 ```shell
 CC=gcc CXX=g++ python3 configure.py --cmake=build && cd build && make -j && make test
@@ -56,7 +62,7 @@ which is equivalent to
 
 ```shell
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-CC="gcc -O3" CXX="g++ -std=c++20 -O3" ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-libxsmm
+CFLAGS="-O3 -march=native" CC="gcc" CXXFLAGS="-std=c++20 -w -O3 -march=native" CXX="g++" LDFLAGS="-march=native" ./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
 make -j && make check
 ```
 
@@ -70,7 +76,7 @@ which is equivalent to
 
 ```shell
 mkdir build && cd build
-CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_LIBXSMM=ON
+CC=gcc CXX=g++ cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON
 make -j && make test
 ```
 

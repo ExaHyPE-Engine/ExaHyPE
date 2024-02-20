@@ -32,6 +32,10 @@
 
 #define LittleEndian
 
+#if !defined(AlignmentOnHeap)
+#define AlignmentOnHeap 16
+#endif
+
 #define KeywordToAvoidDuplicateSymbolsForInlinedFunctions static inline
 
 #define OpenMPTaskGroup

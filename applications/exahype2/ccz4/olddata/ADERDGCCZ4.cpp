@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "../../../../src/tarch/NonCriticalAssertions.h"
+#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   examples::exahype2::ccz4::ADERDGCCZ4::_log( "examples::exahype2::ADERDGCCZ4::CCZ4" );

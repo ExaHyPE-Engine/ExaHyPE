@@ -1,10 +1,8 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-try:
-  import jinja2
-except ImportError:
-  raise Exception("Jinja2 is not available, cannot generate glue code.")
+
+print("Peano 4 (C) www.peano-framework.org")
 
 havevtk=False
 try:
@@ -23,11 +21,20 @@ except ImportError:
 if havevtk and haveparaview:
   import peano4.visualisation
 
-import peano4.datamodel
-import peano4.solversteps
-import peano4.output
-import peano4.toolbox
+try:
+  import jinja2
+except ImportError:
+  print("WARNING: Jinja2 is not available, cannot generate glue code. Most Peano 4 features will be unavailable")
 
-from .Project import Project
+try:
+  import peano4.datamodel
+  import peano4.solversteps
+  import peano4.output
+  import peano4.toolbox
+  
+  from .Project import Project
+  from .Project import merge
+except ImportError as error:
+  print( "Peano core project files cannot be loaded: {}".format(error) )
 
-print("Peano 4 (C) www.peano-framework.org")
+

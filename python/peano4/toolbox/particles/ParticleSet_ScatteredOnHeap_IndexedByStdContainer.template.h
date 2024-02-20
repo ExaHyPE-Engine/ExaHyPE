@@ -46,8 +46,8 @@
   class {{CLASSNAME}}: public toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >
                        {
     public:
-      typedef toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >  Base;
-      typedef std::{{STD_CONTAINER}}< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >          Container;
+      using Base      = toolbox::particles::ParticleSet< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} >;
+      using Container = std::{{STD_CONTAINER}}< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* >;
 
       /**
        * Expose C++ standard interface
@@ -83,7 +83,7 @@
        *
        * Please consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" before
        * you study the implementation remarks below. Furhermore, consult the
-       * documentation of peano4.toolbox.particles.UpdateParallelState which
+       * documentation of peano4.toolbox.particles.api.UpdateParallelState which
        * provides some examples of the functionality added here.
        *
        * @see STDVectorOverContainerOfPointers::startReceive()
@@ -236,6 +236,19 @@
       static tarch::logging::Log _log;
 
       Container  _container;
+
+      /**
+       * Extracted into routine of its own, as I need it for both boundary and periodic boundary merges
+       *
+       * Even if we replace a current particle with an incoming one, we keep
+       * the current particle's (debug) location. This way, we ensure that all
+       * debug data remain correct also for periodic BCs.
+       */
+      void mergeWithNeighbourParticle(
+        DoFType*                                     neighbourParticle,
+        const peano4::datamanagement::VertexMarker&  marker,
+        int                                          spacetreeId
+      );
 };
 
 {% for item in NAMESPACE -%}

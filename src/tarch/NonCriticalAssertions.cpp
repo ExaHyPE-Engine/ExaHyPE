@@ -41,7 +41,7 @@ void tarch::enableNonCriticalAssertions(bool value) {
 }
 
 
-void tarch::shutdownNonCritialAssertionEnvironment() {
+void tarch::shutdownNonCriticalAssertionEnvironment() {
   #if defined(Parallel)
   tarch::mpi::Rank::releaseTag( assertionExchangeTag );
   #endif
@@ -56,7 +56,7 @@ void tarch::initNonCriticalAssertionEnvironment() {
 
 
 void tarch::triggerNonCriticalAssertion( std::string file, int line, std::string expression, std::string parameterValuePairs ) {
-  static tarch::logging::Log _log( "exahype2" );
+  static tarch::logging::Log _log("tarch");
 
   tarch::multicore::Lock lock( assertionSemaphore );
 
@@ -90,7 +90,7 @@ void tarch::triggerNonCriticalAssertion( std::string file, int line, std::string
 
 bool tarch::hasNonCriticalAssertionBeenViolated() {
   #if defined(Parallel)
-  static tarch::logging::Log _log( "exahype2" );
+  static tarch::logging::Log _log("tarch");
 
   if (rankWhichHasSetNonCriticalAssertion<0) {
     int         flag = 0;

@@ -12,7 +12,7 @@ messed up.
 
 # Particle sorting
 
-The particle sorting is realised through peano4.toolbox.particles.AbstractUpdateParticleGridAssociation
+The particle sorting is realised through peano4.toolbox.particles.api.AbstractUpdateParticleGridAssociation
 and subclasses of this type. In principle all flavours work in a similar way
 and spread up the sorting over at least two mesh traversals. That is, once
 you have updated either a particle position or a particle's search radius,
@@ -32,6 +32,15 @@ to a coarser level.
 It is the subsequent grid sweep that then sorts the particles again into the
 right resolution of the mesh plus associates it with the right vertex.
 So it needs access to UpdateParticleGridAssocation.
+
+Please note that you will need potentially multiple follow-up action sets
+aka mesh sweeps: 
+In the first sweep, all particles are put into the right place in space and 
+the mesh hierarchy yet may be on a too coarse level.
+In the second sweep, we drop them.
+Throughout the drop, we might drop them through a horizontal tree cut.
+We cannot handle this, so have to send out the particle through message passing
+and then drop once more.
 
 
 A similar argument holds if you parallelise:

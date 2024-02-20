@@ -8,6 +8,14 @@ experiments assume @ref exahype_home "a working ExaHyPE 2/Peano 4 installation".
 As our experiments are canonical expensive, it makes sense to enable MPI+X
 parallelisation.
 
+Please use
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=../../../python/:.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+before you start experimenting with this project.
+
 
 ## Single puncture node benchmark setup
 

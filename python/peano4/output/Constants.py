@@ -8,7 +8,10 @@ from .Helper import write_file
 from .Overwrite  import Overwrite
 
 class Constants(object):
-  """
+  """!
+    
+    Representative of generated Constants.h holding all user-defined constants
+  
     Represents all constants that a Project exports from the Python
     script into C++. I do provide routines to export defines or
     constants (via constexpr). For the latter, I rely on the auto
@@ -18,9 +21,12 @@ class Constants(object):
     Each project has one instance of Constants, so you can always
     add/export new constants with
 
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     my_project.constants.export ...
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     Constants also allows you to add defines (precompiler statements).
+    
   """
   default_overwrite = True
 
@@ -124,11 +130,37 @@ class Constants(object):
     pass
 
   def define( self, name ):
+    """!
+    
+    Add define pragma to Constants.h
+    
+    This routine introduces a 
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #defined name
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    entry into your Constants.h.
+    
+    """
     new_entry = "#define " + name
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
 
   def define_value(self, name, value):
+    """!
+    
+    Add define pragma to Constants.h
+    
+    This routine introduces a 
+    
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #defined name value
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    entry into your Constants.h.
+    
+    """
     new_entry = "#define " + name + " " + value
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass

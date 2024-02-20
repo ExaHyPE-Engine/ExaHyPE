@@ -117,7 +117,11 @@ class LeapfrogFixedSearchRadius(Particle):
                 dependencies=AlgorithmStep.Dependencies.SELF,
                 effect=AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS,
                 touch_vertex_first_time_kernel = """::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::resetMovedParticleMarker<globaldata::{}> );""".format( self.name),
-                touch_vertex_last_time_kernel  = """::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize<globaldata::{}> );""".format( self.name),
+                touch_vertex_last_time_kernel  = """
+                auto oldParticlePositions = ::toolbox::particles::assignmentchecks::recordParticlePositions(assignedParticles);
+                ::swift2::kernels::forAllParticles( marker, assignedParticles, ::swift2::timestepping::leapfrogDriftWithGlobalTimeStepSize<globaldata::{}> );
+                ::toolbox::particles::assignmentchecks::traceParticleMovements(assignedParticles, oldParticlePositions, _spacetreeId);
+                """.format( self.name),
                 includes="""
                                          #include "swift2/timestepping/Leapfrog.h"
                                          #include "swift2/timestepping/GlobalTimeStepping.h"

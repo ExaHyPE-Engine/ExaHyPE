@@ -193,7 +193,7 @@ Particle properties:
     ):
         """!
 
-        Add dependency checks to algorithm steps
+        Add dependency checks as well as mesh consistency checks to the algorithm steps
 
         This function actually modifies the AlgorithmSteps to contain the
         debug dependency checks. Is called by self.add_dependency_checks()
@@ -338,7 +338,15 @@ Particle properties:
                 "EVENT": None,
                 "INVARIANT": None,
             }
-
+            
+            step.prepare_traversal_kernel = (
+                """
+                toolbox::particles::assignmentchecks::startMeshSweep( "{}" );
+                """.format( step.name )
+                + 
+                step.prepare_traversal_kernel
+            )
+            
             if (
                 step.touch_vertex_first_time_dependency_policy == None
                 and AlgorithmStep.may_trigger_rerun(step.effect)
@@ -466,12 +474,6 @@ Particle properties:
             # during this algorithm step
             step.touch_vertex_last_time_kernel += (
                 check_template_vertex_operation_local_particles_after_sweep.format(**d)
-            )
-
-            if step.includes is None:
-                step.includes = ""
-            step.includes += (
-                """\n#include "swift2/dependencychecks/DependencyChecks.h"\n"""
             )
 
         return steps
