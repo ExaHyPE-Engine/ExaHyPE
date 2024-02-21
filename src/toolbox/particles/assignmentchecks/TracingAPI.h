@@ -5,6 +5,7 @@
 
 #include <map>
 #include <vector>
+#include <list>
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexEnumerator.h"
@@ -250,7 +251,7 @@ namespace toolbox {
           private:
             tarch::multicore::MultiReadSingleWriteSemaphore  _semaphore;
 
-            std::vector<MeshSweepData> _data;
+            std::list<MeshSweepData> _data;
 
             /**
              * Of how many previous associations do we want to keep track
@@ -266,22 +267,28 @@ namespace toolbox {
             int _maxParticleSnapshotsToKeepTrackOf;
 
             /**
-             * Remove the first numberOfSnapshots for identifier on spacetree spacetreeId
+             * Remove the particle trajectory that ends up in lastIdentifier
              *
-             * This routine will acquire its own write lock.
+             * This is typically invoked by addEvent(). It is not thread-safe,
+             * i.e. does not acquire a write lock.
              */
-            void removeOldSnapshots(
-              const ParticleIdentifier&  identifier,
+            void removeTrajectory(
+              const ParticleIdentifier&  lastIdentifier,
               int                        spacetreeId,
-              int                        numberOfSnapshots
+              int                        firstNRecentEntriesToSkip = 0
             );
+
+            /**
+             * Not thread-safe
+             */
+            void removeEmptyDatabaseSnapshots();
 
           public:
             static constexpr int SearchWholeDatabase = 0;
             static constexpr int AnyTree = -1;
             static constexpr int DoNotFollowParticleMovementsInDatabase = -2;
 
-            Database( int maxParticleSnapshotsToKeepTrackOf = 4 );
+            Database( int maxParticleSnapshotsToKeepTrackOf = 16 );
 
             /**
              * Create a particle identifier
@@ -388,6 +395,15 @@ namespace toolbox {
              * If there is not yet an entry for identifier in the current
              * snapshot, we create one. Afterwards, we append event to this
              * new dataset for particle identifier.
+             *
+             * Now it is time to clean up the database. This happens if and
+             * only if we have a maximum database size set in
+             * _maxParticleSnapshotsToKeepTrackOf. If the new event is not a
+             * move event, we know that future getEntry() requests will return
+             * this event. So we can delete all previous entries for this one.
+             *
+             * If we have a reassignment, we
+             *.
              */
             void addEvent(ParticleIdentifier identifier, const Event& event);
 
