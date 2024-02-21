@@ -7,7 +7,7 @@ Iterator toolbox::particles::particleIsDuplicate(const typename Iterator::value_
   static tarch::logging::Log _log( "toolbox::particles" );
   while (begin != end) {
     if (tarch::la::equals((*begin)->getX(), particle->getX(), SpatialDuplicateTolerance)) {
-      logInfo( "particleIsDuplicate(...)", "particles " << particle->toString() << " and " << (*begin)->toString() << " are the same" );
+      logDebug( "particleIsDuplicate(...)", "particles " << particle->toString() << " and " << (*begin)->toString() << " are the same" );
       return begin;
     }
     begin++;
