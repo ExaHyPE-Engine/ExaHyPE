@@ -68,7 +68,7 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
     // Same if we are below h_min
     if (((h_old >= hydro_h_max) && (f < 0.)) || ((h_old <= hydro_h_min) && (f > 0.))) {
       if (not localParticle->getIsBoundaryParticle()) {
-        logWarning(
+        logDebug(
           "hydro_update_smoothing_length_and_rerun_if_required",
           "Aborting unsuccessful smoothing length computation"
             << " partID " << localParticle->getPartid() << " h_old " << h_old << " h_min " << hydro_h_min << " h_max " << hydro_h_max << " f " << f

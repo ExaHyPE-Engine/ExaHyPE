@@ -70,7 +70,7 @@ void swift2::kernels::legacy::hydro_prepare_force(Particle* localParticle) {
          expression, since that would lead to overflow or excessive round
          off and cause excessively high accelerations in the force loop */
       grad_h_term = 0.;
-      logWarning(
+      logDebug(
         "hydro_prepare_force",
         "grad_W_term very small for particle with ID "
           << localParticle->getPartid() << " h:" << h_a << " wcount:" << localParticle->getWcount() << " wcount_dh:"
