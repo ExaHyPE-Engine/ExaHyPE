@@ -106,6 +106,13 @@ def read_meta_file(path_to_metafile):
                 "\n"
             )
 
+def count_total_snapshot_number(path_to_metafile):
+    count=0
+    with open(path_to_metafile, "r") as metafile:
+        for line in metafile.readlines():
+            if "timestamp" in line:
+                count+=1
+    return count
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -118,6 +125,17 @@ if __name__ == "__main__":
         help="The main file that links to a set of Peano patch files",
         required=True,
     )
+    parser.add_argument(
+        "-start", "--start-snapshot-index",
+        dest="start",
+        help="set the snapshot number where the merge starts(all snapshot before it will be ignore)",
+        default=0,)
+    parser.add_argument(
+        "-end", "--end-snapshot-index",
+        dest="end",
+        help="set the snapshot number where the merge ends(all snapshot after it will be ignore)",
+        default=-1,)
+    
     args = parser.parse_args()
 
     if not os.path.exists(args.metafile):
@@ -127,5 +145,14 @@ if __name__ == "__main__":
             )
         )
         sys.exit(1)
+
+    total_snapshot_number=count_total_snapshot_number(args.metafile)
+    if (args.start>args.end):
+        print("Error, specifeid start snapshot index is bigger than end snapshot index, please check.")
+        sys.exit(1)
+    elif:
+        args.end==-1:
+            end_snapshot=total_snapshot_number-1 #processing all snapshot if no end snapshot is specified.
+
 
     read_meta_file(args.metafile)
