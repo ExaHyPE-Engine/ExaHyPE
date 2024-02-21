@@ -8,7 +8,7 @@
 import os, sys
 import argparse
 import peano4
-import multigrid.petsc as petsc
+import petsc
 
 print( """
 

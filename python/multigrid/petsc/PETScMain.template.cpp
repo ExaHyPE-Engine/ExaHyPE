@@ -1,4 +1,3 @@
-// (Generated from multigrid/petsc/{{CPP_FILE_TEMPLATE}})
 #include "{{MAIN_NAME}}.h"
 
 #include "observers/Assemble.h"

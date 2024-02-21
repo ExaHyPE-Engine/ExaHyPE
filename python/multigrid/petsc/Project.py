@@ -73,27 +73,13 @@ mark these steps as private via a leading underscore.
     
     self._solvers = []
 
-    self.algorithm_step_create_grid = peano4.solversteps.Step(
-      self._project.project_name+"_CreateGrid", False
-    )
-    self.algorithm_step_enumerate_and_init_solution = peano4.solversteps.Step(
-      self._project.project_name+"_EnumerateAndInitSolution", False
-    )
-    self._algorithm_step_init_petsc = peano4.solversteps.Step(
-      self._project.project_name+"_InitPETSc", False
-    )
-    self.algorithm_step_assemble = peano4.solversteps.Step(
-      self._project.project_name+"_Assemble", False
-    )
-    self._algorithm_step_solve = peano4.solversteps.Step(
-      self._project.project_name+"_Solve", False
-    )
-    self.algorithm_step_map_solution_onto_mesh = peano4.solversteps.Step(
-      self._project.project_name+"_MapSolutionOntoMesh", False
-    )
-    self.algorithm_step_plot = peano4.solversteps.Step(
-      self._project.project_name+"_Plot", False
-    )
+    self.algorithm_step_create_grid                  = peano4.solversteps.Step( "CreateGrid",                False )
+    self.algorithm_step_enumerate_and_init_solution  = peano4.solversteps.Step( "EnumerateAndInitSolution",  False )
+    self._algorithm_step_init_petsc                  = peano4.solversteps.Step( "InitPETSc",                 False )
+    self.algorithm_step_assemble                     = peano4.solversteps.Step( "Assemble",                  False )
+    self._algorithm_step_solve                       = peano4.solversteps.Step( "Solve",                     False )
+    self.algorithm_step_map_solution_onto_mesh       = peano4.solversteps.Step( "MapSolutionOntoMesh",       False )
+    self.algorithm_step_plot                         = peano4.solversteps.Step( "Plot",                      False )
                 
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
@@ -240,12 +226,6 @@ This yet has to be written.
     return self._project
 
 
-  def __set_solver_repository_dict(self):
-      self.solverRepositoryDictionary = {
-            "SOLVER_INSTANCES": [(x.typename(), x.instance_name()) for x in self._solvers ],
-      }
-
-
   def __generate_solver_repository(self):
     """!
 
@@ -253,18 +233,20 @@ This yet has to be written.
        Name of the solvers that we should instantiate and use in the main.
     
     
-    """    
+    """
+    dictionary = {}
+    dictionary[ "SOLVER_INSTANCES"] = [(x.typename(), x.instance_name()) for x in self._solvers ]
+    
     '''
     put in a guard clause to skip over CollocatedLowOrderDiscretisation
     if it has one, it should have the others
     '''
 
-    self.__set_solver_repository_dict()
 
     if hasattr(self, 'quadrature_points'):
       #this function returns a dict. use it to update 
-      #"solverRepositoryDictionary" here.
-      self.solverRepositoryDictionary.update(self.get_dict_for_quad_points()) 
+      #"dictionary" here.
+      dictionary.update(self.get_dict_for_quad_points()) 
 
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
     template_name       = templatefile_prefix + ".SolverRepository.template"
@@ -274,7 +256,8 @@ This yet has to be written.
       "SolverRepository", 
       self._project.namespace,
       "repositories", 
-      self.solverRepositoryDictionary,
+      dictionary,
+      True,
       True)
 
     self._project.output.add( generated_repository_files )

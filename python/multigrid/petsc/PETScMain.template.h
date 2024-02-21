@@ -3,7 +3,6 @@
 // Generated through Peano's Python API
 // www.peano-framework.org
 //
-// (Generated from multigrid/petsc/{{HEADER_FILE_TEMPLATE}})
 #pragma once
 
 

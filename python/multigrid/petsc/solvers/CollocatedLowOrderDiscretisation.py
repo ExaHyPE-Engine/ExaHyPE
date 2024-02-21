@@ -269,31 +269,6 @@ class CollocatedLowOrderDiscretisation(Solver):
     pass
 
 
-  def __str__(self):
-      result = (
-          """
-Name:            """
-          + self._name
-          + """
-Type:            """
-          + self.__class__.__name__
-          + """
-Unknowns:        """
-          + str(self._unknowns)
-          + """
-min_h:           """
-          + str(self.min_h)
-          + """
-max_h:           """
-          + str(self.max_h)
-          + """
-"""
-      )
-      return result
-
-  __repr__ = __str__
-
-
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     super( CollocatedLowOrderDiscretisation, self ).add_to_Peano4_datamodel(datamodel,verbose)
     datamodel.add_vertex(self._vertex_pde_data)
@@ -455,6 +430,3 @@ max_h:           """
     """
     return 0
 
-  @property
-  def name(self):
-    return self._name
