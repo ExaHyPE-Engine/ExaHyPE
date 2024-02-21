@@ -231,7 +231,7 @@ class InitDofsDG(ActionSet):
    """
 
   templateTCFT = """
-  //logTraceInWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  logTraceInWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
   celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
 
@@ -260,13 +260,19 @@ class InitDofsDG(ActionSet):
       {
         fineGridCell{{SOLVER_NAME}}.setType( celldata::{{SOLVER_NAME}}::Type::Interior );
 
-        logTraceInWith2Arguments("TCFT::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs());
+        // create vectors to send to implementation
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > value;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > rhs;
+        // send to init
+        repositories::{{SOLVER_INSTANCE}}.initCell(marker.x(), marker.h(), value, rhs);
+
+        logTraceInWith5Arguments("TCFT::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs(), marker.toString(), value, rhs);
 
         // adding junk data to the solution and rhs for development purposes
         for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++)
         {
-          fineGridCell{{SOLVER_NAME}}.setSolution(i,i);
-          fineGridCell{{SOLVER_NAME}}.setRhs(i,i);
+          fineGridCell{{SOLVER_NAME}}.setSolution(i,value(i));
+          fineGridCell{{SOLVER_NAME}}.setRhs(i,rhs(i));
         }
 
         logTraceOutWith2Arguments("TCFT::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs());
@@ -276,11 +282,11 @@ class InitDofsDG(ActionSet):
 
   }
   
-  //logTraceOutWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  logTraceOutWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
    """
 
   templateTFFT = """
-  //logTraceInWith2Arguments("InitDofs::TFFT", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
+  logTraceInWith2Arguments("InitDofs::TFFT", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
 
   facedata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceDoFType(marker.x(),marker.h());
 
@@ -307,6 +313,18 @@ class InitDofsDG(ActionSet):
       else 
       {
         fineGridFace{{SOLVER_NAME}}.setType( facedata::{{SOLVER_NAME}}::Type::Interior );
+
+        // vectors to be passed into face
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > sol;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection, double > projection;
+
+        // send to init
+        repositories::{{SOLVER_INSTANCE}}.initFace(marker.x(), marker.h(), sol, projection);
+
+        // put into mesh
+        fineGridFace{{SOLVER_NAME}}.setSolution(sol);
+        fineGridFace{{SOLVER_NAME}}.setProjection(projection);
+
       }
     } break;
 
@@ -319,13 +337,24 @@ class InitDofsDG(ActionSet):
       else 
       {
         fineGridFace{{SOLVER_NAME}}.setType( facedata::{{SOLVER_NAME}}::Type::Boundary );
+
+        // vectors to be passed into face
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsSolution,   double > sol;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.FaceUnknownsProjection, double > projection;
+
+        // send to init
+        repositories::{{SOLVER_INSTANCE}}.initFace(marker.x(), marker.h(), sol, projection);
+
+        // put into mesh
+        fineGridFace{{SOLVER_NAME}}.setSolution(sol);
+        fineGridFace{{SOLVER_NAME}}.setProjection(projection);
       }
     } break;
     
 
   }
   
-  //logTraceOutWith2Arguments("InitDofs::TFFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  logTraceOutWith2Arguments("InitDofs::TFFT", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
    """
   
   def __init__(self,

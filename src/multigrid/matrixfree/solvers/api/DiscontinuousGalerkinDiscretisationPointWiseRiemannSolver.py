@@ -7,9 +7,8 @@ import os
 
 from .Solver import Solver
 from .actionsets.InitDofs         import InitDofsDG
-from .actionsets.UpdateCell       import UpdateCell
-from .actionsets.UpdateCell       import InteriorPenalty
-from .actionsets.ProjectOntoFaces import ProjectOntoFaces
+from .actionsets.DGSolver         import UpdateCell, ProjectOntoFaces, UpdateFaceSolution
+from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   """!
@@ -119,11 +118,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     
 
   ## Algorithmical blueprint
-  
-  @todo Sean, Alex: The notation has to be globally consistent. 
 
   1. Enter cell: Whenever a cell is entered, we create a temporary 
-    \f$ N(p+1)^d \f$ array (on the heap). 
+    \f$ K^c(p+1)^d \f$ array (on the heap). 
     
     1. Into this temporary array
         \f$ r \f$, we write \f$ Mb \f$. This is the mass matrix (right-hand side
@@ -181,6 +178,9 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   There is a @ref tutorials_multigrid_matrixfree_discontinuous_galerkin_poisson "very simple Poisson solver tutorial"
   in the tutorials section which illustrates how to use this solver.
 
+  The user needs to supply a few crucial matrices, referred to in the maths above. These are noted and their
+  shapes discussed in the parameters section of the documentation of this class.
+
   ### Under the hood
   
   Inside the cells we store \f$ K^c (p+1)^{d} \f$ values for the solution, and the same number for the rhs.
@@ -231,8 +231,11 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               mass_matrix,
               mass_matrix_scaling,
               face_from_cell_projection,
+              face_from_cell_projection_scaling,
               cell_from_face_projection,
+              cell_from_face_projection_scaling,
               riemann_matrix,
+              boundary_matrix,
               cell_relaxation,
               face_relaxation,
               approximate_system_matrix,
@@ -265,16 +268,49 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
       case, the generated C++ code will not compile, but you will be allowed
       to fill it in manually.
 
-    @param mass_matrix: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
+    @param assembly_matrix_scaling: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
+      This is a matrix of ints that prescribes how we scale each element in the assembly_matrix
+      ie for each i,j, we do: assembly_matrix[i,j] *= ( h )^( assembly_matrix_scaling[i,j] )
 
-    @param face_from_cell: \f$ \mathbb{R}^{2d K^f_{f \gets c} * (p+1)^{d-1} \times K^c * (p+1)^{d}}\f$ 
+
+    @param mass_matrix: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
+    
+    @param mass_matrix_scaling: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times K^c * (p+1)^{d}}\f$ 
+      This is a matrix of ints that prescribes how we scale each element in the mass_matrix
+      ie for each i,j, we do: mass_matrix[i,j] *= ( h )^( mass_matrix_scaling[i,j] )
+
+    @param face_from_cell: \f$ \mathbb{R}^{2d * 2K^f_{f \gets c} * (p+1)^{d-1} \times K^c * (p+1)^{d}}\f$ 
       This matrix projects the cell solution onto all of the faces. Note the 
-      extra factor of @f$ 2d @f$. The intention of this factor is that we project all values
-      into a flat array, face-by-face.
+      extra factor of @f$ 2d @f$. The structure of this matrix is quite important. The rows
+      should be structured in blocks of \f$ 2K^f_{f \gets c} * (p+1)^{d-1} \f$, ie one for each 
+      face, in the familiar Peano ordering. We note that this is the same as the number of projections
+      we store per face. We note that, since the 0th face has left-side projections which
+      should be set outside of the cell, that at least half of the rows of the matrix should
+      be empty.
+      We also note that each face contains multiple nodes, and they should be ordered sequentially
+      in the typical Peano fashion, i.e. greedily along each coordinate axis until full, starting
+      from the negative. For each face, with two nodes, with two values (q and u) being projected onto the face,
+      the rows should be ordered as follows:
+        1. Negative projection of q onto node 0
+        2. Negative projection of q onto node 1
+        3. Negative projection of u onto node 0
+        4. Negative projection of u onto node 1
+        5. Positive projection of q onto node 0
+        6. Positive projection of q onto node 1
+        7. Positive projection of u onto node 0
+        8. Positive projection of u onto node 1
+      In two dimensions, all of the negative projections should be 0 on faces 0 and 1. Ditto for the 
+      positive projections on faces 2 and 3.
 
     @param cell_from_face: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times 2d K^f * (p+1)^{d-1}}\f$ 
-      This matrix projects the cell solution onto all of the faces. Note the 
-      extra factor of @f$ 2d @f$.
+      This matrix projects the face solution onto the cells. Note the 
+      extra factor of @f$ 2d @f$, similar to face_from_cell matrix. Some clever indexing
+      is required in the backend here. The enumeration of the cols should follow a similar
+      pattern to the rows of face_from_cell.
+
+    @param cell_from_face_scaling: \f$ \mathbb{R}^{K^c * (p+1)^{d} \times 2d K^f * (p+1)^{d-1}}\f$ 
+      This is a matrix of ints that prescribes how we scale each element in the cell_from_face
+      ie for each i,j, we do: cell_from_face[i,j] *= ( h )^( cell_from_face_scaling[i,j] )
 
     @param Riemann_matrix: \f$ \mathbb{R}^{ K^f (p+1)^{d-1} \times 2K^f_{f \gets c} (p+1)^{d-1}} @f$
       The matrix that combines the left/right projections on the cell and outputs a value 
@@ -286,6 +322,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     @param approximate_system_matrix: @f$ \mathbb{R}^{K^c (p+1)^d \times K^c (p+1)^d} @f$
       Approximation @f$ \tilde{A} @f$ which will be internally inverted, so it 
       has to be non-singular.
+
+    @param approximate_system_matrix_scaling: @f$ \mathbb{R}^{K^c (p+1)^d \times K^c (p+1)^d} @f$
       
     """  
     super( DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver, self ).__init__(name, min_h, max_h)
@@ -301,8 +339,11 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._mass_matrix               = mass_matrix
     self._mass_matrix_scaling       = mass_matrix_scaling
     self._face_from_cell_projection = face_from_cell_projection
+    self._face_from_cell_projection_scaling = face_from_cell_projection_scaling
     self._cell_from_face_projection = cell_from_face_projection
+    self._cell_from_face_projection_scaling = cell_from_face_projection_scaling
     self._riemann_matrix            = riemann_matrix
+    self._boundary_matrix           = boundary_matrix
     self._approximate_system_matrix = approximate_system_matrix
     self._approximate_system_matrix_scaling = approximate_system_matrix_scaling
 
@@ -329,8 +370,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "projection",    str(self._unknowns_per_face_projection) ))
 
     # assertions for matrix shapes
-    assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
-    assert assembly_matrix.shape == mass_matrix.shape
+    # assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
+    # assert assembly_matrix.shape == mass_matrix.shape
 
     # assert  face_from_cell_projection.shape    == (self._unknowns_per_face_projection * 2*self._dimensions, self._unknowns_per_cell)
     # assert (face_from_cell_projection.T).shape ==  self._cell_from_face_projection.shape
@@ -350,6 +391,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     solution and right-hand side. 
     
     """
+    observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "solution", "getSolution") )
+    observer.add_action_set( PlotDGDataInPeanoBlockFormat(self, "rhs", "getRhs") )
     pass
 
   def add_to_create_grid(self, observer):
@@ -366,15 +409,10 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     pass
 
   def add_to_solve(self, observer):
-    # 1st priority, run sequentially
-    observer.add_action_set( UpdateCell(self, 0, False) ) 
+    observer.add_action_set( UpdateFaceSolution(self, 0, False) )
+    observer.add_action_set( UpdateCell(self, 1, False) )
+    observer.add_action_set( ProjectOntoFaces(self, 2, False) )
 
-    # I think this means we run InteriorPenalty at same time as 
-    # UpdateCell, with ProjectFaces waiting until they're done.
-    observer.add_action_set( InteriorPenalty(self, 0, True) ) 
-    # 2nd priority, run sequentially
-    observer.add_action_set( ProjectOntoFaces(self, 1, False) ) 
-    pass
   
   def add_implementation_files_to_project(self, namespace, output):
     """
@@ -401,16 +439,22 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "NODES_PER_FACE"              : (self._poly_degree + 1) ** (self._dimensions-1),
         "UNKNOWNS_PER_CELL_NODE"      : self._unknowns_per_cell_node,
         "SOLUTIONS_PER_FACE_NODE"     : self._solutions_per_face_node,
+        "PROJECTIONS_PER_FACE_NODE"   : self._projections_per_face_node,
         "MASS_MATRIX"                 : self._mass_matrix,
         "MASS_MATRIX_SCALING"         : self._mass_matrix_scaling,
         "ASSEMBLY_MATRIX"             : self._assembly_matrix,
         "ASSEMBLY_MATRIX_SCALING"     : self._assembly_matrix_scaling,
         "FACE_FROM_CELL_PROJECTION"   : self._face_from_cell_projection,
+        "FACE_FROM_CELL_PROJECTION_SCALING": self._face_from_cell_projection_scaling,
         "CELL_FROM_FACE_PROJECTION"   : self._cell_from_face_projection,
+        "CELL_FROM_FACE_PROJECTION_SCALING"   : self._cell_from_face_projection_scaling,
         "RIEMANN_MATRIX"              : self._riemann_matrix,
+        "BOUNDARY_MATRIX"             : self._boundary_matrix,
         "APPROX_SYSTEM_MATRIX"        : self._approximate_system_matrix,
+        "APPROX_SYSTEM_MATRIX_SCALING": self._approximate_system_matrix_scaling,
         "CELL_RELAXATION"             : self._cell_relaxation,
         "FACE_RELAXATION"             : self._face_relaxation,
+        "POLY_DEGREE"                 : self._poly_degree
 
         }
 

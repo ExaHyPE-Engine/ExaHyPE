@@ -72,9 +72,10 @@ bool selectNextAlgorithmicStep() {
           );
         }
         break;
+
       case repositories::StepRepository::Steps::Solve:
         {
-          if ( solverSteps++ >= 20 )
+          if ( ++solverSteps >= 100 )
           {
             peano4::parallel::Node::getInstance().setNextProgramStep(
               repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
@@ -83,6 +84,9 @@ bool selectNextAlgorithmicStep() {
           else
           {
             logInfo("selectNextAlgorithmicStep", "Continuining to solve...");
+            peano4::parallel::Node::getInstance().setNextProgramStep(
+              repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
+            );
           }
         }
         break;
@@ -155,7 +159,7 @@ void step() {
         initMeasurement.setValue( watch.getCalendarTime() );
       }
       break;
-    
+
     case repositories::StepRepository::Steps::Solve:
       {
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "solve" );

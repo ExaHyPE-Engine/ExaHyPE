@@ -1,14 +1,14 @@
 #include "CollocatedPoisson.h"
 
 
-benchmarks::multigrid::matrixfree::poisson::CollocatedPoisson::CollocatedPoisson() {
+tests::multigrid::matrixfree::poisson::CollocatedPoisson::CollocatedPoisson() {
 }
 
 
-benchmarks::multigrid::matrixfree::poisson::CollocatedPoisson::~CollocatedPoisson() {
+tests::multigrid::matrixfree::poisson::CollocatedPoisson::~CollocatedPoisson() {
 }
 
-void benchmarks::multigrid::matrixfree::poisson::CollocatedPoisson::initVertex(
+void tests::multigrid::matrixfree::poisson::CollocatedPoisson::initVertex(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h,
   tarch::la::Vector< VertexUnknowns, double >&  value,

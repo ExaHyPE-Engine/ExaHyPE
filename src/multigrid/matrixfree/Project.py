@@ -61,7 +61,8 @@ class Project:
     self.algorithm_step_create_grid    = peano4.solversteps.Step( "CreateGrid", False )
     self.algorithm_step_init_solution  = peano4.solversteps.Step( "InitSolution", False )
     self.algorithm_step_solve          = peano4.solversteps.Step( "Solve", False )
-    self.algorithm_step_plot           = peano4.solversteps.Step( "Plot", False )
+
+    self.algorithm_step_plot            = peano4.solversteps.Step( "Plot", False )
 
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments):
     """
@@ -208,6 +209,7 @@ you require to run this Peano4 application with PETSc.
     solver.add_to_create_grid  (self.algorithm_step_create_grid)
     solver.add_to_init_solution(self.algorithm_step_init_solution)
     solver.add_to_solve        (self.algorithm_step_solve)
+
     solver.add_to_plot         (self.algorithm_step_plot)
 
     solver.add_implementation_files_to_project( self._project.namespace, self._project.output )

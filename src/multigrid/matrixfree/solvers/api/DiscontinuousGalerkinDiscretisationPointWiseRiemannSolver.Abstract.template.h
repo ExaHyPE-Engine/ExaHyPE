@@ -43,7 +43,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     static constexpr int        UnknownsPerCellNode    = {{UNKNOWNS_PER_CELL_NODE}};
     static constexpr int        SolutionsPerFaceNode   = {{SOLUTIONS_PER_FACE_NODE}};
+    static constexpr int        ProjectionsPerFaceNode = {{PROJECTIONS_PER_FACE_NODE}};
 
+    static constexpr int        PolyDegree             = {{POLY_DEGREE}};
   public:
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
@@ -107,13 +109,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     // no arguments needed
     virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > getCellFromFaceMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
     );
 
     // no arguments needed
     virtual tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > getFaceFromCellMatrix(
+      const tarch::la::Vector<Dimensions, double>&  cellCentre,
+      const tarch::la::Vector<Dimensions, double>&  cellSize
     );
 
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix();
+    virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix();
 
 
 
