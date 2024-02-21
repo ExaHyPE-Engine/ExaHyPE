@@ -33,18 +33,34 @@ def merge_partial_files(partial_files, merged_file_path):
     print("Merged.")
 
 
-def read_meta_file(path_to_metafile):
-    merged_files = []  # stores names of merged files
+def read_meta_file(path_to_metafile, start, end):
+    #merged_files = []  # stores names of merged files
     partial_files = []  # stores partial files that need to be merged
     # into the same file
-    timestamps = []
+    #timestamps = []
     merged_file_number = 0
-    target = 0
+
+    f=open(
+        os.path.join(
+            os.path.dirname(path_to_metafile), "merged_meta_file.peano-patch-file"
+        ),
+        "w",
+    )
+    f.write(
+            "# \n"
+            "# Peano patch file \n"
+            "# Version 0.2 \n"
+            "# \n"
+            "format ASCII \n"
+            "\n"
+        )
+
     with open(path_to_metafile, "r") as metafile:
         for line in metafile.readlines():
-            if "end dataset" in line and merged_file_number < target:
+            if "end dataset" in line and (merged_file_number < start or merged_file_number > end):
                 partial_files.clear()
                 print("jump snapshot", merged_file_number)
+                print()
                 merged_file_number += 1
             elif "end dataset" in line:
                 # merged files will be put in the same dir as the original meta-file
@@ -58,14 +74,21 @@ def read_meta_file(path_to_metafile):
                     )
 
                 merge_partial_files(partial_files, merged_file_name)
-                merged_files.append(merged_file_name)
 
                 partial_files.clear()
                 merged_file_number += 1
+                print()
 
-            if "timestamp" in line and merged_file_number >= target:
-                timestamps.append(line)
-                print(line)
+                f.write(
+                "begin dataset\n" + timestamp_line + "\n"
+                f'  include "{merged_file_name}"\n'
+                "end dataset\n"
+                "\n"
+                )
+
+            if "timestamp" in line and merged_file_number >= start:
+                timestamp_line=line
+                print(line[0:-2])
 
             words = line.split()
 
@@ -82,29 +105,7 @@ def read_meta_file(path_to_metafile):
 
                 partial_files.append(file_path)
 
-    # write a meta file out of the merged_files
-    # to the directory of the original meta-file
-    with open(
-        os.path.join(
-            os.path.dirname(path_to_metafile), "merged_meta_file.peano-patch-file"
-        ),
-        "w",
-    ) as new_meta_file:
-        new_meta_file.write(
-            "# \n"
-            "# Peano patch file \n"
-            "# Version 0.2 \n"
-            "# \n"
-            "format ASCII \n"
-            "\n"
-        )
-        for merged_file, timestamp in zip(merged_files, timestamps):
-            new_meta_file.write(
-                "begin dataset\n" + timestamp + "\n"
-                f'  include "{merged_file}"\n'
-                "end dataset\n"
-                "\n"
-            )
+    f.close()
 
 def count_total_snapshot_number(path_to_metafile):
     count=0
@@ -127,13 +128,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-start", "--start-snapshot-index",
-        dest="start",
-        help="set the snapshot number where the merge starts(all snapshot before it will be ignore)",
+        dest="start", type=int,
+        help="set the snapshot number where the merge starts(all snapshot before it will be ignore), default is 0 (start from beginning)",
         default=0,)
     parser.add_argument(
         "-end", "--end-snapshot-index",
-        dest="end",
-        help="set the snapshot number where the merge ends(all snapshot after it will be ignore)",
+        dest="end", type=int,
+        help="set the snapshot number where the merge ends(all snapshot after it will be ignore), default is -1 (end at the last)",
         default=-1,)
     
     args = parser.parse_args()
@@ -147,12 +148,21 @@ if __name__ == "__main__":
         sys.exit(1)
 
     total_snapshot_number=count_total_snapshot_number(args.metafile)
-    if (args.start>args.end):
-        print("Error, specifeid start snapshot index is bigger than end snapshot index, please check.")
+    if ( (args.start>args.end and args.end!=-1) or args.start<0 or args.end<-1):
+        print("Error, specified snapshot index is wrong, please check.")
         sys.exit(1)
-    elif:
-        args.end==-1:
-            end_snapshot=total_snapshot_number-1 #processing all snapshot if no end snapshot is specified.
+    elif args.end==-1:
+        start_snapshot=args.start
+        end_snapshot=total_snapshot_number-1 #processing all snapshot if no end snapshot is specified.
+    elif args.end>(total_snapshot_number-1):
+        start_snapshot=args.start
+        end_snapshot=total_snapshot_number-1
+        print("Warning, specified end snapshot index exceed the totoal number, reset to the last snapshot.")
+    else:
+        start_snapshot=args.start
+        end_snapshot=args.end
 
+    print("The meta file include", total_snapshot_number, "snapshots, processing snapshot", start_snapshot, "to", end_snapshot)
+    print("==============================================================")
 
-    read_meta_file(args.metafile)
+    read_meta_file(args.metafile, start_snapshot, end_snapshot)
