@@ -33,15 +33,15 @@ private:
   std::string _fileName;
   std::string _dataName;
 
-  double      _dataDelta;
-  double      _maxDataDelta;
-  int         _numberOfGlobalDataPoints;
+  double  _dataDelta;
+  double  _maxDataDelta;
+  int     _numberOfGlobalDataPoints;
 
-  double      _timeDelta;
+  double  _timeDelta;
 
-  const int   _deltaBetweenTwoDatabaseFlushes;
-  int         _thresholdForNextDatabaseFlush;
-  int         _precision;
+  int     _deltaBetweenTwoDatabaseFlushes;
+  int     _thresholdForNextDatabaseFlush;
+  int     _precision;
 
   /**
    * Flag that indicates if we erase the database after a flush
@@ -188,7 +188,7 @@ public:
    *   for both is not the ideal choice.
    */
   GlobalDatabase(
-    int    growthBetweenTwoDatabaseFlushes,
+    int    growthBetweenTwoDatabaseFlushes = 0,
     double dataDelta               = 1e-8,
     double timeDelta               = 0.0,
     bool   clearDatabaseAfterFlush = true,
@@ -218,6 +218,7 @@ public:
    */
   void dumpCSVFile();
 
+  void setDeltaBetweenTwoDatabaseFlushes(const int deltaBetweenTwoDatabaseFlushes);
   void setOutputFileName(const std::string& filename);
   void setDataName(const std::string& dataname);
   void setOutputPrecision(int precision);
