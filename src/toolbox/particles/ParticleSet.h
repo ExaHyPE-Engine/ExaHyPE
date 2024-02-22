@@ -113,8 +113,7 @@ public:
   static void updateNumberOfLocalAndExpiredParticles(
     int numberOfRemainingLocalParticles,
     int numberOfExpiredHaloParticles,
-    int numberOfLeavingLocalParticles,
-    int numberOfIncomingParticles
+    int numberOfLeavingLocalParticles
   );
 
   /**
@@ -261,13 +260,6 @@ protected:
   static int _numberOfLeavingLocalParticles;
 
   /**
-   * Set by parallel state analysis
-   *
-   * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
-   */
-  static int _numberOfIncomingParticles;
-
-  /**
    * Number of incoming halo particles which are not worked in
    *
    * Dropped incoming virtual particles "happen" when a neighbour sends in a
@@ -297,7 +289,7 @@ protected:
    *
    * Updated by boundary merge operations.
    */
-  static int _numberOfReplacedParticlesAlongBoundary;
+  static int _numberOfReplacedVirtualParticlesAlongBoundary;
 
   /**
    * Newly "discovered" virtual particles
@@ -308,7 +300,8 @@ protected:
    *
    * Updated by boundary merge operations.
    */
-  static int _numberOfAddedParticlesAlongBoundary;
+  static int _numberOfAddedVirtualParticlesAlongBoundary;
+  static int _numberOfAddedLocalParticlesAlongBoundary;
 
   /**
    * Map of persistent particles that have to be sieved

@@ -127,7 +127,6 @@ class UpdateParallelState(ActionSet):
   _numberOfRemainingLocalParticles = 0;
   _numberOfExpiredHaloParticles    = 0;
   _numberOfLeavingParticles        = 0;
-  _numberOfIncomingParticles       = 0;
 """
     )
 
@@ -136,8 +135,7 @@ class UpdateParallelState(ActionSet):
   vertexdata::{{PARTICLES_CONTAINER}}::updateNumberOfLocalAndExpiredParticles(
     _numberOfRemainingLocalParticles,
     _numberOfExpiredHaloParticles,
-    _numberOfLeavingParticles,
-    _numberOfIncomingParticles
+    _numberOfLeavingParticles
   );
 """
     )
@@ -146,13 +144,6 @@ class UpdateParallelState(ActionSet):
         """
 for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   const bool particleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
-
-  if (particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual ) {
-    p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
-    _numberOfIncomingParticles++;
-    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
-    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), true,  marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
-  }
 
   // Has just left the domain. So we set it to virtual now. Next iteration,
   // the neighbour who has received this particle due to the movement will
@@ -177,7 +168,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is local and remains local" );
     _numberOfRemainingLocalParticles++;
-    (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
+    // (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
     p++;
   }
   else {
@@ -244,7 +235,6 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   int  _numberOfRemainingLocalParticles;
   int  _numberOfExpiredHaloParticles;
   int  _numberOfLeavingParticles;
-  int  _numberOfIncomingParticles;
 """
 
     def get_body_of_prepareTraversal(self):

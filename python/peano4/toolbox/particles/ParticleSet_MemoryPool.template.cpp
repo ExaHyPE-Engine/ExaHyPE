@@ -31,6 +31,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithNeighbourParticle(
       tarch::multicore::Lock lock( _statisticsSemaphore );
       _numberOfRedundantlySharedLocalParticles++;
     }
+    else {
+      tarch::multicore::Lock lock( _statisticsSemaphore );
+      _numberOfReplacedVirtualParticlesAlongBoundary++;
+    }
     toolbox::particles::assignmentchecks::detachParticleFromVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(), (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
@@ -51,14 +55,20 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithNeighbourParticle(
       "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge()-replaced"
     );
     _memoryPool.replace( iteratorToExistingCopy, neighbourParticle );
-    tarch::multicore::Lock lock( _statisticsSemaphore );
-    _numberOfReplacedParticlesAlongBoundary++;
   }
   else {
     _memoryPool.scatter();
     _memoryPool.container.push_back(neighbourParticle);
-    tarch::multicore::Lock lock( _statisticsSemaphore );
-    _numberOfAddedParticlesAlongBoundary++;
+
+    if (incomingParticleWillBeLocal) {
+      tarch::multicore::Lock lock( _statisticsSemaphore );
+      _numberOfAddedLocalParticlesAlongBoundary++;
+    }
+    else {
+      tarch::multicore::Lock lock( _statisticsSemaphore );
+      _numberOfAddedVirtualParticlesAlongBoundary++;
+    }
+
     toolbox::particles::assignmentchecks::assignParticleToVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(), neighbourParticle->getParallelState()==DoFType::ParallelState::Local,
