@@ -102,11 +102,6 @@ class Elastic_planar_waves(Scenario):
   sol[0] = val_x*cp + val_z*cs; //vx
   sol[1] = val_y*cp + val_x*cs; //vy
   sol[2] = val_z*cp + val_y*cs; //vz
-
-  //auxiliary variables
-  sol[9]  = rho; //rho
-  sol[10]   = cp; //cp
-  sol[11]   = cs; //cs
 """ if self._dimensions==3 else """
 
   //stresses
@@ -117,9 +112,4 @@ class Elastic_planar_waves(Scenario):
   //velocities
   sol[0] = val_x*cp + val_y*cs; //vx
   sol[1] = val_y*cp + val_x*cs; //vy
-
-  //auxiliary variables
-  sol[5]  = rho; //rho
-  sol[6]   = cp; //cp
-  sol[7]   = cs; //cs
 """)
