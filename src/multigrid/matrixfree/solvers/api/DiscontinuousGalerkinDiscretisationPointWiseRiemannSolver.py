@@ -83,8 +83,6 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   
   in line with @ref xxxx. The @f$ q @f$ is the result of the Riemann solver.
   
-  @todo Eike It would be nice to refer to the overall write-up here. But is should all be linked in one page.
-  
   ## Solver 
   
   We now realise a Block-Jacobi smoother subject to two relaxation parameters 
@@ -132,10 +130,12 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         \f$
     2. Once complete, we substract \f$ P^{c \gets f}  q|_f \f$. That is, we take the 
         solution on the face and we project it (cell from face) onto the 
-        cell, where we substract it from the previous \f$ r \f$ value:
+        cell, where we substract it from the previous \f$ r \f$ value. We also
+        do the same with the cell-to-cell couplings. So:
         \f$
-        r \gets Mb + Pq|_f.
+        r \gets Mb - Pq|_f -A^{cc}u^c.
         \f$
+      We also do the same with the cell couplings
     3. The third step is where the MFlops come from: We take the user's
        approximation of the cell
         matrix and explicitly invert it. For a linear, invariant matrix
@@ -144,7 +144,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         every step and uses BLAS routines or this. The result is multiplied
         with the residual as accumulated so far:
         \f$
-        r \gets \tilde{A}^{-1} \left( Mb + Pq|_f \right).
+        r \gets \tilde{A}^{-1} \left( Mb - Pq|_f -A^{cc}u^c \right).
         \f$
     4. We run over the solution within the cell and scale each entry 
         with \f$ (1-\omega _c) \f$. If \f$ \omega _c =1 \f$, this means we
@@ -198,22 +198,22 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
   ###  InitDofs
   Code for this is in actionsets.InitDofsDG. So far nothing happens, other than determining which cells/faces are 
-  on the boundary and putting in initial guesses for each cell and face dof.
+  on the boundary and putting in initial guesses for each cell and face dof. We pass over to the implementation
+  cpp file which should be left in situ in the directory for the application.
+
+  ### UpdateFaceSolution
+  Code for this is in actionsets.DGSolver.UpdateFaceSolution. This action set only contains something nontrivial at 
+  TFFT. We apply the Riemann matrix that is present in the Abstract Solver class. This action set goes first,
+  the idea being that we updated the face solution using the updated face projections from the previous sweep.
+  On the first sweep, this does nothing.
 
   ### UpdateCell
-  This is called before ProjectOntoFaces. Code for this is in actionsets.UpdateCell.
-  @todo - include code snippets here
+  Code for this is in actionsets.DGSolver.UpdateCell. We do something nontrivial in TCFT, namely perform the cell update
+  rule as above. 
 
   ### ProjectOntoFaces
-  Code for this is in actionsets.ProjectOntoFaces
-  @todo - include code snippets here
-
-  ## Solver class
-  For now, the solver class contains the matrices mentioned above. We also include a method that explicitly
-  inverts a matrix using BLAS, in two stages:
-
-  # Questions to be answered:
-  - What to do on boundary cells/faces?
+  Code for this is in actionsets.DGSolver.ProjectOntoFaces. This occurs strictly after UpdateCell, so that we project
+  freshly updated Cell values onto the Faces.
 
     
   """
