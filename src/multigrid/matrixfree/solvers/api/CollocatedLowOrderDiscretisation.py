@@ -116,7 +116,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     into this base class, so they are available in the C++ code. 
     
     """
-    templatefile_prefix  = os.path.dirname( os.path.realpath(__file__) ) + "/"
+    templatefile_prefix  = os.path.dirname( os.path.realpath(__file__) ) + "/templates/"
     templatefile_prefix += self.__class__.__name__
 
     dictionary = {
