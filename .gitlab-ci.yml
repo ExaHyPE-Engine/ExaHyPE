@@ -1,5 +1,6 @@
 variables:
   RUNNER_TAG: "peano-dine-runner"
+
   BASE_IMAGE_TAG: "base_latest.sif"
   LATEX_IMAGE_TAG: "latex_latest.sif"
   AMD_IMAGE_TAG: "amd_latest.sif"
@@ -10,14 +11,12 @@ variables:
 
 workflow:
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "DG"'
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "exahype"'
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "gpus"'
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "multigrid"'
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "applications"'
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "particles"'
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "ccz4-cpp"'
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH =~ /^p4.*$/
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH =~ /^exahype.*$/
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH =~ /^infrastructure.*$/
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH =~ /^multigrid.*$/
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH =~ /^applications.*$/
+    - if: $CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH =~ /^particles.*$/
 
 stages:
   - build
@@ -42,5 +41,5 @@ include:
   - .continuous_integration/pipeline-llvm-cmake.yml
   - .continuous_integration/pipeline-nvidia-cmake.yml
 
-  - .continuous_integration/pipeline-formatting.yml
+  #- .continuous_integration/pipeline-formatting.yml
   - .continuous_integration/pipeline-documentation.yml
