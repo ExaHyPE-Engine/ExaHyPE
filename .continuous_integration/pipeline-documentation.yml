@@ -8,6 +8,7 @@ documentation:
   artifacts:
     paths:
       - ./doxygen-html/*
+  when: always
   retry: 0
 
 pages:
@@ -25,3 +26,4 @@ pages:
       - public
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
+  when: always
