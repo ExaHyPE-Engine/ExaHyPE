@@ -4,13 +4,20 @@ Peano's build process relies on GNU Autotools or CMake.
 The build yields a couple of libraries and executables.
 Most codes then use Peano's Python API to build an application on top of the libraries.
 You also can create a sole C++ application.
-The Python API yields such applications, too, i.e.,
-Python is not required to run the simulations but only to construct them.
+The Python API yields such applications, too, i.e., Python is not required to run the simulations but only to construct them.
 
-## Prerequisite
+To install the Python API accompanying and required by Peano, use
+
+## Prerequisites
 
 ```shell
 pip3 install -e python
+```
+
+or add this directory to your `PYTHONPATH`:
+
+```shell
+export PYTHONPATH=$PYTHONPATH:/Peano/python
 ```
 
 ## Autotools
