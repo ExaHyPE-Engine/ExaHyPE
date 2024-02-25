@@ -113,7 +113,7 @@ public:
   static void updateNumberOfLocalAndExpiredParticles(
     int numberOfRemainingLocalParticles,
     int numberOfExpiredHaloParticles,
-    int numberOfLeavingLocalParticles
+    int numberOfParticlesThatHaveLeftTheirDomain
   );
 
   /**
@@ -257,7 +257,7 @@ protected:
    *
    * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
    */
-  static int _numberOfLeavingLocalParticles;
+  static int _numberOfParticlesThatHaveLeftTheirDomain;
 
   /**
    * Number of incoming halo particles which are not worked in

@@ -40,7 +40,7 @@ template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfExpiredHaloParticles;
 
 template <typename T>
-int toolbox::particles::ParticleSet<T>::_numberOfLeavingLocalParticles;
+int toolbox::particles::ParticleSet<T>::_numberOfParticlesThatHaveLeftTheirDomain;
 
 template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfDroppedIncomingVirtualParticles;
@@ -100,7 +100,7 @@ template <typename T>
 void toolbox::particles::ParticleSet<T>::clearParticleStateStatistics() {
   _numberOfRemainingLocalParticles = 0;
   _numberOfExpiredHaloParticles    = 0;
-  _numberOfLeavingLocalParticles   = 0;
+  _numberOfParticlesThatHaveLeftTheirDomain   = 0;
 
   _numberOfDroppedIncomingVirtualParticles       = 0;
   _numberOfRedundantlySharedLocalParticles       = 0;
@@ -117,7 +117,7 @@ std::string toolbox::particles::ParticleSet<T>::printParticleStateStatistics() {
   std::ostringstream msg;
   msg << "#remaining=" << _numberOfRemainingLocalParticles
       << ", #expired halo="   << _numberOfExpiredHaloParticles
-      << ", #leaving="   << _numberOfLeavingLocalParticles
+      << ", #left="   << _numberOfParticlesThatHaveLeftTheirDomain
       << ", #dropped virtual copy from neighbour=" << _numberOfDroppedIncomingVirtualParticles
       << ", #redundantly owned=" << _numberOfRedundantlySharedLocalParticles
       << ", #replaced virtual=" << _numberOfReplacedVirtualParticlesAlongBoundary
@@ -133,7 +133,7 @@ void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
   #if Parallel
   const int localNumberOfRemainingLocalParticles = _numberOfRemainingLocalParticles;
   const int localNumberOfExpiredHaloParticles    = _numberOfExpiredHaloParticles;
-  const int localNumberOfLeavingLocalParticles   = _numberOfLeavingLocalParticles;
+  const int localNumberOfParticlesThatHaveLeftTheirDomain   = _numberOfParticlesThatHaveLeftTheirDomain;
 
   tarch::mpi::Rank::getInstance()
     .reduce(&localNumberOfRemainingLocalParticles, &_numberOfRemainingLocalParticles, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
@@ -144,7 +144,7 @@ void toolbox::particles::ParticleSet<T>::reduceParticleStateStatistics() {
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     });
   tarch::mpi::Rank::getInstance()
-    .reduce(&localNumberOfLeavingLocalParticles, &_numberOfLeavingLocalParticles, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
+    .reduce(&localNumberOfParticlesThatHaveLeftTheirDomain, &_numberOfParticlesThatHaveLeftTheirDomain, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     });
 
@@ -258,12 +258,12 @@ template <typename T>
 void toolbox::particles::ParticleSet<T>::updateNumberOfLocalAndExpiredParticles(
   int numberOfRemainingLocalParticles,
   int numberOfExpiredHaloParticles,
-  int numberOfLeavingLocalParticles
+  int numberOfParticlesThatHaveLeftTheirDomain
 ) {
   tarch::multicore::Lock lock(_statisticsSemaphore);
   _numberOfRemainingLocalParticles += numberOfRemainingLocalParticles;
   _numberOfExpiredHaloParticles += numberOfExpiredHaloParticles;
-  _numberOfLeavingLocalParticles += numberOfLeavingLocalParticles;
+  _numberOfParticlesThatHaveLeftTheirDomain += numberOfParticlesThatHaveLeftTheirDomain;
 }
 
 

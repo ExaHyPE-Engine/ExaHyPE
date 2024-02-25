@@ -143,6 +143,11 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 """
     )
 
+
+#
+# @todo I think we might be able to delete this variant once we have elimianted the local trees
+#
+#
     _Template_Sieve = jinja2.Template(
         """
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices(_spacetreeId) ) {
@@ -151,29 +156,8 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     );
 
     for (auto& newParticle: sievedParticles) {
-      if ( ::toolbox::particles::particleIsDuplicate(
-        newParticle, 
-        fineGridVertex{{PARTICLES_CONTAINER}}.begin(), 
-        fineGridVertex{{PARTICLES_CONTAINER}}.end() 
-      ) != fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
-        _numberOfSkippedDropsFromSieveSet++;
-        delete newParticle;
-      }
-      else {
-        logDebug( "touchVertexFirstTime(...)", "drop particle " << newParticle->toString() << " from local sort set of tree " << _spacetreeId << " into vertex " << marker.toString() );
-        
-        fineGridVertex{{PARTICLES_CONTAINER}}.addParticle( newParticle );
-        _numberOfDropsFromSieveSet++;
-        toolbox::particles::assignmentchecks::assignParticleToVertex(
-          "{{PARTICLE}}",
-          newParticle->getX(),
-          newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          marker.x(),
-          marker.h(),
-          _spacetreeId, 
-          "UpdateParticleGridAssociation_BucketSort::_Template_Sieve"
-        );
-      }
+      _numberOfSkippedDropsFromSieveSet++;      
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId );
     }
     
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
@@ -186,29 +170,8 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     );
 
     for (auto& newParticle: sievedParticles) {
-      if ( ::toolbox::particles::particleIsDuplicate(
-        newParticle, 
-        fineGridVertex{{PARTICLES_CONTAINER}}.begin(), 
-        fineGridVertex{{PARTICLES_CONTAINER}}.end() 
-      ) != fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
-        _numberOfSkippedDropsFromSieveSet++;
-        delete newParticle;
-      }
-      else {
-        logDebug( "touchVertexFirstTime(...)", "drop particle " << newParticle->toString() << " from global sort set into vertex " << marker.toString() );
-        
-        fineGridVertex{{PARTICLES_CONTAINER}}.addParticle( newParticle );
-        _numberOfDropsFromSieveSet++;
-        toolbox::particles::assignmentchecks::assignParticleToVertex(
-          "{{PARTICLE}}",
-          newParticle->getX(),
-          newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          marker.x(),
-          marker.h(),
-          _spacetreeId,
-          "UpdateParticleGridAssociation_BucketSort::_Template_Sieve"
-        );
-      }
+      _numberOfSkippedDropsFromSieveSet++;      
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId );
     }
 
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );

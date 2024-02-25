@@ -288,23 +288,32 @@
        * realisation which scatters particles over the heap.
        */
       bool isGathered() const;
-    private:
-      static tarch::logging::Log _log;
-
-      MemoryPool  _memoryPool;
 
       /**
-       * Extracted into routine of its own, as I need it for both boundary and periodic boundary merges
+       * Extracted into routine of its own
+       *
+       * This routine it used by boundary merges, periodic boundary merges, and
+       * also drops.
+       *
+       * ## Debug data
        *
        * Even if we replace a current particle with an incoming one, we keep
        * the current particle's (debug) location. This way, we ensure that all
        * debug data remain correct also for periodic BCs.
+       *
+       * @param neighbourParticle Will either be incorporated into current data
+       *   structure or the routine will delete it if it decides not to use
+       *   the object the pointer points to.
        */
-      void mergeWithNeighbourParticle(
+      void mergeWithParticle(
         DoFType*                                     neighbourParticle,
         const peano4::datamanagement::VertexMarker&  marker,
         int                                          spacetreeId
       );
+    private:
+      static tarch::logging::Log _log;
+
+      MemoryPool  _memoryPool;
 };
 
 {% for item in NAMESPACE -%}

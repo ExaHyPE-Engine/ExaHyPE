@@ -297,6 +297,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   }
 """
     )
+    
+#
+# @todo Remove _numberOfSkippedDropsFromSieveSet
+#    
 
     _Template_Sieve = jinja2.Template(
         """
@@ -308,27 +312,8 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     );
 
     for (auto& newParticle: sievedParticles) {
-      if ( ::toolbox::particles::particleIsDuplicate(
-        newParticle,
-        fineGridVertex{{PARTICLES_CONTAINER}}.begin(),
-        fineGridVertex{{PARTICLES_CONTAINER}}.end()
-      ) != fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
-        logDebug( "touchVertexFirstTime(...)", "particle is a duplicate: " << newParticle->toString() );
-        _numberOfSkippedDropsFromSieveSet++;
-        delete newParticle;
-      }
-      else {
-        fineGridVertex{{PARTICLES_CONTAINER}}.addParticle( newParticle );
-        _numberOfDropsFromSieveSet++;
-        toolbox::particles::assignmentchecks::assignParticleToVertex(
-          "{{PARTICLE}}",
-          newParticle->getX(),
-          newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          marker.x(),
-          marker.h(),
-          _spacetreeId, "AbstractUpdateParticleGridAssociation::_Template_Sieve"
-        );
-      }
+      _numberOfDropsFromSieveSet++;      
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId );
     }
 
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
