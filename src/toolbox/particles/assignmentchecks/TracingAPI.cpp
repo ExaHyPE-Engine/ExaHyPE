@@ -222,22 +222,74 @@ void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(co
 };
 
 
-int toolbox::particles::assignmentchecks::internal::Database::getCurrentMeshSweep() {
-  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
+int toolbox::particles::assignmentchecks::internal::Database::getNumberOfSnapshots() const {
   return _data.size()-1;
 }
 
 
-void toolbox::particles::assignmentchecks::internal::Database::removeEmptyDatabaseSnapshots() {
-  bool isEmpty = true;
 
-  for (auto p: *_data.cbegin()) {
-    isEmpty &= p.second.empty();
+void toolbox::particles::assignmentchecks::internal::Database::eliminateExistingParticles() {
+  tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Write);
+
+  bool hasEliminated = true;
+
+  while (hasEliminated) {
+    removeEmptyDatabaseSnapshots();
+
+    hasEliminated        = false;
+    auto currentSnapshot = _data.crbegin();
+    while (currentSnapshot != _data.crend() and not hasEliminated) {
+      auto particleTrajectory = currentSnapshot->begin();
+      while (particleTrajectory != currentSnapshot->end() and not hasEliminated) {
+        ParticleIdentifier identifier = particleTrajectory->first;
+        if ( not particleTrajectory->second.empty() ) {
+          Event lastEvent = particleTrajectory->second.back();
+          if (lastEvent.type==Event::Type::AssignToVertex) {
+            removeTrajectory(
+              identifier,
+              lastEvent.treeId
+            );
+            hasEliminated = true;
+          }
+        }
+        particleTrajectory++;
+      }
+      currentSnapshot++;
+    }
   }
 
-  if (isEmpty) {
-    logDebug( "removeEmptyDatabaseSnapshots()", "remove first snapshot from database as it is empty" );
-    _data.erase( _data.begin() );
+}
+
+
+void toolbox::particles::assignmentchecks::internal::Database::removeEmptyDatabaseSnapshots() {
+  auto snapshot = _data.begin();
+  int currentSnapshot = 0;
+  while (snapshot!=_data.end()) {
+    auto trajectory = snapshot->begin();
+    while (trajectory!=snapshot->end()) {
+      if (trajectory->second.empty()) {
+        logDebug( "removeEmptyDatabaseSnapshots()", "removed entry for particle " << trajectory->first.toString() );
+        trajectory = snapshot->erase(trajectory);
+      }
+      else {
+        trajectory++;
+      }
+    }
+    snapshot++;
+  }
+
+
+  snapshot = _data.begin();
+  const int size = _data.size();
+  while (snapshot!=_data.end()) {
+    if (snapshot->empty() and currentSnapshot<size-1) {
+      logDebug( "removeEmptyDatabaseSnapshots()", "removed whole snapshot as it was empty" );
+      snapshot = _data.erase(snapshot);
+    }
+    else {
+      snapshot++;
+    }
+    currentSnapshot++;
   }
 }
 
@@ -288,7 +340,7 @@ void toolbox::particles::assignmentchecks::internal::Database::removeTrajectory(
 }
 
 
-toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assignmentchecks::internal::Database::getEntry(
+std::pair< toolbox::particles::assignmentchecks::internal::Event, toolbox::particles::assignmentchecks::internal::ParticleIdentifier >  toolbox::particles::assignmentchecks::internal::Database::getEntry(
   const ParticleIdentifier&  identifier,
   int                        spacetreeId,
   int                        firstNRecentEntriesToSkip
@@ -312,7 +364,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
           and
           treeIsAFit
         ) {
-          return Event(Event::Type::NotFound);
+          return { Event(Event::Type::NotFound), identifier };
         }
         else if (
           event->type == Event::Type::MoveWhileAssociatedToVertex
@@ -321,7 +373,6 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
           and
           firstNRecentEntriesToSkip!=DoNotFollowParticleMovementsInDatabase
         ) {
-          lock.free();
           const ParticleIdentifier previousIdentifier = _database.createParticleIdentifier(identifier.particleName, event->previousParticleX);
           assertion3(
             not (previousIdentifier==identifier),
@@ -333,7 +384,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
           return getEntry(previousIdentifier, spacetreeId, firstNRecentEntriesToSkip);
         }
         else if (event->type != Event::Type::Erase and treeIsAFit) {
-          return *event;
+          return { *event, identifier };
         }
         event++;
       }
@@ -342,7 +393,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
     firstNRecentEntriesToSkip++;
   }
 
-  return Event(Event::Type::NotFound);
+  return { Event(Event::Type::NotFound), identifier };
 }
 
 
@@ -451,7 +502,7 @@ void toolbox::particles::assignmentchecks::internal::Database::addEvent(Particle
   // We first have to push it. Otherwise, the susequent getEntry() won't work.
   snapshot[identifier].push_back(event);
 
-  if ( event.type != Event::Type::MoveWhileAssociatedToVertex and _data.size() > _maxParticleSnapshotsToKeepTrackOf ) {
+  if ( event.type == Event::Type::AssignToVertex and _data.size() > _maxParticleSnapshotsToKeepTrackOf ) {
     removeTrajectory( identifier, event.treeId );
     removeEmptyDatabaseSnapshots();
 
@@ -465,18 +516,23 @@ void toolbox::particles::assignmentchecks::internal::Database::addEvent(Particle
   if ( event.type == Event::Type::MoveWhileAssociatedToVertex and _data.size() > _maxParticleSnapshotsToKeepTrackOf ) {
     lock.free();
 
-    Event originalEntry               = getEntry(identifier, event.treeId);
-    Event substituteEntry             = originalEntry;
-    substituteEntry.previousParticleX = event.previousParticleX;
-    substituteEntry.trace             = "substitute:" + originalEntry.trace + "->" + event.trace;
-    logDebug(
-      "addEvent(...)",
-      "have " << _data.size() << " snapshots in database which indicates that lots of particles have moved slightly but not changed vertex association. The identifier/event combination " <<
-      identifier.toString() << "/" << event.toString() <<
-      " has a history leading back to " << originalEntry.toString() <<
-      ". Introduce substitute event " << identifier.toString() << "/" << substituteEntry.toString()
+    auto rootEntryOfLatestTrajectory = getEntry(identifier, event.treeId);
+    assertion4(
+      rootEntryOfLatestTrajectory.first.type!=Event::Type::NotFound,
+      rootEntryOfLatestTrajectory.first.toString(),
+      rootEntryOfLatestTrajectory.second.toString(),
+      event.toString(),
+      identifier.toString()
     );
-    assertion(originalEntry.type!=Event::Type::NotFound);
+
+    Event substituteEntryForTrajectory(
+        Event::Type::MoveWhileAssociatedToVertex,
+        rootEntryOfLatestTrajectory.second.particleX,
+        event.treeId,
+        "substitute-for-whole-trajectory"
+    );
+    rootEntryOfLatestTrajectory.first.trace = "substitute-trajectory-start-from-original-point-" + ::toString( rootEntryOfLatestTrajectory.second.particleX );
+
 
     lock.lock();
     removeTrajectory( identifier, event.treeId);
@@ -487,7 +543,8 @@ void toolbox::particles::assignmentchecks::internal::Database::addEvent(Particle
       snapshot.insert(std::pair<ParticleIdentifier, ParticleEvents>(identifier, ParticleEvents()));
       logDebug( "addEvent(...)", "re-add particle history in this snapshot for " << identifier.toString() );
     }
-    snapshot[identifier].push_back(substituteEntry);
+    snapshot[rootEntryOfLatestTrajectory.second].push_back(rootEntryOfLatestTrajectory.first);
+    snapshot[identifier].push_back(substituteEntryForTrajectory);
   }
 }
 
@@ -513,7 +570,7 @@ void toolbox::particles::assignmentchecks::eraseParticle(
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event(internal::Event::Type::Erase, isLocal, treeId, trace);
 
-  internal::Event previousLocalParticle = _database.getEntry(identifier, treeId);
+  internal::Event previousLocalParticle = _database.getEntry(identifier, treeId).first;
   assertion5(
     previousLocalParticle.type==internal::Event::Type::DetachFromVertex,
     identifier.toString(),
@@ -552,7 +609,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   else {
     internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
     internal::Event              event(internal::Event::Type::AssignToVertex, isLocal, vertexX, vertexH, treeId, trace);
-    internal::Event              previousEvent = _database.getEntry(identifier, treeId);
+    internal::Event              previousEvent = _database.getEntry(identifier, treeId).first;
 
     const bool isDropping = previousEvent.type == internal::Event::Type::DetachFromVertex and tarch::la::allGreater( previousEvent.vertexH, vertexH );
     const bool isLifting  = previousEvent.type == internal::Event::Type::DetachFromVertex and tarch::la::allSmaller( previousEvent.vertexH, vertexH );
@@ -573,12 +630,12 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
         event.toString(),
         previousEvent.toString(),
         treeId,
-        _database.getCurrentMeshSweep(),
+        _database.getNumberOfSnapshots(),
         trace,
         _database.particleHistory(identifier)
       );
       assertion5(
-        _database.getEntry(identifier, treeId).type == internal::Event::Type::NotFound
+        _database.getEntry(identifier, treeId).first.type == internal::Event::Type::NotFound
         or
         isLifting or isDropping or isDroppingFromSieveSet
         or
@@ -590,7 +647,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
         _database.particleHistory(identifier)
       );
       assertion5(
-        _database.getEntry(identifier, treeId).type == internal::Event::Type::NotFound
+        _database.getEntry(identifier, treeId).first.type == internal::Event::Type::NotFound
         or
         isLifting or isDropping or isDroppingFromSieveSet
         or
@@ -615,7 +672,7 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
         event.toString(),
         previousEvent.toString(),
         treeId,
-        _database.getCurrentMeshSweep(),
+        _database.getNumberOfSnapshots(),
         trace,
         _database.particleHistory(identifier)
       );
@@ -643,15 +700,15 @@ void toolbox::particles::assignmentchecks::moveParticle(
       newIdentifier != oldIdentifier
     ) {
       internal::Event              newEvent(internal::Event::Type::MoveWhileAssociatedToVertex, oldIdentifier.particleX, treeId, trace );
-      internal::Event              previousEvent    = _database.getEntry(oldIdentifier, treeId );
-      internal::Event              existingNewEvent = _database.getEntry(newIdentifier, internal::Database::AnyTree );
+      internal::Event              previousEvent    = _database.getEntry(oldIdentifier, treeId ).first;
+      internal::Event              existingNewEvent = _database.getEntry(newIdentifier, internal::Database::AnyTree ).first;
       assertion10(
         existingNewEvent.type == internal::Event::Type::NotFound,
         oldIdentifier.toString(),
         previousEvent.toString(),
         newIdentifier.toString(),
         newEvent.toString(),
-        _database.getCurrentMeshSweep(),
+        _database.getNumberOfSnapshots(),
         treeId,
         trace,
         _database.totalEntries(oldIdentifier),
@@ -664,7 +721,7 @@ void toolbox::particles::assignmentchecks::moveParticle(
         previousEvent.toString(),
         newIdentifier.toString(),
         newEvent.toString(),
-        _database.getCurrentMeshSweep(),
+        _database.getNumberOfSnapshots(),
         treeId,
         trace,
         _database.totalEntries(oldIdentifier),
@@ -693,7 +750,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event{internal::Event::Type::DetachFromVertex, isLocal, vertexX, vertexH, treeId, trace};
 
-  internal::Event previousEvent = _database.getEntry(identifier, treeId);
+  internal::Event previousEvent = _database.getEntry(identifier, treeId).first;
 
   assertion7(
     previousEvent.type == internal::Event::Type::AssignToVertex,
@@ -701,7 +758,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     event.toString(),
     previousEvent.toString(),
     treeId,
-    _database.getCurrentMeshSweep(),
+    _database.getNumberOfSnapshots(),
     trace,
     _database.particleHistory(identifier)
   );
@@ -711,7 +768,7 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
     event.toString(),
     previousEvent.toString(),
     treeId,
-    _database.getCurrentMeshSweep(),
+    _database.getNumberOfSnapshots(),
     trace,
     _database.particleHistory(identifier)
   );
@@ -741,7 +798,7 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
 
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
-  internal::Event              previousEvent = _database.getEntry(identifier, treeId);
+  internal::Event              previousEvent = _database.getEntry(identifier, treeId).first;
 
   assertion5(
     previousEvent.type == internal::Event::Type::DetachFromVertex,
@@ -754,6 +811,18 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
   logTraceOut( "assignParticleToSieveSet(...)" );
 }
 
+
+void toolbox::particles::assignmentchecks::eliminateExistingParticles() {
+  _database.eliminateExistingParticles();
+}
+
+
+void toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty() {
+  assertion1(
+    _database.getNumberOfSnapshots()==0,
+    _database.toString()
+  );
+}
 
 #else
 
@@ -796,6 +865,12 @@ void toolbox::particles::assignmentchecks::moveParticle(
     int                                           treeId,
     const std::string&                            trace
 ) {}
+
+void toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty() {}
+
+void toolbox::particles::assignmentchecks::eliminateExistingParticles() {
+
+}
 
 #endif
 

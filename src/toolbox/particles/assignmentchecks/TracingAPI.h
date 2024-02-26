@@ -280,6 +280,13 @@ namespace toolbox {
 
             /**
              * Not thread-safe
+             *
+             * Run through the individual snapshots and remove those trajectory
+             * entries which are now empty. If a whole snapshot becomes empty, we
+             * delete it but if and only if it is not the very last one. If we
+             * deleted the very last one, we'd confuse the timeline of some
+             * particles as the ordering of the snapshots carries temporal
+             * causalities.
              */
             void removeEmptyDatabaseSnapshots();
 
@@ -320,12 +327,6 @@ namespace toolbox {
              */
             void startMeshSweep(const std::string&  meshSweepName);
 
-            /**
-             * We enumerate the mesh sweeps. This routine returns the number of
-             * the current one.
-             */
-            int getCurrentMeshSweep();
-
              /**
               * Return last entry matching identifier
              *
@@ -350,9 +351,26 @@ namespace toolbox {
              * floating point accuracy. So we have to make them match before we
              * continue to search recursively.
              *
+             * ## Implementation
+             *
+             * I originally thought that I have to release the lock before I
+             * jump into the recursion. This is however not necessary, as we
+             * are working with read/write locks and I can have an arbitrary
+             * number of read locks in this case. Actually, it would be
+             * outrightly wrong to free it, as someone might alter the data
+             * structure in-between a function and its recursive re-invocation.
+             * So we have to keep it lock until we return.
+             *
+             *
              * @param spacetreeId Either a valid spacetree or AnyTree if you don't care
+             *
+             * @return tuple of event and identifier. In most cases, the
+             *   identifier returned will equal the parameter identifier.
+             *   However, if the particle has moved, the result identifier
+             *   will identify the spatial position corresponding to the
+             *   returned event.
              */
-            Event getEntry(
+            std::pair< Event, ParticleIdentifier > getEntry(
               const ParticleIdentifier&  identifier,
               int                        spacetreeId,
               int                        firstNRecentEntriesToSkip = SearchWholeDatabase
@@ -390,6 +408,15 @@ namespace toolbox {
             int totalEntries(const ParticleIdentifier& identifier);
 
             /**
+             * Return number of snapshots
+             *
+             * These are the active snapshots still held in the database.
+             * addEntry()'s garbage collection might have removed some of
+             * them already.
+             */
+            int getNumberOfSnapshots() const;
+
+            /**
              * Add a new event to the database
              *
              * If there is not yet an entry for identifier in the current
@@ -398,12 +425,15 @@ namespace toolbox {
              *
              * Now it is time to clean up the database. This happens if and
              * only if we have a maximum database size set in
-             * _maxParticleSnapshotsToKeepTrackOf. If the new event is not a
-             * move event, we know that future getEntry() requests will return
-             * this event. So we can delete all previous entries for this one.
+             * _maxParticleSnapshotsToKeepTrackOf. If the new event is an
+             * assignment, then we know that now future request will ever look
+             * backwards in history beyond this assignment. So we can delete
+             * all of this historic data.
              *
-             * If we have a reassignment, we
-             *.
+             * If we have tons of particle moves switching vertices (and hence
+             * deleting and re-associating particles), we can eliminate all of
+             * those and instead add two events: one that attaches a particle
+             * and one that moves it in one go.
              */
             void addEvent(ParticleIdentifier identifier, const Event& event);
 
@@ -413,6 +443,15 @@ namespace toolbox {
              * Cannot be const as we have a semaphore to be thread-safe.
              */
             std::string toString();
+
+            /**
+             * Eliminate existing particles, so only those that are "forgotten" remain
+             *
+             * We do this iteratively and call removeEmptyDatabaseSnapshots()
+             * such that we eliminate the database quite aggressively.
+             */
+            void eliminateExistingParticles();
+
         };
       } // namespace internal
 
@@ -471,6 +510,23 @@ namespace toolbox {
          int                                           treeId,
          const std::string&                            trace
       );
+
+      /**
+       * Eliminate all "live" particles from database
+       *
+       * This routine can be used to find "lost" particles. It runs through the
+       * database and eliminates all those particles which do still exist.
+       *
+       * This routine is not called routinely, as it can be very expensive.
+       *
+       * @param numberOfParticles Specify the number of particles you are
+       *   searching for or pass in a negative number to indicate that all
+       *   particles still have to be in the domain.
+       *
+       * @param eliminateExistingParticlesFromDatabase This operation prunes
+       *   the database and speeds up the validation process significantly.
+       */
+      void eliminateExistingParticles();
 
       /**
        * Assign a particle to a vertex
@@ -644,6 +700,9 @@ namespace toolbox {
         assertion2(result.size() > 1, typeid(Particle).name(), result);
         return result.size() > 1 ? result.substr(0, result.size() - 1) : result;
       }
+
+
+      void ensureDatabaseIsEmpty();
     } // namespace assignmentchecks
   }   // namespace particles
 } // namespace toolbox
