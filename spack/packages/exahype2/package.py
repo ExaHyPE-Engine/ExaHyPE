@@ -46,7 +46,7 @@ class Exahype2(CMakePackage, CudaPackage):
     )
 
     variant("mpi", default=False, description="Build with MPI support")
-    variant("particles", default=False, description="Build with particles tracer support")
+    variant("tracer", default=False, description="Build with particle tracer support")
     variant("hdf5", default=False, description="Build with HDF5 support")
     variant("netcdf", default=False, description="Build with NetCDF support")
 
@@ -107,7 +107,7 @@ class Exahype2(CMakePackage, CudaPackage):
             self.define_from_variant("WITH_DIMENSIONS", "dimensions"),
             self.define_from_variant("CMAKE_BUILD_TYPE", "build_type"),
             self.define_from_variant("WITH_MPI", "mpi"),
-            self.define_from_variant("ENABLE_PARTICLES", "particles"),
+            self.define_from_variant("ENABLE_PARTICLES", "tracer"),
         ]
 
         if self.spec.satisfies("+omp"):
