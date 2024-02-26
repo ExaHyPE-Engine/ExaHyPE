@@ -50,7 +50,7 @@ def get_body_of_adm_constraints(patch_size, number_of_output_variable):
         double constraints[n_a_v]={0};
         admconstraints(constraints, oldQWithHalo+cellSerialised*(59+n_a_v), gradQ);
         ::exahype2::enumerator::AoSLexicographicEnumerator enumeratorWithAuxiliaryVariables ( 1, patchSize, 0, 59, n_a_v);
-        for (int i=0;i<4;i++){
+        for (int i=0;i<n_a_v;i++){
           fineGridCellCCZ4Q.value[ enumeratorWithAuxiliaryVariables(0,cell,59+i) ] = constraints[i]; 
         }
       }  

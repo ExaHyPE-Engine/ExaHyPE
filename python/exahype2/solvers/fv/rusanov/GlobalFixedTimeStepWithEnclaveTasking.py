@@ -95,7 +95,7 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
       self._source_term_implementation,
       compute_max_eigenvalue_of_next_time_step = False,
       solver_variant = SolverVariant.WithVirtualFunctions,
-      kernel_variant = KernelVariant.VolumeWiseAoS
+      kernel_variant = KernelVariant.PatchWiseAoS
     )
 
     self._compute_kernel_call_stateless = create_compute_Riemann_kernel_for_Rusanov(
@@ -104,7 +104,7 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
       self._source_term_implementation,
       compute_max_eigenvalue_of_next_time_step = False,
       solver_variant = SolverVariant.Stateless,
-      kernel_variant = KernelVariant.VolumeWiseSoA
+      kernel_variant = KernelVariant.PatchWiseAoS
     )
 
     self._fused_compute_kernel_call_stateless_cpu = create_compute_Riemann_kernel_for_Rusanov(
@@ -113,7 +113,7 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
       self._source_term_implementation,
       compute_max_eigenvalue_of_next_time_step = True,
       solver_variant = SolverVariant.Stateless,
-      kernel_variant = KernelVariant.VolumeWiseSoA
+      kernel_variant = KernelVariant.PatchWiseAoS
     )
 
     self._fused_compute_kernel_call_stateless_gpu = create_compute_Riemann_kernel_for_Rusanov(
@@ -122,7 +122,7 @@ class GlobalFixedTimeStepWithEnclaveTasking(EnclaveTasking):
       self._source_term_implementation,
       compute_max_eigenvalue_of_next_time_step = True,
       solver_variant = SolverVariant.Accelerator,
-      kernel_variant = KernelVariant.VolumeWiseSoA
+      kernel_variant = KernelVariant.PatchWiseAoS
     )
 
     solver_code_snippets = FixedTimeSteppingCodeSnippets(self._normalised_time_step_size,True)

@@ -6,7 +6,7 @@
 #SBATCH -A durham
 #SBATCH -t 1:00:00
 #SBATCH --ntasks-per-node=1
-#SBATCH --nodes=2
+#SBATCH --nodes=1
 #SBATCH -J ccz4
 
 echo "My SLURM_ARRAY_TASK_ID: " $SLURM_ARRAY_TASK_ID
