@@ -40,13 +40,19 @@ spack info exahype2
 spack install exahype2 <OPTIONS>
 ```
 
-#### Example Usages
+#### Installation Examples
 
 ```shel
 spack install exahype2+omp+cuda cuda_arch=70 gpu_backend=omp % nvhpc
 ```
 
 Installs ExaHyPE 2 with OpenMP multithreading and OpenMP target offloading for NVIDIA GPUs using the NVIDIA compilers.
+
+#### Uninstall
+
+```shel
+spack uninstall -y exahype2
+```
 
 ### Remove the Repository
 
