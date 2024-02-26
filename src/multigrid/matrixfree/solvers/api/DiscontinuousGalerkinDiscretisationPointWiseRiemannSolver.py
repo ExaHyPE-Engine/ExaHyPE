@@ -7,7 +7,7 @@ import os
 
 from .Solver import Solver
 from .actionsets.InitDofs         import InitDofsDG
-from .actionsets.DGSolver         import UpdateCell, ProjectOntoFaces, UpdateFaceSolution
+from .actionsets.DGSolver         import UpdateCell, ProjectOntoFaces, UpdateFaceSolution, CheckTolerance
 from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
@@ -240,6 +240,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
               face_relaxation,
               approximate_system_matrix,
               approximate_system_matrix_scaling,
+              solver_tolerance
               ):
     """!
     
@@ -350,6 +351,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._cell_relaxation           = cell_relaxation
     self._face_relaxation           = face_relaxation
 
+    self._solver_tolerance          = solver_tolerance
+
 
     # K^c * (p+1)^d
     self._unknowns_per_cell = unknowns_per_cell_node * ( poly_degree + 1) ** dimensions
@@ -364,6 +367,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     # cell stuff
     self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution", str(self._unknowns_per_cell) ))
     self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self._unknowns_per_cell) ))
+    self._cell_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "exact",    str(self._unknowns_per_cell) ))
 
     # face stuff
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
@@ -412,6 +416,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     observer.add_action_set( UpdateFaceSolution(self, 0, False) )
     observer.add_action_set( UpdateCell(self, 1, False) )
     observer.add_action_set( ProjectOntoFaces(self, 2, False) )
+    observer.add_action_set( CheckTolerance(self, 3, False) )
 
   
   def add_implementation_files_to_project(self, namespace, output):
@@ -454,7 +459,8 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
         "APPROX_SYSTEM_MATRIX_SCALING": self._approximate_system_matrix_scaling,
         "CELL_RELAXATION"             : self._cell_relaxation,
         "FACE_RELAXATION"             : self._face_relaxation,
-        "POLY_DEGREE"                 : self._poly_degree
+        "POLY_DEGREE"                 : self._poly_degree,
+        "SOLVER_TOLERANCE"            : self._solver_tolerance,
 
         }
 

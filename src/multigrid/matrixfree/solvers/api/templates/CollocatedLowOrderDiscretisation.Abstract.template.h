@@ -69,6 +69,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions, double>&  cellSize
     );
 
+    /**
+    * Always returns false for this solver
+    */
+    virtual bool absValueWithinTolerance() { return false; }
+
   protected:
     static tarch::logging::Log  _log;
 

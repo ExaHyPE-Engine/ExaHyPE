@@ -263,8 +263,9 @@ class InitDofsDG(ActionSet):
         // create vectors to send to implementation
         tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > value;
         tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > rhs;
+        tarch::la::Vector< repositories::{{SOLVER_INSTANCE}}.CellUnknowns, double > exact;
         // send to init
-        repositories::{{SOLVER_INSTANCE}}.initCell(marker.x(), marker.h(), value, rhs);
+        repositories::{{SOLVER_INSTANCE}}.initCell(marker.x(), marker.h(), value, rhs, exact);
 
         logTraceInWith5Arguments("TCFT::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs(), marker.toString(), value, rhs);
 
@@ -273,6 +274,7 @@ class InitDofsDG(ActionSet):
         {
           fineGridCell{{SOLVER_NAME}}.setSolution(i,value(i));
           fineGridCell{{SOLVER_NAME}}.setRhs(i,rhs(i));
+          fineGridCell{{SOLVER_NAME}}.setExact(i,exact(i));
         }
 
         logTraceOutWith2Arguments("TCFT::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs());

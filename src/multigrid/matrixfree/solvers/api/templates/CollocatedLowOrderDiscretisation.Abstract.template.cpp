@@ -66,3 +66,4 @@ tarch::la::Matrix< {{VERTEX_CARDINALITY}}*TwoPowerD, {{VERTEX_CARDINALITY}}*TwoP
 ) {
   return celldata::{{SOLVER_NAME}}::Type::Interior;
 }
+

@@ -20,6 +20,8 @@ namespace {{N}} {
     extern {{NAMESPACE | join("::")}}::{{SOLVER[0]}}  {{SOLVER[1]}};
 
     {% endfor %}
+    
+    bool absValueWithinTolerance();
 
 {% for N in NAMESPACE %}
 }

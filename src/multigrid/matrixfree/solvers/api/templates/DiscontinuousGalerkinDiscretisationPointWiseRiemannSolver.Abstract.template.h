@@ -46,6 +46,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr int        ProjectionsPerFaceNode = {{PROJECTIONS_PER_FACE_NODE}};
 
     static constexpr int        PolyDegree             = {{POLY_DEGREE}};
+
+    static constexpr double     SolverTolerance        = {{SOLVER_TOLERANCE}};
   public:
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
@@ -57,7 +59,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< CellUnknowns, double >&  solution,
-      tarch::la::Vector< CellUnknowns, double >&  rhs
+      tarch::la::Vector< CellUnknowns, double >&  rhs,
+      tarch::la::Vector< CellUnknowns, double >&  exact
     ) = 0;
 
     /**
@@ -122,7 +125,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix();
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix();
 
-
+    /**
+    * Returns false if we are outside allowed tolerance,
+    * true if we can terminate.
+    */
+    virtual bool absValueWithinTolerance() = 0;
 
   protected:
     static tarch::logging::Log  _log;

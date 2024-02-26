@@ -83,6 +83,7 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   face_relaxation = args.omega_f,
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
+  solver_tolerance = 0.01,
 )
 
 #! [Instantiate solver]

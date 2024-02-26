@@ -2,6 +2,7 @@
 
 
 #include "Abstract{{CLASSNAME}}.h"
+#include <mutex>
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -44,7 +45,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
       const tarch::la::Vector<Dimensions, double>&  x,
       const tarch::la::Vector<Dimensions, double>&  h,
       tarch::la::Vector< CellUnknowns, double >&  value,
-      tarch::la::Vector< CellUnknowns, double >&  rhs
+      tarch::la::Vector< CellUnknowns, double >&  rhs,
+      tarch::la::Vector< CellUnknowns, double >&  exact
     ) override;
 
     virtual void initFace(
@@ -54,4 +56,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
       tarch::la::Vector< FaceUnknownsProjection, double >&  projection
     ) override;
 
+    virtual bool absValueWithinTolerance() override;
+
+    void setMaxAbs(double);
+    void updateMaxAbs(double);
+
+  private:
+    double     currentMaxAbs;
+    std::mutex maxAbsMtx;
 };
