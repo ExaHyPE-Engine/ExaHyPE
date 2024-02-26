@@ -2,9 +2,6 @@ import os
 import sys
 import argparse
 import re
-
-sys.path.insert(0, os.path.abspath('../../../python'))
-
 import peano4
 import exahype2
 from exahype2.solvers.PDETerms import PDETerms

@@ -355,7 +355,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  assertion( mayPlot()  or ::exahype2::hasNonCriticalAssertionBeenViolated() );
+  assertion( mayPlot()  or ::tarch::hasNonCriticalAssertionBeenViolated() );
   _solverState = SolverState::Plotting;
 }
 

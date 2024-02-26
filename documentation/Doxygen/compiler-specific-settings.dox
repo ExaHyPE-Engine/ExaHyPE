@@ -289,7 +289,21 @@ the OpenMP target instructions:
 ~~~~~~~~~~~~~~~~~~~~~~~
 ./configure CC=clang CXX=clang++  CXXFLAGS="-O3 -std=c++20 -mtune=native -march=native -fopenmp" -fopenmp-targets=nvptx64 --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp
 ~~~~~~~~~~~~~~~~~~~~~~~
-  
+
+
+# Python
+
+Our code base relies on several Python packages. There's a requirements 
+specification file which you can use to ensure that all requirements are 
+met:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+pip install -r requirements.txt
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+where the requirements.txt file resides within Peano's root directory.
+Depending on your system, you might have to use pip3 or install the 
+packages in your user space by adding ```--user```. 
 
  */
  

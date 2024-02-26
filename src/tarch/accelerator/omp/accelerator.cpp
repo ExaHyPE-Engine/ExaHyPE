@@ -13,26 +13,26 @@ void tarch::gpuAbort() {}
 
 void* tarch::internal::allocateRawData(int size, MemoryLocation location) {
   void* result = nullptr;
-  switch (location) {
-    case MemoryLocation::Heap:
+  //switch (location) {
+    //case MemoryLocation::Heap:
       result = std::aligned_alloc(AlignmentOnHeap, tarch::padSizeToAlignment(size, AlignmentOnHeap)); // Aligned alloc requires size to be a multiple of the aligment
-      break;
-    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-      CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));
-      break;
-  }
+     // break;
+    //case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+    //  CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));
+    //  break;
+  //}
   return result;
 }
 
 void tarch::freeMemory(void* data, MemoryLocation location) {
-  switch (location) {
-    case MemoryLocation::Heap:
+  //switch (location) {
+  //  case MemoryLocation::Heap:
       std::free(data);
-      break;
-    case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-      CHECK_CUDA_ERROR(cudaFree(data));
-      break;
-  }
+  //    break;
+  //  case MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+  //    CHECK_CUDA_ERROR(cudaFree(data));
+  //    break;
+  //}
 }
 
 #endif
