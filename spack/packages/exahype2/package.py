@@ -45,8 +45,8 @@ class Exahype2(CMakePackage, CudaPackage):
         description="Build type",
     )
 
-    variant("mpi", default=True, description="Build with MPI support")
-    variant("particles", default=True, description="Build with particles tracer support")
+    variant("mpi", default=False, description="Build with MPI support")
+    variant("particles", default=False, description="Build with particles tracer support")
     variant("hdf5", default=False, description="Build with HDF5 support")
     variant("netcdf", default=False, description="Build with NetCDF support")
 
@@ -107,7 +107,7 @@ class Exahype2(CMakePackage, CudaPackage):
             self.define_from_variant("WITH_DIMENSIONS", "dimensions"),
             self.define_from_variant("CMAKE_BUILD_TYPE", "build_type"),
             self.define_from_variant("WITH_MPI", "mpi"),
-            self.define_from_variant("WITH_PARTICLES", "particles"),
+            self.define_from_variant("ENABLE_PARTICLES", "particles"),
         ]
 
         if self.spec.satisfies("+omp"):
@@ -121,9 +121,9 @@ class Exahype2(CMakePackage, CudaPackage):
 
         if self.spec.satisfies("+cuda"):
             cuda_arch = self.spec.variants["cuda_arch"].value[0]
-            gpu_backend = self.spec_variants["gpu_backend"].value[0]
-            args.append(f"-WITH_GPU={gpu_backend}")
-            args.append(f"-WITH_GPU_ARCH=sm_{cuda_arch}")
+            gpu_backend = self.spec.variants["gpu_backend"].value
+            args.append(f"-DWITH_GPU={gpu_backend}")
+            args.append(f"-DWITH_GPU_ARCH=sm_{cuda_arch}")
 
         return args
 
