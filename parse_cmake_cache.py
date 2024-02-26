@@ -25,9 +25,14 @@ def populate_predefined_strings():
         "ENABLE_PARTICLES",
         "ENABLE_EXAHYPE",
         "ENABLE_FINITEELEMENTS",
-        "ENABLE_BLOCKSTRUCTURES",
+        "ENABLE_BLOCKSTRUCTURED",
+        "ENABLE_LOADBALANCING",
+        "ENABLE_PARTICLES",
         "ENABLE_SWIFT",
         "PEANO_INCLUDES",
+        "PEANO_DEPENDS",
+        "PEANO_FLAGS",
+        "PEANO_LINK_FLAGS"
     ]
 
     return predefined_strings

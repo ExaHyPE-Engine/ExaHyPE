@@ -54,6 +54,7 @@ endforeach()
 
 # Toolboxes etc.
 list(APPEND DEPENDS_FULL ${DEPENDS_OTHER})
+list(APPEND DEPENDS_FULL "Tarch_${PEANO_BUILD_TYPE_LOWER}")
 
 # Create executable as a CMake target
 add_executable(${TARGET_NAME})
@@ -114,3 +115,7 @@ endif()
 if(ENABLE_MULTIPRECISION)
   target_link_libraries(${TARGET_NAME} PRIVATE ToolboxMultiprecision${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
 endif()
+
+#target_link_libraries(${TARGET_NAME} PRIVATE ${PEANO_DEPENDS})
+target_compile_options(${TARGET_NAME} PRIVATE ${PEANO_FLAGS})
+target_link_options(${TARGET_NAME} PRIVATE ${PEANO_LINK_FLAGS})
