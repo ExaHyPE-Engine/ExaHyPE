@@ -54,6 +54,8 @@ void toolbox::particles::insertParticleIntoCell(
     targetVertex[d] = newParticle->getX()(d) > marker.x()(d);
   }
 
+  assertion3( tarch::la::smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.h())), marker.toString(), newParticle->toString(), spacetreeId );
+
   newParticle->setParallelState(Particle::ParallelState::Local);
   newParticle->setCellH(marker.h());
 
