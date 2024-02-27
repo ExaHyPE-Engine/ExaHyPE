@@ -37,9 +37,9 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
   if (guardFlag) {
     tarch::multicore::RecursiveLock lock(_semaphore);
 
-    int        flag;
-    MPI_Status status;
+    int         flag;
     MPI_Message msg;
+    MPI_Status  status;
     MPI_Improbe(MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &msg, &status);
     if (flag) {
       const int rank = status.MPI_SOURCE;
