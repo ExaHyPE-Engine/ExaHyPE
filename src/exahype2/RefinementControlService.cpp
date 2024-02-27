@@ -38,9 +38,9 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
     tarch::multicore::RecursiveLock lock(_semaphore);
 
     MPI_Status status;
-    int        flag;
-    MPI_Iprobe(MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
-    if (flag) {
+    MPI_Message msg;
+    MPI_Mprobe(MPI_ANY_SOURCE, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &msg, &status);
+    //if (flag) {
       const int rank = status.MPI_SOURCE;
       int       numberOfMessages;
       MPI_Get_count(&status, peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(), &numberOfMessages);
@@ -49,13 +49,11 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
 
       std::vector<peano4::grid::GridControlEvent> receiveBuffer;
       receiveBuffer.resize(numberOfMessages);
-      MPI_Recv(
+      MPI_Mrecv(
         receiveBuffer.data(),
         numberOfMessages,
         peano4::grid::GridControlEvent::getGlobalCommunciationDatatype(),
-        rank,
-        _reductionTag,
-        tarch::mpi::Rank::getInstance().getCommunicator(),
+        &msg,
         MPI_STATUS_IGNORE
       );
 
@@ -70,7 +68,7 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
           << _remoteNewEvents.size() << " new remote events and " << _committedEvents.size()
           << " committed events (valid for this traversal)"
       );
-    }
+    //}
   }
 #endif
 }
