@@ -54,6 +54,8 @@ private:
 
   MemoryManager() = default;
 
+  void clearWithoutLock();
+
 public:
   MemoryManager(const MemoryManager& copy) = delete;
 

@@ -64,12 +64,10 @@ void tarch::memory::MemoryManager::free(void* pointer, int device) {
 }
 
 
-tarch::memory::MemoryManager::~MemoryManager() { clear(); }
+tarch::memory::MemoryManager::~MemoryManager() { clearWithoutLock(); }
 
 
-void tarch::memory::MemoryManager::clear() {
-  tarch::multicore::Lock lock(_semaphore);
-
+void tarch::memory::MemoryManager::clearWithoutLock() {
   for (auto& memoryPage : _memoryPages) {
     int device = memoryPage.first;
     logDebug("clear()", "Free data of device " << device);
@@ -88,6 +86,12 @@ void tarch::memory::MemoryManager::clear() {
   }
 
   _memoryPages.clear();
+}
+
+
+void tarch::memory::MemoryManager::clear() {
+  tarch::multicore::Lock lock(_semaphore);
+  clearWithoutLock();
 }
 
 
