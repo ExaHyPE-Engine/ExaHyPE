@@ -161,6 +161,9 @@ orithmStepUpdates=1,...,dependencyChecksAlgorithmStepMaskOuts=0,...,dependencyCh
    * we remove the search radius (as in the implementation of the test), the
    * code shows the correct behaviour.
    *
+   * Once we have assessed the original setup, we therefore return to the
+   * large search radius of 0.0555556
+   *
    */
   void testLiftDropOfParticleAssociatedWithVertex03();
 

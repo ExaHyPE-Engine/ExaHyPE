@@ -241,8 +241,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._relativePositionOfCellWithinFatherCell = {0,0};
   marker._isAdjacentCellLocal  = 0b110110000;
 
-  // @todo Wrong Eine Null zu viel
-  const double searchRadius = 0.00555556;
+  double searchRadius = 0.00555556;
   tarch::la::Vector<Dimensions,double> x = {0.0555708, 0.322228};
   toolbox::particles::ParticleReassociationInstruction liftInstruction;
 
@@ -297,6 +296,44 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   // Vertex 3 should not drop
   marker._select  = 3;
   validateWithParams1(dropParticle(searchRadius,x,marker), marker.toString());
+
+
+  // Roll back and see if sieving works
+  marker._cellCentre(0) -=   meshSize;
+  searchRadius = 0.0555556;
+
+  // Vertex 0 should trigger a lift globally - this time due to the size of the
+  // particle and the distance
+  marker._select  = 0;
+  liftInstruction = liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
+  validateEqualsWithParams1(liftInstruction, toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
+
+  // Vertex 1 would not keep particle either as it is too big
+  marker._select  = 1;
+  liftInstruction = liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
+  validateEqualsWithParams5(
+    liftInstruction, toolbox::particles::ParticleReassociationInstruction_SieveGlobally,
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
+
+  // Next coarser mesh level
+  marker._cellCentre     = {1.5*meshSize, 1.5*meshSize};
+  marker._select         = 2;
+  marker._h              = {3.0*meshSize, 3.0*meshSize};
+
+  validateWithParams5(
+    sieveParticle(searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
+
   #endif
 }
 
