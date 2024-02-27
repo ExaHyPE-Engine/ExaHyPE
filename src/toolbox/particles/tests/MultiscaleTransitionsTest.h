@@ -86,8 +86,6 @@ private:
   void testLiftDropOfParticleAssociatedWithVertex01();
 
 
-
-
   /*
    * Another test case
    *
@@ -118,6 +116,48 @@ orithmStepUpdates=1,...,dependencyChecksAlgorithmStepMaskOuts=0,...,dependencyCh
    *
    */
   void testLiftDropOfParticleAssociatedWithVertex02();
+
+
+  /**
+   * Another test from the Swift runs where seven particles disappeared
+   *
+   * This is the dump of the seven missing particles. We only focus on the
+   * first one from hereon:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- (HydroPart,[0.0555708,0.322228]): ->(moved-while-associated-to-vertex,[0.05,0.32]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[0,0.333333],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.0556128,0.33212]): ->(moved-while-associated-to-vertex,[0.05,0.33]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[0,0.333333],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.944203,0.618454]): ->(moved-while-associated-to-vertex,[0.95,0.62]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[1,0.666667],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.944236,0.628335]): ->(moved-while-associated-to-vertex,[0.95,0.63]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[1,0.666667],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.944271,0.638218]): ->(moved-while-associated-to-vertex,[0.95,0.64]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[1,0.666667],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.944308,0.648103]): ->(moved-while-associated-to-vertex,[0.95,0.65]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[1,0.666667],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.944347,0.65799]): ->(moved-while-associated-to-vertex,[0.95,0.66]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[1,0.666667],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * This is due to lifts without the corresponding drops. We can see
+   * the following line for the first particle:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 482512398740 00:08:02     rank:0       core:7       info         benchmarks::swift2::noh::vertexdata::HydroPartSet::mergeWithParticle(...)                           inflying particle=(debugX=[0.05,0.32],debugH=[0,0],x=[0.0555708,0.322228],cellH=[0.111111,0.111111],searchRadius=0.0555556,ParallelState=Virtual,MoveState=Moved,CellHasUpdatedParticle=1,mass=0.0001,v=[0.928474,0.37139],a=[-0.000587972,-0.000240799],density=1.01022,pressure=6.76278e-07,smoothingLength=0.0122854,u=1.00416e-06,uDot=1.39669e-06,v_full=[0.928473,0.37139],u_full=1.00416e-06,wcount=10102.2,wcount_dh=-6995.6,f=-4.27191e-07,hDot=-0.0128069,rho_dh=-0.69956,smoothingLengthIterCount=0,hasNoNeighbours=0,isBoundaryParticle=0,partid=1,cfl=0.1,initialTimeStepSize=0.001,adjustTimeStepSize=0,hydroDimensions=2,etaFactor=1.2348,smlMin=1e-06,smlMax=0.166667,smlTolerance=0.0001,smlMaxIterations=30,alphaAV=0.8,betaAV=3,balsara=0.799889,rot_v=0.000278591,div_v=-2.07604,v_sig_AV=0.140208,soundSpeed=0.00105628,dependencyChecksPeanoEventUsedBySwift=touchVertexFirstTime,dependencyChecksAlgorithmStepLastUpdated=FlagBoundaryParticles,dependencyChecksAlgorithmStepUpdates=1,...,dependencyChecksAlgorithmStepMaskOuts=0,...,dependencyChecksInitStepLastUpdated=FlagBoundaryParticles,dependencyChecksInitStepUpdates=1,...,dependencyChecksInitStepMaskOuts=0,...) at vertex (cell-centre=[0.0555556,0.388889],cell-h=[0.111111,0.111111],local=1111,hanging=0000,select=1,has-been-refined=0000,will-be-refined=0000,is-parent-vertex-local=1111,is-parent-cell-local=1,rel-pos-within-father=[0,0],is-adjacent-cell-local=110110000,x(selected)=[0.111111,0.333333]) is new and will be remote on tree  1 (marker=(cell-centre=[0.0555556,0.388889],cell-h=[0.111111,0.111111],local=1111,hanging=0000,select=1,has-been-refined=0000,will-be-refined=0000,is-parent-vertex-local=1111,is-parent-cell-local=1,rel-pos-within-father=[0,0],is-adjacent-cell-local=110110000,x(selected)=[0.111111,0.333333]))
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * so the particle has been local on tree 0 and remote on tree 1, before it
+   * started to move. Then it moves and is lifted. We obtain only one drop
+   * after that. That drop yields a remote particle on tree 1, i.e. it seems
+   * that it is really only dropped on tree 1. And on this tree 1, it is then
+   * erased, as it is not local. What we'd like to see is that it is
+   *
+   * - dropped on both tree 0 and tree 1, with one of them yielding a local
+   *   particle; or
+   * - dropped on either of the trees where it yields a local particle.
+   *
+   * @image html MultiscaleTransitionsTest_testLiftDropOfParticleAssociatedWithVertex03.png
+   *
+   *
+   */
+  void testLiftDropOfParticleAssociatedWithVertex03();
+
+
 
 public:
   MultiscaleTransitionsTest();

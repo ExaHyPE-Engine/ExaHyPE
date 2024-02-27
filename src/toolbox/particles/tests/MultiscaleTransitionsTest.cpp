@@ -3,6 +3,7 @@
 #include "TestParticle.h"
 #include "toolbox/particles/MultiscaleTransitions.h"
 
+
 tarch::logging::Log toolbox::particles::tests::MultiscaleTransitionsTest::_log(
   "toolbox::particles::tests::MultiscaleTransitionsTest"
 );
@@ -162,6 +163,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::run() {
   testMethod(testSievePredicate);
   testMethod(testLiftDropOfParticleAssociatedWithVertex01);
   testMethod(testLiftDropOfParticleAssociatedWithVertex02);
+  testMethod(testLiftDropOfParticleAssociatedWithVertex03);
 }
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex02() {
@@ -218,6 +220,64 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
     (x-marker.x()),
     searchRadius
   );
+  #endif
+}
+
+
+void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex03() {
+  #if Dimensions==2
+  peano4::datamanagement::VertexMarker marker;
+
+  const double  meshSize = 1.0/3.0/3.0;
+
+
+// vertex_x(selected)=[0.111111,0.333333]
+
+  marker._cellCentre = {0.5 * meshSize, 3.5 * meshSize};
+  marker._h          = {meshSize, meshSize};
+  marker._isLocal    = 0b1111;
+  marker._isHanging  = 0b0000;
+  marker._hasBeenRefined = 0b0000;
+  marker._willBeRefined  = 0b0000;
+  marker._isParentVertexLocal = 0b1111;
+  marker._isParentCellLocal   = true;
+  marker._relativePositionOfCellWithinFatherCell = {0,0};
+  marker._isAdjacentCellLocal  = 0b110110000;
+
+  const double searchRadius = 0.0555556;
+  tarch::la::Vector<Dimensions,double> x = {0.0555708, 0.322228};
+  toolbox::particles::ParticleReassociationInstruction liftInstruction;
+
+  // Vertex 0 should trigger a lift globally => we see this in the trace
+  marker._select  = 0;
+  liftInstruction = liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
+  validateEqualsWithParams1(liftInstruction, toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
+
+  // Vertex 1 would have kept particle => consistency check (not observed, but will arise later)
+  marker._select  = 1;
+  liftInstruction = liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
+  validateEqualsWithParams1(liftInstruction, toolbox::particles::ParticleReassociationInstruction_Keep, marker.toString());
+
+  // Vertex 0 should not drop
+  marker._select  = 0;
+  validateEqualsWithParams1(not dropParticle(searchRadius,x,marker), toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
+
+  // Vertex 1 should not drop
+  marker._select  = 0;
+  validateEqualsWithParams1(dropParticle(searchRadius,x,marker), toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
+
+  // And now we study the same thing from the boundary cell below on the other
+  // rank
+  marker._cellCentre(1) -= meshSize;
+  marker._isAdjacentCellLocal.flip();
+
+  // Vertex 2 should not drop
+  marker._select  = 2;
+  validateEqualsWithParams1(not dropParticle(searchRadius,x,marker), toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
+
+  // Vertex 3 should not drop
+  marker._select  = 3;
+  validateEqualsWithParams1(dropParticle(searchRadius,x,marker), toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
   #endif
 }
 
