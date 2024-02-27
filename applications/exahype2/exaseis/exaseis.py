@@ -222,7 +222,7 @@ def parse_arguments():
         "-lb",
         "--load-balancing-strategy",
         choices=available_load_balancing_strategies,
-        default="SpreadOutOnceGridStagnates",
+        default="SpreadOutHierarchically",
         help="|".join(available_load_balancing_strategies),
     )
     parser.add_argument(

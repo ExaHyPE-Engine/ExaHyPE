@@ -2,7 +2,7 @@
 
 #include "RefinementControl.h"
 #include "peano4/grid/grid.h"
-#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/RecursiveLock.h"
 #include "tarch/services/ServiceRepository.h"
 
 tarch::logging::Log exahype2::RefinementControlService::_log("exahype2::RefinementControlService");
@@ -10,7 +10,7 @@ tarch::logging::Log exahype2::RefinementControlService::_log("exahype2::Refineme
 int exahype2::RefinementControlService::_reductionTag(tarch::mpi::Rank::reserveFreeTag("exahype2::"
                                                                                        "RefinementControlService"));
 
-tarch::multicore::BooleanSemaphore exahype2::RefinementControlService::_semaphore;
+tarch::multicore::RecursiveSemaphore exahype2::RefinementControlService::_semaphore;
 
 exahype2::RefinementControlService& exahype2::RefinementControlService::getInstance() {
   static exahype2::RefinementControlService result;
@@ -35,7 +35,7 @@ void exahype2::RefinementControlService::receiveDanglingMessages() {
   );
 
   if (guardFlag) {
-    tarch::multicore::Lock lock(_semaphore);
+    tarch::multicore::RecursiveLock lock(_semaphore);
 
     MPI_Status status;
     int        flag;
@@ -85,12 +85,12 @@ std::string exahype2::RefinementControlService::toString() const {
 }
 
 void exahype2::RefinementControlService::merge(const RefinementControl& control) {
-  tarch::multicore::Lock lock(_semaphore);
+  tarch::multicore::RecursiveLock lock(_semaphore);
   _localNewEvents.insert(_localNewEvents.end(), control._newEvents.begin(), control._newEvents.end());
 }
 
 void exahype2::RefinementControlService::finishStep() {
-  tarch::multicore::Lock lock(_semaphore);
+  tarch::multicore::RecursiveLock lock(_semaphore);
 
   _committedEvents.clear();
 
