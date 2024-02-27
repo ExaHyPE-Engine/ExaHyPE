@@ -294,16 +294,15 @@ void toolbox::particles::ParticleSet<T>::finishedTraversal() {
 
 template <typename T>
 typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::ParticleSet<T>::getParticlesToBeSievedIntoVertex(
-  const peano4::datamanagement::VertexMarker& marker, int originatingTree, int callingTree
+  const peano4::datamanagement::VertexMarker& marker
 ) {
-  return _sieveParticles.getParticlesToBeSievedIntoVertex(marker, originatingTree, callingTree);
+  return _sieveParticles.getParticlesToBeSievedIntoVertex(marker);
 }
 
 
 template <typename T>
-bool toolbox::particles::ParticleSet<T>::hasParticlesToBeSievedIntoVertices(int tree) {
-  logDebug("hasParticlesToBeSievedIntoVertices(int)", "got invoked for tree " << tree);
-  return _sieveParticles.hasParticlesToBeSievedIntoVertices(tree);
+bool toolbox::particles::ParticleSet<T>::hasParticlesToBeSievedIntoVertices() {
+  return _sieveParticles.hasParticlesToBeSievedIntoVertices();
 }
 
 

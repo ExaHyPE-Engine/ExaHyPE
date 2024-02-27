@@ -153,7 +153,7 @@ for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   // existing (virtual) particle copy.
   if (not particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local ) {
     p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
-    logInfo( "touchVertexLastTime(...)", "particle has left domain=" << p->toString() << " (attached to vertex " << marker.toString() << ", will be deleted after this sweep but should be inflying on other tree)" );
+    logDebug( "touchVertexLastTime(...)", "particle has left domain=" << p->toString() << " (attached to vertex " << marker.toString() << ", will be deleted after this sweep but should be inflying on other tree)" );
     _numberOfParticlesThatHaveLeftTheirDomain++;
     toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), true, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
     toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );

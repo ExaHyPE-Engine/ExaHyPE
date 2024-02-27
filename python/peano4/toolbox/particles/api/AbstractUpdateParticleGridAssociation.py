@@ -298,11 +298,9 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     
     _Template_Sieve = jinja2.Template(
         """
-  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices( vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort ) ) {
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
-      marker,
-      vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort,
-      _spacetreeId
+      marker
     );
 
     for (auto& newParticle: sievedParticles) {

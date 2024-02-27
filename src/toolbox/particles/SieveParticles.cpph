@@ -35,13 +35,11 @@ void toolbox::particles::SieveParticles<T>::deleteParticles(ParticleList& list) 
 template <typename T>
 void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
   logDebug("finishedTraversal()", "there are " << _particlesThatHaveToBeSieved.size() << " sieve sets (each tied to one tree or the global sorting, respectively)");
-  for (auto& p : _particlesThatHaveToBeSieved) {
-    logDebug("finishedTraversal()", "#particles left over from previous sweep=" << p.second.size() << " (originating tree=" << p.first << ")");
-    deleteParticles(p.second);
-  }
+
+  deleteParticles(_particlesThatHaveToBeSieved);
 
 #ifdef Parallel
-  const int numberOfParticlesToSend = _particlesThatCanNotBeLiftedWithinTheirTree[GlobalSort].size();
+  const int numberOfParticlesToSend = _particlesThatCanNotBeLiftedWithinTheirTree.size();
   logDebug("finishedTraversal()", "inform all other ranks that I host " << numberOfParticlesToSend << " particles that cannot be sorted locally. Use tag " << _SieveReductionTag);
   for (int rank = 0; rank < tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
     if (rank != tarch::mpi::Rank::getInstance().getRank()) {
@@ -54,7 +52,7 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
   std::vector<T> sendBuffer; // no pointers here
   sendBuffer.resize(numberOfParticlesToSend);
   int i = 0;
-  for (auto& p : _particlesThatCanNotBeLiftedWithinTheirTree[GlobalSort]) {
+  for (auto& p : _particlesThatCanNotBeLiftedWithinTheirTree) {
     sendBuffer[i] = *p;
     i++;
   }
@@ -117,7 +115,7 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
 
       logDebug("finishedTraversal()", "append " << receiveBuffer.size() << " messages to local sieve particle list");
       for (int i = 0; i < numberOfReceivedMessages.getValue(); i++) {
-        _particlesThatHaveToBeSieved[GlobalSort].push_back(new T(receiveBuffer[i]));
+        _particlesThatHaveToBeSieved.push_back(new T(receiveBuffer[i]));
       }
 
       if (sendRequest != nullptr)
@@ -128,65 +126,43 @@ void toolbox::particles::SieveParticles<T>::exchangeSieveListsGlobally() {
   }
 #endif
 
-  for (auto& p : _particlesThatCanNotBeLiftedWithinTheirTree) {
-    _particlesThatHaveToBeSieved[p.first].insert(
-      _particlesThatHaveToBeSieved[p.first].end(), _particlesThatCanNotBeLiftedWithinTheirTree[p.first].begin(), _particlesThatCanNotBeLiftedWithinTheirTree[p.first].end()
-    );
-    logDebug("finishedTraversal()", "rolled over local list and now have " << _particlesThatHaveToBeSieved[p.first].size() << " sieve particles to sieve for tree " << p.first);
+  _particlesThatHaveToBeSieved.insert(
+    _particlesThatHaveToBeSieved.end(), _particlesThatCanNotBeLiftedWithinTheirTree.begin(), _particlesThatCanNotBeLiftedWithinTheirTree.end()
+  );
 
-    // I originally had a function here to eliminate spatial redundancies, but
-    // this knowledge is now encapsulated in the owning class, so I can't do
-    // anything here anymore.
-    /*
-      Some other delete Particles call( _particlesThatHaveToBeSieved );
-      logDebug(
-          "finishedTraversal()",
-          "after eliminating all redundant particles, " << _particlesThatHaveToBeSieved.size() << " particles are left
-      to sieve " <<
-          "(local particles that are rolled over=" << _particlesThatCanNotBeLiftedWithinTheirTree.size() << ")"
-      );
-    */
-
-
-    // shallow clear, as the pointers have already been rolled over into _particlesThatHaveToBeSieved
-    _particlesThatCanNotBeLiftedWithinTheirTree[p.first].clear();
-  }
+  // shallow clear, as the pointers have already been rolled over into _particlesThatHaveToBeSieved
+  _particlesThatCanNotBeLiftedWithinTheirTree.clear();
 }
 
 
 template <typename T>
-void toolbox::particles::SieveParticles<T>::addParticleThatCanNotBeLiftedWithinItsTree(T* p, int tree) {
-  tarch::multicore::Lock lock(_particlesThatCanNotBeLiftedWithinTheirTreeSemaphore, tree == GlobalSort);
-  logDebug("addParticleThatCanNotBeLiftedWithinItsTree(...)", "particle " << p->toString() << " cannot be lifted within tree " << tree);
-  _particlesThatCanNotBeLiftedWithinTheirTree[tree].push_back(p);
+void toolbox::particles::SieveParticles<T>::addParticleThatCanNotBeLiftedWithinItsTree(T* p) {
+  _particlesThatCanNotBeLiftedWithinTheirTree.push_back(p);
 }
 
 
 template <typename T>
-bool toolbox::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices(int tree) const {
-  return _particlesThatHaveToBeSieved.count(tree) > 0 and not _particlesThatHaveToBeSieved.at(tree).empty();
+bool toolbox::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices() const {
+  return not _particlesThatHaveToBeSieved.empty();
 }
 
 
 template <typename T>
 typename toolbox::particles::SieveParticles<T>::ParticleList toolbox::particles::SieveParticles<T>::getParticlesToBeSievedIntoVertex(
-  const peano4::datamanagement::VertexMarker& marker, int originatingTree, int callingTree
+  const peano4::datamanagement::VertexMarker& marker
 ) {
-  tarch::multicore::Lock lock(_particlesToBeSievedSemaphore, originatingTree == GlobalSort);
-
-  assertion3(callingTree >= 0, marker.toString(), originatingTree, callingTree);
-  assertion3(callingTree == originatingTree or originatingTree == GlobalSort, marker.toString(), originatingTree, callingTree);
+  tarch::multicore::Lock lock(_particlesToBeSievedSemaphore);
 
   ParticleList                    result;
-  typename ParticleList::iterator p = _particlesThatHaveToBeSieved[originatingTree].begin();
-  while (p != _particlesThatHaveToBeSieved[originatingTree].end()) {
+  typename ParticleList::iterator p = _particlesThatHaveToBeSieved.begin();
+  while (p != _particlesThatHaveToBeSieved.end()) {
     if (::toolbox::particles::sieveParticle(**p, marker)) {
       logDebug("getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString());
 
       (*p)->setCellH(marker.h());
 
       result.push_back(*p);
-      p = _particlesThatHaveToBeSieved[originatingTree].erase(p);
+      p = _particlesThatHaveToBeSieved.erase(p);
     } else {
       p++;
     }

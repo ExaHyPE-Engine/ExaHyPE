@@ -142,16 +142,8 @@
        *
        * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
-       *
-       * @param targetTree You have to tell the code where the particle will
-       *   end up. In most cases, the whole reason behind calling this routine
-       *   is that you don't know. In this case, use the default argument
-       *   GlobalSort. However, there is for example
-       *   peano4.toolbox.particles.UpdateParticleGridAssociation_BucketSort
-       *   which has expert knowledge of where the particle will end up and
-       *   hence can use this to optimise the sorting.
        */
-      Container::iterator particleCanNotBeLiftedLocally( const Container::iterator&   particle, int targetTree = toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
+      Container::iterator particleCanNotBeLiftedLocally( const Container::iterator&   particle );
 
       /**
        * This is a deep delete

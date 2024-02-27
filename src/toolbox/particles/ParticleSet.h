@@ -151,7 +151,7 @@ public:
    * @see SieveParticles::getParticlesToBeSievedIntoVertex() for parameter
    *   descriptions.
    */
-  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree, int callingTree);
+  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
 
   /**
    * Make routine from SieveParticles public
@@ -159,11 +159,8 @@ public:
    * Delegate through. This way, we don't have to expose the actual
    * sieve object. This predicate is usually always used as guard before
    * actually invoking getParticlesToBeSievedIntoVertex().
-   *
-   * @param originatingTree Either a number associated with a local tree or
-   *                        SieveParticles<T>::GlobalSort.
    */
-  static bool hasParticlesToBeSievedIntoVertices(int originatingTree);
+  static bool hasParticlesToBeSievedIntoVertices();
 
   /**
    * Return global sum of the particles that did remain within their partition at a time.

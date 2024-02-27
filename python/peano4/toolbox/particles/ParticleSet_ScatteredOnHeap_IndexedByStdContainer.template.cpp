@@ -249,19 +249,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
-  const Container::iterator&   particle,
-  int                          targetTree
+  const Container::iterator&   particle
 ) {
   assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
 
-  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle, targetTree );
+  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle );
   return _container.erase(particle);
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
   for (auto p: _container) {
-    _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
+    _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p);
   }
   _container.clear();
 }

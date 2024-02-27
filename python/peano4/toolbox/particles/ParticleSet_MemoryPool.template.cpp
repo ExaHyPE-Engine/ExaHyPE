@@ -253,15 +253,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Container::iterator {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particleCanNotBeLiftedLocally(
-  const Container::iterator&   originalParticleContainer,
-  int                          targetTree
+  const Container::iterator&   originalParticleContainer
 ) {
   logDebug( "particleCanNotBeLiftedLocally()", "call scatter and update iterator" );
   Container::iterator particle = _memoryPool.scatterAndUpdateIterator( originalParticleContainer );
 
   assertion1( (*particle)->getParallelState()==globaldata::{{PARTICLE_TYPE}}::ParallelState::Local, (*particle)->toString() );
 
-  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle, targetTree );
+  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(*particle );
   return _memoryPool.container.erase(particle);
 }
 
@@ -269,7 +268,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
   _memoryPool.scatter();
   for (auto p: _memoryPool.container) {
-    _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p, toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
+    _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(p);
   }
   _memoryPool.container.clear();
 }
