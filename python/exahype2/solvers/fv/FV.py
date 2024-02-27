@@ -566,7 +566,7 @@ The finest mesh width of """
           to interpolate in time.
 
         _patch_overlap_update: Patch (2xNxN)
-          This is hte new update. After the time step, I roll this
+          This is the new update. After the time step, I roll this
           information over into _patch_overlap_new, while I backup the
           previous _patch_overlap_new into _patch_overlap_old. If I
           worked with regular meshes only, I would not need this update
@@ -982,7 +982,7 @@ The finest mesh width of """
 
 
     def get_name_of_global_instance(self):
-        return "InstanceOf" + self._name
+        return "instanceOf" + self._name
 
 
     def add_to_Peano4_datamodel(self, datamodel, verbose):
@@ -1232,8 +1232,7 @@ The finest mesh width of """
     def add_entries_to_text_replacement_dictionary(self, d):
         pass
 
-
-    def add_implementation_files_to_project(self, namespace, output, dimensions):
+    def add_implementation_files_to_project(self, namespace, output, dimensions, subdirectory=""):
         """
         The ExaHyPE project will call this operation when it sets
         up the overall environment.
@@ -1253,16 +1252,26 @@ The finest mesh width of """
         implementationDictionary = {}
         self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
         self._init_dictionary_with_default_parameters(implementationDictionary)
+
+        header_file_abstr_template = templatefile_prefix + "Abstract.template.h"
+        cpp_file_abstr_template = templatefile_prefix + "Abstract.template.cpp"
+        abstractHeaderDictionary[ "HEADER_FILE_ABSTR_TEMPLATE" ] = os.path.basename(header_file_abstr_template)
+        abstractHeaderDictionary[ "CPP_FILE_ABSTR_TEMPLATE" ] = os.path.basename(cpp_file_abstr_template)
         self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
+
+        header_file_template = templatefile_prefix + ".template.h"
+        cpp_file_template = templatefile_prefix + ".template.cpp"
+        implementationDictionary[ "HEADER_FILE_TEMPLATE" ] = os.path.basename(header_file_template)
+        implementationDictionary[ "CPP_FILE_TEMPLATE" ] = os.path.basename(cpp_file_template)
         self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
         generated_abstract_header_file = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                templatefile_prefix + "Abstract.template.h",
-                templatefile_prefix + "Abstract.template.cpp",
+                header_file_abstr_template,
+                cpp_file_abstr_template,
                 "Abstract" + self._name,
                 namespace,
-                ".",
+                "./" + subdirectory,
                 abstractHeaderDictionary,
                 True,
                 True,
@@ -1270,11 +1279,11 @@ The finest mesh width of """
         )
         generated_solver_files = (
             peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-                templatefile_prefix + ".template.h",
-                templatefile_prefix + ".template.cpp",
+                header_file_template,
+                cpp_file_template,
                 self._name,
                 namespace,
-                ".",
+                "./" + subdirectory,
                 implementationDictionary,
                 False,
                 True,
@@ -1283,10 +1292,10 @@ The finest mesh width of """
 
         output.add(generated_abstract_header_file)
         output.add(generated_solver_files)
-        output.makefile.add_h_file("Abstract" + self._name + ".h", generated=True)
-        output.makefile.add_h_file(self._name + ".h", generated=True)
-        output.makefile.add_cpp_file("Abstract" + self._name + ".cpp", generated=True)
-        output.makefile.add_cpp_file(self._name + ".cpp", generated=True)
+        output.makefile.add_h_file(subdirectory + "Abstract" + self._name + ".h", generated=True)
+        output.makefile.add_h_file(subdirectory + self._name + ".h", generated=True)
+        output.makefile.add_cpp_file(subdirectory + "Abstract" + self._name + ".cpp", generated=True)
+        output.makefile.add_cpp_file(subdirectory + self._name + ".cpp", generated=True)
 
         if self._use_var_shortcut:
             generated_shortcut_file = peano4.output.Jinja2TemplatedHeaderFile(
@@ -1295,13 +1304,13 @@ The finest mesh width of """
                 + "../VariableShortcuts.template.h",
                 "VariableShortcuts",
                 namespace,
-                ".",
+                "./" + subdirectory,
                 implementationDictionary,
                 True,
                 True,
             )
             output.add(generated_shortcut_file)
-            output.makefile.add_h_file("VariableShortcuts.h", generated=True)
+            output.makefile.add_h_file(subdirectory + "VariableShortcuts.h", generated=True)
 
 
     def set_solver_constants(self, datastring):

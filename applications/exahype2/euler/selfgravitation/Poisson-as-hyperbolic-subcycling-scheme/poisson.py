@@ -17,10 +17,11 @@ modes = {
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("-cs", "--cell-size",              dest="h",              type=float, required=True, help="Mesh size")
 parser.add_argument("-j",  "--parallel-builds",        dest="j",              type=int, default=-1, help="Parallel builds. Set to 0 to disable compile or to -1 to use all cores")
-parser.add_argument("-d",  "--dim",                    dest="dim",            type=int, default=2, help="Dimensions")
+parser.add_argument("-d",  "--dimensions",                    dest="dimensions",            type=int, default=2, help="Dimensions")
 parser.add_argument("-m",  "--mode",                   dest="mode",                     default="release", help="|".join(modes.keys()))
 parser.add_argument("-et", "--end-time",               dest="end_time",                 type=float, default=1.0, help="Number of timesteps")
-parser.add_argument("-pd", "--peano-dir",              dest="peanodir",                 default="../../../../", help="Peano4 directory")
+parser.add_argument("-pd", "--peano-dir",              dest="peanodir",                 default="../../../../../", help="Peano4 directory")
+parser.add_argument("-cd", "--configure-dir",          dest="configuredir",             default="../../../../../", help="Location of configure" )
 parser.add_argument("-amr", "--adaptive-levels",       dest="adaptivity_levels",        type=int, default=0, help="Number of AMR grid levels on top of hmax (0 by default)")
 parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive"], required=True)
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
@@ -28,8 +29,8 @@ parser.add_argument("-v",   "--verbose",               dest="verbose",          
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions")
 args = parser.parse_args()
 
-if args.dim not in [2,3]:
-    print("Error, dimension must be 2 or 3, you supplied {}".format(args.dim))
+if args.dimensions not in [2,3]:
+    print("Error, dimension must be 2 or 3, you supplied {}".format(args.dimensions))
     import sys
     sys.exit(1)
 
@@ -38,7 +39,7 @@ if args.mode not in modes:
     import sys
     sys.exit(1)
 
-print("\nConfiguring {}D Euler problem. Buildmode is {}, nbuilds={}.\n".format(args.dim, args.mode, args.j))
+print("\nConfiguring {}D Euler problem. Buildmode is {}, nbuilds={}.\n".format(args.dimensions, args.mode, args.j))
 
 #
 # Create a project and configure it to end up in a subnamespace (and thus
@@ -164,7 +165,7 @@ poisson_solver.postprocess_updated_patch = """
    0,       // no overlap/halo here
    marker.h()
  );
- repositories::InstanceOf{}.reportGradientDelta( delta );
+ repositories::instanceOf{}.reportGradientDelta( delta );
 """.format(args.patch_size, poisson_solver.name)
 
 #
@@ -180,7 +181,7 @@ else {
 }
 """
 
-if args.dim == 2:
+if args.dimensions == 2:
   size                    = [1.0, 1.0]
   offset                  = [0.0, 0.0]
 else:
@@ -191,7 +192,7 @@ else:
 # Lets configure some global parameters
 #
 project.set_global_simulation_parameters(
-  dimensions = args.dim,
+  dimensions = args.dimensions,
   offset = offset,
   size = size,
   min_end_time = args.end_time,
@@ -208,10 +209,11 @@ project.set_global_simulation_parameters(
 project.set_load_balancing("toolbox::loadbalancing::strategies::RecursiveBipartition", "new ::exahype2::LoadBalancingConfiguration()")
 project.set_Peano4_installation(args.peanodir, modes[args.mode])
 peano4_project = project.generate_Peano4_project(args.verbose)
+peano4_project.output.makefile.add_h_file("Euler.h")
 peano4_project.output.makefile.add_cpp_file("Euler.cpp")
 peano4_project.output.makefile.add_h_file("Poisson.h")
 peano4_project.output.makefile.add_cpp_file("Poisson.cpp")
-#peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
+peano4_project.output.makefile.parse_configure_script_outcome(args.configuredir)
 if args.j==0:
   peano4_project.generate()
 else:
