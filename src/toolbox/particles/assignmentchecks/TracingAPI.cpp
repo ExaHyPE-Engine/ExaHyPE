@@ -5,6 +5,16 @@
 #include "tarch/multicore/MultiReadSingleWriteLock.h"
 
 
+#if !defined(AssignmentChecks) and !defined(noAssignmentChecks) and PeanoDebug>0
+#define AssignmentChecks
+#endif
+
+
+//@todo raus
+#define AssignmentChecks
+
+
+
 namespace {
   tarch::logging::Log _log("toolbox::particles::assignmentchecks");
 
@@ -504,6 +514,14 @@ void toolbox::particles::assignmentchecks::internal::Database::addEvent(Particle
     }
     snapshot[identifier].push_back(event);
   }
+  if ( event.type == Event::Type::Erase  and _data.size() > _maxParticleSnapshotsToKeepTrackOf ) {
+    auto previousErase = getEntry(identifier, event.treeId, _maxParticleSnapshotsToKeepTrackOf);
+    if (previousErase.first.type==Event::Type::Erase) {
+      logInfo( "addEvent(...)", "remove very old erase event sequences" );
+      removeTrajectory( previousErase.second, previousErase.first.treeId );
+      removeEmptyDatabaseSnapshots();
+    }
+  }
   if ( event.type == Event::Type::MoveWhileAssociatedToVertex and _data.size() > _maxParticleSnapshotsToKeepTrackOf ) {
     lock.free();
 
@@ -540,7 +558,7 @@ void toolbox::particles::assignmentchecks::internal::Database::addEvent(Particle
 }
 
 
-#if PeanoDebug > 0 and !defined(noAssignmentChecks)
+#if defined(AssignmentChecks)
 
 void toolbox::particles::assignmentchecks::startMeshSweep(
   const std::string&  meshSweepName
@@ -600,11 +618,14 @@ void toolbox::particles::assignmentchecks::assignParticleToVertex(
   else {
     internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
     internal::Event              event(internal::Event::Type::AssignToVertex, isLocal, vertexX, vertexH, treeId, trace);
+
+    #if PeanoDebug>0
     internal::Event              previousEvent = _database.getEntry(identifier, treeId).first;
 
     const bool isDropping = previousEvent.type == internal::Event::Type::DetachFromVertex and tarch::la::allGreater( previousEvent.vertexH, vertexH );
     const bool isLifting  = previousEvent.type == internal::Event::Type::DetachFromVertex and tarch::la::allSmaller( previousEvent.vertexH, vertexH );
     const bool isDroppingFromSieveSet  = previousEvent.type == internal::Event::Type::AssignToSieveSet;
+    #endif
 
     if (isLocal) {
       assertion7(
@@ -691,8 +712,12 @@ void toolbox::particles::assignmentchecks::moveParticle(
       newIdentifier != oldIdentifier
     ) {
       internal::Event              newEvent(internal::Event::Type::MoveWhileAssociatedToVertex, oldIdentifier.particleX, treeId, trace );
+
+      #if PeanoDebug>0
       internal::Event              previousEvent    = _database.getEntry(oldIdentifier, treeId ).first;
       internal::Event              existingNewEvent = _database.getEntry(newIdentifier, internal::Database::AnyTree ).first;
+      #endif
+
       assertion10(
         existingNewEvent.type == internal::Event::Type::NotFound,
         oldIdentifier.toString(),
@@ -741,7 +766,9 @@ void toolbox::particles::assignmentchecks::detachParticleFromVertex(
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event{internal::Event::Type::DetachFromVertex, isLocal, vertexX, vertexH, treeId, trace};
 
+  #if PeanoDebug>0
   internal::Event previousEvent = _database.getEntry(identifier, treeId).first;
+  #endif
 
   assertion7(
     previousEvent.type == internal::Event::Type::AssignToVertex,
@@ -789,7 +816,10 @@ void toolbox::particles::assignmentchecks::assignParticleToSieveSet(
 
   internal::ParticleIdentifier identifier = _database.createParticleIdentifier(particleName, particleX);
   internal::Event              event{internal::Event::Type::AssignToSieveSet, isLocal, treeId, trace};
+
+  #if PeanoDebug>0
   internal::Event              previousEvent = _database.getEntry(identifier, treeId).first;
+  #endif
 
   assertion5(
     previousEvent.type == internal::Event::Type::DetachFromVertex,
