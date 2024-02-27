@@ -230,9 +230,6 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
 
   const double  meshSize = 1.0/3.0/3.0;
 
-
-// vertex_x(selected)=[0.111111,0.333333]
-
   marker._cellCentre = {0.5 * meshSize, 3.5 * meshSize};
   marker._h          = {meshSize, meshSize};
   marker._isLocal    = 0b1111;
@@ -244,7 +241,8 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._relativePositionOfCellWithinFatherCell = {0,0};
   marker._isAdjacentCellLocal  = 0b110110000;
 
-  const double searchRadius = 0.0555556;
+  // @todo Wrong Eine Null zu viel
+  const double searchRadius = 0.00555556;
   tarch::la::Vector<Dimensions,double> x = {0.0555708, 0.322228};
   toolbox::particles::ParticleReassociationInstruction liftInstruction;
 
@@ -256,15 +254,36 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   // Vertex 1 would have kept particle => consistency check (not observed, but will arise later)
   marker._select  = 1;
   liftInstruction = liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
-  validateEqualsWithParams1(liftInstruction, toolbox::particles::ParticleReassociationInstruction_Keep, marker.toString());
+  validateEqualsWithParams5(
+    liftInstruction, toolbox::particles::ParticleReassociationInstruction_Keep,
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
 
   // Vertex 0 should not drop
   marker._select  = 0;
-  validateEqualsWithParams1(not dropParticle(searchRadius,x,marker), toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
+  validateWithParams5(
+    not dropParticle(searchRadius,x,marker),
+    liftParticleAssociatedWithVertex(true, searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
 
   // Vertex 1 should not drop
-  marker._select  = 0;
-  validateEqualsWithParams1(dropParticle(searchRadius,x,marker), toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
+  marker._select  = 1;
+  validateWithParams5(
+    dropParticle(searchRadius,x,marker),
+    liftParticleAssociatedWithVertex(true, searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
 
   // And now we study the same thing from the boundary cell below on the other
   // rank
@@ -273,11 +292,11 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
 
   // Vertex 2 should not drop
   marker._select  = 2;
-  validateEqualsWithParams1(not dropParticle(searchRadius,x,marker), toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
+  validateWithParams1(not dropParticle(searchRadius,x,marker), marker.toString());
 
   // Vertex 3 should not drop
   marker._select  = 3;
-  validateEqualsWithParams1(dropParticle(searchRadius,x,marker), toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
+  validateWithParams1(dropParticle(searchRadius,x,marker), marker.toString());
   #endif
 }
 

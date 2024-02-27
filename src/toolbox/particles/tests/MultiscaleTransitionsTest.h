@@ -153,6 +153,13 @@ orithmStepUpdates=1,...,dependencyChecksAlgorithmStepMaskOuts=0,...,dependencyCh
    *
    * @image html MultiscaleTransitionsTest_testLiftDropOfParticleAssociatedWithVertex03.png
    *
+   * After studying the setup, it became clear that the sorting per se was
+   * correct: The problem here is that the particle should never have ended
+   * up on the fine level anyway. If it is there, it should be lifted and
+   * counted there, which it is not apparently. So the lift/drop behaves
+   * correctly, but the constellation is ill-posed in the first place. If
+   * we remove the search radius (as in the implementation of the test), the
+   * code shows the correct behaviour.
    *
    */
   void testLiftDropOfParticleAssociatedWithVertex03();
