@@ -113,49 +113,27 @@ toolbox::particles::assignmentchecks::internal::Event::Event(
 std::string toolbox::particles::assignmentchecks::internal::Event::toString() const {
   std::ostringstream msg;
 
-  auto reportErase =[&]() -> void {
-    msg << ",local=" << isLocal << ",tree=" << treeId << ",trace=" << trace;
-  };
-
-  auto reportDetach =[&]() -> void {
-    msg << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH << ",tree=" << treeId << ",trace=" << trace;
-  };
-
-  auto reportOthers = [&]() -> void {
-    msg << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH << ",tree=" << treeId << ",trace=" << trace;
-  };
-
-  auto reportMove = [&]() -> void {
-    msg << "," << previousParticleX << "->x_new,tree=" << treeId << ",trace=" << trace;
-  };
-
   msg << "(";
   switch (type) {
   case Type::AssignToSieveSet:
-    msg << "assign-to-sieve-set";
-    reportOthers();
+    msg << "assign-to-sieve-set" << ",local=" << isLocal << ",tree=" << treeId << ",trace=" << trace;
     break;
   case Type::AssignToVertex:
-    msg << "assign-to-vertex";
-    reportOthers();
+    msg << "assign-to-vertex" << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH << ",tree=" << treeId << ",trace=" << trace;
     break;
   case Type::Erase:
-    msg << "erase";
-    reportErase();
+    msg << "erase" << ",local=" << isLocal << ",tree=" << treeId << ",trace=" << trace;
     break;
   case Type::DetachFromVertex:
-    msg << "detach-from-vertex";
-    reportDetach();
+    msg << "detach-from-vertex" << ",local=" << isLocal << ",x=" << vertexX << ",h=" << vertexH << ",tree=" << treeId << ",trace=" << trace;
     break;
   case Type::NotFound:
     msg << "not-found";
     break;
   case Type::MoveWhileAssociatedToVertex:
-    msg << "moved-while-associated-to-vertex";
-    reportMove();
+    msg << "moved-while-associated-to-vertex" << "," << previousParticleX << "->x_new,tree=" << treeId << ",trace=" << trace;
     break;
   };
-
   msg << ")";
 
   return msg.str();
@@ -237,27 +215,33 @@ void toolbox::particles::assignmentchecks::internal::Database::eliminateExisting
     removeEmptyDatabaseSnapshots();
 
     hasEliminated        = false;
-    auto currentSnapshot = _data.crbegin();
-    while (currentSnapshot != _data.crend() and not hasEliminated) {
-      auto particleTrajectory = currentSnapshot->begin();
-      while (particleTrajectory != currentSnapshot->end() and not hasEliminated) {
-        ParticleIdentifier identifier = particleTrajectory->first;
-        if ( not particleTrajectory->second.empty() ) {
-          Event lastEvent = particleTrajectory->second.back();
-          if (lastEvent.type==Event::Type::AssignToVertex) {
-            removeTrajectory(
-              identifier,
-              lastEvent.treeId
-            );
-            hasEliminated = true;
-          }
-        }
+    auto lastSnapshot = _data.rbegin();
+
+    auto particleTrajectory = lastSnapshot->begin();
+    while (particleTrajectory != lastSnapshot->end() and not hasEliminated) {
+      if (
+        particleTrajectory->second.back().type == Event::Type::MoveWhileAssociatedToVertex
+        or
+        particleTrajectory->second.back().type == Event::Type::AssignToVertex
+        or
+        not particleTrajectory->second.back().isLocal
+      ) {
+        removeTrajectory(
+          particleTrajectory->first,
+          particleTrajectory->second.back().treeId
+        );
+        hasEliminated = true;
+      }
+      else {
         particleTrajectory++;
       }
-      currentSnapshot++;
+    }
+
+    if (lastSnapshot->empty()) {
+      _data.pop_back();
+      hasEliminated = true;
     }
   }
-
 }
 
 
@@ -407,7 +391,14 @@ std::string toolbox::particles::assignmentchecks::internal::Database::toString()
     msg << std::endl << "sweep #" << snapshotCounter << " (" << snapshot.getName() << "):";
     for (const auto& identifier: snapshot) {
       msg << std::endl << "- " << identifier.first.toString() << ": ";
+      bool firstEntry = false;
       for (const auto& event : identifier.second) {
+        if (firstEntry) {
+          firstEntry = true;
+        }
+        else {
+          msg << "->";
+        }
         msg << event.toString();
       }
     }
