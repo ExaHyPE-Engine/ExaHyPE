@@ -16,23 +16,24 @@ tarch::multicore::MultiReadSingleWriteSemaphore::~MultiReadSingleWriteSemaphore(
 
 
 void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalReadSection() {
-  volatile bool letWriteAccessOvertake = not _highPriorityToWrites;
-  if (letWriteAccessOvertake) {
-    if (_semaphore.tryEnterCriticalSection()) {
-      letWriteAccessOvertake = _numberOfPendingWriteRequests>0;
-      _semaphore.leaveCriticalSection();
-    }
+  volatile bool letWriteAccessOvertake = _highPriorityToWrites;
+  while (letWriteAccessOvertake) {
+    _semaphore.enterCriticalSection();
+    letWriteAccessOvertake = _numberOfPendingWriteRequests>0;
+    _semaphore.leaveCriticalSection();
   }
 
   volatile bool success = false;
   while (not success) {
-    if (_semaphore.tryEnterCriticalSection()) {
-      success = not _writeAccessAcquired;
-      if (success) {
-        _numberOfActiveReadAccesses++;
-      }
-      _semaphore.leaveCriticalSection();
+    _semaphore.enterCriticalSection();
+    success = not _writeAccessAcquired;
+    if (success) {
+      // point out to compiler that we update, as volatile ++ is deprecated
+      int updatedNumberOfActiveReadAccesses = _numberOfActiveReadAccesses;
+      updatedNumberOfActiveReadAccesses++;
+      _numberOfActiveReadAccesses = updatedNumberOfActiveReadAccesses;
     }
+    _semaphore.leaveCriticalSection();
   }
 }
 
@@ -40,30 +41,38 @@ void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalReadSection()
 void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalWriteSection() {
   if (_highPriorityToWrites) {
     _semaphore.enterCriticalSection();
-    _numberOfPendingWriteRequests++;
+    // point out to compiler that we update, as volatile ++ is deprecated
+    int updatedNuberOfPendingWriteRequests = _numberOfPendingWriteRequests;
+    updatedNuberOfPendingWriteRequests++;
+    _numberOfPendingWriteRequests = updatedNuberOfPendingWriteRequests;
     _semaphore.leaveCriticalSection();
   }
 
   volatile bool success = false;
 
   while (not success) {
-    if (_semaphore.tryEnterCriticalSection()) {
-      success = not _writeAccessAcquired and (_numberOfActiveReadAccesses==0);
-      if (success) {
-        if (_highPriorityToWrites) {
-          _numberOfPendingWriteRequests--;
-        }
-        _writeAccessAcquired = true;
+    _semaphore.enterCriticalSection();
+    success = not _writeAccessAcquired and (_numberOfActiveReadAccesses==0);
+    if (success) {
+      if (_highPriorityToWrites) {
+        // point out to compiler that we update, as volatile ++ is deprecated
+        int updatedNuberOfPendingWriteRequests = _numberOfPendingWriteRequests;
+        updatedNuberOfPendingWriteRequests--;
+        _numberOfPendingWriteRequests = updatedNuberOfPendingWriteRequests;
       }
-      _semaphore.leaveCriticalSection();
+      _writeAccessAcquired = true;
     }
+    _semaphore.leaveCriticalSection();
   }
 }
 
 
 void tarch::multicore::MultiReadSingleWriteSemaphore::leaveCriticalReadSection() {
   _semaphore.enterCriticalSection();
-  _numberOfActiveReadAccesses--;
+  // point out to compiler that we update, as volatile ++ is deprecated
+  int updatedNumberOfActiveReadAccesses = _numberOfActiveReadAccesses;
+  updatedNumberOfActiveReadAccesses--;
+  _numberOfActiveReadAccesses = updatedNumberOfActiveReadAccesses;
   assertion( _numberOfActiveReadAccesses>=0 );
   _semaphore.leaveCriticalSection();
 }
