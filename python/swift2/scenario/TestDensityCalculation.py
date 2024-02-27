@@ -17,7 +17,7 @@ class TestDensityCalculation:
     tarch::la::Vector<Dimensions,double> GridSize = marker.h();
     const double GridSize_x = GridSize(0);
 
-    particle->setSearchRadius( GridSize_x / 2.0);
+    particle->setSearchRadius( 0.9 * GridSize_x / 2.0);
 
     particle->setDensity ( 1.0 );
     particle->setMass( particle->getDensity() / std::pow(HYDRO_PART_NUMBER, HYDRO_DIMENSIONS) );
