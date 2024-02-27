@@ -200,7 +200,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   _numberOfDrops  = 0;
   _numberOfLiftsIntoSieveSet = 0;
   _numberOfDropsFromSieveSet = 0;
-  _numberOfSkippedDropsFromSieveSet = 0;
   _numberOfDropsIntoHorizontalTreeDecomposition = 0;
 """
     )
@@ -213,7 +212,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfParticleReassignmentsOnCurrentLevel,
     _numberOfLiftsIntoSieveSet,
     _numberOfDropsFromSieveSet,
-    _numberOfSkippedDropsFromSieveSet,
     _numberOfDropsIntoHorizontalTreeDecomposition
   );
 """
@@ -298,10 +296,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
 """
     )
     
-#
-# @todo Remove _numberOfSkippedDropsFromSieveSet
-#    
-
     _Template_Sieve = jinja2.Template(
         """
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices( vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort ) ) {
@@ -419,7 +413,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   int  _numberOfDrops;
   int  _numberOfLiftsIntoSieveSet;
   int  _numberOfDropsFromSieveSet;
-  int  _numberOfSkippedDropsFromSieveSet;
   int  _numberOfDropsIntoHorizontalTreeDecomposition;
 """
         ).render(**self.d)

@@ -28,9 +28,6 @@ template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfDropsFromSieveSet;
 
 template <typename T>
-int toolbox::particles::ParticleSet<T>::_numberOfSkippedDropsFromSieveSet;
-
-template <typename T>
 int toolbox::particles::ParticleSet<T>::_numberOfDropsIntoHorizontalTreeDecomposition;
 
 template <typename T>
@@ -91,7 +88,6 @@ void toolbox::particles::ParticleSet<T>::clearReassignmentStatistics() {
   _numberOfDrops                    = 0;
   _numberOfLiftsIntoSieveSet        = 0;
   _numberOfDropsFromSieveSet        = 0;
-  _numberOfSkippedDropsFromSieveSet = 0;
   _numberOfReassignments            = 0;
 }
 
@@ -186,7 +182,6 @@ std::string toolbox::particles::ParticleSet<T>::printReassignmentStatistics() {
       << ", #drops=" << _numberOfDrops
       << ", #lifts-into-sieve-set=" << _numberOfLiftsIntoSieveSet
       << ", #drops-from-sieve-set=" << _numberOfDropsFromSieveSet
-      << ", #skipped-drops-from-sieve-set=" << _numberOfSkippedDropsFromSieveSet
       << ", #drops-into-horizontal-tree-decomposition=" << _numberOfDropsIntoHorizontalTreeDecomposition
       << ", #reassignments=" << _numberOfReassignments;
   return msg.str();
@@ -199,7 +194,6 @@ void toolbox::particles::ParticleSet<T>::reduceReassignmentStatistics() {
   int localNumberOfDrops                    = _numberOfDrops;
   int localNumberOfLiftsIntoSieveSet        = _numberOfLiftsIntoSieveSet;
   int localNumberOfDropsFromSieveSet        = _numberOfDropsFromSieveSet;
-  int localNumberOfSkippedDropsFromSieveSet = _numberOfSkippedDropsFromSieveSet;
   int localNumberOfDropsIntoHorizontalTreeDecomposition =_numberOfDropsIntoHorizontalTreeDecomposition;
   int localNumberOfReassignments            = _numberOfReassignments;
 
@@ -215,10 +209,6 @@ void toolbox::particles::ParticleSet<T>::reduceReassignmentStatistics() {
     });
   tarch::mpi::Rank::getInstance()
     .reduce(&localNumberOfDropsFromSieveSet, &_numberOfDropsFromSieveSet, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
-      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    });
-  tarch::mpi::Rank::getInstance()
-    .reduce(&localNumberOfSkippedDropsFromSieveSet, &_numberOfSkippedDropsFromSieveSet, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getGlobalMasterRank(), [&]() -> void {
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     });
   tarch::mpi::Rank::getInstance()
@@ -240,7 +230,6 @@ void toolbox::particles::ParticleSet<T>::updateLiftDropStatistics(
   int numberOfReassignmentsInThisTree,
   int numberOfLiftsIntoSieveSetInThisTree,
   int numberOfDropsFromSieveSetInThisTree,
-  int numberOfSkippedDropsFromSieveSetInThisTree,
   int numberOfDropsIntoHorizontalTreeDecomposition
 ) {
   tarch::multicore::Lock lock(_statisticsSemaphore);
@@ -249,7 +238,6 @@ void toolbox::particles::ParticleSet<T>::updateLiftDropStatistics(
   _numberOfReassignments += numberOfReassignmentsInThisTree;
   _numberOfLiftsIntoSieveSet += numberOfLiftsIntoSieveSetInThisTree;
   _numberOfDropsFromSieveSet += numberOfDropsFromSieveSetInThisTree;
-  _numberOfSkippedDropsFromSieveSet += numberOfSkippedDropsFromSieveSetInThisTree;
   _numberOfDropsIntoHorizontalTreeDecomposition += numberOfDropsIntoHorizontalTreeDecomposition;
 }
 
@@ -280,7 +268,6 @@ bool toolbox::particles::ParticleSet<T>::registeredAnyResorting() {
        +_numberOfReassignments
        + _numberOfLiftsIntoSieveSet
        + _numberOfDropsFromSieveSet
-       + _numberOfSkippedDropsFromSieveSet
        + _numberOfDropsIntoHorizontalTreeDecomposition > 0;
 }
 

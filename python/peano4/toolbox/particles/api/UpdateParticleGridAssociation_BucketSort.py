@@ -156,7 +156,7 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     );
 
     for (auto& newParticle: sievedParticles) {
-      _numberOfSkippedDropsFromSieveSet++;      
+      _numberOfDropsFromSieveSet++;      
       fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId );
     }
     

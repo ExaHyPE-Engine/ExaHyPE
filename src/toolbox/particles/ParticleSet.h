@@ -106,7 +106,6 @@ public:
     int numberOfReassignmentsInThisTree,
     int numberOfLiftsIntoSieveSetInThisTree,
     int numberOfDropsFromSieveSetInThisTree,
-    int numberOfSkippedDropsFromSieveSetInThisTree,
     int numberOfDropsIntoHorizontalTreeDecomposition
   );
 
@@ -235,7 +234,6 @@ protected:
    */
   static int _numberOfLiftsIntoSieveSet;
   static int _numberOfDropsFromSieveSet;
-  static int _numberOfSkippedDropsFromSieveSet;
   static int _numberOfDropsIntoHorizontalTreeDecomposition;
 
   /**
