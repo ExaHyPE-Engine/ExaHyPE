@@ -515,12 +515,15 @@ void toolbox::particles::assignmentchecks::internal::Database::addEvent(Particle
     snapshot[identifier].push_back(event);
   }
   if ( event.type == Event::Type::Erase  and _data.size() > _maxParticleSnapshotsToKeepTrackOf ) {
-
-    Das geht hier nicht, weil da noch ein write lock drauf ist
+    // @todo Debug
+    logInfo( "addEvent(...)", "try to remove expired sequences terminated by erase events" );
+    lock.free();
 
     auto previousErase = getEntry(identifier, event.treeId, _maxParticleSnapshotsToKeepTrackOf);
+
     if (previousErase.first.type==Event::Type::Erase) {
       logInfo( "addEvent(...)", "remove very old erase event sequences" );
+      lock.lock();
       removeTrajectory( previousErase.second, previousErase.first.treeId );
       removeEmptyDatabaseSnapshots();
     }
