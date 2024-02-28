@@ -56,6 +56,36 @@ class tarch::multicore::MultiReadSingleWriteSemaphore {
 
     /**
      * Waits until I can enter the critical section.
+     *
+     * We loop until there are no write locks active anymore. The checks for
+     * write locks are protected with a semaphore. Once we got our read
+     * permission, we increment _numberOfActiveReadAccesses. The routine
+     * leaveCriticalReadSection() will again decrement it.
+     *
+     * ## Fairness
+     *
+     * If _highPriorityToWrites is not set, we just try to get our read
+     * access as quickly as possible. If this one is set however, we first
+     * check if there's a write request. If so, we "deprioritise". Originally,
+     * I wanted to use a while loop that waits until the write has gone
+     * through:
+     *
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  volatile bool letWriteAccessOvertake = _highPriorityToWrites;
+  while (letWriteAccessOvertake) {
+    _semaphore.enterCriticalSection(); // der create identifier, dier ja nur liest, haengt hier, d.g. write request pended
+    letWriteAccessOvertake = _numberOfPendingWriteRequests>0;
+    _semaphore.leaveCriticalSection();
+  }
+     * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     *
+     * This cannot work however, as read access can be requested recursively.
+     * Let A have a read lock, B asks for write lock, and A ask for another
+     * read (without releasing the first one). The snippet above produces a
+     * deadlock.
+     *
+     * Therefore, we can grant write requests higher priority, but if and only
+     * if there are no active read requests atm.
      */
     void enterCriticalReadSection();
     void enterCriticalWriteSection();

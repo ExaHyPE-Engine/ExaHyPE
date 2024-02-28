@@ -19,7 +19,8 @@ void tarch::multicore::MultiReadSingleWriteSemaphore::enterCriticalReadSection()
   volatile bool letWriteAccessOvertake = _highPriorityToWrites;
   while (letWriteAccessOvertake) {
     _semaphore.enterCriticalSection();
-    letWriteAccessOvertake = _numberOfPendingWriteRequests>0;
+    letWriteAccessOvertake = _numberOfPendingWriteRequests>0
+                         and _numberOfActiveReadAccesses==0;
     _semaphore.leaveCriticalSection();
   }
 
