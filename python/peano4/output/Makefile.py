@@ -647,6 +647,7 @@ then this message can typically be ignored.
         self.d["PROJECT_ROOT_DIR"]  = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../..', ))
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
+        #raise Exception(building_standalone_application())
         # In the CMake backend we add a command that allows to build the generated application in the applicaiton directory
         # To be able to do it, we need to change directory to project build directory and call make from there with the target name
         # So that we do not build everything (all), and of course we need to propagate every make flag give with $(MAKEFLAGS)

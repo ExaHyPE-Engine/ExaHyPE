@@ -32,7 +32,10 @@ def populate_predefined_strings():
         "PEANO_INCLUDES",
         "PEANO_DEPENDS",
         "PEANO_FLAGS",
-        "PEANO_LINK_FLAGS"
+        "PEANO_LINK_FLAGS",
+        "_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS",
+        "_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS",
+        "_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS",
     ]
 
     return predefined_strings

@@ -17,7 +17,7 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
     target_include_directories(ToolboxMultiprecision${dimension}d_${mode_lower} PRIVATE ${CMAKE_SOURCE_DIR}/src)
     target_compile_definitions(ToolboxMultiprecision${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_DEFINITIONS} Dimensions=${dimension})
     target_link_options(ToolboxMultiprecision${dimension}d_${mode_lower} PUBLIC ${PEANO_${mode_upper}_LDFLAGS})
-    target_link_libraries(ToolboxMultiprecision${dimension}d_${mode_lower} PUBLIC project_options Peano4Core${dimension}d_${mode_lower})
+    target_link_libraries(ToolboxMultiprecision${dimension}d_${mode_lower} PUBLIC project_options Peano4Core${dimension}d_${mode_lower} Tarch_${mode_lower})
     target_link_libraries(ToolboxMultiprecision${dimension}d_${mode_lower} PRIVATE project_warnings)
     target_compile_options(ToolboxMultiprecision${dimension}d_${mode_lower} PUBLIC ${PEANO_CXX_FLAGS_${mode_upper}})
 

@@ -72,10 +72,11 @@ def find_CMake_build_dir():
   # We will iterate upwards aka implement "cd .." until we reach the Peano root, or until we find CMakeCache.txt.
   current_iter_dir = call_directory
   while current_iter_dir != project_root_dir:
-    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt")) or \
-      os.path.exists(os.path.join(current_iter_dir, "Config.cmake"))
-    if os.path.exists(os.path.join(current_iter_dir, "Config.cmake")):
-      find_CMake_build_dir.standalone = True
+    found_cache_file = os.path.exists(os.path.join(current_iter_dir, "CMakeCache.txt")) 
+      #or \
+      #os.path.exists(os.path.join(current_iter_dir, "Config.cmake"))
+    #if os.path.exists(os.path.join(current_iter_dir, "Config.cmake")):
+    #  find_CMake_build_dir.standalone = True
     if found_cache_file:
       find_CMake_build_dir.saved_CMake_build_dir = current_iter_dir
       print("P3: ", find_CMake_build_dir.saved_CMake_build_dir)
@@ -84,12 +85,15 @@ def find_CMake_build_dir():
     current_iter_dir = os.path.abspath(os.path.join(current_iter_dir, ".."))
 
   # At project root we gotta try one last time, only for Config.cmake tho
-  found_cache_file = os.path.exists(os.path.join(project_root_dir, "Config.cmake"))
-  if found_cache_file:
+  found_config_file = os.path.exists(os.path.join(project_root_dir, "Config.cmake")) and \
+    not os.path.exists(os.path.join(project_root_dir, "CMakeCache.txt"))
+  if found_config_file:
     find_CMake_build_dir.saved_CMake_build_dir = current_iter_dir
     find_CMake_build_dir.standalone = True
+    return find_CMake_build_dir.saved_CMake_build_dir
 
   print("P4: ", find_CMake_build_dir.saved_CMake_build_dir)
+  find_CMake_build_dir.standalone = False
   return find_CMake_build_dir.saved_CMake_build_dir
 
 find_CMake_build_dir.CMake_build_dir_check_done = False
