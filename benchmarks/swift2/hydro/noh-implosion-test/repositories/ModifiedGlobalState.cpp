@@ -122,8 +122,14 @@ void finishTimeStep() {
   vertexdata::HydroPartSet::reduceParticleStateStatistics();
   logInfo("finishTimeStep()", vertexdata::HydroPartSet::printParticleStateStatistics() );
 
-  if ( vertexdata::HydroPartSet::getNumberOfRemainingLocalParticles() < 10201) {
-//  if ( vertexdata::HydroPartSet::getNumberOfRemainingLocalParticles() < 10194) {
+  static int previousNumberOfRemainingLocalParticles = -1;
+
+  if (previousNumberOfRemainingLocalParticles<0) {
+    previousNumberOfRemainingLocalParticles = vertexdata::HydroPartSet::getNumberOfRemainingLocalParticles();
+    logInfo( "finishTimeStep()", "will validate that simulations continues to host " << previousNumberOfRemainingLocalParticles << " particle(s)" );
+  }
+
+  if ( vertexdata::HydroPartSet::getNumberOfRemainingLocalParticles() < previousNumberOfRemainingLocalParticles) {
     toolbox::particles::assignmentchecks::eliminateExistingParticles();
     toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty();
   }

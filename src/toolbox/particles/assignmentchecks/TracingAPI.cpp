@@ -831,10 +831,12 @@ void toolbox::particles::assignmentchecks::eliminateExistingParticles() {
 
 
 void toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty() {
-  assertion1(
-    _database.getNumberOfSnapshots()==0,
-    _database.toString()
-  );
+  if (_database.getNumberOfSnapshots()!=0) {
+    logInfo( "ensureDatabaseIsEmpty()", "database still holds " << _database.getNumberOfSnapshots() << " snapshots" );
+    logError( "ensureDatabaseIsEmpty()", _database.toString() );
+    assertion(false);
+    exit(-1);
+  }
 }
 
 #else

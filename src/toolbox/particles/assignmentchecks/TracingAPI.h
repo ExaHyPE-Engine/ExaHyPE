@@ -730,7 +730,14 @@ namespace toolbox {
         return result.size() > 1 ? result.substr(0, result.size() - 1) : result;
       }
 
-
+      /**
+       * Ensure that database is empty
+       *
+       * This one is usually called after eliminateExistingParticles() and will
+       * leave the user only with particles which have "magically" disappeared.
+       *
+       * This routine uess exit(-1) if no assertions are enabled.
+       */
       void ensureDatabaseIsEmpty();
     } // namespace assignmentchecks
   }   // namespace particles
