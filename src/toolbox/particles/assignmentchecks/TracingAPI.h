@@ -421,19 +421,30 @@ namespace toolbox {
              *
              * If there is not yet an entry for identifier in the current
              * snapshot, we create one. Afterwards, we append event to this
-             * new dataset for particle identifier.
+             * new dataset for particle identifier and clean up the database,
+             * i.e. throw away irrelevant old data.
              *
-             * Now it is time to clean up the database. This happens if and
-             * only if we have a maximum database size set in
-             * _maxParticleSnapshotsToKeepTrackOf. If the new event is an
-             * assignment, then we know that now future request will ever look
-             * backwards in history beyond this assignment. So we can delete
-             * all of this historic data.
              *
-             * If we have tons of particle moves switching vertices (and hence
-             * deleting and re-associating particles), we can eliminate all of
-             * those and instead add two events: one that attaches a particle
-             * and one that moves it in one go.
+             * ## Garbage/history collection
+             *
+             * Eventually, it is time to clean up the database. This happens if
+             * and only if we have a maximum database size set in
+             * _maxParticleSnapshotsToKeepTrackOf.
+             *
+             * - If the new event is an assignment, then we know that now
+             *   future request will ever look backwards in history beyond this
+             *   assignment. So we can delete all of this historic data.
+             * - If we have tons of particle moves switching vertices (and
+             *   hence deleting and re-associating particles), we can eliminate
+             *   all of those and instead add two events: one that attaches a
+             *   particle and one that moves it in one go.
+             *
+             * I originally thought that I'd also like to remove old data
+             * entries whenever we encounter an erase event. However, this is
+             * not necessary: If we have an erase event (for an expired halo
+             * element), we'll very likely get a new assignment in a second.
+             * This assignment will then eliminate previous "expired"
+             * information as per the description above.
              */
             void addEvent(ParticleIdentifier identifier, const Event& event);
 
