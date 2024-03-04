@@ -11,7 +11,7 @@
 #include "Constants.h"
 
 #include "tarch/multicore/Lock.h"
-#include "exahype2/NonCriticalAssertions.h"
+#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
@@ -46,7 +46,8 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
   _maxTimeStepSize(0.0),
   _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0),
-  _cellUpdates(0) {
+  _cellUpdates(0),
+  _numberOfTroubledCellsThisTimeStep(0) {
 
   {{CONSTRUCTOR_IMPLEMENTATION}}
 
@@ -55,6 +56,10 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}    
   generated::kernels::AderDG::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
   generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initDGMatrices();
+
+  {% if USE_LIMITER %}
+  generated::kernels::limiter::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::initQuadratureNodesAndWeights();
+  {% endif %}
   {% endfor %}
   {% endif %}
   
@@ -101,6 +106,10 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
   {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}  
   generated::kernels::AderDG::{{LINEARITY}}::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
   generated::kernels::AderDG::{{LINEARITY}}::DGMatrices<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeDGMatrices();
+
+  {% if USE_LIMITER %}
+  generated::kernels::limiter::Quadrature<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>::freeQuadratureNodesAndWeights();
+  {% endif %}
   {% endfor %}
   {% endif %}
 }
@@ -234,11 +243,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  const tarch::la::Vector<Dimensions,int>&     index,
-  bool                                         gridIsConstructed
+    {{SOLUTION_STORAGE_PRECISION}}* __restrict__                          Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  h,
+    const tarch::la::Vector<Dimensions,int>&     index,
+    bool                                         gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }
@@ -249,8 +258,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   const {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   {{CORRECTOR_COMPUTATION_PRECISION}} * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
 ) {
@@ -345,18 +354,23 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::Prediction;
       break;
     case SolverState::Prediction:
-      if(_minCellHThisTimeStep<_maxCellHThisTimeStep){
-        _solverState = SolverState::PredictionOnHangingCells;
-        break;
-      }
-      else{
-        _solverState = SolverState::Correction;
-        break;
-      }
+      _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
+        SolverState::PredictionOnHangingCells : _solverState = SolverState::Correction;
+      break;
     case SolverState::PredictionOnHangingCells:
       _solverState = SolverState::Correction;
       break;
     case SolverState::Correction:
+      _solverState = _numberOfTroubledCellsThisTimeStep == 0 ?
+        SolverState::Prediction : SolverState::LimiterStatusSpreadingToNeighbours;
+      break;
+    case SolverState::LimiterStatusSpreadingToNeighbours:
+      _solverState = SolverState::LimiterStatusSpreadingToSecondNeighbours;
+      break;
+    case SolverState::LimiterStatusSpreadingToSecondNeighbours:
+      _solverState = SolverState::FVRecomputation;
+      break;
+    case SolverState::FVRecomputation:
       _solverState = SolverState::Prediction;
       break;
   }
@@ -384,14 +398,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
     _cellUpdates    = 0;
+
+    _numberOfTroubledCellsThisTimeStep = 0;
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
+
+  logInfo( "startTimeStep(...)", "phase " + toString(_solverState) );
+
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-	if ( _solverState==SolverState::Correction ) {
+	if ( isLastGridSweepOfTimeStep() ) {
 
   #ifdef Parallel
   double newMinTimeStamp    = _minTimeStampThisTimeStep;
@@ -519,7 +538,16 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       break;
     case SolverState::Correction:
 			return "correction";
-  }
+      break;
+    case SolverState::LimiterStatusSpreadingToNeighbours:
+			return "limiter status spreading to neighbours";
+      break;
+    case SolverState::LimiterStatusSpreadingToSecondNeighbours:
+			return "limiter status spreading to second neighbours";
+      break;
+    case SolverState::FVRecomputation:
+			return "fv recomputation";
+    }
   return "<undef>";
 }
 
@@ -537,7 +565,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return _solverState==SolverState::Correction;
+  return (_solverState==SolverState::Correction && _numberOfTroubledCellsThisTimeStep==0) || _solverState==SolverState::FVRecomputation;
 }
 
 

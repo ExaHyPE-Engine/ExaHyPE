@@ -117,8 +117,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
   [[maybe_unused]] double                                       t
 ) {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
@@ -134,9 +134,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   [[maybe_unused]] double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, int>&    index,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
   [[maybe_unused]] bool                                         gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
@@ -148,8 +147,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   [[maybe_unused]] const double* __restrict__                   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] double* __restrict__                         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] int                                          normal
 ) {
@@ -178,12 +177,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   [[maybe_unused]] double globalMinTimeStepSize,
   [[maybe_unused]] double globalMaxTimeStepSize
 ) {
-  if ( _solverState==SolverState::GridInitialisation ) {
-    _solverState     = SolverState::TimeStepAfterGridInitialisation;
-  }
-  else {
-    assertion( _solverState!=SolverState::GridConstruction );
-    _solverState     = SolverState::TimeStep;
+  if (_solverState == SolverState::GridInitialisation) {
+    _solverState = SolverState::TimeStepAfterGridInitialisation;
+  } else {
+    assertion(_solverState!=SolverState::GridConstruction);
+    _solverState = SolverState::TimeStep;
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
@@ -210,6 +208,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
   _patchUpdates    = 0;
+
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("startTimeStep()", "Phase " + toString(_solverState));
+  }
 }
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
@@ -347,11 +349,12 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
   return true;
 }
 
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return true;
 }
 
-{{ABSTRACT_SOLVER_USER_DEFINITIONS}}
+
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -362,6 +365,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
   return true;
 }
 
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {}
 
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
+
+
+{{ABSTRACT_SOLVER_USER_DEFINITIONS}}

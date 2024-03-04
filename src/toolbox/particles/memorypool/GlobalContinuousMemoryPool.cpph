@@ -234,15 +234,23 @@ int toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::GlobalMemory:
       logInfo(
         "addPage(int)",
         "global memory had no free page of size " << size << " and we cannot accommodate an additional page of size " <<
-        size << " (current used size=" << totalUsedSize() << " vs available capacity of " <<
+        size << " (currently used size=" << totalUsedSize() << " vs available capacity of " <<
         data.size() << "). Will not report on further requests unless global memory space has grown"
       );
     }
     additionalEntriesRequested += size;
+    logDebug( "addPage(int)", "additional-entries-requested=" << additionalEntriesRequested );
   }
 
   logTraceOutWith1Argument( "addPage(int)", freePage );
   return freePage;
+}
+
+
+template <class T>
+bool toolbox::particles::memorypool::GlobalContinuousMemoryPool<T>::requestCompleteScatter() {
+    // @todo Oder true?
+  return _globalMemory.additionalEntriesRequested>0;
 }
 
 

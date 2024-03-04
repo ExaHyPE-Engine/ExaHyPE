@@ -8,14 +8,12 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "tarch/multicore/Tasks.h"
+#include "tarch/NonCriticalAssertions.h"
 
 #include "exahype2/fv/rusanov/rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-#include "exahype2/NonCriticalAssertions.h"
 #include "repositories/SolverRepository.h"
-
-{{SOLVER_INCLUDES}}
 
 #include <vector>
 
@@ -34,11 +32,10 @@
 {%- endfor %}
 
 
-
 /**
  * Single task that can also take multiple tasks and deploy them to the GPU
  *
- * @author ExaHyPE's code generator written by Tobias Weinzierl
+ * @author Tobias Weinzierl
  */
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 #ifdef UseSmartMPI
@@ -46,10 +43,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 #endif
 {
   private:
-    static tarch::logging::Log  _log;
+    static tarch::logging::Log _log;
 
-    #ifdef UseSmartMPI
-    /*
+#ifdef UseSmartMPI
+    /**
      * This uniquely identifies an enclave task. Unlike _enclaveTaskTypeId it
      * differentiates between tasks within a task type, not between task types.
      *
@@ -67,13 +64,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * task will already have been moved.
      */
     int          _remoteTaskId = -1;
-    #endif
+#endif
 
     /**
      * This is a unique static id which we use both for task fusion and within
      * SmartMPI to distinguish different task types.
      */
-    static int                                _enclaveTaskTypeId;
+    static int _enclaveTaskTypeId;
 
   public:
     static int getEnclaveTaskTypeId();
@@ -89,14 +86,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * done here in the Finite Volume solver.
      */
     static void applyKernelToCell(
-      const ::peano4::datamanagement::CellMarker& marker, 
+      const ::peano4::datamanagement::CellMarker& marker,
       double                                      timeStamp,
       double                                      timeStepSize,
       double* __restrict__                        QIn,
       double* __restrict__                        QOut
     );
-    
-    
+
     /**
      * Initialise superclass with right compute functor
      *
@@ -123,14 +119,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * @see applyKernelToCell()
      */
     {{CLASSNAME}}(
-      const ::peano4::datamanagement::CellMarker& marker, 
+      const ::peano4::datamanagement::CellMarker& marker,
       double                                      timeStamp,
       double                                      timeStepSize,
       const double* __restrict__                  copyOfLinearCombinationOfPreviousShots
     );
 
-
-    #ifdef UseSmartMPI
+#ifdef UseSmartMPI
     bool isSmartMPITask() const;
     virtual void runLocally() override;
     virtual void moveTask(int rank, int tag, MPI_Comm communicator) override;
@@ -139,7 +134,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 
     static smartmpi::Task* receiveTask(int rank, int tag, MPI_Comm communicator);
     static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward);
-    #endif
+#endif
 
     {% if STATELESS_PDE_TERMS %}
     virtual bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host ) override;
@@ -147,9 +142,4 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     {% endif %}
 };
 
-
-
-
-
 {# Empty line here #}
-

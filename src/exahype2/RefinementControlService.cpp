@@ -156,7 +156,7 @@ void exahype2::RefinementControlService::freeAllPendingSendRequests() {
 void exahype2::RefinementControlService::triggerSendOfCopyOfCommittedEvents() {
   _sendRequests.clear();
 
-  logDebug(
+  logInfo(
     "triggerSendOfCopyOfCommittedEvents()", "share my " << _copyOfCommittedEvents.size() << " event(s) with others"
   );
   if (_copyOfCommittedEvents.size() > 0) {

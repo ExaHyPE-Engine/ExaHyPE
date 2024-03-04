@@ -66,6 +66,17 @@ bool mayPlot() {
 }
 
 
+std::string getSolverStateDescriptions() {
+  std::ostringstream result;
+  {% for item in SOLVERS -%}
+  if (not result.str().empty()) result << ", ";
+  result << "{{ item[1] }}:" << {{ item[1] }}.toString( {{ item[1] }}.getSolverState() );
+  {# Comment to ensure that jinja2 adds a new line#}
+  {%- endfor %}
+  return result.str();
+}
+
+
 bool isFirstGridSweepOfTimeStep() {
   bool result = true;
   {% for item in SOLVERS -%}
@@ -221,9 +232,6 @@ void startPlottingStep(
 
 
 void finishTimeStep() {
-  ::tarch::dumpStatistics();
-  ::tarch::memory::dumpStatistics();
-
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishTimeStep();
   {# Comment to ensure that jinja2 adds a new line#}
@@ -240,7 +248,7 @@ void finishTimeStep() {
   #ifdef UseSmartMPI
   smartmpi::tick();
   #endif
-  logTraceOut("TimeStep()");
+  logTraceOut( "TimeStep()" );
 }
 
 

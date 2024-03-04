@@ -30,8 +30,10 @@ def create_compute_time_step_size_for_fixed_time_stepping(_time_step_size):
 
 def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_tasking):
     """
+
     The outcome is used before we actually roll over the accumulation variables
     and other stuff.
+
     """
     predicate = """
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
@@ -47,12 +49,11 @@ def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_ta
   if ("""
         + predicate
         + """) {
-    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logInfo("startTimeStep()", "Phase     " << toString(_solverState));
-    logInfo("startTimeStep()", "t       = " << _minTimeStampThisTimeStep);
-    logInfo("startTimeStep()", "dt      = " << getTimeStepSize());
-    logInfo("startTimeStep()", "h_{min} = " << _minCellHThisTimeStep << " (volume size)");
-    logInfo("startTimeStep()", "h_{max} = " << _maxCellHThisTimeStep << " (volume size)");
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
+    logInfo( "step()", "dt      = " << getTimeStepSize() );
+    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep << " (volume size)");
+    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep<< " (volume size)" );
   }
 """
     )
@@ -155,13 +156,12 @@ def create_start_time_step_implementation_for_adaptive_time_stepping():
   if ("""
         + predicate
         + """) {
-    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo("startTimeStep()", "Phase          " << toString(_solverState));
-    logInfo("startTimeStep()", "t            = " << _minTimeStamp);
-    logInfo("startTimeStep()", "dt           = " << getAdmissibleTimeStepSize());
-    logInfo("startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep << " (volume size)");
-    logInfo("startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep << " (volume size)");
-    logInfo("startTimeStep()", "lambda_{max} = " << _maxEigenvalue);
+    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "startTimeStep()", "t            = " << _minTimeStamp );
+    logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
+    logInfo( "startTimeStep()", "h_{min}      = " << _minCellHThisTimeStep << " (volume size)");
+    logInfo( "startTimeStep()", "h_{max}      = " << _maxCellHThisTimeStep << " (volume size)" );
+    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
   }
 """
     )
@@ -196,12 +196,12 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
 
 
     if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
-      ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
+      ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
       // keep time step size invariant
       // _admissibleTimeStepSize = _admissibleTimeStepSize;
     }
     else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
-      logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
+      ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>0", "Max eigenvalue has reached zero, which means that the simulation cannot succesfully continue: " + std::to_string(_maxEigenvalue) );
       _admissibleTimeStepSize = 0.0;
     }
     else {
@@ -209,7 +209,7 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping():
       //the max eigenvalue here is already the sum of the eigenvalues in each direction scaled with the volume size in that direction
       _admissibleTimeStepSize = std::min( MinTerminalTime-_minTimeStampThisTimeStep,CFL * PNPM / _maxEigenvalue);
       if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
-        ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
+        ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
       }
       if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
         logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")" );

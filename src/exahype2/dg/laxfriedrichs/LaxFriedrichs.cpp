@@ -68,14 +68,12 @@ void exahype2::dg::laxfriedrichs::solveRiemannProblem_pointwise_in_situ(
     if(useFlux){
       flux( projectedValues + inputEnumerator( leftDoF, 0 ),
             x,
-            cellSize,
             t,
             dt,
             faceNumber%Dimensions, //normal
             fluxValuesLeft);
       flux( projectedValues + inputEnumerator (rightDoF, 0),
             x,
-            cellSize,
             t,
             dt,
             faceNumber%Dimensions, //normal
@@ -92,7 +90,6 @@ void exahype2::dg::laxfriedrichs::solveRiemannProblem_pointwise_in_situ(
           averageQ,
           deltaQ,
           x, //TODO: add positioning
-          cellSize,
           t,
           dt,
           faceNumber%Dimensions, //normal

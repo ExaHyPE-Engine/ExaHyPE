@@ -1,6 +1,3 @@
-# This file is part of the Peano project. For conditions of distribution and
-# use, please see the copyright notice at www.peano-framework.org
-
 SUBDIRS = src
 TESTS = src/unittests/UnitTests2d src/unittests/UnitTests3d \
 				src/unittests/UnitTests2d_debug src/unittests/UnitTests3d_debug \

@@ -247,6 +247,21 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
         splitting.empty()
   );
 
+  event.setIsAdjacentCellLocal(0);
+  dfor2(k) {
+    if (fineGridVertices[kScalar].getState()!=GridVertex::State::HangingVertex) {
+      dfor2(j) {
+        tarch::la::Vector<Dimensions,int>  entryIn3x3Patch = k + j;
+        int owningTree = fineGridVertices[kScalar].getAdjacentRanks(jScalar);
+        event.setIsAdjacentCellLocal(
+          peano4::utils::dLinearised(entryIn3x3Patch,3),
+          owningTree == _id
+        );
+        event.setIsVertexParentOfSubtree( fineGridVertices[kScalar].getHasBeenParentOfSubtreeVertexInPreviousTreeSweep() );
+      } enddforx
+    }
+  } enddforx
+
   logTraceOutWith2Arguments( "createGenericCellTraversalEvent(...)", event.toString(), _id );
   return event;
 }

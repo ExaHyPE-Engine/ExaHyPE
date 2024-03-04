@@ -1,5 +1,3 @@
-# This file is part of the Peano project. For conditions of distribution and
-# use, please see the copyright notice at www.peano-framework.org
 #!/usr/bin/env python3
 
 import os
@@ -31,7 +29,7 @@ def get_peano_root():
 
     returns:
     peano_root: str
-        Root of Peano repository
+        Root of Peano repo
     """
 
     cmd = "git rev-parse --show-toplevel"
@@ -218,7 +216,7 @@ def install_black_formatting_tool():
 
 def install_clang_formatting_tool():
     """
-    Installs a specific version of `clang-format`.
+    Installs a specific version of `clang-format`
     """
     venv_path = get_venv_path(peano_root)
 
@@ -476,7 +474,7 @@ def run_clang_formatter(filename, dry_run, clang_format_file):
     whether it would modify the file.
 
     Returns 1 if file was modified or if it could be modified
-    and the dry_run flag was provided, or 0 otherwise.
+    and the dry_run flag was provided, or 0 otherwise
     """
 
     clang_cmd = get_clang_command(clang_format_file)

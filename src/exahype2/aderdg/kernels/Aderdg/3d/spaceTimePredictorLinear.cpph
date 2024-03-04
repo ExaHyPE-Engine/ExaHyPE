@@ -395,7 +395,7 @@ void spaceTimePredictorLinear(SolverType& solver,
             const double y = cellCenter[1] + (1./invDx[1]) * (exahype2::solvers::aderdg::ADERDGSolver::nodes[order][k] - 0.5);
             const double z = cellCenter[2] + (1./invDx[2]) * (exahype2::solvers::aderdg::ADERDGSolver::nodes[order][j] - 0.5);
             tarch::la::Vector<Dimensions, double> coords = {x, y, z};
-            solver.algebraicSource(&lQi[idx_lQi(i, j, k, l, 0)], coords, dx, ti, dt, &lFi[idx_lFi(i, j, k, l, sourceIndex, 0)]);
+            solver.algebraicSource(coords, ti, &lQi[idx_lQi(i, j, k, l, 0)], &lFi[idx_lFi(i, j, k, l, sourceIndex, 0)]);
           }
         }
       }

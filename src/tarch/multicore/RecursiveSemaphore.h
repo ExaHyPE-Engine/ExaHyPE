@@ -1,7 +1,3 @@
-#pragma once
-
-#include "config.h"
-
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #if defined(SharedCPP)
@@ -12,7 +8,8 @@
   #include "omp/RecursiveSemaphore.h"
 #elif defined(SharedSYCL)
   #include "sycl/RecursiveSemaphore.h"
-#else
+#elif !defined(_TARCH_MULTICORE_RECURSIVE_SEMAPHORE_H_)
+#define _TARCH_MULTICORE_RECURSIVE_SEMAPHORE_H_
 
 namespace tarch {
   namespace multicore {

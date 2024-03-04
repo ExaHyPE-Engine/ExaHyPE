@@ -1,5 +1,3 @@
-// This file is part of the Peano project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
 #include <string>
@@ -10,31 +8,41 @@
 namespace tarch::accelerator {
   struct BenchmarkResultInNanoSeconds;
 } // namespace tarch::accelerator
-
 namespace tarch::accelerator::omp {
   /**
-   * @brief Queries device information for the OpenMP target accelerator implementation.
+   * Queries device information for OpenMP GPU accelerator  backend.
+   *
+   * It implements the device infromation queries described in `tarch::accelerator::queryDeviceInformation`
+   * Since OpenMP hides any information about the GPUs other than the count to the users, a matrix that is
+   * filled will placeholder "X" values instead of the information is returned.
    *
    * @see tarch::accelerator::queryDeviceInformation
    */
   void queryDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix);
 
   /**
-   * @brief Prints device information for the OpenMP target accelerator implementation.
+   * Prints device information for OpenMP GPU accelerator  backend.
+   *
+   * It implements the device infromation printing described in `tarch::accelerator::printDeviceInformation`
    *
    * @see tarch::accelerator::printDeviceInformation
    */
   void printDeviceInformation(std::vector<std::vector<std::string>>& propertyMatrix);
 
   /**
-   * @brief Test the kernel launch capability of the system.
+   * Prints device information for OpenMP GPU accelerator  backend.
+   *
+   * It implements the kernel launch test described in `tarch::accelerator::testKernelLaunch`
+   *
    *
    * @see tarch::accelerator::testKernelLaunch
    */
   std::vector<bool> testKernelLaunch();
 
   /**
-   * @brief Runs benchmarks with the the OpenMP target accelerator implementation.
+   * Runs benchmarks for the OpenMP GPU accelerator backend.
+   *
+   * It implements the memory bandwidth benchmarks described in `tarch::accelerator::runBenchmarks`
    *
    * @see tarch::accelerator::runBenchmarks
    */

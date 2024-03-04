@@ -1,0 +1,164 @@
+/**
+
+ @page tests_swift2_planet_orbit Planet orbit
+
+
+
+This standard test case is used to assess the adaptive mesh refinement and to
+illustrate the importance of a symplectic time integrator. The setup simulates
+the Earth rotating around the Sun. So we actually have only one (free)
+particle with a hard-coded force function. The realisation is subject of a 
+@ref tutorials_swift2_planet_orbit "tutorial session" which demonstrates how 
+to inject user-defined force functions into the default Euler and leapfrog 
+ODE integrators. 
+
+
+@image html two-particles-00.png
+
+
+# Run example benchmark
+
+Usage is relatively straightforward
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+export PYTHONPATH=../../../python
+python3 planet-orbit.py --time-integrator euler -et 5.0 -cs 0.4 -plot 0.01
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The code spills out a series of vtu files for the particles including one pvd 
+file that serves as overview/meta file. You can load this one straight into
+Paraview, e.g. The grid visualisation requires a separate postprocessing step
+before you can visualise it as native file. Please note that the snippet above
+uses an explicit Euler which is not capable to reproduce a stationary orbit, 
+as it is a non-symplectic time integrator.
+
+
+Depending on the mesh size, you get different AMR levels. I extract them into
+a table below, but it actually makes more sense to study the README-orbit-xxx.md
+file that the Python script produces. It provides all the essential information 
+per experiment. 
+
+
+Cell size | Levels | Remarks
+----------|--------|---------
+0.4       | 0      | Regular 81x81 mesh. No dynamic adaptivity (default).
+0.1       | 1      | Around 234 mesh cells with one level of adaptivity.
+0.03      | 2      | Two levels of adaptivity. The number of mesh cells starts to change almost every time step.
+0.01      | 3      | More radical version with three levels of adaptive mesh refinement. 
+
+
+Swift's AMR analysis works on a per-cell basis. For each cell, it studies
+all four adjacent vertices, and sums up the number of particles stored 
+there. As we set the maximum number of particles to 0, every cell that is
+adjacent to a vertex holding the single particle will issue a refine command
+- unless the cell is already refined down to the minimum mesh size.
+ 
+
+To run the test, you can either follow the instructions below
+one by one (which allows you to tailor some settings), or you run the ./run.sh
+script from the test's directory. This script will automatically invoke the 
+postprocessing, too. Please note that the run script builds the executables
+in assert mode, i.e. it ensures that there are no runtime errors.
+
+
+# Visualise resulting mesh
+
+I recommend to use the Python Paraview variant to convert the 
+@ref tarch_patch_files "arising mesh files" into something you can visualise 
+straightforwardly. 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/opt/paraview/bin/pvpython ../../../python/peano4/visualisation/render.py --filter-fine-grid grid.peano-patch-file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+@image html two-particles-01.png
+@image html two-particles-02.png
+
+
+# Postprocess trajectories and produce statistics
+
+The test is supplemented with a Python script which assesses the energy 
+conservation and yields some overview plots. The script assumes that you 
+did dump some output data into the current directory. 
+
+python3 ./plots-time-integration-test.py
+
+It should create some global stats as well as a plot of the energy over time:
+
+@image html energy_conservation_profile.png
+
+Please note that the script currently works only for a serial run. The plot 
+above stems from a parallel experiment and hence shows a lot of gaps.
+
+
+
+# Clean up
+
+The instruction snippets below clean up the majority of the file spilled out
+by this benchmark. All files that are essential to rerun the benchmark and
+are stored in the repo are kept:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+rm *patch-file *.vtu *.pvd *.o *.bak *.cmake
+rm -rf celldata globaldata observers repositories vertexdata
+rm Constants.h planetorbit-main* Makefile *.md
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+# A sample script using the test case/tutorial code
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+#!/bin/sh
+
+# Script to run experiment
+
+# Parameters
+END_TIME=0.5
+CELL_SIZE=0.4
+PLOT_DELTA=0.1
+
+# Run python script to generate the experiment
+python3 planet-orbit.py -integrator leapfrog -et=$END_TIME -cs=$CELL_SIZE -plot=$PLOT_DELTA
+
+# set threads number
+export OMP_NUM_THREADS=1
+
+# run experiment
+echo 'running experiment...'
+./orbit-$CELL_SIZE > output.txt
+echo 'post-processing results...'
+
+# generate Peano grid for Paraview
+pvpython ../../../python/peano4/visualisation/render.py grid.peano-patch-file
+
+DIRNAME="output_"$CELL_SIZE
+if [ -d $DIRNAME ]
+then
+    rm -r $DIRNAME
+fi
+mkdir $DIRNAME
+mv output.txt $DIRNAME
+
+# Save file with parameters and metadata
+less Constants.h > Constants.txt && mv Constants.txt $DIRNAME
+
+# Save snapshots
+mkdir $DIRNAME"/snapshots/"
+mv particles* grid* $DIRNAME"/snapshots/"
+
+# Save other data, if any
+if [ -e *.cvs ]
+then
+    mv *.cvs $DIRNAME
+fi
+
+echo 'Done. Bye!'
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+ */
+

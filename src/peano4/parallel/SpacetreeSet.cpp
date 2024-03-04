@@ -131,7 +131,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
         getAnswerTag(p.getMasterSpacetreeId()),
         tarch::mpi::Rank::getInstance().getCommunicator()
       );
-      logDebug(
+      logInfo(
         "receiveDanglingMessages()", "reserved tree id " << newSpacetreeId << " for tree " << p.getMasterSpacetreeId()
       );
     } break;

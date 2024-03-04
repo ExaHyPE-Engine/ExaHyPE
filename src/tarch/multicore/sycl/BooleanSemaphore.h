@@ -3,10 +3,10 @@
 #pragma once
 
 #include <string>
-
-#include "config.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+
+
 
 #if defined(SharedSYCL)
 #include <mutex>
@@ -21,6 +21,7 @@ class tarch::multicore::BooleanSemaphore {
     friend class tarch::multicore::Lock;
     friend class RecursiveSemaphore;
     friend class tarch::mpi::BooleanSemaphore;
+    friend class MultiReadSingleWriteSemaphore;
 
     void enterCriticalSection();
     void leaveCriticalSection();

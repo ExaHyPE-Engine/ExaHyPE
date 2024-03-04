@@ -12,6 +12,7 @@
 #include "tarch/multicore/smartScheduling.h"
 #endif
 
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
 
@@ -121,8 +122,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   [[maybe_unused]] const double* __restrict__                   Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
   [[maybe_unused]] double                                       t
 ) {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
@@ -138,9 +139,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   [[maybe_unused]] double* __restrict__                         Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, int>&    index,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
   [[maybe_unused]] bool                                         gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
@@ -151,8 +151,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   [[maybe_unused]] const double* __restrict__                   Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   [[maybe_unused]] double* __restrict__                         Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& x,
-  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& h,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& faceCentre,
+  [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& volumeH,
   [[maybe_unused]] double                                       t,
   [[maybe_unused]] int                                          normal
 ) {
@@ -182,21 +182,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   [[maybe_unused]] double globalMinTimeStepSize,
   [[maybe_unused]] double globalMaxTimeStepSize
 ) {
-  logDebug( "startTimeStep(...)", "old state is " << toString(_solverState) );
+  logDebug("startTimeStep(...)", "old state is " << toString(_solverState));
 
   if (
     _solverState == SolverState::GridInitialisation
   ) {
     _solverState = SolverState::PrimaryAfterGridInitialisation;
-  }
-  else if (
+  } else if (
     _solverState == SolverState::Primary
     or
     _solverState == SolverState::PrimaryAfterGridInitialisation
   ) {
     _solverState = SolverState::Secondary;
-  }
-  else { // plot initial condition, e.g.
+  } else { // Plot initial condition, e.g.
     _solverState = SolverState::Primary;
   }
 
@@ -207,7 +205,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     or
     _solverState == SolverState::PrimaryAfterGridInitialisation
   ) {
-    logDebug( "startTimeStep(...)", "reset t and dt as state had been " << toString(_solverState) );
+    logDebug("startTimeStep(...)", "Reset t and dt as state had been " << toString(_solverState));
 
     _minTimeStamp = _minTimeStampThisTimeStep;
     _maxTimeStamp = _maxTimeStampThisTimeStep;
@@ -231,6 +229,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
     _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
     _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+  }
+
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+    logInfo("startTimeStep()", "Phase " + toString(_solverState));
   }
 }
 
@@ -339,7 +341,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
     _solverState = SolverState::PlottingInitialCondition;
   }
   else {
-    assertion( mayPlot()  or ::exahype2::hasNonCriticalAssertionBeenViolated() );
+    assertion( mayPlot()  or ::tarch::hasNonCriticalAssertionBeenViolated() );
 
     _solverState = SolverState::Plotting;
   }
@@ -379,7 +381,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return _solverState == SolverState::Secondary;
 }
 
-{{ABSTRACT_SOLVER_USER_DEFINITIONS}}
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
   [[maybe_unused]] const tarch::la::Vector<Dimensions, double>& patchCentre,
@@ -389,6 +390,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
 ) const {
   return true;
 }
+
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   #if defined(UseSmartMPI)
@@ -410,4 +412,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startSimulation() {
   #endif
 }
 
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishSimulation() {}
+
+
+{{ABSTRACT_SOLVER_USER_DEFINITIONS}}

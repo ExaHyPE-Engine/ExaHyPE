@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+
 #include <vector>
 
 #include "tarch/la/la.h"
@@ -17,6 +18,8 @@
 #include "Functors.h"
 
 #include "exahype2/fv/PatchUtils.h"
+
+
 
 namespace exahype2 {
   namespace dg {
@@ -90,7 +93,7 @@ namespace exahype2 {
     int getNodesPerCell(int nodesPerAxis);
 
 
-    /* returns a vector with the powers of nodesPerAxis up to the Dimension - 1
+    /* returns a vector with the powers of nodesPerAxis up to the Dimensions - 1
     ** e.g. for dims = 2, nodesPerAxis = 2 will return (1, 2)
     **      for dims = 3, nodesPerAxis = 4 will return (1, 4, 16)
     **
@@ -287,5 +290,6 @@ namespace exahype2 {
     );
   }
 }
+
 
 #include "DGUtils.cpph"

@@ -1,12 +1,13 @@
 #include "{{MAIN_NAME}}.h"
 #include "Constants.h"
 
+#include "tarch/NonCriticalAssertions.h"
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/Statistics.h"
 #include "tarch/multicore/multicore.h"
 
-#include "peano4/peano4.h"
+#include "peano4/peano.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
@@ -64,11 +65,26 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
   static double nextMinPlotTimeStamp                        = {{NAMESPACE | join("::")}}::FirstPlotTimeStamp;
   static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
   bool          continueToSolve                             = true;
+  static bool   haveReceivedNoncriticialAssertion           = false;
 
   // ==============================================================
-  // Phase x: Rerun previous step once again. Generic for all steps
+  // Phase x: Generic types of steps for all phases:
+  //          - Rerun previous sweep again;
+  //          - Dump result due to non-critical assertion.
   // ==============================================================
-  if ( repositories::rerunPreviousGridSweep() ) {
+  if (tarch::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
+    );
+    haveReceivedNoncriticialAssertion = true;
+    logError(
+      "selectNextAlgorithmicStep()", "non-critical assertion has been triggered in code. Dump final state and terminate"
+    );
+  }
+  else if (tarch::hasNonCriticalAssertionBeenViolated()) {
+    continueToSolve = false;
+  }
+  else if ( repositories::rerunPreviousGridSweep() ) {
     logInfo(
       "selectNextAlgorithmicStep()",
       "rerun previous step " << repositories::StepRepository::toString(
@@ -416,6 +432,7 @@ int main(int argc, char** argv) {
   peano4::initParallelEnvironment(&argc,&argv);
   tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
+  tarch::initNonCriticalAssertionEnvironment();
 
   peano4::initSingletons(
     {{NAMESPACE | join("::")}}::DomainOffset,

@@ -15,6 +15,7 @@ import jinja2
 
 class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     """!
+
     Action set determining the final solution using a linear combination of previous Runge-Kutta guesses
 
     We solve the ODE
@@ -23,6 +24,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 
     where we have multiple guesses for F according to the Butcher tableau. The final
     solution can be written down as linear combination over these guesses:
+
 
     @f$ Q^{new} = Q^{old} + a_1 \cdot dt \cdot F_1(Q) + a_2 \cdot dt \cdot F_2(Q) + \dots @f$
 
@@ -47,6 +49,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
     where we effectively take the data and write it to the faces once again.
     But this is too much of an optimisation, I just retrigger the projection
     there agin.
+
     """
 
     TemplateProject = """
@@ -64,11 +67,12 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
         {% endfor %}
       }
     }
+    
 
     const double timeStamp = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
     double* newQ = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-
+    
     {{POSTPROCESS_UPDATED_CELL_AFTER_FINAL_LINEAR_COMBINATION}}
 
     {% if COMPUTE_MAX_EIGENVALUE %}
@@ -76,38 +80,37 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 
     ::exahype2::dg::reduceMaxEigenvalue_patchwise_functors(
       cellData,
-      {{ORDER}},
+      {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       [&](
         const double * __restrict__ Q,
         const tarch::la::Vector<Dimensions,double>&  x,
-        const tarch::la::Vector<Dimensions,double>&  h,
         double                                       t,
         double                                       dt,
         int                                          normal
       )->double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, x, h, t, dt, normal );
+        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, x, t, dt, normal );
       },
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d
     );
 
     const double maxEigenvalue = cellData.maxEigenvalue[0];
     {% endif %}
-
+        
     // Set the variable
     // double newTimeStepSize
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
-
+     
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
-
+    
     {% if NUMBER_OF_FACE_PROJECTIONS!=1 %}
     #error Have to tweak compute final projection
     {% endif %}
-
+    
     #if Dimensions==2
     ::exahype2::dg::projectVolumetricDataOntoFaces(
       newQ,
@@ -139,11 +142,12 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 """
 
     TemplateUpdateFace = """
-  if (repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()) {
+  if ( repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() ) {
     for (int leftRight=0; leftRight<2; leftRight++) {
-      if (fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdated(leftRight)) {
-        fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp(leftRight, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(leftRight));
-        fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp(leftRight, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(leftRight));
+      if ( fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdated(leftRight) ) {
+        fineGridFace{{SOLVER_NAME}}FaceLabel.setOldTimeStamp( leftRight, fineGridFace{{SOLVER_NAME}}FaceLabel.getNewTimeStamp(leftRight) );
+        fineGridFace{{SOLVER_NAME}}FaceLabel.setNewTimeStamp( leftRight, fineGridFace{{SOLVER_NAME}}FaceLabel.getUpdatedTimeStamp(leftRight) );
+        
         ::exahype2::dg::copyOneSideOfFaceProjection(
           {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
           {{ORDER}},
@@ -152,7 +156,7 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
           leftRight==1,
           fineGridFace{{UNKNOWN_IDENTIFIER}}EstimateProjection.value,
           fineGridFace{{UNKNOWN_IDENTIFIER}}OldSolutionProjection.value
-        );
+        ); 
       }
     }
   }
@@ -160,12 +164,14 @@ class ComputeFinalLinearCombination(AbstractRungeKuttaDGActionSet):
 
     def __init__(self, solver, guard, face_projections: FaceProjections):
         """
+
         guard_project: String (C++ code)
           Predicate which controls if the solution is actually projected
 
         guard_safe_old_time_step: String (C++ code)
           Predicate which controls if the projection should be copied into
           the old solution and the time step should also be moved over
+
         """
         super(ComputeFinalLinearCombination, self).__init__(solver)
         self.guard = guard

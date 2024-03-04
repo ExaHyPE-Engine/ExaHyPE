@@ -19,6 +19,7 @@ def create_abstract_solver_declarations(
     Template = jinja2.Template(
         """
   public:
+
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 
 {% if EIGENVALUES_IMPLEMENTATION=="<none>" or EIGENVALUES_IMPLEMENTATION=="<empty>" %}
@@ -26,8 +27,8 @@ def create_abstract_solver_declarations(
 {% elif EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     virtual double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -35,99 +36,80 @@ def create_abstract_solver_declarations(
 {% else %}
     virtual double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal
     );
 {% endif %}
 
-{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+{% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
-    ) = 0;
-{% elif FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<empty>" %}
-    virtual void flux(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
-    );
+    )  {% if FLUX_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if NCP_IMPLEMENTATION=="<user-defined>" %}
+{% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-    const tarch::la::Vector<Dimensions, double> &x,
-    const tarch::la::Vector<Dimensions, double> &h,
-    double t,
-    double dt,
-    int normal,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ) = 0;
-{% elif NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<empty>" %}
-    virtual void nonconservativeProduct(
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-    const tarch::la::Vector<Dimensions, double> &x,
-    const tarch::la::Vector<Dimensions, double> &h,
-    double t,
-    double dt,
-    int normal,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ);
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
+      const tarch::la::Vector<Dimensions, double> &faceCentre,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ
+    ) {% if NCP_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-  virtual void algebraicSource(
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
-    double t,
-    double dt,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
-  ) = 0;
-{% elif SOURCE_TERM_IMPLEMENTATION!="<none>" and SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
-  virtual void algebraicSource(
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
-    double t,
-    double dt,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
-  );
+{% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    virtual void algebraicSource(
+      const tarch::la::Vector<Dimensions, double>& x,
+      double t,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S
+      ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}
+{% if MATERIAL_PARAMETER_IMPLEMENTATION!="<none>" %}
     virtual void multiplyMaterialParameterMatrix(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
-      const tarch::la::Vector<Dimensions, double> &x,
-      const tarch::la::Vector<Dimensions, double> &h,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
       double t,
       double dt,
       int normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs
-      ) = 0;
+      ) {% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    virtual void pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n) = 0;
+{% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
+    virtual void pointSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+      const double* const x,
+      const double t,
+      const double dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,
+      int n
+    ) {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
 {% endfor %}
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
-    virtual void initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]) = 0;
+    virtual void initPointSourceLocations(
+      double sourceLocation[NumberOfPointSources][Dimensions]
+    ) = 0;
 {% endif %}
+
+
 """,
         undefined=jinja2.DebugUndefined,
     )
@@ -163,8 +145,8 @@ def create_abstract_solver_definitions(
 {% if EIGENVALUES_IMPLEMENTATION!="<empty>" and EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -176,8 +158,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION!="<empty>" and FLUX_IMPLEMENTATION!="<user-defined>" and FLUX_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q, // Q[3+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -191,12 +173,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-  const tarch::la::Vector<Dimensions, double> &x,
-  const tarch::la::Vector<Dimensions, double> &h,
+  const tarch::la::Vector<Dimensions, double> &faceCentre,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ)
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ)
 {
     {{NCP_IMPLEMENTATION}}
 }
@@ -204,14 +186,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" and SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and SOURCE_TERM_IMPLEMENTATION!="<none>"%}
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
-  const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
-  double t,
-  double dt,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
-) {
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& volumeCentre, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) {
   {{SOURCE_TERM_IMPLEMENTATION}}
 }
 {% endif %}
@@ -219,8 +194,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
 {% if MATERIAL_PARAM_IMPLEMENTATION!="<empty>" and MATERIAL_PARAM_IMPLEMENTATION!="<user-defined>" and MATERIAL_PARAM_IMPLEMENTATION!="<none>"%}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
-  const tarch::la::Vector<Dimensions, double> &x,
-  const tarch::la::Vector<Dimensions, double> &h,
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
   double t,
   double dt,
   int normal,
@@ -267,11 +242,12 @@ def create_solver_declarations(
 ):
     TemplateSinglePrecisions = jinja2.Template(
         """
-  {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
   virtual double maxEigenvalue(
     const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q,
-    const tarch::la::Vector<Dimensions,double>&  x,
-    const tarch::la::Vector<Dimensions,double>&  h,
+    const tarch::la::Vector<Dimensions,double>&  volumeX,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal
@@ -280,8 +256,8 @@ def create_solver_declarations(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(
       const {{COMPUTATION_PRECISIONS[0]}} * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -292,28 +268,21 @@ def create_solver_declarations(
     void nonconservativeProduct(
       const {{COMPUTATION_PRECISIONS[0]}}*__restrict__ Q,
       const {{COMPUTATION_PRECISIONS[0]}}*__restrict__ deltaQ,
-      const tarch::la::Vector<Dimensions, double> &x,
-      const tarch::la::Vector<Dimensions, double> &h,
+      const tarch::la::Vector<Dimensions, double> &faceCentre,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
       double t,
       double dt,
       int normal,
-      {{COMPUTATION_PRECISIONS[0]}}*__restrict__ BTimesDeltaQ) override;
+      {{COMPUTATION_PRECISIONS[0]}}*__restrict__ BgradQ) override;
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-  void algebraicSource(
-    const {{COMPUTATION_PRECISIONS[0]}}* const __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
-    double t,
-    double dt,
-    {{COMPUTATION_PRECISIONS[0]}}* __restrict__ S
-  ) override;
+    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[0]}} *const Q, {{COMPUTATION_PRECISIONS[0]}} *S) override;
 {% endif %}
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
     void multiplyMaterialParameterMatrix(
-      const {{COMPUTATION_PRECISIONS[0]}}* const Q,
-      const tarch::la::Vector<Dimensions, double> &x,
-      const tarch::la::Vector<Dimensions, double> &h,
+      const {{COMPUTATION_PRECISIONS[0]}}* const Q, 
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
       double t,
       double dt,
       int normal,
@@ -336,8 +305,8 @@ def create_solver_declarations(
     template<typename T>
     double maxEigenvalue(
       const T* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal
@@ -347,8 +316,8 @@ def create_solver_declarations(
     template<typename T>
     void flux(
       const T* __restrict__                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
@@ -360,31 +329,24 @@ def create_solver_declarations(
     void nonconservativeProduct(
       const T*__restrict__ Q,
       const T*__restrict__ deltaQ,
-      const tarch::la::Vector<Dimensions, double> &x,
-      const tarch::la::Vector<Dimensions, double> &h,
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
       double t,
       double dt,
       int normal,
-      T*__restrict__ BTimesDeltaQ);
+      T*__restrict__ BgradQ);
 
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-  template <typename T>
-  void algebraicSource(
-    const T* const __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
-    double t,
-    double dt,
-    T* __restrict__ S
-  );
+    template<typename T>
+    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const T *const Q, T *S);
 {% endif %}
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
     template<typename T>
     void multiplyMaterialParameterMatrix(
       const T* const Q, 
-      const tarch::la::Vector<Dimensions, double> &x,
-      const tarch::la::Vector<Dimensions, double> &h,
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
       double t,
       double dt,
       int normal,
@@ -405,64 +367,60 @@ def create_solver_declarations(
 
     double maxEigenvalue(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal
     ){
-      return maxEigenvalue<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, normal);
+      return maxEigenvalue<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal);
     }
 {% endif %}
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,double>&  volumeX,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       int                                          normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
     ){
-      flux<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, normal, F);
+      flux<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal, F);
     }
 {% endif %}
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     void nonconservativeProduct(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ Q,
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ deltaQ,
-      const tarch::la::Vector<Dimensions, double> &x,
-      const tarch::la::Vector<Dimensions, double> &h,
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
       double t,
       double dt,
       int normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ BTimesDeltaQ) override {
-      nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, x, h, t, dt, normal, BTimesDeltaQ);
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ BgradQ) override 
+    {
+      
+      nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, volumeX, volumeH, t, dt, normal, BgradQ);
+
     }
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-  void algebraicSource(
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
-    double t,
-    double dt,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
-  ) override {
-    algebraicSource<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, S);
-  }
+    void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) override {
+      algebraicSource<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(x, t, Q, S);
+    }
 {% endif %}
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
     void multiplyMaterialParameterMatrix(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
-      const tarch::la::Vector<Dimensions, double> &x,
-      const tarch::la::Vector<Dimensions, double> &h,
+      const tarch::la::Vector<Dimensions, double> &volumeX,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
       double t,
       double dt,
       int normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs) override {
       
-      multiplyMaterialParameterMatrix<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, x, h, t, dt, normal, rhs);
+      multiplyMaterialParameterMatrix<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, volumeX, volumeH, t, dt, normal, rhs);
 
     }
 {% endif %}
@@ -511,14 +469,16 @@ def create_solver_definitions(
 
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
   double                                       t,
   double                                       dt,
   int                                          normal
 ){
-  logTraceInWith3Arguments( "eigenvalue(...)", x, t, normal );
+  logTraceInWith3Arguments( "eigenvalue(...)", volumeCentre, t, normal );
   // @todo implement
+  double maxEigenvalue = 1.0;
+  return maxEigenvalue;
   logTraceOut( "eigenvalue(...)" );
 }
 {% endif %}
@@ -527,8 +487,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -543,16 +503,16 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
-  const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions, double> &x,
-  const tarch::la::Vector<Dimensions, double> &h,
+  const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const {{COMPUTATION_PRECISIONS[0]}} *__restrict__ deltaQ, //deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[0]}} *__restrict__ BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  {{COMPUTATION_PRECISIONS[0]}} *__restrict__ BgradQ //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ){
-  logTraceInWith3Arguments( "nonconservativeProduct(...)", x, t, normal );
+  logTraceInWith3Arguments( "nonconservativeProduct(...)", volumeX, t, normal );
   // @todo implement
   logTraceOut( "nonconservativeProduct(...)" );
 }
@@ -561,25 +521,22 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  const {{COMPUTATION_PRECISIONS[0]}}* const __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
   double t,
-  double dt,
-  {{COMPUTATION_PRECISIONS[0]}}* __restrict__ S
+  const {{COMPUTATION_PRECISIONS[0]}} *const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  {{COMPUTATION_PRECISIONS[0]}} *S
 ) {
-  logTraceInWith3Arguments("algebraicSource(...)", x, t, dt);
+  logTraceInWith3Arguments( "algebraicSource(...)", x, t, dt );
   // @todo implement
-  logTraceOut("algebraicSource(...)");
+  logTraceOut( "algebraicSource(...)" );
 }
 {% endif %}
-
 
 {% if MATERIAL_PARAM_IMPLEMENTATION=="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
   const {{COMPUTATION_PRECISIONS[0]}}* const Q,
-  const tarch::la::Vector<Dimensions, double> &x,
-  const tarch::la::Vector<Dimensions, double> &h,
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
   double t,
   double dt,
   int normal,
@@ -622,8 +579,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::pointSource(
 template<typename T>
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const T* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -636,8 +593,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeSize,
   double                                       t,
   double                                       dt,
   int                                          normal
@@ -650,8 +607,8 @@ template double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const T* __restrict__                        Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -665,8 +622,8 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
 template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
   int                                          normal,
@@ -681,14 +638,14 @@ template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const T*__restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const T*__restrict__ deltaQ, //deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions, double> &x,
-  const tarch::la::Vector<Dimensions, double> &h,
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
   double t,
   double dt,
   int normal,
-  T*__restrict__ BTimesDeltaQ // BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
+  T*__restrict__ BgradQ //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ){
-  logTraceInWith3Arguments( "nonconservativeProduct(...)", x, t, normal );
+  logTraceInWith3Arguments( "nonconservativeProduct(...)", volumeX, t, normal );
   // @todo implement
   logTraceOut( "nonconservativeProduct(...)" );
 }
@@ -697,12 +654,12 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
   const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-  const tarch::la::Vector<Dimensions, double> &x,
-  const tarch::la::Vector<Dimensions, double> &h,
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ
 );
 {% endfor%}
 
@@ -712,26 +669,18 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduc
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-    const T* const __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-    const tarch::la::Vector<Dimensions, double>& x,
-    const tarch::la::Vector<Dimensions, double>& h,
-    double t,
-    double dt,
-    T* __restrict__ S
-) {
-  logTraceInWith3Arguments("algebraicSource(...)", x, t, dt);
-  // @todo implement
-  logTraceOut("algebraicSource(...)");
-}
-{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
-  const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const __restrict__ Q,
   const tarch::la::Vector<Dimensions, double>& x,
-  const tarch::la::Vector<Dimensions, double>& h,
   double t,
-  double dt,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ S
-);
+  const T *const Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  T *S
+) {
+  logTraceInWith3Arguments( "algebraicSource(...)", x, t, dt );
+  // @todo implement
+  logTraceOut( "algebraicSource(...)" );
+}
+
+{% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
 {% endfor%}
 {% endif %}
 
@@ -739,8 +688,8 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::algebraicSource(
 template<typename T>
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(
   const T* const Q,
-  const tarch::la::Vector<Dimensions, double> &x,
-  const tarch::la::Vector<Dimensions, double> &h,
+  const tarch::la::Vector<Dimensions, double> &volumeX,
+  const tarch::la::Vector<Dimensions, double> &volumeH,
   double t,
   double dt,
   int normal,
@@ -752,7 +701,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatri
 }
 
 {% for PRECISION_NUM in range(0,COMPUTATION_PRECISIONS|length) %}
-template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const tarch::la::Vector<Dimensions, double> &x, const tarch::la::Vector<Dimensions, double> &h, double t, double dt, int normal, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs);
+template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::multiplyMaterialParameterMatrix(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const tarch::la::Vector<Dimensions, double> &volumeX, const tarch::la::Vector<Dimensions, double> &volumeH, double t, double dt, int normal, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs);
 {% endfor%}
 {% endif %}
 
@@ -837,23 +786,24 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(
 
 def create_start_time_step_implementation_for_fixed_time_stepping():
     """
+
     The outcome is used before we actually roll over the accumulation variables
     and other stuff.
+
     """
     return """
   if (
-    tarch::mpi::Rank::getInstance().isGlobalMaster()
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
     and
     _maxCellH>0.0
     and
     isLastGridSweepOfTimeStep()
   ) {
-    logInfo("startTimeStep()", "Solver {{SOLVER_NAME}}:");
-    logInfo("startTimeStep()", "Phase     " << toString(_solverState));
-    logInfo("startTimeStep()", "t       = " << globalMinTimeStamp);
-    logInfo("startTimeStep()", "dt      = " << getTimeStepSize());
-    logInfo("startTimeStep()", "h_{min} = " << _minCellHThisTimeStep);
-    logInfo("startTimeStep()", "h_{max} = " << _maxCellHThisTimeStep);
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t       = " << globalMinTimeStamp );
+    logInfo( "step()", "dt      = " << getTimeStepSize() );
+    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
+    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
   }
 """
 
@@ -977,6 +927,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setError(double* err){
 
 def create_finish_time_step_implementation_for_error_measurement():
     return """
+
   if ( 
     _solverState==SolverState::Correction 
     and _minTimeStampThisTimeStep+getAdmissibleTimeStepSize()>=MinTerminalTime
@@ -1015,18 +966,20 @@ def create_finish_time_step_implementation_for_error_measurement():
     );
     #endif
 
+
     if (
-      tarch::mpi::Rank::getInstance().isGlobalMaster()
+      tarch::mpi::Rank::getInstance().isGlobalMaster() 
       and
       _maxCellH>0.0
     ) {
-      logInfo("finishTimeStep()", "Solver {{SOLVER_NAME}}:");
-      logInfo("finishTimeStep()", "Phase          " << toString(_solverState));
-      logInfo("finishTimeStep()", "t            = " << _minTimeStampThisTimeStep);
-      logInfo("finishTimeStep()", "l1_error     = " << _errors[0]);
-      logInfo("finishTimeStep()", "l2_error     = " << _errors[1]);
-      logInfo("finishTimeStep()", "linf_error   = " << _errors[2]);
+      logInfo( "FinalTimeStep()", "Solver {{SOLVER_NAME}}:" );
+      logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
+      logInfo( "FinalTimeStep()", "l1_error     = " << _errors[0] );
+      logInfo( "FinalTimeStep()", "l2_error     = " << _errors[1] );
+      logInfo( "FinalTimeStep()", "linf_error   = " << _errors[2] );
+      logInfo( "FinalTimeStep(...)", "phase " + toString(_solverState) );
     }
+
   }
 """
 

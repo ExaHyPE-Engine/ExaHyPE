@@ -1,4 +1,3 @@
-#include "config.h"
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Tasks.h"

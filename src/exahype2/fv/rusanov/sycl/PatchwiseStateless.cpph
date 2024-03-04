@@ -17,9 +17,9 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovPatchwiseStateles
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  const TempDataEnumeratorType                 fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                 ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
-  const TempDataEnumeratorType                 eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
+  const TempDataEnumeratorType                  fluxEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  ncpEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch + 1, HaloSize, NumberOfUnknowns, 0);
+  const TempDataEnumeratorType                  eigenvalueEnumerator(patchData.numberOfCells, NumberOfVolumesPerAxisInPatch, HaloSize, 1, 0);
 
   double* tempFluxX                   = EvaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
   double* tempFluxY                   = EvaluateFlux ? ::sycl::malloc_device<double>(fluxEnumerator.size(), queue) : nullptr;
@@ -158,7 +158,7 @@ void exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovPatchwiseStateles
           }
         }
 #else
-        x = i.get_local_id(2) - HaloSize;
+        x              = i.get_local_id(2) - HaloSize;
         loopbodies::computeMaxEigenvalue<SolverType>(
           patchData.QIn[patchIndex],
           QInEnumerator,
@@ -563,9 +563,11 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless(int t
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
   logTraceIn("timeStepWithRusanovPatchwiseUSMStateless()");
 
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUUSMCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, targetDevice);
+  GPUUSMCellData                                gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovPatchwiseStateless<
     SolverType,
@@ -579,7 +581,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless(int t
     EvaluateMaximumEigenvalueAfterTimeStep,
     TempDataEnumeratorType>(targetDevice, gpuPatchData);
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, targetDevice);
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
   logTraceOut("timeStepWithRusanovPatchwiseUSMStateless()");
 }
@@ -596,15 +598,17 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless(int targetDevice, CellData& patchData) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseHeapStateless(int targetDevice, CellData& patchData) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
-  logTraceIn("timeStepWithRusanovPatchwiseCopyStateless()");
+  logTraceIn("timeStepWithRusanovPatchwiseHeapStateless()");
+
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUCopyCellData                              gpuPatchData(patchData, QInEnumerator, QOutEnumerator, targetDevice);
+  GPUCopyCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovPatchwiseStateless<
     SolverType,
@@ -618,9 +622,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless(int 
     EvaluateMaximumEigenvalueAfterTimeStep,
     TempDataEnumeratorType>(targetDevice, gpuPatchData);
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, targetDevice);
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
-  logTraceOut("timeStepWithRusanovPatchwiseCopyStateless()");
+  logTraceOut("timeStepWithRusanovPatchwiseHeapStateless()");
 }
 
 
@@ -641,9 +645,11 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless(i
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
   logTraceIn("timeStepWithRusanovPatchwiseManagedStateless()");
 
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUManagedCellData                           gpuPatchData(patchData, QInEnumerator, QOutEnumerator, targetDevice);
+  GPUManagedCellData                            gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovPatchwiseStateless<
     SolverType,
@@ -657,7 +663,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless(i
     EvaluateMaximumEigenvalueAfterTimeStep,
     TempDataEnumeratorType>(targetDevice, gpuPatchData);
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, targetDevice);
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
   logTraceOut("timeStepWithRusanovPatchwiseManagedStateless()");
 }
@@ -680,9 +686,11 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless(int t
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
   logTraceIn("timeStepWithRusanovPatchwiseUSMStateless()");
 
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+
   const enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   const enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUUSMCellData                               gpuPatchData(patchData, QInEnumerator, QOutEnumerator, targetDevice);
+  GPUUSMCellData                                gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovPatchwiseUSMStateless", false, true);
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovPatchwiseStateless<
@@ -699,7 +707,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseUSMStateless(int t
   watch.stop();
   measurement.setValue(watch.getCalendarTime());
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, targetDevice);
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
   logTraceOut("timeStepWithRusanovPatchwiseUSMStateless()");
 }
@@ -716,17 +724,19 @@ template <
   bool        EvaluateSource,
   bool        EvaluateMaximumEigenvalueAfterTimeStep,
   class TempDataEnumeratorType>
-void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless(int targetDevice, CellData& patchData, ::tarch::timing::Measurement& measurement) {
+void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseHeapStateless(int targetDevice, CellData& patchData, ::tarch::timing::Measurement& measurement) {
   static_assert(HaloSize == 1);
 
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
-  logTraceIn("timeStepWithRusanovPatchwiseCopyStateless()");
+  logTraceIn("timeStepWithRusanovPatchwiseHeapStateless()");
+
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
 
   enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUCopyCellData                        gpuPatchData(patchData, QInEnumerator, QOutEnumerator, targetDevice);
+  GPUCopyCellData                         gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
-  tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovPatchwiseCopyStateless", false, true);
+  tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovPatchwiseHeapStateless", false, true);
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovPatchwiseStateless<
     SolverType,
     NumberOfVolumesPerAxisInPatch,
@@ -741,9 +751,9 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseCopyStateless(int 
   watch.stop();
   measurement.setValue(watch.getCalendarTime());
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, targetDevice);
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
-  logTraceOut("timeStepWithRusanovPatchwiseCopyStateless()");
+  logTraceOut("timeStepWithRusanovPatchwiseHeapStateless()");
 }
 
 
@@ -764,9 +774,11 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless(i
   static tarch::logging::Log _log("exahype2::fv::rusanov::sycl");
   logTraceIn("timeStepWithRusanovPatchwiseManagedStateless()");
 
+  ::sycl::queue& queue = tarch::accelerator::getSYCLQueue(targetDevice);
+
   enumerator::AoSLexicographicEnumerator QInEnumerator(1, NumberOfVolumesPerAxisInPatch, HaloSize, NumberOfUnknowns, NumberOfAuxiliaryVariables);
   enumerator::AoSLexicographicEnumerator QOutEnumerator(1, NumberOfVolumesPerAxisInPatch, 0, NumberOfUnknowns, NumberOfAuxiliaryVariables);
-  GPUManagedCellData                     gpuPatchData(patchData, QInEnumerator, QOutEnumerator, targetDevice);
+  GPUManagedCellData                      gpuPatchData(patchData, QInEnumerator, QOutEnumerator, queue);
 
   tarch::timing::Watch watch("exahype2::fv::rusanov::sycl", "timeStepWithRusanovPatchwiseManagedStateless", false, true);
   exahype2::fv::rusanov::sycl::internal::timeStepWithRusanovPatchwiseStateless<
@@ -783,7 +795,7 @@ void exahype2::fv::rusanov::sycl::timeStepWithRusanovPatchwiseManagedStateless(i
   watch.stop();
   measurement.setValue(watch.getCalendarTime());
 
-  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, targetDevice);
+  gpuPatchData.destroy(patchData, QOutEnumerator, EvaluateMaximumEigenvalueAfterTimeStep, queue);
 
   logTraceOut("timeStepWithRusanovPatchwiseManagedStateless()");
 }

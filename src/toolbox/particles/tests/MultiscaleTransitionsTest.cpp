@@ -4,8 +4,7 @@
 #include "toolbox/particles/MultiscaleTransitions.h"
 
 tarch::logging::Log toolbox::particles::tests::MultiscaleTransitionsTest::_log(
-  "toolbox::particles::tests::"
-  "MultiscaleTransitionsTest"
+  "toolbox::particles::tests::MultiscaleTransitionsTest"
 );
 
 #ifdef UseTestSpecificCompilerSettings
@@ -24,6 +23,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testSievePredicate() 
   marker._h          = {0.037037, 0.037037};
   marker._isHanging  = 0;
   marker._select     = 1;
+  marker._isAdjacentCellLocal.set();
 
   tarch::la::Vector<Dimensions, double> cornerVertex1 = {
     marker._cellCentre(0) + 0.5 * marker._h(0), marker._cellCentre(1) - 0.5 * marker._h(1)};
@@ -69,7 +69,158 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testSievePredicate() 
 #endif
 }
 
-void toolbox::particles::tests::MultiscaleTransitionsTest::run() { testMethod(testSievePredicate); }
+void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex01() {
+  #if Dimensions==2
+  const int select = 0;
+  peano4::datamanagement::VertexMarker marker;
+
+  const double  meshSize = 0.111111;
+
+  marker._cellCentre = {0.611111, 0.166667};
+  marker._h          = {meshSize, meshSize};
+  marker._isHanging  = 0;
+  marker._hasBeenRefined = 1+2+4+8;
+  marker._willBeRefined  = 1+2+4+8;
+  marker._isParentVertexLocal = 1+2+4+8;
+  marker._isParentCellLocal   = true;
+  marker._relativePositionOfCellWithinFatherCell = {0,0};
+  marker._isAdjacentCellLocal.set();
+
+  tarch::la::Vector<Dimensions,double> x = {0.554725,0.166678};
+  const double                         searchRadius = 0.0185185;
+  toolbox::particles::ParticleReassociationInstruction liftInstruction;
+  bool                                                 drop;
+
+  // bottom left vertex owns particle
+  marker._select     = 0;
+  liftInstruction = toolbox::particles::liftParticleAssociatedWithVertex(
+    true,                  // ParallelState=Local
+    searchRadius,
+    x,
+    marker
+  );
+  drop = toolbox::particles::dropParticle(
+    searchRadius,
+    x,
+    marker
+  );
+
+/*
+  validateWithParams7(
+    liftInstruction==0, // that means we lift
+    marker.toString(),
+    x,
+    liftInstruction, drop,
+    (x-marker.x()),
+    searchRadius,
+    tarch::la::NUMERICAL_ZERO_DIFFERENCE
+  );
+*/
+  validateWithParams6(
+    not drop,           // but we do not drop
+    marker.toString(),
+    x,
+    liftInstruction, drop,
+    (x-marker.x()),
+    searchRadius
+  );
+
+  // top left vertex owns particle
+  marker._select     = 2;
+  liftInstruction = toolbox::particles::liftParticleAssociatedWithVertex(
+    true,                  // ParallelState=Local
+    searchRadius,
+    x,
+    marker
+  );
+  drop = toolbox::particles::dropParticle(
+    searchRadius,
+    x,
+    marker
+  );
+
+  validateWithParams6(
+    liftInstruction==ParticleReassociationInstruction_Keep, // keep it
+    marker.toString(),
+    x,
+    liftInstruction, drop,
+    (x-marker.x()),
+    searchRadius
+  );
+  validateWithParams6(
+    drop,  // but please drop
+    marker.toString(),
+    x,
+    liftInstruction, drop,
+    (x-marker.x()),
+    searchRadius
+  );
+  #endif
+}
+
+void toolbox::particles::tests::MultiscaleTransitionsTest::run() {
+  testMethod(testSievePredicate);
+  testMethod(testLiftDropOfParticleAssociatedWithVertex01);
+  testMethod(testLiftDropOfParticleAssociatedWithVertex02);
+}
+
+void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex02() {
+  #if Dimensions==2
+  const int select = 0;
+  peano4::datamanagement::VertexMarker marker;
+
+  const double  meshSize = 0.037037;
+
+  marker._cellCentre = {0.537037,0.12963};
+  marker._h          = {meshSize, meshSize};
+  marker._isHanging  = 0;
+  marker._hasBeenRefined = 0;
+  marker._willBeRefined  = 0;
+  marker._isParentVertexLocal = 1+2+4+8;
+  marker._isParentCellLocal   = true;
+  marker._relativePositionOfCellWithinFatherCell = {2,0};
+  marker._select     = 2;
+  marker._isAdjacentCellLocal.set();
+
+  tarch::la::Vector<Dimensions,double> x = {0.504975,0.1667};
+  const double                         searchRadius = 0.0185185;
+  toolbox::particles::ParticleReassociationInstruction liftInstruction;
+  bool                                                 drop;
+
+  // top left vertex owns particle, but it is even further left up than the
+  // owning vertex. So lift.
+  liftInstruction = toolbox::particles::liftParticleAssociatedWithVertex(
+    true,                  // ParallelState=Local
+    searchRadius,
+    x,
+    marker
+  );
+  drop = toolbox::particles::dropParticle(
+    searchRadius,
+    x,
+    marker
+  );
+
+  validateWithParams7(
+    liftInstruction==3, // that means we lift if we don't reassociate within a vertex
+    marker.toString(),
+    x,
+    marker.x(),
+    liftInstruction, drop,
+    (x-marker.x()),
+    searchRadius
+  );
+  validateWithParams6(
+    not drop,           // but we do not drop
+    marker.toString(),
+    x,
+    liftInstruction, drop,
+    (x-marker.x()),
+    searchRadius
+  );
+  #endif
+}
+
 
 #ifdef UseTestSpecificCompilerSettings
 #pragma optimize("", on)

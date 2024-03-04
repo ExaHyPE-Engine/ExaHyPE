@@ -137,12 +137,20 @@ class Controller:
                     else "double",
                     "correctorStoragePrecision": args["correctorStoragePrecision"]
                     if "correctorStoragePrecision" in args
-                    else "double"
+                    else "double",
+                  "usePicardIterationSplitPrecisions": True
+                  if "usePicardIterationSplitPrecisions" in args and args["usePicardIterationSplitPrecisions"]
+                  else False,
+                  "picardIterationPrecision": args["picardIterationPrecision"]
+                  if "picardIterationPrecision" in args
+                  else ""
                 }
             )
             self.config["computePrecisions"] = self.config["predictorComputePrecisions"][:]
             if self.config["correctorComputePrecision"] not in self.config["computePrecisions"]:
                 self.config["computePrecisions"].append(self.config["correctorComputePrecision"])
+            if self.config["usePicardIterationSplitPrecisions"] and self.config["picardIterationPrecision"] not in self.config["computePrecisions"]:
+                self.config["computePrecisions"].append(self.config["picardIterationPrecision"])
             self.config["useSourceOrNCP"] = (
                 self.config["useSource"] or self.config["useNCP"]
             )
@@ -164,6 +172,7 @@ class Controller:
                     ),
                 }
             )
+            self.config["computePrecisions"] = ["double"]
         elif self.config["kernelType"] == "fv":
             self.config.update(
                 {
@@ -227,23 +236,18 @@ class Controller:
                 self.config["nDof"] < 1 or self.config["nDof"] > 15 + 1
             ):  # nDof = order+1
                 raise ValueError("Order has to be between 0 and 15 (inclusive)")
-            for key in [
-                "predictorStoragePrecision",
-                "correctorComputePrecision",
-                "correctorStoragePrecision",
-            ]:
-                if self.config[key] not in Configuration.validPrecisions:
-                    raise ValueError(
-                        "One of the chosen precisions for storage or calculation was not a valid choice"
-                    )
-            for key in ["predictorComputePrecisions"]:
-                for precision in self.config[key]:
-                    if precision not in Configuration.validPrecisions:
-                        raise ValueError(
-                            "Precision "
-                            + precision
-                            + " of the chosen precisions for prediction calculation was not a valid choice"
-                        )
+
+            for precision in self.config["computePrecisions"]:
+              if precision not in Configuration.validPrecisions:
+                raise ValueError(
+                    "One of the chosen computation precisions was not a valid choice, you have specified: " + precision
+                    + ", valid choices are: " + ", ".join(Configuration.validPrecisions.keys())
+                )
+            if self.config["predictorStoragePrecision"] not in Configuration.validPrecisions:
+              raise ValueError(
+                "One of the chosen storage precisions was not a valid choice, valid choices are: "
+                + ", ".join(Configuration.validPrecisions.keys())
+              )
         if self.config["kernelType"] == "fv":
             if self.config["finiteVolumesType"] != "musclhancock":
                 raise ValueError("Only musclhancock scheme is supported")

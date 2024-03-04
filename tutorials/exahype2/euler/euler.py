@@ -6,13 +6,6 @@ import sympy
 import subprocess
 
 #
-# We use our code Python generator to generate additional glue code.
-# The generator is located in the /Peano/python folder and needs to therefore added to PYTHONPATH.
-# You can either set PYTHONPATH on the command line yourself or insert it here in the script.
-#
-sys.path.insert(0, os.path.abspath("../../../python"))
-
-#
 # We import the required modules for this project.
 # We always need the 'peano4' module as this is our core project.
 # Since we are creating an ExaHyPE 2 application, we additionally
@@ -148,7 +141,7 @@ else:
 my_pde.substitute_expression(gamma, 1.4)
 
 #
-# Since 'my_pde' only holds the PDE without initial- or boundary conditions,
+# Since 'my_pde' only holds the PDE for the Euler equations without initial- or boundary conditions,
 # we still need to properly define initial- and boundary conditions.
 # This gives us then a complete description of a 'scenario'.
 #
@@ -238,7 +231,7 @@ if visualise:
 # For an overview of available load balancer refer to the documentation.
 #
 my_project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+    "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
     "new ::exahype2::LoadBalancingConfiguration()",
 )
 

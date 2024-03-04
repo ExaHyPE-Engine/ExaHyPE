@@ -13,6 +13,12 @@ toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::VertexWiseCon
 
 
 template <class T>
+bool toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::requestCompleteScatter() {
+  return false;
+}
+
+
+template <class T>
 void toolbox::particles::memorypool::VertexWiseContinuousMemoryPool<T>::scatter() {
   assertion( not container.empty() or _gatheredDataPointer==nullptr );
   if (_gatheredDataPointer!=nullptr) {

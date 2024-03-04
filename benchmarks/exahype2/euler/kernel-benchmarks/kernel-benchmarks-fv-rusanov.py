@@ -151,7 +151,7 @@ my_project = exahype2.Project(
 my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
     name="FVRusanovSolver",
     patch_size=args.patch_size,
-    unknowns={"rho": 1, "u": 1, "v": 1, "w": 1, "e": 1} if args.dim == 3 else {"rho": 1, "u": 1, "v": 1, "e": 1},
+    unknowns={"rho": 1, "v": args.dim, "e": 1},
     auxiliary_variables=0,
     min_volume_h=0.001,  # max_cell_size -> arbitrary value
     max_volume_h=0.001,  # min_cell_size -> arbitrary value
@@ -162,8 +162,8 @@ my_solver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 my_solver.set_implementation(
     initial_conditions="",
     boundary_conditions=exahype2.solvers.PDETerms.Empty_Implementation,
-    flux="::applications::exahype2::euler::flux(Q, x, h, t, dt, normal, F);",
-    eigenvalues="return ::applications::exahype2::euler::maxEigenvalue(Q, x, h, t, dt, normal);",
+    flux="::applications::exahype2::euler::flux(Q, normal, F);",
+    eigenvalues="return ::applications::exahype2::euler::maxEigenvalue(Q, normal);",
     refinement_criterion=exahype2.solvers.PDETerms.Empty_Implementation,
     # There is a bug in the code generator: When set to 'None_Implementation', an offloadable function is still generated, also 'Empty_Implementation' does not work.
     # TODO: What is the difference between 'None_Implementation' and 'Empty_Implementation'?
@@ -237,3 +237,9 @@ my_project.constants.define_value("GAMMA", str(1.0))
 my_project.build(
     make=not args.no_make, make_clean_first=True, throw_away_data_after_build=True
 )
+
+print("Executable is ", executable_name)
+print("Clean object files via 'make clean'")
+print("Recompile the generated code via 'make -j'")
+print("Remove all generated code via 'make distclean'")
+print("Regenerate all code by running 'python3 kernel-benchmarks-fv-rusanov.py' again")

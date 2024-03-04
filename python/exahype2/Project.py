@@ -66,6 +66,7 @@ class Project(object):
         self._output_path = "./"
         self._plotter_precision = 5
         self._tracer_particles = []
+        self._tracer_particle_sets = []
 
         self.create_grid = peano4.solversteps.Step("CreateGrid", False)
         self.init_grid = peano4.solversteps.Step("InitGrid", False)
@@ -77,11 +78,6 @@ class Project(object):
         )
         self.plot_solution = peano4.solversteps.Step("PlotSolution", False)
         self.perform_time_step = peano4.solversteps.Step("TimeStep", False)
-
-
-    @property
-    def executable_name(self):
-        return self._executable_name
 
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments=""):
@@ -413,6 +409,11 @@ thus appreciate any citation of the original release paper
         """!
 
         Add a tracer to the project
+        
+        Tracers have to be the very last thing you add to your project.
+        At this point, all solvers have to be added to the project.
+        However, you have to add the tracers prior to any user-defined
+        routines. See docu of register_new_user_defined_algorithmic_step().
 
         We rely on the particle toolbox. Therefore, our particles have
         already a position x, a search radius (which we don't usually
@@ -422,10 +423,25 @@ thus appreciate any citation of the original release paper
         thus is always sieved through to the finest grid level.
 
         @see peano4.toolbox.particles.Particle
+        
+        
+        ## Projection of data onto particles and database dumping
+        
+        The projection onto the particle has to be realised separatedly, as
+        it depends on the solver variant chosen. The same holds for the 
+        dump of particle data into a database if this shall happen 
+        on-the-fly. 
+        
+        Most bigger applications add their solvers an add_tracer() operation,
+        which takes all of this domain knowledge into account. This 
+        add_tracer() then forwards to this routine, adding further 
+        behaviour.
+        
+        See the class application.exahype2.ccz.CCZ4Solver and its derived
+        variants for examples.
 
-        Besides those pre-defined attributes, we add one more vector field
-        to each particle which we simply call data. Data stores, as one
-        large array, all the properties that we want to track per tracer.
+
+        ## Moving particles
 
         Tracers in ExaHyPE can move, though they do not have to move. Even if
         they move, they never have a native velocity, i.e. their velocity will
@@ -437,8 +453,11 @@ thus appreciate any citation of the original release paper
         particle update routines. Obviously, nothing stops you from adding
         a separate velocity field to the tracer object and thus to redefine
         this behaviour.
+        
+        
+        ## ExaHyPE-specific particle attributes
 
-        Finally, we add each
+        We add each
         particle a number which is a tuple consisting of the tree number
         (on which tree has a particle been generationed plus what was the
         tree-local number of this particle at the time). Through this
@@ -452,18 +471,17 @@ thus appreciate any citation of the original release paper
 
         @see peano4.toolbox.particles.PlotParticlesInVTKFormat.add_attribute_to_plot()
 
+
         ## Action set order
 
-        We add the particle ordering with priority -1. This should do the job
+        We add the particle ordering with descend order -1. This should do the job
         for most setups, but we might be wrong. The following action sets are
         automatically added:
 
         - UpdateParallelState is added to each and every time step and plotting
           sweep. As we also add
-        - UpdateParticleGridAssociation_LiftDrop to each and every time step,
+        - peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop to each and every time step,
           particles can move at any point. We always resort them immediately.
-
-        Both action sets are assigned the standard priority of sort_priority_within_action_sets.
 
 
         ## Arguments
@@ -484,14 +502,8 @@ thus appreciate any citation of the original release paper
           do so if they dump the tracer data independently into another database
           anyway.
 
-        sort_priority_within_action_sets: Integer
-          You have to clarify what the priority of the tracer is within the
-          action sets. By default, all ExaHyPE solvers start with priority
-          0 and then up to n. So you are fine with using the default of -1
-          which means that the tracer precedes any solver. However, there
-          might be cases where you wanna move the priorities manually.
-
-        Returns the particle set that you can use to modify further
+        Returns the particle set that you can use to modify further.
+        
         """
         particle = peano4.toolbox.particles.Particle(name)
 
@@ -524,22 +536,20 @@ thus appreciate any citation of the original release paper
         # Initialisation
         #
         self.init_grid.add_action_set(
-            peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles)
+            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
         )
 
         update_particle_association_action_set = (
-            peano4.toolbox.particles.UpdateParticleGridAssociation_LiftDrop(particles)
+            peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop(particles)
         )
-        update_particle_association_action_set.priority = (
-            sort_priority_within_action_sets
-        )
+        update_particle_association_action_set.descend_invocation_order = sort_descend_invocation_order_within_action_sets
         update_particle_association_action_set.parallel = True
 
         update_particle_parallel_state_action_set = (
-            peano4.toolbox.particles.UpdateParallelState(particles)
+            peano4.toolbox.particles.api.UpdateParallelState(particles)
         )
-        update_particle_parallel_state_action_set.priority = (
-            sort_priority_within_action_sets
+        update_particle_parallel_state_action_set.descend_invocation_order = (
+            sort_descend_invocation_order_within_action_sets
         )
         update_particle_parallel_state_action_set.parallel = True
 
@@ -570,13 +580,14 @@ thus appreciate any citation of the original release paper
             particle_plotter.add_attribute_to_plot(
                 particle_number, 2, "tarch::la::convertScalar<double>(p->getNumber())"
             )
-            particle_plotter.priority = plot_priority_within_action_sets
+            particle_plotter.descend_invocation_order = plot_descend_invocation_order_within_action_sets
             self.plot_solution.add_action_set(particle_plotter)
 
         self.plot_solution.add_action_set(update_particle_association_action_set)
         self.plot_solution.add_action_set(update_particle_parallel_state_action_set)
 
         self._tracer_particles.append(particle)
+        self._tracer_particle_sets.append(particles)
 
         return particles
 
@@ -729,19 +740,23 @@ thus appreciate any citation of the original release paper
                                                    ):
         """! Add all the use operations to new algorithmic step
         
-Use this routine whenever you have created your own 
-@ref page_architecture "algorithmic step". Please note that the routine should
-be called after you have created all of your solvers. Otherwise, we'll miss out
-a few of your solvers and the data access patterns will/might be corrupted.
+        Use this routine whenever you have created your own 
+        @ref page_architecture "algorithmic step". Please note that the routine
+        should be called after you have created all of your solvers. Otherwise, 
+        we'll miss out a few of your solvers and the data access patterns 
+        will/might be corrupted. Also all tracers have to be added at this 
+        point already.
 
-The routine has no side-effects, i.e. does not alter the underlying project.
-It only manipulates the step. Therefore, you can even call it after you have 
-distilled the Peano project from the ExaHyPE project, i.e. after you have 
-called exahype2.Project.generate_Peano4_project().
+        The routine has no side-effects, i.e. does not alter the underlying 
+        project. It only manipulates the step. Therefore, you can even call it 
+        after you have distilled the Peano project from the ExaHyPE project, 
+        i.e. after you have called exahype2.Project.generate_Peano4_project().
 
-step: peano4.solversteps.Step
+        @param step: peano4.solversteps.Step
   
         """
         for solver in self._solvers:
             solver.add_use_data_statements_to_Peano4_solver_step(step)
 
+        for tracer_set in self._tracer_particle_sets:
+            step.use_vertex(tracer_set)

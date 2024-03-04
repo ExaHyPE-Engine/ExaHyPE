@@ -80,7 +80,30 @@ class DastgenTestDummyParticle(Particle):
         self._generate_peano_integer_array_attributes(compress=False, ifdefs=True)
         self._generate_peano_integer_array_attributes(compress=True, ifdefs=True)
 
+        self._generate_user_defined_attributes(ifdefs=False)
+        self._generate_user_defined_attributes(ifdefs=True)
+
         return
+
+    def _generate_user_defined_attributes(self, ifdefs: bool):
+        if ifdefs:
+            var_basename = "DebugUserDefinedAttribute"
+            defs = ["PeanoDebug > 0"]
+        else:
+            var_basename = "UserDefinedAttribute"
+            defs = []
+        self.data.add_attribute(
+            dastgen2.attributes.UserDefinedType(
+                name="myStatic" + var_basename,
+                type="std::string",
+                include="""
+#include <string>
+""",
+                ifdefs=defs,
+                qualifier=dastgen2.attributes.Attribute.Qualifier.STATIC,
+                user_type_has_toString_method=False,
+            )
+        )
 
     def _generate_boolean_attributes(self, ifdefs: bool):
         """!
@@ -489,7 +512,7 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and not compress:
             var_basename = "DebugBooleanArray"
         if ifdefs and compress:
-            var_basename = "DebugCompressedBooleanArray"
+            var_basename = "CompressedDebugBooleanArray"
 
         # Set ifdefs
         defs = []
@@ -527,7 +550,7 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and not compress:
             var_basename = "DebugIntegerArray"
         if ifdefs and compress:
-            var_basename = "DebugCompressedIntegerArray"
+            var_basename = "CompressedDebugIntegerArray"
 
         # Set ifdefs
         defs = []
@@ -573,7 +596,7 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and not compress:
             var_basename = "DebugDoubleArray"
         if ifdefs and compress:
-            var_basename = "DebugCompressedDoubleArray"
+            var_basename = "CompressedDebugDoubleArray"
 
         # Set ifdefs
         defs = []
@@ -616,7 +639,7 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and not compress:
             var_basename = "DebugPeanoIntegerArray"
         if ifdefs and compress:
-            var_basename = "DebugCompressedPeanoIntegerArray"
+            var_basename = "CompressedDebugPeanoIntegerArray"
 
         # Set ifdefs
         defs = []
@@ -661,7 +684,7 @@ class DastgenTestDummyParticle(Particle):
         if ifdefs and not compress:
             var_basename = "DebugPeanoDoubleArray"
         if ifdefs and compress:
-            var_basename = "DebugCompressedPeanoDoubleArray"
+            var_basename = "CompressedDebugPeanoDoubleArray"
 
         # Set ifdefs
         defs = []
@@ -696,7 +719,7 @@ class DastgenTestDummyParticle(Particle):
             name="dummyDastgenTest",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_first_time_kernel="""::swift2::dastgenTest::checkDastgen(localParticles);""",
+            touch_vertex_first_time_kernel="""::swift2::dastgenTest::checkDastgen(assignedParticles);""",
             prepare_traversal_kernel="""
                 ::swift2::dastgenTest::dummyMoveForwardInTime<globaldata::{}>();""".format(
                 self.name
@@ -714,7 +737,7 @@ class DastgenTestDummyParticle(Particle):
             name="dummyDastgenTest2",
             dependencies=AlgorithmStep.Dependencies.SELF,
             effect=AlgorithmStep.Effect.ALTER_LOCAL_STATE,
-            touch_vertex_last_time_kernel="""::swift2::dastgenTest::checkDastgen(localParticles);""",
+            touch_vertex_last_time_kernel="""::swift2::dastgenTest::checkDastgen(assignedParticles);""",
             unprepare_traversal_kernel="""
                                        globaldata::{PARTICLE}::getSpecies().setTimeStamp( globaldata::{PARTICLE}::getSpecies().getMinTimeStamp() + globaldata::{PARTICLE}::getSpecies().getMinTimeStepSize(), false );
                                        ::swift2::dastgenTest::reportStep<globaldata::{PARTICLE}>( "{PARTICLE}" );

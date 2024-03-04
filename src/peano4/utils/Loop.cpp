@@ -1,7 +1,6 @@
+// This file is part of the Peano project. For conditions of distribution and
+// use, please see the copyright notice at www.peano-framework.org
 #include "Loop.h"
-
-
-
 
 namespace {
   int dLinearisedNotOptimised( const tarch::la::Vector<Dimensions,int> & counter, int max ) {
@@ -346,14 +345,14 @@ tarch::la::Vector<Dimensions,int> peano4::utils::dStartVector( int max, const pe
 
 
 
-std::string toString( peano4::utils::LoopParallelism arg ) {
+std::string toString( peano4::utils::LoopPlacement arg ) {
   switch (arg) {
-    case peano4::utils::LoopParallelism::None:
-      return "none";
-    case peano4::utils::LoopParallelism::ParallelFor:
-      return "parallel-for";
-    case peano4::utils::LoopParallelism::Subtasks:
-      return "subtasks";
+    case peano4::utils::LoopPlacement::Serial:
+      return "serial";
+    case peano4::utils::LoopPlacement::Nested:
+      return "nested";
+    case peano4::utils::LoopPlacement::SpreadOut:
+      return "spread-out";
   }
   assertion(false);
   return "<undef>";

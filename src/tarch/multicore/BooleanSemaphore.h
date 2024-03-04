@@ -1,28 +1,29 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#include "config.h"
 #include "tarch/multicore/multicore.h"
 
 namespace tarch {
   namespace multicore {
     class BooleanSemaphore;
+    class MultiReadSingleWriteSemaphore;
     class Lock;
-  } // namespace multicore
+  }
 
   namespace mpi {
     class BooleanSemaphore;
-  } // namespace mpi
-} // namespace tarch
+  }
+}
+
 
 
 #if defined(SharedCPP)
-#include "cpp/BooleanSemaphore.h"
+  #include "cpp/BooleanSemaphore.h"
 #elif defined(SharedTBB)
-#include "tbb/BooleanSemaphore.h"
+  #include "tbb/BooleanSemaphore.h"
 #elif defined(SharedOMP)
-#include "omp/BooleanSemaphore.h"
+  #include "omp/BooleanSemaphore.h"
 #elif defined(SharedSYCL)
-#include "sycl/BooleanSemaphore.h"
+  #include "sycl/BooleanSemaphore.h"
 #elif !defined(_TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_)
 #define _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_
 
@@ -118,41 +119,46 @@ namespace tarch {
  * @author Tobias Weinzierl
  */
 class tarch::multicore::BooleanSemaphore {
-private:
-  friend class tarch::multicore::Lock;
-  friend class RecursiveSemaphore;
-  friend class tarch::mpi::BooleanSemaphore;
+  private:
+    friend class tarch::multicore::Lock;
+    friend class RecursiveSemaphore;
+    friend class MultiReadSingleWriteSemaphore;
+    friend class tarch::mpi::BooleanSemaphore;
 
-  /**
-   * Waits until I can enter the critical section.
-   */
-  void enterCriticalSection();
+    /**
+     * Waits until I can enter the critical section.
+     */
+    void enterCriticalSection();
 
-  /**
-   * Tells the semaphore that it is about to leave.
-   */
-  void leaveCriticalSection();
+    /**
+     * Tells the semaphore that it is about to leave.
+     */
+    void leaveCriticalSection();
 
-  /**
-   * Run into critical section and try to lock. If we are successful,
-   * the routine returns true and the stuff is locked (so please call
-   * leave later on). Otherwise, I return false.
-   */
-  bool tryEnterCriticalSection();
+    /**
+     * Try to lock
+     *
+     * Run into critical section and try to lock. If we are successful,
+     * the routine returns true and the stuff is locked (so please call
+     * leave later on). Otherwise, I return false.
+     *
+     * You have invoke leaveCriticalSection() if the result is true.
+     */
+    bool tryEnterCriticalSection();
 
-  /**
-   * You may not copy a semaphore
-   */
-  BooleanSemaphore(const BooleanSemaphore&) {}
+    /**
+     * You may not copy a semaphore
+     */
+    BooleanSemaphore( const BooleanSemaphore& ) {}
 
-  /**
-   * You may not copy a semaphore
-   */
-  BooleanSemaphore& operator=(const BooleanSemaphore&) { return *this; }
+    /**
+     * You may not copy a semaphore
+     */
+    BooleanSemaphore& operator = ( const BooleanSemaphore& ) { return *this; }
 
-public:
-  BooleanSemaphore();
-  ~BooleanSemaphore();
+  public:
+    BooleanSemaphore();
+    ~BooleanSemaphore();
 };
 
 #endif

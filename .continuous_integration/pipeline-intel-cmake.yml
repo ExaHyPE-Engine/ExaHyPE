@@ -41,7 +41,7 @@ exahype2-tutorials-cmake-intel:
     - job: build-cmake-intel
   parallel:
     matrix:
-    - tutorial: [euler, acoustic, elastic, advection, swe]
+    - tutorial: [euler, acoustic-wave, elastic-wave, advection, swe]
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd build/tutorials/exahype2/$tutorial; python3 $tutorial.py"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd build/tutorials/exahype2/$tutorial; make -j $(nproc --all)"
@@ -58,7 +58,7 @@ exahype2-applications-cmake-intel:
     matrix:
     - dimensions: [2, 3]
       build_type: [Debug, Release]
-      application: [acoustic, euler, elastic]
+      application: [euler, elastic-wave]
       solver_type: [FVRusanovGlobalAdaptiveEnclave, RKDGRusanovGlobalAdaptiveEnclave, ADERDGRusanovGlobalAdaptive]
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd build/applications/exahype2/$application; python3 $application.py -s $solver_type -d $dimensions -m $build_type --no-make"
@@ -74,9 +74,9 @@ exahype2-benchmarks-cmake-intel:
     - job: build-cmake-intel
   parallel:
     matrix:
-    - benchmark: [euler, acoustic, elastic, advection]
+    - benchmark: [euler, acoustic-wave, elastic-wave, advection]
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$benchmark/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -s 1 -e -fpe -m Release --no-make"
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$benchmark/kernel-benchmarks; python3 kernel-benchmarks-fv-rusanov.py -d 2 -ps 16 -p 128 -a -1 -s 1 -e -m Release --no-make"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} bash <<< "cd build/benchmarks/exahype2/$benchmark/kernel-benchmarks; make -j $(nproc --all)"
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${INTEL_IMAGE_TAG} build/benchmarks/exahype2/$benchmark/kernel-benchmarks/kernel-benchmarks-fv-rusanov-2d-ps-16-Release
   retry: 0

@@ -1,59 +1,42 @@
-// This file is part of the Peano project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/accelerator/accelerator.h"
-
-#include "ErrorCheck.h"
 #include "tarch/Assertions.h"
-#include "tarch/memory/memory.h"
 
 #if defined(GPUOffloadingCUDA)
 
 #include <cuda_runtime.h>
 
-void tarch::accelerator::gpuAbort() {}
-
-void* tarch::accelerator::allocateRawData(std::size_t size, tarch::memory::MemoryLocation location, int device) {
-  void* data = nullptr;
-
-  switch (location) {
-  case tarch::memory::MemoryLocation::Heap:
-    data = std::aligned_alloc(AlignmentOnHeap, padSizeToAlignment(size, AlignmentOnHeap));
-    break;
-  case tarch::memory::MemoryLocation::HeapDeviceMemory:
-    CHECK_CUDA_ERROR(cudaSetDevice(device));
-    CHECK_CUDA_ERROR(cudaMalloc(&data, size));
-    break;
-  case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    CHECK_CUDA_ERROR(cudaSetDevice(device));
-    CHECK_CUDA_ERROR(cudaMallocManaged(&data, size));
-    break;
-  case tarch::memory::MemoryLocation::PinnedMemory:
-    CHECK_CUDA_ERROR(cudaSetDevice(device));
-    CHECK_CUDA_ERROR(cudaMallocHost(&data, size));
-    break;
+#define CHECK_CUDA_ERROR(ans) { cudaAssertion((ans), __FILE__, __LINE__); }
+void cudaAssertion(cudaError_t code, const char *file, int line) {
+  if (code != cudaSuccess) {
+    fprintf(stderr,"CUDA assertion: %s %s %d\n", cudaGetErrorString(code), file, line);
   }
-
-  assertion(data);
-  return data;
+  assertion(code == cudaSuccess);
 }
 
+void tarch::gpuAbort() {
+}
 
-void tarch::accelerator::freeRawData(void* data, tarch::memory::MemoryLocation location, int device) {
-  assertion(data);
-
+void* tarch::internal::allocateRawData(int size, tarch::MemoryLocation location) {
+  void* result = nullptr;
   switch (location) {
-  case tarch::memory::MemoryLocation::Heap:
-    std::free(data);
-    break;
-  case tarch::memory::MemoryLocation::HeapDeviceMemory:
-  case tarch::memory::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
-    CHECK_CUDA_ERROR(cudaSetDevice(device));
-    CHECK_CUDA_ERROR(cudaFree(data));
-    break;
-  case tarch::memory::MemoryLocation::PinnedMemory:
-    CHECK_CUDA_ERROR(cudaSetDevice(device));
-    CHECK_CUDA_ERROR(cudaFreeHost(data));
-    break;
+    case tarch::MemoryLocation::Heap:
+      result = std::aligned_alloc(AlignmentOnHeap, tarch::padSizeToAlignment(size, AlignmentOnHeap)); // Aligned alloc requires size to be a multiple of the aligment
+      break;
+    case tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+      CHECK_CUDA_ERROR(cudaMallocManaged((void**)&result, size));
+      break;
+  }
+  return result;
+}
+
+void tarch::freeMemory(void* data, tarch::MemoryLocation location) {
+  switch (location) {
+    case tarch::MemoryLocation::Heap:
+      std::free(data);
+      break;
+    case tarch::MemoryLocation::ManagedSharedAcceleratorDeviceMemory:
+      CHECK_CUDA_ERROR(cudaFree(data));
+      break;
   }
 }
 

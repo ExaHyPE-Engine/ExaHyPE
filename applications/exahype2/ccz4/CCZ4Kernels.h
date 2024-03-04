@@ -30,26 +30,8 @@ namespace applications {
         const double CCZ4bs,
         const double CCZ4sk,
         const double CCZ4xi,
-        const double CCZ4mu
-      ) InlineMethod;
-
-
-      /**
-       * @todo Han What do we do here?
-       */
-      #if defined(SharedOMP)
-      #pragma omp declare simd
-      #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions void ncpSecondOrderFormulation(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
-        const int CCZ4LapseType,
-        const double CCZ4ds,
-        const double CCZ4c,
-        const double CCZ4e,
-        const double CCZ4f,
-        const double CCZ4bs,
-        const double CCZ4sk,
-        const double CCZ4xi,
-        const double CCZ4mu
+        const double CCZ4mu,
+        const double CCZ4SO
       ) InlineMethod;
 
       /**
@@ -84,32 +66,9 @@ namespace applications {
         const double CCZ4eta,
         const double CCZ4k1,
         const double CCZ4k2,
-        const double CCZ4k3
+        const double CCZ4k3,
+        const double CCZ4SO
       ) InlineMethod;
-
-
-      /**
-       * @todo Han
-       */
-      #if defined(SharedOMP)
-      #pragma omp declare simd
-      #endif
-      KeywordToAvoidDuplicateSymbolsForInlinedFunctions void sourceSecondOrderFormulation(double* S, const double* const Q,
-        const int CCZ4LapseType,
-        const double CCZ4ds,
-        const double CCZ4c,
-        const double CCZ4e,
-        const double CCZ4f,
-        const double CCZ4bs,
-        const double CCZ4sk,
-        const double CCZ4xi,
-        const double CCZ4itau,
-        const double CCZ4eta,
-        const double CCZ4k1,
-        const double CCZ4k2,
-        const double CCZ4k3
-      ) InlineMethod;
-
 
       #if defined(SharedOMP)
       #pragma omp declare simd
@@ -171,12 +130,6 @@ namespace applications {
        * If works on the full set of unknowns of the first-order formulation
        */
       void enforceCCZ4constraints(double* __restrict__  newQ);
-
-
-      /**
-       * @todo Han
-       */
-      void enforceCCZ4constraintsSecondOrderFormulation(double* __restrict__  newQ);
 
       /**
        * Anticipate Euler step and correct dQdt such that outcome does fulfill

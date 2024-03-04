@@ -12,7 +12,7 @@
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/orchestration/StrategyFactory.h"
 
-#include "peano4/peano4.h"
+#include "peano4/peano.h"
 
 namespace {
   tarch::logging::Log _log( "exahype2" );
