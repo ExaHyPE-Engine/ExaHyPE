@@ -164,6 +164,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::run() {
   testMethod(testLiftDropOfParticleAssociatedWithVertex01);
   testMethod(testLiftDropOfParticleAssociatedWithVertex02);
   testMethod(testLiftDropOfParticleAssociatedWithVertex03);
+  testMethod(testLiftDropOfParticleAssociatedWithVertex04);
 }
 
 void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex02() {
@@ -337,6 +338,136 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   #endif
 }
 
+
+
+void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticleAssociatedWithVertex04() {
+  #if Dimensions==2
+  const int select = 0;
+  peano4::datamanagement::VertexMarker marker;
+
+  const double  meshSize = 1.0/3.0;
+
+  marker._cellCentre = {0.166667,0.5};
+  marker._h          = {meshSize, meshSize};
+  marker._isHanging  = 0;
+  marker._hasBeenRefined = 0;
+  marker._willBeRefined  = 0;
+  marker._isParentVertexLocal = 0b1011;
+  marker._isParentCellLocal   = true;
+  marker._relativePositionOfCellWithinFatherCell = {2,0};
+  marker._select     = 2;
+  marker._isAdjacentCellLocal = 0b000100110;
+
+  tarch::la::Vector<Dimensions,double> x = {4.99999996463071805231e-01, 5.00000003548028204570e-01};
+  const double                         searchRadius = 0.15;
+  toolbox::particles::ParticleReassociationInstruction liftInstruction;
+  bool                                                 drop;
+
+  // Vertex 1 triggers a global lift
+  marker._select  = 1;
+  liftInstruction = liftParticleAssociatedWithVertex(true, searchRadius, x, marker);
+  validateEqualsWithParams1(liftInstruction, toolbox::particles::ParticleReassociationInstruction_SieveGlobally, marker.toString());
+
+  validateWithParams5(
+    not sieveParticle(searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
+
+  marker._select  = 3;
+  validateWithParams5(
+    sieveParticle(searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
+
+  // look into cell to the right
+  marker._cellCentre(0) += meshSize;
+  marker._isAdjacentCellLocal = 0b000110111;
+
+  marker._select  = 0;
+  validateWithParams5(
+    not sieveParticle(searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
+
+  marker._select  = 2;
+  validateWithParams5(
+    sieveParticle(searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
+
+  // study diagonal right top cell
+  marker._cellCentre(1) += meshSize;
+  marker._isAdjacentCellLocal = 0b000000110;
+
+  marker._select  = 0;
+  validateWithParams5(
+    sieveParticle(searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
+
+
+  // Same overall test on other rank: start with left cell
+  marker._cellCentre = {0.166667,0.5};
+  marker._isAdjacentCellLocal = 0b000100110;
+  marker._isAdjacentCellLocal.flip();
+
+  marker._select  = 1;
+  validateWithParams5(
+    not sieveParticle(searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
+
+  marker._select  = 3;
+  validateWithParams5(
+    sieveParticle(searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
+
+  // study diagonal right top cell
+  marker._cellCentre(0) += meshSize;
+  marker._cellCentre(1) += meshSize;
+  marker._isAdjacentCellLocal = 0b000000110;
+  marker._isAdjacentCellLocal.flip();
+
+  marker._select  = 0;
+  validateWithParams5(
+    sieveParticle(searchRadius, x, marker),
+    internal::fitsIntoLevel(searchRadius, marker),
+    marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
+    2.0 * searchRadius,
+    internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE,
+    marker.toString()
+  );
+  #endif
+}
 
 #ifdef UseTestSpecificCompilerSettings
 #pragma optimize("", on)
