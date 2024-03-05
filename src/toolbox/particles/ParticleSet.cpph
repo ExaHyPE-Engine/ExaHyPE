@@ -307,6 +307,12 @@ bool toolbox::particles::ParticleSet<T>::hasParticlesToBeSievedIntoVertices() {
 
 
 template <typename T>
+int toolbox::particles::ParticleSet<T>::getNumberOfParticlesThatHaveBeSievedIntoVertices() {
+  return _sieveParticles.getNumberOfParticlesThatHaveBeSievedIntoVertices();
+}
+
+
+template <typename T>
 std::string toolbox::particles::ParticleSet<T>::toString(bool addBrackets) const {
   std::ostringstream msg;
   if (addBrackets)

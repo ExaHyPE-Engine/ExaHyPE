@@ -163,6 +163,13 @@ public:
   static bool hasParticlesToBeSievedIntoVertices();
 
   /**
+   * Return total number of particles to be sieved
+   *
+   * Delegates to SieveParticles::getNumberOfParticlesThatHaveBeSievedIntoVertices()
+   */
+  static int getNumberOfParticlesThatHaveBeSievedIntoVertices();
+
+  /**
    * Return global sum of the particles that did remain within their partition at a time.
    *
    * Should only be called on global master after the reduction.
