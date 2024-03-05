@@ -158,6 +158,14 @@ public:
    * @param originatingTree Number of tree (positive integer) or GlobalSort. It
    *   indicates where the particles should come from, i.e. are they form a
    *   specific tree or some particles that we have to sort globally.
+   *
+   * @param removeReturnedParticlesFromSet If this field is set, we remove the
+   *   particles from the underlying set before we return them. That is, the
+   *   underlying set on which we call getParticlesToBeSievedIntoVertex()
+   *   shrinks monotonously. If you set it to false, the particles will reside
+   *   within the set, but the set will eventually delete them, as it updates
+   *   its content globally. Therefore, you should not use the returned
+   *   particles directly but rather create copies.
    */
   ParticleList getParticlesToBeSievedIntoVertex(
     const peano4::datamanagement::VertexMarker& marker,

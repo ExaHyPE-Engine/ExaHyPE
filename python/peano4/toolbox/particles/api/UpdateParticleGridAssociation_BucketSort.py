@@ -131,16 +131,29 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
     )
 
 
+    """!
+        
+    The sieve here differs from the default one in the lift-drop variants. It
+    inserts also remote particles, i.e. directly into the halo layer. It also
+    does not eliminate particles from the sieve set.
+        
+    """
     _Template_Sieve = jinja2.Template(
         """
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( 
-      marker
+      marker,
+      false, // removeReturnedParticlesFromSet,
+      false  // onlyReturnParticlesThatWillBeLocal
     );
 
-    for (auto& newParticle: sievedParticles) {
+    for (auto& sievedParticle: sievedParticles) {
       _numberOfDropsFromSieveSet++;      
-      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId );
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( 
+        new globaldata::{{PARTICLE}}(*sievedParticle), 
+        marker, 
+        _spacetreeId 
+      );
     }
 
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );

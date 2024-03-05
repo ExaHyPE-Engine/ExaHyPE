@@ -246,6 +246,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
    the coarse vertices could be on another rank if the tree is cut vertically.
    If could also be that the green vertex is actually from an adjacent domain
    and hence does not hold any reasonable information.
+   
+   This routine is not used by all action sets. The bucket sort for example 
+   does not need it. The lift drop sets in return however all use this 
+   particular action set.
 
   """
     _Template_Drop = jinja2.Template(
@@ -302,9 +306,11 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
         """
   if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
-      marker
+      marker,
+      true, // removeReturnedParticlesFromSet,
+      true // onlyReturnParticlesThatWillBeLocal    );
     );
-
+    
     for (auto& newParticle: sievedParticles) {
       _numberOfDropsFromSieveSet++;      
       fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId );
