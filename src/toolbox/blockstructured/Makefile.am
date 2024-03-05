@@ -11,6 +11,7 @@ ToolboxBlockstructured_SOURCES = \
   Copy.cpp \
   Derivative.cpp \
   Enumeration.cpp \
+  GlobalDatabase.cpp \
   Interpolation.cpp \
   Projection.cpp \
   Restriction.cpp \
