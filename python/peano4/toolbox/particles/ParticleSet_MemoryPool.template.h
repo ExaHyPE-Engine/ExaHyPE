@@ -158,6 +158,8 @@
        */
       Container::iterator particleCanNotBeLiftedLocally( const Container::iterator&   particle );
 
+      void particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(DoFType*  particle);
+
       /**
        * This is a deep delete
        *

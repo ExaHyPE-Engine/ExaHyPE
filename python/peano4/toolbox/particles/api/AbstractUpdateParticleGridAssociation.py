@@ -263,7 +263,7 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
           toolbox::particles::particleWillBeDroppedFurther(**p, marker)
         ) {
           _numberOfDropsIntoHorizontalTreeDecomposition++;
-          fineGridVertex{{PARTICLES_CONTAINER}}.addParticleThatCanNotBeLiftedWithinItsTree(*p);    
+          fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(*p);    
         }
         else if ( ::toolbox::particles::dropParticle(**p,marker) ) {
           _numberOfDrops++;

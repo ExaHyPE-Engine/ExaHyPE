@@ -122,6 +122,8 @@
        */
       void particlesCanNotBeLiftedLocally();
 
+      void particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(DoFType*  particle);
+
       /**
        * Shallow clear
        *

@@ -265,6 +265,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clear() {
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(DoFType*  particle) {
+  _sieveParticles.addParticleThatCanNotBeLiftedWithinItsTree(particle);
+}
+
+
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::particlesCanNotBeLiftedLocally() {
   _memoryPool.scatter();
   for (auto p: _memoryPool.container) {
