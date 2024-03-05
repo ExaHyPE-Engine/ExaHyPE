@@ -255,16 +255,18 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       // Define inside for loop, as sieve will define it as well
       vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin();
       while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-        if ( ::toolbox::particles::dropParticle(**p,marker) ) {
+        if ( 
+          ::toolbox::particles::dropParticle(**p,marker) 
+          and 
+          marker.isParentOfSubtree() 
+          and 
+          toolbox::particles::particleWillBeDroppedFurther(**p, marker)
+        ) {
+          _numberOfDropsIntoHorizontalTreeDecomposition++;
+          fineGridVertex{{PARTICLES_CONTAINER}}.addParticleThatCanNotBeLiftedWithinItsTree(*p);    
+        }
+        else if ( ::toolbox::particles::dropParticle(**p,marker) ) {
           _numberOfDrops++;
-          
-          if (
-            marker.isParentOfSubtree() 
-            and 
-            toolbox::particles::particleWillBeDroppedFurther(**p, marker)
-          ) {
-            _numberOfDropsIntoHorizontalTreeDecomposition++;
-          }
           
           (*p)->setCellH(marker.h());
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
