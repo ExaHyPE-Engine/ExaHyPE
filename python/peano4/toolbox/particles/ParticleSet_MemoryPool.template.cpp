@@ -25,7 +25,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithNeighbourParticle(
   );
   const bool incomingParticleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( neighbourParticle->getX(), marker );
   neighbourParticle->setParallelState( incomingParticleWillBeLocal ? DoFType::ParallelState::Local : DoFType::ParallelState::Virtual );
-  Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(p, _memoryPool.container.begin(), _memoryPool.container.end());
+  Container::iterator iteratorToExistingCopy = ::toolbox::particles::particleIsDuplicate(neighbourParticle, _memoryPool.container.begin(), _memoryPool.container.end());
   if ( iteratorToExistingCopy!=end() ) {
     if ( (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local ) {
       tarch::multicore::Lock lock( _statisticsSemaphore );

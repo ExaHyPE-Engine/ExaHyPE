@@ -307,12 +307,14 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       _spacetreeId
     );
 
+    logInfo( "touchVertexFirstTime(...)", "vertex holds " << fineGridVertex{{PARTICLES_CONTAINER}}.size() << " entries" );
     for (auto& newParticle: sievedParticles) {
       if ( ::toolbox::particles::particleIsDuplicate(
         newParticle,
         fineGridVertex{{PARTICLES_CONTAINER}}.begin(),
         fineGridVertex{{PARTICLES_CONTAINER}}.end()
       ) != fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
+        logInfo( "touchVertexFirstTime(...)", "particle is a duplicate: " << newParticle->toString() );
         _numberOfSkippedDropsFromSieveSet++;
         delete newParticle;
       }

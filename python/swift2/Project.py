@@ -69,10 +69,10 @@ class Project(object):
         self.additional_action_sets_per_solver_step = []
 
         self.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
+            swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
         )
         self.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_scattered_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
         )
 
     def set_load_balancing(self, load_balancer_name, load_balancer_arguments):
@@ -503,7 +503,10 @@ levels.
                 current_species_set.name
             )
             vertex_marker_for_tasks = peano4.toolbox.api.EnumerateCellsAndVerticesOnEnclaveMesh.create_vertex_marker(
-                current_species_set.name
+                task_name = current_species_set.name,
+                full_qualified_enumerator_type = "::swift2::TaskEnumerator",
+                enumerator_include = """ #include "swift2/TaskEnumerator.h" """
+                
             )
 
             # Enable cell statistics for this species

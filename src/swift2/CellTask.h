@@ -6,6 +6,7 @@
 #include <functional>
 
 #include "tarch/multicore/Tasks.h"
+#include "peano4/datamanagement/CellMarker.h"
 
 
 namespace swift2 {
@@ -24,11 +25,19 @@ namespace swift2 {
    * this point, active and passive set are written down as templates over an
    * unknown particle type. This task does not exploit any vectorisation in any
    * way.
+   *
+   * ## Design rationale
+   *
+   * One might initially think that this task class is not required, as we only
+   * wrap the TaskWithCopyOfFunctor. However, we add a few more bits and pieces
+   * such as the GPU-offload and fusion capabilities. Furthermore, it is nice to
+   * see the copy semantics preserved explicitly, i.e. which objects are explicitly
+   * preserved and handed over.
    */
   template <typename ParticleSet>
   class CellTask: public tarch::multicore::Task {
   public:
-    typedef std::function<void(ParticleSet& localParticles, ParticleSet& activeParticles)> Functor;
+    typedef std::function<void(const peano4::datamanagement::CellMarker&  marker, ParticleSet& localParticles, ParticleSet& activeParticles)> Functor;
 
     /**
      * Construct a vertex task
@@ -37,15 +46,26 @@ namespace swift2 {
      * multicore component via
      */
     CellTask(
-      const ParticleSet& localParticles, const ParticleSet& activeParticles, Functor functor, bool FuseAndPortToGPU
+      const peano4::datamanagement::CellMarker&  marker,
+      const ParticleSet&                         localParticles,
+      const ParticleSet&                         activeParticles,
+      Functor                                    functor,
+      bool                                       fuseAndPortToGPU
     );
     ~CellTask();
 
+    /**
+     * Run the task
+     *
+     * This routine invokes the actual task functor. After that, it sets the
+     * updated marker for the particles. We see that t
+     */
     virtual bool run() override;
 
   private:
     static int TaskTypeId;
 
+    const peano4::datamanagement::CellMarker  _marker;
     ParticleSet _localParticles;
     ParticleSet _activeParticles;
     Functor     _functor;

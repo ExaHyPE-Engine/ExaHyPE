@@ -182,21 +182,21 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier toolbox::part
     tarch::multicore::MultiReadSingleWriteLock lock(_semaphore,tarch::multicore::MultiReadSingleWriteLock::Read);
     auto currentSnapshot = _data.crbegin();
     while (currentSnapshot != _data.crend()) {
-      for (const auto& event: *currentSnapshot) {
+      for (const auto& eventsForOneParticle: *currentSnapshot) {
         // use floating-point aware comparison operator
         if (
-          event.first.particleName==result.particleName
+          eventsForOneParticle.first.particleName==result.particleName
           and
-          tarch::la::equals(event.first.particleX, result.particleX, searchTolerance)
+          tarch::la::equals(eventsForOneParticle.first.particleX, result.particleX, searchTolerance)
         ) {
           logDebug(
             "createParticleIdentifier()",
             "found entry for " << particleX << " given tolerance of " << searchTolerance << ": will copy data over bit-wisely which biases identifier by "
-            << (event.first.particleX - result.particleX)
+            << (eventsForOneParticle.first.particleX - result.particleX)
           );
           // This is a bit-wise copy and biases the result towards an
           // existing entry.
-          result = event.first;
+          result = eventsForOneParticle.first;
           assertion(currentSnapshot->count(result) > 0);
           return result;
         }
@@ -209,9 +209,11 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier toolbox::part
 }
 
 
-toolbox::particles::assignmentchecks::internal::Database::Database() {
+toolbox::particles::assignmentchecks::internal::Database::Database( int maxParticleSnapshotsToKeepTrackOf ):
+  _maxParticleSnapshotsToKeepTrackOf( maxParticleSnapshotsToKeepTrackOf ) {
   _data.push_back(MeshSweepData("initial"));
 };
+
 
 void toolbox::particles::assignmentchecks::internal::Database::startMeshSweep(const std::string& meshSweepName) {
   logInfo("startMeshSweep()", "finish old mesh sweep with " << _data.rbegin()->size() << " event(s) and start new one for " << meshSweepName );
@@ -226,6 +228,66 @@ int toolbox::particles::assignmentchecks::internal::Database::getCurrentMeshSwee
 }
 
 
+void toolbox::particles::assignmentchecks::internal::Database::removeEmptyDatabaseSnapshots() {
+  bool isEmpty = true;
+
+  for (auto p: *_data.cbegin()) {
+    isEmpty &= p.second.empty();
+  }
+
+  if (isEmpty) {
+    logDebug( "removeEmptyDatabaseSnapshots()", "remove first snapshot from database as it is empty" );
+    _data.erase( _data.begin() );
+  }
+}
+
+
+void toolbox::particles::assignmentchecks::internal::Database::removeTrajectory(
+  const ParticleIdentifier&  identifier,
+  int                        spacetreeId,
+  int                        firstNRecentEntriesToSkip
+) {
+  assertion( spacetreeId>=0 );
+
+  auto currentSnapshot = _data.rbegin();
+  std::advance( currentSnapshot, firstNRecentEntriesToSkip );
+
+  while (currentSnapshot != _data.rend()) {
+    MeshSweepData& meshSweepData = *currentSnapshot;
+
+    if (meshSweepData.count(identifier) > 0) {
+      auto historyEventIterator = meshSweepData.at(identifier).rbegin();
+      while (historyEventIterator != meshSweepData.at(identifier).rend()) {
+        if (
+          historyEventIterator->treeId == spacetreeId
+          and
+          historyEventIterator->type == Event::Type::MoveWhileAssociatedToVertex
+        ) {
+          ParticleIdentifier previousIdentifier = identifier;
+          previousIdentifier.particleX = historyEventIterator->previousParticleX;
+          logDebug( "removeTrajectory(...)", "first erase historic data of " << previousIdentifier.toString() << " due to " << historyEventIterator->toString() );
+          removeTrajectory(previousIdentifier, spacetreeId, firstNRecentEntriesToSkip);
+        }
+        historyEventIterator++;
+      }
+
+      auto forwardEventIterator = meshSweepData.at(identifier).begin();
+      while (forwardEventIterator != meshSweepData.at(identifier).end()) {
+        if ( forwardEventIterator->treeId == spacetreeId ) {
+          logDebug( "removeTrajectory(...)", "erase event " << forwardEventIterator->toString() );
+          forwardEventIterator = meshSweepData[identifier].erase(forwardEventIterator);
+        }
+        else {
+          forwardEventIterator++;
+        }
+      }
+    }
+    currentSnapshot++;
+    firstNRecentEntriesToSkip++;
+  }
+}
+
+
 toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assignmentchecks::internal::Database::getEntry(
   const ParticleIdentifier&  identifier,
   int                        spacetreeId,
@@ -237,7 +299,6 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
 
   std::advance( currentSnapshot, firstNRecentEntriesToSkip );
 
-  int countSnapshotsBackwards = 0;
   while (currentSnapshot != _data.crend()) {
     const MeshSweepData& meshSweepData = *currentSnapshot;
 
@@ -268,8 +329,8 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
             identifier.toString(),
             event->toString()
           );
-          logDebug( "getEntry()", "rerun with " << previousIdentifier.toString() << " distilled from " << identifier.toString() << " on iteration " << countSnapshotsBackwards );
-          return getEntry(previousIdentifier, spacetreeId, countSnapshotsBackwards);
+          logDebug( "getEntry()", "rerun with " << previousIdentifier.toString() << " distilled from " << identifier.toString() << " on iteration " << firstNRecentEntriesToSkip );
+          return getEntry(previousIdentifier, spacetreeId, firstNRecentEntriesToSkip);
         }
         else if (event->type != Event::Type::Erase and treeIsAFit) {
           return *event;
@@ -278,7 +339,7 @@ toolbox::particles::assignmentchecks::internal::Event toolbox::particles::assign
       }
     }
     currentSnapshot++;
-    countSnapshotsBackwards++;
+    firstNRecentEntriesToSkip++;
   }
 
   return Event(Event::Type::NotFound);
@@ -386,7 +447,48 @@ void toolbox::particles::assignmentchecks::internal::Database::addEvent(Particle
     snapshot.insert(std::pair<ParticleIdentifier, ParticleEvents>(identifier, ParticleEvents()));
     logDebug( "addEvent(...)", "add new particle history thread in this snapshot for " << identifier.toString() );
   }
+
+  // We first have to push it. Otherwise, the susequent getEntry() won't work.
   snapshot[identifier].push_back(event);
+
+  if ( event.type != Event::Type::MoveWhileAssociatedToVertex and _data.size() > _maxParticleSnapshotsToKeepTrackOf ) {
+    removeTrajectory( identifier, event.treeId );
+    removeEmptyDatabaseSnapshots();
+
+    // re-add element
+    if (snapshot.count(identifier) == 0) {
+      snapshot.insert(std::pair<ParticleIdentifier, ParticleEvents>(identifier, ParticleEvents()));
+      logDebug( "addEvent(...)", "re-add particle history in this snapshot for " << identifier.toString() );
+    }
+    snapshot[identifier].push_back(event);
+  }
+  if ( event.type == Event::Type::MoveWhileAssociatedToVertex and _data.size() > _maxParticleSnapshotsToKeepTrackOf ) {
+    lock.free();
+
+    Event originalEntry               = getEntry(identifier, event.treeId);
+    Event substituteEntry             = originalEntry;
+    substituteEntry.previousParticleX = event.previousParticleX;
+    substituteEntry.trace             = "substitute:" + originalEntry.trace + "->" + event.trace;
+    logDebug(
+      "addEvent(...)",
+      "have " << _data.size() << " snapshots in database which indicates that lots of particles have moved slightly but not changed vertex association. The identifier/event combination " <<
+      identifier.toString() << "/" << event.toString() <<
+      " has a history leading back to " << originalEntry.toString() <<
+      ". Introduce substitute event " << identifier.toString() << "/" << substituteEntry.toString()
+    );
+    assertion(originalEntry.type!=Event::Type::NotFound);
+
+    lock.lock();
+    removeTrajectory( identifier, event.treeId);
+    removeEmptyDatabaseSnapshots();
+
+    // re-add element
+    if (snapshot.count(identifier) == 0) {
+      snapshot.insert(std::pair<ParticleIdentifier, ParticleEvents>(identifier, ParticleEvents()));
+      logDebug( "addEvent(...)", "re-add particle history in this snapshot for " << identifier.toString() );
+    }
+    snapshot[identifier].push_back(substituteEntry);
+  }
 }
 
 
