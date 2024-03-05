@@ -155,20 +155,32 @@ bool toolbox::particles::SieveParticles<T>::hasParticlesToBeSievedIntoVertices()
 
 template <typename T>
 typename toolbox::particles::SieveParticles<T>::ParticleList toolbox::particles::SieveParticles<T>::getParticlesToBeSievedIntoVertex(
-  const peano4::datamanagement::VertexMarker& marker
+  const peano4::datamanagement::VertexMarker& marker,
+  bool  removeReturnedParticlesFromSet,
+  bool  onlyReturnParticlesThatWillBeLocal
 ) {
-  tarch::multicore::Lock lock(_particlesToBeSievedSemaphore);
+  tarch::multicore::Lock lock(_particlesToBeSievedSemaphore, removeReturnedParticlesFromSet);
 
   ParticleList                    result;
   typename ParticleList::iterator p = _particlesThatHaveToBeSieved.begin();
   while (p != _particlesThatHaveToBeSieved.end()) {
-    if (::toolbox::particles::sieveParticle(**p, marker)) {
+    bool willBeLocal              = toolbox::particles::particleAssignedToVertexWillBeLocal( (*p)->getX(), marker );
+    if (
+      ::toolbox::particles::sieveParticle(**p, marker)
+      and
+      (willBeLocal or not onlyReturnParticlesThatWillBeLocal)
+    ) {
       logDebug("getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString());
 
       (*p)->setCellH(marker.h());
 
       result.push_back(*p);
-      p = _particlesThatHaveToBeSieved.erase(p);
+      if (removeReturnedParticlesFromSet) {
+        p = _particlesThatHaveToBeSieved.erase(p);
+      }
+      else {
+        p++;
+      }
     } else {
       p++;
     }

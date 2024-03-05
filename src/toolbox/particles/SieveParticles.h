@@ -159,7 +159,11 @@ public:
    *   indicates where the particles should come from, i.e. are they form a
    *   specific tree or some particles that we have to sort globally.
    */
-  ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
+  ParticleList getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker,
+    bool  removeReturnedParticlesFromSet,
+    bool  onlyReturnParticlesThatWillBeLocal
+  );
 
   /**
    * Fine out how many particles still to sieve

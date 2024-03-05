@@ -151,7 +151,11 @@ public:
    * @see SieveParticles::getParticlesToBeSievedIntoVertex() for parameter
    *   descriptions.
    */
-  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker);
+  static ParticleList getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker,
+    bool  removeReturnedParticlesFromSet,
+    bool  onlyReturnParticlesThatWillBeLocal
+  );
 
   /**
    * Make routine from SieveParticles public
