@@ -189,6 +189,17 @@ orithmStepUpdates=1,...,dependencyChecksAlgorithmStepMaskOuts=0,...,dependencyCh
  500006642    00:00:00     rank:0       core:2       info         benchmarks::swift2::noh::repositories::GlobalState::finishIntermediateStep() sort statistics: #lifts=0, #drops=0, #lifts-into-sieve-set=1, #drops-from-sieve-set=0, #drops-into-horizontal-tree-decomposition=0, #reassignments=0
 
    * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * Funny enough, this particular bug did arise only for two threads, but
+   * passed with eight. Digging into the output revealed that the inflying
+   * particle seems to not to be local on either rank:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1616501080   00:00:01     rank:0       core:7       info         benchmarks::swift2::noh::observers::StepHydroPartDrift_sweep12peano4_toolbox_particles_api_UpdateParticleGridAssociation_BucketSort0::touchVertexLastTime(...) lift particle (,x=[0.5,0.5],cellH=[0.333333,0.333333],searchRadius=0.15,ParallelState=Local,MoveState=Moved,CellHasUpdatedParticle=1,mass=0.01,v=[-3.51825e-06,3.5199e-06],a=[1.29168e-05,-9.76758e-05],density=1.01558,pressure=6.80968e-07,smoothingLength=0.12252,u=1.00578e-06,uDot=1.15969e-05,v_full=[-3.5176e-06,3.51502e-06],u_full=1.00578e-06,wcount=101.558,wcount_dh=-14.06,f=0,hDot=-1.06525,rho_dh=-0.1406,smoothingLengthIterCount=0,hasNoNeighbours=0,isBoundaryParticle=0,partid=1,cfl=0.1,initialTimeStepSize=0.0001,adjustTimeStepSize=0,hydroDimensions=2,etaFactor=1.2348,smlMin=1e-06,smlMax=0.166667,smlTolerance=0.0001,smlMaxIterations=30,alphaAV=0.8,betaAV=3,balsara=0.8,rot_v=4.39144e-07,div_v=-17.2853,v_sig_AV=3.00064,soundSpeed=0.00105714) globally from tree 0. Previously assigned to (cell-centre=[0.166667,0.5],cell-h=[0.333333,0.333333],local=1011,hanging=0000,select=1,has-been-refined=0000,will-be-refined=0000,is-parent-vertex-local=1111,is-parent-cell-local=0,rel-pos-within-father=[0,1],is-adjacent-cell-local=000100110,x(selected)=[0.333333,0.333333])
+ 1620846099   00:00:01     rank:0       core:6       info         benchmarks::swift2::noh::observers::DummyStepHydroPartPredictHydro_sweep22peano4_toolbox_particles_api_UpdateParticleGridAssociation_BucketSort0::touchVertexFirstTime() now we drop particle (,x=[0.5,0.5],cellH=[0.333333,0.333333],searchRadius=0.15,ParallelState=Local,MoveState=Moved,CellHasUpdatedParticle=1,mass=0.01,v=[-3.51825e-06,3.5199e-06],a=[1.29168e-05,-9.76758e-05],density=1.01558,pressure=6.80968e-07,smoothingLength=0.12252,u=1.00578e-06,uDot=1.15969e-05,v_full=[-3.5176e-06,3.51502e-06],u_full=1.00578e-06,wcount=101.558,wcount_dh=-14.06,f=0,hDot=-1.06525,rho_dh=-0.1406,smoothingLengthIterCount=0,hasNoNeighbours=0,isBoundaryParticle=0,partid=1,cfl=0.1,initialTimeStepSize=0.0001,adjustTimeStepSize=0,hydroDimensions=2,etaFactor=1.2348,smlMin=1e-06,smlMax=0.166667,smlTolerance=0.0001,smlMaxIterations=30,alphaAV=0.8,betaAV=3,balsara=0.8,rot_v=4.39144e-07,div_v=-17.2853,v_sig_AV=3.00064,soundSpeed=0.00105714)
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   *
    */
   void testLiftDropOfParticleAssociatedWithVertex04();
 

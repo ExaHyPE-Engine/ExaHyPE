@@ -326,8 +326,9 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._select         = 2;
   marker._h              = {3.0*meshSize, 3.0*meshSize};
 
+  // not here as on other rank
   validateWithParams5(
-    sieveParticle(searchRadius, x, marker),
+    not sieveParticle(searchRadius, x, marker),
     internal::fitsIntoLevel(searchRadius, marker),
     marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
     2.0 * searchRadius,
@@ -443,7 +444,7 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
 
   marker._select  = 3;
   validateWithParams5(
-    sieveParticle(searchRadius, x, marker),
+    not sieveParticle(searchRadius, x, marker),
     internal::fitsIntoLevel(searchRadius, marker),
     marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
     2.0 * searchRadius,
@@ -457,9 +458,10 @@ void toolbox::particles::tests::MultiscaleTransitionsTest::testLiftDropOfParticl
   marker._isAdjacentCellLocal = 0b000000110;
   marker._isAdjacentCellLocal.flip();
 
+  // not here as on other rank
   marker._select  = 0;
   validateWithParams5(
-    sieveParticle(searchRadius, x, marker),
+    not sieveParticle(searchRadius, x, marker),
     internal::fitsIntoLevel(searchRadius, marker),
     marker.isContainedInAdjacentCells(x, 0.5, internal::relativeReleaseOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE),
     2.0 * searchRadius,

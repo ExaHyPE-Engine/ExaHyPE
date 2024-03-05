@@ -202,7 +202,8 @@ namespace toolbox {
      * - this vertex's search radius would not fit into the next finer
      *   mesh level OR
      *   there is no next finer mesh level; AND
-     * - the particle's search radius is not too big for the current mesh level.
+     * - the particle's search radius is not too big for the current mesh level; AND
+     * - the particle will be local.
      *
      *
      * ## Rationale and usage

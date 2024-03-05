@@ -153,8 +153,9 @@ bool toolbox::particles::sieveParticle(double searchRadius, const tarch::la::Vec
 
   bool fitsIntoCurrentMeshLevel = internal::fitsIntoLevel(searchRadius, marker);
   bool willNotBeDroppedFurther  = not internal::fitsIntoLevel(searchRadius * 3.0, marker) or not marker.hasBeenRefined();
+  bool willBeLocal              = toolbox::particles::particleAssignedToVertexWillBeLocal( x, marker );
 
-  return belongsIntoNeighbouringCells and fitsIntoCurrentMeshLevel and willNotBeDroppedFurther;
+  return belongsIntoNeighbouringCells and fitsIntoCurrentMeshLevel and willNotBeDroppedFurther and willBeLocal;
 }
 
 
