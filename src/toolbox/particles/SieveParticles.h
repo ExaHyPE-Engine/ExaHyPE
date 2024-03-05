@@ -119,6 +119,7 @@ public:
    */
   void addParticleThatCanNotBeLiftedWithinItsTree(T*);
 
+
   /**
    * Get particles that are to be sieved into one vertex
    *
@@ -128,10 +129,13 @@ public:
    * removes them from the current set.
    *
    * In line with peano4.toolbox.particles.Particle, we do not alter the
-   * parallel state. That's the job of peano4.toolbox.particles.api.UpdateParticle.
+   * parallel state. That's the job of whoever calls this routine. Most
+   * action sets (notably our sorting action sets) will invoke the boundary
+   * merger and this merger will then take care of the parallel flag.
    *
    * All the particles in the result set are assigned the correct mesh
-   * size h of the corresponding mesh into which we sieve it.
+   * size h of the corresponding mesh into which we sieve it. So this
+   * attribute is changed.
    *
    *
    * ## Thread safety
@@ -166,6 +170,12 @@ public:
    * been done.
    */
   bool hasParticlesToBeSievedIntoVertices() const;
+
+  /**
+   * hasParticlesToBeSievedIntoVertices() is equivalent to checking if this
+   * routine returns something greater than 0.
+   */
+  int getNumberOfParticlesThatHaveBeSievedIntoVertices() const;
 
 
 private:
