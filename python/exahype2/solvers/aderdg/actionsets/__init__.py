@@ -5,10 +5,6 @@ from .AdaptivityCriterion            import AdaptivityCriterion
 from .InitialCondition               import InitialCondition
 from .DynamicAMR                     import DynamicAMR
 from .PostprocessSolution            import EmptyPostprocessSolution
-from .HandleDGBoundary               import HandleDGBoundary
-from .HandleFVBoundary               import HandleFVBoundary
+from .HandleBoundary                 import HandleBoundary
 from .Prediction                     import Prediction
 from .Correction                     import Correction
-from .SpreadLimiterStatus            import SpreadLimiterStatus
-from .RecomputeSolutionWithFV        import RecomputeSolutionWithFV
-
