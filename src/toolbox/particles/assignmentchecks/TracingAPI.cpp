@@ -10,8 +10,6 @@
 #endif
 
 
-// @todo Please comment out; should not be activated by default
-#define AssignmentChecks
 
 
 
