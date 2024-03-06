@@ -18,7 +18,8 @@ from SBH import FD4SolverWithLimiter
 from SBH import FD4SolverWithoutLimiter
 
 # See comments in README.dox
-# export PYTHONPATH=$PYTHONPATH:~/Peano/applications/exahype2/ccz4
+# export PYTHONPATH=../../../../python
+# export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import (
@@ -149,10 +150,15 @@ if __name__ == "__main__":
         required=True,
         help="Pick solver type",
     )
+    parser.add_argument(
+        "--no-make",
+        dest="no_make",
+        action="store_true",
+        help="Do not compile the code after generation",
+    )
 
     args = parser.parse_args()
 
-    
     #
     # Start of real ExaHyPE 2 script
     #
@@ -170,7 +176,7 @@ if __name__ == "__main__":
       max_cell_size = domain_size[0]/3.0
     else:
       max_cell_size = args.cell_size
-       
+
     ########################################################################################
     # Configure run
     ########################################################################################
@@ -206,7 +212,7 @@ if __name__ == "__main__":
         fv_kernel_parallelisation           = KernelParallelisation.SUBTASKS
     else:
         assert False, "not supported yet"
- 
+
     added_limiter = False
     if "fd4-rk1-ps-" in args.solver:
         FD4PatchSize = int(args.solver[-1])
@@ -226,7 +232,7 @@ if __name__ == "__main__":
                                                  parallelisation_of_interpolation = parallelise_interpolation,
                                                  parallelisation_of_kernels       = fv_kernel_parallelisation
                                                  )
-        
+
         my_secondary_solver = Limiter(name                      = "CCZ4SBH",
                                       patch_size                = FD4PatchSize,
                                       amend_priorities          = enable_higher_priority_for_FV_tasks,
@@ -238,8 +244,6 @@ if __name__ == "__main__":
     else:
         raise "unknown solver type {}".format(args.solver)
 
-
-      
     ########################################################################################
     # Build the project
     ########################################################################################
@@ -272,7 +276,6 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation(args.peanodir, build_mode)
 
-    
     if args.load_balancing_metric=="generic":
       project.set_load_balancing(
         "toolbox::loadbalancing::strategies::cascade::SpreadOut_SplitOversizedTree",
@@ -342,4 +345,4 @@ if __name__ == "__main__":
         peano4_project.output.makefile.add_CXX_flag("-DCoupleWithFV")
 
     peano4_project.generate(throw_away_data_after_generation=False)
-    peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+    peano4_project.build(make=not args.no_make, make_clean_first=True, number_of_parallel_builds=args.j)
