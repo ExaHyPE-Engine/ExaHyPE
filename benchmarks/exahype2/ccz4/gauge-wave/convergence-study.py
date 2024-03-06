@@ -230,7 +230,7 @@ if args.tracer:
         time_delta_between_two_snapsots = 0.1
     my_solver.add_tracer(
         name="Tracer",
-        coordinates=[[-0.4251, 0, 0], [0, 0, 0], [0.4251, 0, 0]],
+        coordinates=[[0, 0, 0]],#coordinates=[[-0.4251, 0, 0], [0, 0, 0], [0.4251, 0, 0]],
         project=project,
         number_of_entries_between_two_db_flushes = 100,
         data_delta_between_two_snapsots = 1e-8,
