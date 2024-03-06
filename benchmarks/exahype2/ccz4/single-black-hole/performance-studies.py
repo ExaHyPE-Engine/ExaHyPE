@@ -339,7 +339,6 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_h_file(
         "CCZ4SBH_FV.h"
     )
-    peano4_project.constants.add_include("""#include "MulticoreOrchestration.h" """)
     peano4_project.output.makefile.add_CXX_flag("-DIncludeTwoPunctures")
     if added_limiter:
         peano4_project.output.makefile.add_CXX_flag("-DCoupleWithFV")
