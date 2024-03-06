@@ -237,7 +237,7 @@ def map_onto_separate_mesh_traversals_with_generic_mapper(
             use_lists_to_construct_active_sets = False
             add_additional_dummy_sweep = AddAdditionalDummySweep.NO
         elif (
-            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE
         ):
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = AddAdditionalDummySweep.NO
@@ -266,7 +266,7 @@ def map_onto_separate_mesh_traversals_with_generic_mapper(
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = AddAdditionalDummySweep.NO
         else:
-           assert False, "option not supported"
+           assert False, "variant {} x {} not supported".format(particle_sorting_and_storage,alter_particle_position)
 
         if add_additional_dummy_sweep == AddAdditionalDummySweep.BEFORE:
             if verbose:
