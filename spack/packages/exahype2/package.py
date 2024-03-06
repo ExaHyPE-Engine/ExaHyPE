@@ -21,7 +21,7 @@ class Exahype2(CMakePackage, CudaPackage):
     then delegate all further work to ExaHyPE.
     """
 
-    homepage = "https://exahype.eu"
+    homepage = "www.peano-framework.org"
     url = "https://gitlab.lrz.de/hpcsoftware/Peano"
     git = "https://gitlab.lrz.de/hpcsoftware/Peano.git"
 
