@@ -53,5 +53,6 @@ do
   END_TIME=0.0005
   PLOT_DELTA=$END_TIME
   python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m asserts -o noh2D.$REALISATION-asserts
+  cp repositories/ModifiedGlobalState.cpp repositories/GlobalState.cpp; make -j
 done
 
