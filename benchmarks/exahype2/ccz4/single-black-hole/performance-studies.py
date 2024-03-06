@@ -298,7 +298,7 @@ if __name__ == "__main__":
     )
 
     peano4_project.output.makefile.add_linker_flag(
-        "-lm -L/cosma/local/gsl/2.4/lib -lgsl -L/cosma/local/gsl/2.4/lib -lgslcblas"
+        "-lm -lgsl -lgslcblas"
     )
     peano4_project.output.makefile.add_cpp_file(
         "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Utilities.cpp"
