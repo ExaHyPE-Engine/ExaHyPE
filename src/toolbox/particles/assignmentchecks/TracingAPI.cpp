@@ -706,21 +706,23 @@ void toolbox::particles::assignmentchecks::moveParticle(
       #if PeanoDebug>0
       internal::Event              previousEvent    = _database.getEntry(oldIdentifier, treeId ).first;
       internal::Event              existingNewEvent = _database.getEntry(newIdentifier, internal::Database::AnyTree ).first;
+
+      if (existingNewEvent.type != internal::Event::Type::NotFound) {
+        logWarning( "moveParticle(...)",
+          "particle " << newIdentifier.toString() << " has moved to new position due to " << newEvent.toString()
+        );
+        logWarning( "moveParticle(...)",
+          "new position already taken by other particle. This can happen if other particle not yet updated. However, it is rare and potentially problematic re stability"
+        );
+        logWarning( "moveParticle(...)",
+          "new particle's trajectory: " << _database.particleHistory(newIdentifier)
+        );
+        logWarning( "moveParticle(...)",
+          "existing (overtaken) particle's trajectory: " << _database.particleHistory(oldIdentifier)
+        );
+      }
       #endif
 
-      assertion10(
-        existingNewEvent.type == internal::Event::Type::NotFound,
-        oldIdentifier.toString(),
-        previousEvent.toString(),
-        newIdentifier.toString(),
-        newEvent.toString(),
-        _database.getNumberOfSnapshots(),
-        treeId,
-        trace,
-        _database.totalEntries(oldIdentifier),
-        _database.particleHistory(oldIdentifier),
-        "make ParticleIdentifier::Precision smaller if this problem continues to persist (tracking might be too blurry) and ensure that particles do not overlap and collide"
-      );
       assertion9(
         previousEvent.type == internal::Event::Type::AssignToVertex,
         oldIdentifier.toString(),
