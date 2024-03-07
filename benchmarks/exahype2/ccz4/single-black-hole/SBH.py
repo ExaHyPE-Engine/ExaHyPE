@@ -18,7 +18,8 @@ import exahype2.solvers.fv.rusanov.kernels
 from enum import Enum
 
 # See comments in README.dox
-# export PYTHONPATH=$PYTHONPATH:~/Peano/applications/exahype2/ccz4
+# export PYTHONPATH=../../../../python
+# export PYTHONPATH=$PYTHONPATH:../../../../applications/exahype2/ccz4
 from CCZ4Solver import CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTasking
 from CCZ4Solver import (

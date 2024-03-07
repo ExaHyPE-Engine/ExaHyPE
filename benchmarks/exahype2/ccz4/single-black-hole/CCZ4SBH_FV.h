@@ -3,6 +3,9 @@
 #pragma once
 
 #include "AbstractCCZ4SBH_FV.h"
+
+#include "MulticoreOrchestration.h"
+
 #include "tarch/logging/Log.h"
 
 namespace benchmarks {

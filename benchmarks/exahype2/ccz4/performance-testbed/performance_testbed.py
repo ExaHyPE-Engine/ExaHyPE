@@ -481,7 +481,7 @@ if __name__ == "__main__":
     if args.scenario=="gauge" or args.scenario=="linear" or args.scenario=="dia_gauge" or args.scenario=="flat":
       pass
     elif args.scenario=="two-punctures" or args.scenario=="single-puncture":
-      peano4_project.output.makefile.add_linker_flag( "-lm -L/cosma/local/gsl/2.4/lib -lgsl -L/cosma/local/gsl/2.4/lib -lgslcblas" )
+      peano4_project.output.makefile.add_linker_flag( "-lm -lgsl -lgslcblas" )
       peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Utilities.cpp" )
       peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Parameters.cpp" )
       peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/TP_Logging.cpp" )
@@ -492,7 +492,7 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_cpp_file( "../../../../applications/exahype2/ccz4/libtwopunctures/Newton.cpp" )
       peano4_project.output.makefile.add_CXX_flag( "-DIncludeTwoPunctures" )
     else:
-      raise Exception( "Scenario " + args.scenario + " is now unknown")        
+      raise Exception( "Scenario " + args.scenario + " is now unknown")
 
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
 
