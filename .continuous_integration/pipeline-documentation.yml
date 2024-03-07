@@ -4,10 +4,11 @@ documentation:
   tags:
     - ${RUNNER_TAG}
   script:
-    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${LATEX_IMAGE_TAG} doxygen documentation/Doxyfile
+    - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${BASE_IMAGE_TAG} doxygen documentation/Doxyfile
   artifacts:
     paths:
       - ./doxygen-html/*
+  when: always
   retry: 0
 
 pages:
@@ -25,3 +26,4 @@ pages:
       - public
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "p4"'
+  when: always
