@@ -172,7 +172,6 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is local and remains local" );
     _numberOfRemainingLocalParticles++;
-    // (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
     p++;
   }
   else {

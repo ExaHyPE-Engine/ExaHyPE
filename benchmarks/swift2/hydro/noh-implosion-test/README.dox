@@ -60,6 +60,14 @@
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
+ Setups like this build a standard executable with assertions (or release). 
+ After that one is built, they swap in a slightly altered GlobalState.cpp
+ file which is usually overwritten after each Python rerun, i.e. solely 
+ generated. This tweaked state tracks the number of particles after the 
+ first time step and then ensures in each subsequent time step that the 
+ number of particles is preserved. Otherwise it quits (also in release mode)
+ and dumps some relevant particle history information.
+ 
  
  # Impact of memory layouts and sorting
  
