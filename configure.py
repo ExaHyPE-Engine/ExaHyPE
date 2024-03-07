@@ -8,13 +8,7 @@ import argparse
 import subprocess
 
 parser = argparse.ArgumentParser(
-    description="Configuration helper script for GNU Autotools and CMake"
-)
-parser.add_argument(
-    "-cc", "--cc", type=str, default=os.environ.get("CC"), help="C compiler to use"
-)
-parser.add_argument(
-    "-cxx", "--cxx", type=str, default=os.environ.get("CXX"), help="C++ compiler to use"
+    description="Configuration helper script for GNU Automake and CMake"
 )
 parser.add_argument(
     "--cmake", help="Use CMake; specify target build folder via --cmake=..."
@@ -51,23 +45,26 @@ parser.add_argument("--with-cuda", type=str, help="Path to the CUDA toolkit")
 parser.add_argument(
     "--arch",
     choices=[
-        "gfx906",
-        "gfx908",
-        "gfx90a",  # gfx906=MI50, gfx908=MI100, gfx90a=MI200
-        "70",
-        "72",
-        "75",
-        "80",
-        "86",
-        "89",
-        "90",
+        "gfx906",  # gfx906=MI50
+        "gfx908",  # gfx908=MI100
+        "gfx90a",  # gfx90a=MI200
+        "gfx942",  # gfx942=MI300
+        "sm_70",
+        "sm_72",
+        "sm_75",
+        "sm_80",
+        "sm_86",
+        "sm_89",
+        "sm_90",
         "spir64",
     ],
     help="Select GPU compute capability",
 )
 args = parser.parse_args()
 
-if args.cc is None or args.cxx is None:
+cc = os.environ.get("CC")
+cxx = os.environ.get("CXX")
+if cc is None or cxx is None:
     raise Exception(
         "Invalid C and C++ compilers provided. \
 Specify compatible C and C++ compilers by using --cc and --cxx or the environment flags CC and CXX."
@@ -87,10 +84,10 @@ if args.multithreading == "omp":
 
     # Intel suggests to use -fiopenmp for performance and features:
     # https://www.intel.com/content/www/us/en/developer/articles/guide/porting-guide-for-icc-users-to-dpcpp-or-icx.html
-    if "icx" in args.cc:
+    if "icx" in cc:
         cflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
         ldflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
-    if "icpx" in args.cxx:
+    if "icpx" in cxx:
         cxxflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
         ldflags = re.sub("-fopenmp", "-fiopenmp", cxxflags)
 
@@ -108,7 +105,7 @@ if args.multithreading == "sycl":
 if args.gpu and not args.arch:
     raise Exception("You need to specify a GPU architecture when using GPU support.")
 
-if args.gpu == "omp" and "icx" in args.cc and "icpx" in args.cxx and "spir64" in args.arch:
+if args.gpu == "omp" and "icx" in cc and "icpx" in cxx and "spir64" in args.arch:
     cflags += (
         " -fopenmp-targets="
         + args.arch
@@ -122,63 +119,72 @@ if args.gpu == "omp" and "icx" in args.cc and "icpx" in args.cxx and "spir64" in
         + args.arch
     )
 
+elif args.gpu == "omp" and "amdclang" in cc and "amdclang++" in cxx:
+    cflags += " -lstdc++fs --offload-arch=" + args.arch + " -D__AMDGPU__"
+    cxxflags += " -lstdc++fs --offload-arch=" + args.arch + " -D__AMDGPU__"
+    cxxflags = re.sub(r"-std=c\+\+20", "-std=c++17", cxxflags)
+    ldflags += " -lstdc++fs --offload-arch=" + args.arch
+    if args.asm:
+        cflags += " -save-temps"
+        cxxflags += " -save-temps"
+
 elif (
     args.gpu == "omp"
-    and ("clang" in args.cc or "clangwrap" in args.cc or "tdclang" in args.cc)
+    and ("clang" in cc or "clangwrap" in cc or "tdclang" in cc)
     and (
-        "clang++" in args.cxx
-        or "clangwrap" in args.cxx
-        or "clangwrap++" in args.cxx
-        or "tdclang++" in args.cxx
+        "clang++" in cxx
+        or "clangwrap" in cxx
+        or "clangwrap++" in cxx
+        or "tdclang++" in cxx
     )
 ):
     cflags += (
-        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march="
         + args.arch
     )
     cxxflags += (
-        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march="
         + args.arch
     )
     cxxflags = re.sub(r"-std=c\+\+20", "-std=c++17", cxxflags)
     ldflags += (
-        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_"
+        " -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march="
         + args.arch
     )
     if args.asm:
         cflags += " -save-temps -Xcuda-ptxas -v"
         cxxflags += " -save-temps -Xcuda-ptxas -v"
 
-elif args.gpu == "omp" and "amdclang" in args.cc and "amdclang++" in args.cxx:
+elif args.gpu == "omp" and "amdclang" in cc and "amdclang++" in cxx:
     cflags += " -lstdc++fs --offload-arch=" + args.arch
     cxxflags += " -lstdc++fs --offload-arch=" + args.arch
     ldflags += " -lstdc++fs --offload-arch=" + args.arch
 
 elif (
     args.gpu == "omp"
-    and ("nvc" in args.cc or "nvc++ in args.cc")
-    and "nvc++" in args.cxx
+    and ("nvc" in cc or "nvc++ in cc")
+    and "nvc++" in cxx
 ):
-    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
-    cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch
-    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch
+    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
+    cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
+    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
     if args.asm:
         cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
         cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mpp"
 
 elif (
     args.gpu == "cpp"
-    and ("nvc" in args.cc or "nvc++ in args.cc")
-    and "nvc++" in args.cxx
+    and ("nvc" in cc or "nvc++ in cc")
+    and "nvc++" in cxx
 ):
-    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch
-    cxxflags += " -cuda -mp=gpu -gpu=cc" + args.arch + " -stdpar=gpu"
-    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch
+    cflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
+    cxxflags += " -cuda -mp=gpu -stdpar=gpu -gpu=cc" + args.arch.split('_')[1]
+    ldflags += " -cuda -mp=gpu -gpu=cc" + args.arch.split('_')[1]
     if args.asm:
         cflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
         cxxflags += " -gpu=keep,zeroinit,ptxinfo,all,lineinfo -Minfo=mp"
 
-elif args.gpu == "omp" and "gcc" in args.cc and "g++" in args.cxx:
+elif args.gpu == "omp" and "gcc" in cc and "g++" in cxx:
     cflags += " -fopenmp -foffload=nvptx-none -march=native"
     cxxflags += " -fopenmp -foffload=nvptx-none -march=native"
     ldflags += " -fopenmp -foffload=nvptx-none -march=native"
@@ -186,7 +192,7 @@ elif args.gpu == "omp" and "gcc" in args.cc and "g++" in args.cxx:
         cflags += " -save-temps"
         cxxflags += " -save-temps"
 
-elif args.gpu == "sycl" and "icx" in args.cc and "icpx" in args.cxx:
+elif args.gpu == "sycl" and "icx" in cc and "icpx" in cxx:
     if "gfx" in args.arch:
         cflags += (
             " -fsycl -fsycl-targets=amdgcn-amd-amdsha -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=amdgcn-amd-amdsha --offload-arch="
@@ -206,20 +212,20 @@ elif args.gpu == "sycl" and "icx" in args.cc and "icpx" in args.cxx:
         ldflags += " -fsycl -fsycl-targets=spir64 -fsycl-device-code-split -fp-model=consistent"
     else:
         cflags += (
-            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_"
+            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch="
             + args.arch
         )
         cxxflags += (
-            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_"
+            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch="
             + args.arch
         )
         ldflags += (
-            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch=sm_"
+            " -fsycl -fsycl-targets=nvptx64-nvidia-cuda -fsycl-device-code-split -fp-model=consistent -Xsycl-target-backend=nvptx64-nvidia-cuda --cuda-gpu-arch="
             + args.arch
         )
 
 elif args.gpu == "cuda":
-    nvccflags += f" -arch=sm_{args.arch}"
+    nvccflags += f" -arch={args.arch}"
     if args.with_cuda is not None:
         if not args.cmake:
             # CUDA path is only needed with Automake builds
@@ -234,9 +240,9 @@ else:
     if args.gpu is not None:
         raise Exception(
             "Unsupported compiler and GPU flag/arch combination requested: CC="
-            + args.cc
+            + cc
             + " CXX="
-            + args.cxx
+            + cxx
             + " --gpu="
             + args.gpu
             + " --arch="
@@ -252,7 +258,7 @@ if args.multithreading is not None:
 if args.gpu is not None:
     if args.cmake:
         configure_args.append(f"-DWITH_GPU={args.gpu}")
-        configure_args.append(f"-DWITH_GPU_ARCH=sm_{args.arch}")
+        configure_args.append(f"-DWITH_GPU_ARCH={args.arch}")
     else:
         configure_args.append(f"--with-gpu={args.gpu}")
 
@@ -333,13 +339,13 @@ if args.cmake:
     # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
     if args.scorep:
         env_vars = {
-            "CC": "scorep-{}".format(args.cc),
-            "CXX": "scorep-{}".format(args.cxx),
+            "CC": "scorep-{}".format(cc),
+            "CXX": "scorep-{}".format(cxx),
         }
     else:
         env_vars = {
-            "CC": "{}".format(args.cc),
-            "CXX": "{}".format(args.cxx),
+            "CC": "{}".format(cc),
+            "CXX": "{}".format(cxx),
         }
 
     # Create a string to display environment variables like in a terminal
@@ -387,17 +393,17 @@ else:
     if args.scorep:
         env_vars = {
             "CFLAGS": "{}".format(env_cflags),
-            "CC": "scorep-{}".format(args.cc),
+            "CC": "scorep-{}".format(cc),
             "CXXFLAGS": "{}".format(env_cxxflags),
-            "CXX": "scorep-{}".format(args.cxx),
+            "CXX": "scorep-{}".format(cxx),
             "LDFLAGS": "{}".format(env_ldflags),
         }
     else:
         env_vars = {
             "CFLAGS": "{}".format(env_cflags),
-            "CC": "{}".format(args.cc),
+            "CC": "{}".format(cc),
             "CXXFLAGS": "{}".format(env_cxxflags),
-            "CXX": "{}".format(args.cxx),
+            "CXX": "{}".format(cxx),
             "LDFLAGS": "{}".format(env_ldflags),
         }
 
