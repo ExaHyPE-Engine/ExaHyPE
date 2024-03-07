@@ -36,8 +36,8 @@ for REALISATION in domain-decomposition.scattered.bucket-sort.no-optimisation do
                    task-graph.global-continuous.multiscale-sort.no-optimisation task-graph.global-continuous.multiscale-sort.outer-guards \
                    task-graph.global-continuous.multiscale-sort.vectorise-all task-graph.global-continuous.multiscale-sort.vectorise-distance-checks
 do
-  EXECUTABLE=noh2D.$REALISATION
+  EXECUTABLE=noh2D.$REALISATION-asserts
   echo $EXECUTABLE
-  ./$EXECUTABLE-asserts
+  ./$EXECUTABLE
 done
 
