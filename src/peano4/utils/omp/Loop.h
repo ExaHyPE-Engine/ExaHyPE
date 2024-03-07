@@ -65,7 +65,7 @@
 #define simtForWithSchedulerInstructions(counter, max, loopParallelism) \
   { \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp taskloop simd default(shared) if ( __loopParallelismUsedWithinMacroWithUniqueName!=::peano4::utils::LoopPlacement::Serial)" ) \
+  _Pragma( "omp taskloop simd default(shared) if ( __loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
   for( int counter = 0; counter < max; counter++ ) {
 
 #define endSimtFor }}
