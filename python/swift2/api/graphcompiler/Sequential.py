@@ -232,43 +232,41 @@ def map_onto_separate_mesh_traversals_with_generic_mapper(
         current_step_of_species = current_entry_from_total_sequence_of_steps[1]
 
         if (
-            (
-                particle_sorting_and_storage == ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE
-                or
-                particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE
-            )
-            and len(alter_particle_position) > 0
-            and alter_particle_position[-1]
-        ):
-            use_lists_to_construct_active_sets = False
-            add_additional_dummy_sweep = AddAdditionalDummySweep.BEFORE
-        elif (
-            particle_sorting_and_storage == ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE
-            or
             particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE
         ):
             use_lists_to_construct_active_sets = False
             add_additional_dummy_sweep = AddAdditionalDummySweep.NO
         elif (
-            (
-                particle_sorting_and_storage == ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE
-                or
-                particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE
-            )
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE
+        ):
+            use_lists_to_construct_active_sets = True
+            add_additional_dummy_sweep = AddAdditionalDummySweep.NO
+        elif (
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE
+            and len(alter_particle_position) > 0
+            and alter_particle_position[-1]
+        ):
+            use_lists_to_construct_active_sets = False
+            add_additional_dummy_sweep = AddAdditionalDummySweep.BEFORE
+        elif (
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE
+        ):
+            use_lists_to_construct_active_sets = False
+            add_additional_dummy_sweep = AddAdditionalDummySweep.NO
+        elif (
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE
             and len(alter_particle_position) > 0
             and alter_particle_position[-1]
         ):
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = AddAdditionalDummySweep.BEFORE
         elif (
-            particle_sorting_and_storage == ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE
-            or
-            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE
+            particle_sorting_and_storage == ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE
         ):
             use_lists_to_construct_active_sets = True
             add_additional_dummy_sweep = AddAdditionalDummySweep.NO
         else:
-           assert False, "option not supported"
+           assert False, "variant {} x {} not supported".format(particle_sorting_and_storage,alter_particle_position)
 
         if add_additional_dummy_sweep == AddAdditionalDummySweep.BEFORE:
             if verbose:
@@ -336,9 +334,9 @@ def map_onto_separate_mesh_traversals_with_generic_mapper(
         
 
     if (
-        particle_sorting_and_storage==ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE
+        particle_sorting_and_storage==ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE
         or
-        particle_sorting_and_storage==ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE
+        particle_sorting_and_storage==ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE
     ):
         sort_with_lifts_and_drops = True
     elif (
@@ -483,7 +481,7 @@ def initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_sc
     """
     return map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
-        particle_sorting_and_storage=ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE,
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
         step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
@@ -527,7 +525,7 @@ def initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coales
     """
     return map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, True),
-        particle_sorting_and_storage=ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE,
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
         step_type=StepType.INITIALISATION,
         verbose=verbose,
     )
@@ -575,7 +573,7 @@ def particle_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattere
     """
     return map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
-        particle_sorting_and_storage=ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE,
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
@@ -628,7 +626,7 @@ def particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_me
     """
     return map_onto_separate_mesh_traversals(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
-        particle_sorting_and_storage=ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE,
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )

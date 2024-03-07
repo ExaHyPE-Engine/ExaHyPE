@@ -353,7 +353,7 @@ def particle_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory(
     """
     return map_onto_separate_mesh_traversals_constructing_task_tree(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
-        particle_sorting_and_storage=ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_SCATTERED_PARTICLE_STORAGE,
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
@@ -406,7 +406,7 @@ def particle_steps_onto_task_tree_insert_sort_sweeps_coalesced_memory(
     """
     return map_onto_separate_mesh_traversals_constructing_task_tree(
         sequence_of_steps=concatenate_steps_of_species(species_sets, False),
-        particle_sorting_and_storage=ParticleSortingAndStorage.INSERT_RESORT_SWEEPS_COALESCED_PARTICLE_STORAGE,
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )

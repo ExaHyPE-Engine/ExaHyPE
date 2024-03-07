@@ -310,7 +310,7 @@ if __name__ == "__main__":
     total_number_of_particles = args.particle_number**hydro_dimensions
     total_number_of_cells = total_number_of_particles / particles_per_cell
     cells_per_dimension = total_number_of_cells ** (1.0 / hydro_dimensions)
-    max_cell_size = 1.0 / cells_per_dimension
+    max_cell_size = 1.0 / cells_per_dimension * 3.0
 
     print(
         "{} particles in total fit into {} cells, i.e. {} cells per dimension. This gives h={}".format(

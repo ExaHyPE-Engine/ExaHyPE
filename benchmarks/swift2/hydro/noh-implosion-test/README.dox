@@ -42,6 +42,33 @@
  rm vertexdata celldata globaldata repositories observers
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
+ # Validate correctness
+ 
+ I've written a variant of the code which automatically checks if particles get
+ losted.
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ export PYTHONPATH=$PYTHONPATH:../../../../python
+ TIMESTEP_SIZE=0.0001
+ PLOT_DELTA=0.0
+ N_PART=100
+ N_PART=10
+ END_TIME=0.01
+ PLOT_DELTA=0.0
+ REALISATION=domain-decomposition.scattered.bucket-sort.no-optimisation
+ python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION-asserts; cp repositories/ModifiedGlobalState.cpp repositories/GlobalState.cpp; clear; make
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ Setups like this build a standard executable with assertions (or release). 
+ After that one is built, they swap in a slightly altered GlobalState.cpp
+ file which is usually overwritten after each Python rerun, i.e. solely 
+ generated. This tweaked state tracks the number of particles after the 
+ first time step and then ensures in each subsequent time step that the 
+ number of particles is preserved. Otherwise it quits (also in release mode)
+ and dumps some relevant particle history information.
+ 
+ 
  # Impact of memory layouts and sorting
  
  The impact of the various memory layouts and the sorting variations have to be assessed using a 

@@ -106,15 +106,13 @@ public:
     int numberOfReassignmentsInThisTree,
     int numberOfLiftsIntoSieveSetInThisTree,
     int numberOfDropsFromSieveSetInThisTree,
-    int numberOfSkippedDropsFromSieveSetInThisTree,
     int numberOfDropsIntoHorizontalTreeDecomposition
   );
 
   static void updateNumberOfLocalAndExpiredParticles(
     int numberOfRemainingLocalParticles,
     int numberOfExpiredHaloParticles,
-    int numberOfLeavingLocalParticles,
-    int numberOfIncomingParticles
+    int numberOfParticlesThatHaveLeftTheirDomain
   );
 
   /**
@@ -153,7 +151,11 @@ public:
    * @see SieveParticles::getParticlesToBeSievedIntoVertex() for parameter
    *   descriptions.
    */
-  static ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree, int callingTree);
+  static ParticleList getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker,
+    bool  removeReturnedParticlesFromSet,
+    bool  onlyReturnParticlesThatWillBeLocal
+  );
 
   /**
    * Make routine from SieveParticles public
@@ -161,11 +163,15 @@ public:
    * Delegate through. This way, we don't have to expose the actual
    * sieve object. This predicate is usually always used as guard before
    * actually invoking getParticlesToBeSievedIntoVertex().
-   *
-   * @param originatingTree Either a number associated with a local tree or
-   *                        SieveParticles<T>::GlobalSort.
    */
-  static bool hasParticlesToBeSievedIntoVertices(int originatingTree);
+  static bool hasParticlesToBeSievedIntoVertices();
+
+  /**
+   * Return total number of particles to be sieved
+   *
+   * Delegates to SieveParticles::getNumberOfParticlesThatHaveBeSievedIntoVertices()
+   */
+  static int getNumberOfParticlesThatHaveBeSievedIntoVertices();
 
   /**
    * Return global sum of the particles that did remain within their partition at a time.
@@ -236,7 +242,6 @@ protected:
    */
   static int _numberOfLiftsIntoSieveSet;
   static int _numberOfDropsFromSieveSet;
-  static int _numberOfSkippedDropsFromSieveSet;
   static int _numberOfDropsIntoHorizontalTreeDecomposition;
 
   /**
@@ -258,14 +263,7 @@ protected:
    *
    * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
    */
-  static int _numberOfLeavingLocalParticles;
-
-  /**
-   * Set by parallel state analysis
-   *
-   * See documentation of action set peano4.toolbox.particles.api.UpdateParallelState.
-   */
-  static int _numberOfIncomingParticles;
+  static int _numberOfParticlesThatHaveLeftTheirDomain;
 
   /**
    * Number of incoming halo particles which are not worked in
@@ -297,7 +295,7 @@ protected:
    *
    * Updated by boundary merge operations.
    */
-  static int _numberOfReplacedParticlesAlongBoundary;
+  static int _numberOfReplacedVirtualParticlesAlongBoundary;
 
   /**
    * Newly "discovered" virtual particles
@@ -308,7 +306,8 @@ protected:
    *
    * Updated by boundary merge operations.
    */
-  static int _numberOfAddedParticlesAlongBoundary;
+  static int _numberOfAddedVirtualParticlesAlongBoundary;
+  static int _numberOfAddedLocalParticlesAlongBoundary;
 
   /**
    * Map of persistent particles that have to be sieved

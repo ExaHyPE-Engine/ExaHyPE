@@ -43,6 +43,7 @@ namespace toolbox {
        * Forward declarations for test purposes
        */
       class MultiscaleTransitionsTest;
+      class TestHelpers;
     } // namespace tests
   }   // namespace particles
 } // namespace toolbox
@@ -92,6 +93,7 @@ private:
    * For unit tests
    */
   friend class toolbox::particles::tests::MultiscaleTransitionsTest;
+  friend class toolbox::particles::tests::TestHelpers;
 
   /**
    * Centre of the underlying cell
