@@ -7,7 +7,6 @@ from .sph_kernels import (
     sph_kernel_W,
     sph_kernel_dWdr,
     sph_kernel_get_H,
-    sph_kernel_get_H,
     sph_kernel_root,
 )
 from numpy import ndarray, sqrt, cbrt, pi, sum
@@ -64,7 +63,7 @@ def _neighbour_loop(r: ndarray, h: float, kernel: str, ndim: int):
 
 
 def find_smoothing_length(
-    xp: ndarray, xn: ndarray, kernel: str, eta: float, h_tolerance: float, ndim: int
+        xp: ndarray, xn: ndarray, kernel: str, eta: float, h_tolerance: float, ndim: int, verbose: bool=False
 ):
     """!
     Determine the smoothing length of a particle with coordinates xp
@@ -93,6 +92,9 @@ def find_smoothing_length(
     ndim: int
         number of dimensions to work with
 
+    verbose: bool
+        whether to be verbose about what's going on
+
 
     Returns
     -------
@@ -100,9 +102,6 @@ def find_smoothing_length(
     h: float
         the smoothing length
     """
-
-    # This is for debugging purposes
-    verbose = False
 
     # get distances between particles
     dx = xn - xp
@@ -113,8 +112,9 @@ def find_smoothing_length(
 
     # Set up boundaries. We assume that the correct
     # number of neighbour (candidates) has been passed.
-    h_max = r.max()
-    h_min = h_max * 1e-6
+    H_over_h = sph_kernel_get_H(1., kernel, ndim)
+    h_max = r.max() / H_over_h
+    h_min = h_max * 1e-9
 
     # Get initial guess for smoothing length
     dx_average = r.max() / xn.shape[0]
@@ -141,7 +141,7 @@ def find_smoothing_length(
     # This is a very high number of iterations. However, this function
     # is intended for confirmation checks that use untypically low
     # convergence criteria, so allow it to do a lot of iterations.
-    while iteration < 500:
+    while iteration < 100:
         iteration += 1
 
         h_dim = h**ndim
@@ -173,11 +173,14 @@ def find_smoothing_length(
                 right = right_old
 
             if h >= h_max and f < 0:
-                print("Particle with coordinates", xp, "reached h_max. Returning that.")
+                raise RuntimeError( f"""
+Particle with coordinates {xp} reached h_max without converging.
+Increase the number of neighbours you pass to this script."""
+                        )
                 return h_max
 
             if h <= h_min and f > 0:
-                print("Particle with coordinates", xp, "reached h_min. Returning that.")
+                print(f"WARNING: Particle with coordinates {xp} reached h_min. Returning that.")
                 return h_min
 
             h_new = h - f / f_prime
@@ -188,27 +191,35 @@ def find_smoothing_length(
             h_new = max(h_new, left)
             h_new = min(h_new, right)
 
+        diff = h - h_new
+
         if verbose:
+            print("h =", h)
             print("h_new=", h_new)
             print("wcount", wcount)
             print("wcount_dh", wcount_dh)
             print("f", f)
             print("f_prime", f_prime)
+            print("h - h_new", diff)
 
         diff = h - h_new
 
         # Are we done?
         if abs(diff) < h_tolerance * h:
-            if verbose:
-                print("done h=", h_new)
+            if verbose: print("done h=", h_new)
             return h_new
 
         # We're not done...
         # Case where we have been oscillating around the solution
         if (h_new == left and h == right) or (h == left and h_new == right):
+            if (verbose):
+                if (h_new == left): print("h_new == left")
+                if (h == right): print("h == right")
+                if (h_new == right): print("h_new == right")
+                if (h == left): print("h == left")
             h_new = (0.5 * (left**ndim + right**ndim)) ** (-ndim)
-        else:
-            h = h_new
+
+        h = h_new
 
         h = min(h_max, h)
         h = max(h_min, h)
