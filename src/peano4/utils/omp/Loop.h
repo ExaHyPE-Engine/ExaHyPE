@@ -62,10 +62,11 @@
 #define endParallelDfor }}
 
 
+// TODO: Intel icpx does not seem to support the conditional simd here.
 #define simtForWithSchedulerInstructions(counter, max, loopParallelism) \
   { \
   auto __loopParallelismUsedWithinMacroWithUniqueName = loopParallelism; \
-  _Pragma( "omp taskloop simd default(shared) if ( __loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
+  _Pragma( "omp taskloop /*simd*/ default(shared) if ( __loopParallelismUsedWithinMacroWithUniqueName==::peano4::utils::LoopPlacement::SpreadOut)" ) \
   for( int counter = 0; counter < max; counter++ ) {
 
 #define endSimtFor }}
