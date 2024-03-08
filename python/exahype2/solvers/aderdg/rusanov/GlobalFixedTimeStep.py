@@ -109,6 +109,8 @@ class GlobalFixedTimeStep(SingleSweep):
             computation_precisions.append(self._corrector_computation_precision)
         if self._precompute_picard_precision!=False and self._precompute_picard_precision not in computation_precisions:
             computation_precisions.append(self._precompute_picard_precision)
+        if self._solution_persistent_storage_precision not in computation_precisions:
+            computation_precisions.append(self._solution_persistent_storage_precision)
 
         self._abstract_solver_user_declarations = create_abstract_solver_declarations(
             self._flux_implementation,
