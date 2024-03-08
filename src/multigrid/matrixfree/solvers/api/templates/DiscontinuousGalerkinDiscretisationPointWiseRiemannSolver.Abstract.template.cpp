@@ -1,5 +1,7 @@
 #include "{{CLASSNAME}}.h"
 #include <cmath> // for std::pow
+#include "tarch/multicore/Lock.h"
+
 
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
@@ -265,3 +267,65 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 {% endif %}
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::terminationCriterionHolds() {
+  static double initialGlobalResidualMaxNorm       = 0.0;
+  static double initialGlobalResidualEukledianNorm = 0.0;
+  static double initialGlobalResidualHNorm         = 0.0;
+
+  bool result = false;
+
+  if ( tarch::la::equals(initialGlobalResidualMaxNorm,0.0) ) {
+    initialGlobalResidualMaxNorm = _globalResidualMaxNorm;
+  }
+  else {
+    result |= _globalResidualMaxNorm / initialGlobalResidualMaxNorm < SolverTolerance;
+  }
+
+  if ( tarch::la::equals(initialGlobalResidualEukledianNorm,0.0) ) {
+    initialGlobalResidualEukledianNorm = _globalResidualEukledianNorm;
+  }
+  else {
+    result |= _globalResidualEukledianNorm / initialGlobalResidualEukledianNorm < SolverTolerance;
+  }
+
+  if ( tarch::la::equals(initialGlobalResidualHNorm,0.0) ) {
+    initialGlobalResidualHNorm = _globalResidualHNorm;
+  }
+  else {
+    result |= _globalResidualHNorm / initialGlobalResidualHNorm < SolverTolerance;
+  }
+
+  return result;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clearGlobalResidual() {
+  tarch::multicore::Lock lock( _semaphore );
+
+  _globalResidualMaxNorm        = 0.0;
+  _globalResidualEukledianNorm += 0.0;
+  _globalResidualHNorm         += 0.0;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateGlobalResidual(
+  double residualMaxNorm,
+  double residualEukledianNorm,
+  double residualHNorm
+) {
+  tarch::multicore::Lock lock( _semaphore );
+
+  _globalResidualMaxNorm        = std::max(_globalResidualMaxNorm, residualMaxNorm);
+  _globalResidualEukledianNorm += residualEukledianNorm;
+  _globalResidualHNorm         += residualHNorm;
+}
+
+
+std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
+  std::ostringstream msg;
+  msg << "{{CLASSNAME}}"
+      << ": |r|_max=" << _globalResidualMaxNorm
+      << ", |r|_2=" << _globalResidualEukledianNorm
+      << ", |r|_h=" << _globalResidualHNorm;
+  return msg.str();
+}

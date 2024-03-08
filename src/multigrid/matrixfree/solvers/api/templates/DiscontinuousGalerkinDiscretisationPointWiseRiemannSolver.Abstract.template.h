@@ -128,18 +128,28 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix()
       {% if BOUNDARY_MATRIX is not defined %} = 0 {% endif %};
 
-    /**
-     * Returns false if we are outside allowed tolerance,
-     * true if we can terminate.
-     */
-    virtual bool absValueWithinTolerance() = 0;
+    virtual bool terminationCriterionHolds();
+    virtual void clearGlobalResidual();
+    virtual void updateGlobalResidual(
+      double residualMaxNorm,
+      double residualEukledianNorm,
+      double residualHNorm
+    );
 
+    virtual std::string toString() const;
   protected:
     static tarch::logging::Log  _log;
 
     double     _minH;
     double     _maxH;
 
+    double     _globalResidualMaxNorm;
+    double     _globalResidualEukledianNorm;
+    double     _globalResidualHNorm;
+
+    /**
+     * Semaphore for global residual values
+     */
     tarch::multicore::BooleanSemaphore  _semaphore;
 };
 

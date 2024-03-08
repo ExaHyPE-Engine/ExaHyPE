@@ -77,21 +77,20 @@ bool selectNextAlgorithmicStep() {
         {
           if ( ++solverSteps >= 100
               or
-              repositories::absValueWithinTolerance()
+              repositories::allSolversTerminationCriterionHolds()
           )
           {
-            logInfo("selectNextAlgorithmicStep", "Exiting after " << solverSteps << " iterations.");
             peano4::parallel::Node::getInstance().setNextProgramStep(
               repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Plot )
             );
           }
           else
           {
-            logInfo("selectNextAlgorithmicStep", "Continuining to solve...");
             peano4::parallel::Node::getInstance().setNextProgramStep(
               repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::Solve )
             );
           }
+          repositories::plotAllSolversToInfo();
         }
         break;
       case repositories::StepRepository::Steps::Plot:

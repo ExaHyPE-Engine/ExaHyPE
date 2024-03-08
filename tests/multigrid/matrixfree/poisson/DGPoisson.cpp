@@ -60,7 +60,7 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initFace(
   for (int i=0; i < projection.size(); i++) projection[i] = 0;
 }
 
-bool tests::multigrid::matrixfree::poisson::DGPoisson::absValueWithinTolerance()
+bool tests::multigrid::matrixfree::poisson::DGPoisson::terminationCriterionHolds()
 {
   return std::abs( currentMaxAbs ) < SolverTolerance;
 }

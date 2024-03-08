@@ -55,13 +55,4 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public {{NAMESPACE | join("::")
       tarch::la::Vector< FaceUnknownsSolution  , double >&  solution,
       tarch::la::Vector< FaceUnknownsProjection, double >&  projection
     ) override;
-
-    virtual bool absValueWithinTolerance() override;
-
-    void setMaxAbs(double);
-    void updateMaxAbs(double);
-
-  private:
-    double     currentMaxAbs;
-    std::mutex maxAbsMtx;
 };

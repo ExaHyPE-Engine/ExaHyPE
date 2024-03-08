@@ -21,7 +21,8 @@ namespace {{N}} {
 
     {% endfor %}
     
-    bool absValueWithinTolerance();
+    bool allSolversTerminationCriterionHolds();
+    void plotAllSolversToInfo();
 
 {% for N in NAMESPACE %}
 }
