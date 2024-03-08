@@ -8,6 +8,16 @@ cmake_minimum_required(VERSION 3.20.5)
 
 project({{EXECUTABLENAME}}_PROJECT)
 
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED TRUE)
+set(CMAKE_C_EXTENSIONS OFF)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_CXX_VISIBILITY_INLINES_HIDDEN YES)
+
 set(CMakeCachePath {{PROJECT_ROOT_DIR}}/Config.cmake)
 include("${CMakeCachePath}")
 
@@ -54,7 +64,6 @@ endforeach()
 
 # Toolboxes etc.
 list(APPEND DEPENDS_FULL ${DEPENDS_OTHER})
-list(APPEND DEPENDS_FULL "Tarch_${PEANO_BUILD_TYPE_LOWER}")
 
 # Create executable as a CMake target
 add_executable(${TARGET_NAME})
@@ -72,54 +81,54 @@ list(APPEND SOURCES
 )
 
 # Set sources of the executable, we depend in the generated CMake file, the generator script.
-target_sources(${TARGET_NAME} PRIVATE ${SOURCES})
+target_sources(${TARGET_NAME} PUBLIC ${SOURCES})
 
 # Set default include directories as well as the generated ones
-target_include_directories(${TARGET_NAME} PRIVATE
+target_include_directories(${TARGET_NAME} PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${GENERATED_INCLUDE_DIRS}
   ${PEANO_INCLUDES}
 )
 
 # Link to full target libraries
-target_link_libraries(${TARGET_NAME} PRIVATE ${DEPENDS_FULL})
+target_link_libraries(${TARGET_NAME} PUBLIC ${DEPENDS_FULL})
 
 # Libraries are generated at $cmake_binary_dir, just in case add it to the link directories.
-target_link_directories(${TARGET_NAME} PRIVATE ${CMAKE_BINARY_DIR})
-target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${PEANO_DIMENSIONS} ${${PEANO_BUILD_MODE}_DEFINITIONS})
-#target_link_libraries(${TARGET_NAME} PRIVATE project_options)
-target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${PEANO_BUILD_MODE}}>)
-target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${PEANO_BUILD_MODE}}>)
-target_compile_definitions(${TARGET_NAME} PRIVATE ${PEANO_DEFINITIONS})
+target_link_directories(${TARGET_NAME} PUBLIC ${CMAKE_BINARY_DIR})
+target_compile_definitions(${TARGET_NAME} PUBLIC Dimensions=${PEANO_DIMENSIONS} ${${PEANO_BUILD_MODE}_DEFINITIONS})
+#target_link_libraries(${TARGET_NAME} PUBLIC project_options)
+target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${PEANO_BUILD_MODE}}>)
+target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${PEANO_BUILD_MODE}}>)
+target_compile_definitions(${TARGET_NAME} PUBLIC ${PEANO_DEFINITIONS})
 
-target_link_options(${TARGET_NAME} PRIVATE ${PEANO_${PEANO_BUILD_MODE}_LDFLAGS})
-#target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
-target_link_directories(${TARGET_NAME} PRIVATE {{PROJECT_ROOT_DIR}}/lib)
+target_link_options(${TARGET_NAME} PUBLIC ${PEANO_${PEANO_BUILD_MODE}_LDFLAGS})
+#target_link_libraries(${TARGET_NAME} PUBLIC project_warnings)
+target_link_directories(${TARGET_NAME} PUBLIC {{PROJECT_ROOT_DIR}}/lib)
 
 # Link every toolbox, if they are enabled
 if (ENABLE_PARTICLES)
-  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxParticles${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
+  target_link_libraries(${TARGET_NAME} PUBLIC ToolboxParticles${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
 endif()
 
 if(ENABLE_BLOCKSTRUCTURED)
-  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxBlockStructured${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
+  target_link_libraries(${TARGET_NAME} PUBLIC ToolboxBlockStructured${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
 endif()
 
-if(ENABLE_FEM)
-  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxFiniteElements${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
+if(ENABLE_FINITEELEMENTS)
+  target_link_libraries(${TARGET_NAME} PUBLIC ToolboxFiniteElements${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
 endif()
 
 if(ENABLE_LOADBALANCING)
-  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxLoadBalancing${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
+  target_link_libraries(${TARGET_NAME} PUBLIC ToolboxLoadBalancing${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
 endif()
 
 if(ENABLE_MULTIPRECISION)
-  target_link_libraries(${TARGET_NAME} PRIVATE ToolboxMultiprecision${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
+  target_link_libraries(${TARGET_NAME} PUBLIC ToolboxMultiprecision${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
 endif()
 
-#target_link_libraries(${TARGET_NAME} PRIVATE ${PEANO_DEPENDS})
-target_compile_options(${TARGET_NAME} PRIVATE ${PEANO_FLAGS})
-target_link_options(${TARGET_NAME} PRIVATE ${PEANO_LINK_FLAGS})
+target_link_libraries(${TARGET_NAME} PUBLIC Tarch_${PEANO_BUILD_TYPE_LOWER})
+target_compile_options(${TARGET_NAME} PUBLIC ${PEANO_FLAGS})
+target_link_options(${TARGET_NAME} PUBLIC ${PEANO_LINK_FLAGS})
 
-target_compile_options(${TARGET_NAME} PRIVATE ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS})
-target_compile_definitions(${TARGET_NAME} PRIVATE ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS})
-target_link_options(${TARGET_NAME} PRIVATE ${_PROJECT_OPTIONS_INTERFACE_LINK_DEFINITIONS})
+target_compile_options(${TARGET_NAME} PUBLIC ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS} ${_PROJECT_OPTIONS_COMPILE_OPTIONS})
+target_compile_definitions(${TARGET_NAME} PUBLIC ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS} ${_PROJECT_COMPILE_DEFINITIONS})
+target_link_options(${TARGET_NAME} PUBLIC ${_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS} ${_PROJECT_OPTIONS_LINK_OPTIONS})

@@ -52,8 +52,6 @@ def find_CMake_build_dir():
   call_directory = os.path.join(os.getcwd(), "..")
   file_dir = os.path.dirname(os.path.realpath(__file__))
   project_root_dir = os.path.abspath(os.path.join(file_dir, '..', '..', '..'))
-  print("P: ", project_root_dir, os.path.exists(os.path.join(project_root_dir, "Config.cmake")))
-  print("Q: ", os.path.commonpath([call_directory, project_root_dir]), call_directory, project_root_dir)
 
   if os.path.commonpath([call_directory, project_root_dir]) != project_root_dir:
     found_cache_file = os.path.exists(os.path.join(project_root_dir, "CMakeCache.txt")) or \
@@ -62,11 +60,9 @@ def find_CMake_build_dir():
       find_CMake_build_dir.saved_CMake_build_dir = project_root_dir
       if os.path.exists(os.path.join(project_root_dir, "Config.cmake")):
         find_CMake_build_dir.standalone = True
-      print("P1: ", find_CMake_build_dir.saved_CMake_build_dir)
       return find_CMake_build_dir.saved_CMake_build_dir
     else:
       find_CMake_build_dir.saved_CMake_build_dir = ""
-      print("P2: ", find_CMake_build_dir.saved_CMake_build_dir)
       return find_CMake_build_dir.saved_CMake_build_dir
 
   # We will iterate upwards aka implement "cd .." until we reach the Peano root, or until we find CMakeCache.txt.
@@ -79,10 +75,17 @@ def find_CMake_build_dir():
     #  find_CMake_build_dir.standalone = True
     if found_cache_file:
       find_CMake_build_dir.saved_CMake_build_dir = current_iter_dir
-      print("P3: ", find_CMake_build_dir.saved_CMake_build_dir)
       return current_iter_dir
-    print("P3.1:", current_iter_dir)
+
     current_iter_dir = os.path.abspath(os.path.join(current_iter_dir, ".."))
+
+  # Before checking the project root, check if the env variable is set to see if we are building a
+  # standalone project
+  if 'PEANO_ROOT' in os.environ:
+    env_value = os.environ['PEANO_ROOT']
+    find_CMake_build_dir.saved_CMake_build_dir = os.getcwd()
+    find_CMake_build_dir.standalone = True
+    return find_CMake_build_dir.saved_CMake_build_dir
 
   # At project root we gotta try one last time, only for Config.cmake tho
   found_config_file = os.path.exists(os.path.join(project_root_dir, "Config.cmake")) and \
@@ -92,7 +95,6 @@ def find_CMake_build_dir():
     find_CMake_build_dir.standalone = True
     return find_CMake_build_dir.saved_CMake_build_dir
 
-  print("P4: ", find_CMake_build_dir.saved_CMake_build_dir)
   find_CMake_build_dir.standalone = False
   return find_CMake_build_dir.saved_CMake_build_dir
 
@@ -177,7 +179,6 @@ def caller_distance_to_build_root():
   project_root_dir = os.path.abspath(os.path.join(file_dir, '../../..', ))
 
   # Ensure we call the script under Peano folder.
-  print("C:", [call_directory, project_root_dir])
 
   # This check means that the python modules (call_directory) are not inside (freshly cloned Peano git repository)
   # If the modules are installed for example to opt the project root directory should be /opt but call directory can

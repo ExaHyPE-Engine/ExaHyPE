@@ -94,7 +94,7 @@ if(ENABLE_BLOCKSTRUCTURED)
   target_link_libraries(${TARGET_NAME} PRIVATE ToolboxBlockStructured${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
 endif()
 
-if(ENABLE_FEM)
+if(ENABLE_FINITEELEMENTS)
   target_link_libraries(${TARGET_NAME} PRIVATE ToolboxFiniteElements${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
 endif()
 

@@ -28,6 +28,26 @@ foreach(mode IN LISTS CMAKE_BUILD_TYPE)
       target_compile_definitions(UnitTests${dimension}d_${mode_lower} PUBLIC ${USE_COMPONENT_DEFINITIONS} CACHE INTERNAL "")
     endif()
 
+    if (ENABLE_PARTICLES)
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC ToolboxParticles${dimension}d_${mode_lower})
+    endif()
+    
+    if(ENABLE_BLOCKSTRUCTURED)
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC ToolboxBlockStructured${dimension}d_${mode_lower})
+    endif()
+    
+    if(ENABLE_FINITEELEMENTS)
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC ToolboxFiniteElements${dimension}d_${mode_lower})
+    endif()
+    
+    if(ENABLE_LOADBALANCING)
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC ToolboxLoadBalancing${dimension}d_${mode_lower})
+    endif()
+    
+    if(ENABLE_MULTIPRECISION)
+      target_link_libraries(UnitTests${dimension}d_${mode_lower} PUBLIC ToolboxMultiprecision${dimension}d_${mode_lower})
+    endif()
+
     install(TARGETS UnitTests${dimension}d_${mode_lower}
       RUNTIME DESTINATION         ${CMAKE_INSTALL_BINDIR}
               COMPONENT           ${PROJECT_NAME}_Runtime
