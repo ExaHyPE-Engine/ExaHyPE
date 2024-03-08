@@ -98,17 +98,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getLocalAssemblyMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
-    );
+    ) {% if ASSEMBLY_MATRIX is not defined %} = 0 {% endif %};
 
     virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getMassMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
-    );
+    ) {% if MASS_MATRIX is not defined %} = 0 {% endif %};
 
     virtual tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > getInvertedApproxSystemMatrix(
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
-    );
+    ) {% if APPROX_SYSTEM_MATRIX is not defined %} = 0 {% endif %};
 
     // no arguments needed
     virtual tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > getCellFromFaceMatrix(
@@ -122,13 +122,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions, double>&  cellSize
     );
 
-    virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix();
-    virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix();
+    virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsProjection, double > getRiemannMatrix()
+      {% if RIEMANN_MATRIX is not defined %} = 0 {% endif %};
+
+    virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix()
+      {% if BOUNDARY_MATRIX is not defined %} = 0 {% endif %};
 
     /**
-    * Returns false if we are outside allowed tolerance,
-    * true if we can terminate.
-    */
+     * Returns false if we are outside allowed tolerance,
+     * true if we can terminate.
+     */
     virtual bool absValueWithinTolerance() = 0;
 
   protected:

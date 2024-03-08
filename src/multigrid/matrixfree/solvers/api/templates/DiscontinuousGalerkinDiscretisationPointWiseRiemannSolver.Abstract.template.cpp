@@ -59,137 +59,148 @@ tarch::la::Matrix<Rows,Cols,double> scaleMatrix(
     facedata::{{SOLVER_NAME}}::Type::Interior;
 }
 
+
+{% if MASS_MATRIX is defined %}
 tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMassMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
   logTraceInWith2Arguments("getMassMatrix", cellCentre, cellSize);
-{% if MASS_MATRIX!=[] %}
-static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
-  {% for MATRIX in MASS_MATRIX %}
-  // {# MASS_MATRIX is an array, possible of length 1 #}
-  {
-    {{MATRIX[0]| join(", ")}}
-      {% for ROW in MATRIX[1:] %}
-      ,{{ROW | join(", ")}}
+  static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
+    {% for MATRIX in MASS_MATRIX %}
+    // {# MASS_MATRIX is an array, possible of length 1 #}
+    {
+      {{MATRIX[0]| join(", ")}}
+        {% for ROW in MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+    },
     {% endfor %}
-  },
-  {% endfor %}
-};
-{% endif %}
+  };
 
+  {% if MASS_MATRIX_SCALING is not defined %}
+  #error If matrices are predefined, scaling has to be defined, too
+  {% endif %}
 
-{% if MASS_MATRIX_SCALING!=[] %}
   static std::vector<int> scaleFactors = {
       {% for el in MASS_MATRIX_SCALING %}
         {{el}},
       {% endfor %}
   };
-{% endif %}
   static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
 
   logTraceOutWith1Argument("getMassMatrix", result);
   return result;
 }
+{% endif %}
 
+
+{% if ASSEMBLY_MATRIX is defined %}
 tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getLocalAssemblyMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
   logTraceInWith2Arguments("getLocalAssemblyMatrix", cellCentre, cellSize);
-{% if ASSEMBLY_MATRIX!=[] %}
-static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
-  {% for MATRIX in ASSEMBLY_MATRIX %}
-  {
-    {{MATRIX[0]| join(", ")}}
-      {% for ROW in MATRIX[1:] %}
-      ,{{ROW | join(", ")}}
+  static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
+    {% for MATRIX in ASSEMBLY_MATRIX %}
+    {
+      {{MATRIX[0]| join(", ")}}
+        {% for ROW in MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+    },
     {% endfor %}
-  },
-  {% endfor %}
-};
-{% endif %}
+  };
 
-{% if ASSEMBLY_MATRIX_SCALING!=[] %}
+  {% if ASSEMBLY_MATRIX_SCALING is not defined %}
+  #error If matrices are predefined, scaling has to be defined, too
+  {% endif %}
+
   static std::vector<int> scaleFactors = {
       {% for el in ASSEMBLY_MATRIX_SCALING %}
         {{el}},
       {% endfor %}
   };
-{% endif %}
 
   static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
 
   logTraceOutWith1Argument("getLocalAssemblyMatrix", result);
   return result;
 }
+{% endif %}
 
+
+{% if FACE_FROM_CELL_PROJECTION is defined %}
 tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection * TwoTimesD, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getFaceFromCellMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 )
 {
   logTraceInWith2Arguments("getFaceFromCellMatrix", cellCentre, cellSize);
-{% if FACE_FROM_CELL_PROJECTION!=[] %}
-static std::vector< tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > > matrices = {
-  {% for MATRIX in FACE_FROM_CELL_PROJECTION %}
-  {
-    {{MATRIX[0]| join(", ")}}
-      {% for ROW in MATRIX[1:] %}
-      ,{{ROW | join(", ")}}
+  static std::vector< tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > > matrices = {
+    {% for MATRIX in FACE_FROM_CELL_PROJECTION %}
+    {
+      {{MATRIX[0]| join(", ")}}
+        {% for ROW in MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+    },
     {% endfor %}
-  },
-  {% endfor %}
-};
-{% endif %}
+  };
 
-{% if FACE_FROM_CELL_PROJECTION_SCALING!=[] %}
+  {% if FACE_FROM_CELL_PROJECTION_SCALING is not defined %}
+  #error If matrices are predefined, scaling has to be defined, too
+  {% endif %}
+
   static std::vector<int> scaleFactors = {
       {% for el in FACE_FROM_CELL_PROJECTION_SCALING %}
         {{el}},
       {% endfor %}
   };
-{% endif %}
 
   static tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
   logTraceOutWith1Argument("getFaceFromCellMatrix", result);
   return result;
 } 
+{% endif %}
 
+
+{% if CELL_FROM_FACE_PROJECTION is defined %}
 tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution * TwoTimesD, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getCellFromFaceMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 )
 {
   logTraceInWith2Arguments("getCellFromFaceMatrix", cellCentre, cellSize);
-{% if CELL_FROM_FACE_PROJECTION!=[] %}
-static std::vector< tarch::la::Matrix<CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > > matrices = {
-  {% for MATRIX in CELL_FROM_FACE_PROJECTION %}
-  {
-    {{MATRIX[0]| join(", ")}}
-      {% for ROW in MATRIX[1:] %}
-      ,{{ROW | join(", ")}}
+  static std::vector< tarch::la::Matrix<CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > > matrices = {
+    {% for MATRIX in CELL_FROM_FACE_PROJECTION %}
+    {
+      {{MATRIX[0]| join(", ")}}
+        {% for ROW in MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+    },
     {% endfor %}
-  },
-  {% endfor %}
-};
-{% endif %}
+  };
 
-{% if CELL_FROM_FACE_PROJECTION_SCALING!=[] %}
+  {% if CELL_FROM_FACE_PROJECTION_SCALING is not defined %}
+  #error If matrices are predefined, scaling has to be defined, too
+  {% endif %}
+
   static std::vector<int> scaleFactors = {
       {% for el in CELL_FROM_FACE_PROJECTION_SCALING %}
         {{el}},
       {% endfor %}
   };
-{% endif %}
 
   static tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
   logTraceOutWith1Argument("getCellFromFaceMatrix", result);
   return result;
 } 
+{% endif %}
 
 
-{% if RIEMANN_MATRIX!=[] %}
+{% if RIEMANN_MATRIX is defined %}
 tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProjection, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getRiemannMatrix()
 {
   static tarch::la::Matrix<  FaceUnknownsSolution, FaceUnknownsProjection, double > result = {
@@ -201,10 +212,9 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolutio
 
   return result;
 } 
-
 {% endif %}
 
-{% if BOUNDARY_MATRIX!=[] %}
+{% if BOUNDARY_MATRIX is defined %}
 tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolution, double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getBoundaryConditionMatrix()
 {
   /*
@@ -219,29 +229,39 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsSolutio
 
   return result;
 } 
-
 {% endif %}
 
+
+{% if APPROX_SYSTEM_MATRIX is defined %}
 tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, double > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getInvertedApproxSystemMatrix(
   const tarch::la::Vector<Dimensions, double>&  cellCentre,
   const tarch::la::Vector<Dimensions, double>&  cellSize
 ) {
-
-{% if APPROX_SYSTEM_MATRIX!=[] %}
-static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
-  {% for MATRIX in APPROX_SYSTEM_MATRIX %}
-  {
-    {{MATRIX[0]| join(", ")}}
-      {% for ROW in MATRIX[1:] %}
-      ,{{ROW | join(", ")}}
+  static std::vector< tarch::la::Matrix< CellUnknowns, CellUnknowns, double > > matrices = {
+    {% for MATRIX in APPROX_SYSTEM_MATRIX %}
+    {
+      {{MATRIX[0]| join(", ")}}
+        {% for ROW in MATRIX[1:] %}
+        ,{{ROW | join(", ")}}
+      {% endfor %}
+    },
     {% endfor %}
-  },
-  {% endfor %}
-};
-{% endif %}
-  // merge the inversion routine in here
+  };
 
-  return matrices[0];
+  {% if APPROX_SYSTEM_MATRIX_SCALING is not defined %}
+  #error If matrices are predefined, scaling has to be defined, too
+  {% endif %}
+
+  static std::vector<int> scaleFactors = {
+      {% for el in APPROX_SYSTEM_MATRIX_SCALING %}
+        {{el}},
+      {% endfor %}
+  };
+
+  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
+
+  return result;
 }
+{% endif %}
 
 
