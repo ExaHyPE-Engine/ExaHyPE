@@ -21,8 +21,9 @@ namespace {{N}} {
 
     {% endfor %}
     
-    bool allSolversTerminationCriterionHolds();
-    void plotAllSolversToInfo();
+    bool terminationCriterionHolds();
+    void beginTimeStep();
+    void endTimeStep();
 
 {% for N in NAMESPACE %}
 }

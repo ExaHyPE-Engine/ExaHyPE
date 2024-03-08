@@ -7,7 +7,7 @@ import os
 
 from .Solver import Solver
 from .actionsets.InitDofs         import InitDofsDG
-from .actionsets.DGSolver         import UpdateCell, ProjectOntoFaces, UpdateFaceSolution, CheckTolerance
+from .actionsets.DGSolver         import UpdateCell, ProjectOntoFaces, UpdateFaceSolution
 from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockFormat
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
@@ -416,7 +416,6 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     observer.add_action_set( UpdateFaceSolution(self, 0, False) )
     observer.add_action_set( UpdateCell(self, 1, False) )
     observer.add_action_set( ProjectOntoFaces(self, 2, False) )
-    observer.add_action_set( CheckTolerance(self, 3, False) )
 
   
   def add_implementation_files_to_project(self, namespace, output):

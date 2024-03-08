@@ -144,8 +144,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     double     _maxH;
 
     double     _globalResidualMaxNorm;
-    double     _globalResidualEukledianNorm;
-    double     _globalResidualHNorm;
+    double     _globalResidualEukledianNormSquared;
+    double     _globalResidualHNormSquared;
 
     /**
      * Semaphore for global residual values

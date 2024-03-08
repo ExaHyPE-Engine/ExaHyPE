@@ -9,7 +9,7 @@ namespace {{N}} {
     {% endfor %}
 
 
-    bool allSolversTerminationCriterionHolds() {
+    bool terminationCriterionHolds() {
     /*
     Return true if all solvers return true.
     */
@@ -21,14 +21,21 @@ namespace {{N}} {
     }
 
 
-    void plotAllSolversToInfo() {
+    void beginTimeStep() {
+      static tarch::logging::Log _log( "{{NAMESPACE | join("::")}}" );
+
+      {% for SOLVER in SOLVER_INSTANCES %}
+      {{SOLVER[1]}}.clearGlobalResidual();
+      {% endfor %}
+    }
+
+    void endTimeStep() {
       static tarch::logging::Log _log( "{{NAMESPACE | join("::")}}" );
 
       {% for SOLVER in SOLVER_INSTANCES %}
       logInfo( "plotAllSolversToInfo()", {{SOLVER[1]}}.toString() );
       {% endfor %}
     }
-
   }
 {% for N in NAMESPACE %}
 }

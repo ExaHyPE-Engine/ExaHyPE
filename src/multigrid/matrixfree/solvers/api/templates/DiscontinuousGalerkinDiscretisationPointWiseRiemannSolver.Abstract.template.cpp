@@ -269,8 +269,8 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::terminationCriterionHolds() {
   static double initialGlobalResidualMaxNorm       = 0.0;
-  static double initialGlobalResidualEukledianNorm = 0.0;
-  static double initialGlobalResidualHNorm         = 0.0;
+  static double initialGlobalResidualEukledianNormSquared = 0.0;
+  static double initialGlobalResidualHNormSquared         = 0.0;
 
   bool result = false;
 
@@ -281,18 +281,18 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::terminationCriterionHolds() {
     result |= _globalResidualMaxNorm / initialGlobalResidualMaxNorm < SolverTolerance;
   }
 
-  if ( tarch::la::equals(initialGlobalResidualEukledianNorm,0.0) ) {
-    initialGlobalResidualEukledianNorm = _globalResidualEukledianNorm;
+  if ( tarch::la::equals(initialGlobalResidualEukledianNormSquared,0.0) ) {
+    initialGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
   }
   else {
-    result |= _globalResidualEukledianNorm / initialGlobalResidualEukledianNorm < SolverTolerance;
+    result |= _globalResidualEukledianNormSquared / initialGlobalResidualEukledianNormSquared < SolverTolerance;
   }
 
-  if ( tarch::la::equals(initialGlobalResidualHNorm,0.0) ) {
-    initialGlobalResidualHNorm = _globalResidualHNorm;
+  if ( tarch::la::equals(initialGlobalResidualHNormSquared,0.0) ) {
+    initialGlobalResidualHNormSquared = _globalResidualHNormSquared;
   }
   else {
-    result |= _globalResidualHNorm / initialGlobalResidualHNorm < SolverTolerance;
+    result |= _globalResidualHNormSquared / initialGlobalResidualHNormSquared < SolverTolerance;
   }
 
   return result;
@@ -302,22 +302,22 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::terminationCriterionHolds() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clearGlobalResidual() {
   tarch::multicore::Lock lock( _semaphore );
 
-  _globalResidualMaxNorm        = 0.0;
-  _globalResidualEukledianNorm += 0.0;
-  _globalResidualHNorm         += 0.0;
+  _globalResidualMaxNorm               = 0.0;
+  _globalResidualEukledianNormSquared += 0.0;
+  _globalResidualHNormSquared         += 0.0;
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateGlobalResidual(
   double residualMaxNorm,
-  double residualEukledianNorm,
-  double residualHNorm
+  double residualEukledianNormSquared,
+  double residualHNormSquared
 ) {
   tarch::multicore::Lock lock( _semaphore );
 
   _globalResidualMaxNorm        = std::max(_globalResidualMaxNorm, residualMaxNorm);
-  _globalResidualEukledianNorm += residualEukledianNorm;
-  _globalResidualHNorm         += residualHNorm;
+  _globalResidualEukledianNormSquared += residualEukledianNormSquared;
+  _globalResidualHNormSquared         += residualHNormSquared;
 }
 
 
@@ -325,7 +325,7 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream msg;
   msg << "{{CLASSNAME}}"
       << ": |r|_max=" << _globalResidualMaxNorm
-      << ", |r|_2=" << _globalResidualEukledianNorm
-      << ", |r|_h=" << _globalResidualHNorm;
+      << ", |r|_2=" << std::sqrt( _globalResidualEukledianNormSquared )
+      << ", |r|_h=" << std::sqrt( _globalResidualHNormSquared );
   return msg.str();
 }
