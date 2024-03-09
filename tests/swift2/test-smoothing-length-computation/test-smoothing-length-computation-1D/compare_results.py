@@ -216,6 +216,7 @@ if errors > 0:
     print("Before you panic:")
     print(" - Are you using the correct kernel in this script?")
     print(" - Are you using the correct resolution eta in this script?")
+    print(" - Are you hitting h_min/h_max limits?")
     print("Other ToDo's left for this script: ")
     print(" - corrections for periodic wrapping ")
 
