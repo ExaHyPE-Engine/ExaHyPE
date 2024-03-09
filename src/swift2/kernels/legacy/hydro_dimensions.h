@@ -29,6 +29,23 @@ namespace swift2 {
   #endif
         }
 
+        /**
+         * Returns \f$x^{1/d}\f$.
+         */
+        template <typename T>
+        InlineMethod T pow_inv_dimension(T x) {
+        #if (HYDRO_DIMENSION == 3)
+                return std::cbrt(x);
+        #elif (HYDRO_DIMENSION == 2)
+                return std::sqrt(x);
+        #elif (HYDRO_DIMENSION == 1)
+                return x;
+        #else
+        #pragma error "HYDRO_DIMENSION undefined?"
+        #endif
+        }
+
+
 
         /**
          * returns x^{ndim+1}
