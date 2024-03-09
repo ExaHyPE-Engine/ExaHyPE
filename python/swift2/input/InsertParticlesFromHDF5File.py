@@ -81,11 +81,19 @@ class InsertParticlesFromHDF5File(ActionSet):
       tarch::la::Vector<Dimensions,double> Velocity;
       /* Density is not encoded in all SWIFT HDF5 IC files as it is recomputed
       by the density loop anyway. Here we just initialse to an arbitrary value */
-      const double Density         = 1.0;
-      const double Mass            = MassWithinVoxel[indexEntry];
-      const double SmoothingLength = SmoothingLengthWithinVoxel[indexEntry];
-      const double InternalEnergy  = InternalEnergyWithinVoxel[indexEntry];
-      const int    ParticleID      = PartidWithinVoxel[indexEntry];
+      double Density         = 1.0;
+      double Mass            = MassWithinVoxel[indexEntry];
+      double SmoothingLength = SmoothingLengthWithinVoxel[indexEntry];
+      double InternalEnergy  = InternalEnergyWithinVoxel[indexEntry];
+      int    ParticleID      = PartidWithinVoxel[indexEntry];
+
+      if (SmoothingLength > SmlMax){
+        logWarning("InsertParticlesFromHDF5File.py",
+          "particle smoothing length > global smoothing length max;"
+          << " h= " << SmoothingLength << " h_max= " << SmlMax <<
+          "setting it to 0.9 * Max");
+        SmoothingLength = 0.9 * SmlMax;
+      }
 
       /*
        * Other attributes not set in HDF5 file
@@ -114,14 +122,7 @@ class InsertParticlesFromHDF5File(ActionSet):
        */
 
       /* Internal search radius used by Peano.
-       * We set the maximum allowed value, R = grid_size/2.
-       */
-       if (SmoothingLength > SmlMax)
-            logError("InsertParticlesFromHDF5File.py",
-                "particle smoothing length > global smoothing length max;"
-                << " h= " << SmoothingLength << " h_max= " << SmlMax
-                );
-
+       * We set the maximum allowed value, R = grid_size/2.  */
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0);
       const double searchRadiusGlobal = SmlMax * kernel_gamma;
