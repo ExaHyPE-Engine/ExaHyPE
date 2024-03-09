@@ -1,20 +1,20 @@
-# Docker
+# Dockerfiles
 
 Here we maintain Dockerfiles for different compilers.
 
-## Build a Docker image
+## Build a Docker Image
 
 ```shell
 docker build -t peanoframework/<compiler> -f Dockerfile.<compiler> .
 ```
 
-### Login into your Dockerhub account
+### Login Into Your Dockerhub Account
 
 ```shell
 docker login
 ```
 
-### Push the Docker image to Dockerhub
+### Push the Docker Image to Dockerhub
 
 ```shell
 docker push peanoframework/<compiler>
@@ -22,7 +22,7 @@ docker push peanoframework/<compiler>
 
 You can find prebuilt Docker images for each compiler we support at [Dockerhub](https://hub.docker.com/u/peanoframework).
 
-## Run a Docker image
+## Run a Docker Image
 
 ```shell
 docker run -it -v ${PWD}:/work --rm --privileged peanoframework/<compiler> /bin/bash

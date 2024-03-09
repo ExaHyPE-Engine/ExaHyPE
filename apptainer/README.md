@@ -1,8 +1,8 @@
-# Apptainer
+# Apptainer Definition Files
 
 Here we maintain Apptainer Definition Files for different compilers.
 
-## Build an Apptainer container
+## Build an Apptainer Container
 
 ```shell
 apptainer build <compiler>.sif Apptainer.<compiler>
@@ -10,13 +10,13 @@ apptainer build <compiler>.sif Apptainer.<compiler>
 
 Then copy the created .sif file to an HPC cluster.
 
-## Build an Apptainer container using Docker
+## Build an Apptainer Container Using Docker
 
 ```shell
 docker run -v ${PWD}:/work peanoframework/base apptainer build work/<compiler>.sif work/Apptainer.<compiler>
 ```
 
-## Use an Apptainer container
+## Use an Apptainer Container
 
 ```shell
 apptainer shell -e --bind "$PWD" <compiler>.sif

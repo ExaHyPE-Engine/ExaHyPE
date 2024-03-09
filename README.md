@@ -70,16 +70,16 @@ The most important ones are:
 
 # Docker
 
-We maintain a collection of [Dockerfiles](./docker/README.md).
+We maintain a collection of [Dockerfiles](./docker/).
 
 # Apptainer
 
-We maintain a collection of [Apptainer Definition Files](./apptainer/README.md).
+We maintain a collection of [Apptainer Definition Files](./apptainer/).
 
 # Spack
 
 To considerably alleviate the installation process of Peano, especially on HPC systems,
-we provide [packages](./spack/README.md) that rely on [Spack](https://github.com/spack/spack/wiki).
+we provide [packages](./spack/) that rely on [Spack](https://github.com/spack/spack/wiki).
 
 # Contributing
 
