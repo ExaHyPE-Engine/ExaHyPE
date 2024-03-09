@@ -34,7 +34,8 @@ load balancing, sophisticated geometry representations, and other features.
 - [Quickstart](#quickstart)
 - [Availability](#availability)
 - [Dependencies and Prerequisites](#dependencies-and-prerequisites)
-- [Docker and Apptainer](#docker-and-apptainer)
+- [Docker](#docker)
+- [Apptainer](#apptainer)
 - [Spack](#spack)
 - [Contributing](#contributing)
 - [Code of Conduct](#code-of-conduct)
@@ -67,10 +68,13 @@ The most important ones are:
 * LIBXSMM (optional).
 * Doxygen if you want to create HTML pages of the documentation (optional).
 
-# Docker and Apptainer
+# Docker
 
-We maintain a collection of Docker and Apptainer [containers](./containers/README.md)
-with all required dependencies.
+We maintain a collection of [Dockerfiles](./docker/README.md).
+
+# Apptainer
+
+We maintain a collection of [Apptainer Definition Files](./apptainer/README.md).
 
 # Spack
 
