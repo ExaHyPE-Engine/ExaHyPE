@@ -71,7 +71,7 @@ namespace swift2 {
         template <typename T>
         InlineMethod T pow_dimension_minus_one(T x) {
   #if (HYDRO_DIMENSION == 3)
-          return = x * x;
+          return x * x;
   #elif (HYDRO_DIMENSION == 2)
           return x;
   #elif (HYDRO_DIMENSION == 1)

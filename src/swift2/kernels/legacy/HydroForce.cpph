@@ -25,13 +25,11 @@ void swift2::kernels::legacy::hydro_prepare_force(Particle* localParticle) {
   const double fac_balsara_eps = 1.;
 
   // Compute the norm of the curl
-  double curl_v = 0;
-
-  if (hydroDimensions != 3) { /* in 2D sims Rot_v is a scalar */
-    curl_v = std::sqrt(localParticle->getRot_v() * localParticle->getRot_v());
-  } else {
-    assertionMsg(false, "3D curl_v term to be implemented (straightforward, but have only run 2D so far...)");
-  }
+#if Dimensions < 3
+  const double curl_v = std::sqrt(localParticle->getRot_v() * localParticle->getRot_v());
+#else
+  const double curl_v = tarch::la::norm2(localParticle->getRot_v());
+#endif
 
   /* Compute the norm of div v */
   const double abs_div_v = tarch::la::abs(localParticle->getDiv_v());

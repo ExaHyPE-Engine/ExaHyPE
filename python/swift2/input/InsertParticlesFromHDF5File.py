@@ -148,11 +148,9 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       // Vectors
       for (int d=0; d<Dimensions; d++) {
-         newParticle->setA          (d,0);
+         newParticle->setA(d,0);
+         newParticle->setRot_v(d, 0);
       }
-
-      /* For 2D sims, we only get one component */
-      newParticle->setRot_v(0);
 
       /* Initialise the "extended" arrays */
       newParticle->setV_full( newParticle->getV() );

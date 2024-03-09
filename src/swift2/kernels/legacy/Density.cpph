@@ -83,7 +83,6 @@ void swift2::kernels::legacy::hydro_prepare_density(Particle* localParticle) {
   localParticle->setDiv_v(0.0);
   localParticle->setRot_v(0.0);
 
-  // std::cout << "Resetting part " << localParticle->getPartid() << " iter " << localParticle->getSmoothingLengthIterCount() << std::endl;
 #if PeanoDebug > 0
   localParticle->setSmoothingLengthNeighbourCount(0);
 #endif
@@ -144,7 +143,6 @@ void swift2::kernels::legacy::density_kernel(Particle* localParticle, const Part
     // Compute dv dot r
     // Velocity terms for viscosity
     tarch::la::Vector<Dimensions, double> dv;
-    tarch::la::Vector<Dimensions, double> curlvr(0.0);
 
     /* Now we need to compute the div terms */
     const double r_inv = r ? 1.0 / r : 0.0;
@@ -156,11 +154,17 @@ void swift2::kernels::legacy::density_kernel(Particle* localParticle, const Part
 
     /* Compute dv cross r */
     /* 2D Term only has 1 component (z) */
-    const double curlvr2D = dv[0] * dx[1] - dv[1] * dx[0];
-    localParticle->setRot_v(localParticle->getRot_v() + fac_i * curlvr2D);
-    // @TODO Mladen: Implement 3D curl
-    if (hydroDimensions == 3)
-      assertionMsg(false, "3D not implemented");
+#if Dimensions < 3
+      const double curlvr2D = dv[0] * dx[1] - dv[1] * dx[0];
+      localParticle->setRot_v(localParticle->getRot_v() + fac_i * curlvr2D);
+#else
+      const tarch::la::Vector<3, double> curlvr = {
+        dv[1] * dx[2] - dv[2] * dx[1],
+        dv[2] * dx[0] - dv[0] * dx[2],
+        dv[0] * dx[1] - dv[1] * dx[0]
+      };
+      localParticle->setRot_v(localParticle->getRot_v(0) + fac_i * curlvr);
+#endif
 
 #if PeanoDebug > 0
     localParticle->setSmoothingLengthNeighbourCount(localParticle->getSmoothingLengthNeighbourCount()+1);
