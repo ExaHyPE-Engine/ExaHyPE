@@ -197,8 +197,8 @@ errors = 0
 errorstr = (
     "Found difference: "
     + "particle ID = {0:4d} "
-    + "H_peano = {1:.5e} "
-    + "H_python = {2:.5e} "
+    + "h_peano = {1:.5e} "
+    + "h_python = {2:.5e} "
     + "diff = {3:.5e}"
 )
 

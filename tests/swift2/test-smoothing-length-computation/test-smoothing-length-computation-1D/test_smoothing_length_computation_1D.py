@@ -105,9 +105,12 @@ project = swift2.Project(
     namespace=project_namespace, project_name="TestSML1D", executable="testSML"
 )
 
-
 cfl_factor = 1e-6
 init_dt = 1.0e-6
+
+offset = [0, 0, 0]
+domain_size = [1, 1, 1]
+periodic_boundary_conditions = [False, False, False]
 
 
 # Initialise the SPH particle --------------------------------------------------
@@ -167,11 +170,11 @@ GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
 # SPH kernel -------------------------------------------------------
 KERNEL_SYMBOL = swift2.sphtools.sph_kernel_macro_name[kernel]
-KERNEL_SUPPORT_RAD = swift2.sphtools.sph_kernel_H_over_h[hydro_dimensions - 1][kernel]
-
 
 # Additional Particle Parameters -----------------------------------------------
-hydro_h_max = args.cell_size / 2
+dx = domain_size[0] / npart
+hydro_H_max = 10 * dx
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(hydro_H_max, kernel, hydro_dimensions)
 particle.h_hydro_max = hydro_h_max
 
 # Modify the eta factor to look for a precise number of neighbours.
@@ -206,10 +209,6 @@ else:
     build_mode = peano4.output.CompileMode.Release
 
 # Set Peano4 simulation parameters ---------------------------------------------
-offset = [0, 0, 0]
-domain_size = [1, 1, 1]
-periodic_boundary_conditions = [False, False, False]
-
 project.set_global_simulation_parameters(
     dimensions=dimensions,
     offset=offset,

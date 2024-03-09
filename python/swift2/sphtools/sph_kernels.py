@@ -459,12 +459,14 @@ def sph_kernel_dWdr(r: float, h: float, kernel: str, ndim: int):
     return dWdr
 
 
+def sph_kernel_get_search_radius(h: Union[float, np.ndarray], kernel: str, ndim: int):
+    return sph_kernel_get_H(h, kernel, ndim);
+
+
 def sph_kernel_get_H(h: Union[float, np.ndarray], kernel: str, ndim: int):
     """!
-    Compute the smoothing length in terms of the compact support length
-    of a given kernel.
+    Compute the compact support radius of a given kernel and given smoothing length.
     The kernels defined above are defined and scaled to support a region <= H.
-
 
     Parameters
     ----------
@@ -488,6 +490,37 @@ def sph_kernel_get_H(h: Union[float, np.ndarray], kernel: str, ndim: int):
     """
 
     return h * sph_kernel_H_over_h[ndim - 1][kernel]
+
+
+def sph_kernel_get_smoothing_length_from_search_radius(H: Union[float, np.ndarray], kernel: str, ndim: int):
+    """!
+    Compute the smoothing length given the compact support length of a given kernel.
+    The kernels defined above are defined and scaled to support a region <= H.
+
+
+    Parameters
+    ----------
+
+    H: float or np.ndarray
+        compact support radii.
+
+    kernel: str
+        which kernel to use.
+
+    ndim: int
+        how many dimensions we're working with
+
+
+    Returns
+    -------
+
+    h: float or np.dnarray
+        smoothing lengt(s)
+
+    """
+
+    return H / sph_kernel_H_over_h[ndim - 1][kernel]
+
 
 
 def sph_kernel_root(kernel: str, ndim: int):
