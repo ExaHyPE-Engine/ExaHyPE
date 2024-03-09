@@ -18,7 +18,7 @@
 template <typename Particle>
 void swift2::kernels::legacy::hydro_end_density(Particle* localParticle) {
 
-  // if (localParticle->getSmoothingLengthConverged()) return;
+  if (localParticle->getSmoothingLengthConverged()) return;
 
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::kernels::legacy::kernelHydro;
@@ -72,7 +72,7 @@ void swift2::kernels::legacy::hydro_end_density(Particle* localParticle) {
 template <typename Particle>
 void swift2::kernels::legacy::hydro_prepare_density(Particle* localParticle) {
   // temporary to get things to work
-  // if (localParticle->getSmoothingLengthConverged()) return;
+  if (localParticle->getSmoothingLengthConverged()) return;
 
   localParticle->setWcount(0.0);
   localParticle->setWcount_dh(0.0);
@@ -93,7 +93,7 @@ void swift2::kernels::legacy::hydro_prepare_density(Particle* localParticle) {
 template <typename Particle>
 void swift2::kernels::legacy::density_kernel(Particle* localParticle, const Particle* activeParticle) {
 
-  // if (localParticle->getSmoothingLengthConverged()) return;
+  if (localParticle->getSmoothingLengthConverged()) return;
 
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::kernels::legacy::kernelHydro;

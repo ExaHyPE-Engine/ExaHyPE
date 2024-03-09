@@ -157,7 +157,7 @@ coords = coords[sort_ic]
 # -------------------------
 
 tree = KDTree(coords)
-distances, indexes = tree.query(coords, k=nneigh + 10 * ndim)
+distances, indexes = tree.query(coords, k=2*nneigh + 10 * ndim)
 neighbours = coords[indexes]
 
 npart = coords.shape[0]

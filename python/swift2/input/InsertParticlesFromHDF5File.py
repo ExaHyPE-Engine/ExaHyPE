@@ -117,7 +117,10 @@ class InsertParticlesFromHDF5File(ActionSet):
        * We set the maximum allowed value, R = grid_size/2.
        */
        if (SmoothingLength > SmlMax)
-            logError("InsertParticlesFromHDF5File.py", "particle smoothing length > global smoothing length max");
+            logError("InsertParticlesFromHDF5File.py",
+                "particle smoothing length > global smoothing length max;"
+                << " h= " << SmoothingLength << " h_max= " << SmlMax
+                );
 
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0);
@@ -137,8 +140,7 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       newParticle->setSearchRadius( searchRadiusGlobal );
 
-      std::cout << " =========== SETTING SEARCH RADIUS " << newParticle->getSearchRadius()
-          << " GridSize" <<  0.5 * GridSize << " ratio " << 2 * newParticle->getSearchRadius()/GridSize_x << std::endl;
+      // std::cout << " =========== SETTING SEARCH RADIUS " << newParticle->getSearchRadius() << " GridSize" <<  0.5 * GridSize << " ratio " << 2 * newParticle->getSearchRadius()/GridSize_x << std::endl;
 
       newParticle->setPressure  ( Pressure );
       newParticle->setSoundSpeed( Soundspeed );

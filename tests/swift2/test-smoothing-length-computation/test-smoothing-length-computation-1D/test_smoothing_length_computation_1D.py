@@ -150,6 +150,7 @@ HYDRO_DIMENSIONS = hydro_dimensions
 hfile = h5py.File(args.ic_filename, "r")
 header = hfile["Header"]
 npart = header.attrs["NumPart_ThisFile"][0]
+npart_base = header.attrs["NumPart_base"][0]
 hfile.close()
 HYDRO_PART_NUMBER = npart
 
@@ -172,8 +173,8 @@ GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 KERNEL_SYMBOL = swift2.sphtools.sph_kernel_macro_name[kernel]
 
 # Additional Particle Parameters -----------------------------------------------
-dx = domain_size[0] / npart
-hydro_H_max = 10 * dx
+dx = domain_size[0] / npart_base
+hydro_H_max = 20 * dx
 hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(hydro_H_max, kernel, hydro_dimensions)
 particle.h_hydro_max = hydro_h_max
 
@@ -184,7 +185,7 @@ particle.eta_factor = swift2.sphtools.eta_from_number_of_neighbours(
     nneigh, kernel=kernel, ndim=hydro_dimensions
 )
 
-# particle.h_hydro_min = 1e-6
+particle.h_hydro_min = 1e-10
 particle.h_max_iterations = 50
 particle.h_tolerance = h_tol
 # particle.beta_av = 3.0

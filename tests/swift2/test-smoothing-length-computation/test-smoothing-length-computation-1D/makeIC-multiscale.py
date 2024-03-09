@@ -40,7 +40,7 @@ coords = np.zeros((npart_tot, 3))
 v = np.zeros((npart_tot, 3))
 ids = np.linspace(1, npart_tot, npart_tot)
 m = np.ones(npart_tot)
-h = np.ones(npart_tot) * 10.0 * boxSize/npart # just a first guess.
+h = np.ones(npart_tot) * 4. * boxSize/npart_tot # just a first guess.
 u = np.ones(npart_tot)
 
 rng = np.random.RandomState(seed=seed)
@@ -98,9 +98,11 @@ file = h5py.File(fileName, "w")
 # Header
 grp = file.create_group("/Header")
 grp.attrs["BoxSize"] = boxSize
-grp.attrs["NumPart_Total"] = [npart, 0, 0, 0, 0, 0]
+grp.attrs["NumPart_Total"] = [npart_tot, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_Total_HighWord"] = [0, 0, 0, 0, 0, 0]
-grp.attrs["NumPart_ThisFile"] = [npart, 0, 0, 0, 0, 0]
+grp.attrs["NumPart_ThisFile"] = [npart_tot, 0, 0, 0, 0, 0]
+# This is an addition for this test to be able to estimate the search radius.
+grp.attrs["NumPart_base"] = [npart]
 grp.attrs["Time"] = 0.0
 grp.attrs["NumFilesPerSnapshot"] = 1
 grp.attrs["MassTable"] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

@@ -11,7 +11,7 @@ template <typename Particle>
 void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_required(Particle* localParticle) {
   // TODO Mladen: rething naming w.r.t. legacy SWIFT 1 names.
   //
-  // if (localParticle->getSmoothingLengthConverged()) return;
+  if (localParticle->getSmoothingLengthConverged()) return;
 
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::kernels::legacy::kernelHydro;
@@ -61,7 +61,7 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
         "hydro_update_smoothing_length_and_rerun_if_required",
         "Caught situation with no neighbours. Needs exception handling. part="<<localParticle->toString());
 
-    // localParticle->setSmoothingLengthConverged(false);
+    localParticle->setSmoothingLengthConverged(false);
 
   } else {
 
@@ -131,7 +131,7 @@ if (localParticle->getPartid() == PROBLEMPART1){
       // smaller but has already reached the minimum). So, just give up.
       // Leave things as they are and don't re-run.
 
-      // localParticle->setSmoothingLengthConverged(true);
+      localParticle->setSmoothingLengthConverged(true);
       return;
     }
 
@@ -201,7 +201,7 @@ if (localParticle->getPartid() == PROBLEMPART1){
   if (std::abs(h_new - h_old) <= sml_tolerance_epsilon * h_old) {
     // we're done. Note that in SWIFT, they check the other way around.
     localParticle->setSmoothingLength(h_new);
-    // localParticle->setSmoothingLengthConverged(true);
+    localParticle->setSmoothingLengthConverged(true);
     return;
   }
 
@@ -227,8 +227,8 @@ if (localParticle->getPartid() == PROBLEMPART1){
     // If we reach this point, we need to run again.
     // TODO: can't hurt to try again.
     localParticle->getSpecies().setRerunPreviousGridSweep();
-    std::cout << "RE-ITERATE PLEASE " << localParticle->getPartid() << std::endl;
-    // localParticle->setSmoothingLengthConverged(false);
+    // std::cout << "RE-ITERATE PLEASE " << localParticle->getPartid() << std::endl;
+    localParticle->setSmoothingLengthConverged(false);
     return;
 
   } else if (localParticle->getSmoothingLength() >= hydro_h_max) {
@@ -239,15 +239,15 @@ if (localParticle->getPartid() == PROBLEMPART1){
     logWarning("hydro_update_smoothing_length_and_rerun_if_required", "Got a particle that is lost cause. Setting h = h_max , id=" << localParticle->getPartid());
     // Do some damage control if no neighbours at all were found
     // if (has_no_neighbours) {
-    //   ...
+    //   ... we already crash if this is the case.
     // }
-    // localParticle->setSmoothingLengthConverged(true);
+    localParticle->setSmoothingLengthConverged(true);
   } else if (localParticle->getSmoothingLength() <= hydro_h_min) {
     // Ok, this particle is a lost cause...
     localParticle->setSmoothingLength(hydro_h_min);
     // Temporary warning. This may not be an error, but just a particle hitting the limit we impose on it.
     logWarning("hydro_update_smoothing_length_and_rerun_if_required", "Got a particle that is lost cause. Setting h = h_min , id=" << localParticle->getPartid());
-    // localParticle->setSmoothingLengthConverged(true);
+    localParticle->setSmoothingLengthConverged(true);
     if (hasNoNeighbours){
       logWarning("hydro_update_smoothing_length_and_rerun_if_required", "Particle also has no neighbours... TODO");
     }
