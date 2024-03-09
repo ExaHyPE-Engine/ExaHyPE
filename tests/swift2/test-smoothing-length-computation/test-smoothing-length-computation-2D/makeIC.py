@@ -40,7 +40,7 @@ v = np.zeros((npart**2, 3))
 ids = np.linspace(1, npart**2, npart**2)
 m = np.ones(npart**2)
 dx = boxSize / npart
-h = np.ones(npart**2) * 2.0 * dx
+h = np.ones(npart**2) * 1.2 * dx
 u = np.ones(npart**2)
 
 # Get uniform coordinates.
@@ -62,10 +62,22 @@ for i in range(npart):
 
 rng = np.random.RandomState(seed=seed)
 # rng.random returns random numbers in [0, 1). Scale that.
-#  displacement = (2.0 * rng.random(coords.shape) - 1.0) * 0.199 * dx
-displacement = np.zeros(coords.shape)
+displacement = (2.0 * rng.random(coords.shape) - 1.0) * 0.199 * dx
+#  displacement = np.zeros(coords.shape)
 coords[:, 0] += displacement[:, 0]
 coords[:, 1] += displacement[:, 1]
+
+
+# too many particles mean that the comparison python script takes ages.
+# too few particles mean that the search radii are going to be too big
+# for the cell size.
+# So let's scale the particles down into a smaller box than the actual
+# box size.
+scale = 1./5
+coords *= scale
+h *= scale
+# and shift them into the center
+coords += 0.4
 
 
 from matplotlib import pyplot as plt
@@ -83,11 +95,13 @@ grp.attrs["BoxSize"] = boxSize
 grp.attrs["NumPart_Total"] = [npart**2, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_Total_HighWord"] = [0, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_ThisFile"] = [npart**2, 0, 0, 0, 0, 0]
+# This is an addition for this test to be able to estimate the search radius.
+grp.attrs["NumPart_base"] = [npart / scale]
 grp.attrs["Time"] = 0.0
 grp.attrs["NumFilesPerSnapshot"] = 1
 grp.attrs["MassTable"] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 grp.attrs["Flag_Entropy_ICs"] = 0
-grp.attrs["Dimension"] = 1
+grp.attrs["Dimension"] = 2
 grp.attrs["RandomSeed"] = seed
 
 # Units
