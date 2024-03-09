@@ -1,6 +1,11 @@
+#include <iomanip>
 #include "equation_of_state.h"
 #include "hydro_dimensions.h"
 #include "kernel_hydro.h"
+
+#ifndef PROBLEMPART1
+#define PROBLEMPART1 -1
+#endif
 
 template <typename Particle>
 void swift2::kernels::legacy::hydro_end_density_copy(Particle* localParticle) {
@@ -93,6 +98,7 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
   const int iteration = localParticle->getSmoothingLengthIterCount();
   localParticle->setSmoothingLengthIterCount(iteration + 1);
 
+
   // Condition changes here because we've done hydro_end_density already
   // if (std::abs(localParticle->getWcount() / kernel_root - 1.) < 1.e-5 * h_old_dim) {
   if (localParticle->getWcount() < 1.e-5) {
@@ -114,6 +120,17 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
   } else {
 
     hydro_end_density_copy(localParticle);
+
+if (localParticle->getPartid() == PROBLEMPART1){
+  std::cout << std::setprecision(6) << "Particle " << localParticle->getPartid() << "\n";
+  std::cout << "Iteration " << iteration + 1 << "\n";
+  std::cout << "h= " << localParticle->getSmoothingLength() << "\n";
+  std::cout << "h_min= " << hydro_h_min << "\n";
+  std::cout << "h_max= " << hydro_h_max << "\n";
+  std::cout << "Neighbourcount:= " << localParticle->getSmoothingLengthNeighbourCount() << "\n";
+}
+
+
 
     // swift1 calls hydro_end_density here. We did that already.
 
@@ -176,6 +193,19 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
     // Avoid floating point exception from f_prime = 0
     h_new = h_old - f / (f_prime + std::numeric_limits<double>::min());
 
+    if (localParticle->getPartid() == PROBLEMPART1){
+      std::cout << std::setprecision(6);
+      std::cout <<   " iteration " << iteration << "\n";
+      std::cout <<   " wcount " << wcount << "\n";
+      std::cout <<   " wcount_dh " << localParticle->getWcount_dh() << "\n";
+      std::cout <<   " n_sum " << n_sum << "\n";
+      std::cout <<   " f " << f << "\n";
+      std::cout <<   " f_prime " << f_prime << "\n";
+      std::cout <<   " h_new " << h_new << "\n";
+      std::cout <<   " ------------------------------------------ \n ";
+    }
+
+
 
     // Be verbose about the particles that struggle to converge
     // `max_iterations` is currently a user-set variable, with the swift1
@@ -236,7 +266,7 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
 
     // Bisect the remaining interval
     const double temp = 0.5 * (legacy::hydroDimensions::pow_dimension(left) + legacy::hydroDimensions::pow_dimension(right));
-    localParticle->setSmoothingLength(1. / legacy::hydroDimensions::pow_dimension(temp));
+    localParticle->setSmoothingLength(legacy::hydroDimensions::pow_inv_dimension(temp));
 
   } else {
 
@@ -251,7 +281,7 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
     // If we reach this point, we need to run again.
     // TODO: can't hurt to try again.
     localParticle->getSpecies().setRerunPreviousGridSweep();
-    std::cout << "RE-ITERATE PLEASE" << std::endl;
+    // std::cout << "RE-ITERATE PLEASE " << localParticle->getPartid() << std::endl;
     // localParticle->setSmoothingLengthConverged(false);
     return;
 

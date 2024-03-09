@@ -2,6 +2,18 @@
 #include "hydro_dimensions.h"
 #include "kernel_hydro.h"
 
+// TODO: temporary
+#include <iomanip>
+
+
+// #define PROBLEMPART1 836
+// #define PROBLEMPART1 3628
+#define PROBLEMPART1 -1
+#define PROBLEMPART2 -1
+#define PROBLEMPART3 -1
+// #define PROBLEMPART2 836
+// #define PROBLEMPART3 837
+
 
 template <typename Particle>
 void swift2::kernels::legacy::hydro_end_density(Particle* localParticle) {
@@ -72,6 +84,9 @@ void swift2::kernels::legacy::hydro_prepare_density(Particle* localParticle) {
   localParticle->setRot_v(0.0);
 
   // std::cout << "Resetting part " << localParticle->getPartid() << " iter " << localParticle->getSmoothingLengthIterCount() << std::endl;
+#if PeanoDebug > 0
+  localParticle->setSmoothingLengthNeighbourCount(0);
+#endif
 }
 
 
@@ -86,14 +101,14 @@ void swift2::kernels::legacy::density_kernel(Particle* localParticle, const Part
   const double hydroDimensions = localParticle->getHydroDimensions();
 
   /* Retrieve basic properties of local and active particles */
-  const double h_a = localParticle->getSmoothingLength();
+  const double hi = localParticle->getSmoothingLength();
 
   /* Distance between the particles */
   const tarch::la::Vector<Dimensions, double> dx = localParticle->getX() - activeParticle->getX();
   const double                                r  = tarch::la::norm2(dx);
 
   /* Compute the actual interaction radius */
-  const double iactR = kernel_gamma * h_a;
+  const double iactR = kernel_gamma * hi;
 
   // This will probably cause issues with vectorisation and should be outside of the loop.
   if (
@@ -103,27 +118,27 @@ void swift2::kernels::legacy::density_kernel(Particle* localParticle, const Part
     // not localParticle->getIsBoundaryParticle()
   ) {
 
-    const double m_b     = activeParticle->getMass();
-    const double h_a_inv = 1. / h_a;
+    const double mj     = activeParticle->getMass();
+    const double hi_inv = 1. / hi;
     // Normalized distance to evaluate kernel
-    const double qa = r * h_a_inv;
+    const double qi = r * hi_inv;
 
     // Evaluate kernel and its derivative
-    double w_a, dwa_dx;
-    kernel_deval(qa, w_a, dwa_dx);
-    const double dwa_dh = -(hydroDimensions * w_a + qa * dwa_dx);
+    double wi, dwi_dx;
+    kernel_deval(qi, wi, dwi_dx);
+    const double dwi_dh = -(hydroDimensions * wi + qi * dwi_dx);
 
     // Increment density
-    localParticle->setDensity(localParticle->getDensity() + m_b * w_a);
+    localParticle->setDensity(localParticle->getDensity() + mj * wi);
 
-    // Increment drho/dh. Note that minus sign was absorbed into dwa_dh
-    localParticle->setRho_dh(localParticle->getRho_dh() + m_b * dwa_dh);
+    // Increment drho/dh. Note that minus sign was absorbed into dwi_dh
+    localParticle->setRho_dh(localParticle->getRho_dh() + mj * dwi_dh);
 
     // Increment fractional number density
-    localParticle->setWcount(localParticle->getWcount() + w_a);
+    localParticle->setWcount(localParticle->getWcount() + wi);
 
-    // Increment dWcount/dh. Note that minus sign was absorbed into dwa_dh
-    localParticle->setWcount_dh(localParticle->getWcount_dh() + dwa_dh);
+    // Increment dWcount/dh. Note that minus sign was absorbed into dwi_dh
+    localParticle->setWcount_dh(localParticle->getWcount_dh() + dwi_dh);
 
 
     // Compute dv dot r
@@ -133,19 +148,46 @@ void swift2::kernels::legacy::density_kernel(Particle* localParticle, const Part
 
     /* Now we need to compute the div terms */
     const double r_inv = r ? 1.0 / r : 0.0;
-    const double fac_a = m_b * dwa_dx * r_inv;
+    const double fac_i = mj * dwi_dx * r_inv;
 
     dv                = localParticle->getV() - activeParticle->getV();
     const double dvdr = tarch::la::dot(dv, dx);
-    localParticle->setDiv_v(localParticle->getDiv_v() - fac_a * dvdr);
+    localParticle->setDiv_v(localParticle->getDiv_v() - fac_i * dvdr);
 
     /* Compute dv cross r */
     /* 2D Term only has 1 component (z) */
     const double curlvr2D = dv[0] * dx[1] - dv[1] * dx[0];
-    localParticle->setRot_v(localParticle->getRot_v() + fac_a * curlvr2D);
+    localParticle->setRot_v(localParticle->getRot_v() + fac_i * curlvr2D);
     // @TODO Mladen: Implement 3D curl
     if (hydroDimensions == 3)
       assertionMsg(false, "3D not implemented");
+
+#if PeanoDebug > 0
+    localParticle->setSmoothingLengthNeighbourCount(localParticle->getSmoothingLengthNeighbourCount()+1);
+
+    int pid = localParticle->getPartid();
+    double H = localParticle->getSearchRadius() ;
+    if ( pid == PROBLEMPART1 or pid == PROBLEMPART2 or pid == PROBLEMPART3){
+      // std::cout << std::setprecision(7) <<
+      //   " ============ Particle " << pid << // " iact with " << activeParticle->getPartid() <<
+      //   " r " << r <<
+      //   " x " << activeParticle->getX(0) <<
+      //   " xlocl " << localParticle->getX(0) <<
+      //   " w " << wi / (hi) <<
+      //   " dwi_dx " <<  dwi_dx / (hi *hi) <<
+        // " dwi_dh " << -(hydroDimensions * wi + qi * dwi_dx) / (hi *hi) << "\n";
+ // -(hydroDimensions * w_a / (h_a) + qa * (dwa_dx / (h_a *h_a))) << "\n";
+ // -(hydroDimensions * w_a / (kernel_gamma * h_a) + qa * (dwa_dx / (kernel_gamma * kernel_gamma *h_a *h_a))) << "\n";
+        // " iter=" << localParticle->getSmoothingLengthIterCount() << " ncount=" << localParticle->getSmoothingLengthNeighbourCount() <<
+      //   " h=" << localParticle->getSmoothingLength() << "\n";
+      //   " x_loc=" << localParticle->getX(0) << " x_act=" << activeParticle->getX(0) <<
+      //   " r=" << r << " iactR=" << iactR << " H=" << H << " r/H=" << r/H << " iactR/H=" << iactR/H << " r/iactR=" << r/iactR
+      //   << std::endl;
+
+        // " x_loc=(" << localParticle->getX(0) << "," << localParticle->getX(1) <<
+        // ") x_act=(" << activeParticle->getX(0) << "," << activeParticle->getX(1) <<
+    }
+#endif
 
   } /* End if r<iactR */
 }
