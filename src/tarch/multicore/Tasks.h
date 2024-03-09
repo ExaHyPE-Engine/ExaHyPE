@@ -445,6 +445,13 @@ namespace tarch {
        * list can be empty. Efficient implementations should spawn the fused
        * tasks as a further ready task and return immediately.
        *
+       * ## No multithreading
+       *
+       * If no multithreading is enabled, then we map it onto a plain task via
+       * a spawnTask(). This spawn has no conflicts and no dependencies.
+       *
+       *
+       *
        * @param firstTask First task. This is a task which can be fused. The pointer
        *   is valid. The ownership of firstTask is handed over to the called routine,
        *   i.e. processFusedTask() has to ensure that it is deleted.
@@ -517,6 +524,15 @@ namespace tarch {
        * memoryRegionToTrackTaskDependencies and also
        * tarch::multicore::native::spawnTask() for a discussion of the required
        * dynamic growth.
+       *
+       *
+       * ## No multithreading
+       *
+       * We just execute this task. We know that tasks may not have anti-dependencies.
+       * That is, we know that any incoming task has been spawned before. By
+       * induction, it therefore has already completed. We also don't have any
+       * competition, as there are no competing tasks. So we actually can ignore
+       * all the parameters and just execute the task.
        */
       void spawnTask(
         Task*                        task,
