@@ -121,7 +121,7 @@ class InsertParticlesFromHDF5File(ActionSet):
        */
 
       // newParticle->setSearchRadius(GridSize_x / 2.0);
-      newParticle->setSearchRadius(8. * SmoothingLength * kernel_gamma );
+      newParticle->setSearchRadius(1.2 * SmoothingLength * kernel_gamma );
 
       std::cout << " =========== SETTING SEARCH RADIUS " << newParticle->getSearchRadius()  << GridSize << newParticle->getSearchRadius()/GridSize_x << std::endl;
 
