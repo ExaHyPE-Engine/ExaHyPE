@@ -178,11 +178,15 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
     toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
     toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), false, _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
+    #if !defined(Parallel)
+    assertion2(
+      ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1,
+      (*p)->toString(),
+      marker.toString()
+    );
+    #endif
     _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
-    #if !defined(Parallel)
-    assertion(::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1);
-    #endif
   }
 }
 """
