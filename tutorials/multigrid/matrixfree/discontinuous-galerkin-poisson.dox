@@ -96,6 +96,22 @@ for the user is DGPoisson.cpp.
 # Solver flavours
 
 By default, we get a block Jacobi method, where we update individual the cells
-all in parallel (logically). 
+all in parallel (logically). So we calculate the residual per cell, and then 
+approximately eliminate this residual locally. After that, we solve all the
+problems on the facing. Depending on the relaxation weight, this is another
+Jacobi update or even an exact solve (for a value face_relaxation=1). 
  
+## An additive two-grid solver
+
+The first extension of this solver is an additive two-grid solver:
+
+- All faces are solved exactly (for face_relaxation=1). 
+- The residual is computed per cell.
+- The residual is restricted onto a collocated low-order discretisation
+  (d-linear shape functions tied to the vertices).
+- The residual feeds into a cell update.
+- The coarser mesh updates.
+- Both solutions are summed up into a new cell guess.
+- The new guess is projected onto the faces.
+
 */
