@@ -51,13 +51,14 @@ def _neighbour_loop(r: ndarray, h: float, kernel: str, ndim: int):
         w = sph_kernel_W(r[n], h, kernel, ndim)
         dwdr = sph_kernel_dWdr(r[n], h, kernel, ndim)
         wcount += w
-        wcount_dh -= ndim * w + q * dwdr
+        dwdh_term = (ndim * w / h + q * dwdr)
+        wcount_dh -= dwdh_term
 
     # Add self contribution
     w = sph_kernel_W(0.0, h, kernel, ndim)
     dwdr = sph_kernel_dWdr(0.0, h, kernel, ndim)
     wcount += w
-    wcount_dh -= dwdr
+    wcount_dh -= ndim * w / h
 
     return wcount, wcount_dh
 
@@ -136,13 +137,18 @@ def find_smoothing_length(
     iteration = 0
     n_target = eta**ndim
     if verbose:
-        print("h_init", h)
+        print("Startup: h_init", h)
+        print("Startup: h_min", h_min)
+        print("Startup: h_max", h_max)
+        print("Startup: Neighbours: ", xn.shape[0])
 
     # This is a very high number of iterations. However, this function
     # is intended for confirmation checks that use untypically low
     # convergence criteria, so allow it to do a lot of iterations.
-    while iteration < 100:
+    while iteration < 10000:
         iteration += 1
+        if verbose:
+            print("Iteration", iteration)
 
         h_dim = h**ndim
         h_dim_minus_one = h ** (ndim - 1.0)
@@ -154,6 +160,8 @@ def find_smoothing_length(
             h_new = 2. * h
 
         else:
+            if (verbose):
+                print("Proceeding normal route")
             n_sum = wcount * h_dim
             f = n_sum - n_target
             f_prime = wcount_dh * h_dim + ndim * wcount * h_dim_minus_one
@@ -186,6 +194,8 @@ Increase the number of neighbours you pass to this script."""
             h_new = h - f / f_prime
 
             # don't overstep boundaries, and don't change too fast
+            if verbose:
+                print("boundaries check:", h_new > 2. * h, h_new < 0.5 * h, h_new < left, h_new == left, h_new > right, h_new == right)
             h_new = min(2.0 * h, h_new)
             h_new = max(0.5 * h, h_new)
             h_new = max(h_new, left)
@@ -206,7 +216,8 @@ Increase the number of neighbours you pass to this script."""
 
         # Are we done?
         if abs(diff) < h_tolerance * h:
-            if verbose: print("done h=", h_new)
+            if verbose:
+                print("done h=", h_new)
             return h_new
 
         # We're not done...
@@ -217,7 +228,7 @@ Increase the number of neighbours you pass to this script."""
                 if (h == right): print("h == right")
                 if (h_new == right): print("h_new == right")
                 if (h == left): print("h == left")
-            h_new = (0.5 * (left**ndim + right**ndim)) ** (-ndim)
+            h_new = (0.5 * (left**ndim + right**ndim)) ** (1./ndim)
 
         h = h_new
 
