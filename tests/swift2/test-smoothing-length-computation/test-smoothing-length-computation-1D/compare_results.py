@@ -169,7 +169,7 @@ for i in range(npart):
     xp = neighbours[i, 0, :]
     xn = neighbours[i, 1:, :]
     h = swift2.sphtools.find_smoothing_length(
-        xp, xn, kernel=kernel, eta=eta, h_tolerance=h_tolerance, ndim=ndim
+        xp, xn, kernel=kernel, eta=eta, h_tolerance=h_tolerance, ndim=ndim, verbose=False
     )
     sml_python[i] = h
 

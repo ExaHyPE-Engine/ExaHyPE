@@ -55,9 +55,9 @@ for i in range(npart):
 # uniform particle distribution.
 
 rng = np.random.RandomState(seed=seed)
-# rng.random returns random numbers in [0, 1). Scale that.
-#  displacement = (2.0 * rng.random(coords.shape) - 1.0) * 0.499 * dx
-#  coords[:, 0] += displacement[:, 0]
+#  rng.random returns random numbers in [0, 1). Scale that.
+displacement = (2.0 * rng.random(coords.shape) - 1.0) * 0.499 * dx
+coords[:, 0] += displacement[:, 0]
 
 # File
 file = h5py.File(fileName, "w")
