@@ -60,16 +60,20 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::Vertex
   flushIfPatchIsComplete();
 }
 
+/**
+*  Paraview doesn't support extended precision. So if the value 
+*  in the array is "too small" for single precision, write a 0
+*  into the plotter.
+*/
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::plotVertex( [[maybe_unused]] int index, double* values ) {
   for (int i=0; i<_numberOfUnknowns; i++) {
     if ( std::isnan(values[i]) ) {
       _out << " nan";
     }
     else {
-      if ( std::abs(values[i]) < std::numeric_limits<double>::min() ) values[i] = 0.0;
-      if (tarch::la::equals(values[i],0.0)) {
+      if ( std::abs(values[i]) < std::numeric_limits<float>::min() ){
         _out << " 0";
-      }
+      } 
       else {
         _out << " " << values[i];
       }
