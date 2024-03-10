@@ -993,15 +993,23 @@ INPUT_FILE_ENCODING    =
 # *.vhdl, *.ucf, *.qsf and *.ice.
 
 FILE_PATTERNS          = *.h \
-                         *.def \
+                         *.c \
+                         *.cc \
+                         *.cxx \
                          *.cpp \
+                         *.hpp \
+                         *.hxx \
+                         *.h++ \
                          *.cpph \
+                         *.cu \
+                         *.cuh \
+                         *.def \
+                         *.inc \
+                         *.inl \
                          *.py \
                          *.dox \
                          *.html \
-                         *.cu \
-                         *.markdown \
-                         *.c
+                         *.rst
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
