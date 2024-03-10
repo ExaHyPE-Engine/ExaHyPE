@@ -1,4 +1,4 @@
-## Installation with Spack
+# Installation with Spack
 
 Spack installs everything from sources and it is the main feature of Spack,
 in contrast to other package managers. In other words, Spack downloads
@@ -6,17 +6,17 @@ source files, compiles them and locates binaries inside of your system.
 You don’t need to have *super-user’s* rights to install packages and
 you can try different versions and flavours of them.
 
-### Overview
+## Overview
 
 We provide Spack scripts for various of Peano's extensions:
 
 - [ExaHyPE 2](./packages/exahype2/package.py)
 
-### Prerequisites
+## Prerequisites
 
 Follow the official [Spack Installation Guide](https://spack.readthedocs.io/en/latest/getting_started.html).
 
-### Getting Started
+## Getting Started
 
 ```shell
 cd $HOME/Peano/spack
@@ -33,14 +33,14 @@ exahype2
 
 If you can see an output similar to the one above then we are ready to proceed.
 
-### Usage
+## Usage
 
 ```shel
 spack info exahype2
 spack install exahype2 <OPTIONS>
 ```
 
-#### Installation Examples
+### Installation Examples
 
 ```shel
 spack install exahype2+omp+cuda cuda_arch=70 gpu_backend=omp % nvhpc
@@ -48,19 +48,19 @@ spack install exahype2+omp+cuda cuda_arch=70 gpu_backend=omp % nvhpc
 
 Installs ExaHyPE 2 with OpenMP multithreading and OpenMP target offloading for NVIDIA GPUs using the NVIDIA compilers.
 
-#### Uninstall
+### Uninstall
 
 ```shel
 spack uninstall -y exahype2
 ```
 
-### Remove the Repository
+## Remove the Repository
 
 ```shel
 spack repo remove Peano
 ```
 
-### Cleanup
+## Cleanup
 
 ```shel
 spack gc -y
