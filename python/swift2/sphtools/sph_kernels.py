@@ -21,6 +21,10 @@ sph_kernel_list = [
     "wendland_C6",
 ]
 
+sph_vectorized_kernel_list = [
+        "quartic_spline_vectorized",
+        ]
+
 
 class _forbidInvalidKernelsDict(dict):
     """!
@@ -35,7 +39,7 @@ class _forbidInvalidKernelsDict(dict):
     def __init__(self, *args, blocked_keys=(), ndim=0, **kwargs):
         super().__init__(*args, **kwargs)
         for key in blocked_keys:
-            if key not in sph_kernel_list:
+            if key not in sph_kernel_list and key not in sph_vectorized_kernel_list:
                 raise KeyError(
                     f"Invalid kernel key {key}. Only {sph_kernel_list} are permitted"
                 )
@@ -43,7 +47,7 @@ class _forbidInvalidKernelsDict(dict):
         self.ndim = ndim
 
     def __setitem__(self, key, value):
-        if key not in sph_kernel_list:
+        if key not in sph_kernel_list and key not in sph_vectorized_kernel_list:
             raise KeyError(
                 f"Invalid kernel key {key}. Only {sph_kernel_list} are permitted"
             )
@@ -88,7 +92,7 @@ sph_kernel_macro_name["quintic_spline"] = "QUINTIC_SPLINE_KERNEL"
 sph_kernel_macro_name["wendland_C2"] = "WENDLAND_C2_KERNEL"
 sph_kernel_macro_name["wendland_C4"] = "WENDLAND_C4_KERNEL"
 sph_kernel_macro_name["wendland_C6"] = "WENDLAND_C6_KERNEL"
-
+sph_kernel_macro_name["quartic_spline_vectorized"] = sph_kernel_macro_name["quartic_spline"]
 
 # Kernel Gammas (ratio of compact support radius H to smoothing length h)
 # 3D values
@@ -98,6 +102,7 @@ sph_kernel_H_over_h[2]["quintic_spline"] = 2.195775
 sph_kernel_H_over_h[2]["wendland_C2"] = 1.936492
 sph_kernel_H_over_h[2]["wendland_C4"] = 2.207940
 sph_kernel_H_over_h[2]["wendland_C6"] = 2.449490
+sph_kernel_H_over_h[2]["quartic_spline_vectorized"] = sph_kernel_H_over_h[2]["quartic_spline"]
 
 # 2D values
 sph_kernel_H_over_h[1]["cubic_spline"] = 1.778002
@@ -106,6 +111,7 @@ sph_kernel_H_over_h[1]["quintic_spline"] = 2.158131
 sph_kernel_H_over_h[1]["wendland_C2"] = 1.897367
 sph_kernel_H_over_h[1]["wendland_C4"] = 2.171239
 sph_kernel_H_over_h[1]["wendland_C6"] = 2.415230
+sph_kernel_H_over_h[1]["quartic_spline_vectorized"] = sph_kernel_H_over_h[1]["quartic_spline"]
 
 # 1D values
 sph_kernel_H_over_h[0]["cubic_spline"] = 1.732051
@@ -114,6 +120,7 @@ sph_kernel_H_over_h[0]["quintic_spline"] = 2.121321
 sph_kernel_H_over_h[0]["wendland_C2"] = 1.620185
 sph_kernel_H_over_h[0]["wendland_C4"] = None  # not defined in 1D
 sph_kernel_H_over_h[0]["wendland_C6"] = None  # not defined in 1D
+sph_kernel_H_over_h[0]["quartic_spline_vectorized"] = sph_kernel_H_over_h[0]["quartic_spline"]
 
 
 # Kernel Normalizations
@@ -124,6 +131,7 @@ sph_kernel_normalization[2]["quintic_spline"] = 2187.0 / (np.pi * 40.0)
 sph_kernel_normalization[2]["wendland_C2"] = 21.0 / (np.pi * 2.0)
 sph_kernel_normalization[2]["wendland_C4"] = 495.0 / (np.pi * 32.0)
 sph_kernel_normalization[2]["wendland_C6"] = 1365.0 / (np.pi * 64.0)
+sph_kernel_normalization[2]["quartic_spline_vectorized"] = sph_kernel_normalization[2]["quartic_spline"]
 
 # 2D values
 sph_kernel_normalization[1]["cubic_spline"] = 80.0 / (np.pi * 7.0)
@@ -132,6 +140,7 @@ sph_kernel_normalization[1]["quintic_spline"] = 15309.0 / (np.pi * 478.0)
 sph_kernel_normalization[1]["wendland_C2"] = 7.0 / np.pi
 sph_kernel_normalization[1]["wendland_C4"] = 9.0 / np.pi
 sph_kernel_normalization[1]["wendland_C6"] = 78.0 / (np.pi * 7.0)
+sph_kernel_normalization[1]["quartic_spline_vectorized"] = sph_kernel_normalization[1]["quartic_spline"]
 
 # 1D values
 sph_kernel_normalization[0]["cubic_spline"] = 8.0 / 3.0
@@ -140,6 +149,7 @@ sph_kernel_normalization[0]["quintic_spline"] = 243.0 / 40.0
 sph_kernel_normalization[0]["wendland_C2"] = 5.0 / 4.0
 sph_kernel_normalization[0]["wendland_C4"] = None  # not defined in 1D
 sph_kernel_normalization[0]["wendland_C6"] = None  # not defined in 1D
+sph_kernel_normalization[0]["quartic_spline_vectorized"] = sph_kernel_normalization[0]["quartic_spline"]
 
 
 def _sph_kernel_eval_cubic_spline(q: float):
@@ -171,6 +181,33 @@ def _sph_kernel_eval_quartic_spline(q: float):
     return res
 
 
+
+def _sph_kernel_eval_quartic_spline_vectorized(q: np.ndarray):
+    """!
+    Evaluates the quartic spline kernel
+    """
+
+    res = np.zeros(q.shape)
+    mask1 = q <= 0.2
+    mask2 = np.logical_and(q > 0.2, q <= 0.6)
+    mask3 = np.logical_and(q > 0.6, q <= 1.)
+
+    qa = q[mask1]
+    qa2 = qa**2
+    res[mask1] = 6. * qa2**2 - 2.4 * qa2 + 46. / 125.
+
+    qb = q[mask2]
+    qb2 = qb**2
+    res[mask2] = -4. * qb2**2 + 8. * qb2 * qb - 4.8 * qb2 + 8. / 25. * qb + 44.0 / 125.
+
+    qc = q[mask3]
+    qc2 = qc**2
+    res[mask3] = qc2**2 - 4. * qc2 * qc + 6. * qc2 - 4. * qc + 1.
+
+    return res
+
+
+
 def _sph_kernel_eval_quintic_spline(q: float):
     """!
     Evaluates the quintic spline kernel
@@ -194,6 +231,32 @@ def _sph_kernel_eval_quintic_spline(q: float):
         res = qsq * (qsq * (5 - q) + 10 * (1 - q)) - 5 * q + 1
     else:
         res = 0.0
+    return res
+
+
+def _sph_kernel_eval_quintic_spline_vectorized(q: np.ndarray):
+    """!
+    Evaluates the quintic spline kernel
+    """
+
+    res = np.zeros(q.shape)
+    mask1 = q <= 1./3.
+    mask2 = np.logical_and(q > 1./3., q <= 2./3)
+    mask3 = np.logical_and(q > 2./3, q <= 1.)
+
+    qa= q[mask1]
+    res[mask1] = 10.0 * (qa**4 * (1.0 - qa) - 0.2222222222 * qa**2) + 0.2716049382716049
+
+    qb = q[mask2]
+    qb2 = qb**2
+    qb4 = qb2**2
+
+    res[mask2] = 5. * ( qb4 * (qb - 3.) + qb2 * (3.333333333333333 * qb - 1.5555555555555) + 0.18518518518518517 * qb) + 0.20987654320987653
+
+    qc = q[mask3]
+    qc2 = qc**2
+    res[mask3] = qc2 * (qc2 * (5. - qc) + 10. * (1. - qc)) - 5. * qc + 1.
+
     return res
 
 
@@ -281,6 +344,32 @@ def _sph_kernel_deval_quartic_spline(q: float):
     return res
 
 
+def _sph_kernel_deval_quartic_spline_vectorized(q: np.ndarray):
+    """!
+    Evaluates the quartic spline kernel derivative
+    """
+
+    res = np.zeros(q.shape)
+    mask1 = q <= 0.2
+    mask2 = np.logical_and(q > 0.2, q <= 0.6)
+    mask3 = np.logical_and(q > 0.6, q <= 1.)
+
+    qa = q[mask1]
+    qa2 = qa**2
+    res[mask1] = 24. * qa**3 - 4.8 * qa
+
+    qb = q[mask2]
+    qb2 = qb**2
+    res[mask2] = -16. * qb2*qb + 24. * qb2 - 9.6 * qb + 8. / 25.
+
+    qc = q[mask3]
+    qc2 = qc**2
+    res[mask3] = 4. * qc2*qc - 12. * qc2 + 12. * qc - 4.
+
+    return res
+
+
+
 def _sph_kernel_deval_quintic_spline(q: float):
     """!
     Evaluates the quintic spline kernel derivative
@@ -357,6 +446,7 @@ sph_kernel_eval_function["quintic_spline"] = _sph_kernel_eval_quintic_spline
 sph_kernel_eval_function["wendland_C2"] = _sph_kernel_eval_wendland_C2
 sph_kernel_eval_function["wendland_C4"] = _sph_kernel_eval_wendland_C4
 sph_kernel_eval_function["wendland_C6"] = _sph_kernel_eval_wendland_C6
+sph_kernel_eval_function["quartic_spline_vectorized"] = _sph_kernel_eval_quartic_spline_vectorized
 
 sph_kernel_deval_function["cubic_spline"] = _sph_kernel_deval_cubic_spline
 sph_kernel_deval_function["quartic_spline"] = _sph_kernel_deval_quartic_spline
@@ -364,9 +454,10 @@ sph_kernel_deval_function["quintic_spline"] = _sph_kernel_deval_quintic_spline
 sph_kernel_deval_function["wendland_C2"] = _sph_kernel_deval_wendland_C2
 sph_kernel_deval_function["wendland_C4"] = _sph_kernel_deval_wendland_C4
 sph_kernel_deval_function["wendland_C6"] = _sph_kernel_deval_wendland_C6
+sph_kernel_deval_function["quartic_spline_vectorized"] = _sph_kernel_deval_quartic_spline_vectorized
 
 
-def sph_kernel_W(r: float, h: float, kernel: str, ndim: int):
+def sph_kernel_W(r: Union[float, np.ndarray], h: Union[float, np.ndarray], kernel: str, ndim: int):
     """!
     Evaluates various kernels.
     The kernels are scaled such that W(q > 1) = 0.
@@ -382,11 +473,11 @@ def sph_kernel_W(r: float, h: float, kernel: str, ndim: int):
     Parameters
     ----------
 
-    r: float
-        particle distance
+    r: float or ndarray
+        particle distance(s)
 
-    h: float
-        smoothing length
+    h: float or ndarray
+        smoothing length(s)
 
     kernel: str
         which kernel to use
@@ -412,7 +503,7 @@ def sph_kernel_W(r: float, h: float, kernel: str, ndim: int):
     return W
 
 
-def sph_kernel_dWdr(r: float, h: float, kernel: str, ndim: int):
+def sph_kernel_dWdr(r: Union[float,np.ndarray], h: Union[float,np.ndarray], kernel: str, ndim: int):
     """
     Evaluates kernel derivatives for various kernels:
     returns dW/dr = dW/dq dq/dr = 1/H * dW/dq
@@ -430,11 +521,11 @@ def sph_kernel_dWdr(r: float, h: float, kernel: str, ndim: int):
     Parameters
     ----------
 
-    r: float
-        particle distance
+    r: float or ndarray
+        particle distance(s)
 
-    h: float
-        smoothing length
+    h: float or ndarray
+        smoothing length(s)
 
     kernel: str
         which kernel to use
@@ -445,7 +536,7 @@ def sph_kernel_dWdr(r: float, h: float, kernel: str, ndim: int):
     Returns
     -------
 
-    dWdr: float
+    dWdr: float or ndarray
         evaluated kernel derivative
 
     """
@@ -546,7 +637,10 @@ def sph_kernel_root(kernel: str, ndim: int):
         evaluated kernel
 
     """
+    kernel_novector = kernel
+    if kernel.endswith("vectorized"):
+        kernel_novector = kernel[:-11]
 
-    return sph_kernel_W(0., 1., kernel, ndim)
+    return sph_kernel_W(0., 1., kernel_novector, ndim)
 
 

@@ -12,6 +12,56 @@ from .sph_kernels import (
 from numpy import ndarray, sqrt, cbrt, pi, sum
 
 
+def _neighbour_loop_vectorized(r: ndarray, h: float, kernel: str, ndim: int):
+    """!
+    A neighbour interaction loop used to determine the smoothing lengths.
+
+    Parameters
+    ----------
+
+    r: ndarray
+        distances from the particle to the neighbours
+
+    h: float
+        current guess for the particle's smoothing length
+
+    kernel: str
+        which SPH kernel to use.
+
+    ndim: int
+        number of dimensions to work for.
+
+
+    Returns
+    -------
+
+    wcount: float
+        sum of particle's kernel weight at neighbour positions
+
+    wcount_dh: float
+        sum of particle's kernel derivative weight at neighbour positions
+    """
+    wcount = 0.0
+    wcount_dh = 0.0
+    H = sph_kernel_get_H(h, kernel, ndim)
+
+    q = r / H
+    w_all = sph_kernel_W(r, h, kernel, ndim)
+    dwdr_all = sph_kernel_dWdr(r, h, kernel, ndim)
+    wcount = w_all.sum()
+    dwdh_term = sum(ndim * w_all / h + q * dwdr_all)
+    wcount_dh = -dwdh_term
+
+    # Add self contribution
+    w = sph_kernel_W(0.0, h, kernel, ndim)
+    dwdr = sph_kernel_dWdr(0.0, h, kernel, ndim)
+    wcount += w
+    wcount_dh -= ndim * w / h
+
+    return wcount, wcount_dh
+
+
+
 def _neighbour_loop(r: ndarray, h: float, kernel: str, ndim: int):
     """!
     A neighbour interaction loop used to determine the smoothing lengths.
@@ -147,12 +197,10 @@ def find_smoothing_length(
     # convergence criteria, so allow it to do a lot of iterations.
     while iteration < 10000:
         iteration += 1
-        if verbose:
-            print("Iteration", iteration)
 
         h_dim = h**ndim
         h_dim_minus_one = h ** (ndim - 1.0)
-        wcount, wcount_dh = _neighbour_loop(r, h, kernel, ndim)
+        wcount, wcount_dh = _neighbour_loop_vectorized(r, h, kernel, ndim)
 
         if abs(wcount - kernel_root) < 1e-5 * kernel_root:
             if verbose:
@@ -160,8 +208,6 @@ def find_smoothing_length(
             h_new = 2. * h
 
         else:
-            if (verbose):
-                print("Proceeding normal route")
             n_sum = wcount * h_dim
             f = n_sum - n_target
             f_prime = wcount_dh * h_dim + ndim * wcount * h_dim_minus_one
