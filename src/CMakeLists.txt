@@ -3,8 +3,8 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/config.h
 )
 
-set(SOURCE_EXTENSIONS_TO_GLOB "*.c" "*.cxx" "*.c++" "*.cpp" "*.cu" ".csnippet")
-set(HEADER_EXTENSIONS_TO_GLOB "*.h" "*.hxx" "*.h++" "*.hpp" "*.cuh" "*.cpph" "*.inc" ".inl" ".hsnippet")
+set(SOURCE_EXTENSIONS_TO_GLOB "*.c" "*.cxx" "*.c++" "*.cpp" "*.cu" "*.csnippet")
+set(HEADER_EXTENSIONS_TO_GLOB "*.h" "*.hxx" "*.h++" "*.hpp" "*.cuh" "*.cpph" "*.inc" "*.inl" "*.hsnippet")
 
 add_subdirectory(tarch)
 add_subdirectory(peano4)
