@@ -997,15 +997,17 @@ INPUT_FILE_ENCODING    =
 
 FILE_PATTERNS          = *.h \
                          *.c \
+                         *.hh \
                          *.cc \
-                         *.cxx \
-                         *.cpp \
-                         *.hpp \
                          *.hxx \
+                         *.cxx \
+                         *.hpp \
+                         *.cpp \
                          *.h++ \
-                         *.cpph \
-                         *.cu \
+                         *.c++ \
                          *.cuh \
+                         *.cu \
+                         *.cpph \
                          *.def \
                          *.inc \
                          *.inl \
@@ -1066,7 +1068,7 @@ EXCLUDE_PATTERNS       = */benchmarks/*/celldata \
                          */tests/*/observers \
                          */tests/*/repositories \
                          */tests/*/vertexdata \
-                         */tests/*/Constants.h 
+                         */tests/*/Constants.h
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
