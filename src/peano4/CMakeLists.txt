@@ -1,7 +1,7 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-file(GLOB_RECURSE SOURCES ${SOURCES_TO_GLOB})
-file(GLOB_RECURSE HEADERS ${HEADERS_TO_GLOB})
+file(GLOB_RECURSE SOURCES ${SOURCE_EXTENSIONS_TO_GLOB})
+file(GLOB_RECURSE HEADERS ${HEADER_EXTENSIONS_TO_GLOB})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${HEADERS})
 
@@ -40,7 +40,7 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/peano4"
 )
 
-foreach(pattern IN LISTS HEADERS_TO_GLOB)
+foreach(pattern IN LISTS HEADER_EXTENSIONS_TO_GLOB)
   install(
     DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
