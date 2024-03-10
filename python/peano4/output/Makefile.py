@@ -19,7 +19,7 @@ from .CompileMode import CompileMode
 
 
 class Makefile(object):
-    """Represents the created makefile of a Peano4 project"""
+    """Represents the created Makefile of a Peano 4 project"""
 
     default_overwrite = True
 
@@ -154,6 +154,8 @@ the SISC paper
         self.d["GENERATED_INCLUDE_DIRS"] = set()
         self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
         self.d["CMAKE_LIBS"] = []
+        self.d["CMAKE_LDFLAGS"] = []
+        self.d["CMAKE_COMPILE_DEFINITIONS"] = []
         self.d["USING_CMAKE"] = False
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = ""
         self.d["CMAKE_MAKE_COMMAND"] = ""
@@ -263,6 +265,8 @@ the SISC paper
             )
         else:
             self.d["CXXFLAGS"] += " " + value
+            if find_CMake_build_dir() != "" and "-D" in value:
+                self.d["CMAKE_COMPILE_DEFINITIONS"].append(value.replace("-D", ""))
 
     def set_Fortran_compiler(self, value):
         self.d["FC"] = value
@@ -279,9 +283,13 @@ the SISC paper
             )
         else:
             self.d["FCFLAGS"] += " " + value
+            if find_CMake_build_dir() != "" and "-D" in value:
+                self.d["CMAKE_COMPILE_DEFINITIONS"].append(value.replace("-D", ""))
 
     def add_linker_flag(self, value):
         self.d["LDFLAGS"] += " " + value
+        if find_CMake_build_dir() != "":
+            self.d["CMAKE_LDFLAGS"].append(value.replace("-l", ""))
 
     def set_linker_flags(self, value):
         self.d["LDFLAGS"] = value + " "
@@ -618,11 +626,11 @@ then this message can typically be ignored.
         """
         Generates build files and other project-related files based on templates.
 
-        If using the Automake then a Makefile is generated, if using CMake then
-        a CMakeLists.txt for the generated application is generated. A
-        GeneratedSubdirectories.cmake is generated to add the target to the project.
-        In the CMake backend a modified Makefile is produced where calling make will
-        change directories and call the cmake's defined make command.
+        If using Automake, then a Makefile is generated; if using CMake then
+        a CMakeLists.txt for the project is generated. A 'GeneratedSubdirectories.cmake'
+        file is generated to add the project's target to the CMake build tree.
+        With CMake, a modified Makefile is also generated where invoking 'make' will
+        change directories and forward to CMake's own Makefile.
 
         A .gitignore is also generated depending on the project files.
 
@@ -648,10 +656,11 @@ then this message can typically be ignored.
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = os.path.join(self.d["CMAKE_BUILD_DIR"], "GeneratedSubdirectory.cmake")
 
         #raise Exception(building_standalone_application())
-        # In the CMake backend we add a command that allows to build the generated application in the applicaiton directory
-        # To be able to do it, we need to change directory to project build directory and call make from there with the target name
-        # So that we do not build everything (all), and of course we need to propagate every make flag give with $(MAKEFLAGS)
-        # See the Makefile.template for the resulting command
+        # In CMake, we add a command that allows to build the generated project in the project's directory.
+        # For that, we need to change the directory to the project's build directory and
+        # invoke 'make' from there with the project's target name, so that we do not build every project.
+        # Furthermore, we need to propagate every make flag given with $(MAKEFLAGS).
+        # See the Makefile.template for the resulting command.
         if cmake_build_dir != "":
             dist = caller_distance_to_build_root()
             command = 'cd '
@@ -663,9 +672,9 @@ then this message can typically be ignored.
                 self.d["CMAKE_MAKE_PATH"] = "."
             self.d["CMAKE_MAKE_COMMAND"] = command
 
-        # Anonymous function that generates the output_file_path from input_file_path template,
-        # As we might generate both for CMake (2 files) and Make (1 File) or only for Make
-        # We also use the anoynmous function to generate the .gitignore
+        # Anonymous function that generates the output_file_path from input_file_path template.
+        # We generate output files for CMake (2 files) and the Makefile (1 file) or only for the Makefile.
+        # We also use the anoynmous function to generate the .gitignore.
         def generate_build_file(input_file_path, output_file_path):
             if write_file(overwrite, self.default_overwrite, output_file_path):
                 print("write " + output_file_path)
@@ -680,7 +689,7 @@ then this message can typically be ignored.
 
                 try:
                     # We first eliminate the precompiled variant, and then we get rid of the
-                    # postfix in the case where it is a source file
+                    # postfix in the case where it is a source file.
                     with open(output_file_path, "w") as output:
                         output.write(template.render(self.d))
                 except Exception as e:
@@ -724,9 +733,9 @@ then this message can typically be ignored.
             cmake_list_output_pair = (
                     os.path.join(file_dir, "CMakeLists.txt.template"),
                     os.path.join(directory, "CMakeLists.txt"),)
-            # Currently we support 1 generated application at a time.
-            # To add the generated application sub directory to the CMake build tree,
-            # we write it to a file called GeneratedSubdirectory.cmake in the build directory root.
+            # Currently we support one generated project at a time.
+            # To add the generated project's sub-directory to the CMake build tree,
+            # we write it to a file called 'GeneratedSubdirectory.cmake' in the build directory.
             if cmake_build_dir != "":
                 generated_paths_filepath = self.d["GENERATED_SUBDIRECTORY_FULLPATH"]
 
@@ -738,6 +747,6 @@ then this message can typically be ignored.
             for template, output_file in template_output_pairs:
                 generate_build_file(template, output_file)
 
-        # Generate CMakeLists only if we are using the CMake backend (CMake build directory found)
+        # Generate CMakeLists.txt only if we are using CMake (CMake build directory found).
         if cmake_build_dir != "":
           generate_build_file(cmake_list_output_pair[0], cmake_list_output_pair[1])

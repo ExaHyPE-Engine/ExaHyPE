@@ -37,7 +37,9 @@ list(APPEND GENERATED_CXX_SOURCES {% for item in GENERATED_CXX_SOURCES -%} {{ite
 list(APPEND GENERATED_CU_SOURCES {% for item in GENERATED_CU_SOURCES -%} {{item+" "}} {%- endfor %})
 list(APPEND GENERATED_FORTRAN_SOURCES {% for item in GENERATED_FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %})
 
+list(APPEND GENERATED_LDFLAGS {% for item in CMAKE_LDFLAGS -%} {{item+" "}} {%- endfor %})
 list(APPEND GENERATED_INCLUDE_DIRS {% for item in GENERATED_INCLUDE_DIRS -%} ${CMAKE_CURRENT_SOURCE_DIR}/{{item+" "}} {%- endfor %})
+list(APPEND GENERATED_COMPILE_DEFINITIONS {% for item in CMAKE_COMPILE_DEFINITIONS -%} {{item+" "}} {%- endfor %})
 
 string(TOLOWER "{{MODE}}" PEANO_BUILD_TYPE_LOWER)
 
@@ -49,7 +51,7 @@ endforeach()
 # Toolboxes etc.
 list(APPEND DEPENDS_FULL ${DEPENDS_OTHER})
 
-# Create executable as a CMake target
+# Create an executable as a CMake target.
 add_executable(${TARGET_NAME})
 
 list(APPEND SOURCES
@@ -64,28 +66,33 @@ list(APPEND SOURCES
   ${GENERATOR}
 )
 
-# Set sources of the executable, we depend in the generated CMake file, the generator script.
+# Set sources of the executable, we depend on the generated CMake file, the generator script.
 target_sources(${TARGET_NAME} PRIVATE ${SOURCES})
 
-# Set default include directories as well as the generated ones
+# Set default include directories as well as the generated ones.
 target_include_directories(${TARGET_NAME} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/src ${GENERATED_INCLUDE_DIRS}
 )
 
-# Link to full target libraries
+# Link to full target libraries.
 target_link_libraries(${TARGET_NAME} PRIVATE ${DEPENDS_FULL})
 
-# Libraries are generated at $cmake_binary_dir, just in case add it to the link directories.
+# Libraries are generated at $CMAKE_BINARY_DIR, just in case add it to the link directories.
 target_link_directories(${TARGET_NAME} PRIVATE ${CMAKE_BINARY_DIR})
+
 target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${PEANO_DIMENSIONS} ${${PEANO_BUILD_MODE}_DEFINITIONS})
+target_compile_definitions(${TARGET_NAME} PRIVATE ${GENERATED_COMPILE_DEFINITIONS})
+
 target_link_libraries(${TARGET_NAME} PRIVATE project_options)
+target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
+target_link_libraries(${TARGET_NAME} PRIVATE ${GENERATED_LDFLAGS})
+
 target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${PEANO_BUILD_MODE}}>)
 target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${PEANO_BUILD_MODE}}>)
 
 target_link_options(${TARGET_NAME} PRIVATE ${PEANO_${PEANO_BUILD_MODE}_LDFLAGS})
-target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
 
-# Link every toolbox, if they are enabled
+# Link every toolbox, if they are enabled.
 if (ENABLE_PARTICLES)
   target_link_libraries(${TARGET_NAME} PRIVATE ToolboxParticles${PEANO_DIMENSIONS}d_${PEANO_BUILD_TYPE_LOWER})
 endif()

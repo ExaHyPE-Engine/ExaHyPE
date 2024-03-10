@@ -10,7 +10,7 @@ import jinja2
 from .kernels import (
     create_corrector_allocations, create_includes,
     riemann_solver, face_integral,
-    create_solution_update, check_troubledness
+    create_solution_update
 )
 
 
@@ -103,8 +103,6 @@ class Correction(AbstractAderDGActionSet):
     
     {{SOLUTION_UPDATE}}
 
-    {{CHECK_TROUBLEDNESS}}
-
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
   
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
@@ -135,10 +133,6 @@ class Correction(AbstractAderDGActionSet):
         self.use_custom_riemann_solver  = solver._riemann_solver_implementation!=PDETerms.None_Implementation
         self.use_kernelgenerator        = solver._use_kernel_generator
         self.is_linear                  = solver._is_linear
-        self.use_PAC                    = solver._physical_admissibility_criterion!=PDETerms.None_Implementation
-        self.use_DMP                    = solver._number_of_dmp_observables>0
-        self.useTroubledMarker          = solver._use_troubled_marker
-        self.use_limiting               = solver._use_limiting
 
     def get_body_of_operation(self, operation_name):
         result = ""
@@ -157,11 +151,10 @@ class Correction(AbstractAderDGActionSet):
             operation_name
             == peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME
         ):
-            d[ "PREDICATE" ]            = self.guard
+            d["PREDICATE" ]             = self.guard
             d["CORRECTOR_ALLOCATIONS"]  = jinja2.Template(create_corrector_allocations(self.use_kernelgenerator)).render(**d)
             d["SOLUTION_UPDATE"]        = jinja2.Template(create_solution_update(self.use_kernelgenerator)).render(**d)
             d["FACE_INTEGRAL"]          = jinja2.Template(face_integral(self.use_kernelgenerator, self.is_linear)).render(**d)
-            d["CHECK_TROUBLEDNESS"]     = jinja2.Template(check_troubledness(self.use_PAC, self.use_DMP, self.useTroubledMarker)).render(**d)
             result = jinja2.Template(self.Template_TouchCellFirstTime).render(**d)
             pass
         return result
@@ -173,5 +166,5 @@ class Correction(AbstractAderDGActionSet):
         linearity = "linear" if self._solver._is_linear else "nonlinear"
         return (
             super(Correction, self).get_includes()
-            + create_includes(self.use_kernelgenerator, self.use_limiting, self._solver._is_linear)
+            + create_includes(self.use_kernelgenerator, self._solver._is_linear)
         )
