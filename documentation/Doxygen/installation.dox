@@ -2,16 +2,19 @@
 
 \page page_installation Installation
 
+\li \subpage page_installation_with_spack
+\li \subpage page_installation_with_docker
+\li \subpage page_installation_with_apptainer
 
 Peano is typicall acquired through a git clone.
 You have to clone this archive first.
-We grant access to  free of charge and the repository is public. However,
+We grant access to free of charge and the repository is public. However,
 we ask users to sign up for the software if they indend to push
 modifications to the code - which we very much appreciate. This way, we
 can report to funding agencies how frequent the software is used, and I
 also have at least some ideas which application areas benefit from the
 software and where it is actively used and developed. If you do not
-indend to modify the  core code base, you can just clone the code
+indend to modify the core code base, you can just clone the code
 anonymously.
 
 
@@ -281,7 +284,5 @@ make check
 
 exit 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
 
 */

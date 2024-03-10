@@ -1,4 +1,6 @@
-# Apptainer Definition Files
+/**
+
+@page page_installation_with_apptainer Installation with Apptainer
 
 Here we maintain Apptainer Definition Files for different compilers.
 
@@ -23,3 +25,5 @@ apptainer shell -e --bind "$PWD" <compiler>.sif
 ```
 
 In cases where `apptainer` is not available, you might want to try `singularity` instead.
+
+*/

@@ -1,4 +1,6 @@
-# Dockerfiles
+/**
+
+@page page_installation_with_docker Installation with Docker
 
 Here we maintain Dockerfiles for different compilers.
 
@@ -41,3 +43,5 @@ docker run -it -v ${PWD}:/work --rm --gpus=all --privileged peanoframework/<comp
 ```shell
 docker run -it -v ${PWD}:/work -p 53155:53155 --rm --privileged peanoframework/<compiler> /bin/bash
 ```
+
+*/
