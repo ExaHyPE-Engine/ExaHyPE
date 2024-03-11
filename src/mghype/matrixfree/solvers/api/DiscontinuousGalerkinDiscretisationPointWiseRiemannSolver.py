@@ -373,6 +373,11 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "solution",      str(self._unknowns_per_face_solution ) ))
     self._face_data.data.add_attribute(peano4.dastgen2.Peano4DoubleArray( "projection",    str(self._unknowns_per_face_projection) ))
 
+    self.preprocessing_action_set  = None
+    self.postprocessing_action_set = None
+    
+    self._basic_descend_order           = 0
+
     # assertions for matrix shapes
     # assert mass_matrix.shape     == (self._unknowns_per_cell, self._unknowns_per_cell)
     # assert assembly_matrix.shape == mass_matrix.shape
@@ -413,13 +418,20 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     pass
 
   def add_to_solve(self, observer):
-    observer.add_action_set( UpdateFaceSolution(self, 0, False) )
-    observer.add_action_set( UpdateCell(self, 1, False) )
-    observer.add_action_set( ProjectOntoFaces(self, 2, False) )
+    descend_order = observer.highest_descend_invocation_order() + self._basic_descend_order
+    if self.preprocessing_action_set != None:
+      self.preprocessing_action_set.descend_invocation_order = descend_order + 0
+      observer.add_action_set( self.preprocessing_action_set )
+    observer.add_action_set( UpdateFaceSolution(self, descend_order+1, False) )
+    observer.add_action_set( UpdateCell(self, descend_order+2, False) )
+    observer.add_action_set( ProjectOntoFaces(self, descend_order+3, False) )
+    if self.postprocessing_action_set != None:
+      self.postprocessing_action_set.descend_invocation_order = descend_order + 4
+      observer.add_action_set( self.postprocessing_action_set )
 
   
   def add_implementation_files_to_project(self, namespace, output):
-    """
+    """!
     
     The solver creates two classes: An abstract base class and its 
     implementations. The abstract base class will be overwritten if

@@ -5,6 +5,13 @@ import jinja2
 
 
 class CollocatedSolver(ActionSet):
+  """!
+  
+  Simple action set for solver for collocated discretisations
+  
+  """
+  
+  
   templateTVFT = """ 
   if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
   {
@@ -47,6 +54,7 @@ class CollocatedSolver(ActionSet):
         marker.h()(0)
       );
 
+      fineGridVertex{{SOLVER_NAME}}.setDelta(dof, val - fineGridVertex{{SOLVER_NAME}}.getValue(dof));
       fineGridVertex{{SOLVER_NAME}}.setValue(dof, val);
       logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(dof));
     }

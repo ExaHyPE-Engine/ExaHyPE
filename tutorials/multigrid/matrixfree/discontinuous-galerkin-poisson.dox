@@ -133,8 +133,13 @@ and then simply creates an additional solver:
 @snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Correction equation solver
 
 This additional solver is a sole helper and hence never terminates the 
-simulation (see very small value of solver_tolerance).
-Both solvers are added to the project: 
+simulation (see very small value of solver_tolerance). Once created, we
+take our DG solver and add a new preprocessing and postprocessing action set to
+it. Theycrealise the actual coupling:
+
+@snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Coupling
+
+Both solvers are next added to the project.
 
 @snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Add solvers
 

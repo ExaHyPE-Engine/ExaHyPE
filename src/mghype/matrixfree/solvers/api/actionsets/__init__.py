@@ -1,5 +1,4 @@
-# This file is part of the SWIFT 2 project. For conditions of distribution and 
+# This file is part of the MGHyPE project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-# from .DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver import DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver
 
-
+from .DGCGCoupling   import ComputeAndRestrictBiasedHierarchicalResidual, InjectAndProlong

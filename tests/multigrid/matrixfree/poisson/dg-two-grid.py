@@ -12,15 +12,15 @@ Peano 4 multigrid solver using Discontinuous Galerkin
 
 
 parser = argparse.ArgumentParser(description='Multigrid - Poisson solver')
-parser.add_argument("-j",   "--parallel-builds",      dest="j",              type=int, default=-1, help="Parallel builds" )
-parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       default="../../../../", help="Peano4 directory" )
-parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
-parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
-parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
-parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
+parser.add_argument("-j",   "--parallel-builds",    dest="j",              type=int, default=-1, help="Parallel builds" )
+parser.add_argument("-pd",  "--peano-dir",          dest="peanodir",       default="../../../../", help="Peano4 directory" )
+parser.add_argument("-v",   "--verbose",            dest="verbose",        action="store_true", default=False, help="Verbose")
+parser.add_argument("-d",   "--dimensions",         dest="dimensions",     type=int, default=2, help="Dimensions")
+parser.add_argument("-p",   "--poly_degree",        dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
+parser.add_argument("-meshsize",  "--meshsize",     dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Mesh size")
 parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Mesh size")
-parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
+parser.add_argument("-m",   "--mode",               dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
 
@@ -101,9 +101,32 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDis
 #! [Correction equation solver]
 
 
+#! [Coupling]
+prolongation_matrix = None
+prolongation_matrix_scaling = None
+restriction_matrix = None
+restriction_matrix_scaling = None
+
+solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.ComputeAndRestrictBiasedHierarchicalResidual(
+    solver,                      # dg_solver
+    correction_equation_solver,  # cg_solver
+    prolongation_matrix,
+    prolongation_matrix_scaling,
+    restriction_matrix,
+    restriction_matrix_scaling,
+)
+solver.postprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.InjectAndProlong(
+    solver,                      # dg_solver
+    correction_equation_solver,  # cg_solver
+    prolongation_matrix,
+    prolongation_matrix_scaling,
+)
+#! [Coupling]
+
+
 #! [Add solvers]
-project.add_solver(solver)
 project.add_solver(correction_equation_solver)
+project.add_solver(solver)
 #! [Add solvers]
 
 #

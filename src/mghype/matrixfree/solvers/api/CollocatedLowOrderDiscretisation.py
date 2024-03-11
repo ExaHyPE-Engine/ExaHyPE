@@ -46,6 +46,7 @@ class CollocatedLowOrderDiscretisation(Solver):
     # already initialised this in superclass!
     # self._vertex_pde_data = peano4.datamodel.DaStGen2( name )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",      str(unknowns_per_vertex) ) )
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "delta",      str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",        str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "fieldDiag", str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "residual",   str(unknowns_per_vertex) ) )
@@ -55,7 +56,9 @@ class CollocatedLowOrderDiscretisation(Solver):
 
     self._mass_matrix                   = mass_matrix
     self._mass_matrix_scaling           = mass_matrix_scaling
-    self._solver_tolerance          = solver_tolerance
+    self._solver_tolerance              = solver_tolerance
+    
+    self._basic_descend_order           = 0
     
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
@@ -107,7 +110,9 @@ class CollocatedLowOrderDiscretisation(Solver):
     pass
 
   def add_to_solve(self, observer):
-    observer.add_action_set( CollocatedSolver(self) )
+    new_action_set = CollocatedSolver(self)
+    new_action_set.descend_invocation_order = observer.highest_descend_invocation_order() + self._basic_descend_order + 1
+    observer.add_action_set( new_action_set )
     pass
   
   def add_implementation_files_to_project(self, namespace, output):

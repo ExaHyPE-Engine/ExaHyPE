@@ -102,7 +102,7 @@ class UpdateCell(ActionSet):
     Python class name.
      
     """
-    return __name__.replace(".py", "").replace(".", "_")
+    return __name__.replace(".py", "").replace(".", "_") + "_UpdateCell"
     
   def user_should_modify_template(self):
     """!
@@ -210,7 +210,7 @@ class ProjectOntoFaces(ActionSet):
     Python class name.
      
     """
-    return __name__.replace(".py", "").replace(".", "_")
+    return __name__.replace(".py", "").replace(".", "_") + "_ProjectOntoFaces"
     
   def user_should_modify_template(self):
     """!
@@ -233,6 +233,7 @@ class ProjectOntoFaces(ActionSet):
 #include "repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
 """
+
 
 class UpdateFaceSolution(ActionSet):
   """!
@@ -324,7 +325,7 @@ class UpdateFaceSolution(ActionSet):
     Python class name.
      
     """
-    return __name__.replace(".py", "").replace(".", "_")
+    return __name__.replace(".py", "").replace(".", "_") + "_UpdateFaceSolution"
     
   def user_should_modify_template(self):
     """!
@@ -347,4 +348,3 @@ class UpdateFaceSolution(ActionSet):
 #include "repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
 """
-
