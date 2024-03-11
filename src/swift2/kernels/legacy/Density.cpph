@@ -2,19 +2,6 @@
 #include "hydro_dimensions.h"
 #include "kernel_hydro.h"
 
-// TODO: temporary
-#include <iomanip>
-
-
-// #define PROBLEMPART1 836
-// #define PROBLEMPART1 3628
-#define PROBLEMPART1 -1
-#define PROBLEMPART2 -1
-#define PROBLEMPART3 -1
-// #define PROBLEMPART2 836
-// #define PROBLEMPART3 837
-
-
 template <typename Particle>
 void swift2::kernels::legacy::hydro_end_density(Particle* localParticle) {
 
@@ -111,8 +98,7 @@ void swift2::kernels::legacy::density_kernel(Particle* localParticle, const Part
 
   // This will probably cause issues with vectorisation and should be outside of the loop.
   if (
-    // tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) [> Self-contribution is calculated elsewhere <]
-    (r < iactR) and (r > 0.0) // TODO: quickfix for unit test. Also check whether this might be issue.
+    tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) /* Self-contribution is calculated elsewhere */
     // and
     // not localParticle->getIsBoundaryParticle()
   ) {
@@ -168,29 +154,6 @@ void swift2::kernels::legacy::density_kernel(Particle* localParticle, const Part
 
 #if PeanoDebug > 0
     localParticle->setSmoothingLengthNeighbourCount(localParticle->getSmoothingLengthNeighbourCount()+1);
-
-    int pid = localParticle->getPartid();
-    double H = localParticle->getSearchRadius() ;
-    if ( pid == PROBLEMPART1 or pid == PROBLEMPART2 or pid == PROBLEMPART3){
-      // std::cout << std::setprecision(7) <<
-      //   " ============ Particle " << pid << // " iact with " << activeParticle->getPartid() <<
-      //   " r " << r <<
-      //   " x " << activeParticle->getX(0) <<
-      //   " xlocl " << localParticle->getX(0) <<
-      //   " w " << wi / (hi) <<
-      //   " dwi_dx " <<  dwi_dx / (hi *hi) <<
-        // " dwi_dh " << -(hydroDimensions * wi + qi * dwi_dx) / (hi *hi) << "\n";
- // -(hydroDimensions * w_a / (h_a) + qa * (dwa_dx / (h_a *h_a))) << "\n";
- // -(hydroDimensions * w_a / (kernel_gamma * h_a) + qa * (dwa_dx / (kernel_gamma * kernel_gamma *h_a *h_a))) << "\n";
-        // " iter=" << localParticle->getSmoothingLengthIterCount() << " ncount=" << localParticle->getSmoothingLengthNeighbourCount() <<
-      //   " h=" << localParticle->getSmoothingLength() << "\n";
-      //   " x_loc=" << localParticle->getX(0) << " x_act=" << activeParticle->getX(0) <<
-      //   " r=" << r << " iactR=" << iactR << " H=" << H << " r/H=" << r/H << " iactR/H=" << iactR/H << " r/iactR=" << r/iactR
-      //   << std::endl;
-
-        // " x_loc=(" << localParticle->getX(0) << "," << localParticle->getX(1) <<
-        // ") x_act=(" << activeParticle->getX(0) << "," << activeParticle->getX(1) <<
-    }
 #endif
 
   } /* End if r<iactR */

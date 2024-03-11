@@ -141,8 +141,6 @@ class InsertParticlesFromHDF5File(ActionSet):
 
       newParticle->setSearchRadius( searchRadiusGlobal );
 
-      // std::cout << " =========== SETTING SEARCH RADIUS " << newParticle->getSearchRadius() << " GridSize" <<  0.5 * GridSize << " ratio " << 2 * newParticle->getSearchRadius()/GridSize_x << std::endl;
-
       newParticle->setPressure  ( Pressure );
       newParticle->setSoundSpeed( Soundspeed );
 
@@ -155,7 +153,8 @@ class InsertParticlesFromHDF5File(ActionSet):
       }
 
 #if Dimensions <= 2
-         newParticle->setRot_v(0);
+      /* For 2D sims, we only get one component */
+      newParticle->setRot_v(0);
 #endif
 
       /* Initialise the "extended" arrays */
