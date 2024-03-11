@@ -1,50 +1,39 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
-if UseSWIFT
-  lib_LIBRARIES = libSWIFT2Core2d.a  libSWIFT2Core2d_debug.a  libSWIFT2Core2d_stats.a  libSWIFT2Core2d_asserts.a  libSWIFT2Core2d_trace.a \
-                  libSWIFT2Core3d.a  libSWIFT2Core3d_debug.a  libSWIFT2Core3d_stats.a  libSWIFT2Core3d_asserts.a  libSWIFT2Core3d_trace.a
+if UseMultigrid
+  lib_LIBRARIES = libMultigrid2d.a  libMultigrid2d_debug.a  libMultigrid2d_stats.a  libMultigrid2d_asserts.a  libMultigrid2d_trace.a \
+                  libMultigrid3d.a  libMultigrid3d_debug.a  libMultigrid3d_stats.a  libMultigrid3d_asserts.a  libMultigrid3d_trace.a
 endif
 
 
 
-SWIFT2Sources = \
-  GridControlEvents.cpp \
-  ParticleSpecies.cpp \
-  TaskNumber.cpp \
-  UnitTests.cpp \
-  UserInterface.cpp \
-  boundaryconditions/FixedBoundary.cpp \
-  boundaryconditions/Utils.cpp \
-  kernels/legacy/Density.cpp \
-  kernels/legacy/HydroForce.cpp \
-  kernels/legacy/SmoothingLength.cpp \
-  kernels/legacy/Swift.cpp \
-  timestepping/TimeStepping.cpp \
-  dependencychecks/DependencyChecks.cpp
+MultigridSources = \
+  matrixfree/Solver.cpp
+  
 
-libSWIFT2Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
-libSWIFT2Core2d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_TRACE)  
-libSWIFT2Core2d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_2D_ASSERTS)  
-libSWIFT2Core2d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_DEBUG)  
-libSWIFT2Core2d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_STATS)
+libMultigrid2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
+libMultigrid2d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_TRACE)  
+libMultigrid2d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_2D_ASSERTS)  
+libMultigrid2d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_DEBUG)  
+libMultigrid2d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_STATS)
 
-libSWIFT2Core3d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_3D_RELEASE)
-libSWIFT2Core3d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_TRACE)  
-libSWIFT2Core3d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_ASSERTS)  
-libSWIFT2Core3d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_DEBUG)  
-libSWIFT2Core3d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_STATS)
+libMultigrid3d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_3D_RELEASE)
+libMultigrid3d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_TRACE)  
+libMultigrid3d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_ASSERTS)  
+libMultigrid3d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_DEBUG)  
+libMultigrid3d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_STATS)
 
 
-libSWIFT2Core2d_a_SOURCES         = $(SWIFT2Sources)
-libSWIFT2Core2d_trace_a_SOURCES   = $(SWIFT2Sources)
-libSWIFT2Core2d_asserts_a_SOURCES = $(SWIFT2Sources)
-libSWIFT2Core2d_debug_a_SOURCES   = $(SWIFT2Sources)
-libSWIFT2Core2d_stats_a_SOURCES   = $(SWIFT2Sources)
+libMultigrid2d_a_SOURCES         = $(MultigridSources)
+libMultigrid2d_trace_a_SOURCES   = $(MultigridSources)
+libMultigrid2d_asserts_a_SOURCES = $(MultigridSources)
+libMultigrid2d_debug_a_SOURCES   = $(MultigridSources)
+libMultigrid2d_stats_a_SOURCES   = $(MultigridSources)
 
-libSWIFT2Core3d_a_SOURCES         = $(SWIFT2Sources)
-libSWIFT2Core3d_trace_a_SOURCES   = $(SWIFT2Sources)
-libSWIFT2Core3d_asserts_a_SOURCES = $(SWIFT2Sources)
-libSWIFT2Core3d_debug_a_SOURCES   = $(SWIFT2Sources)
-libSWIFT2Core3d_stats_a_SOURCES   = $(SWIFT2Sources)
+libMultigrid3d_a_SOURCES         = $(MultigridSources)
+libMultigrid3d_trace_a_SOURCES   = $(MultigridSources)
+libMultigrid3d_asserts_a_SOURCES = $(MultigridSources)
+libMultigrid3d_debug_a_SOURCES   = $(MultigridSources)
+libMultigrid3d_stats_a_SOURCES   = $(MultigridSources)
 
 

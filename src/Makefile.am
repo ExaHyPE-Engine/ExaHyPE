@@ -13,10 +13,11 @@ SUBDIRS = . \
 	toolbox/loadbalancing \
 	toolbox/multiprecision \
 	toolbox/particles \
-	exahype2 \
-	swift2 \
-	petsc \
 	convert \
+	exahype2 \
+	multigrid \
+	petsc \
+	swift2 \
 	unittests
 
 #
