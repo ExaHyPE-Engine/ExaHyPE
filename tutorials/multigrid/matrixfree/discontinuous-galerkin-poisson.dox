@@ -114,4 +114,26 @@ The first extension of this solver is an additive two-grid solver:
 - Both solutions are summed up into a new cell guess.
 - The new guess is projected onto the faces.
 
+<div style="background-color: #cfc ; padding: 10px; border: 1px solid green;"> 
+ Whenever possible and reasonable, we try to realise complex solvers as 
+ composition of simple solvers. In the present example, the two-grid solver is
+ realised as two completely separate solvers which are coupled in a pre- and 
+ postprocessing step. This way, we can write and test the solvers 
+ independently.
+</div>
+
+
+The two-grid solver can be found in tests/multigrid/matrixfree/poisson/dg-two-grid.py.
+It requires a second matrix generator for the correction equation
+
+@snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Construct correction matrices
+
+and then simply creates an additional solver:
+
+@snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Correction equation solver
+
+Both solvers are added to the project: 
+
+@snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Add solvers
+
 */

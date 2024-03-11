@@ -46,7 +46,8 @@ class UpdateCell(ActionSet):
     repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
       tarch::la::max(r),
       tarch::la::volume(marker.h()) * tarch::la::max(r),
-      tarch::la::norm2Squared(r)
+      tarch::la::norm2Squared(r),
+      marker.h()(0)
     );
 
     logTraceOutWith2Arguments("UpdateCell::Projection", r, projection);

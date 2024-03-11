@@ -13,6 +13,8 @@
 #include "celldata/{{SOLVER_NAME}}.h"
 #include "facedata/{{SOLVER_NAME}}.h"
 
+#include "mghype/matrixfree/solvers/Solver.h"
+
 {{SOLVER_INCLUDES}}
 
 {% for item in NAMESPACE -%}
@@ -25,7 +27,7 @@
   }
 {%- endfor %}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solvers::Solver {
 
   public:
     static constexpr double     MinH = {{MIN_H}};
@@ -46,8 +48,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     static constexpr int        ProjectionsPerFaceNode = {{PROJECTIONS_PER_FACE_NODE}};
 
     static constexpr int        PolyDegree             = {{POLY_DEGREE}};
-
-    static constexpr double     SolverTolerance        = {{SOLVER_TOLERANCE}};
   public:
     {{CLASSNAME}}();
     virtual ~{{CLASSNAME}}();
@@ -128,28 +128,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     virtual tarch::la::Matrix< FaceUnknownsSolution, FaceUnknownsSolution, double >   getBoundaryConditionMatrix()
       {% if BOUNDARY_MATRIX is not defined %} = 0 {% endif %};
 
-    virtual bool terminationCriterionHolds();
-    virtual void clearGlobalResidual();
-    virtual void updateGlobalResidual(
-      double residualMaxNorm,
-      double residualEukledianNorm,
-      double residualHNorm
-    );
-
-    virtual std::string toString() const;
   protected:
     static tarch::logging::Log  _log;
-
-    double     _minH;
-    double     _maxH;
-
-    double     _globalResidualMaxNorm;
-    double     _globalResidualEukledianNormSquared;
-    double     _globalResidualHNormSquared;
-
-    /**
-     * Semaphore for global residual values
-     */
-    tarch::multicore::BooleanSemaphore  _semaphore;
 };
 

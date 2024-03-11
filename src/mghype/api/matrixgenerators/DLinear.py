@@ -89,9 +89,9 @@ class DLinear(MatrixGenerator):
 
     Create a cell-cell mass matrix
     
-    
-    needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
-    so normalise by h
+    Needs to be scaled 0.5*h, that is why we use factor=2.0 as evaluateIntegral2d() has coeff. 0.25 as default,
+    so normalise by h. In a finite element context, this matrix has to be 
+    scaled with @f$ h^{d-2} @f$.
 
     '''
     # making it 2^D since this is number of vertices per cell

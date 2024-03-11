@@ -15,7 +15,7 @@ SUBDIRS = . \
 	toolbox/particles \
 	convert \
 	exahype2 \
-	multigrid \
+	mghype \
 	petsc \
 	swift2 \
 	unittests

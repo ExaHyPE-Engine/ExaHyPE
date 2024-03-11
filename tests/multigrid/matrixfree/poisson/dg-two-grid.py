@@ -23,14 +23,11 @@ parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       defaul
 parser.add_argument("-m",   "--mode",                 dest="mode",           choices=["release","stats","asserts", "trace"], required=True, help="Pick build type" )
 args = parser.parse_args()
 
-#! [Create project]
+
 project = multigrid.matrixfree.api.Project( project_name = "DGPointwise", 
                               namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                             )
-#! [Create project]
 
-
-#! [Construct matrices]
 
 matrices = multigrid.api.matrixgenerators.GLMatrixFree(
   args.dimensions,
@@ -48,8 +45,6 @@ cell_from_face_projection, \
 cell_from_face_projection_scaling        = matrices.get_cell_from_face_matrix()
 approximate_system_matrix, \
 approximate_system_matrix_scaling        = matrices.get_A_tilde()
-#! [Construct matrices]
-
 
 
 #! [Instantiate solver]
@@ -78,10 +73,37 @@ solver = multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPoi
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 0.01,
 )
-
 #! [Instantiate solver]
 
+
+#! [Construct correction matrices]
+correction_equation_matrices = multigrid.api.matrixgenerators.DLinear(
+  dimensions = args.dimensions,
+  poly_degree = 1,
+  unknowns_per_vertex_dof = 1
+)
+#! [Construct correction matrices]
+
+
+#! [Correction equation solver]
+correction_equation_solver = multigrid.matrixfree.solvers.api.CollocatedLowOrderDiscretisation(
+  name = "CorrectionEquation",
+  unknowns_per_vertex = 1, 
+  dimensions = args.dimensions,
+  min_h = args.meshsize,
+  max_h = args.meshsize,
+  local_assembly_matrix         = correction_equation_matrices.get_cell_system_matrix_for_laplacian(),
+  local_assembly_matrix_scaling = args.dimensions-2,
+  mass_matrix                   = correction_equation_matrices.get_cell_identity_matrix(),
+  mass_matrix_scaling           = 0
+)
+#! [Correction equation solver]
+
+
+#! [Add solvers]
 project.add_solver(solver)
+project.add_solver(correction_equation_solver)
+#! [Add solvers]
 
 #
 # Configure build

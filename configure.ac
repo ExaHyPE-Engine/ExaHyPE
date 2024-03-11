@@ -791,15 +791,15 @@ AM_CONDITIONAL([UseSWIFT],[test "x$toolbox_swift" = xtrue])
 #
 # Multigrid
 #
-AC_ARG_ENABLE(multigrid,
-  AS_HELP_STRING([--enable-multigrid],[enable MGHyPE [default=false]]),
-  [ AC_MSG_CHECKING(for multigrid)
+AC_ARG_ENABLE(mghype,
+  AS_HELP_STRING([--enable-mghype],[enable MGHyPE [default=false]]),
+  [ AC_MSG_CHECKING(for mghype)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    toolbox_multigrid=false ;;
-      *)     AC_MSG_RESULT(yes);   toolbox_multigrid=true  ;;
+      no)    AC_MSG_RESULT(no);    toolbox_mghype=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_mghype=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for multigrid); AC_MSG_RESULT(no); toolbox_multigrid=false ])
-AM_CONDITIONAL([UseMultigrid],[test "x$toolbox_multigrid" = xtrue])
+  [ AC_MSG_CHECKING(for mghype); AC_MSG_RESULT(no); toolbox_mghype=false ])
+AM_CONDITIONAL([UseMGHyPE],[test "x$toolbox_mghype" = xtrue])
 
 
 #
@@ -982,7 +982,7 @@ fi
 if test "$petsc" != false; then
   AC_DEFINE([UsePETSc], [1], [UsePETSc])
   if test "$toolbox_finiteelements" == false; then
-    AC_MSG_ERROR([PETSc requires the finite elements toolbox (run with --help to see the correct enable statement)])
+    AC_MSG_ERROR([PETSc requires the finiteelements toolbox (run with --help to see the correct enable statement)])
   fi
   LDADD_PEANO_2D_RELEASE=" -lPETSc         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lPETSc_stats   $LDADD_PEANO_2D_STATS "
@@ -1038,10 +1038,10 @@ fi
 #
 # Multigrid
 #
-if test "$toolbox_multigrid" != false; then
-  AC_DEFINE([UseMultigrid], [1], [UseMultigrid])
-  if test "$toolbox_matrixfree" == false; then
-    AC_MSG_ERROR([MGHyPE (multigrid) requires the matrixfree toolbox (run with --help to see the correct enable statement)])
+if test "$toolbox_mghype" != false; then
+  AC_DEFINE([UseMGHyPE], [1], [UseMGHyPE])
+  if test "$toolbox_finiteelements" == false; then
+    AC_MSG_ERROR([MGHyPE (mghype) requires the matrixfree toolbox (run with --help to see the correct enable statement)])
   fi
 
   LDADD_PEANO_2D_RELEASE=" -lMultigrid2d         $LDADD_PEANO_2D_RELEASE "
@@ -1056,11 +1056,11 @@ if test "$toolbox_multigrid" != false; then
   LDADD_PEANO_3D_TRACE="   -lMultigrid3d_trace   $LDADD_PEANO_3D_TRACE "
   LDADD_PEANO_3D_DEBUG="   -lMultigrid3d_debug   $LDADD_PEANO_3D_DEBUG "
 
-  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/multigrid "
-  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/multigrid "
-  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/multigrid "
-  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/multigrid "
-  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/multigrid "
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/mghype "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/mghype "
 fi
 
 
@@ -1353,7 +1353,7 @@ AC_CONFIG_FILES([Makefile
   src/toolbox/particles/Makefile
   src/convert/Makefile
   src/exahype2/Makefile
-  src/multigrid/Makefile
+  src/mghype/Makefile
   src/petsc/Makefile
   src/swift2/Makefile
   src/unittests/Makefile

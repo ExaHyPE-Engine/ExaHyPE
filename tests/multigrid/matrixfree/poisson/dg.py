@@ -1,7 +1,7 @@
 import os, sys
 import argparse
 import peano4
-import multigrid
+import mghype
 import numpy as np
 
 print( """
@@ -24,7 +24,7 @@ parser.add_argument("-m",   "--mode",                 dest="mode",           cho
 args = parser.parse_args()
 
 #! [Create project]
-project = multigrid.matrixfree.api.Project( project_name = "DGPointwise", 
+project = mghype.matrixfree.api.Project( project_name = "DGPointwise", 
                               namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                             )
 #! [Create project]
@@ -32,7 +32,7 @@ project = multigrid.matrixfree.api.Project( project_name = "DGPointwise",
 
 #! [Construct matrices]
 
-matrices = multigrid.api.matrixgenerators.GLMatrixFree(
+matrices = mghype.api.matrixgenerators.GLMatrixFree(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
@@ -53,7 +53,7 @@ approximate_system_matrix_scaling        = matrices.get_A_tilde()
 
 
 #! [Instantiate solver]
-solver = multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
+solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
   name = "DGPoisson",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,

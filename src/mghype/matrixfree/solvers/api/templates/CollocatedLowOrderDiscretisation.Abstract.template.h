@@ -13,6 +13,8 @@
 #include "celldata/{{SOLVER_NAME}}.h"
 #include "facedata/{{SOLVER_NAME}}.h"
 
+#include "mghype/matrixfree/solvers/Solver.h"
+
 
 {{SOLVER_INCLUDES}}
 
@@ -27,7 +29,7 @@
   }
 {%- endfor %}
 
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solvers::Solver {
 
   public:
     static constexpr double     MinH = {{MIN_H}};
@@ -68,18 +70,5 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     );
-
-    /**
-    * Always returns false for this solver
-    */
-    virtual bool terminationCriterionHolds() { return false; }
-
-  protected:
-    static tarch::logging::Log  _log;
-
-    double     _minH;
-    double     _maxH;
-
-    tarch::multicore::BooleanSemaphore  _semaphore;
 };
 

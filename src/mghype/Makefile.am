@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
-if UseMultigrid
+if UseMGHyPE
   lib_LIBRARIES = libMultigrid2d.a  libMultigrid2d_debug.a  libMultigrid2d_stats.a  libMultigrid2d_asserts.a  libMultigrid2d_trace.a \
                   libMultigrid3d.a  libMultigrid3d_debug.a  libMultigrid3d_stats.a  libMultigrid3d_asserts.a  libMultigrid3d_trace.a
 endif
@@ -8,7 +8,7 @@ endif
 
 
 MultigridSources = \
-  matrixfree/Solver.cpp
+  matrixfree/solvers/Solver.cpp
   
 
 libMultigrid2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE)
