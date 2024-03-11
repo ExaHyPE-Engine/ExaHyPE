@@ -1,11 +1,6 @@
-#include <iomanip>
 #include "equation_of_state.h"
 #include "hydro_dimensions.h"
 #include "kernel_hydro.h"
-
-#ifndef PROBLEMPART1
-#define PROBLEMPART1 -1
-#endif
 
 template <typename Particle>
 void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_required(Particle* localParticle) {
@@ -42,11 +37,8 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
   localParticle->setSmoothingLengthIterCount(iteration + 1);
 
 
-  // Condition changes here because we've done hydro_end_density already
-  // if (std::abs(localParticle->getWcount() / kernel_root - 1.) < 1.e-5 * h_old_dim) {
+  // Condition changes here compared to swift1 because we've done hydro_end_density already
   if (std::abs(localParticle->getWcount() - kernel_root) < 1.e-5 * h_old_dim * kernel_root) {
-  // if (localParticle->getWcount() < 1.e-5) {
-
 
     // No neighbours case
     hasNoNeighbours = true;
@@ -60,21 +52,9 @@ void swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_require
         "Caught situation with no neighbours. Needs exception handling. part="<<localParticle->toString());
 
     localParticle->setSmoothingLengthConverged(false);
+    return;
 
   } else {
-
-    // hydro_end_density_copy(localParticle);
-
-if (localParticle->getPartid() == PROBLEMPART1){
-  std::cout << std::setprecision(6) << "Particle " << localParticle->getPartid() << "\n";
-  std::cout << "At enter: Iteration " << iteration + 1 << "\n";
-  std::cout << "h= " << localParticle->getSmoothingLength() << "\n";
-  std::cout << "h_min= " << hydro_h_min << "\n";
-  std::cout << "h_max= " << hydro_h_max << "\n";
-  std::cout << "Neighbourcount:= " << localParticle->getSmoothingLengthNeighbourCount() << "\n";
-}
-
-
 
     // swift1 calls hydro_end_density here. We did that already.
 
@@ -97,7 +77,6 @@ if (localParticle->getPartid() == PROBLEMPART1){
       right = std::min(right, h_old);
     }
 
-    // TODO MLaden: check this condition here.
     assertion4(
       //     localParticle->getIsBoundaryParticle()
       //     or
@@ -136,20 +115,6 @@ if (localParticle->getPartid() == PROBLEMPART1){
     // Normal case: Use Newton-Raphson to get a better value of h
     // Avoid floating point exception from f_prime = 0
     h_new = h_old - f / (f_prime + std::numeric_limits<double>::min());
-
-    if (localParticle->getPartid() == PROBLEMPART1){
-      std::cout << std::setprecision(6);
-      std::cout <<   " In middle: iteration " << iteration << "\n";
-      std::cout <<   " wcount " << wcount << "\n";
-      std::cout <<   " wcount_dh " << localParticle->getWcount_dh() << "\n";
-      std::cout <<   " n_sum " << n_sum << "\n";
-      std::cout <<   " f " << f << "\n";
-      std::cout <<   " f_prime " << f_prime << "\n";
-      std::cout <<   " h_new " << h_new << "\n";
-      std::cout <<   " ------------------------------------------ \n ";
-    }
-
-
 
     // Be verbose about the particles that struggle to converge
     // `max_iterations` is currently a user-set variable, with the swift1
@@ -200,9 +165,6 @@ if (localParticle->getPartid() == PROBLEMPART1){
     // we're done. Note that in SWIFT, they check the other way around.
     localParticle->setSmoothingLength(h_new);
     localParticle->setSmoothingLengthConverged(true);
-if (localParticle->getPartid() == PROBLEMPART1){
-  std::cout << "EXIT CLEAN " << std::abs(h_new - h_old) << " " << sml_tolerance_epsilon * h_old;
-}
     return;
   }
 
@@ -227,12 +189,7 @@ if (localParticle->getPartid() == PROBLEMPART1){
     // SWIFT calls hydro_init_part here. We do that at the start at the loop.
     // If we reach this point, we need to run again.
     localParticle->getSpecies().setRerunPreviousGridSweep();
-    // std::cout << "RE-ITERATE PLEASE " << localParticle->getPartid() << std::endl;
     localParticle->setSmoothingLengthConverged(false);
-
-if (localParticle->getPartid() == PROBLEMPART1){
-  std::cout << "WANT REITER loc1 " << std::abs(h_new - h_old) << " " << sml_tolerance_epsilon * h_old;
-}
     return;
 
   } else if (localParticle->getSmoothingLength() >= hydro_h_max) {
@@ -244,30 +201,22 @@ if (localParticle->getPartid() == PROBLEMPART1){
     // Do some damage control if no neighbours at all were found
     // if (has_no_neighbours) {
     //   ... we already crash if this is the case.
+    //   logError("hydro_update_smoothing_length_and_rerun_if_required", "Particle also has no neighbours... TODO");
     // }
     localParticle->setSmoothingLengthConverged(true);
-if (localParticle->getPartid() == PROBLEMPART1){
-  std::cout << "ERROR EXIT 1 " << std::abs(h_new - h_old) << " " << sml_tolerance_epsilon * h_old;
-}
   } else if (localParticle->getSmoothingLength() <= hydro_h_min) {
     // Ok, this particle is a lost cause...
     localParticle->setSmoothingLength(hydro_h_min);
     // Temporary warning. This may not be an error, but just a particle hitting the limit we impose on it.
     logWarning("hydro_update_smoothing_length_and_rerun_if_required", "Got a particle that is lost cause. Setting h = h_min , id=" << localParticle->getPartid());
     localParticle->setSmoothingLengthConverged(true);
-    if (hasNoNeighbours){
-      logWarning("hydro_update_smoothing_length_and_rerun_if_required", "Particle also has no neighbours... TODO");
-    }
+    // if (hasNoNeighbours){
+    //   logError("hydro_update_smoothing_length_and_rerun_if_required", "Particle also has no neighbours... TODO");
+    // }
 
-if (localParticle->getPartid() == PROBLEMPART1){
-  std::cout << "ERROR EXIT 2 " << std::abs(h_new - h_old) << " " << sml_tolerance_epsilon * h_old;
-}
   } else {
     logError("hydro_update_smoothing_length_and_rerun_if_required", "Fundamental problem with the smoothing length iteration logic.");
   }
-if (localParticle->getPartid() == PROBLEMPART1){
-  std::cout << "ERROR EXIT 3 " << std::abs(h_new - h_old) << " " << sml_tolerance_epsilon * h_old;
-}
 
 }
 
