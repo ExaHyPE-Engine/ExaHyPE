@@ -118,7 +118,6 @@ project = swift2.Project(
     namespace=project_namespace, project_name="Sod1D", executable="sod1D"
 )
 
-
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
@@ -140,28 +139,29 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     max_h=args.cell_size,
 )
 
-particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += """
-if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
-  ::swift2::kernels::forAllParticles( 
-    marker, 
-    assignedParticles, 
-    [&](const peano4::datamanagement::VertexMarker& marker, globaldata::""" + name + """&  assignedParticle)->void {
-      ::swift2::boundaryconditions::applyFixedBoundaryCondition(
-        assignedParticle,
-        marker,
-        DomainOffset,
-        DomainSize,
-        0.1,
-        _spacetreeId
-      );
-    }
-  );
-}
-"""
-particle.algorithm_steps_dict["Drift"].includes += """
-#include "swift2/boundaryconditions/FixedBoundary.h"
-#include "swift2/boundaryconditions/Utils.h"
-"""
+# TODO: ???? Where did this come from?
+#  particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += """
+#  if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
+#    ::swift2::kernels::forAllParticles(
+#      marker,
+#      assignedParticles,
+#      [&](const peano4::datamanagement::VertexMarker& marker, globaldata::""" + name + """&  assignedParticle)->void {
+#        ::swift2::boundaryconditions::applyFixedBoundaryCondition(
+#          assignedParticle,
+#          marker,
+#          DomainOffset,
+#          DomainSize,
+#          0.1,
+#          _spacetreeId
+#        );
+#      }
+#    );
+#  }
+#  """
+#  particle.algorithm_steps_dict["Drift"].includes += """
+#  #include "swift2/boundaryconditions/FixedBoundary.h"
+#  #include "swift2/boundaryconditions/Utils.h"
+#  """
 
 
 ########################################################################################
@@ -171,6 +171,9 @@ particle.algorithm_steps_dict["Drift"].includes += """
 # using the set/get methods.
 ########################################################################################
 
+offset = [0, 0, 0]
+domain_size = [2, 2, 2]
+periodic_boundary_conditions = [False, False, False]
 
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
 HYDRO_DIMENSIONS = hydro_dimensions
@@ -201,7 +204,10 @@ KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
 
 # Additional Particle Parameters -----------------------------------------------
-hydro_h_max = args.cell_size / 2
+dx = domain_size[0] / args.particle_number
+hydro_H_max = 20. * dx
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(hydro_H_max, kernel, hydro_dimensions)
+
 particle.h_hydro_max = hydro_h_max
 
 # particle.h_hydro_min = 1e-6
@@ -231,10 +237,6 @@ else:
     build_mode = peano4.output.CompileMode.Release
 
 # Set Peano4 simulation parameters ---------------------------------------------
-offset = [0, 0, 0]
-domain_size = [2, 2, 2]
-periodic_boundary_conditions = [False, False, False]
-
 project.set_global_simulation_parameters(
     dimensions=dimensions,
     offset=offset,
