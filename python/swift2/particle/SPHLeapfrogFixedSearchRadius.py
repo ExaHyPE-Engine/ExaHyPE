@@ -333,12 +333,12 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
         Make sure get_algorithm_steps_dict(self) has been called before.
         """
         initsteps = [
-            #  self.algorithm_steps_dict["FlagBoundaryParticles"],
-            #  self.algorithm_steps_dict["Density"],
-            #  self.algorithm_steps_dict["Force"],
+            self.algorithm_steps_dict["FlagBoundaryParticles"],
+            self.algorithm_steps_dict["Density"],
+            self.algorithm_steps_dict["Force"],
             # TODO MLADEN: verify this later.
             #  self.algorithm_steps_dict["Kick1"],
-            #  self.algorithm_steps_dict["Kick2"],
+            self.algorithm_steps_dict["Kick2"],
         ]
 
         # return deep copies of algorithms steps. Otherwise,
