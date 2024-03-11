@@ -4,6 +4,12 @@ import peano4
 import jinja2
 
 
+def order_DG_CG_solver( dg_solver,
+                        cg_solver,
+                        ):
+    dg_solver._basic_descend_order = cg_solver._basic_descend_order + 1
+
+
 class ComputeAndRestrictBiasedHierarchicalResidual(ActionSet):
   """!
   

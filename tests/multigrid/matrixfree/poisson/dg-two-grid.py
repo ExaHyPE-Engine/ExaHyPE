@@ -121,6 +121,11 @@ solver.postprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.Inje
     prolongation_matrix,
     prolongation_matrix_scaling,
 )
+
+mghype.matrixfree.solvers.api.actionsets.order_DG_CG_solver(
+    solver,                      # dg_solver
+    correction_equation_solver,  # cg_solver
+)
 #! [Coupling]
 
 
