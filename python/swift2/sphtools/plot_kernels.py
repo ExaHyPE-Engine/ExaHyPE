@@ -26,7 +26,7 @@ ax3.set_title("3D")
 r = np.linspace(0.0, 4.0, 400)
 
 #  h = 1.0
-h = 1.8522633292987498 # what swiftsim/theory/SPH/Kernels/kernels.py uses
+h = 1.8522633292987498  # what swiftsim/theory/SPH/Kernels/kernels.py uses
 
 for kernel in sph_kernel_list:
     if kernel not in ["wendland_C4", "wendland_C6"]:

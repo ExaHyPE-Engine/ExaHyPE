@@ -42,7 +42,7 @@ seed = args.random_seed
 npart_tot = 4 * (npart**2)
 coords = np.zeros((npart_tot, 3))
 v = np.zeros((npart_tot, 3))
-ids = np.linspace(1,npart_tot, npart_tot)
+ids = np.linspace(1, npart_tot, npart_tot)
 m = np.ones(npart_tot)
 dx = boxSize / npart
 h = np.ones(npart_tot) * 2.0 * dx
@@ -50,6 +50,7 @@ u = np.ones(npart_tot)
 
 
 rng = np.random.RandomState(seed=seed)
+
 
 def get_coords(box_xmin, box_xmax, box_ymin, box_ymax, npart):
     """
@@ -66,7 +67,7 @@ def get_coords(box_xmin, box_xmax, box_ymin, box_ymax, npart):
     new_coords = np.zeros((npart2, 3))
     ind = 0
     for i in range(npart):
-        x =  (i + 0.5) * dx
+        x = (i + 0.5) * dx
         for j in range(npart):
             y = (j + 0.5) * dy
             new_coords[ind, 0] = box_xmin + x
@@ -81,30 +82,28 @@ def get_coords(box_xmin, box_xmax, box_ymin, box_ymax, npart):
     # uniform particle distribution.
 
     # rng.random returns random numbers in [0, 1). Scale that to [-1, 1)
-    displacement_x = (2.0 * rng.random((npart2,1)) - 1.0) * 0.499 * dx
-    displacement_y = (2.0 * rng.random((npart2,1)) - 1.0) * 0.499 * dy
+    displacement_x = (2.0 * rng.random((npart2, 1)) - 1.0) * 0.499 * dx
+    displacement_y = (2.0 * rng.random((npart2, 1)) - 1.0) * 0.499 * dy
     new_coords[:, 0] += displacement_x[:, 0]
     new_coords[:, 1] += displacement_y[:, 0]
 
     return new_coords
 
 
-
 # Now generate actual coordinates
 # First the "background"
 npart2 = npart**2
-new_coords = get_coords(0., boxSize, 0., boxSize, npart)
-coords[:npart2, :2] = new_coords[:,:2]
+new_coords = get_coords(0.0, boxSize, 0.0, boxSize, npart)
+coords[:npart2, :2] = new_coords[:, :2]
 
-new_coords = get_coords(0., 2./3 * boxSize, 0., 2./3 * boxSize, npart)
-coords[npart2:2*npart2, :2] = new_coords[:,:2]
+new_coords = get_coords(0.0, 2.0 / 3 * boxSize, 0.0, 2.0 / 3 * boxSize, npart)
+coords[npart2 : 2 * npart2, :2] = new_coords[:, :2]
 
-new_coords = get_coords(1./6, 2./3 * boxSize, 1./6, 2./3 * boxSize, npart)
-coords[2*npart2:3*npart2, :2] = new_coords[:,:2]
+new_coords = get_coords(1.0 / 6, 2.0 / 3 * boxSize, 1.0 / 6, 2.0 / 3 * boxSize, npart)
+coords[2 * npart2 : 3 * npart2, :2] = new_coords[:, :2]
 
-new_coords = get_coords(2./6, 2./3 * boxSize, 2./6, 2./3 * boxSize, npart)
-coords[3*npart2:, :2] = new_coords[:,:2]
-
+new_coords = get_coords(2.0 / 6, 2.0 / 3 * boxSize, 2.0 / 6, 2.0 / 3 * boxSize, npart)
+coords[3 * npart2 :, :2] = new_coords[:, :2]
 
 
 # too many particles mean that the comparison python script takes ages.
@@ -112,7 +111,7 @@ coords[3*npart2:, :2] = new_coords[:,:2]
 # for the cell size.
 # So let's scale the particles down into a smaller box than the actual
 # box size.
-scale = 1./5
+scale = 1.0 / 5
 coords *= scale
 h *= scale
 # and shift them into the center
@@ -120,8 +119,9 @@ coords += 0.4
 
 
 from matplotlib import pyplot as plt
+
 plt.figure()
-plt.scatter(coords[:,0], coords[:,1], s=1, marker=",")
+plt.scatter(coords[:, 0], coords[:, 1], s=1, marker=",")
 plt.show()
 
 

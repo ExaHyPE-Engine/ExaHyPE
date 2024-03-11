@@ -144,7 +144,7 @@ elif icfile.endswith(".vtu"):
 
     reader = ParticleVTUReader(vtufile=vtufile, verbose=False)
     partData = reader.load()
-    coords = partData.x[:,:ndim]
+    coords = partData.x[:, :ndim]
     ids = partData.partid
 
 else:
@@ -160,7 +160,7 @@ coords = coords[sort_ic]
 # -------------------------
 
 tree = KDTree(coords)
-distances, indexes = tree.query(coords, k=2*nneigh + 10 * ndim)
+distances, indexes = tree.query(coords, k=2 * nneigh + 10 * ndim)
 neighbours = coords[indexes]
 
 npart = coords.shape[0]
@@ -179,9 +179,9 @@ def sml_search(i):
     )
     return h
 
+
 pool = multiprocessing.Pool()
 sml_python[:] = pool.map(sml_search, (i for i in range(npart)))
-
 
 
 # Read in peano output

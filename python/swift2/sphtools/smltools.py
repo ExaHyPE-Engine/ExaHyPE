@@ -61,7 +61,6 @@ def _neighbour_loop_vectorized(r: ndarray, h: float, kernel: str, ndim: int):
     return wcount, wcount_dh
 
 
-
 def _neighbour_loop(r: ndarray, h: float, kernel: str, ndim: int):
     """!
     A neighbour interaction loop used to determine the smoothing lengths.
@@ -101,7 +100,7 @@ def _neighbour_loop(r: ndarray, h: float, kernel: str, ndim: int):
         w = sph_kernel_W(r[n], h, kernel, ndim)
         dwdr = sph_kernel_dWdr(r[n], h, kernel, ndim)
         wcount += w
-        dwdh_term = (ndim * w / h + q * dwdr)
+        dwdh_term = ndim * w / h + q * dwdr
         wcount_dh -= dwdh_term
 
     # Add self contribution
@@ -114,7 +113,13 @@ def _neighbour_loop(r: ndarray, h: float, kernel: str, ndim: int):
 
 
 def find_smoothing_length(
-        xp: ndarray, xn: ndarray, kernel: str, eta: float, h_tolerance: float, ndim: int, verbose: bool=False
+    xp: ndarray,
+    xn: ndarray,
+    kernel: str,
+    eta: float,
+    h_tolerance: float,
+    ndim: int,
+    verbose: bool = False,
 ):
     """!
     Determine the smoothing length of a particle with coordinates xp
@@ -156,14 +161,14 @@ def find_smoothing_length(
 
     # get distances between particles
     dx = xn - xp
-    r2 = sum(dx[:, :ndim]**2, axis=1)
+    r2 = sum(dx[:, :ndim] ** 2, axis=1)
     r = sqrt(r2)
 
     kernel_root = sph_kernel_root(kernel, ndim)
 
     # Set up boundaries. We assume that the correct
     # number of neighbour (candidates) has been passed.
-    H_over_h = sph_kernel_get_H(1., kernel, ndim)
+    H_over_h = sph_kernel_get_H(1.0, kernel, ndim)
     h_max = r.max() / H_over_h
     h_min = h_max * 1e-9
 
@@ -205,7 +210,7 @@ def find_smoothing_length(
         if abs(wcount - kernel_root) < 1e-5 * kernel_root:
             if verbose:
                 print(f"Caught no neighbours case, h={h}")
-            h_new = 2. * h
+            h_new = 2.0 * h
 
         else:
             n_sum = wcount * h_dim
@@ -227,21 +232,32 @@ def find_smoothing_length(
                 right = right_old
 
             if h >= h_max and f < 0:
-                raise RuntimeError( f"""
+                raise RuntimeError(
+                    f"""
 Particle with coordinates {xp} reached h_max without converging.
 Increase the number of neighbours you pass to this script."""
-                        )
+                )
                 return h_max
 
             if h <= h_min and f > 0:
-                print(f"WARNING: Particle with coordinates {xp} reached h_min. Returning that.")
+                print(
+                    f"WARNING: Particle with coordinates {xp} reached h_min. Returning that."
+                )
                 return h_min
 
             h_new = h - f / f_prime
 
             # don't overstep boundaries, and don't change too fast
             if verbose:
-                print("boundaries check:", h_new > 2. * h, h_new < 0.5 * h, h_new < left, h_new == left, h_new > right, h_new == right)
+                print(
+                    "boundaries check:",
+                    h_new > 2.0 * h,
+                    h_new < 0.5 * h,
+                    h_new < left,
+                    h_new == left,
+                    h_new > right,
+                    h_new == right,
+                )
             h_new = min(2.0 * h, h_new)
             h_new = max(0.5 * h, h_new)
             h_new = max(h_new, left)
@@ -269,12 +285,16 @@ Increase the number of neighbours you pass to this script."""
         # We're not done...
         # Case where we have been oscillating around the solution
         if (h_new == left and h == right) or (h == left and h_new == right):
-            if (verbose):
-                if (h_new == left): print("h_new == left")
-                if (h == right): print("h == right")
-                if (h_new == right): print("h_new == right")
-                if (h == left): print("h == left")
-            h_new = (0.5 * (left**ndim + right**ndim)) ** (1./ndim)
+            if verbose:
+                if h_new == left:
+                    print("h_new == left")
+                if h == right:
+                    print("h == right")
+                if h_new == right:
+                    print("h_new == right")
+                if h == left:
+                    print("h == left")
+            h_new = (0.5 * (left**ndim + right**ndim)) ** (1.0 / ndim)
 
         h = h_new
 
@@ -284,7 +304,9 @@ Increase the number of neighbours you pass to this script."""
         if verbose:
             print("------------------------------------")
 
-    print( f"Particle with coordinates {xp} didn't converge smoothing length after {iteration} iterations")
+    print(
+        f"Particle with coordinates {xp} didn't converge smoothing length after {iteration} iterations"
+    )
 
     quit()
     return h

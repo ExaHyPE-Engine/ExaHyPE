@@ -46,7 +46,7 @@ u = np.ones(npart**3)
 # Get uniform coordinates.
 ind = 0
 for i in range(npart):
-    x =  (i + 0.5) * dx
+    x = (i + 0.5) * dx
     for j in range(npart):
         y = (j + 0.5) * dx
         for k in range(npart):
@@ -78,18 +78,17 @@ coords[:, 2] += displacement[:, 2]
 # for the cell size.
 # So let's scale the particles down into a smaller box than the actual
 # box size.
-scale = 1./5
+scale = 1.0 / 5
 coords *= scale
 h *= scale
 # and shift them into the center
 coords += 0.4
 
 
-
-
 from matplotlib import pyplot as plt
+
 plt.figure()
-plt.scatter(coords[:,0], coords[:,1], s=1, marker=",")
+plt.scatter(coords[:, 0], coords[:, 1], s=1, marker=",")
 plt.show()
 
 
@@ -103,7 +102,7 @@ grp.attrs["NumPart_Total"] = [npart**3, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_Total_HighWord"] = [0, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_ThisFile"] = [npart**3, 0, 0, 0, 0, 0]
 # This is an addition for this test to be able to estimate the search radius.
-grp.attrs["NumPart_base"] = [npart/scale]
+grp.attrs["NumPart_base"] = [npart / scale]
 grp.attrs["Time"] = 0.0
 grp.attrs["NumFilesPerSnapshot"] = 1
 grp.attrs["MassTable"] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

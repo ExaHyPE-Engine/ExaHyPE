@@ -4,7 +4,6 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
-
 #include "swift2/kernels/ParticleUpdatePredicates.h"
 
 
@@ -25,9 +24,9 @@ namespace swift2 {
      * naming conventions: The actual physics remain written in C/Swift
      * style, whereas the wrappers follow the Peano's C++ convention.
      *
-     * This file contains only the functions that we actually want to use from the
-     * original swift codebase, and maintains their original name. The idea is
-     * to eventually use the SWIFT implementation of these functions. But for
+     * This file contains only the functions that we actually want to use from
+     * the original swift codebase, and maintains their original name. The idea
+     * is to eventually use the SWIFT implementation of these functions. But for
      * now, we keep a (modified) version of them here.
      *
      * A second point to keep these functions separate is the fact that they
@@ -35,26 +34,32 @@ namespace swift2 {
      * replaceable anyway.
      *
      * There are some notable exceptions which are missing from this collection
-     * of functions. Firstly, we keep the particle-particle interactions separately.
-     * We are tinkering with them in Peano and optimizing them in a different way.
-     * They are defined in ParticleParticleInteraction.h. Secondly, anything related
-     * to the computation of the smoothing lengths is defined in
-     * SmoothingLengthComputation.h. The smoothing length computation is intimately
-     * tied to the neighbour search algorithms, and cannot be separated trivially
-     * from the underlying codebase and infrastructure. As such, we can't simply re-use
-     * what original SWIFT does, but need to provide our own algorithms.
-     * In particular, we differentiate between the search radius and the interaction radius/
-     * compact support radius of particles, which original swift doesn't. We provide
-     * smoothing length computation algorithms for both a constant search radius as well
-     * as a varying search radius.
+     * of functions. Firstly, we keep the particle-particle interactions
+     * separately. We are tinkering with them in Peano and optimizing them in a
+     * different way. They are defined in ParticleParticleInteraction.h.
+     * Secondly, anything related to the computation of the smoothing lengths is
+     * defined in SmoothingLengthComputation.h. The smoothing length computation
+     * is intimately tied to the neighbour search algorithms, and cannot be
+     * separated trivially from the underlying codebase and infrastructure. As
+     * such, we can't simply re-use what original SWIFT does, but need to
+     * provide our own algorithms. In particular, we differentiate between the
+     * search radius and the interaction radius/ compact support radius of
+     * particles, which original swift doesn't. We provide smoothing length
+     * computation algorithms for both a constant search radius as well as a
+     * varying search radius.
      */
     namespace legacy {
       /**
-       * @todo Is this one at the right place, or should it rather be in SmoothingLength?
+       * @todo Is this one at the right place, or should it rather be in
+       * SmoothingLength?
        */
       template <typename Particle>
-      void resetSmoothingLengthIterationCounter(const peano4::datamanagement::VertexMarker& marker, Particle& particle) {
-        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,particle)) {
+      void resetSmoothingLengthIterationCounter(
+        const peano4::datamanagement::VertexMarker& marker,
+        Particle&                                   particle
+      ) {
+        if (::swift2::kernels::
+              localParticleCanBeUpdatedInVertexKernel(marker, particle)) {
           particle.setSmoothingLengthConverged(false);
           particle.setSmoothingLengthIterCount(0);
 #if PeanoDebug > 0
@@ -64,12 +69,15 @@ namespace swift2 {
       }
 
       /**
-       * At this point, we just reset some flags and counters that are only required
-       * during a single time step. So we don't need to pass any checks whether to
-       * work on a particle.
+       * At this point, we just reset some flags and counters that are only
+       * required during a single time step. So we don't need to pass any checks
+       * whether to work on a particle.
        */
       template <typename Particle>
-      void resetSmoothingLengthIterationCounterWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& particle) {
+      void resetSmoothingLengthIterationCounterWithMasking(
+        const peano4::datamanagement::VertexMarker& marker,
+        Particle&                                   particle
+      ) {
         resetSmoothingLengthIterationCounter(marker, particle);
       }
 
@@ -87,20 +95,26 @@ namespace swift2 {
        * @todo Is this the correct place? Might belong to the leapfrog maybe?
        */
       template <typename Particle>
-      void resetAcceleration(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
-        if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
+      void resetAcceleration(
+        const peano4::datamanagement::VertexMarker& marker,
+        Particle&                                   localParticle
+      ) {
+        if (::swift2::kernels::
+              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
           hydro_reset_acceleration(&localParticle);
         }
       }
 
       template <typename Particle>
-      void resetAccelerationWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
+      void resetAccelerationWithMasking(
+        const peano4::datamanagement::VertexMarker& marker,
+        Particle&                                   localParticle
+      ) {
         resetAcceleration(marker, localParticle);
       }
-    }
-  }
-}
+    } // namespace legacy
+  }   // namespace kernels
+} // namespace swift2
 
 
 #include "Swift.cpph"
-

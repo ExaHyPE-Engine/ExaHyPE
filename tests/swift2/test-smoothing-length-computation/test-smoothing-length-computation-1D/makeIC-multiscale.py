@@ -40,10 +40,11 @@ coords = np.zeros((npart_tot, 3))
 v = np.zeros((npart_tot, 3))
 ids = np.linspace(1, npart_tot, npart_tot)
 m = np.ones(npart_tot)
-h = np.ones(npart_tot) * 4. * boxSize/npart_tot # just a first guess.
+h = np.ones(npart_tot) * 4.0 * boxSize / npart_tot  # just a first guess.
 u = np.ones(npart_tot)
 
 rng = np.random.RandomState(seed=seed)
+
 
 def get_coords(box_min, box_max, npart):
     """
@@ -65,7 +66,7 @@ def get_coords(box_min, box_max, npart):
     # uniform particle distribution.
 
     # rng.random returns random numbers in [0, 1). Scale that.
-    displacement = (2.0 * rng.random((npart,1)) - 1.0) * 0.499 * dx
+    displacement = (2.0 * rng.random((npart, 1)) - 1.0) * 0.499 * dx
     new_coords[:, 0] += displacement[:, 0]
 
     return new_coords
@@ -73,22 +74,23 @@ def get_coords(box_min, box_max, npart):
 
 # Now generate actual coordinates
 # First the "background"
-new_coords = get_coords(0., boxSize, npart)
-coords[:npart, 0] = new_coords[:,0]
-new_coords = get_coords(1./3., 5./6*boxSize, npart)
-coords[npart:2*npart, 0] = new_coords[:,0]
-new_coords = get_coords(3./6., 5./6*boxSize, npart)
-coords[2*npart:3*npart, 0] = new_coords[:,0]
-new_coords = get_coords(4./6., 5./6*boxSize, npart)
-coords[3*npart:, 0] = new_coords[:,0]
+new_coords = get_coords(0.0, boxSize, npart)
+coords[:npart, 0] = new_coords[:, 0]
+new_coords = get_coords(1.0 / 3.0, 5.0 / 6 * boxSize, npart)
+coords[npart : 2 * npart, 0] = new_coords[:, 0]
+new_coords = get_coords(3.0 / 6.0, 5.0 / 6 * boxSize, npart)
+coords[2 * npart : 3 * npart, 0] = new_coords[:, 0]
+new_coords = get_coords(4.0 / 6.0, 5.0 / 6 * boxSize, npart)
+coords[3 * npart :, 0] = new_coords[:, 0]
 
 
 from matplotlib import pyplot as plt
+
 plt.figure()
 plt.subplot(121)
-plt.plot(coords[:,0], m, marker=".")
+plt.plot(coords[:, 0], m, marker=".")
 plt.subplot(122)
-plt.hist(coords[:,0], bins=200)
+plt.hist(coords[:, 0], bins=200)
 plt.show()
 
 

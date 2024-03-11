@@ -175,7 +175,9 @@ KERNEL_SYMBOL = swift2.sphtools.sph_kernel_macro_name[kernel]
 # Additional Particle Parameters -----------------------------------------------
 dx = domain_size[0] / npart_base
 hydro_H_max = 20 * dx
-hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(hydro_H_max, kernel, hydro_dimensions)
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+    hydro_H_max, kernel, hydro_dimensions
+)
 particle.h_hydro_max = hydro_h_max
 
 # Modify the eta factor to look for a precise number of neighbours.

@@ -46,7 +46,7 @@ u = np.ones(npart**2)
 # Get uniform coordinates.
 ind = 0
 for i in range(npart):
-    x =  (i + 0.5) * dx
+    x = (i + 0.5) * dx
     for j in range(npart):
         y = (j + 0.5) * dx
         coords[ind, 0] = x
@@ -73,7 +73,7 @@ coords[:, 1] += displacement[:, 1]
 # for the cell size.
 # So let's scale the particles down into a smaller box than the actual
 # box size.
-scale = 1./5
+scale = 1.0 / 5
 coords *= scale
 h *= scale
 # and shift them into the center
@@ -81,8 +81,9 @@ coords += 0.4
 
 
 from matplotlib import pyplot as plt
+
 plt.figure()
-plt.scatter(coords[:,0], coords[:,1], s=1, marker=",")
+plt.scatter(coords[:, 0], coords[:, 1], s=1, marker=",")
 plt.show()
 
 
