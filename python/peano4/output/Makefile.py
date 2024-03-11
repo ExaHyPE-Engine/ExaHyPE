@@ -269,7 +269,7 @@ the SISC paper
             if find_CMake_build_dir() != "" and "-D" in value:
                 self.d["CMAKE_COMPILE_DEFINITIONS"].append(value.replace("-D", ""))
             else:
-                self.d["CMAKE_CXXFLAGS"].append(value.replace("-D", ""))
+                self.d["CMAKE_CXXFLAGS"].append(value)
 
     def set_Fortran_compiler(self, value):
         self.d["FC"] = value
