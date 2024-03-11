@@ -72,7 +72,7 @@ class Exahype2(CMakePackage, CudaPackage):
     depends_on('gsl')
     depends_on('blis')
     depends_on('libxsmm+generator')
-    depends_on('paraview+ipo+python')
+    #depends_on('paraview+ipo+python')
     #depends_on('paraview+mpi+osmesa+ipo+python+hdf5')
 
     variant("omp", default=False, description="Build with OpenMP multithreading support")
