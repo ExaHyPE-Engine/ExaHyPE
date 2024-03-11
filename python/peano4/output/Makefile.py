@@ -155,6 +155,7 @@ the SISC paper
         self.d["CMAKE_CORE_LIBS"] = ["Peano4Core"]
         self.d["CMAKE_LIBS"] = []
         self.d["CMAKE_LDFLAGS"] = []
+        self.d["CMAKE_CXXFLAGS"] = []
         self.d["CMAKE_COMPILE_DEFINITIONS"] = []
         self.d["USING_CMAKE"] = False
         self.d["GENERATED_SUBDIRECTORY_FULLPATH"] = ""
@@ -267,6 +268,8 @@ the SISC paper
             self.d["CXXFLAGS"] += " " + value
             if find_CMake_build_dir() != "" and "-D" in value:
                 self.d["CMAKE_COMPILE_DEFINITIONS"].append(value.replace("-D", ""))
+            else:
+                self.d["CMAKE_CXXFLAGS"].append(value.replace("-D", ""))
 
     def set_Fortran_compiler(self, value):
         self.d["FC"] = value

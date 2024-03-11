@@ -38,6 +38,7 @@ list(APPEND GENERATED_CU_SOURCES {% for item in GENERATED_CU_SOURCES -%} {{item+
 list(APPEND GENERATED_FORTRAN_SOURCES {% for item in GENERATED_FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %})
 
 list(APPEND GENERATED_LDFLAGS {% for item in CMAKE_LDFLAGS -%} {{item+" "}} {%- endfor %})
+list(APPEND GENERATED_CXXFLAGS {% for item in CMAKE_CXXFLAGS -%} {{item+" "}} {%- endfor %})
 list(APPEND GENERATED_INCLUDE_DIRS {% for item in GENERATED_INCLUDE_DIRS -%} ${CMAKE_CURRENT_SOURCE_DIR}/{{item+" "}} {%- endfor %})
 list(APPEND GENERATED_COMPILE_DEFINITIONS {% for item in CMAKE_COMPILE_DEFINITIONS -%} {{item+" "}} {%- endfor %})
 
@@ -66,7 +67,7 @@ list(APPEND SOURCES
   ${GENERATOR}
 )
 
-# Set sources of the executable, we depend on the generated CMake file, the generator script.
+# Set sources of the executable. We depend on the generated CMake file and the generator script.
 target_sources(${TARGET_NAME} PRIVATE ${SOURCES})
 
 # Set default include directories as well as the generated ones.
@@ -87,6 +88,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE project_options)
 target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
 target_link_libraries(${TARGET_NAME} PRIVATE ${GENERATED_LDFLAGS})
 
+target_compile_options(${TARGET_NAME} PRIVATE ${GENERATED_CXXFLAGS})
 target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${PEANO_BUILD_MODE}}>)
 target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${PEANO_BUILD_MODE}}>)
 
