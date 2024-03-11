@@ -149,8 +149,14 @@ class InsertParticlesFromHDF5File(ActionSet):
       // Vectors
       for (int d=0; d<Dimensions; d++) {
          newParticle->setA(d,0);
+#if Dimensions > 2
          newParticle->setRot_v(d, 0);
+#endif
       }
+
+#if Dimensions <= 2
+         newParticle->setRot_v(0);
+#endif
 
       /* Initialise the "extended" arrays */
       newParticle->setV_full( newParticle->getV() );
