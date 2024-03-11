@@ -20,7 +20,6 @@ def populate_predefined_strings():
             "PEANO_" + capitalized_build_type + "_DEFINITIONS",
         ]
     predefined_strings += [
-        "PEANO_DEFINITIONS",
         "USE_COMPONENT_DEFINITIONS",
         "ENABLE_PARTICLES",
         "ENABLE_EXAHYPE",
@@ -30,15 +29,18 @@ def populate_predefined_strings():
         "ENABLE_PARTICLES",
         "ENABLE_SWIFT",
         "PEANO_INCLUDES",
-        "PEANO_DEPENDS",
-        "PEANO_FLAGS",
-        "PEANO_LINK_FLAGS",
+        "PEANO_LINK_LIBRARIES",
+        "PEANO_COMPILE_OPTIONS",
+        "PEANO_LINK_OPTIONS",
+        "PEANO_COMPILE_DEFINITIONS",
         "_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS",
         "_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS",
         "_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS",
         "_PROJECT_OPTIONS_LINK_OPTIONS",
         "_PROJECT_OPTIONS_COMPILE_OPTIONS",
         "_PROJECT_OPTIONS_COMPILE_DEFINITIONS",
+        "C_COMPILER_NAME",
+        "CXX_COMPILER_NAME",
     ]
 
     return predefined_strings
@@ -67,7 +69,8 @@ def search_and_copy_strings(input_file_path, predefined_strings, output_director
                             # a new line
                             value = tokens[1].replace(";", " ").replace("\n", "")
                             var_name = var_name_and_type.split(":")[0]
-                            line_as_set_command = f'set({var_name} {value} CACHE INTERNAL "")\n'
+                            s = '""'
+                            line_as_set_command = f'set({var_name} {s if len(value) == 0 or value == "" or value == " " else value} CACHE INTERNAL "")\n'
                             output_file.write(line_as_set_command)
 
 if __name__ == "__main__":

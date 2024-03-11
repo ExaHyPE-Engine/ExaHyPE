@@ -18,6 +18,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_INLINES_HIDDEN YES)
 
+if(C_COMPILER_NAME)
+  set(CMAKE_C_COMPILER ${C_COMPILER_NAME})
+endif()
+
+if(CXX_COMPILER_NAME)
+  set(CMAKE_CXX_COMPILER ${CXX_COMPILER_NAME})
+  message(WARNING ${CXX_COMPILER_NAME})
+endif()
+
 set(CMakeCachePath {{PROJECT_ROOT_DIR}}/Config.cmake)
 include("${CMakeCachePath}")
 
@@ -94,13 +103,13 @@ target_link_libraries(${TARGET_NAME} PUBLIC ${DEPENDS_FULL})
 
 # Libraries are generated at $cmake_binary_dir, just in case add it to the link directories.
 target_link_directories(${TARGET_NAME} PUBLIC ${CMAKE_BINARY_DIR})
-target_compile_definitions(${TARGET_NAME} PUBLIC Dimensions=${PEANO_DIMENSIONS} ${${PEANO_BUILD_MODE}_DEFINITIONS})
-#target_link_libraries(${TARGET_NAME} PUBLIC project_options)
-target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${PEANO_BUILD_MODE}}>)
-target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${PEANO_BUILD_MODE}}>)
-target_compile_definitions(${TARGET_NAME} PUBLIC ${PEANO_DEFINITIONS})
+target_compile_definitions(${TARGET_NAME} PUBLIC Dimensions=${PEANO_DIMENSIONS} ${${PEANO_BUILD_TYPE}_DEFINITIONS})
+target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${PEANO_BUILD_TYPE}}>)
+message(WARNING "CXX: ${PEANO_CXX_FLAGS_${PEANO_BUILD_TYPE}}")
+target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${PEANO_BUILD_TYPE}}>)
+message(WARNING "CUDA: ${PEANO_CUDA_FLAGS_${PEANO_BUILD_TYPE}}")
 
-target_link_options(${TARGET_NAME} PUBLIC ${PEANO_${PEANO_BUILD_MODE}_LDFLAGS})
+target_link_options(${TARGET_NAME} PUBLIC ${PEANO_${PEANO_BUILD_TYPE}_LDFLAGS})
 #target_link_libraries(${TARGET_NAME} PUBLIC project_warnings)
 target_link_directories(${TARGET_NAME} PUBLIC {{PROJECT_ROOT_DIR}}/lib)
 
@@ -126,9 +135,11 @@ if(ENABLE_MULTIPRECISION)
 endif()
 
 target_link_libraries(${TARGET_NAME} PUBLIC Tarch_${PEANO_BUILD_TYPE_LOWER})
-target_compile_options(${TARGET_NAME} PUBLIC ${PEANO_FLAGS})
-target_link_options(${TARGET_NAME} PUBLIC ${PEANO_LINK_FLAGS})
+target_compile_options(${TARGET_NAME} PUBLIC ${PEANO_COMPILE_OPTIONS})
+target_link_options(${TARGET_NAME} PUBLIC ${PEANO_LINK_OPTIONS})
 
 target_compile_options(${TARGET_NAME} PUBLIC ${_PROJECT_OPTIONS_INTERFACE_COMPILE_OPTIONS} ${_PROJECT_OPTIONS_COMPILE_OPTIONS})
 target_compile_definitions(${TARGET_NAME} PUBLIC ${_PROJECT_OPTIONS_INTERFACE_COMPILE_DEFINITIONS} ${_PROJECT_COMPILE_DEFINITIONS})
 target_link_options(${TARGET_NAME} PUBLIC ${_PROJECT_OPTIONS_INTERFACE_LINK_OPTIONS} ${_PROJECT_OPTIONS_LINK_OPTIONS})
+
+target_link_libraries(${TARGET_NAME} PUBLIC ${PEANO_LINK_LIBRARIES})
