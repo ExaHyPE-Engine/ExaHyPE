@@ -33,10 +33,19 @@ class CollocatedSolver(ActionSet):
     {
       logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(dof), fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof), fineGridVertex{{SOLVER_NAME}}.getResidual(dof));
       assertion( fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof) > 0 );
+      
+      double r   = tarch::la::abs(fineGridVertex{{SOLVER_NAME}}.getResidual(dof));
       double val = fineGridVertex{{SOLVER_NAME}}.getValue(dof) 
                   + repositories::{{SOLVER_INSTANCE}}.Omega 
                     * ( 1.0 / fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof) )
-                    * fineGridVertex{{SOLVER_NAME}}.getResidual(dof);
+                    * r;
+
+      repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
+        tarch::la::abs(r),
+        tarch::la::volume(marker.h()) * r * r,
+        r * r,
+        marker.h()(0)
+      );
 
       fineGridVertex{{SOLVER_NAME}}.setValue(dof, val);
       logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(dof));

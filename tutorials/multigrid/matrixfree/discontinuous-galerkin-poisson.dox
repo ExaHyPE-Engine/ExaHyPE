@@ -132,6 +132,8 @@ and then simply creates an additional solver:
 
 @snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Correction equation solver
 
+This additional solver is a sole helper and hence never terminates the 
+simulation (see very small value of solver_tolerance).
 Both solvers are added to the project: 
 
 @snippet tests/multigrid/matrixfree/poisson/dg-two-grid.py Add solvers

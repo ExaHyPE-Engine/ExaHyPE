@@ -73,6 +73,14 @@ class mghype::matrixfree::solvers::Solver {
     double     _globalResidualEukledianNormSquared;
     double     _globalResidualHNormSquared;
 
+    double _initialGlobalResidualMaxNorm;
+    double _initialGlobalResidualEukledianNormSquared;
+    double _initialGlobalResidualHNormSquared;
+
+    double _previousGlobalResidualMaxNorm;
+    double _previousGlobalResidualEukledianNormSquared;
+    double _previousGlobalResidualHNormSquared;
+
     /**
      * Semaphore for global residual values
      */

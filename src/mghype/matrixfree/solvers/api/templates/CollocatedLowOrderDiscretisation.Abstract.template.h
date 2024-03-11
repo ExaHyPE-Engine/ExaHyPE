@@ -70,5 +70,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       const tarch::la::Vector<Dimensions, double>&  cellCentre,
       const tarch::la::Vector<Dimensions, double>&  cellSize
     );
+
+  protected:
+    static tarch::logging::Log  _log;
 };
 

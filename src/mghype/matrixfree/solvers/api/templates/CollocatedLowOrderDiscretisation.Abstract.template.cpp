@@ -1,7 +1,9 @@
 #include "{{CLASSNAME}}.h"
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {}
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
+  Solver("{{CLASSNAME}}", {{SOLVER_TOLERANCE}} )
+{}
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}() {}

@@ -44,9 +44,9 @@ class UpdateCell(ActionSet):
     // residual is now complete
     
     repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
-      tarch::la::max(r),
-      tarch::la::volume(marker.h()) * tarch::la::max(r),
-      tarch::la::norm2Squared(r),
+      tarch::la::max( tarch::la::abs(r) ),
+      tarch::la::volume(marker.h()) * tarch::la::max(tarch::la::abs(r)),
+      tarch::la::norm2Squared(tarch::la::abs(r)),
       marker.h()(0)
     );
 

@@ -1,7 +1,7 @@
 import os, sys
 import argparse
 import peano4
-import multigrid
+import mghype
 import numpy as np
 
 print( """
@@ -24,12 +24,12 @@ parser.add_argument("-m",   "--mode",                 dest="mode",           cho
 args = parser.parse_args()
 
 
-project = multigrid.matrixfree.api.Project( project_name = "DGPointwise", 
+project = mghype.matrixfree.api.Project( project_name = "DGPointwise", 
                               namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                             )
 
 
-matrices = multigrid.api.matrixgenerators.GLMatrixFree(
+matrices = mghype.api.matrixgenerators.GLMatrixFree(
   args.dimensions,
   args.poly_degree,
   1,  # Unknowns per cell dof. Scalar PDE here
@@ -48,7 +48,7 @@ approximate_system_matrix_scaling        = matrices.get_A_tilde()
 
 
 #! [Instantiate solver]
-solver = multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
+solver = mghype.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
   name = "DGPoisson",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
@@ -77,7 +77,7 @@ solver = multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPoi
 
 
 #! [Construct correction matrices]
-correction_equation_matrices = multigrid.api.matrixgenerators.DLinear(
+correction_equation_matrices = mghype.api.matrixgenerators.DLinear(
   dimensions = args.dimensions,
   poly_degree = 1,
   unknowns_per_vertex_dof = 1
@@ -86,7 +86,7 @@ correction_equation_matrices = multigrid.api.matrixgenerators.DLinear(
 
 
 #! [Correction equation solver]
-correction_equation_solver = multigrid.matrixfree.solvers.api.CollocatedLowOrderDiscretisation(
+correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDiscretisation(
   name = "CorrectionEquation",
   unknowns_per_vertex = 1, 
   dimensions = args.dimensions,
@@ -95,7 +95,8 @@ correction_equation_solver = multigrid.matrixfree.solvers.api.CollocatedLowOrder
   local_assembly_matrix         = correction_equation_matrices.get_cell_system_matrix_for_laplacian(),
   local_assembly_matrix_scaling = args.dimensions-2,
   mass_matrix                   = correction_equation_matrices.get_cell_identity_matrix(),
-  mass_matrix_scaling           = 0
+  mass_matrix_scaling           = 0,
+  solver_tolerance              = 1e-12,
 )
 #! [Correction equation solver]
 
