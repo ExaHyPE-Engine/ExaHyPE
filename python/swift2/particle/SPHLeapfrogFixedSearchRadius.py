@@ -309,7 +309,7 @@ class SPHLeapfrogFixedSearchRadius(SPHParticle):
         """
 
         steps = [
-            self.algorithm_steps_dict["FlagBoundaryParticles"],
+            #  self.algorithm_steps_dict["FlagBoundaryParticles"],
             self.algorithm_steps_dict["Drift"],
             self.algorithm_steps_dict["PredictHydro"],
             self.algorithm_steps_dict["Density"],

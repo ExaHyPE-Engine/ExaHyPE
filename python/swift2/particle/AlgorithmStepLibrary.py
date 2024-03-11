@@ -218,14 +218,14 @@ def get_algorithm_step_dict(particle):
     # --------------------------------------------------------------------------
     #
     #
-    # Correctness: Whenever we drift a particle, we might subsequently have to 
-    # resort it. That is, we assign it to another vertex. Therefore, it can 
+    # Correctness: Whenever we drift a particle, we might subsequently have to
+    # resort it. That is, we assign it to another vertex. Therefore, it can
     # happen that another cell checks a particle again and that we notably call
-    # touchVertexLastTime() with one particle twice. Therefore, we only know 
-    # that we touch a particle at least once in touchVertexLastTime, that cell 
-    # updates can be done multiple times (subsequent cell and vertex updates 
-    # will mask out any changes to the particle as the moved flag is set, but 
-    # they check), and that a cell update can follow a touchVertexLastTime() 
+    # touchVertexLastTime() with one particle twice. Therefore, we only know
+    # that we touch a particle at least once in touchVertexLastTime, that cell
+    # updates can be done multiple times (subsequent cell and vertex updates
+    # will mask out any changes to the particle as the moved flag is set, but
+    # they check), and that a cell update can follow a touchVertexLastTime()
     # (on a finer level if we move particles from fine to coarse).
     # --------------------------------------------------------------------------
     drift = AlgorithmStep(

@@ -17,7 +17,7 @@ TIMESTEP_SIZE=9.765625e-05 # copied from SWIFT output.
 CFL_FACTOR=0.1
 # PLOT_DELTA=0.01
 PLOT_DELTA=9.765625e-05 # write each step.
-CELL_SIZE=0.1
+CELL_SIZE=0.3
 
 # Generate initial condition file
 if [ ! -e $IC_FILENAME ]
@@ -28,7 +28,7 @@ fi
 
 # Run python script to generate the experiment
 echo 'generate and compile code ...'
-echo python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
+echo python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE --asserts -v
 python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE --asserts -v
 
 # run experiment
