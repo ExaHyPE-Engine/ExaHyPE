@@ -22,39 +22,51 @@ bool mghype::matrixfree::solvers::Solver::terminationCriterionHolds() {
   static double initialGlobalResidualEukledianNormSquared = 0.0;
   static double initialGlobalResidualHNormSquared         = 0.0;
 
-  bool result = false;
+  static double previousGlobalResidualMaxNorm              = 0.0;
+  static double previousGlobalResidualEukledianNormSquared = 0.0;
+  static double previousGlobalResidualHNormSquared         = 0.0;
+
+  int residualReduced = 0;
+  int residualGrows   = 0;
 
   if ( tarch::la::equals(initialGlobalResidualMaxNorm,0.0) ) {
     initialGlobalResidualMaxNorm = _globalResidualMaxNorm;
   }
-  else if (initialGlobalResidualMaxNorm * 1.5 < _globalResidualMaxNorm) {
-    logWarning( "terminationCriterionHolds()", "max residual grows" );
+  else if (previousGlobalResidualMaxNorm * 1.2 < _globalResidualMaxNorm) {
+    logWarning( "terminationCriterionHolds()", "max residual grows from " << previousGlobalResidualMaxNorm << " to " << _globalResidualMaxNorm );
+    residualGrows++;
   }
-  else {
-    result |= _globalResidualMaxNorm / initialGlobalResidualMaxNorm < _tolerance;
+  else if (_globalResidualMaxNorm / initialGlobalResidualMaxNorm < _tolerance) {
+    residualReduced++;
   }
 
   if ( tarch::la::equals(initialGlobalResidualEukledianNormSquared,0.0) ) {
     initialGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
   }
-  else if (initialGlobalResidualEukledianNormSquared * 1.5 < _globalResidualEukledianNormSquared ) {
-    logWarning( "terminationCriterionHolds()", "Eukledian residual grows" );
+  else if (previousGlobalResidualEukledianNormSquared * 1.2 < _globalResidualEukledianNormSquared ) {
+    logWarning( "terminationCriterionHolds()", "Eukledian residual squared grows from " << previousGlobalResidualEukledianNormSquared << " to " << _globalResidualEukledianNormSquared );
+    residualGrows++;
   }
-  else {
-    result |= _globalResidualEukledianNormSquared / initialGlobalResidualEukledianNormSquared < _tolerance;
+  else if (_globalResidualEukledianNormSquared / initialGlobalResidualEukledianNormSquared < _tolerance) {
+    residualReduced++;
   }
 
   if ( tarch::la::equals(initialGlobalResidualHNormSquared,0.0) ) {
     initialGlobalResidualHNormSquared = _globalResidualHNormSquared;
   }
-  else if (initialGlobalResidualHNormSquared * 1.5 < _globalResidualHNormSquared ) {
-    logWarning( "terminationCriterionHolds()", "residual in h-norm grows" );
+  else if (previousGlobalResidualHNormSquared * 1.2 < _globalResidualHNormSquared ) {
+    logWarning( "terminationCriterionHolds()", "residual in h-norm squared grows from " << previousGlobalResidualHNormSquared << " to " << _globalResidualHNormSquared );
+    residualGrows++;
   }
-  else {
-    result |= _globalResidualHNormSquared / initialGlobalResidualHNormSquared < _tolerance;
+  else if (_globalResidualHNormSquared / initialGlobalResidualHNormSquared < _tolerance ) {
+    residualReduced++;
   }
 
-  return result;
+  previousGlobalResidualMaxNorm              = _globalResidualMaxNorm;
+  previousGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
+  previousGlobalResidualHNormSquared         = _globalResidualHNormSquared;
+
+  return residualGrows==3 or residualReduced==3;
 }
 
 
