@@ -81,7 +81,7 @@ target_link_libraries(${TARGET_NAME} PRIVATE ${DEPENDS_FULL})
 # Libraries are generated at $CMAKE_BINARY_DIR, just in case add it to the link directories.
 target_link_directories(${TARGET_NAME} PRIVATE ${CMAKE_BINARY_DIR})
 
-target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${PEANO_DIMENSIONS} ${${PEANO_BUILD_MODE}_DEFINITIONS})
+target_compile_definitions(${TARGET_NAME} PRIVATE Dimensions=${PEANO_DIMENSIONS} ${${PEANO_BUILD_TYPE}_DEFINITIONS})
 target_compile_definitions(${TARGET_NAME} PRIVATE ${GENERATED_COMPILE_DEFINITIONS})
 
 target_link_libraries(${TARGET_NAME} PRIVATE project_options)
@@ -89,10 +89,10 @@ target_link_libraries(${TARGET_NAME} PRIVATE project_warnings)
 target_link_libraries(${TARGET_NAME} PRIVATE ${GENERATED_LDFLAGS})
 
 target_compile_options(${TARGET_NAME} PRIVATE ${GENERATED_CXXFLAGS})
-target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${PEANO_BUILD_MODE}}>)
-target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${PEANO_BUILD_MODE}}>)
+target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${PEANO_BUILD_TYPE}}>)
+target_compile_options(${TARGET_NAME} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${PEANO_BUILD_TYPE}}>)
 
-target_link_options(${TARGET_NAME} PRIVATE ${PEANO_${PEANO_BUILD_MODE}_LDFLAGS})
+target_link_options(${TARGET_NAME} PRIVATE ${PEANO_${PEANO_BUILD_TYPE}_LDFLAGS})
 
 # Link every toolbox, if they are enabled.
 if (ENABLE_PARTICLES)

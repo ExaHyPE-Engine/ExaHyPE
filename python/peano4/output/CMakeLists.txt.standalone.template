@@ -19,12 +19,11 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_INLINES_HIDDEN YES)
 
 if(C_COMPILER_NAME)
-  set(CMAKE_C_COMPILER ${C_COMPILER_NAME})
+  #set(CMAKE_C_COMPILER ${C_COMPILER_NAME})
 endif()
 
 if(CXX_COMPILER_NAME)
-  set(CMAKE_CXX_COMPILER ${CXX_COMPILER_NAME})
-  message(WARNING ${CXX_COMPILER_NAME})
+  #set(CMAKE_CXX_COMPILER ${CXX_COMPILER_NAME})
 endif()
 
 set(CMakeCachePath {{PROJECT_ROOT_DIR}}/Config.cmake)
@@ -92,7 +91,7 @@ list(APPEND SOURCES
   ${GENERATOR}
 )
 
-# Set sources of the executable. We depend in the generated CMake file and the generator script.
+# Set sources of the executable. We depend on the generated CMake file and the generator script.
 target_sources(${TARGET_NAME} PUBLIC ${SOURCES})
 
 # Set default include directories as well as the generated ones.
@@ -106,27 +105,21 @@ target_link_libraries(${TARGET_NAME} PUBLIC ${DEPENDS_FULL})
 
 # Libraries are generated at $CMAKE_BINARY_DIR, just in case add it to the link directories.
 target_link_directories(${TARGET_NAME} PUBLIC ${CMAKE_BINARY_DIR})
+target_link_directories(${TARGET_NAME} PUBLIC {{PROJECT_ROOT_DIR}}/lib)
+
 target_compile_definitions(${TARGET_NAME} PUBLIC Dimensions=${PEANO_DIMENSIONS} ${${PEANO_BUILD_TYPE}_DEFINITIONS})
+target_compile_definitions(${TARGET_NAME} PUBLIC ${PEANO_DEFINITIONS})
+target_compile_definitions(${TARGET_NAME} PUBLIC ${GENERATED_COMPILE_DEFINITIONS})
+
+#target_link_libraries(${TARGET_NAME} PUBLIC project_options)
+#target_link_libraries(${TARGET_NAME} PUBLIC project_warnings)
+target_link_libraries(${TARGET_NAME} PUBLIC ${GENERATED_LDFLAGS})
+
+target_compile_options(${TARGET_NAME} PUBLIC ${GENERATED_CXXFLAGS})
 target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${PEANO_BUILD_TYPE}}>)
 target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${PEANO_BUILD_TYPE}}>)
 
 target_link_options(${TARGET_NAME} PUBLIC ${PEANO_${PEANO_BUILD_TYPE}_LDFLAGS})
-
-target_link_directories(${TARGET_NAME} PUBLIC {{PROJECT_ROOT_DIR}}/lib)
-
-target_compile_definitions(${TARGET_NAME} PUBLIC Dimensions=${PEANO_DIMENSIONS} ${${PEANO_BUILD_MODE}_DEFINITIONS})
-target_compile_definitions(${TARGET_NAME} PUBLIC ${PEANO_DEFINITIONS})
-target_compile_definitions(${TARGET_NAME} PUBLIC ${GENERATED_COMPILE_DEFINITIONS})
-
-target_link_libraries(${TARGET_NAME} PUBLIC project_options)
-target_link_libraries(${TARGET_NAME} PUBLIC project_warnings)
-target_link_libraries(${TARGET_NAME} PUBLIC ${GENERATED_LDFLAGS})
-
-target_compile_options(${TARGET_NAME} PUBLIC ${GENERATED_CXXFLAGS})
-target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${PEANO_CXX_FLAGS_${PEANO_BUILD_MODE}}>)
-target_compile_options(${TARGET_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CUDA>:${PEANO_CUDA_FLAGS_${PEANO_BUILD_MODE}}>)
-
-target_link_options(${TARGET_NAME} PUBLIC ${PEANO_${PEANO_BUILD_MODE}_LDFLAGS})
 
 # Link every toolbox, if they are enabled.
 if (ENABLE_PARTICLES)
