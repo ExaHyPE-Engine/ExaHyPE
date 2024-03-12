@@ -260,6 +260,8 @@ def parse_cmake_cache_for_mpi_and_gpu_vendor():
       if "MPI_CXX_COMPILER:FILEPATH" in line:
         mpicxx = line.split("=")[1]  # Get path to mpicxx. E.g., /usr/bin/mpicxx
         mpi_vendor = get_mpi_implementation(mpicxx)
+      elif "SLURM_SRUN_COMMAND" in line:
+        mpi_vendor = "SLURM"
       if "WITH_GPU_ARCH:STRING" in line:
         gpu_arch = line.split("=")[1]  # Get GPU arch
         gpu_vendor = get_gpu_vendor(gpu_arch)
