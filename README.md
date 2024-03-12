@@ -8,6 +8,7 @@
 <div align="center" style="text-align: center;"><b>
   <a href="http://www.peano-framework.org">Website</a> •
   <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html">Documentation</a> •
+  <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/tags">Tags</a> •
   <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/releases">Releases</a>
 </b></div>
 
@@ -33,7 +34,9 @@ load balancing, sophisticated geometry representations, and other features.
 - [Quickstart](#quickstart)
 - [Availability](#availability)
 - [Dependencies and Prerequisites](#dependencies-and-prerequisites)
-- [Docker and Apptainer](#docker-and-apptainer)
+- [Docker](#docker)
+- [Apptainer](#apptainer)
+- [Spack](#spack)
 - [Contributing](#contributing)
 - [Code of Conduct](#code-of-conduct)
 - [License](#license)
@@ -65,10 +68,18 @@ The most important ones are:
 * LIBXSMM (optional).
 * Doxygen if you want to create HTML pages of the documentation (optional).
 
-# Docker and Apptainer
+# Docker
 
-We maintain a collection of Docker and Apptainer [containers](./containers/README.md)
-with all required dependencies.
+We maintain a collection of [Dockerfiles](./docker/).
+
+# Apptainer
+
+We maintain a collection of [Apptainer Definition Files](./apptainer/).
+
+# Spack
+
+To considerably alleviate the installation process of Peano, especially on HPC systems,
+we provide [packages](./spack/) that rely on [Spack](https://github.com/spack/spack/wiki).
 
 # Contributing
 
