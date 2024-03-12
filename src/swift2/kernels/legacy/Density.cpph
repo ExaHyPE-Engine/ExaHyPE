@@ -96,7 +96,7 @@ void swift2::kernels::legacy::hydro_prepare_density(Particle* localParticle) {
   localParticle->setRot_v(0.0);
 
 #if PeanoDebug > 0
-  localParticle->setSmoothingLengthNeighbourCount(0);
+  localParticle->setDensityNeighbourCount(0);
 #endif
 }
 
@@ -185,8 +185,8 @@ void swift2::kernels::legacy::density_kernel(
 #endif
 
 #if PeanoDebug > 0
-    localParticle->setSmoothingLengthNeighbourCount(
-      localParticle->getSmoothingLengthNeighbourCount() + 1
+    localParticle->setDensityNeighbourCount(
+      localParticle->getDensityNeighbourCount() + 1
     );
 #endif
 

@@ -114,6 +114,10 @@ void swift2::kernels::legacy::hydro_prepare_force(Particle* localParticle) {
   localParticle->setPressure(P_a);
   localParticle->setSoundSpeed(soundspeed);
   localParticle->setBalsara(balsara);
+
+#if PeanoDebug > 0
+  localParticle->setForceNeighbourCount(0);
+#endif
 }
 
 
@@ -132,6 +136,12 @@ void swift2::kernels::legacy::hydro_end_force(Particle* localParticle) {
     localParticle->toString(),
     localParticle->getSmoothingLength()
   );
+
+#if PeanoDebug > 0
+#pragma message "HELLO THERE"
+  assertion2(localParticle->getDensityNeighbourCount() <= localParticle-> getForceNeighbourCount(),
+      "Interacted with fewer particles in Force than in Density loop", localParticle->toString());
+#endif
 }
 
 
@@ -170,6 +180,10 @@ void swift2::kernels::legacy::force_kernel(
   if ((tarch::la::smaller(r, iactRa) or (tarch::la::smaller(r, iactRb))) and tarch::la::greater(r, 0.0)) {
     // and not localParticle->getIsBoundaryParticle()) {
 
+#if PeanoDebug > 0
+  localParticle->setForceNeighbourCount(
+      localParticle->getForceNeighbourCount() + 1);
+#endif
     // Retrieve basic properties of local and active particles
     const double m_a = localParticle->getMass();
     const double m_b = activeParticle->getMass();

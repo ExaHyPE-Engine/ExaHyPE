@@ -62,9 +62,6 @@ namespace swift2 {
               localParticleCanBeUpdatedInVertexKernel(marker, particle)) {
           particle.setSmoothingLengthConverged(false);
           particle.setSmoothingLengthIterCount(0);
-#if PeanoDebug > 0
-          particle.setSmoothingLengthNeighbourCount(0);
-#endif
         }
       }
 
