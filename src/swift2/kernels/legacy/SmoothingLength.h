@@ -2,6 +2,8 @@
 // use, please see the copyright notice at www.peano-framework.org
 #pragma once
 
+#include "tarch/Assertions.h"
+
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
 
@@ -28,10 +30,19 @@ namespace swift2 {
         Particle* localParticle
       );
 
+      /**
+       * Wrapper around hydro_update_smoothing_length_and_rerun_if_required()
+       * with only one argument. Further to that, it also adds some consistency
+       * checks as discussed @page swift_algorithm "in the context of generic algorithm remarks".
+       */
       template <typename Particle>
       void updateSmoothingLengthAndRerunIfRequired(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
         if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_update_smoothing_length_and_rerun_if_required(&localParticle);
+          assertion2(
+            localParticle.getSmoothingLength() <= tarch::la::min( marker.h() ),
+            marker.toString(), localParticle.toString()
+          );
         }
       }
 
