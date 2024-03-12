@@ -40,6 +40,14 @@ class UpdateCell(ActionSet):
     // also subtract A^cc u^c
 
     r = r - repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h()) * fineGridCell{{SOLVER_NAME}}.getSolution();
+    
+    // residual is now complete
+    
+    repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
+      tarch::la::max(r),
+      tarch::la::volume(marker.h()) * tarch::la::max(r),
+      tarch::la::norm2Squared(r)
+    );
 
     logTraceOutWith2Arguments("UpdateCell::Projection", r, projection);
 
@@ -338,93 +346,4 @@ class UpdateFaceSolution(ActionSet):
 #include "repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
 """
-
-class CheckTolerance(ActionSet):
-  """!
-  This is for DG solver.
-  """
-
-  templateBeginTraversal="""
-  // reset the current max abs in the solver class
-  repositories::{{SOLVER_INSTANCE}}.setMaxAbs(-9E99);
-  """
-
-  templateTCFT="""
-  if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
-  {
-    double maxAbs = -9E99;
-
-    // find the largest difference between the solution and exact at each dof
-    for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++)
-    {
-      maxAbs = std::max( 
-        std::abs( fineGridCell{{SOLVER_NAME}}.getSolution(i) -  fineGridCell{{SOLVER_NAME}}.getExact(i) ),
-        maxAbs
-      );
-    }
-
-    repositories::{{SOLVER_INSTANCE}}.updateMaxAbs( maxAbs );
-  }
-
-"""
-
-
-  def __init__(self,
-               solver,
-               descend_invocation_order=0,
-               parallel=True):
-    super( CheckTolerance, self ).__init__(
-      descend_invocation_order,
-      parallel
-    )
-    self.d = {}
-    self.d["SOLVER_INSTANCE"]    = solver.instance_name()
-    self.d["SOLVER_NAME"]        = solver.typename()
-
-  def get_body_of_operation(self,operation_name):
-    result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
-      pass
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      result = jinja2.Template(self.templateBeginTraversal).render(**self.d)
-      pass
-    return result
-
-  def get_action_set_name(self):
-    """!
-    
-    Configure name of generated C++ action set
-    
-    This action set will end up in the directory observers with a name that
-    reflects how the observer (initialisation) is mapped onto this action 
-    set. The name pattern is ObserverName2ActionSetIdentifier where this
-    routine co-determines the ActionSetIdentifier. We make is reflect the
-    Python class name.
-     
-    """
-    return __name__.replace(".py", "").replace(".", "_")
-    
-  def user_should_modify_template(self):
-    """!
-    
-    The action set that Peano will generate that corresponds to this class
-    should not be modified by users and can safely be overwritten every time
-    we run the Python toolkit.
-    
-    """
-    return False
-
-  def get_includes(self):
-    """!
-   
-    We need the solver repository in this action set, as we directly access
-    the solver object. We also need access to Peano's d-dimensional loops.
-         
-    """    
-    return """
-#include "repositories/SolverRepository.h"
-#include "peano4/utils/Loop.h"
-"""
-
 

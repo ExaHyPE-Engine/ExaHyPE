@@ -59,28 +59,3 @@ void tests::multigrid::matrixfree::poisson::DGPoisson::initFace(
   for (int i=0; i < solution.size(); i++)   solution[i]   = 0;
   for (int i=0; i < projection.size(); i++) projection[i] = 0;
 }
-
-bool tests::multigrid::matrixfree::poisson::DGPoisson::absValueWithinTolerance()
-{
-  return std::abs( currentMaxAbs ) < SolverTolerance;
-}
-
-/**
-* Used for updating mid-sweep
-*/
-void tests::multigrid::matrixfree::poisson::DGPoisson::updateMaxAbs(double maxAbs)
-{
-  maxAbsMtx.lock();
-  currentMaxAbs = std::max( currentMaxAbs, maxAbs );
-  maxAbsMtx.unlock();
-}
-
-/**
-* Used for actually resetting at start of sweep
-*/
-void tests::multigrid::matrixfree::poisson::DGPoisson::setMaxAbs(double maxAbs)
-{
-  maxAbsMtx.lock();
-  currentMaxAbs = maxAbs;
-  maxAbsMtx.unlock();
-}

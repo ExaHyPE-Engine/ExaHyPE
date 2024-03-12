@@ -1,5 +1,7 @@
 #include "{{CLASSNAME}}.h"
 #include <cmath> // for std::pow
+#include "tarch/multicore/Lock.h"
+
 
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
@@ -265,3 +267,65 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
 {% endif %}
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::terminationCriterionHolds() {
+  static double initialGlobalResidualMaxNorm       = 0.0;
+  static double initialGlobalResidualEukledianNormSquared = 0.0;
+  static double initialGlobalResidualHNormSquared         = 0.0;
+
+  bool result = false;
+
+  if ( tarch::la::equals(initialGlobalResidualMaxNorm,0.0) ) {
+    initialGlobalResidualMaxNorm = _globalResidualMaxNorm;
+  }
+  else {
+    result |= _globalResidualMaxNorm / initialGlobalResidualMaxNorm < SolverTolerance;
+  }
+
+  if ( tarch::la::equals(initialGlobalResidualEukledianNormSquared,0.0) ) {
+    initialGlobalResidualEukledianNormSquared = _globalResidualEukledianNormSquared;
+  }
+  else {
+    result |= _globalResidualEukledianNormSquared / initialGlobalResidualEukledianNormSquared < SolverTolerance;
+  }
+
+  if ( tarch::la::equals(initialGlobalResidualHNormSquared,0.0) ) {
+    initialGlobalResidualHNormSquared = _globalResidualHNormSquared;
+  }
+  else {
+    result |= _globalResidualHNormSquared / initialGlobalResidualHNormSquared < SolverTolerance;
+  }
+
+  return result;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::clearGlobalResidual() {
+  tarch::multicore::Lock lock( _semaphore );
+
+  _globalResidualMaxNorm               = 0.0;
+  _globalResidualEukledianNormSquared += 0.0;
+  _globalResidualHNormSquared         += 0.0;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::updateGlobalResidual(
+  double residualMaxNorm,
+  double residualEukledianNormSquared,
+  double residualHNormSquared
+) {
+  tarch::multicore::Lock lock( _semaphore );
+
+  _globalResidualMaxNorm        = std::max(_globalResidualMaxNorm, residualMaxNorm);
+  _globalResidualEukledianNormSquared += residualEukledianNormSquared;
+  _globalResidualHNormSquared         += residualHNormSquared;
+}
+
+
+std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
+  std::ostringstream msg;
+  msg << "{{CLASSNAME}}"
+      << ": |r|_max=" << _globalResidualMaxNorm
+      << ", |r|_2=" << std::sqrt( _globalResidualEukledianNormSquared )
+      << ", |r|_h=" << std::sqrt( _globalResidualHNormSquared );
+  return msg.str();
+}

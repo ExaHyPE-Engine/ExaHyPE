@@ -21,7 +21,9 @@ namespace {{N}} {
 
     {% endfor %}
     
-    bool absValueWithinTolerance();
+    bool terminationCriterionHolds();
+    void beginTimeStep();
+    void endTimeStep();
 
 {% for N in NAMESPACE %}
 }

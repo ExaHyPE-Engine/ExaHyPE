@@ -72,7 +72,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     /**
     * Always returns false for this solver
     */
-    virtual bool absValueWithinTolerance() { return false; }
+    virtual bool terminationCriterionHolds() { return false; }
 
   protected:
     static tarch::logging::Log  _log;

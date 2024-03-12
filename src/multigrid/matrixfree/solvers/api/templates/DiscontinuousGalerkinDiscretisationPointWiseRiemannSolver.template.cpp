@@ -35,7 +35,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initFace(
 * tolerance, and false if we can terminate.
 *
 */
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::absValueWithinTolerance()
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::terminationCriterionHolds()
 {
   return true;
 }

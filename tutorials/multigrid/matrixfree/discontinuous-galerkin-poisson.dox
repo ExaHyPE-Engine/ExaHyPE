@@ -91,6 +91,11 @@ for the user is DGPoisson.cpp.
 
 @snippet tests/multigrid/matrixfree/poisson/DGPoisson.cpp Set initial guess and rhs
 
- 
+
+
+# Solver flavours
+
+By default, we get a block Jacobi method, where we update individual the cells
+all in parallel (logically). 
  
 */
