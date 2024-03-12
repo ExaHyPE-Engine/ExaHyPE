@@ -1,0 +1,33 @@
+/**
+
+@page swift_algorithm Algorithmic steps
+
+This page hosts generic remarks on some algorithmic steps and their implementation.
+
+
+# Cut-off radius realisation in the force calculation
+
+Swift 2 builds up its interaction lists (who has to be checked against whom) 
+on-the-fly while it runs through the mesh. Hereby, it employs the concept of 
+a @ref page_toolbox_particles_mesh_traversal "search radius": Only particles
+within the the search radius of a particle @f$ p_i @f$ are taken into account 
+when we search for any other particle @f$ p_j @f$ interacting.
+
+In Swift, the search radius @f$ r_{\text{search}} @f$ is a 
+***technical quantity***. The physics are not directly impacted by it. They
+are determined by the smoothing length @f$ r_{\text{search}} @f$ which changes 
+(more) frequently. Our code runs through the mesh and looks at all particles
+around a particle within the search radius. For the density calculation, all
+particles within the smoothing length then enter the equations. 
+
+
+
+For the 
+force calculation however, all 
+
+When we calculate the forces, we however have to employ a or-combination of 
+the smoothing lengths.
+
+
+
+ */
