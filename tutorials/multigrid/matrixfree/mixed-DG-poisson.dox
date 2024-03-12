@@ -5,7 +5,7 @@
 This simple example discusses the most basic steps behind a matrix-free mixed Discontinuous Galerkin solver for the Poisson equation. 
 
 The standard "benchmark" for this solver (once again solving the Poisson 
-equation on the unit square) can be found in benchmarks/multigrid/matrixfree/poisson/mixed.py.
+equation on the unit square) can be found in tests/multigrid/matrixfree/poisson/mixed.py.
 Our discussion follows this script, though we omit many technical details such
 as the parsing of the command line) and  focus on key numerical ingredients 
 from a user perspective. Therefore, it is reasonable to study the present text 
@@ -89,7 +89,7 @@ The PDE over the secondary variables is structurally simpler:
 All the entries on the left-hand side have a scaling of @f$ h^{d-1} @f$.
 
 
-@snippet benchmarks/multigrid/matrixfree/poisson/dg.py Construct matrices
+@snippet tests/multigrid/matrixfree/poisson/dg.py Construct matrices
 
 
 @todo Tobias and Alex should discuss.

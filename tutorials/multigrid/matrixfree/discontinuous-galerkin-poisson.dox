@@ -6,7 +6,7 @@ This simple example discusses the most basic steps behind a Discontinuous
 Galerkin solver. 
 
 The standard "benchmark" for this solver (once again solving the Poisson 
-equation on the unit square) can be found in benchmarks/multigrid/matrixfree/poisson/dg.py.
+equation on the unit square) can be found in tests/multigrid/matrixfree/poisson/dg.py.
 Our discussion follows this script, though we omit many technical details such
 as the parsing of the command line) and  focus on key numerical ingredients 
 from a user perspective. Therefore, it is reasonable to study the present text 
@@ -35,12 +35,22 @@ approach nor elegant, but it helps us to illustrate how to set up the solver.
 Once we @ref page_multigrid_unfolding "unfold this weak formulation over the mesh", we 
 see all the operators and steps of the script involved:
  
+<div style="background-color: #fcc ; padding: 10px; border: 1px solid green;"> 
+We are currently in the progress of restructuring our directories: We used to have a top-level
+python directory and a top-level src directory. In the future, we plan to merge all of these
+in one place (src) and to have api subdirectories within the C++ folders which hold the 
+Python code corresponding/wrapping the C++ snippets. As this transition is not complete
+yet, you have to make both python and src part of your PYTHONPATH:
+
+        export PYTHONPATH=../../../../python:../../../../src
+</div>
+ 
  
 # Project setup
  
 Creating a project is a one-liner:
 
-@snippet benchmarks/multigrid/matrixfree/poisson/dg.py Create project
+@snippet tests/multigrid/matrixfree/poisson/dg.py Create project
  
 
 # Create the solver
@@ -50,16 +60,13 @@ The solver construction also is a "one-liner" using the following observations:
 - We solve a scalar equation system. Consequently, we have @f$ K_c=1 @f$.
 - Our Riemann solver will take the projections of the gradients and average it. In this simple case, @f$ K_c=1 @f$.
 
-@snippet benchmarks/multigrid/matrixfree/poisson/dg.py Instantiate solver
+@snippet tests/multigrid/matrixfree/poisson/dg.py Instantiate solver
 
 The instantiation relies heavily on several matrices. Here, we can reuse 
 the same utility routines that we also use for the @ref tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson "DG with PETSc"
 code.  
 
-@todo Sean, Alex This is taken from the dg.py script. I honestly have no clue where these come from and who wrote that, but we should simply "reuse" the same matrices that we've used with PETSc. Alex has written functions to generate them and we should use exactly the same routines here.
-@todo Alex Please fix scaling
-
-@snippet benchmarks/multigrid/matrixfree/poisson/dg.py Construct matrices
+@snippet tests/multigrid/matrixfree/poisson/dg.py Construct matrices
 
 Only two matrices are new:
 
@@ -70,32 +77,20 @@ Only two matrices are new:
   means that we end up with a global Jacobi solver.
 - The Riemann solver matrix here can either be specified, or we set it to None.
   If we set it to None, we will get an empty routine in the generated C++ 
-  code that we have to befill (see below). In our case, we simply average 
-  between the left and right projection of the gradient and hence can hard-code
-  the operator. It is not scaled with the mesh size, i.e. it is scaled with 
-  @f$ h^0 @f$.
-    
-@todo Alex Do we already ahve this averaging matrix somewhere?
+  code that we have to befill (see below). In our case, we apply the penalty 
+  method (see remarks below).
 
 
-@todo Alex can you add this?
-
-
-# Implement the functionality
+# Implement the solver's core functionality
  
 Upon the first run of the Python script, we get two new C++ classes, i.e. four
-files: AbstractMyDG.h, AbstractMyDG.cpp, MyDG.h, MyDG.cpp. The interesting file
-for the user is MyDG.cpp
+files: AbstractDGPoisson.h, AbstractDGPoisson.cpp, DGPoisson.h, DGPoisson.cpp. 
+They are named like this, as DGPoisson is the name of the solver. The interesting file
+for the user is DGPoisson.cpp.
 
 
-@todo Sean The parts below needs more details. Direction of travel is clear I hope.
+@snippet tests/multigrid/matrixfree/poisson/DGPoisson.cpp Set initial guess and rhs
 
-
- 
- We create a solver of the type multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver.
- This solver is given the name MyDG in the present example.
- 
- 
  
  
 */

@@ -1,16 +1,12 @@
 import os, sys
 import argparse
 import peano4
+import multigrid
 import numpy as np
-
-import src.multigrid.matrixfree as matrixfree
-import multigrid.matrixgenerators
 
 print( """
 
 Peano 4 multigrid solver using Discontinuous Galerkin
-
-@author 2022 Sean Baccas, Dmitry Nikolaenko, Tobias Weinzierl
 
 """)
 
@@ -21,7 +17,6 @@ parser.add_argument("-pd",  "--peano-dir",            dest="peanodir",       def
 parser.add_argument("-v",   "--verbose",              dest="verbose",        action="store_true", default=False, help="Verbose")
 parser.add_argument("-d",   "--dimensions",           dest="dimensions",     type=int, default=2, help="Dimensions")
 parser.add_argument("-p",   "--poly_degree",          dest="poly_degree",    type=int, default=1, help="Polynomial Degree")
-parser.add_argument("-upcn", "--unknowns_per_cell",   dest="upcn",            type=int, default=1, help="Unknowns per cell node")
 parser.add_argument("-meshsize",  "--meshsize",       dest="meshsize",       default=0.3, help="Mesh size")
 parser.add_argument("-omega_c",  "--omega_c",       dest="omega_c",       default=0.5, help="Mesh size")
 parser.add_argument("-omega_f",  "--omega_f",       dest="omega_f",       default=1.0, help="Mesh size")
@@ -29,7 +24,7 @@ parser.add_argument("-m",   "--mode",                 dest="mode",           cho
 args = parser.parse_args()
 
 #! [Create project]
-project = matrixfree.Project( project_name = "DGPointwise", 
+project = multigrid.matrixfree.api.Project( project_name = "DGPointwise", 
                               namespace = [ "tests", "multigrid", "matrixfree", "poisson" ]
                             )
 #! [Create project]
@@ -37,18 +32,13 @@ project = matrixfree.Project( project_name = "DGPointwise",
 
 #! [Construct matrices]
 
-matrices = multigrid.matrixgenerators.GLMatrixFree(
+matrices = multigrid.api.matrixgenerators.GLMatrixFree(
   args.dimensions,
   args.poly_degree,
-  args.upcn,
-  2,
+  1,  # Unknowns per cell dof. Scalar PDE here
+  2,  # We use the penalty formulation (see docu in tutorials)
   2
 )
-
-#! [Construct matrices]
-
-
-#! [Instantiate solver]
 
 assembly_matrix, assembly_matrix_scaling = matrices.get_cell_system_matrix_for_laplacian()
 mass_matrix, mass_matrix_scaling         = matrices.get_cell_mass_matrix()
@@ -58,13 +48,16 @@ cell_from_face_projection, \
 cell_from_face_projection_scaling        = matrices.get_cell_from_face_matrix()
 approximate_system_matrix, \
 approximate_system_matrix_scaling        = matrices.get_A_tilde()
+#! [Construct matrices]
 
 
-solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
+
+#! [Instantiate solver]
+solver = multigrid.matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(
   name = "DGPoisson",
   dimensions = args.dimensions,
   poly_degree = args.poly_degree,
-  unknowns_per_cell_node = args.upcn,
+  unknowns_per_cell_node = 1,
   solutions_per_face_node = 2,
   projections_per_face_node = 2,
   min_h = args.meshsize,
@@ -80,7 +73,7 @@ solver = matrixfree.solvers.api.DiscontinuousGalerkinDiscretisationPointWiseRiem
   riemann_matrix = matrices.get_face_face_riemann_problem_matrix(),
   boundary_matrix = matrices.get_boundary_matrix(),
   cell_relaxation = args.omega_c,
-  face_relaxation = args.omega_f,
+  face_relaxation = args.omega_f,  # default here is 1, i.e. we solve exactly. See class docu
   approximate_system_matrix = approximate_system_matrix,
   approximate_system_matrix_scaling = approximate_system_matrix_scaling,
   solver_tolerance = 0.01,
