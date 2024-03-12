@@ -24,7 +24,7 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::ParticleIden
   particleName(particleName__),
   particleX(particleX__) {}
 
-double toolbox::particles::assignmentchecks::internal::ParticleIdentifier::Precision = 1e-8;
+double toolbox::particles::assignmentchecks::internal::ParticleIdentifier::Precision = 1e-6;
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::numericalEquals(const ParticleIdentifier& rhs) const {
   return (particleName == rhs.particleName) and tarch::la::equals(particleX, rhs.particleX, Precision);
@@ -708,7 +708,37 @@ void toolbox::particles::assignmentchecks::moveParticle(
       internal::Event              existingNewEvent = _database.getEntry(newIdentifier, internal::Database::AnyTree ).first;
       #endif
 
-      assertion10(
+      const std::string errorMessage0 = R"(
+=============
+Explanation
+=============
+The tracer has been informed of a particle movement. When it tried to bookmark
+the particle with its new position, it found out that there is already a 
+particle registered at this place. It seems that a particle overlaps with 
+another one.
+
+This might mean that there is actually a particle here, but could also result 
+from two other situations:
+
+- We trace position updates one after the other. If particle A takes the 
+  position of a particle B, we might simply not have updated B yet.
+- We trace position updates only if positions have changed significantly.
+  Significantly here is formalised via
+
+      toolbox::particles::assignmentchecks::internal::ParticleIdentifier::Precision
+
+  That is, if particles are closer together than this delta, we do not write
+  logs into our database. This ensures that the database is not filled with 
+  tiny update entries.
+
+As the tracing cannot handle either situation, we are left with two options.
+We can dramatically reduce Precision at the cost of a higher overhead. 
+Alternatively, it might be appropriate to check the time step sizes 
+employed: If particles move too fast, the probability that A ends up at a 
+position just previously held by B (which is not yet updated) is higher.
+
+)";
+      assertion11(
         existingNewEvent.type == internal::Event::Type::NotFound,
         oldIdentifier.toString(),
         previousEvent.toString(),
@@ -717,9 +747,10 @@ void toolbox::particles::assignmentchecks::moveParticle(
         _database.getNumberOfSnapshots(),
         treeId,
         trace,
+        internal::ParticleIdentifier::Precision,
         _database.totalEntries(oldIdentifier),
         _database.particleHistory(oldIdentifier),
-        "make ParticleIdentifier::Precision smaller if this problem continues to persist (tracking might be too blurry) and ensure that particles do not overlap and collide"
+        errorMessage0
       );
       assertion9(
         previousEvent.type == internal::Event::Type::AssignToVertex,
