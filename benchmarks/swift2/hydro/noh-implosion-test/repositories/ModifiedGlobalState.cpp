@@ -132,6 +132,8 @@ void finishTimeStep() {
   if ( vertexdata::HydroPartSet::getNumberOfRemainingLocalParticles() < previousNumberOfRemainingLocalParticles) {
     toolbox::particles::assignmentchecks::eliminateExistingParticles();
     toolbox::particles::assignmentchecks::ensureDatabaseIsEmpty();
+    logError( "finishTimeStep()", "seems we have lost particles" );
+    exit(-1);
   }
 
 
