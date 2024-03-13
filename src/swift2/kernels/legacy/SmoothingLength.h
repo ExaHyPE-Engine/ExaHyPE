@@ -40,9 +40,13 @@ namespace swift2 {
         if (::swift2::kernels::localParticleCanBeUpdatedInVertexKernel(marker,localParticle)) {
           hydro_update_smoothing_length_and_rerun_if_required(&localParticle);
           assertion2(
-            localParticle.getSmoothingLength() <= tarch::la::min( marker.h() ),
+            localParticle.getSearchRadius() <= tarch::la::min( marker.h() ),
             marker.toString(), localParticle.toString()
           );
+          assertion2(
+            localParticle.getSmoothingLength() <= localParticle.getSearchRadius(),
+            marker.toString(), localParticle.toString()
+          );          
         }
       }
 
