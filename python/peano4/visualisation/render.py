@@ -4,8 +4,6 @@ import argparse
 
 from paraview.simple import *
 
-sys.path.insert(0, os.path.abspath('../../../python'))
-
 import peano4.visualisation
 import peano4.visualisation.filters
 

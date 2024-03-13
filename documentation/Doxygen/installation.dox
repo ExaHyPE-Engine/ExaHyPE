@@ -2,64 +2,63 @@
 
 \page page_installation Installation
 
-
-Peano is typicall acquired through a git clone.
+Peano is typically acquired through a git clone.
 You have to clone this archive first.
-We grant access to  free of charge and the repository is public. However,
-we ask users to sign up for the software if they indend to push
+We grant access free of charge, and the repository is public. However,
+we ask users to sign up for the software if they intend to push
 modifications to the code - which we very much appreciate. This way, we
-can report to funding agencies how frequent the software is used, and I
-also have at least some ideas which application areas benefit from the
+can report to funding agencies how frequently the software is used, and I
+also have at least some ideas about which application areas benefit from the
 software and where it is actively used and developed. If you do not
-indend to modify the  core code base, you can just clone the code
+intend to modify the core code base, you can just clone the code
 anonymously.
 
-
          git clone https://gitlab.lrz.de/hpcsoftware/Peano.git
-
 
 I still maintain the "old" Peano in the repository (version 3).
 However, we now work with the fourth generation of Peano (p4).
 Therefore, the default master is called ```p4```.
 
 
-Dependencies and prerequisites
+Dependencies and Prerequisites
 ===============================
 
-Peano's core is plain C++17 code.
-We however use a whole set of tools around it:
+Peano's core is plain C++17/C++20 code.
+We however use a whole set of tools around it.
 
-- GNU autotools (automake) or CMake to set up the system (required).
-- C++17-compatible C++ compiler (required).
-- Python3 (optional; not required if you work only with the C++ baseline).
-- MPI2 (optional). MPI's multithreaded support is required.
-- Intel's Threading Building Blocks (TBB), OpenMP 5 or SYCL. We also can work with C++
-  threads, but found their performance suboptimal.
-- Doxygen if you want to create HTML pages of PDFs of the in-code
-  documentation (recommended).
+- C++17/C++20-compatible C++ compiler (required).
+- GNU Autotools (automake) to set up the system (required).
+- CMake > 3.20 (required).
+- Python3 (optional but recommended; not required if you work only with the C++ baseline).
+- MPI (optional). MPI's multithreaded support is required.
+- Intel's Threading Build Blocks, C++ threads or OpenMP for multithreading (optional).
+- CUDA, ROCm, OpenSYCL or Intel oneAPI for GPU offloading (optional).
+- The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities (optional).
+- HDF5 (optional).
+- NetCDF (optional).
+- LIBXSMM (optional).
+- Doxygen if you want to create HTML pages of the documentation (optional).
 
-We test and maintain Peano  for Linux only.
+We test and maintain Peano for Linux only.
 If you prefer Windows or MacOS, it should work as long as you provide the
 mandatory tools from above, but we won't be able to help.
 Peano is well-integrated with a number of @ref page_third_party "third party tools",
 but these are all optional.
 
-
 Configure Peano
 ===================
 
-We currently provide support for the autotools and cmake with Peano.
+We currently provide support for Autotools and CMake with Peano.
 After you have cloned the repository, you will have to to set up your
 installation using either of these two build systems.
 This will allow you to build the Peano core libraries and is a step
 required before you use any application or tool built on top of Peano
 such as ExaHyPE or our PETSc multigrid environment.
 
-
-Prepare the configure environment (autotools)
+Prepare the Configure Environment (Autotools)
 ----------------------------------------------
 
-- Ensure you have the autotool packages installed on your system. They
+- Ensure you have the Autotools packages installed on your system. They
   typically are shipped in the packages `autoconf`, `automake` and
   `libtool`.
 - Set up the configure environment:
@@ -77,7 +76,7 @@ Prepare the configure environment (autotools)
   variants of Peano, its extensions and toolboxes.
 
 I recommend that you start a first test without any additional flavours
-of Peano, i.e. to work with a plain `./configure` call. Once the tests pass,
+of Peano, i.e. to work with a plain `./configure` call. Once the tests pass,
 I recommend that you add further options (IO) and/or parallelisation.
 Please note that the baseline configure is not sufficient for most
 applications, as it builds merely Peano's core libraries.
@@ -91,12 +90,11 @@ you can pass the variables to be used to `configure` through arguments
 for details.
 
 Most Linux tools prefer you to specify a dedicated installation
-directory via `--prefix`. For Peano, things are slightly different:  
-Peano is a mere set of libraries, i.e. not "useful" per se. It is applications built on top of
-Peano that become tools that you might later want to install/deploy on your
-system. Therefore, I ship Peano with static libraries only, and most users
-work with the code in the download/installation directory until they
-have constructed the application with the help of . So no need to
+directory via `--prefix`. For Peano, things are slightly different:
+Peano is a mere set of libraries, i.e. not "useful" per se. It is applications built on top of
+Peano that become tools that you might later want to install/deploy on your
+system. Therefore, I ship Peano with static libraries only, and most users
+work with the code in the download/installation directory. So no need to
 specify a proper installation directory via `--prefix`.
 
 
@@ -107,7 +105,7 @@ Once the configuration has been successful, a simple
 
      make
 
-should build the  core. It also builds some examples and all the
+should build the core. It also builds some examples and all the
 extensions and toolboxes you have manually enabled. All of these go into
 static libraries. The code is not small and you thus might prefer
 
@@ -116,20 +114,20 @@ static libraries. The code is not small and you thus might prefer
 with x being the number of parallel builds to use.
 
 
-Installation test
+Installation Test
 ====================
 
-Once you have compiled   I recommend that you run all tests using
+Once you have compiled, I recommend that you run all tests using
 
      make check
 
-The call launches Peano's unit test, i.e. all the unit tests for the
+The call launches Peano's unit test, i.e. all the unit tests for the
 core plus the extensions that you have enabled.
 
 I have written the test target such that it works out-of-the-box for
-non-MPI calls. If you have configured with `–with-mpi`, then the unit
+non-MPI calls. If you have configured with `--with-mpi`, then the unit
 tests will fail. But this does not mean that the unit tests are broken.
-It is simply due to the fact that the makefile's test target does not
+It is simply due to the fact that the Makefile's test target does not
 know that you have to use the `mpirun` prefix. To make a long story
 short: If you use MPI and you want to run the unit tests, you have to do
 so manually.
@@ -141,23 +139,20 @@ To run 2D and 3D tests individually, use
 
 You can run these builds with different core counts and also MPI support
 if you have compiled with MPI. The executables contain both node
-correctness tests and MPI ping-pong tests, i.e. you can both assess a
-valid build plus a working MPI environment. If successful, you should
-always get a message alike
+correctness tests and MPI ping-pong tests, i.e. you can both assess a
+valid build plus a working MPI environment.
 
 
-
-Python configuration
+Python Configuration
 =====================
 
-Peano's Python front-end (API) is developed with Python 3.
+Peano's Python front-end (API) is developed with Python 3.
 Python 2 is not supported.
-
 
 Package Installation
 ----------------------
 
-The easiest way to install the Peano python packages is to navigate to
+The easiest way to install the Peano Python packages is to navigate to
 `myPeanoDirectory/python` first (you're in the right place if you see the
 `pyproject.toml` file), and then run
 
@@ -166,33 +161,30 @@ The easiest way to install the Peano python packages is to navigate to
 to install the packages.
 
 Note:
-- It is strongly recommended to install the python packages in editable mode
+- It is strongly recommended to install the Python packages in editable mode
   (which is what the `-e` flag does). Otherwise, you'll have to re-install the
   packages every time something is changed.
 - The packages are not, and likely will never be, available through PyPI or
-  other official python package distributions. It simply doesn't make sense for
+  other official Python package distributions. It simply doesn't make sense for
   them to be published this way.
 
-
-
-Python paths
+Python Path
 -------------------
 
-As an alternative to installing the packages, you can modify your Python paths. There
+As an alternative to installing the packages, you can modify your Python path. There
 are multiple ways to do so.
 The standard way is to set the `PYTHONPATH`:
 
        export PYTHONPATH=myPeanoDirectory/python
 
-This can even be done in the `.bashrc`. If you "install" the Peano python
+This can even be done in the `.bashrc`. If you "install" the Peano Python
 packages this way, you will also need to manually install additional
 dependencies, as noted below.
-
 
 Python Dependencies
 -------------------
 
-Peano currently relies on the following Python packages/projects:
+Peano currently relies on the following Python packages/projects:
 
 - jinja2 for all the templated glue code. Most Linux distributions ship this
   one as
@@ -213,17 +205,14 @@ Peano currently relies on the following Python packages/projects:
 
         python3-matplotlib
 
-
-- Optional: Some scripts in the particles/swift2 make use of the python hdf5
+- Optional: Some scripts in the particles/swift2 make use of the Python HDF5
   package:
 
         python3-h5py
 
 - Optional: Some scripts in the particles/swift2 make use of the VTUinterface
   package for visualisation. The package is available <a
-  href="https://github.com/joergbuchwald/VTUinterface"> ``on github``</a>.
-
-
+  href="https://github.com/joergbuchwald/VTUinterface"> ``on GitHub``</a>.
 
 
 Fortran
@@ -245,43 +234,79 @@ Fortran---it is only applications built on top of ---you can redefine
 the flags later on.
 
 
-
-
-Sample Installation script
+Sample Installation Script for Autotools
 ===============================
 
-Please find below a sample shell script that will install Peano with ExaHyPE
+Please find below a sample shell script for Autotools that will install Peano with ExaHyPE
 enabled. Here we use GCC-12 and G++-12 as the C and C++ compiler, as well as
 OpenMP for the multithreading support. We also include some flags to suppress
 warnings.
 
-
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{bash}
 #!/bin/sh
 
-#will clean up the Peano directory if files from previous builds are present<br>
-make clean
+# Cleanup the Peano directory if files from previous builds are present
+make clean && make distclean
 
-#Standard operations<br>
+# Standard operations
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;
 
-#Configure Peano with whatever we need <br>
-./configure --enable-loadbalancing --enable-exahype --enable-blockstructured --with-multithreading=omp CXXFLAGS="--std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang::" LDFLAGS="-fopenmp" CC=gcc-12 CXX=g++-12
+# Configure Peano with whatever we need
+./configure --enable-exahype --enable-loadbalancing --enable-blockstructured --with-multithreading=omp CXXFLAGS="--std=c++20 -fopenmp -Wno-unknown-attributes -Wno-attributes=clang::" LDFLAGS="-fopenmp" CC=gcc-12 CXX=g++-12
 
-#Get number of threads available for quicker compilation<br>
+# Get number of threads available for quicker compilation
 THREADS_NUM=$(nproc --all)
 
-#Compile and check build<br>
-echo "Starting compilation with $THREADS_NUM threads."<br>
-make -j$THREADS_NUM <br>
-echo "Compilation complete. Now Checking..."<br>
+# Compile and check build
+echo "Starting compilation with $THREADS_NUM threads."
+make -j$THREADS_NUM
+echo "Compilation complete. Now Checking..."
 
-#checks installation and runs the unit tests <br>
+# Checks installation and runs the unit tests
 make check
 
 exit 0
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Sample Installation Script for CMake
+===============================
 
+Please find below a sample shell script for CMake that will install Peano with ExaHyPE
+enabled. Here we use GCC-12 and G++-12 as the C and C++ compiler, as well as
+OpenMP for the multithreading support. We also include some flags to suppress
+warnings.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{bash}
+#!/bin/sh
+
+# Cleanup the Peano directory if files from previous builds are present
+rm -rf build
+
+# Standard operations
+mkdir build && cd build
+
+# Configure Peano with whatever we need
+./CC=gcc-12 CXX=g++-12 cmake .. -DENABLE_EXAHYPE=ON -DENABLE_LOADBALANCING=ON -DENABLE_BLOCKSTRUCTURED=ON -DWITH_MULTITHREADING=omp
+
+# Get number of threads available for quicker compilation
+THREADS_NUM=$(nproc --all)
+
+# Compile and check build
+echo "Starting compilation with $THREADS_NUM threads."
+make -j$THREADS_NUM
+echo "Compilation complete. Now Checking..."
+
+# Checks installation and runs the unit tests
+make test
+
+exit 0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Install Peano Using the Container Infrastructure
+===============================
+
+\li \subpage page_installation_with_spack
+\li \subpage page_installation_with_docker
+\li \subpage page_installation_with_apptainer
 
 */
