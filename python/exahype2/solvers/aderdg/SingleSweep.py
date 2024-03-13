@@ -114,10 +114,6 @@ class SingleSweep(ADERDG):
         self._preprocess_reconstructed_patch = ""
         self._postprocess_updated_patch = ""
 
-
-    #    self._riemann_estimates.generator.send_condition                        = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Correction"
-    #    self._riemann_estimates.generator.receive_and_merge_condition           = "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Prediction"
-
     def create_action_sets(self):
         super(SingleSweep, self).create_action_sets()
 
