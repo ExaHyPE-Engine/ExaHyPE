@@ -8,11 +8,11 @@ import dastgen2
 import os
 
 from .Solver                                              import Solver
-from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
-from multigrid.petsc.actionsets.InitCellDoFs              import InitCellDoFs
-from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
-from multigrid.petsc.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
-from multigrid.petsc.actionsets.ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod   import ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod 
+from multigrid.petsc.api.actionsets.EnumerateDoFs             import EnumerateDoFs
+from multigrid.petsc.api.actionsets.InitCellDoFs              import InitCellDoFs
+from multigrid.petsc.api.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
+from multigrid.petsc.api.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
+from multigrid.petsc.api.actionsets.ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod   import ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod 
 
 from abc import abstractmethod
 
