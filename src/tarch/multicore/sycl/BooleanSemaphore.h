@@ -21,6 +21,7 @@ class tarch::multicore::BooleanSemaphore {
     friend class tarch::multicore::Lock;
     friend class RecursiveSemaphore;
     friend class tarch::mpi::BooleanSemaphore;
+    friend class MultiReadSingleWriteSemaphore;
 
     void enterCriticalSection();
     void leaveCriticalSection();

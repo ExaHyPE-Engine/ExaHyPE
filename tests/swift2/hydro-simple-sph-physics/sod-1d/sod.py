@@ -123,7 +123,7 @@ project = swift2.Project(
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
 
-name = "hydroPart"
+name = "HydroPart"
 
 dimensions = 2  # peano needs this for whatever reason...
 hydro_dimensions = 1  # dimensions for the hydro
@@ -138,8 +138,30 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     particles_per_cell=20,
     min_h=args.cell_size,
     max_h=args.cell_size,
-    asserts=args.asserts,
 )
+
+particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += """
+if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
+  ::swift2::kernels::forAllParticles( 
+    marker, 
+    assignedParticles, 
+    [&](const peano4::datamanagement::VertexMarker& marker, globaldata::""" + name + """&  assignedParticle)->void {
+      ::swift2::boundaryconditions::applyFixedBoundaryCondition(
+        assignedParticle,
+        marker,
+        DomainOffset,
+        DomainSize,
+        0.1,
+        _spacetreeId
+      );
+    }
+  );
+}
+"""
+particle.algorithm_steps_dict["Drift"].includes += """
+#include "swift2/boundaryconditions/FixedBoundary.h"
+#include "swift2/boundaryconditions/Utils.h"
+"""
 
 
 ########################################################################################
@@ -203,7 +225,8 @@ particle.set_parameters()
 particle_set = project.add_particle_species(particle)
 
 if args.asserts:
-    build_mode = peano4.output.CompileMode.Asserts
+    #  build_mode = peano4.output.CompileMode.Asserts
+    build_mode = peano4.output.CompileMode.Debug
 else:
     build_mode = peano4.output.CompileMode.Release
 
@@ -227,7 +250,7 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::RecursiveBipartition",
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new toolbox::loadbalancing::DefaultConfiguration()",
 )
 
@@ -242,6 +265,11 @@ project.algorithm_step_initial_conditions.add_action_set(
     )
 )
 
+
+#project.additional_action_sets_per_solver_step.append(
+#    swift2.api.boundaryconditions.Fixed(particle_set=particle_set,
+#                                        damp_particles_as_they_approach_boundary=True)
+#)
 
 ###############################################################################
 # Set up the plotter
@@ -280,8 +308,6 @@ particle_plotter.add_attribute_to_plot(particle.density, 1)
 particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
-particle_plotter.add_attribute_to_plot(particle.f, 1)
-particle_plotter.add_attribute_to_plot(particle.Ncount, 1)
 particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 

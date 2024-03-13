@@ -164,6 +164,38 @@ void toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
   }
 }
 
+void toolbox::blockstructured::restrictCellIntoOverlappingCell_inject_and_average(
+  int     numberOfDoFsPerAxisInSourcePatch,
+  int     numberOfDoFsPerAxisInDestinationPatch,
+  int     unknowns,
+  double* sourceValues,
+  double* destinationValues,
+  double  weightOfInjectedValue
+) {
+  assertion1( weightOfInjectedValue>=0.0, weightOfInjectedValue );
+  assertion1( weightOfInjectedValue<=1.0, weightOfInjectedValue );
+
+  // how many fine grid cells are mapped onto one destination cell
+  double sourceToDestinationRatio = static_cast<double>(numberOfDoFsPerAxisInSourcePatch) / static_cast<double>(numberOfDoFsPerAxisInDestinationPatch);
+  dfor( destinationVolume, numberOfDoFsPerAxisInDestinationPatch ) {
+    const int baseIndexDestination = peano4::utils::dLinearised(destinationVolume,numberOfDoFsPerAxisInDestinationPatch) * unknowns;
+
+    tarch::la::Vector<Dimensions,int> sourceVolume;
+    for (int d=0; d<Dimensions; d++) {
+      sourceVolume(d) = std::floor(
+        static_cast<double>(destinationVolume(d)) * sourceToDestinationRatio + 0.5 * sourceToDestinationRatio
+      );
+    }
+
+    const int baseIndexSource = peano4::utils::dLinearised(sourceVolume,numberOfDoFsPerAxisInSourcePatch) * unknowns;
+    for (int unknown=0; unknown<unknowns; unknown++) {
+      destinationValues[baseIndexDestination+unknown] =
+          weightOfInjectedValue       * sourceValues[baseIndexSource+unknown]
+        + (1.0-weightOfInjectedValue) * destinationValues[baseIndexDestination+unknown];
+    }
+  }
+}
+
 void toolbox::blockstructured::restrictCell_AoS_inject(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,

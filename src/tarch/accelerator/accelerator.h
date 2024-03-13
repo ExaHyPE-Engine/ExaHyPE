@@ -3,6 +3,7 @@
 #pragma once
 
 #include "tarch/multicore/multicore.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 #if !defined(GPUOffloadingOMP) and !defined(GPUOffloadingSYCL) and !defined(GPUOffloadingCPP) and !defined(GPUOffloadingCUDA)
 #define GPUOffloadingOff
@@ -40,17 +41,17 @@ namespace tarch {
    * implementation can be found in accelerator.cpp. The vendor-specific
    * implementations are hold within their accelerator.cpp file.
    */
-  #if defined(GPUOffloadingOMP)
-  #pragma omp declare target
+#if defined(GPUOffloadingOMP)
+#pragma omp declare target
   void gpuAbort();
-  #pragma omp end declare target
-  #elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
+#pragma omp end declare target
+#elif defined(GPUOffloadingSYCL) or defined(SharedSYCL)
   GPUCallableMethod void gpuAbort();
-  #elif defined(GPUOffloadingCPP)
+#elif defined(GPUOffloadingCPP)
   GPUCallableMethod void gpuAbort();
-  #else
+#else
   void gpuAbort();
-  #endif
+#endif
 
   enum class MemoryLocation {
     /**
@@ -70,16 +71,53 @@ namespace tarch {
     ManagedSharedAcceleratorDeviceMemory
   };
 
-  std::string toString( MemoryLocation value );
+  std::string toString(MemoryLocation value);
 
 
   namespace internal {
     void* allocateRawData(int size, MemoryLocation location);
-  }
+  } // namespace internal
 
-  template <class T=double>
-  T* allocateMemory( int size, MemoryLocation location, [[maybe_unused]] int device = -1 ) {
-     return reinterpret_cast<T*>( internal::allocateRawData(size * static_cast<int>(sizeof(T)), location ) );
+  template <class T = double>
+  T* allocateMemory(int size, MemoryLocation location, [[maybe_unused]] int device = -1) {
+    return reinterpret_cast<T*>(internal::allocateRawData(size * static_cast<int>(sizeof(T)), location));
   }
   void freeMemory(void* data, MemoryLocation location);
-}
+
+  int padSizeToAlignment(int size, int aligment);
+
+  /**
+   * Alternative GPU-ready version of memset
+   *
+   * AMD's standard library hasn't annotated the memset call with target
+   * offload for OpenMP. So we have to provide a GPU-ready version ourselves.
+   * We do so if and only if the OpenMPManuallyOffloadMemset macro is set. It
+   * is typically set in the CompilerSpecificSettings.h. If that macro is not
+   * defined, we fall back to std::memset.
+   *
+   * The signature here is compatible with std::memset. The original interface
+   * is
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * char* memset(char* dest, int ch, size_t count);
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * which is just not nice. It should be
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * double* memset(double* dest, double ch, size_t countNumberOfDoubles);
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * but that's not what the C++ standard gives us. So we pick the nicest
+   * interface we could think of, but is still compatible.
+   *
+   * @param count Byte count.
+  */
+  #if defined(GPUOffloadingOMP)
+  #pragma omp declare target
+  #endif
+  double* memset(double* dest, double ch, size_t byteCount);
+  #if defined(GPUOffloadingOMP)
+  #pragma omp end declare target
+  #endif
+} // namespace tarch

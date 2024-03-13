@@ -43,6 +43,12 @@ For an introduction into the topic, see e.g. <a href="https://arxiv.org/abs/1012
 Internal Terminology
 =========================
 
+- **active particles**: The set of *local particles* plus the active set from the father cell
+in the spacetree. This is a recursive definition. See @ref page_toolbox_particles_mesh_traversal
+for more details.
+
+- **halo particles**: Same as **virtual particles**.
+
 - **kernel** : see *swift kernel*
 
 - **search radius** : The radius within which to search for neighbour particles. Naturally, the
@@ -53,6 +59,25 @@ need to touch it.
 
 - **swift kernel** : Functions which actually contain the physics and computations required for SPH,
 which are taken from the SWIFT code. Not to be confused with *SPH kernel*.
+
+- **local particles** : The term "local particles" is used in two different contexts within Peano:
+
+    1) "local" as in "not virtual": This describes the particle's parallel state. Local particles
+    are particles situated in the current rank's/subtree's domain. Virtual particles are copies of
+    particles somewhere else. See peano4.toolbox.particles.api.UpdateParallelState.UpdateParallelState
+    for more details.
+
+    2) "local" as in "not active": Particles associated with local, persistent (non-hanging) vertices
+    of a cell. See @ref page_toolbox_particles_mesh_traversal for more details.
+
+
+- **virtual particles** : Particles that are located on some different rank's/subtree's domain, as
+opposed to "local particles". Sometimes also called "halo particles". Virtual particles are copies
+of particles somewhere else. See peano4.toolbox.particles.api.UpdateParallelState.UpdateParallelState
+for more details.
+
+
+
 
 
 */

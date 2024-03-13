@@ -35,7 +35,7 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
         position_delta_between_two_snapsots=1e-8,
         time_delta_between_two_snapsots=0,
         output_precision=8,
-        clearDatabaseAfterFlush=True,
+        clear_database_after_flush=True,
         use_relative_deltas=False,
         initial_record_time=-1,
         last_record_time=1e8,
@@ -81,7 +81,7 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
         last_record_time: Float
           you can specify at when does the tracer stop dumping data to files.
           
-        clearDatabaseAfterFlush: Boolean
+        clear_database_after_flush: Boolean
         """
         super(DumpTracerIntoDatabase, self).__init__(descend_invocation_order=1, parallel=False)
         self.d = {}
@@ -98,7 +98,7 @@ class DumpTracerIntoDatabase(peano4.solversteps.ActionSet):
             self.d["USE_RELATIVE_DELTAS"] = "true"
         else:
             self.d["USE_RELATIVE_DELTAS"] = "false"
-        if clearDatabaseAfterFlush:
+        if clear_database_after_flush:
             self.d["CLEAR_DATABASE_AFTER_FLUSH"] = "true"
         else:
             self.d["CLEAR_DATABASE_AFTER_FLUSH"] = "false"

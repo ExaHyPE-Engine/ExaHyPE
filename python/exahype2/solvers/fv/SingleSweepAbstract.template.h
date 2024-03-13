@@ -8,11 +8,10 @@
 
 #include "exahype2/RefinementControl.h"
 #include "exahype2/Solver.h"
-#include "exahype2/NonCriticalAssertions.h"
-
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/accelerator/accelerator.h"
+#include "tarch/NonCriticalAssertions.h"
 
 #include "peano4/utils/Globals.h"
 
@@ -229,15 +228,35 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
 
+    {% if STATELESS_PDE_TERMS %}
+    /**
+     * By default each patch can use stateless PDE terms, i.e. the static
+     * versions of the operators. Therefore, each patch can go to the GPU
+     * or inline aggressively. You can disable this behaviour for selected
+     * patches via this callback.
+     */
+    {% else %}
+    /**
+     * Warning: This operation has no semantics, as you have disabled
+     * stateless PDE terms. The routine is here to allow you to write one
+     * code version for both a GPU-enabled solver and a solver without
+     * GPU support.
+     */
+    {% endif %}
+    virtual bool patchCanUseStatelessPDETerms(
+      const tarch::la::Vector<Dimensions, double>& patchCentre,
+      const tarch::la::Vector<Dimensions, double>& patchH,
+      double                                       t,
+      double                                       dt
+    ) const;
+
     /**
      * Feel free to overwrite in user code, but ensure the superclass
      * implementation is still invoked, too.
      */
     virtual void startSimulation() override;
 
-
     virtual void suspendSolversForOneGridSweep() override;
-
 
     /**
      * Feel free to overwrite in user code, but ensure the superclass

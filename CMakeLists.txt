@@ -1,37 +1,39 @@
 cmake_minimum_required(VERSION 3.20.5)
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
-  execute_process(
-    COMMAND git rev-parse --abbrev-ref HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_BRANCH
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  execute_process(
-    COMMAND git rev-parse HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-  execute_process(
-    COMMAND git rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH_SHORT
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-else()
-  set(GIT_BRANCH "")
-  set(GIT_COMMIT_HASH "")
-  set(GIT_COMMIT_HASH_SHORT "")
-endif()
-
 set(META_PROJECT_NAME "Peano")
 set(META_PROJECT_DESCRIPTION "Peano is an open source framework for solvers on dynamically adaptive Cartesian meshes")
 set(META_AUTHOR_ORGANIZATION "Durham University and Technische Universitaet Muenchen")
 set(META_AUTHOR_DOMAIN "www.peano-framework.org")
-set(META_VERSION_REVISION "${GIT_COMMIT_HASH_SHORT}")
+
+# This has to be done before the project is created and before any languages are added.
+# Adding a subdirectory does not help here and needs to be explicitly given with the path(cmake/...),
+# Because this file is needed by CMake itself and not by the project.
+# We need to override specific compiler flags initialized by CMake, to
+# match them exactly with the flags defined in Peano Automake build system.
+# More details can be found in the cmake/CustomMakeRules.cmake file.
+# For example, the Peano release optimisation flag is -O3 (and -DNDEBUG in definitions);
+# but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/CustomMakeRules.cmake")
+
+project(${META_PROJECT_NAME}
+  DESCRIPTION ${META_PROJECT_DESCRIPTION}
+  HOMEPAGE_URL ${META_AUTHOR_DOMAIN}
+  LANGUAGES C CXX
+)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+include(GetGitRevisionDescription)
+get_git_head_revision(GIT_BRANCH GIT_COMMIT_HASH)
+get_git_commit_message(GIT_COMMIT_MESSAGE)
+get_git_commit_timestamp(GIT_COMMIT_TIMESTAMP)
+
+set(META_VERSION_REVISION "${GIT_COMMIT_HASH}")
 set(META_GIT_BRANCH "${GIT_BRANCH}")
 set(META_GIT_HASH "${GIT_COMMIT_HASH}")
-set(META_GIT_BUGREPORT "https://gitlab.lrz.de/hpcsoftware/Peano/-/issues")
+set(META_GIT_COMMIT_MESSAGE "${GIT_COMMIT_MESSAGE}")
 set(META_GIT_URL "https://gitlab.lrz.de/hpcsoftware/Peano")
-message(STATUS "On Git Branch: ${GIT_BRANCH} (${GIT_COMMIT_HASH})")
+message(STATUS "Revision: ${GIT_BRANCH} -m \"${GIT_COMMIT_MESSAGE}\" (${GIT_COMMIT_HASH}) ${GIT_COMMIT_TIMESTAMP}")
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
@@ -49,22 +51,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
-# This has to be done before the project is created and before any languages are added.
-# Adding a subdirectory does not help here and needs to be explicitly given with the path( cmake/...),
-# Because this file is needed by CMake itself and not by the project.
-# We need to override specific compiler flags initialized by CMake, to
-# match them exactly with the flags defined in Peano Automake build system.
-# More details can be found in the cmake/PeanoCustomInitFlags.cmake file.
-# For example, the Peano release flags are -O3 and -O4 for NVHPC compilers (and -DNDEBUG in definitions);
-# but NVHPC defaults are -fast and -O3 in some systems, we override these with this.
-set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/PeanoCustomInitFlags.cmake")
-
-set(LANGUAGES C CXX)
-project(
-  ${META_PROJECT_NAME}
-  DESCRIPTION ${META_PROJECT_DESCRIPTION}
-  HOMEPAGE_URL ${META_AUTHOR_DOMAIN}
-  LANGUAGES ${LANGUAGES})
 file(WRITE "${PROJECT_BINARY_DIR}/.gitignore" "*")
 set(META_COMPILER_VERSION "${CMAKE_SYSTEM_NAME} ${CMAKE_CXX_COMPILER_ID} (${CMAKE_CXX_COMPILER_VERSION})")
 message(STATUS "Compiler is: ${META_COMPILER_VERSION}")
@@ -75,13 +61,24 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
-add_subdirectory(cmake)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jinja2" RESULT_VARIABLE JINJA2_FOUND)
+# We need Jinja2 for code generation
+if(NOT JINJA2_FOUND EQUAL 0)
+  message(WARNING "Jinja2 package (needed for code generation) not found. Please install Jinja2 e.g.: 'pip3 install jinja2'")
+else()
+  message(STATUS "Found Jinja2")
+endif()
+
 include(MessageUtils)
 include(Clang-Format)
-#include(Clang-Tidy)
 #include(Cppcheck)
-#include(Link-What-You-Use)
 #include(Coverage)
+include(Sanitisers)
+include(IWYU)
+include(Clang-Tidy)
+include(CCache)
+include(Doxygen)
 include(TestBigEndian)
 test_big_endian(BIG_ENDIAN)
 include(ProcessorCount)
@@ -98,7 +95,8 @@ if(IPO_SUPPORTED)
   message(STATUS "IPO/LTO enabled")
   set_property(GLOBAL PROPERTY INTERPROCEDURAL_OPTIMIZATION 1)
 else()
-  message(STATUS "IPO/LTO not supported: ${IPO_ERROR}")
+  #message(STATUS "IPO/LTO not supported: ${IPO_ERROR}")
+  message(WARNING "IPO/LTO not supported")
 endif()
 
 add_library(project_warnings INTERFACE)
@@ -176,19 +174,11 @@ if(WITH_MULTITHREADING)
   string(TOUPPER ${WITH_MULTITHREADING} WITH_MULTITHREADING_UPPER)
   target_compile_definitions(project_options INTERFACE Shared${WITH_MULTITHREADING_UPPER})
   target_compile_definitions(project_options INTERFACE SharedMemoryParallelisation)
-  endif()
+endif()
 if(WITH_MULTITHREADING STREQUAL "omp")
   find_package(OpenMP REQUIRED)
   check_include_files(omp.h HAVE_OMP_H)
-
-  # Workaround for Intel oneAPI. TODO: Fix this:
-  # "PLEASE append the compiler options "-save-temps -v", rebuild the application to get the full command which is failing"
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
-    target_compile_options(project_options INTERFACE -fopenmp)
-    target_link_libraries(project_options INTERFACE -fopenmp)
-  else()
-    target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
-  endif()
+  target_link_libraries(project_options INTERFACE OpenMP::OpenMP_C OpenMP::OpenMP_CXX)
 elseif(WITH_MULTITHREADING STREQUAL "tbb")
   find_package(TBB REQUIRED)
   target_link_libraries(project_options INTERFACE TBB::tbb)
@@ -198,6 +188,8 @@ elseif(WITH_MULTITHREADING STREQUAL "cpp")
   target_link_libraries(project_options INTERFACE Threads::Threads)
 elseif(WITH_MULTITHREADING STREQUAL "sycl")
   check_include_files(CL/sycl.hpp HAVE_CL_SYCL_HPP)
+  target_compile_options(project_options INTERFACE -fsycl)
+  target_link_options(project_options INTERFACE -fsycl)
 endif()
 
 list(APPEND ACCELERATOR_BACKENDS
@@ -247,8 +239,8 @@ endif()
 
 if("${WITH_GPU}" STREQUAL "cuda")
   set(ENABLE_CUDA_COMPILATION_OPTIONS ON)
-  cmake_dependent_option(CUDA_SEPARABLE_COMPILATION "Cuda Separable Compilation" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
-  cmake_dependent_option(CUDA_RESOLVE_DEVICE_SYMBOLS "Cuda Resolve Device Symbols" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
+  cmake_dependent_option(CUDA_SEPARABLE_COMPILATION "CUDA separable compilation" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
+  cmake_dependent_option(CUDA_RESOLVE_DEVICE_SYMBOLS "CUDA resolve device symbols" ON "ENABLE_CUDA_COMPILATION_OPTIONS" OFF)
   find_package(CUDAToolkit REQUIRED)
   target_link_libraries(project_options INTERFACE CUDA::toolkit)
 else()
@@ -259,8 +251,8 @@ if(WITH_GPU)
   string(TOUPPER ${WITH_GPU} WITH_GPU_UPPER)
   target_compile_definitions(project_options INTERFACE GPUOffloading${WITH_GPU_UPPER})
   if(WITH_GPU STREQUAL "omp")
-    find_package(OpenMPWithOffloading REQUIRED)
-    target_link_libraries(project_options INTERFACE OpenMP::OpenMP_CXX_with_offloading)
+    find_package(OpenMPTarget REQUIRED)
+    target_link_libraries(project_options INTERFACE OpenMP::OpenMPTarget)
   elseif(WITH_GPU STREQUAL "cpp")
     if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
       string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
@@ -268,76 +260,84 @@ if(WITH_GPU)
       target_compile_options(project_options INTERFACE -mp=gpu -gpu=cc${GPU_ARCH_SUFFIX} -stdpar=gpu)
     endif()
   elseif(WITH_GPU STREQUAL "sycl")
+    if(NVIDIA_GPU)
+      target_compile_options(project_options INTERFACE -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
+      target_link_options(project_options INTERFACE -fsycl -fsycl-targets=nvptx64-nvidia-cuda -Xsycl-target-backend=nvptx64-nvidia-cuda --offload-arch=${WITH_GPU_ARCH})
+    elseif(AMD_GPU)
+      target_compile_options(project_options INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
+      target_link_options(project_options INTERFACE -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend=amdgcn-amd-amdhsa --offload-arch=${WITH_GPU_ARCH})
+    endif()
   elseif(WITH_GPU STREQUAL "hip")
+    message(WARNING "Currently the flags for HIP need to be passed manually")
   elseif(WITH_GPU STREQUAL "cuda")
     set(CMAKE_CUDA_HOST_COMPILER ${CMAKE_CXX_COMPILER})
     set(CMAKE_CUDA_STANDARD 17)
     enable_language(CUDA)
-    option(CUDA_SEPARABLE_COMPILATION "CUDA Separable Compilation" ON)
-    option(CUDA_RESOLVE_DEVICE_SYMBOLS "CUDA Resolve Device Symbols" ON)
+    option(CUDA_SEPARABLE_COMPILATION "CUDA separable compilation" ON)
+    option(CUDA_RESOLVE_DEVICE_SYMBOLS "CUDA resolve device symbols" ON)
     find_package(CUDAToolkit REQUIRED)
     target_link_libraries(project_options INTERFACE CUDA::toolkit)
     string(SUBSTRING "${WITH_GPU_ARCH}" 3 5 GPU_ARCH_SUFFIX)
-    set(CMAKE_CUDA_ARCHITECTURES ${GPU_ARCH_SUFFIX} CACHE INTERNAL "CUDA Architecture" FORCE)
+    set(CMAKE_CUDA_ARCHITECTURES ${GPU_ARCH_SUFFIX} CACHE INTERNAL "CUDA architecture" FORCE)
   endif()
 endif()
 
-set(CMAKE_CONFIGURATION_TYPES "Debug" "Release" "Asserts" "Trace" "Stats" CACHE STRING "Enabled build types" FORCE)
-if(NOT CMAKE_BUILD_TYPE OR NOT ${CMAKE_BUILD_TYPE} IN_LIST CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE "" CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES})
-  list(APPEND BUILD_MODES ${CMAKE_CONFIGURATION_TYPES})
-else()
-  list(APPEND BUILD_MODES ${CMAKE_BUILD_TYPE})
+# Set default build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Debug;Release;Asserts;Trace;Stats" CACHE STRING "Choose the type of build (Debug, Release, Asserts, Trace, Stats)" FORCE)
+endif()
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS " " "Debug" "Release" "Asserts" "Trace" "Stats" "Debug\;Release\;Asserts\;Trace\;Stats")
+set(WITH_DIMENSIONS "2;3" CACHE STRING "Dimensions to build with ;-separated list of values")
+
+if(PEANO_BUILD_TYPE)
+  if(CMAKE_BUILD_TYPE)
+    list(FIND CMAKE_BUILD_TYPE ${PEANO_BUILD_TYPE} index)
+    if(index EQUAL -1)
+      set(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} ${PEANO_BUILD_TYPE} CACHE STRING "List of build types" FORCE)
+    endif()
+  else()
+    set(CMAKE_BUILD_TYPE ${PEANO_BUILD_TYPE} CACHE STRING "List of build types" FORCE)
+  endif()
 endif()
 
-# Update core libraries' build modes and dimensions if it is not set to build all and if the build type of an application is different.
-if(CMAKE_BUILD_TYPE AND PEANO_APP_BUILD_TYPE AND NOT "${CMAKE_BUILD_TYPE}" STREQUAL "${PEANO_APP_BUILD_TYPE}")
-  set(CMAKE_BUILD_TYPE ${PEANO_APP_BUILD_TYPE} CACHE STRING "${CMAKE_CONFIGURATION_TYPES}" FORCE)
-  list(APPEND BUILD_MODES ${PEANO_APP_BUILD_TYPE})
+if(PEANO_DIMENSIONS)
+  foreach(DIMENSION IN LISTS PEANO_DIMENSIONS)
+    list(FIND WITH_DIMENSIONS "${PEANO_DIMENSIONS}" index)
+    if(index EQUAL -1)
+      if (WITH_DIMENSIONS)
+        set(WITH_DIMENSIONS "${WITH_DIMENSIONS};${DIMENSION}" CACHE STRING "Dimensions to build with ;-separated list of values" FORCE)
+      else()
+        set(WITH_DIMENSIONS "${DIMENSION}" CACHE STRING "Dimensions to build with ;-separated list of values" FORCE)
+      endif()
+    endif()
+  endforeach()
 endif()
 
-# LDFLAGS are currently empty but might be required in the future
-# Note linkers (ld, lld) ignore the flag -g when passed
+# Note: linkers (ld, lld) ignore the flag -g when passed.
 # Also see: https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_node/ld_3.html
-if(${CMAKE_CXX_COMPILER_ID} MATCHES "NVHPC|PGI")
-  set(PEANO_CXX_FLAGS_RELEASE -O4)
-  set(PEANO_CUDA_FLAGS_RELEASE -O3) # NVCC does not have -O4, if given, it will be forwarded only to host compiler.
-else()
-  set(PEANO_CXX_FLAGS_RELEASE -O3)
-  set(PEANO_CUDA_FLAGS_RELEASE -O3)
-endif()
+set(PEANO_CXX_FLAGS_RELEASE -O3)
+set(PEANO_CUDA_FLAGS_RELEASE -O3)
 set(PEANO_RELEASE_DEFINITIONS -DPeanoDebug=0 -DNDEBUG)
-set(PEANO_RELEASE_LDFLAGS )
 
 #-O2 -fno-omit-frame-pointer
 set(PEANO_CXX_FLAGS_DEBUG -g -O0)
 set(PEANO_CUDA_FLAGS_DEBUG -g -O0)
 set(PEANO_DEBUG_DEFINITIONS -DPeanoDebug=4)
-set(PEANO_DEBUG_LDFLAGS )
 
 set(PEANO_CXX_FLAGS_STATS ${PEANO_CXX_FLAGS_RELEASE})
 set(PEANO_CUDA_FLAGS_STATS ${PEANO_CUDA_FLAGS_RELEASE})
 set(PEANO_STATS_DEFINITIONS -DPeanoDebug=0 -DTrackStatistics)
-set(PEANO_STATS_LDFLAGS )
 
 set(PEANO_CXX_FLAGS_ASSERTS ${PEANO_CXX_FLAGS_DEBUG})
 set(PEANO_CUDA_FLAGS_ASSERTS ${PEANO_CUDA_FLAGS_DEBUG})
 set(PEANO_ASSERTS_DEFINITIONS -DPeanoDebug=2)
-set(PEANO_ASSERTS_LDFLAGS )
 
 set(PEANO_CXX_FLAGS_TRACE -g -O2)
 set(PEANO_CUDA_FLAGS_TRACE ${PEANO_CXX_FLAGS_TRACE})
 set(PEANO_TRACE_DEFINITIONS -DPeanoDebug=1 -DNDEBUG)
-set(PEANO_TRACE_LDFLAGS )
-
-set(WITH_DIMENSIONS "2;3" CACHE STRING "Build with number of (space) dimensions")
-
-if(NOT "${WITH_DIMENSIONS}" STREQUAL "2;3" AND PEANO_APP_DIMENSION AND NOT "${WITH_DIMENSIONS}" STREQUAL "${PEANO_APP_DIMENSION}")
-  set(WITH_DIMENSIONS ${PEANO_APP_DIMENSION} CACHE STRING "Dimensions 2;3" FORCE)
-endif()
 
 option(WITH_MPI "Build with Message Passing Interface (MPI) support" OFF)
+option(WITH_TARGETDART "Build with targetDART support" OFF)
 option(WITH_OTTER "Build with Otter support" OFF)
 option(WITH_PETSC "Build with PETSc support" OFF)
 option(WITH_LIBXSMM "Build with LIBXSMM support" OFF)
@@ -374,11 +374,14 @@ if(WITH_PETSC)
   target_include_directories(project_options INTERFACE ${PETSc_INCLUDE_DIRS})
 endif()
 
+if(WITH_TARGETDART)
+  target_compile_definitions(project_options INTERFACE UseTargetDART)
+endif()
+
 if(WITH_LIBXSMM)
   find_package(LIBXSMM REQUIRED)
   target_compile_definitions(project_options INTERFACE UseLibXSMM)
-  target_link_libraries(project_options INTERFACE ${LIBXSMM_LIBRARIES}) #target_link_system_libraries
-  target_include_directories(project_options INTERFACE ${LIBXSMM_INCLUDE_DIRS}) #target_include_system_directories
+  target_link_libraries(project_options INTERFACE LIBXSMM::LIBXSMM)
 endif()
 
 if(WITH_VTK)
@@ -417,32 +420,33 @@ write_basic_package_version_file(
   COMPATIBILITY SameMajorVersion
 )
 
-list(APPEND DRIECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications")
-foreach(item IN LISTS DRIECTORIES_TO_LINK_OVER)
-  if (NOT EXISTS "${CMAKE_BINARY_DIR}/${item}")
-    execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/${item}" "${CMAKE_BINARY_DIR}/${item}")
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${item}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
+function(create_symlinks source_dir dest_dir)
+  file(MAKE_DIRECTORY "${dest_dir}")
+  file(GLOB_RECURSE items LIST_DIRECTORIES TRUE RELATIVE "${source_dir}" "${source_dir}/*")
+  foreach(item IN LISTS items)
+    set(source_dir_item "${source_dir}/${item}")
+    set(dest_dir_item "${dest_dir}/${item}")
+    if(IS_DIRECTORY ${source_dir_item})
+      file(MAKE_DIRECTORY "${dest_dir_item}")
+    else()
+      get_filename_component(dest_dir_item_path "${dest_dir_item}" DIRECTORY)
+      file(RELATIVE_PATH relative_source_item "${dest_dir_item_path}" "${source_dir_item}")
+      execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink "${relative_source_item}" "${dest_dir_item}")
+    endif()
+  endforeach()
+endfunction()
+
+list(APPEND DIRECTORIES_TO_LINK_OVER "python" "tutorials" "benchmarks" "applications" "documentation")
+foreach(directory IN LISTS DIRECTORIES_TO_LINK_OVER)
+  if(NOT EXISTS "${CMAKE_BINARY_DIR}/${directory}")
+    create_symlinks("${CMAKE_SOURCE_DIR}/${directory}" "${CMAKE_BINARY_DIR}/${directory}")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/${directory}" DESTINATION "${CMAKE_INSTALL_PREFIX}")
   endif()
 endforeach()
 
 file(TOUCH ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 include(${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_BINARY_DIR}/GeneratedSubdirectory.cmake)
-
-if (NOT EXISTS "${CMAKE_BINARY_DIR}/documentation")
-  execute_process(COMMAND cp -rsfn "${CMAKE_SOURCE_DIR}/documentation" "${CMAKE_BINARY_DIR}/documentation")
-endif()
-
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-    set(DOXYGEN ${CMAKE_CURRENT_BINARY_DIR}/documentation/Doxyfile)
-
-    add_custom_target(documentation
-        COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN}
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMENT "Generating API documentation with Doxygen"
-        VERBATIM)
-endif(DOXYGEN_FOUND)
 
 add_subdirectory(src)
 
@@ -493,6 +497,7 @@ display_variable(WITH_GPU)
 display_variable(WITH_GPU_ARCH)
 display_variable(WITH_DIMENSIONS)
 display_variable(WITH_MPI)
+display_variable(WITH_TARGETDART)
 display_variable(WITH_OTTER)
 if(DEFINED Otter_DIR)
   display_variable(Otter_DIR)
@@ -509,28 +514,28 @@ display_variable(ENABLE_LOADBALANCING)
 display_variable(ENABLE_PARTICLES)
 display_variable(ENABLE_BLOCKSTRUCTURED)
 
+display_subseparator("Options for Sanitisers")
+display_variable(SANITISE_ADDRESS)
+display_variable(SANITISE_UNDEFINED)
+display_variable(SANITISE_THREAD)
+
 display_subseparator("Options to Build")
 display_variable(CMAKE_C_COMPILER)
 display_variable(CMAKE_C_STANDARD)
 display_variable(CMAKE_CXX_COMPILER)
 display_variable(CMAKE_CXX_STANDARD)
+display_variable(MPI_CXX_COMPILER)
 display_variable(CMAKE_BUILD_TYPE)
-display_variable(CMAKE_CONFIGURATION_TYPES)
 display_variable(PEANO_CXX_FLAGS_RELEASE)
 display_variable(PEANO_RELEASE_DEFINITIONS)
-display_variable(PEANO_RELEASE_LDFLAGS)
 display_variable(PEANO_CXX_FLAGS_DEBUG)
 display_variable(PEANO_DEBUG_DEFINITIONS)
-display_variable(PEANO_DEBUG_LDFLAGS)
 display_variable(PEANO_CXX_FLAGS_STATS)
 display_variable(PEANO_STATS_DEFINITIONS)
-display_variable(PEANO_STATS_LDFLAGS)
 display_variable(PEANO_CXX_FLAGS_ASSERTS)
 display_variable(PEANO_ASSERTS_DEFINITIONS)
-display_variable(PEANO_ASSERTS_LDFLAGS)
 display_variable(PEANO_CXX_FLAGS_TRACE)
 display_variable(PEANO_TRACE_DEFINITIONS)
-display_variable(PEANO_TRACE_LDFLAGS)
 display_variable(CMAKE_VERBOSE_MAKEFILE)
 display_variable(BUILD_SHARED_LIBS)
 display_variable(CMAKE_CXX_FLAGS_INIT)

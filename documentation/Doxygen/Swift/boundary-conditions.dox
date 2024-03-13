@@ -1,0 +1,127 @@
+/**
+
+ @page swift_boundary_conditions Boundary conditions and solver coupling
+
+ Boundary conditions are notoriously challenging within SPH. So is solver 
+ coupling. In Swift, we recommend to realise volumetric
+ boundary conditions, which means that we do not alter individual particles,
+ but can modify whole particle sets close to the boundary. Periodic boundary
+ conditions are an exception: They are natively supported through Peano.
+ 
+ 
+ # Periodic boundary conditions
+ 
+ Periodic boundary conditions are enabled globally for a Swift project. Other
+ conditions can be imposed particle species by species, but periodic BCs are 
+ global:
+ 
+  ~~~~~~~~~~~~~~~~~~~~~~~~ 
+  project.set_global_simulation_parameters(
+    dimensions=dimensions,
+    offset=offset,
+    domain_size=domain_size,
+    min_end_time=args.end_time,
+    max_end_time=0.0,
+    first_plot_time_stamp=0.0,
+    time_in_between_plots=args.plot_delta,
+    periodic_BC=[True,True,False],
+    plotter_precision=8,
+  )
+  ~~~~~~~~~~~~~~~~~~~~~~~~ 
+  
+ It is possible to switch them on/off per coordinate axis. Once enabled, the 
+ underlying Peano framework realises them through a plain domain decomposition.
+ That is, any particle close to the right border appears in turn as halo 
+ particle on the left and vice versa.
+  
+  
+ # Other boundary conditions
+
+ We distinguish two different variants how to implement boundary conditions. 
+ One is inspired by our capability to couple SPH to other solvers and the 
+ other one plugs into the drift mechanism. Both have pros and cons.
+ 
+ ## Plug into each and every grid sweep
+ 
+ The Swift project allows us to add our own @ref peano_action_sets "set of actions" to 
+ each and every mesh sweep. That is, Swift's graph compiler will lower the 
+ abstract SPH steps into a series of mesh sweeps per time step, and we can then
+ afterwards add further actions to these mesh sweeps. This is done by appending
+ action sets to the project:
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+project.additional_action_sets_per_solver_step.append(
+    swift2.api.boundaryconditions.Fixed(particle_set=particle_set, 
+                                        damp_particles_as_they_approach_boundary=True
+                                        )
+)
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ There are various pre-defined action sets to realise various SPH boundary 
+ conditions:
+ 
+ - swift2.api.boundaryconditions.Inflow
+ - swift2.api.boundaryconditions.Fixed
+ - swift2.api.boundaryconditions.Outflow
+
+ The advantage with this approach is that it provides a totally generic 
+ approach to add boundary conditions. The disadvantage here is that this action
+ set is merged into each and every mesh sweep. However, we should not really 
+ alter the particle position "arbitrarily" (which is what a lot of boundary
+ condition action sets do), as we then have to resort the particles. Also, it
+ is economically not very clever to check the boundary conditions in each and 
+ every traversal. It makes sense to do these checks only after drifts.
+   
+ 
+ ## Plug into the particle drifts
+ 
+ In line with the observations above, it is often more elegant to plug into 
+ the particle drift as a postprocessing step. There is no generic solution to 
+ this approach however. It depends on the type of particle you use, and each
+ particle species variant might require you to add such a a posterior check
+ in a different way.
+ 
+ In the leapfrog SPH solver, for example, attaching a boundary check can be 
+ realised as follows:
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+particle.algorithm_steps_dict["Drift"].touch_vertex_last_time_kernel += """
+::swift2::kernels::forAllParticles( 
+  marker, 
+  assignedParticles, 
+  [&](const peano4::datamanagement::VertexMarker& marker, Particle& assignedParticle)->void {
+    ::swift2::boundaryconditions::applyFixedBoundaryCondition(
+      assignedParticle,
+      marker,
+      DomainOffset,
+      DomainSize,
+      0.1,
+      _spacetreeId
+    );
+  }
+);
+"""
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ which is the preamble to a reconfiguration of the individual initialisation
+ and solver steps. As written above, the documentation of each and every 
+ solver has to contain information how to inject such information.
+
+ As a boundary update might be expensive, it is reasonable to embed it into
+ some additional checks:
+  
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+if (::swift2::boundaryconditions::isVertexOnGlobalBoundary(marker,DomainOffset,DomainSize)) {
+  // your update; maybe like in the snippet above
+}
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
+ # Solver coupling
+
+ @todo Yet to be written 
+ 
+
+
+ */
+ 
+ 

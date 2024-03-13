@@ -6,21 +6,20 @@
 // **********************************************************************************************
 #pragma once
 
+#include "Constants.h"
+
 #include "exahype2/RefinementControl.h"
 #include "exahype2/PrecisionControl.h"
-#include "exahype2/NonCriticalAssertions.h"
-
 #include "exahype2/aderdg/solvers/ADERDGSolver.h"
 
 #include "tarch/la/Vector.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/NonCriticalAssertions.h"
 
 #include "peano4/utils/Globals.h"
 
-#include "Constants.h"
-
 #include "exahype2/aderdg/kernels/Kernels.h"
-{% if USE_KERNEL_GENERATOR==True %}
+{% if USE_KERNEL_GENERATOR %}
 #include "generated/kernels/aderdg/{{LINEARITY}}/Quadrature.h"
 #include "generated/kernels/aderdg/{{LINEARITY}}/DGMatrices.h"
 {% endif %}
@@ -80,14 +79,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
 
     static std::string toString(SolverState);
 
-    static constexpr int  Order                     = {{ORDER}};
-    static constexpr int NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
-    static constexpr int NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    static constexpr int MaxPicardIterations        = {{ORDER}}+1;
-    static constexpr bool UseMaxPicardIterations    = true;
-    static constexpr bool UseLobattoBasis           = {{USE_GAUSS_LOBATTO}};
-    static constexpr double CFL                     = {{CFL_SAFETY_FACTOR}};
-    static constexpr double PNPM                    = {{CFL_ADER}};
+    static constexpr int    Order                      = {{ORDER}};
+    static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    static constexpr int    MaxPicardIterations        = {{ORDER}}+1;
+    static constexpr bool   UseMaxPicardIterations     = true;
+    static constexpr bool   UseLobattoBasis            = {{USE_GAUSS_LOBATTO}};
+    static constexpr double CFL                        = {{CFL_SAFETY_FACTOR}};
+    static constexpr double PNPM                       = {{CFL_ADER}};
     
     {% if USE_POINT_SOURCE!="<none>" %}
     static constexpr int NumberOfPointSources     = {{NUMBER_OF_POINT_SOURCES}};
@@ -177,7 +176,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      *
      */
     virtual void initialCondition(
-      {{SOLUTION_STORAGE_PRECISION}}* __restrict__                        Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      {{SOLUTION_STORAGE_PRECISION}}* __restrict__                          Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
 			const tarch::la::Vector<Dimensions,double>&  h,
 			const tarch::la::Vector<Dimensions,int>&     index,
@@ -286,7 +285,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::solvers::ade
      * operation is still invoked.
      */
     virtual void finishGridConstructionStep() override;
-
 
 
     /**

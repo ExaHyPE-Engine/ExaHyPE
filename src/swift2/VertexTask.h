@@ -5,8 +5,6 @@
 
 #include <functional>
 
-#include "tarch/multicore/Tasks.h"
-
 
 namespace swift2 {
   /**
@@ -27,31 +25,27 @@ namespace swift2 {
    */
   template <typename ParticleSet>
   class VertexTask: public tarch::multicore::Task {
-    public:
-      typedef std::function<void( ParticleSet& localParticles,
-                                  ParticleSet& activeParticles )>  Functor;
+  public:
+    typedef std::function<void(ParticleSet& assignedParticles)> Functor;
 
-      /**
-       * Construct a vertex task
-       *
-       * Memorize the three parameters, and grab a new task number from the
-       * multicore component via
-       */
-      VertexTask(
-        const ParticleSet& localParticles,
-        const ParticleSet& activeParticles,
-        Functor            functor
-      );
-      ~VertexTask() = default;
+    /**
+     * Construct a vertex task
+     *
+     * Memorize the three parameters, and grab a new task number from the
+     * multicore component via
+     */
+    VertexTask(const ParticleSet& assignedParticles, Functor functor, bool FuseAndPortToGPU);
+    ~VertexTask() = default;
 
-      virtual bool run() override;
+    virtual bool run() override;
 
-    private:
-      ParticleSet  _localParticles;
-      ParticleSet  _activeParticles;
-      Functor      _functor;
+  private:
+    static int TaskTypeId;
+
+    ParticleSet _assignedParticles;
+    Functor     _functor;
   };
-}
+} // namespace swift2
 
 
 #include "VertexTask.cpph"

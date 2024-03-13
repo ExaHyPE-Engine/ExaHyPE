@@ -2,10 +2,10 @@
 \page multigrid_home Multigrid
 
 \li \subpage multigrid_architecture
+\li \subpage page_multigrid_unfolding
 \li \subpage documentation_multigrid_petsc
 \li \subpage multigrid_tutorials
 \li \subpage multigrid_benchmarks
-\li \subpage multigrid_enumeration
 \li \subpage documentation_multigrid_boundary_conditions
 \li \subpage page_multigrid_terminology
  

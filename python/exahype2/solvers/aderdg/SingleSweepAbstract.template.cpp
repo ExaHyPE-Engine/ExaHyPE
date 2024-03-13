@@ -11,24 +11,24 @@
 #include "Constants.h"
 
 #include "tarch/multicore/Lock.h"
-#include "exahype2/NonCriticalAssertions.h"
+#include "tarch/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
-double**   exahype2::solvers::aderdg::ADERDGSolver::weights                                 = kernels::{{POLYNOMIAL_TYPE}}::weights;
-double**   exahype2::solvers::aderdg::ADERDGSolver::nodes                                   = kernels::{{POLYNOMIAL_TYPE}}::nodes;
-double***  exahype2::solvers::aderdg::ADERDGSolver::Kxi                                     = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
-double***  exahype2::solvers::aderdg::ADERDGSolver::dudx                                    = kernels::{{POLYNOMIAL_TYPE}}::dudx;
-double***  exahype2::solvers::aderdg::ADERDGSolver::iK1                                     = kernels::{{POLYNOMIAL_TYPE}}::iK1;
-double***  exahype2::solvers::aderdg::ADERDGSolver::equidistantGridProjector                = kernels::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
-double***  exahype2::solvers::aderdg::ADERDGSolver::FCoeff                                  = kernels::{{POLYNOMIAL_TYPE}}::FCoeff;
-double**** exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector                       = kernels::{{POLYNOMIAL_TYPE}}::fineGridProjector;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunction                 = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionFirstDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
-kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionSecondDerivative = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
+double**   exahype2::solvers::aderdg::ADERDGSolver::weights                                           = kernels::{{POLYNOMIAL_TYPE}}::weights;
+double**   exahype2::solvers::aderdg::ADERDGSolver::nodes                                             = kernels::{{POLYNOMIAL_TYPE}}::nodes;
+double***  exahype2::solvers::aderdg::ADERDGSolver::Kxi                                               = kernels::{{POLYNOMIAL_TYPE}}::Kxi;
+double***  exahype2::solvers::aderdg::ADERDGSolver::dudx                                              = kernels::{{POLYNOMIAL_TYPE}}::dudx;
+double***  exahype2::solvers::aderdg::ADERDGSolver::iK1                                               = kernels::{{POLYNOMIAL_TYPE}}::iK1;
+double***  exahype2::solvers::aderdg::ADERDGSolver::equidistantGridProjector                          = kernels::{{POLYNOMIAL_TYPE}}::equidistantGridProjector;
+double***  exahype2::solvers::aderdg::ADERDGSolver::FCoeff                                            = kernels::{{POLYNOMIAL_TYPE}}::FCoeff;
+double**** exahype2::solvers::aderdg::ADERDGSolver::fineGridProjector                                 = kernels::{{POLYNOMIAL_TYPE}}::fineGridProjector;
+kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunction                  = kernels::{{POLYNOMIAL_TYPE}}::basisFunction;
+kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionFirstDerivative   = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionFirstDerivative;
+kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunctionSecondDerivative  = kernels::{{POLYNOMIAL_TYPE}}::basisFunctionSecondDerivative;
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
@@ -95,6 +95,8 @@ kernels::UnivariateFunction** exahype2::solvers::aderdg::ADERDGSolver::basisFunc
 }
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::~{{CLASSNAME}}(){
+
+  {{DESTRUCTOR_IMPLEMENTATION}}
 
   {% if USE_KERNEL_GENERATOR==True %}
   //free the generated nodes, weights and matrices
@@ -234,11 +236,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
-  {{SOLUTION_STORAGE_PRECISION}} * __restrict__ Q, //Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  const tarch::la::Vector<Dimensions,int>&     index,
-  bool                                         gridIsConstructed
+    {{SOLUTION_STORAGE_PRECISION}}* __restrict__                          Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  h,
+    const tarch::la::Vector<Dimensions,int>&     index,
+    bool                                         gridIsConstructed
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }
@@ -345,14 +347,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
       _solverState = SolverState::Prediction;
       break;
     case SolverState::Prediction:
-      if(_minCellHThisTimeStep<_maxCellHThisTimeStep){
-        _solverState = SolverState::PredictionOnHangingCells;
-        break;
-      }
-      else{
-        _solverState = SolverState::Correction;
-        break;
-      }
+      _solverState = (_minCellHThisTimeStep < _maxCellHThisTimeStep) ?
+        SolverState::PredictionOnHangingCells : _solverState = SolverState::Correction;
+      break;
     case SolverState::PredictionOnHangingCells:
       _solverState = SolverState::Correction;
       break;
@@ -384,6 +381,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
     _cellUpdates    = 0;
+
   }
 
   {{START_TIME_STEP_IMPLEMENTATION}}
@@ -394,7 +392,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-	if ( _solverState==SolverState::Correction ) {
+	if ( isLastGridSweepOfTimeStep() ) {
 
   #ifdef Parallel
   double newMinTimeStamp    = _minTimeStampThisTimeStep;
@@ -522,15 +520,15 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       break;
     case SolverState::Correction:
 			return "correction";
-  }
+      break;
+    }
   return "<undef>";
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return isLastGridSweepOfTimeStep()
-      or _solverState==SolverState::GridInitialisation
-      or _solverState==SolverState::Plotting;
+  return (_solverState!=SolverState::Prediction
+      and _solverState!=SolverState::PredictionOnHangingCells);
 }
 
 

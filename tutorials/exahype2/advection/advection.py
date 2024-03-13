@@ -6,13 +6,6 @@ import sympy
 import subprocess
 
 #
-# We use our code Python generator to generate additional glue code.
-# The generator is located in the /Peano/python folder and needs to therefore added to PYTHONPATH.
-# You can either set PYTHONPATH on the command line yourself or insert it here in the script.
-#
-sys.path.insert(0, os.path.abspath("../../../python"))
-
-#
 # We import the required modules for this project.
 # We always need the 'peano4' module as this is our core project.
 # Since we are creating an ExaHyPE 2 application, we additionally
@@ -56,7 +49,7 @@ offset = [0.0, 0.0, 0.0]
 #
 # If set to False, the project will not compile the project after generation (i.e., you need to invoke the Makefile yourself).
 #
-use_make = False
+use_make = True
 
 #
 # Set to true, to visualise/convert the output data using a postprocessor.

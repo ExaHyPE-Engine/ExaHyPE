@@ -4,19 +4,17 @@ import os
 import sys
 import argparse
 import subprocess
-
-sys.path.insert(0, os.path.abspath("../../../python"))
 import peano4
 import exahype2
 
 # Some reasonable default values
 dimensions = 2
 cell_size = 0.1
-amr_levels = 2
+amr_levels = 4
 patch_size = 4
 rk_order = 2
 dg_order = 1
-end_time = 3.0
+end_time = 3.001
 plot_interval = end_time / 100
 # plot_interval             = 0
 # Based on the assumption that the fluid is an ideal gas, gamma chosen for dry air.
@@ -154,12 +152,20 @@ parser.add_argument(
     help="Use dynamic AMR.",
 )
 parser.add_argument(
-    "-gpu",
-    "--gpu",
-    dest="use_gpu",
+    "-stateless",
+    "--stateless",
+    dest="use_stateless_pde_terms",
     action="store_true",
-    default=False,
-    help="Use GPU offloading (requires a GPU enabled Peano build).",
+    default=True,
+    help="Use stateless PDE terms (GPU offloading requires a GPU enabled Peano build and an enclave solver).",
+)
+parser.add_argument(
+    "-f",
+    "--fuse",
+    dest="fused_tasks",
+    type=int,
+    default=30000,
+    help="Number of enclave tasks to fuse into one meta task.",
 )
 parser.add_argument(
     "-vis",
@@ -225,9 +231,19 @@ parser.add_argument(
 parser.add_argument(
     "--timeout", dest="timeout", type=int, default=3600, help="MPI timeout in seconds."
 )
+parser.add_argument(
+    "-fpe",
+    "--fp-exception",
+    dest="enable_fpe",
+    action="store_true",
+    help="Enable a floating-point exception handler",
+)
 
 parser.add_argument(
-    "--no-make", dest="no_make", action="store_true", help="Do not compile the code after generation"
+    "--no-make",
+    dest="no_make",
+    action="store_true",
+    help="Do not compile the code after generation",
 )
 parser.add_argument(
     "--executable",
@@ -277,25 +293,14 @@ if args.scenario not in scenarios:
     )
     sys.exit(1)
 
-solver_type = args.solver
-if args.use_gpu:
-    if not "Enclave" in solver_type:
-        solver_type += "Enclave"
-        if solver_type not in solvers:
-            raise ValueError(
-                "The requested solver {} is not available for enclave tasking!".format(
-                    solver_type
-                )
-            )
-
 if args.executable:
     executable_name = args.executable
 else:
     executable_name = (
-        "euler-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(solver_type)
+        "euler-" + str(args.dim) + "d-" + str(args.scenario) + "-" + str(args.solver)
     )
-    if args.use_gpu:
-        executable_name += "-GPU"
+    if args.use_stateless_pde_terms:
+        executable_name += "-Stateless"
     executable_name += "-" + str(args.build_mode)
 
 my_project = exahype2.Project(
@@ -305,18 +310,18 @@ my_project = exahype2.Project(
     executable=executable_name,
 )
 
-if solver_type in aderdg_rusanov_solvers:
+if args.solver in aderdg_rusanov_solvers:
     solver_name = "Euler_ADERDG"
-elif solver_type in rkdg_rusanov_solvers:
+elif args.solver in rkdg_rusanov_solvers:
     solver_name = "Euler_RKDG"
-elif solver_type in fv_rusanov_solvers:
+elif args.solver in fv_rusanov_solvers:
     solver_name = "Euler_FV"
 
 unknowns = {"rho": 1, "v": args.dim, "e": 1}
 
 my_solver = None
-if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
-    my_solver = solvers[solver_type](
+if args.solver in fv_rusanov_solvers and "Adaptive" in args.solver:
+    my_solver = solvers[args.solver](
         name=solver_name,
         patch_size=args.patch_size,
         unknowns=unknowns,
@@ -324,6 +329,7 @@ if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
         max_volume_h=args.max_cell_size,
         min_volume_h=args.max_cell_size * 3.0 ** (-args.amr_levels),
         time_step_relaxation=0.5,
+        pde_terms_without_state=args.use_stateless_pde_terms
     )
     # self._patch.generator = peano4.datamodel.PatchToDoubleArrayOnHeap(self._patch,"double")
     my_solver.switch_to_heap_storage(
@@ -340,10 +346,10 @@ if solver_type in fv_rusanov_solvers and "Adaptive" in solver_type:
     #  solver_variant = exahype2.solvers.fv.rusanov.SolverVariant.Multicore,
     #  kernel_variant = exahype2.solvers.fv.rusanov.KernelVariant.BatchedAoSHeap
     # )
-elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
+elif args.solver in fv_rusanov_solvers and "Fixed" in args.solver:
     min_h = args.max_cell_size * 3.0 ** (-args.amr_levels)
     admissible_time_step_size = min_h / patch_size * 0.5
-    my_solver = solvers[solver_type](
+    my_solver = solvers[args.solver](
         name=solver_name,
         patch_size=args.patch_size,
         unknowns=unknowns,
@@ -351,13 +357,14 @@ elif solver_type in fv_rusanov_solvers and "Fixed" in solver_type:
         max_volume_h=args.max_cell_size,
         min_volume_h=min_h,
         normalised_time_step_size=admissible_time_step_size,
+        pde_terms_without_state=args.use_stateless_pde_terms
     )
-elif solver_type in rkdg_rusanov_solvers and "Adaptive" in solver_type:
+elif args.solver in rkdg_rusanov_solvers and "Adaptive" in args.solver:
     from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import (
         FaceProjections,
     )
 
-    my_solver = solvers[solver_type](
+    my_solver = solvers[args.solver](
         name=solver_name,
         rk_order=args.rk_order,
         polynomials=exahype2.solvers.GaussLegendreBasis(args.dg_order),
@@ -367,15 +374,16 @@ elif solver_type in rkdg_rusanov_solvers and "Adaptive" in solver_type:
         max_cell_h=args.max_cell_size,
         min_cell_h=args.max_cell_size * 3.0 ** (-args.amr_levels),
         time_step_relaxation=0.5,
+        pde_terms_without_state=args.use_stateless_pde_terms
     )
-elif solver_type in rkdg_rusanov_solvers and "Fixed" in solver_type:
+elif args.solver in rkdg_rusanov_solvers and "Fixed" in args.solver:
     from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import (
         FaceProjections,
     )
 
     min_h = args.max_cell_size * 3.0 ** (-args.amr_levels)
     admissible_time_step_size = min_h / patch_size * 0.5
-    my_solver = solvers[solver_type](
+    my_solver = solvers[args.solver](
         name=solver_name,
         rk_order=args.rk_order,
         polynomials=exahype2.solvers.GaussLegendreBasis(args.dg_order),
@@ -385,8 +393,9 @@ elif solver_type in rkdg_rusanov_solvers and "Fixed" in solver_type:
         max_cell_h=args.max_cell_size,
         min_cell_h=min_h,
         time_step_size=admissible_time_step_size,
+        pde_terms_without_state=args.use_stateless_pde_terms
     )
-elif solver_type in aderdg_rusanov_solvers and "Fixed" in solver_type:
+elif args.solver in aderdg_rusanov_solvers and "Fixed" in args.solver:
     # stability condition: CFL for Ader-DG
     # dt <= c*dx / (lambda_max*(2N+1)
     # cflAder = [ 1.0, 0.33, 0.17, 0.1, 0.069, 0.045, 0.038, 0.03, 0.02, 0.015]
@@ -395,7 +404,7 @@ elif solver_type in aderdg_rusanov_solvers and "Fixed" in solver_type:
     # dt <= 0.1 * 0.03 / 11 \approx  0.00025
     min_h = args.max_cell_size * 3.0 ** (-args.amr_levels)
     admissible_time_step_size = 0.001
-    my_solver = solvers[solver_type](
+    my_solver = solvers[args.solver](
         name=solver_name,
         order=args.dg_order,
         unknowns=unknowns,
@@ -409,8 +418,8 @@ elif solver_type in aderdg_rusanov_solvers and "Fixed" in solver_type:
         use_kernel_generator=True,
         architecture="noarch",
     )
-elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
-    my_solver = solvers[solver_type](
+elif args.solver in aderdg_rusanov_solvers and "Adaptive" in args.solver:
+    my_solver = solvers[args.solver](
         name=solver_name,
         order=args.dg_order,
         unknowns=unknowns,
@@ -424,9 +433,6 @@ elif solver_type in aderdg_rusanov_solvers and "Adaptive" in solver_type:
         use_kernel_generator=True,
         architecture="noarch",
     )
-
-if args.use_gpu:
-    my_solver.set_pde_terms_without_state(True)
 
 my_solver.set_implementation(
     initial_conditions=exahype2.solvers.PDETerms.User_Defined_Implementation,
@@ -488,14 +494,14 @@ if args.visualise:
 
 if args.trees > 0:
     my_project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+        "toolbox::loadbalancing::strategies::SpreadOut",
         "new ::exahype2::LoadBalancingConfiguration(0.98, 100, "
         + str(args.trees)
         + ")",
     )
 else:
     my_project.set_load_balancing(
-        "toolbox::loadbalancing::strategies::SpreadOutHierarchically",
+        "toolbox::loadbalancing::strategies::SpreadOut",
         "new ::exahype2::LoadBalancingConfiguration(0.98)",
     )
 if args.threads > 0:
@@ -507,9 +513,15 @@ else:
 
 my_project.set_timeout(args.timeout)
 
+my_project.set_multicore_orchestration(
+    "::tarch::multicore::orchestration::Hardcoded::createFuseAll(%s, true, true, ::tarch::accelerator::Device::getInstance().getLocalDeviceId())"
+    % str(args.fused_tasks)
+)
+
 my_project.set_Peano4_installation("../../../", mode=build_modes[args.build_mode])
 my_project = my_project.generate_Peano4_project(verbose=True)
-my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
+if args.enable_fpe:
+    my_project.set_fenv_handler("FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW")
 
 my_project.constants.define_value("GAMMA", str(gamma))
 my_project.constants.define_value("SCENARIO", str(args.scenario))

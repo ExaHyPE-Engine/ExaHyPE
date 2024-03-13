@@ -126,7 +126,7 @@ _cancelOptimisticTasks           = false;
     #endif
 
     if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
-      ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
+      ::tarch::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
       // keep time step size invariant
       // _admissibleTimeStepSize = _admissibleTimeStepSize;
     }

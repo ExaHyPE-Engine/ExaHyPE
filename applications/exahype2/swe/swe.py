@@ -2,9 +2,6 @@ import os
 import sys
 import argparse
 import re
-
-sys.path.insert(0, os.path.abspath('../../../python'))
-
 import peano4
 import exahype2
 from exahype2.solvers.PDETerms import PDETerms
@@ -17,7 +14,7 @@ time_step_relaxation  = 0.4
 plot_interval         = 0.005 # taken from tutorial
 patch_size            = 4 # 32
 maximum_cell_size     = 0.1
-amr_levels            = 3 
+amr_levels            = 3
 auxiliary_variables   = 1 # bathymetry, this is fixed to 1 in pde.py
 amr_tolerance         = 1e-3
 epsilon               = 1e-2
@@ -60,10 +57,10 @@ build_modes = {
 supported_file_types = [".nc"]
 
 scenarios = [
-  "Radial_Dam_Break", 
-  "Radial_Bathymetry_Dam_Break", 
+  "Radial_Dam_Break",
+  "Radial_Bathymetry_Dam_Break",
   "Radial_Obstacle_Dam_Break",
-  "Tsunami", 
+  "Tsunami",
   "Artificial_Tsunami",
   "Sea_At_Rest",
   "Oscillating_Lake",
@@ -77,7 +74,7 @@ def parse_coordinate_pair(coords):
       splits = re.split("[\[\]\,]", coords)
       return [float(splits[1]), float(splits[2])]
   else:
-    raise ValueError("Could not parse the illegal coordinates: {}!".format(coords)) 
+    raise ValueError("Could not parse the illegal coordinates: {}!".format(coords))
 
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - SWE Application Script')
@@ -97,7 +94,7 @@ parser.add_argument("-cs",      "--custom-solver",     dest="custom_solver",  ch
 parser.add_argument("-wd",      "--width",             dest="width",          type=str,                   required=False,             help="Specify size of domain in meters as [x, y] as string (e.g. [10, 10], [7e6, 4e6]). Needed to guarantee physicality of tsunami simulations. Note that some scenarios have a fixed width.")
 
 parser.add_argument("-amr",     "--amr-levels",        dest="amr_levels",     type=int,                   default=amr_levels,         help="Number of AMR grid levels on top of max. finite volume cell Default is %f." % amr_levels)
-parser.add_argument("-gpu",     "--gpu",               dest="gpu",            action="store_true",        default=False,              help="Enable GPU support (stateless PDE terms). Requires a GPU build." )
+parser.add_argument("-stateless","--stateless",        dest="use_stateless_pde_terms", action="store_true", default=True,             help="Use stateless PDE terms (GPU offloading requires a GPU enabled Peano build and an enclave solver)." )
 
 parser.add_argument("-maxd",    "--max_dimension_netcdf",dest="max_dimension_netcdf",type=int,            required=False,             help="Use when netCDF4 python package not installed to pass maximum dimension to the program.")
 parser.add_argument("-maxh",    "--max-cell-size",     dest="max_cell_size",  type=float,                 default=maximum_cell_size,  help="Maximum size in meters of a single finite volume cell on each axis.")
@@ -145,7 +142,7 @@ if args.solver in user_defined_solvers and args.custom_solver is None:
 
 #########################################
 # Set up scenario to use                #
-#########################################  
+#########################################
 
 my_pde = None
 if args.scenario == "Radial_Dam_Break":
@@ -193,19 +190,19 @@ elif args.scenario == "Tsunami":
   # check whether flags are set
   if args.bathymetry_file is None: raise Exception("No bathymetry file supplied for the tsunami scenario!")
   if args.displacement_file is None: raise Exception("No displacement file supplied for the tsunami scenario!")
-  
+
   # check whether files exist in the first place
   if not os.path.exists(args.bathymetry_file): raise FileNotFoundError()
   if not os.path.exists(args.displacement_file): raise FileNotFoundError()
-  if args.gamr_file is not None and not os.path.exists(args.gamr_file): raise FileNotFoundError() 
-  
+  if args.gamr_file is not None and not os.path.exists(args.gamr_file): raise FileNotFoundError()
+
   # check for supported file extension
   bath_ext = os.path.splitext(args.bathymetry_file)[1]
-  displ_ext = os.path.splitext(args.displacement_file)[1] 
+  displ_ext = os.path.splitext(args.displacement_file)[1]
   if bath_ext not in supported_file_types: raise Exception("Unsupported file type of bathymetry file! Supported extensions are: %s" % ("|".join(supported_file_types)))
   if displ_ext not in supported_file_types: raise Exception("Unsupported file type of displacement file! Supported extensions are: %s" % ("|".join(supported_file_types)))
   if args.gamr_file is not None and os.path.splitext(args.gamr_file)[1] not in supported_file_types: raise Exception("Unsupported file type of guided amr file! Supported extensions are: %s" % ("|".join(supported_file_types)))
-  
+
   if args.amr_levels > 0 and args.dynamic_h:
     print("Overwriting max_cell_size to fit finest mesh in data files!")
     try:
@@ -217,8 +214,8 @@ elif args.scenario == "Tsunami":
         nc_file.close()
     except ImportError:
       print("netCDF4 package not found. Checking -maxd flag.")
-      if args.max_dimension_netcdf is None or args.max_dimension_netcdf <= 0: 
-        raise ValueError("Neither netCDF4 package installed nor valid value passed to -maxd!") 
+      if args.max_dimension_netcdf is None or args.max_dimension_netcdf <= 0:
+        raise ValueError("Neither netCDF4 package installed nor valid value passed to -maxd!")
       else: 
         # generally estimates finer mesh width than finest mesh data width
         maximum_cell_size = min(width)/args.max_dimension_netcdf
@@ -229,34 +226,22 @@ elif args.scenario == "Tsunami":
 my_pde.substitute_expression(my_pde.g, 9.81)
 
 #########################################
-# Set up solver for GPU                 #
-#########################################  
-
-solver_type = args.solver
-if args.gpu:
-  if not "Enclave" in solver_type:
-    solver_type += "Enclave"
-    if solver_type not in solvers:
-      # This is necessary as "-s RKDGRusanovGlobalAdaptive -gpu" for example currently leads to this scenario
-      raise ValueError("The requested solver {} is not available for GPUs!".format(solver_type))
-    
-solver_name = "SWESolver" + str(solver_type) + (args.custom_solver if solver_type in user_defined_solvers else "")
-if args.gpu:
-  solver_name += "GPU"
-
-#########################################
 # Set up solver                         #
-#########################################  
+#########################################
+
+solver_name = "SWESolver" + str(args.solver) + (args.custom_solver if args.solver in user_defined_solvers else "")
+if args.use_stateless_pde_terms:
+  solver_name += "Stateless"
 
 my_solver = None
 # finite volume rusanov solver?
-if solver_type in fv_rusanov_solvers or solver_type == "FVUserDefined":
+if args.solver in fv_rusanov_solvers or args.solver == "FVUserDefined":
 
 #########################################
 # Set up solver parameters for FV       #
-#########################################  
+#########################################
 
-  my_solver = solvers[solver_type](
+  my_solver = solvers[args.solver](
     name                      = solver_name,
     patch_size                = patch_size,
     unknowns                  = 3,
@@ -267,40 +252,35 @@ if solver_type in fv_rusanov_solvers or solver_type == "FVUserDefined":
   )
 
 # rkdg rusanov solver?
-elif solver_type in rkdg_rusanov_solvers:
+elif args.solver in rkdg_rusanov_solvers:
   # necessary flags set?
   if args.dg_order is None or args.rk_order is None:
     raise ValueError("When using RKDG, both the -dg-order and -rk-order have to be set!")
-  
   # add flags to solver name for easier distinguishing between executables
   solver_name += "RK%dDG%d" % (args.rk_order, args.dg_order)
-  
   from exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces import FaceProjections
 
 #########################################
 # Set up solver parameters for RKDG     #
-#########################################  
+#########################################
 
-  my_solver = solvers[solver_type](
+  my_solver = solvers[args.solver](
     name                      = solver_name,
     rk_order                  = args.rk_order,
     polynomials               = exahype2.solvers.GaussLegendreBasis(args.dg_order),
     face_projections          = FaceProjections.Solution, # TODO according to python/exahype2/solvers/rkdg/RungeKuttaDG.py, this should be == 2? 
     unknowns                  = 3,
     auxiliary_variables       = 1,
-    max_cell_h                = maximum_cell_size, 
+    max_cell_h                = maximum_cell_size,
     min_cell_h                = maximum_cell_size * 3.0**(-args.amr_levels),
     time_step_relaxation      = time_step_relaxation
   )
-
-if args.gpu:
-  my_solver.set_pde_terms_without_state(True)
 
 #########################################
 # Set up solver implementation          #
 #########################################
 
-if solver_type not in user_defined_solvers:
+if args.solver not in user_defined_solvers:
   my_solver.set_implementation(
     initial_conditions    = my_pde.implementation_of_initial_conditions(),
     boundary_conditions   = my_pde.implementation_of_boundary_conditions(),
@@ -312,7 +292,6 @@ if solver_type not in user_defined_solvers:
   )
 
 else:
-    
 #########################################
 # Set up custom solver                  #
 #########################################
@@ -321,7 +300,7 @@ else:
   if args.custom_solver == "RusanovTsunami":
     from custom_solvers.custom_fv_solvers.rusanov_tsunami import RusanovTsunami
     custom_solver = RusanovTsunami(args.epsilon)
-  
+
   elif args.custom_solver == "HLLEM":
     from custom_solvers.custom_fv_solvers.hllem import HLLEM
     custom_solver = HLLEM(args.epsilon)
@@ -360,18 +339,18 @@ if args.scenario == "Tsunami":
   if args.guided_amr:
     # Is no file provided?
     if args.gamr_file is None:
-      
+
       #########################################
       # Add adjoint problem simulation        #
       #########################################
-      
+
       my_solver.add_user_solver_includes("""
                                          #include \"adjoint/cpp/SWEAdjoint.hpp\"
                                          """)
-      
+
       if args.gamr_area_of_interest is None:
         raise Exception("No file or area of interest specified for guided amr!")
-      
+
       if args.gamr_start_time is None:
         print("No start time for temporal area of interest specified! Default to 0!")
         args.gamr_start_time = 0
@@ -401,13 +380,13 @@ if args.scenario == "Tsunami":
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_x
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_y
       swe_adjoint_parameters += ",\"%s\"" % args.nc_key_bath_bath
-      
+
       my_solver.add_solver_constants("applications::exahype2::swe::adjoint::SWEAdjoint swe_adjoint = applications::exahype2::swe::adjoint::SWEAdjoint(%s);" % swe_adjoint_parameters)
 
     #########################################
     # Add adjoint parser                    #
     #########################################
-    
+
     my_solver.add_user_solver_includes("""
                                       #include \"parser/AdjointParser.h\"
                                       """)
@@ -443,7 +422,7 @@ if args.scenario == "Tsunami":
     displacement_origin_x, displacement_origin_y = parse_coordinate_pair(args.uq_displacement_origin)
     topology_parser_parameters += (", %f" % displacement_origin_x) if displacement_origin_x != float('inf') else ", INFINITY"
     topology_parser_parameters += (", %f" % displacement_origin_y) if displacement_origin_y != float('inf') else ", INFINITY"
-  
+
   my_solver.add_solver_constants("applications::exahype2::swe::parser::TopologyParser topology_parser = applications::exahype2::swe::parser::TopologyParser(%s);" % topology_parser_parameters)
 
 #########################################
@@ -469,7 +448,7 @@ if args.probe_coordinates != None:
   coordinates = []
   for coords in args.probe_coordinates:
     coordinates.append(parse_coordinate_pair(coords))
-    
+
   # add particles/probes to simulation domain at given coordinates
   probes = my_project.add_tracer(name="Probes",attribute_count=4, plot=False) # maybe add a plot=False here to turn off vtu output
   my_project.add_action_set_to_initialisation(
@@ -484,13 +463,13 @@ if args.probe_coordinates != None:
       particle_set = probes
     )
   )
-  
+
   # add fv probe
-  if solver_type in fv_rusanov_solvers:
+  if args.solver in fv_rusanov_solvers:
     my_project.add_action_set_to_timestepping(
       exahype2.tracer.FiniteVolumesTracing(
-        probes, 
-        my_solver, 
+        probes,
+        my_solver,
         project_on_tracer_properties_kernel="::exahype2::fv::projectAllValuesOntoParticle_piecewiseConstant"
       )
     )
@@ -499,8 +478,8 @@ if args.probe_coordinates != None:
   else:
     my_project.add_action_set_to_timestepping(
       exahype2.tracer.DiscontinuousGalerkinTracing(
-        probes, 
-        my_solver,  
+        probes,
+        my_solver,
         project_on_tracer_properties_kernel="::exahype2::dg::projectAllValuesOntoParticle"
       )
     )
@@ -514,7 +493,7 @@ if args.probe_coordinates != None:
       65536,
       1e50,
       1e50,
-      probe_interval, 
+      probe_interval,
       8,
       False,
       probe_interval, # starting time of 0 leads to gibberish for t=0 in csv
@@ -544,7 +523,7 @@ my_project.set_global_simulation_parameters(
 peano4_project = my_project.generate_Peano4_project(verbose=True)
 
 # add additional cpps to makefile if necessary
-if args.scenario == "Tsunami": 
+if args.scenario == "Tsunami":
   peano4_project.output.makefile.add_cpp_file("parser/TopologyParser.cpp")
   peano4_project.output.makefile.add_cpp_file("parser/NetCDFReader.cpp")
   peano4_project.output.makefile.add_cpp_file("parser/NetCDFHelper.cpp")

@@ -17,7 +17,7 @@
 namespace {
   tarch::multicore::BooleanSemaphore suspensionPointSemaphore;
 
-  ::oneapi::tbb::task_arena      defaultTaskArena;
+  ::oneapi::tbb::task_arena defaultTaskArena;
 
   /**
    * Task arena for background tasks
@@ -28,28 +28,27 @@ namespace {
    * will have the same priority. We want to avoid such default behaviour
    * and instead use the three priorities offered by TBB.
    */
-  ::oneapi::tbb::task_arena      backgroundTaskArena(
+  ::oneapi::tbb::task_arena backgroundTaskArena(
     ::oneapi::tbb::task_arena::automatic,    // max_concurrency
     1,                                       // reserved_for_masters
     ::oneapi::tbb::task_arena::priority::low // priority a_priority
   );
 
-  ::oneapi::tbb::task_arena      highPriorityTaskArena(
-    ::oneapi::tbb::task_arena::automatic,    // max_concurrency
-    1,                                       // reserved_for_masters
+  ::oneapi::tbb::task_arena highPriorityTaskArena(
+    ::oneapi::tbb::task_arena::automatic,     // max_concurrency
+    1,                                        // reserved_for_masters
     ::oneapi::tbb::task_arena::priority::high // priority a_priority
   );
 
   /**
    * Fiddle out which arena to use for a job
    */
-  ::oneapi::tbb::task_arena*   getArena( ::tarch::multicore::Task* task ) {
+  ::oneapi::tbb::task_arena* getArena(::tarch::multicore::Task* task) {
     ::oneapi::tbb::task_arena* result = &defaultTaskArena;
 
-    if (task->getPriority()>tarch::multicore::Task::DefaultPriority) {
+    if (task->getPriority() > tarch::multicore::Task::DefaultPriority) {
       result = &highPriorityTaskArena;
-    }
-    else if (task->getPriority()<tarch::multicore::Task::DefaultPriority) {
+    } else if (task->getPriority() < tarch::multicore::Task::DefaultPriority) {
       result = &backgroundTaskArena;
     }
 
@@ -122,7 +121,7 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 }
 
 
-void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
+void tarch::multicore::native::spawnTask(Task* job, const TaskNumber& in, const TaskNumber& out) {
   tarch::multicore::native::spawnTask(job);
 }
 
@@ -162,7 +161,7 @@ void  tarch::multicore::native::spawnTask(Task* job, int in, int out) {
  * @see spawnAndWaitAsTaskLoop()
  */
 void tarch::multicore::native::spawnTask(Task* job) {
-  getArena(job)->enqueue( [&, job] {
+  getArena(job)->enqueue([&, job] {
     while (job->run()) {
     }
     delete job;
@@ -195,23 +194,20 @@ void tarch::multicore::native::processFusedTask(
   });
 }
 
-void tarch::multicore::native::drainTaskQueues() {
-  //backgroundTaskGroup.wait();
-}
-
 
 void tarch::multicore::native::spawnTaskWithDependencies(Task* job, int inDependency, int taskNumber) {
   tarch::multicore::native::spawnTask(job);
 }
 
 
-void tarch::multicore::native::spawnTaskWithDependencies(Task* job, const std::vector<int>& inDependencies, int taskNumber) {
+void tarch::multicore::native::spawnTaskWithDependencies(
+  Task* job, const std::vector<int>& inDependencies, int taskNumber
+) {
   tarch::multicore::native::spawnTask(job);
 }
 
 
+void tarch::multicore::native::waitForTasks(const std::vector<int>& inDependencies) {}
 
-void tarch::multicore::native::waitForTasks( const std::vector<int>& inDependencies ) {}
-
-void tarch::multicore::native::waitForTask( int taskNumber ){}
+void tarch::multicore::native::waitForTask(int taskNumber) {}
 #endif

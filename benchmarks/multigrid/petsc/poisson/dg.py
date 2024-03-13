@@ -5,8 +5,7 @@
 import os, sys
 import argparse
 import peano4
-import multigrid.petsc
-import multigrid.matrixgenerators
+import multigrid
 
 print( """
 
@@ -31,7 +30,7 @@ args = parser.parse_args()
 assert args.dimensions == 2, "not ready for 3d yet"
 
 #! [Create project]
-project = multigrid.petsc.Project(project_name = "DG", 
+project = multigrid.petsc.api.Project(project_name = "DG", 
                                   namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ],
 
                                   # next two arguments let us customise the solver we use in petsc
@@ -42,7 +41,7 @@ project = multigrid.petsc.Project(project_name = "DG",
 #! [Create project]
 
                         
-matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args.degree,
+matrices = multigrid.api.matrixgenerators.GaussLobatto(poly_degree            = args.degree,
                                                    Dimensions             = args.dimensions,
                                                    unknowns_per_cell_node = args.upcn,
                                                    # this attribute is not used by code written by Alex
@@ -50,7 +49,7 @@ matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args
                                                    )
 
 #! [Create solver]
-solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
+solver = multigrid.petsc.api.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
                                                                      cell_unknowns        = args.upcn,                      # unknowns_per_cell_dof,
                                                                      face_unknowns        = args.upfn,                      # unknowns_per_face_dof,

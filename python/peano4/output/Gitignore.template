@@ -25,4 +25,5 @@ solution-*
 Constants.h
 README-*
 CMakeLists.txt
+gpu-mpi-launch
 .gitignore

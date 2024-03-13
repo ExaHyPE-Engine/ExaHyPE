@@ -1,8 +1,19 @@
-<div align="center">
-<img src="./documentation/logos/Peano-logo.png"/>
+[![Build Status](https://gitlab.lrz.de/hpcsoftware/Peano/badges/p4/pipeline.svg)](https://gitlab.lrz.de/hpcsoftware/Peano/-/pipelines "Build Status")
+[![SQAaaS badge shields.io](https://img.shields.io/badge/sqaaas%20software-bronze-e6ae77)](https://api.eu.badgr.io/public/assertions/vg8PP-0FQlafJ-L-cRs_Xw "SQAaaS bronze badge achieved")
+
+<div align="center" style="margin-bottom: 30px;">
+  <img src="./documentation/logos/Peano-logo.png"/>
 </div>
 
+<div align="center" style="text-align: center;"><b>
+  <a href="http://www.peano-framework.org">Website</a> •
+  <a href="https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html">Documentation</a> •
+  <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/tags">Tags</a> •
+  <a href="https://gitlab.lrz.de/hpcsoftware/Peano/-/releases">Releases</a>
+</b></div>
+
 # Overview
+
 Peano is an open-source framework for solvers on dynamically adaptive
 Cartesian meshes.
 
@@ -16,12 +27,29 @@ hook-in points for applications performing per-element, per-vertex, and so
 forth operations on the grid. It also provides interfaces for dynamic
 load balancing, sophisticated geometry representations, and other features.
 
-# Availability
-All software is available as open source through [www.peano-framework.org](https://tobiasweinzierl.webspace.durham.ac.uk/software/peano/).
+# Contents
 
-Please visit the [User Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/index.html).
+- [Overview](#overview)
+- [Contents](#contents)
+- [Quickstart](#quickstart)
+- [Availability](#availability)
+- [Dependencies and Prerequisites](#dependencies-and-prerequisites)
+- [Docker and Apptainer](#docker-and-apptainer)
+- [Spack](#spack)
+- [Contributing](#contributing)
+- [Code of Conduct](#code-of-conduct)
+- [License](#license)
+
+# Quickstart
+
+Get started with Peano following our [Quickstart Guide](./QUICKSTART.md).
+
+# Availability
+
+All software is available as open source through [www.peano-framework.org](http://www.peano-framework.org).
 
 # Dependencies and Prerequisites
+
 Peano's core is plain C++17/C++20 code.
 We however use a whole set of tools around it.
 The most important ones are:
@@ -36,42 +64,29 @@ The most important ones are:
 * The Visualization Toolkit (VTK) if you want to use the built-in visualisation facilities (optional).
 * HDF5 (optional).
 * NetCDF (optional).
+* LIBXSMM (optional).
 * Doxygen if you want to create HTML pages of the documentation (optional).
 
-# Quickstart
-```shell
-python3 configure.py -cc=gcc -cxx=g++ && make -j && make check
-```
-
-Invoke `make -jX` to use `X` threads to build the code.
-Peano is mainly a library collection, i.e.,
-you might want to skip the install command and work directly against the libraries built in the source directory.
-
-Use `python3 configure.py --help` to see the available options to configure and build.
-
-# Build Process
-Peano's build process relies on GNU Autotools or CMake.
-The build yields a couple of libraries and executables.
-Most codes then use Peano's Python API to build an application on top of the libraries.
-You also can create a sole C++ application.
-The Python API yields such applications, too, i.e.,
-Python is not required to run the simulations but only to construct them.
-
-## CMake
-```shell
-mkdir build && cd build && cmake .. && make -j && make test
-```
-
-It is recommended to use `ccmake`.
-With this, you can see all available options to enable/disable.
-For detailed information on each flag please refer to the documentation.
-
-## Autotools
-```shell
-libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-./configure && make -j && make check
-```
-
 # Docker and Apptainer
+
 We maintain a collection of Docker and Apptainer [containers](./containers/README.md)
 with all required dependencies.
+
+# Spack
+
+To considerably alleviate the installation process of Peano, especially on HPC systems,
+we provide [packages](./spack/README.md) that rely on [Spack](https://github.com/spack/spack/wiki).
+
+# Contributing
+
+Contributions are **welcome and very much appreciated**.
+Please refer [to our Contribution Guide](CONTRIBUTING.md) for more details.
+
+# Code of Conduct
+
+We follow a [Code of Conduct](CODE_OF_CONDUCT.md).
+Please follow the rules when participating in our community.
+
+# License
+
+Modified BSD License, see [LICENSE](LICENSE).

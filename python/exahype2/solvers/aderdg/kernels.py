@@ -44,7 +44,7 @@ def create_abstract_solver_declarations(
     );
 {% endif %}
 
-{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+{% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -53,48 +53,32 @@ def create_abstract_solver_declarations(
       double                                       dt,
       int                                          normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
-    ) = 0;
-{% elif FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<empty>" %}
-    virtual void flux(
-      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeX,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* __restrict__ F
-    );
+    )  {% if FLUX_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if NCP_IMPLEMENTATION=="<user-defined>" %}
+{% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-    const tarch::la::Vector<Dimensions, double> &faceCentre,
-    const tarch::la::Vector<Dimensions, double> &volumeH,
-    double t,
-    double dt,
-    int normal,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ) = 0;
-{% elif NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<empty>" %}
-    virtual void nonconservativeProduct(
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
-    const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
-    const tarch::la::Vector<Dimensions, double> &faceCentre,
-    const tarch::la::Vector<Dimensions, double> &volumeH,
-    double t,
-    double dt,
-    int normal,
-    {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ);
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ Q,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ deltaQ,
+      const tarch::la::Vector<Dimensions, double> &faceCentre,
+      const tarch::la::Vector<Dimensions, double> &volumeH,
+      double t,
+      double dt,
+      int normal,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ
+    ) {% if NCP_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S) = 0;
-{% elif SOURCE_TERM_IMPLEMENTATION!="<none>" and SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
-    virtual void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S);
+{% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
+    virtual void algebraicSource(
+      const tarch::la::Vector<Dimensions, double>& x,
+      double t,
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *const Q,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *S
+      ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %}
+{% if MATERIAL_PARAMETER_IMPLEMENTATION!="<none>" %}
     virtual void multiplyMaterialParameterMatrix(
       const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, 
       const tarch::la::Vector<Dimensions, double> &volumeX,
@@ -103,17 +87,26 @@ def create_abstract_solver_declarations(
       double dt,
       int normal,
       {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const rhs
-      ) = 0;
+      ) {% if MATERIAL_PARAMETER_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
-{% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %}
-    virtual void pointSource(const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q, const double* const x, const double t, const double dt, {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector, int n) = 0;
+{% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
+    virtual void pointSource(
+      const {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const Q,
+      const double* const x,
+      const double t,
+      const double dt,
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}* const forceVector,
+      int n
+    ) {% if POINT_SOURCE_IMPLEMENTATION=="<user-defined>" %} = 0{% else %} final {% endif %};
 {% endif %}
 
 {% endfor %}
 
 {% if POINT_SOURCE_IMPLEMENTATION!="<none>" %}
-    virtual void initPointSourceLocations(double sourceLocation[NumberOfPointSources][Dimensions]) = 0;
+    virtual void initPointSourceLocations(
+      double sourceLocation[NumberOfPointSources][Dimensions]
+    ) = 0;
 {% endif %}
 
 
@@ -185,7 +178,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ)
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ)
 {
     {{NCP_IMPLEMENTATION}}
 }
@@ -250,7 +243,7 @@ def create_solver_declarations(
     TemplateSinglePrecisions = jinja2.Template(
         """
 
-  {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
   virtual double maxEigenvalue(
     const {{COMPUTATION_PRECISIONS[0]}}* __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -280,7 +273,7 @@ def create_solver_declarations(
       double t,
       double dt,
       int normal,
-      {{COMPUTATION_PRECISIONS[0]}}*__restrict__ BgradQ) override;
+      {{COMPUTATION_PRECISIONS[0]}}*__restrict__ BTimesDeltaQ) override;
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     void algebraicSource(const tarch::la::Vector<Dimensions, double>& x, double t, const {{COMPUTATION_PRECISIONS[0]}} *const Q, {{COMPUTATION_PRECISIONS[0]}} *S) override;
@@ -341,7 +334,7 @@ def create_solver_declarations(
       double t,
       double dt,
       int normal,
-      T*__restrict__ BgradQ);
+      T*__restrict__ BTimesDeltaQ);
 
 {% endif %}
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
@@ -405,10 +398,10 @@ def create_solver_declarations(
       double t,
       double dt,
       int normal,
-      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ BgradQ) override 
+      {{COMPUTATION_PRECISIONS[PRECISION_NUM]}} *__restrict__ BTimesDeltaQ) override 
     {
       
-      nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, volumeX, volumeH, t, dt, normal, BgradQ);
+      nonconservativeProduct<{{COMPUTATION_PRECISIONS[PRECISION_NUM]}}>(Q, deltaQ, volumeX, volumeH, t, dt, normal, BTimesDeltaQ);
 
     }
 {% endif %}
@@ -484,6 +477,8 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 ){
   logTraceInWith3Arguments( "eigenvalue(...)", volumeCentre, t, normal );
   // @todo implement
+  double maxEigenvalue = 1.0;
+  return maxEigenvalue;
   logTraceOut( "eigenvalue(...)" );
 }
 {% endif %}
@@ -515,7 +510,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[0]}} *__restrict__ BgradQ //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+  {{COMPUTATION_PRECISIONS[0]}} *__restrict__ BTimesDeltaQ //BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ){
   logTraceInWith3Arguments( "nonconservativeProduct(...)", volumeX, t, normal );
   // @todo implement
@@ -648,7 +643,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   double t,
   double dt,
   int normal,
-  T*__restrict__ BgradQ //BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+  T*__restrict__ BTimesDeltaQ //BTimesDeltaQ[{{NUMBER_OF_UNKNOWNS}}]
 ){
   logTraceInWith3Arguments( "nonconservativeProduct(...)", volumeX, t, normal );
   // @todo implement
@@ -664,7 +659,7 @@ template void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduc
   double t,
   double dt,
   int normal,
-  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BgradQ
+  {{COMPUTATION_PRECISIONS[PRECISION_NUM]}}*__restrict__ BTimesDeltaQ
 );
 {% endfor%}
 
@@ -912,9 +907,36 @@ def create_array_and_convert_from_type(from_name, to_name, type_to, array_size):
     )
     return template
 
+
+def create_constructor_implementation_for_error_measurement():
+    return """
+  if(tarch::mpi::Rank::getInstance().isGlobalMaster()){
+    _errorDatabase = new toolbox::blockstructured::GlobalDatabase(0);
+    _errorDatabase->setOutputFileName( "{{SOLVER_NAME}}_error" );
+    _errorDatabase->setDataName( "l0 error,l2 error,l_inf error" );
+    // _errorDatabase->setOutputPrecision( 8 );
+    _errorDatabase->setDataDeltaBetweenTwoSnapshots( 1e+16, false );
+    _errorDatabase->setTimeDeltaBetweenTwoSnapshots( 0.0 );
+    _errorDatabase->clearDatabaseAfterFlush( true );
+  }
+"""
+
+def create_destructor_implementation_for_error_measurement():
+    return """
+  if(tarch::mpi::Rank::getInstance().isGlobalMaster()){
+      delete(_errorDatabase);
+  }
+"""
+
+def create_abstract_solver_includes_for_error_measurement():
+    return """
+#include "toolbox/blockstructured/GlobalDatabase.h"
+"""
+
 def create_abstract_solver_user_declarations_for_error_measurement():
     return """
 public:
+  toolbox::blockstructured::GlobalDatabase* _errorDatabase;
   double _errors[3] = {0.0,0.0,0.0};
   void setError(double* err);
     """
@@ -934,17 +956,15 @@ def create_finish_time_step_implementation_for_error_measurement():
     return """
 
   if ( 
-    _solverState==SolverState::Correction 
-    and _minTimeStampThisTimeStep+getAdmissibleTimeStepSize()>=MinTerminalTime
+    _solverState==SolverState::GridInitialisation or
+    _solverState==SolverState::Correction
   ) {
 
     #ifdef Parallel
-    double l1Error    = _errors[0];
-    double l2Error    = _errors[1];
-    double linfError  = _errors[2];
+    double errorsThisTimeStamp[3] = {_errors[0], _errors[1], _errors[2]};
 
     tarch::mpi::Rank::getInstance().allReduce(
-        &l1Error,
+        &errorsThisTimeStamp[0],
         &_errors[0],
         1,
         MPI_DOUBLE,
@@ -953,7 +973,7 @@ def create_finish_time_step_implementation_for_error_measurement():
     );
 
     tarch::mpi::Rank::getInstance().allReduce(
-        &l2Error,
+        &errorsThisTimeStamp[1],
         &_errors[1],
         1,
         MPI_DOUBLE,
@@ -962,7 +982,7 @@ def create_finish_time_step_implementation_for_error_measurement():
     );
 
     tarch::mpi::Rank::getInstance().allReduce(
-        &linfError,
+        &errorsThisTimeStamp[2],
         &_errors[2],
         1,
         MPI_DOUBLE,
@@ -973,27 +993,23 @@ def create_finish_time_step_implementation_for_error_measurement():
 
 
     if (
-      tarch::mpi::Rank::getInstance().isGlobalMaster() 
-      and
-      _maxCellH>0.0
+      tarch::mpi::Rank::getInstance().isGlobalMaster()
     ) {
-      logInfo( "FinalTimeStep()", "Solver {{SOLVER_NAME}}:" );
-      logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
-      logInfo( "FinalTimeStep()", "l1_error     = " << _errors[0] );
-      logInfo( "FinalTimeStep()", "l2_error     = " << _errors[1] );
-      logInfo( "FinalTimeStep()", "linf_error   = " << _errors[2] );
-      logInfo( "FinalTimeStep(...)", "phase " + toString(_solverState) );
+      _errorDatabase->addGlobalSnapshot(_minTimeStampThisTimeStep, 3, _errors);
     }
+
+    std::fill_n(_errors, 3, 0.0);
 
   }
 """
 
-def add_final_action_for_error_measurement():
+def add_postprocessing_for_error_measurement():
 
     return """
   if (
-    fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()+repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize()>=MinTerminalTime
-    and repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
+       repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::GridInitialisation
+    or repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()
+    and not marker.willBeRefined() and not marker.hasBeenRefined()
   ) {
 
     double errors[3];
@@ -1016,8 +1032,8 @@ def add_final_action_for_error_measurement():
       repositories::{{SOLVER_INSTANCE}}.Order,
       repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
       repositories::{{SOLVER_INSTANCE}}.QuadraturePoints1d,
-      repositories::{{SOLVER_INSTANCE}}.NumberOfVariables,
-      repositories::{{SOLVER_INSTANCE}}.NumberOfParameters,
+      repositories::{{SOLVER_INSTANCE}}.NumberOfUnknowns,
+      repositories::{{SOLVER_INSTANCE}}.NumberOfAuxiliaryVariables,
       fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
       errors
     );

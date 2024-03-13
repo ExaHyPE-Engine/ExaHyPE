@@ -1,3 +1,5 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import os
 import argparse
 
@@ -35,9 +37,10 @@ BlackHoleRegion = 0.1
 
 
 class KernelParallelisation(Enum):
-    NONE         = "::peano4::utils::LoopParallelism::None"
-    PARALLEL_FOR = "::peano4::utils::LoopParallelism::ParallelFor"
-    SUBTASKS     = "::peano4::utils::LoopParallelism::Subtasks"
+    NONE         = "::peano4::utils::LoopPlacement::Serial"
+    PARALLEL_FOR = "::peano4::utils::LoopPlacement::Nested"
+    SUBTASKS     = "::peano4::utils::LoopPlacement::SpreadOut"
+
 
 
 class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
@@ -102,7 +105,7 @@ class Limiter(CCZ4Solver_FV_GlobalAdaptiveTimeStepWithEnclaveTasking):
           #self._fused_compute_kernel_call_gpu  = exahype2.solvers.fv.rusanov.kernels.create_compute_Riemann_kernel_for_Rusanov(
           #  self._flux_implementation, self._ncp_implementation, self._source_term_implementation, 
           #  compute_max_eigenvalue_of_next_time_step=True, 
-          #  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.AcceleratorWithExplicitCopy,
+          #  solver_variant         = exahype2.solvers.fv.rusanov.kernels.SolverVariant.Accelerator,
           #  kernel_variant         = exahype2.solvers.fv.rusanov.kernels.KernelVariant.GenericAoS
           #  )
 
@@ -245,7 +248,7 @@ class FD4SolverWithLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTaski
               min_meshcell_h=min_cell_size / patch_size,
               max_meshcell_h=max_cell_size / patch_size,
               use_heap_storage=False, # See superclass docu
-              pde_terms_without_state=True
+              pde_terms_without_state=False
         )
 
         self._user_action_set_includes += """
@@ -466,8 +469,7 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
             + """
                                                   and 
                                                   repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.isCellOverlappingWithBHImpactArea(marker) 
+            + self._name_without_FD4_extension + """_FV.isCellOverlappingWithBHImpactArea(marker) 
                                                   and
                                                   not repositories::InstanceOf"""
             + self._name_without_FD4_extension
@@ -481,42 +483,36 @@ double* dummyFace5 = ::tarch::allocateMemory<double>(sizeOfFace, ::tarch::Memory
             self,
             """
 if (
-repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.isCellOverlappingWithBHImpactArea(marker) 
-and
-not marker.willBeRefined()
-) { 
-logTraceIn( "touchCellFirstTime(...)-inject" );
+  repositories::InstanceOf{0}_FV.isCellOverlappingWithBHImpactArea(marker) 
+  and
+  not marker.willBeRefined()
+) {{
+  logTraceIn( "touchCellFirstTime(...)-inject" );
 
-repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.incNumberOfPatches();
+  repositories::InstanceOf{0}_FV.incNumberOfPatches();
+  
+  //if ( repositories::InstanceOf{0}_FV.areAllFaceConnectedCellsOverlappingWithBHImpactArea(marker) ) {{
+    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
+      repositories::InstanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::InstanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::InstanceOf{0}_FV.NumberOfUnknowns + repositories::InstanceOf{0}_FV.NumberOfAuxiliaryVariables,
+      fineGridCell{0}_FVQ.value,
+      fineGridCell{0}_FD4Q.value
+    );
+  /*}}
+  else {{
+    ::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject_and_average(
+      repositories::InstanceOf{0}_FV.NumberOfFiniteVolumesPerAxisPerPatch,
+      repositories::InstanceOf{0}_FD4.NumberOfGridCellsPerPatchPerAxis,
+      repositories::InstanceOf{0}_FV.NumberOfUnknowns + repositories::InstanceOf{0}_FV.NumberOfAuxiliaryVariables,
+      fineGridCell{0}_FVQ.value,
+      fineGridCell{0}_FD4Q.value
+    );
+  }}*/
 
-::toolbox::blockstructured::restrictCellIntoOverlappingCell_inject(
-  repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.NumberOfFiniteVolumesPerAxisPerPatch,
-  repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FD4.NumberOfGridCellsPerPatchPerAxis,
-  repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.NumberOfUnknowns + repositories::InstanceOf"""
-            + self._name_without_FD4_extension
-            + """_FV.NumberOfAuxiliaryVariables,
-  fineGridCell"""
-            + self._name_without_FD4_extension
-            + """_FVQ.value,
-  fineGridCell"""
-            + self._name_without_FD4_extension
-            + """_FD4Q.value
-);
-
-logTraceOut( "touchCellFirstTime(...)-inject" );
-}  
-""",
-        )
+  logTraceOut( "touchCellFirstTime(...)-inject" );
+}}
+""".format(self._name_without_FD4_extension))
 
 
 
@@ -530,6 +526,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
 
     def __init__(self, 
                  name, 
+                 patch_size,
                  min_cell_size, 
                  max_cell_size, 
                  use_heap_storage=False, # See superclass docu
@@ -544,7 +541,7 @@ class FD4SolverWithoutLimiter(CCZ4Solver_FD4_GlobalAdaptiveTimeStepWithEnclaveTa
             min_meshcell_h=min_cell_size / patch_size,
             max_meshcell_h=max_cell_size / patch_size,
             use_heap_storage=False, # See superclass docu
-            pde_terms_without_state=True
+            pde_terms_without_state=False
         )
 
         self._user_action_set_includes += """
