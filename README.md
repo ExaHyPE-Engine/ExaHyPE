@@ -27,23 +27,9 @@ hook-in points for applications performing per-element, per-vertex, and so
 forth operations on the grid. It also provides interfaces for dynamic
 load balancing, sophisticated geometry representations, and other features.
 
-# Contents
+# Installation
 
-- [Overview](#overview)
-- [Contents](#contents)
-- [Quickstart](#quickstart)
-- [Availability](#availability)
-- [Dependencies and Prerequisites](#dependencies-and-prerequisites)
-- [Docker](#docker)
-- [Apptainer](#apptainer)
-- [Spack](#spack)
-- [Contributing](#contributing)
-- [Code of Conduct](#code-of-conduct)
-- [License](#license)
-
-# Quickstart
-
-Get started with Peano following our [Quickstart Guide](./QUICKSTART.md).
+Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/de/dce/page_installation.html).
 
 # Availability
 
@@ -53,7 +39,6 @@ All software is available as open source through [www.peano-framework.org](http:
 
 Peano's core is plain C++17/C++20 code.
 We however use a whole set of tools around it.
-The most important ones are:
 
 * C++17/C++20-compatible C++ compiler (required).
 * GNU Autotools (automake) to set up the system (required).
