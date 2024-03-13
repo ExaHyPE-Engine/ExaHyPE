@@ -4,7 +4,7 @@ import peano4
 import jinja2
 
 
-def order_DG_CG_solver( dg_solver,
+def order_DG_CG_solvers( dg_solver,
                         cg_solver,
                         ):
     dg_solver._basic_descend_order = cg_solver._basic_descend_order + 1
@@ -79,6 +79,32 @@ class ComputeAndRestrictBiasedHierarchicalResidual(ActionSet):
                restriction_matrix,
                restriction_matrix_scaling,
                ):
+    """!
+
+    Construct action set
+
+    @param prolongation_matrix: [ @f$ \mathbb{R}^{ (p+1}^dK  \times 2^dK } @f$ ]
+      Counterpart of restriction_matrix. Often the transpose.
+      
+    @param prolongation_matrix_scaling: [ Integer ]
+      See restriction_matrix_scaling.
+    
+    @param restriction_matrix: [ @f$ \mathbb{R}^{2^dK \times (p+1}^dK } @f$ ]
+      Sequence of matrices. Each takes the solution over the cell spanned by 
+      @f$ (p+1}^dK @f$ weights and restricts it onto @f$ K @f$ quantities on the 
+      vertices. You can specify the total restriction through a 
+      sequence of matrices, each one with its own @f$ h^s @f$ scaling.
+      
+    @param restriction_matrix_scaling: [ Integer ]
+      Specifies a sequence of values @f$ s @f$. They define with which 
+      @f$ h^s @f$ the corresponding matrices in restriction_matrix are to be 
+      scaled. That is, if you pass in a [3,0], then the first matrix in 
+      restriction_matrix will be scaled with  @f$ h^3 @f$ and the second one 
+      with one.
+    
+    
+    
+    """  
     super( ComputeAndRestrictBiasedHierarchicalResidual, self ).__init__(
       0,     #descend_invocation_order,
       False  # parallel
@@ -167,8 +193,36 @@ class InjectAndProlong(ActionSet):
                dg_solver,
                cg_solver,
                prolongation_matrix,
-               prolongation_matrix_scaling
+               prolongation_matrix_scaling,
+               injection_matrix,
+               injection_matrix_scaling
                ):
+    """!
+    
+    Construct action set
+    
+    @param prolongation_matrix Please consult the action set ComputeAndRestrictBiasedHierarchicalResidual.
+
+    @param prolongation_matrix_scaling Please consult the action set ComputeAndRestrictBiasedHierarchicalResidual.
+    
+    @param injection_matrix: [ @f$ \mathbb{R}^{2^dK \times (p+1}^dK } @f$ ]
+      Sequence of matrices. Each takes the solution over the cell spanned by 
+      @f$ (p+1}^dK @f$ weights and maps them onto @f$ K @f$ quantities on the 
+      vertices. These quantities are typically just the value of the polynomial
+      in the vertex, but you can pick other schemes, too. Most of the time, it
+      will be a single injection (with one scaling, see below). To be in line
+      with the other signatures, you can however specify the total injection through a 
+      sequence of matrices, each one with its own @f$ h^s @f$ scaling.
+       
+    @param injection_matrix_scaling: [ Integer ]
+      Specifies a sequence of values @f$ s @f$. They define with which 
+      @f$ h^s @f$ the corresponding matrices in injection_matrix are to be 
+      scaled. That is, if you pass in a [3,0], then the first matrix in 
+      injection_matrix will be scaled with  @f$ h^3 @f$ and the second one 
+      with one. If you work with a simple function evaluation as injection, 
+      then you are fine with one matrix, and its scaline will be [ 0 ].
+    
+    """  
     super( InjectAndProlong, self ).__init__(
       0,     #descend_invocation_order,
       False  # parallel
