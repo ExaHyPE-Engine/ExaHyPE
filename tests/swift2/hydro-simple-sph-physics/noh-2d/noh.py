@@ -112,18 +112,17 @@ args = parser.parse_args()
 # Generate SWIFT project
 ########################################################################################
 
-project_namespace = ["tests", "swift2", "noh"]
+project_namespace = ["tests", "swift2", "noh2D"]
 
 project = swift2.Project(
-    namespace=project_namespace, project_name="Noh", executable="noh2D"
+    namespace=project_namespace, project_name="Noh2D", executable="noh2D"
 )
-
 
 # Initialise the SPH particle --------------------------------------------------
 # If multiple particle species are present, we can specify the parameters
 # independently for each case.
 
-name = "hydroPart"
+name = "HydroPart"
 
 dimensions = 2
 hydro_dimensions = 2  # dimensions for the hydro
@@ -136,7 +135,7 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     constant_time_step_size=True,
     swift_project_namespace=project_namespace,
     particles_per_cell=20,
-    min_h=args.cell_size / 100,
+    min_h=args.cell_size,
     max_h=args.cell_size,
 )
 
@@ -148,6 +147,9 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
 # using the set/get methods.
 ########################################################################################
 
+offset = [0, 0, 0]
+domain_size = [2, 2, 2]
+periodic_boundary_conditions = [False, False, False]
 
 # HYDRO_DIMENSION can be smaller than the Peano4 dimensions
 HYDRO_DIMENSIONS = hydro_dimensions
@@ -177,7 +179,13 @@ KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
 KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
 
 
-hydro_h_max = args.cell_size / 2
+# Additional Particle Parameters -----------------------------------------------
+dx = domain_size[0] / args.particle_number
+hydro_H_max = 10.0 * dx
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+    hydro_H_max, kernel, hydro_dimensions
+)
+
 particle.h_hydro_max = hydro_h_max
 
 # particle.h_hydro_min = 1e-6
@@ -202,15 +210,12 @@ particle.set_parameters()
 particle_set = project.add_particle_species(particle)
 
 if args.asserts:
-    build_mode = peano4.output.CompileMode.Asserts
+    #  build_mode = peano4.output.CompileMode.Asserts
+    build_mode = peano4.output.CompileMode.Debug
 else:
     build_mode = peano4.output.CompileMode.Release
 
 # Set Peano4 simulation parameters ---------------------------------------------
-offset = [0, 0, 0]
-domain_size = [1, 1, 1]
-periodic_boundary_conditions = [False, False, False]
-
 project.set_global_simulation_parameters(
     dimensions=dimensions,
     offset=offset,
@@ -226,7 +231,8 @@ project.set_global_simulation_parameters(
 project.set_Peano4_installation(args.peanodir, build_mode)
 
 project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::RecursiveBipartition",
+    #  "toolbox::loadbalancing::strategies::RecursiveBipartition",
+    "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
     "new toolbox::loadbalancing::DefaultConfiguration()",
 )
 
@@ -268,7 +274,7 @@ project.algorithm_step_initial_conditions.add_action_set(
         initialisation_call=initialisation_snippet,
         coordinates=coords,
         additional_includes="""
-#include "swift2/legacy/equation_of_state.h"
+#include "swift2/kernels/legacy/equation_of_state.h"
 """,
     )
 )
@@ -311,6 +317,9 @@ particle_plotter.add_attribute_to_plot(particle.pressure, 1)
 particle_plotter.add_attribute_to_plot(particle.u, 1)
 particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
 particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
+if args.asserts:
+    particle_plotter.add_attribute_to_plot(particle.density_neighbourcount, 1)
+    particle_plotter.add_attribute_to_plot(particle.force_neighbourcount, 1)
 project.algorithm_step_plot.add_action_set(particle_plotter)
 
 
