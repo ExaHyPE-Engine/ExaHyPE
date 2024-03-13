@@ -970,6 +970,16 @@ if test "$petsc" != false; then
   if test "$toolbox_finiteelements" == false; then
     AC_MSG_ERROR([PETSc requires the finite elements toolbox (run with --help to see the correct enable statement)])
   fi
+  AC_CHECK_HEADER([petsc.h], [
+  ], [
+    AC_MSG_ERROR([PETSc headers not found])
+  ])
+  # Check for libraries
+  AC_CHECK_LIB([petsc], [MatCreate], [
+    PETSC_LIBS="ac_cv_search_MatCreate"
+  ], [
+    AC_MSG_ERROR([PETSc library not found. Did you forget to include -lpetsc to LDFLAGS?])
+  ])
   LDADD_PEANO_2D_RELEASE=" -lPETSc         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lPETSc_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lPETSc_asserts $LDADD_PEANO_2D_ASSERTS "

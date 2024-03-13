@@ -95,11 +95,11 @@ if (fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}P
   
   assertionEquals(valuePatchVertexIndex, rhsPatchVertexIndex);
 
-  double* value = fineGridCell{{SOLVER_NAME}}.getValue().data();
-  double* rhs   = fineGridCell{{SOLVER_NAME}}.getRhs().data();
   
   int currentDoF = 0;
   dfor(k,repositories::{{SOLVER_INSTANCE}}.Order+1) {
+    double* value = fineGridCell{{SOLVER_NAME}}.getValue().data();
+    double* rhs   = fineGridCell{{SOLVER_NAME}}.getRhs().data();
     _valueWriter->plotVertex( valuePatchVertexIndex, value+currentDoF );
     _rhsWriter->plotVertex(   rhsPatchVertexIndex,   rhs+currentDoF   );
     valuePatchVertexIndex++;
