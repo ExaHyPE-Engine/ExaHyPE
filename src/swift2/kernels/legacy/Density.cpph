@@ -1,6 +1,9 @@
 #include "equation_of_state.h"
 #include "hydro_dimensions.h"
 #include "kernel_hydro.h"
+#include <iomanip>
+
+#define PROBLEMPART1 -1
 
 template <typename Particle>
 void swift2::kernels::legacy::hydro_end_density(Particle* localParticle) {
@@ -126,16 +129,30 @@ void swift2::kernels::legacy::density_kernel(
   /* Compute the actual interaction radius */
   const double iactR = kernel_gamma * hi;
 
+// if ((localParticle->getPartid() == PROBLEMPART1) and (r / iactR < 1.01)){
+if ((localParticle->getPartid() == PROBLEMPART1)){
+  std::cout << std::setprecision(6) <<
+    "Checking Iact " << PROBLEMPART1 << " with " << activeParticle->getPartid() <<
+    " r=" << r << " H=" << iactR << " r/iactR=" << r/iactR << " gamma=" << kernel_gamma <<
+    " xp= " << localParticle->getX() << " xn=" << activeParticle->getX() << std::endl;
+}
+
   // This will probably cause issues with vectorisation and should be outside of
   // the loop.
   if (
-    tarch::la::smaller(r, iactR)
+    tarch::la::smallerEquals(r, iactR)
     and tarch::la::greater(r, 0.0) /* Self-contribution is calculated elsewhere
                                     */
     // and
     // not localParticle->getIsBoundaryParticle()
   ) {
 
+if ((localParticle->getPartid() == PROBLEMPART1)){
+  std::cout << std::setprecision(6) <<
+    "!!!! Iact " << PROBLEMPART1 << " with " << activeParticle->getPartid() <<
+    " r=" << r << " r/iactR=" << r/iactR <<
+    " xp= " << localParticle->getX() << " xn=" << activeParticle->getX() << std::endl;
+}
     const double mj     = activeParticle->getMass();
     const double hi_inv = 1. / hi;
     // Normalized distance to evaluate kernel

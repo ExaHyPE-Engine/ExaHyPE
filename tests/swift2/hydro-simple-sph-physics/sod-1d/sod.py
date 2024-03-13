@@ -218,6 +218,7 @@ particle.h_hydro_max = hydro_h_max
 # particle.eta_factor = 1.2348
 # particle.beta_av = 3.0
 # particle.alpha_av = 0.8
+
 # Optional: Reduce the mantissa size for particle attributes -------------------
 # Native size is 53 (double precision)
 # particle.mantissa_size = 23
