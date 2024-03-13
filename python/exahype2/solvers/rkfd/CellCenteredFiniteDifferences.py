@@ -936,7 +936,7 @@ The finest mesh width of """
         return self._name + "Q"
 
     def get_name_of_global_instance(self):
-        return "InstanceOf" + self._name
+        return "instanceOf" + self._name
 
     def add_to_Peano4_datamodel(self, datamodel, verbose):
         """!
