@@ -24,7 +24,7 @@ toolbox::particles::assignmentchecks::internal::ParticleIdentifier::ParticleIden
   particleName(particleName__),
   particleX(particleX__) {}
 
-double toolbox::particles::assignmentchecks::internal::ParticleIdentifier::Precision = 1e-8;
+double toolbox::particles::assignmentchecks::internal::ParticleIdentifier::Precision = 1e-6;
 
 bool toolbox::particles::assignmentchecks::internal::ParticleIdentifier::numericalEquals(const ParticleIdentifier& rhs) const {
   return (particleName == rhs.particleName) and tarch::la::equals(particleX, rhs.particleX, Precision);
@@ -704,22 +704,99 @@ void toolbox::particles::assignmentchecks::moveParticle(
       internal::Event              newEvent(internal::Event::Type::MoveWhileAssociatedToVertex, oldIdentifier.particleX, treeId, trace );
 
       #if PeanoDebug>0
-      internal::Event              previousEvent    = _database.getEntry(oldIdentifier, treeId ).first;
-      internal::Event              existingNewEvent = _database.getEntry(newIdentifier, internal::Database::AnyTree ).first;
+      internal::Event              previousEvent               = _database.getEntry(oldIdentifier, treeId ).first;
+      internal::Event              existingNewEventOnAnyTree   = _database.getEntry(newIdentifier, internal::Database::AnyTree ).first;
+      internal::Event              existingNewEventOnLocalTree = _database.getEntry(newIdentifier, treeId ).first;
       #endif
 
-      assertion10(
-        existingNewEvent.type == internal::Event::Type::NotFound,
+      const std::string errorMessage0 = R"(
+=============
+Explanation
+=============
+The tracer has been informed of a particle movement. When it tried to bookmark
+the particle with its new position, it found out that there is already a 
+particle registered at this place. It seems that a particle overlaps with 
+another one.
+
+This might mean that there is actually a particle here, but could also result 
+from two other situations:
+
+- We trace position updates one after the other. If particle A takes the 
+  position of a particle B, we might simply not have updated B yet.
+- We trace position updates only if positions have changed significantly.
+  Significantly here is formalised via
+
+      toolbox::particles::assignmentchecks::internal::ParticleIdentifier::Precision
+
+  That is, if particles are closer together than this delta, we do not write
+  logs into our database. This ensures that the database is not filled with 
+  tiny update entries.
+
+As the tracing cannot handle either situation, we are left with two options.
+We can dramatically reduce Precision at the cost of a higher overhead. 
+Alternatively, it might be appropriate to check the time step sizes 
+employed: If particles move too fast, the probability that A ends up at a 
+position just previously held by B (which is not yet updated) is higher.
+
+)";
+      assertion13(
+        existingNewEventOnLocalTree.type == internal::Event::Type::NotFound,
         oldIdentifier.toString(),
-        previousEvent.toString(),
         newIdentifier.toString(),
+        previousEvent.toString(),
         newEvent.toString(),
+        existingNewEventOnLocalTree.toString(),
+        existingNewEventOnAnyTree.toString(),
         _database.getNumberOfSnapshots(),
         treeId,
         trace,
-        _database.totalEntries(oldIdentifier),
-        _database.particleHistory(oldIdentifier),
-        "make ParticleIdentifier::Precision smaller if this problem continues to persist (tracking might be too blurry) and ensure that particles do not overlap and collide"
+        internal::ParticleIdentifier::Precision,
+        _database.totalEntries(newIdentifier),
+        _database.particleHistory(newIdentifier),
+        errorMessage0
+      );
+      const std::string errorMessage1 = R"(
+=============
+Explanation
+=============
+The tracer has been informed of a particle movement. When it tried to bookmark
+the particle with its new position, it found out that there is already a 
+particle registered at this place. That is fine, as particles might be held
+redundantly on different trees - either as halo copies or as they sit exactly
+on the face between two subdomains.
+
+If that happens, they however have to be tied to the same vertex in the domain
+although the vertex might be replicated on a different tree. Alternatively, the
+other rank might already have moved it and come to the conclusion that it has 
+to be assigned to the sieve set. The present tree is not there yet, i.e. is 
+just about to move it, but will eventually also raise its particle to the
+sieve set.
+)";
+      assertion13(
+        existingNewEventOnAnyTree.type == internal::Event::Type::NotFound
+        or
+        existingNewEventOnAnyTree.type == internal::Event::Type::AssignToSieveSet
+        or
+        (
+          existingNewEventOnAnyTree.type == internal::Event::Type::AssignToVertex
+          and
+          existingNewEventOnAnyTree.vertexX == previousEvent.vertexX
+          and
+          existingNewEventOnAnyTree.vertexH == previousEvent.vertexH
+        ),
+        oldIdentifier.toString(),
+        newIdentifier.toString(),
+        previousEvent.toString(),
+        newEvent.toString(),
+        existingNewEventOnLocalTree.toString(),
+        existingNewEventOnAnyTree.toString(),
+        _database.getNumberOfSnapshots(),
+        treeId,
+        trace,
+        internal::ParticleIdentifier::Precision,
+        _database.totalEntries(newIdentifier),
+        _database.particleHistory(newIdentifier),
+        errorMessage1
       );
       assertion9(
         previousEvent.type == internal::Event::Type::AssignToVertex,

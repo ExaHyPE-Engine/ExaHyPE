@@ -89,9 +89,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-c",
         "--clean",
-        dest="clean_temporary_directories",
+        dest="clean_temporary_files",
         action="store_true",
-        help="Remove temporary directories before script starts",
+        help="Remove temporary directories and output files before script starts",
     )
     parser.add_argument(
         "-np",
@@ -630,7 +630,7 @@ if __name__ == "__main__":
     ###############################################################################
 
     # If we want to start a project from scratch, we may want to remove some of the generated code
-    if args.clean_temporary_directories:
+    if args.clean_temporary_files:
         dirs = ["vertexdata/", "repositories/", "globaldata/", "observers/"]
         for dir in dirs:
             shutil.rmtree(dir)
@@ -642,11 +642,12 @@ if __name__ == "__main__":
     )
     peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 
-    # remove output files from previous runs
-    output_files = [
-        f
-        for f in os.listdir(".")
-        if f.endswith(".peano-patch-file") or f.endswith(".vtu") or f.endswith(".pvd")
-    ]
-    for f in output_files:
-        os.remove(f)
+    if args.clean_temporary_files:
+        # remove output files from previous runs
+        output_files = [
+            f
+            for f in os.listdir(".")
+            if f.endswith(".peano-patch-file") or f.endswith(".vtu") or f.endswith(".pvd")
+        ]
+        for f in output_files:
+            os.remove(f)

@@ -47,8 +47,17 @@ do
   echo build $REALISATION
   N_PART=1024
   PLOT_DELTA=0.0
-  END_TIME=0.001
+  END_TIME=0.1
   python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION
+  
+  N_PART=120
+  PLOT_DELTA=0.001
+  python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION-test
+  #
+  # See remarks on correctness checks in README.dox in the section "Validate correctness"
+  #
+  cp repositories/ModifiedGlobalState.cpp repositories/GlobalState.cpp; make -j
+  
   N_PART=120
   END_TIME=0.0005
   PLOT_DELTA=$END_TIME
