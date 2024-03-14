@@ -49,35 +49,6 @@ namespace swift2 {
      * varying search radius.
      */
     namespace legacy {
-      /**
-       * @todo Is this one at the right place, or should it rather be in
-       * SmoothingLength?
-       */
-      template <typename Particle>
-      void resetSmoothingLengthIterationCounter(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   particle
-      ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, particle)) {
-          particle.setSmoothingLengthConverged(false);
-          particle.setSmoothingLengthIterCount(0);
-        }
-      }
-
-      /**
-       * At this point, we just reset some flags and counters that are only
-       * required during a single time step. So we don't need to pass any checks
-       * whether to work on a particle.
-       */
-      template <typename Particle>
-      void resetSmoothingLengthIterationCounterWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   particle
-      ) {
-        resetSmoothingLengthIterationCounter(marker, particle);
-      }
-
     } // namespace legacy
   }   // namespace kernels
 } // namespace swift2

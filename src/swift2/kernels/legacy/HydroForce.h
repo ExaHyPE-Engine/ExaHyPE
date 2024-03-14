@@ -118,12 +118,8 @@ namespace swift2 {
        *
        * This operation struggles to vectorise, as we have the statement
        *
-       * @todo: boundary particle documentation needs to be removed along with
-       * that sort of boundary particle treatment
-       *
        * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-       *   if (tarch::la::smaller(r, iactR) and tarch::la::greater(r, 0.0) and
-       * not localParticle->getIsBoundaryParticle())
+       *   if ((tarch::la::smaller(r, iactRi) or tarch::la::smaller(r, iactRj)) and tarch::la::greater(r, 0.0))
        * {
        * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *

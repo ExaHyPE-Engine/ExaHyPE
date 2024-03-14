@@ -316,7 +316,7 @@ def get_algorithm_step_dict(particle):
             "::swift2::kernels::legacy::endHydroForceCalculation"
         ),
         includes="""
-          #include "swift2/kernels/legacy/Swift.h"
+          #include "swift2/kernels/legacy/SmoothingLength.h"
           #include "swift2/kernels/legacy/HydroForce.h"
         """,
     )

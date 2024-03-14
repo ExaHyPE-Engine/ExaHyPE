@@ -6,7 +6,6 @@
 
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/VertexMarker.h"
-
 #include "swift2/kernels/ParticleUpdatePredicates.h"
 
 
@@ -46,7 +45,7 @@ namespace swift2 {
           assertion2(
             localParticle.getSmoothingLength() <= localParticle.getSearchRadius(),
             marker.toString(), localParticle.toString()
-          );          
+          );
         }
       }
 
@@ -59,6 +58,36 @@ namespace swift2 {
       void updateSmoothingLengthAndRerunIfRequiredWithMasking(const peano4::datamanagement::VertexMarker& marker, Particle& localParticle) {
         updateSmoothingLengthAndRerunIfRequired( marker, localParticle );
       }
+
+      /**
+       * Reset smoothing length iteration related flags on a particle.
+       */
+      template <typename Particle>
+      void resetSmoothingLengthIterationCounter(
+        const peano4::datamanagement::VertexMarker& marker,
+        Particle&                                   particle
+      ) {
+        if (::swift2::kernels::
+              localParticleCanBeUpdatedInVertexKernel(marker, particle)) {
+          particle.setSmoothingLengthConverged(false);
+          particle.setSmoothingLengthIterCount(0);
+        }
+      }
+
+      /**
+       * At this point, we just reset some flags and counters that are only
+       * required during a single time step. So we don't need to pass any checks
+       * whether to work on a particle.
+       */
+      template <typename Particle>
+      void resetSmoothingLengthIterationCounterWithMasking(
+        const peano4::datamanagement::VertexMarker& marker,
+        Particle&                                   particle
+      ) {
+        resetSmoothingLengthIterationCounter(marker, particle);
+      }
+
+
     }
   }
 }
