@@ -168,7 +168,7 @@ class PatchFileParser(object):
       self._initialise_default_mapping_if_no_mapping_specified()
       self.parsed = True
     except Exception as e:
-      print( "Error: was not able to read " + self.file_path + ": " + str(e) + " in line " + this_line )
+      print( f"Error: was not able to read {self.file_path}: {e} in line {this_line}" )
       self.parsed = False
       
 
