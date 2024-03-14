@@ -316,7 +316,7 @@ def get_algorithm_step_dict(particle):
             "::swift2::kernels::legacy::endHydroForceCalculation"
         ),
         includes="""
-          #include "swift2/kernels/legacy/Swift.h"
+          #include "swift2/kernels/legacy/SmoothingLength.h"
           #include "swift2/kernels/legacy/HydroForce.h"
         """,
     )
@@ -331,9 +331,6 @@ def get_algorithm_step_dict(particle):
         touch_vertex_last_time_kernel=(
             v_iter.insert(
                 "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
-            )
-            + v_iter.insert(
-                "::swift2::kernels::legacy::leapfrogKickExtraWithGlobalTimeStepSize"
             )
             + v_iter.insert("::swift2::kernels::legacy::resetPredictedValues")
         ),

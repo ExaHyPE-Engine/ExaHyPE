@@ -17,30 +17,29 @@ void swift2::kernels::legacy::hydro_end_density(Particle* localParticle) {
   const double alphaAV         = localParticle->getAlphaAV();
 
   /* Retrieve some properties */
-  const double m_a = localParticle->getMass();
-  const double h_a = localParticle->getSmoothingLength();
+  const double m_i = localParticle->getMass();
+  const double h_i = localParticle->getSmoothingLength();
 
   /* Some smoothing length multiples */
-  const double h_inv     = 1.0 / h_a;
+  const double h_inv     = 1.0 / h_i;
   const double h_inv_dim = swift2::kernels::legacy::hydroDimensions::
     pow_dimension(h_inv);
   const double h_inv_dim_plus_one = h_inv_dim * h_inv;
 
   /* Final operation. Add the self-contributions (i.e. at q=0) */
-  localParticle->setDensity(localParticle->getDensity() + m_a * kernel_root);
-  localParticle->setDensity(localParticle->getDensity() * h_inv_dim);
-
-  localParticle->setWcount(localParticle->getWcount() + kernel_root);
-  localParticle->setWcount(localParticle->getWcount() * h_inv_dim);
-
+  localParticle->setDensity(localParticle->getDensity() + m_i * kernel_root);
   localParticle->setRho_dh(
-    localParticle->getRho_dh() - m_a * hydroDimensions * kernel_root
+    localParticle->getRho_dh() - m_i * hydroDimensions * kernel_root
   );
-  localParticle->setRho_dh(localParticle->getRho_dh() * h_inv_dim_plus_one);
-
+  localParticle->setWcount(localParticle->getWcount() + kernel_root);
   localParticle->setWcount_dh(
     localParticle->getWcount_dh() - hydroDimensions * kernel_root
   );
+
+
+  localParticle->setDensity(localParticle->getDensity() * h_inv_dim);
+  localParticle->setRho_dh(localParticle->getRho_dh() * h_inv_dim_plus_one);
+  localParticle->setWcount(localParticle->getWcount() * h_inv_dim);
   localParticle->setWcount_dh(
     localParticle->getWcount_dh() * h_inv_dim_plus_one
   );
@@ -96,7 +95,7 @@ void swift2::kernels::legacy::hydro_prepare_density(Particle* localParticle) {
   localParticle->setRot_v(0.0);
 
 #if PeanoDebug > 0
-  localParticle->setSmoothingLengthNeighbourCount(0);
+  localParticle->setDensityNeighbourCount(0);
 #endif
 }
 
@@ -129,7 +128,7 @@ void swift2::kernels::legacy::density_kernel(
   // This will probably cause issues with vectorisation and should be outside of
   // the loop.
   if (
-    tarch::la::smaller(r, iactR)
+    tarch::la::smallerEquals(r, iactR)
     and tarch::la::greater(r, 0.0) /* Self-contribution is calculated elsewhere
                                     */
     // and
@@ -181,12 +180,12 @@ void swift2::kernels::legacy::density_kernel(
       dv[1] * dx[2] - dv[2] * dx[1],
       dv[2] * dx[0] - dv[0] * dx[2],
       dv[0] * dx[1] - dv[1] * dx[0]};
-    localParticle->setRot_v(localParticle->getRot_v(0) + fac_i * curlvr);
+    localParticle->setRot_v(localParticle->getRot_v() + fac_i * curlvr);
 #endif
 
 #if PeanoDebug > 0
-    localParticle->setSmoothingLengthNeighbourCount(
-      localParticle->getSmoothingLengthNeighbourCount() + 1
+    localParticle->setDensityNeighbourCount(
+      localParticle->getDensityNeighbourCount() + 1
     );
 #endif
 

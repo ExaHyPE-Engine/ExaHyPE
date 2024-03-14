@@ -48,72 +48,8 @@ namespace swift2 {
      * computation algorithms for both a constant search radius as well as a
      * varying search radius.
      */
-    namespace legacy {
-      /**
-       * @todo Is this one at the right place, or should it rather be in
-       * SmoothingLength?
-       */
-      template <typename Particle>
-      void resetSmoothingLengthIterationCounter(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   particle
-      ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, particle)) {
-          particle.setSmoothingLengthConverged(false);
-          particle.setSmoothingLengthIterCount(0);
-#if PeanoDebug > 0
-          particle.setSmoothingLengthNeighbourCount(0);
-#endif
-        }
-      }
-
-      /**
-       * At this point, we just reset some flags and counters that are only
-       * required during a single time step. So we don't need to pass any checks
-       * whether to work on a particle.
-       */
-      template <typename Particle>
-      void resetSmoothingLengthIterationCounterWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   particle
-      ) {
-        resetSmoothingLengthIterationCounter(marker, particle);
-      }
-
-
-      /**
-       * @brief Reset acceleration fields of a particle
-       *
-       * Resets all hydro acceleration and time derivative fields in preparation
-       * for the sums taking place in the various force interactions.
-       */
-      template <typename Particle>
-      void hydro_reset_acceleration(Particle* localParticle);
-
-      /**
-       * @todo Is this the correct place? Might belong to the leapfrog maybe?
-       */
-      template <typename Particle>
-      void resetAcceleration(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   localParticle
-      ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          hydro_reset_acceleration(&localParticle);
-        }
-      }
-
-      template <typename Particle>
-      void resetAccelerationWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   localParticle
-      ) {
-        resetAcceleration(marker, localParticle);
-      }
-    } // namespace legacy
-  }   // namespace kernels
+    namespace legacy {} // namespace legacy
+  }                     // namespace kernels
 } // namespace swift2
 
 

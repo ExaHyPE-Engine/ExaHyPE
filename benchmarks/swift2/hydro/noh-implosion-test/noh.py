@@ -49,23 +49,19 @@ AllKernelOptimisationVariants = [
 ]
 
 
-Choices = (
-    [
-        parallelisation_variant + "." + storage + "." + sorting + "." + kernel_optimisation
-        for parallelisation_variant in ParallelisationVariants
-        for storage                 in [Storage_Scattered]
-        for sorting                 in SortingVariants
-        for kernel_optimisation     in BasicKernelOptimisationVariants
-    ]
-    +
-    [
-        parallelisation_variant + "." + storage + "." + sorting + "." + kernel_optimisation
-        for parallelisation_variant in ParallelisationVariants
-        for storage                 in StorageVariants
-        for sorting                 in SortingVariants
-        for kernel_optimisation     in AllKernelOptimisationVariants
-    ]
-)
+Choices = [
+    parallelisation_variant + "." + storage + "." + sorting + "." + kernel_optimisation
+    for parallelisation_variant in ParallelisationVariants
+    for storage in [Storage_Scattered]
+    for sorting in SortingVariants
+    for kernel_optimisation in BasicKernelOptimisationVariants
+] + [
+    parallelisation_variant + "." + storage + "." + sorting + "." + kernel_optimisation
+    for parallelisation_variant in ParallelisationVariants
+    for storage in StorageVariants
+    for sorting in SortingVariants
+    for kernel_optimisation in AllKernelOptimisationVariants
+]
 
 
 if __name__ == "__main__":
@@ -207,13 +203,11 @@ if __name__ == "__main__":
     project = swift2.Project(
         namespace=project_namespace, project_name="Noh", executable=args.output_file
     )
-    
+
     if (
-        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
-        and 
-        args.realisation.split(".")[1] == Storage_Scattered
-        and 
-        args.realisation.split(".")[2] == Sorting_MultiscaleSort
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
+        and args.realisation.split(".")[1] == Storage_Scattered
+        and args.realisation.split(".")[2] == Sorting_MultiscaleSort
     ):
         project.algorithm_steps_task_graph_compiler = (
             swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
@@ -222,11 +216,9 @@ if __name__ == "__main__":
             swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
-        and 
-        args.realisation.split(".")[1] == Storage_Scattered
-        and 
-        args.realisation.split(".")[2] == Sorting_BucketSort
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
+        and args.realisation.split(".")[1] == Storage_Scattered
+        and args.realisation.split(".")[2] == Sorting_BucketSort
     ):
         project.algorithm_steps_task_graph_compiler = (
             swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
@@ -235,15 +227,12 @@ if __name__ == "__main__":
             swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
-        and 
-        (
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
+        and (
             args.realisation.split(".")[1] == Storage_ContinuousPerVertex
-            or
-            args.realisation.split(".")[1] == Storage_GlobalContinuous
+            or args.realisation.split(".")[1] == Storage_GlobalContinuous
         )
-        and 
-        args.realisation.split(".")[2] == Sorting_MultiscaleSort
+        and args.realisation.split(".")[2] == Sorting_MultiscaleSort
     ):
         project.algorithm_steps_task_graph_compiler = (
             swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory
@@ -252,15 +241,12 @@ if __name__ == "__main__":
             swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_insert_sort_sweeps_coalesced_memory
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition 
-        and 
-        (
+        args.realisation.split(".")[0] == Parallelisation_DomainDecomposition
+        and (
             args.realisation.split(".")[1] == Storage_ContinuousPerVertex
-            or
-            args.realisation.split(".")[1] == Storage_GlobalContinuous
+            or args.realisation.split(".")[1] == Storage_GlobalContinuous
         )
-        and 
-        args.realisation.split(".")[2] == Sorting_BucketSort
+        and args.realisation.split(".")[2] == Sorting_BucketSort
     ):
         project.algorithm_steps_task_graph_compiler = (
             swift2.api.graphcompiler.particle_steps_onto_separate_mesh_traversals_sort_on_the_fly_coalesced_memory
@@ -270,10 +256,8 @@ if __name__ == "__main__":
         )
     elif (
         args.realisation.split(".")[0] == Parallelisation_TaskTree
-        and 
-        args.realisation.split(".")[1] == Storage_Scattered
-        and 
-        args.realisation.split(".")[2] == Sorting_MultiscaleSort
+        and args.realisation.split(".")[1] == Storage_Scattered
+        and args.realisation.split(".")[2] == Sorting_MultiscaleSort
     ):
         project.algorithm_steps_task_graph_compiler = (
             swift2.api.graphcompiler.particle_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory
@@ -282,11 +266,9 @@ if __name__ == "__main__":
             swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
         )
     elif (
-        args.realisation.split(".")[0] == Parallelisation_TaskTree 
-        and 
-        args.realisation.split(".")[1] == Storage_Scattered
-        and 
-        args.realisation.split(".")[2] == Sorting_BucketSort
+        args.realisation.split(".")[0] == Parallelisation_TaskTree
+        and args.realisation.split(".")[1] == Storage_Scattered
+        and args.realisation.split(".")[2] == Sorting_BucketSort
     ):
         project.algorithm_steps_task_graph_compiler = (
             swift2.api.graphcompiler.particle_steps_onto_task_tree_bucket_sort_scattered_memory
@@ -432,15 +414,14 @@ if __name__ == "__main__":
     # the particle_set to the project
     particle_set = project.add_particle_species(particle)
 
-
-    if args.realisation.split(".")[1]==Storage_ContinuousPerVertex:
+    if args.realisation.split(".")[1] == Storage_ContinuousPerVertex:
         particle_set.generator = (
             peano4.toolbox.particles.ParticleSetGenerator_ContinuousPerVertex(
                 particle_set
             )
         )
         print("Benchmark: Use continuous per vertex data layout")
-    elif args.realisation.split(".")[1]==Storage_GlobalContinuous:
+    elif args.realisation.split(".")[1] == Storage_GlobalContinuous:
         particle_set.generator = (
             peano4.toolbox.particles.ParticleSetGenerator_GlobalContinuous(particle_set)
         )
@@ -482,7 +463,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation(args.peanodir, build_mode)
 
-    if args.trees!=0:
+    if args.trees != 0:
         project.set_load_balancing(
             "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
             "new toolbox::loadbalancing::DefaultConfiguration()",
@@ -492,23 +473,6 @@ if __name__ == "__main__":
     # Initialisation snippet for the particle
     ###############################################################################
 
-    # Set up the coordinates for the particles
-    # We construct a regular (lattice) configuration.
-    Npart = args.particle_number
-    offset = 1 / Npart
-
-    coords = np.zeros((Npart**HYDRO_DIMENSIONS, 3))
-
-    x = np.linspace(offset, 1, Npart, endpoint=False)
-    y = np.linspace(offset, 1, Npart, endpoint=False)
-
-    xp, yp = np.meshgrid(x, y)
-    xp = xp.reshape((np.prod(xp.shape),))
-    yp = yp.reshape((np.prod(yp.shape),))
-
-    coords[:, 0] = xp
-    coords[:, 1] = yp
-
     #  Noh problem (2D) snippet  --------------------------------------------------
     #  The particle attributes are set via an initalisation snippet that sets
     #  the initial conditions specific for this problem, i.e. the velocity field
@@ -517,17 +481,6 @@ if __name__ == "__main__":
 
     ICs = swift2.scenario.NohProblemIC(dimensions=HYDRO_DIMENSIONS)
     initialisation_snippet = ICs.initialisation_snippet
-
-    # Finally, pass this configuration to the initialisation script
-    # project.algorithm_step_initial_conditions.add_action_set( swift2.input.InsertParticlesByCoordinates(
-    #  particle_set        = particle_set,
-    #  initialisation_call = initialisation_snippet,
-    #  coordinates         = coords,
-    #  additional_includes = """
-    ##include "swift2/legacy/equation_of_state.h"
-    # """
-    #  )
-    # )
 
     project.algorithm_step_initial_conditions.add_action_set(
         swift2.input.InsertParticlesAlongCartesianGrid(
@@ -577,6 +530,9 @@ if __name__ == "__main__":
     particle_plotter.add_attribute_to_plot(particle.u, 1)
     particle_plotter.add_attribute_to_plot(particle.smoothL, 1)
     particle_plotter.add_attribute_to_plot(particle.is_boundary_part, 1)
+    if args.mode == "asserts" or args.mode == "debug":
+        particle_plotter.add_attribute_to_plot(particle.density_neighbourcount, 1)
+        particle_plotter.add_attribute_to_plot(particle.force_neighbourcount, 1)
     project.algorithm_step_plot.add_action_set(particle_plotter)
 
     ###############################################################################
@@ -647,7 +603,9 @@ if __name__ == "__main__":
         output_files = [
             f
             for f in os.listdir(".")
-            if f.endswith(".peano-patch-file") or f.endswith(".vtu") or f.endswith(".pvd")
+            if f.endswith(".peano-patch-file")
+            or f.endswith(".vtu")
+            or f.endswith(".pvd")
         ]
         for f in output_files:
             os.remove(f)

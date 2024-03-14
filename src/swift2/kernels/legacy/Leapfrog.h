@@ -38,6 +38,14 @@ namespace swift2 {
        *
        * Notice that this operation modifies the particle topology and hence
        * particles must be re-sorted before further operations can be executed.
+       *
+       * It's important to take the "V_full" here, not the fluid velocity V.
+       * V_full doesn't get touched outside of kicks. V will be interpolated/
+       * integrated in time as the time step progresses. V_full is the correct
+       * choice here.
+       *
+       * Note that original SWIFT predicts the velocities at this point. We
+       * moved that into hydroPredictExtra().
        */
       template <typename Particle>
       void leapfrog_drift_global_time_step_size(Particle* particle);

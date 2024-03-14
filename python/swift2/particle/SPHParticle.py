@@ -217,14 +217,18 @@ class SPHParticle(Particle):
         self.sml_converged = dastgen2.attributes.Boolean(
             "smoothingLengthConverged", initval="false"
         )
-        self.sml_neighbourcount = dastgen2.attributes.Integer(
-            "smoothingLengthNeighbourCount", ifdefs=["PeanoDebug > 0"]
+        self.density_neighbourcount = dastgen2.attributes.Integer(
+            "densityNeighbourCount", ifdefs=["PeanoDebug > 0"]
+        )
+        self.force_neighbourcount = dastgen2.attributes.Integer(
+            "forceNeighbourCount", ifdefs=["PeanoDebug > 0"]
         )
         self.part_id = dastgen2.attributes.Integer("partid")
         self.data.add_attribute(self.has_no_neighbours)
         self.data.add_attribute(self.is_boundary_part)
         self.data.add_attribute(self.sml_converged)
-        self.data.add_attribute(self.sml_neighbourcount)
+        self.data.add_attribute(self.density_neighbourcount)
+        self.data.add_attribute(self.force_neighbourcount)
         self.data.add_attribute(self.part_id)
 
         return

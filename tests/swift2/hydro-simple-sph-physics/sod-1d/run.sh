@@ -12,7 +12,7 @@ IC_FILENAME="sodShock.hdf5"
 # Parameters
 N_PART=900          # fixed by IC file
 # END_TIME=0.2      # original setup
-END_TIME=0.025
+END_TIME=0.2
 TIMESTEP_SIZE=9.765625e-05 # copied from SWIFT output.
 CFL_FACTOR=0.1
 # PLOT_DELTA=0.01
@@ -28,8 +28,8 @@ fi
 
 # Run python script to generate the experiment
 echo 'generate and compile code ...'
-echo python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE --asserts -v
-python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE --asserts -v
+echo python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
+python3 sod.py -np $N_PART -et $END_TIME -dt $TIMESTEP_SIZE -cfl $CFL_FACTOR -plot $PLOT_DELTA -cs $CELL_SIZE
 
 # run experiment
 echo 'running experiment...'
