@@ -22,8 +22,8 @@ class DLinear(MatrixGenerator):
   '''
   def __init__(self,
                dimensions,
-               poly_degree=1,
-               unknowns_per_vertex_dof=1,
+               poly_degree,
+               unknowns_per_vertex_dof,
                ):
 
     super( DLinear, self ).__init__(dimensions,
