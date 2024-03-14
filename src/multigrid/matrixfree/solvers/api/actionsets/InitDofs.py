@@ -5,7 +5,14 @@ import jinja2
 
 
 class InitDofsCollocated(ActionSet):
-  # need to set the type of the vertex and give it a value
+  """!
+  In touchVertexFirstTime, we set the type of vertex we see (either Interior, Boundary or Coarse),
+  as well as sending some values to the solver implementation file to be placed into the mesh.
+
+  In touchCellFirstTime, we just determine the type, as we don't store anything on cells in 
+  this solver.
+  """
+
   templateTouchVertexFirstTime = """
   // this is done inside getDofType. included here for sanity check
   auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & x ) -> bool{
@@ -192,7 +199,9 @@ class InitDofsCollocated(ActionSet):
 class InitDofsDG(ActionSet):
   """!
   Redoing this class for discontinuous galerkin solver.
-  Not much is different from above.
+  
+  This time, we store values only in the cells and just 
+  determine the type of vertex we see.
   """
   templateTouchVertexFirstTime = """
 
