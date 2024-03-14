@@ -95,6 +95,8 @@ namespace swift2 {
        *      = \sum_j m_j  \frac{\partial W(r_{ij}, h_i)}{\partial h}
        *      @f$
        *
+       * (see the @f$f_i@f$ in swift2::kernels::legacy::force_kernel to see
+       * where and how it is used)
        * where @f$ m_j @f$ is the particle mass, @f$ r_{ij} @f$ is the distance
        * between particle @f$i @f$ and @f$ j @f$, @f$h_i @f$ is the smoothing
        * length of @f$i @f$ and @f$ W(r, h) @f$ is the SPH kernel function

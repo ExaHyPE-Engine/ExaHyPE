@@ -193,8 +193,7 @@ void swift2::kernels::legacy::force_kernel(
   const double h_j    = activeParticle->getSmoothingLength();
   const double iactRj = kernel_gamma * h_j;
 
-  if ((tarch::la::smallerEquals(r, iactRi) or (tarch::la::smaller(r, iactRj))) and tarch::la::greater(r, 0.0)) {
-    // and not localParticle->getIsBoundaryParticle()) {
+  if ((tarch::la::smaller(r, iactRi) or (tarch::la::smaller(r, iactRj))) and tarch::la::greater(r, 0.0)) {
 
 #if PeanoDebug > 0
     localParticle->setForceNeighbourCount(

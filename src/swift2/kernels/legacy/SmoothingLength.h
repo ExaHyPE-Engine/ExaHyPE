@@ -25,7 +25,7 @@ namespace swift2 {
        * The smoothing length is defined by a user-set parameter @f$\eta @f$
        * which specifies it in units of the (local) mean interparticle separation:
        *
-       * @f$ h = \eta \langle x \rangle = \eta (1/n\mathbf{x})^{1/\nu} @f$
+       * @f$ h = \eta \langle x \rangle = \eta \left(\frac{1}{n(\mathbf{x})} \right)^{1/\nu} @f$
        *
        * where @f$ n @f$ is the local number density of particles (which is
        * the same as the inverse of volume), and @f$ \nu @f$ is the number of
