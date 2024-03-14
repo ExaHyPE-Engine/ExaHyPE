@@ -2,11 +2,6 @@
 #include "hydro_dimensions.h"
 #include "kernel_hydro.h"
 
-#ifndef PROBLEMPART1
-#define PROBLEMPART1 -1
-// #define PROBLEMPART1 855
-#endif
-
 template <typename Particle>
 void swift2::kernels::legacy::
   hydro_update_smoothing_length_and_rerun_if_required(Particle* localParticle) {
@@ -66,7 +61,6 @@ void swift2::kernels::legacy::
     );
 
     localParticle->setSmoothingLengthConverged(false);
-if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PROBLEMPART1 << " WANTS REITERATION LOC1" << std::endl;
     return;
 
   } else {
@@ -122,7 +116,6 @@ if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PR
       // Leave things as they are and don't re-run.
 
       localParticle->setSmoothingLengthConverged(true);
-if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PROBLEMPART1 << " UNHAPPY EXIT; DONT REITERATE LOC2" << std::endl;
       return;
     }
 
@@ -175,9 +168,6 @@ if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PR
     // we're done. Note that in SWIFT, they check the other way around.
     localParticle->setSmoothingLength(h_new);
     localParticle->setSmoothingLengthConverged(true);
-if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PROBLEMPART1 << " EXIT; DONT REITERATE LOC3" <<
-  " hnew=" << h_new << " hold=" << h_old << " hmax=" << hydro_h_max <<
-  std::endl;
     return;
   }
 
@@ -207,7 +197,6 @@ if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PR
     // If we reach this point, we need to run again.
     localParticle->getSpecies().setRerunPreviousGridSweep();
     localParticle->setSmoothingLengthConverged(false);
-if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PROBLEMPART1 << " EXIT; REITERATE LOC4" << std::endl;
     return;
 
   } else if (localParticle->getSmoothingLength() >= hydro_h_max) {
@@ -228,7 +217,6 @@ if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PR
     //   "Particle also has no neighbours... TODO");
     // }
     localParticle->setSmoothingLengthConverged(true);
-if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PROBLEMPART1 << "UNHAPPY EXIT LOC 5; DONT REITERATE" << std::endl;
   } else if (localParticle->getSmoothingLength() <= hydro_h_min) {
     // Ok, this particle is a lost cause...
     localParticle->setSmoothingLength(hydro_h_min);
@@ -240,7 +228,6 @@ if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PR
         << localParticle->getPartid()
     );
     localParticle->setSmoothingLengthConverged(true);
-if (localParticle->getPartid() == PROBLEMPART1) std::cout << "SML: PART " <<  PROBLEMPART1 << "UNHAPPY EXIT LOC 6; DONT REITERATE" << std::endl;
     // if (hasNoNeighbours){
     //   logError("hydro_update_smoothing_length_and_rerun_if_required",
     //   "Particle also has no neighbours... TODO");

@@ -241,23 +241,6 @@ project.set_load_balancing(
 # Initialisation snippet for the particle
 ###############################################################################
 
-# Set up the coordinates for the particles
-# We construct a regular (lattice) configuration.
-Npart = args.particle_number
-offset = 1 / Npart
-
-coords = np.zeros((Npart**HYDRO_DIMENSIONS, 3))
-
-x = np.linspace(offset, 1, Npart, endpoint=False)
-y = np.linspace(offset, 1, Npart, endpoint=False)
-
-xp, yp = np.meshgrid(x, y)
-xp = xp.reshape((np.prod(xp.shape),))
-yp = yp.reshape((np.prod(yp.shape),))
-
-coords[:, 0] = xp
-coords[:, 1] = yp
-
 #  Noh problem (2D) snippet  --------------------------------------------------
 #  The particle attributes are set via an initalisation snippet that sets
 #  the initial conditions specific for this problem, i.e. the velocity field
@@ -267,17 +250,6 @@ coords[:, 1] = yp
 ICs = swift2.scenario.NohProblemIC(dimensions=HYDRO_DIMENSIONS)
 initialisation_snippet = ICs.initialisation_snippet
 
-# Finally, pass this configuration to the initialisation script
-#  project.algorithm_step_initial_conditions.add_action_set(
-#      swift2.input.InsertParticlesByCoordinates(
-#          particle_set=particle_set,
-#          initialisation_call=initialisation_snippet,
-#          coordinates=coords,
-#          additional_includes="""
-#  #include "swift2/kernels/legacy/equation_of_state.h"
-#  """,
-#      )
-#  )
 project.algorithm_step_initial_conditions.add_action_set(
     swift2.input.InsertParticlesAlongCartesianGrid(
         particle_set=particle_set,

@@ -2,10 +2,6 @@
 #include "hydro_dimensions.h"
 #include "kernel_hydro.h"
 
-#ifndef PROBLEMPART2
-#define PROBLEMPART2 -1
-#endif
-
 template <typename Particle>
 void swift2::kernels::legacy::hydro_prepare_force(Particle* localParticle) {
 
@@ -349,10 +345,6 @@ void swift2::kernels::legacy::forceKernelWithMasking(
   const Particle&                           activeParticle
 ) {
 
-  std::cout << "DONT USE THIS YET" << std::endl;
-  std::abort();
-}
-/*
   // macro expansions from swift2/legacy/kernels are cumbersome otherwise.
   using namespace swift2::kernels::legacy::kernelHydro;
 
@@ -362,17 +354,17 @@ void swift2::kernels::legacy::forceKernelWithMasking(
   const double betaAV          = localParticle.getBetaAV();
 
   // Retrieve basic properties of local and active particles
-  const double rho_a = localParticle.getDensity();
-  const double rho_b = activeParticle.getDensity();
+  const double rho_i = localParticle.getDensity();
+  const double rho_j = activeParticle.getDensity();
 
-  const double P_a = localParticle.getPressure();
-  const double P_b = activeParticle.getPressure();
+  const double P_i = localParticle.getPressure();
+  const double P_j = activeParticle.getPressure();
 
-  const double m_a = localParticle.getMass();
-  const double m_b = activeParticle.getMass();
+  const double m_i = localParticle.getMass();
+  const double m_j = activeParticle.getMass();
 
-  const double h_a = localParticle.getSmoothingLength();
-  const double h_b = activeParticle.getSmoothingLength();
+  const double h_i = localParticle.getSmoothingLength();
+  const double h_j = activeParticle.getSmoothingLength();
 
   // Distance between the two particles
   tarch::la::Vector<Dimensions, double>
@@ -381,50 +373,51 @@ void swift2::kernels::legacy::forceKernelWithMasking(
   const double r_inv = r ? 1.0 / r : 0.0;
 
   // Dimensionless distance to evaluate kernel
-  const double h_a_inv = 1. / h_a;
-  const double h_b_inv = 1. / h_b;
-  const double q_a     = r * h_a_inv;
-  const double q_b     = r * h_b_inv;
+  const double h_i_inv = 1. / h_i;
+  const double h_j_inv = 1. / h_j;
+  const double q_i     = r * h_i_inv;
+  const double q_j     = r * h_j_inv;
 
   // Get actual interaction radius
-  const double iactR = kernel_gamma * h_a;
+  const double iactRi = kernel_gamma * h_i;
+  const double iactRj = kernel_gamma * h_j;
 
   // @Pawel I don't know if this vectorises anymore, but I think the second
   // check is important
   //        I also don't know if a strict or non-strict boolean optimisation
   //        make a difference. If they do, please document it in the SWIFT
   //        optimisation pages.
-  double mask = (tarch::la::smaller(r, iactR) & tarch::la::greater(r, 0.0))
+  double mask = ((tarch::la::smaller(r, iactRi) | tarch::la::smaller(r, iactRj)) & tarch::la::greater(r, 0.0))
                   ? 1.0
                   : 0.0;
 
   // Get actual interaction radius
-  double wa, wb;
-  double wa_dr, wb_dr;
-  double dw_dqa, dw_dqb;
+  double wi, wj;
+  double wi_dr, wj_dr;
+  double dw_dqi, dw_dqj;
 
   // Evaluate kernel and its derivative for particle a
-  kernel_deval(q_a, wa, dw_dqa);
+  kernel_deval(q_i, wi, dw_dqi);
 
   // Evaluate kernel and its derivative for particle b
-  kernel_deval(q_b, wb, dw_dqb);
+  kernel_deval(q_j, wj, dw_dqj);
 
-  wa_dr = dw_dqa
+  wi_dr = dw_dqi
           * ::swift2::kernels::legacy::hydroDimensions::
-            pow_dimension_plus_one(h_a_inv);
-  wb_dr = dw_dqb
+            pow_dimension_plus_one(h_i_inv);
+  wj_dr = dw_dqj
           * ::swift2::kernels::legacy::hydroDimensions::
-            pow_dimension_plus_one(h_b_inv);
+            pow_dimension_plus_one(h_j_inv);
 
   // Variable smoothing length term
 
   // SWIFT "f"
-  const double f_ab = 1.0 - localParticle.getF() / m_b;
-  const double f_ba = 1.0 - activeParticle.getF() / m_a;
+  const double f_ij = 1.0 - localParticle.getF() / m_j;
+  const double f_ji = 1.0 - activeParticle.getF() / m_i;
 
   // Compute gradient terms
-  const double P_over_rho2_a = P_a / (rho_a * rho_a) * f_ab;
-  const double P_over_rho2_b = P_b / (rho_b * rho_b) * f_ba;
+  const double P_over_rho2_i = P_i / (rho_i * rho_i) * f_ij;
+  const double P_over_rho2_j = P_j / (rho_j * rho_j) * f_ji;
 
   // Compute dv dot r.
   double dvdr = tarch::la::dot(
@@ -435,26 +428,26 @@ void swift2::kernels::legacy::forceKernelWithMasking(
 
   // Are the particles moving towards each others ?
   const double omega_ij = std::min(dvdr, 0.0);
-  const double mu_ab    = r_inv * omega_ab;
+  const double mu_ij    = r_inv * omega_ij;
 
   // Compute sound speeds and signal velocity
   const double v_sig = localParticle.getSoundSpeed()
-                       + activeParticle.getSoundSpeed() - betaAV * mu_ab;
+                       + activeParticle.getSoundSpeed() - betaAV * mu_ij;
 
   // Balsara term
-  const double balsara_a = localParticle.getBalsara();
-  const double balsara_b = activeParticle.getBalsara();
+  const double balsara_i = localParticle.getBalsara();
+  const double balsara_j = activeParticle.getBalsara();
 
   // Construct the full viscosity term
-  const double rho_ab = 0.5 * (rho_a + rho_b);
-  const double visc = -0.25 * v_sig * mu_ab * (balsara_a + balsara_b) / rho_ab;
+  const double rho_ij = 0.5 * (rho_i + rho_j);
+  const double visc = -0.25 * v_sig * mu_ij * (balsara_i + balsara_j) / rho_ij;
 
   // Convolve with the kernel
-  const double visc_acc_term = 0.5 * visc * (wa_dr * f_ab + wb_dr * f_ba)
+  const double visc_acc_term = 0.5 * visc * (wi_dr * f_ij + wj_dr * f_ji)
                                * r_inv;
 
   // SPH acceleration term
-  const double sph_acc_term = (P_over_rho2_a * wa_dr + P_over_rho2_b * wb_dr)
+  const double sph_acc_term = (P_over_rho2_i * wi_dr + P_over_rho2_j * wj_dr)
                               * r_inv;
 
   // Assemble the acceleration
@@ -465,10 +458,10 @@ void swift2::kernels::legacy::forceKernelWithMasking(
     visc_acc_term,
     localParticle.toString(),
     activeParticle.toString(),
-    wa_dr,
-    f_ab,
-    wb_dr,
-    f_ba,
+    wi_dr,
+    f_ij,
+    wj_dr,
+    f_ji,
     r_inv,
     visc
   );
@@ -480,25 +473,25 @@ void swift2::kernels::legacy::forceKernelWithMasking(
   );
 
   // Use the force
-  localParticle.setA(localParticle.getA() - mask * m_b * acc * dx);
+  localParticle.setA(localParticle.getA() - mask * m_j * acc * dx);
 
   // Get the time derivative for u.
-  const double sph_du_term_a = P_over_rho2_a * dvdr * r_inv * wa_dr;
+  const double sph_du_term_i = P_over_rho2_i * dvdr * r_inv * wi_dr;
 
   // Viscosity term
   const double visc_du_term = 0.5 * visc_acc_term * dvdr;
 
   // Assemble the energy equation term
-  const double du_dt_a = sph_du_term_a + visc_du_term;
+  const double du_dt_i = sph_du_term_i + visc_du_term;
 
   const double udot = localParticle.getUDot();
 
   // Internal energy time derivative
-  localParticle.setUDot(localParticle.getUDot() + mask * m_b * du_dt_a);
+  localParticle.setUDot(localParticle.getUDot() + mask * m_j * du_dt_i);
 
   // Get the time derivative for h.
   localParticle.setHDot(
-    localParticle.getHDot() - mask * m_b * dvdr * r_inv / rho_b * wa_dr * f_ab
+    localParticle.getHDot() - mask * m_j * dvdr * r_inv / rho_j * wi_dr * f_ij
   );
 
   // Update the signal velocity
@@ -514,20 +507,19 @@ void swift2::kernels::legacy::forceKernelWithMasking(
     localParticle.toString(),
     dvdr,
     r_inv,
-    wa_dr,
-    f_ab,
-    f_ba
+    wi_dr,
+    f_ij,
+    f_ji
   );
   assertion7(
     not tarch::la::isEntryNan(localParticle.getA()),
     localParticle.toString(),
     sph_acc_term,
     visc_acc_term,
-    f_ab,
-    f_ba,
+    f_ij,
+    f_ji,
     activeParticle.getF(),
     activeParticle.getIsBoundaryParticle()
   );
 }
 
-*/
