@@ -121,7 +121,8 @@ void swift2::kernels::legacy::hydro_prepare_force(Particle* localParticle) {
 
 
 template <typename Particle>
-void swift2::kernels::legacy::hydro_reset_acceleration(Particle* localParticle) {
+void swift2::kernels::legacy::hydro_reset_acceleration(Particle* localParticle
+) {
 
   /* Reset the acceleration*/
   localParticle->setA(0.0);
@@ -131,7 +132,6 @@ void swift2::kernels::legacy::hydro_reset_acceleration(Particle* localParticle) 
   localParticle->setHDot(0.0);
   localParticle->setV_sig_AV(2.0 * localParticle->getSoundSpeed());
 }
-
 
 
 template <typename Particle>
@@ -151,8 +151,12 @@ void swift2::kernels::legacy::hydro_end_force(Particle* localParticle) {
   );
 
 #if PeanoDebug > 0
-  assertion2(localParticle->getDensityNeighbourCount() <= localParticle->getForceNeighbourCount(),
-      "Interacted with fewer particles in Force than in Density loop", localParticle->toString());
+  assertion2(
+    localParticle->getDensityNeighbourCount(
+    ) <= localParticle->getForceNeighbourCount(),
+    "Interacted with fewer particles in Force than in Density loop",
+    localParticle->toString()
+  );
 #endif
 }
 
@@ -193,8 +197,9 @@ void swift2::kernels::legacy::force_kernel(
     // and not localParticle->getIsBoundaryParticle()) {
 
 #if PeanoDebug > 0
-  localParticle->setForceNeighbourCount(
-      localParticle->getForceNeighbourCount() + 1);
+    localParticle->setForceNeighbourCount(
+      localParticle->getForceNeighbourCount() + 1
+    );
 #endif
 
     // Retrieve basic properties of local and active particles
@@ -263,10 +268,12 @@ void swift2::kernels::legacy::force_kernel(
     const double visc = -0.25 * v_sig * mu_ij * (balsara_i + balsara_j) / rho_ij;
 
     /* Convolve with the kernel */
-    const double visc_acc_term = 0.5 * visc * (dwi_dr * f_ij + dwj_dr * f_ji) * r_inv;
+    const double visc_acc_term = 0.5 * visc * (dwi_dr * f_ij + dwj_dr * f_ji)
+                                 * r_inv;
 
     /* SPH acceleration term */
-    const double sph_acc_term = (P_over_rho2_i * dwi_dr + P_over_rho2_j * dwj_dr) * r_inv;
+    const double sph_acc_term = (P_over_rho2_i * dwi_dr + P_over_rho2_j * dwj_dr)
+                                * r_inv;
 
     // Assemble the acceleration
     const double acc = sph_acc_term + visc_acc_term;
@@ -337,7 +344,6 @@ void swift2::kernels::legacy::force_kernel(
 }
 
 
-
 template <typename Particle>
 void swift2::kernels::legacy::forceKernelWithMasking(
   const peano4::datamanagement::CellMarker& marker,
@@ -387,7 +393,8 @@ void swift2::kernels::legacy::forceKernelWithMasking(
   //        I also don't know if a strict or non-strict boolean optimisation
   //        make a difference. If they do, please document it in the SWIFT
   //        optimisation pages.
-  double mask = ((tarch::la::smaller(r, iactRi) | tarch::la::smaller(r, iactRj)) & tarch::la::greater(r, 0.0))
+  double mask = ((tarch::la::smaller(r, iactRi) | tarch::la::smaller(r, iactRj))
+                 & tarch::la::greater(r, 0.0))
                   ? 1.0
                   : 0.0;
 
@@ -522,4 +529,3 @@ void swift2::kernels::legacy::forceKernelWithMasking(
     activeParticle.getIsBoundaryParticle()
   );
 }
-

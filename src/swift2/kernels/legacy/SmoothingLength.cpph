@@ -34,7 +34,8 @@ void swift2::kernels::legacy::
   // Now on to the smoothing length computation
   const double h_old     = localParticle->getSmoothingLength();
   const double h_old_dim = legacy::hydroDimensions::pow_dimension(h_old);
-  const double h_old_dim_minus_one = legacy::hydroDimensions::pow_dimension_minus_one(h_old);
+  const double h_old_dim_minus_one = legacy::hydroDimensions::
+    pow_dimension_minus_one(h_old);
   double h_new;
 
   bool hasNoNeighbours = false;
