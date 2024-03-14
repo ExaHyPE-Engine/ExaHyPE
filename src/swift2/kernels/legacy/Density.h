@@ -123,7 +123,7 @@ namespace swift2 {
        * Similarly, for the computation of the smoothing length, we require to
        * accumulate the analgue number densities (and its derivative w.r.t. h):
        *
-       * @f$ n_i = \sum_j m_j W(r_{ij}, h_i)@f$
+       * @f$ n_i = \sum_j W(r_{ij}, h_i)@f$
        *
        * @f$ \frac{\partial n_i}{\partial h}
        *      = \sum_j \frac{\partial W(r_{ij}, h_i)}{\partial h}
