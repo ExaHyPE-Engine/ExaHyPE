@@ -27,22 +27,9 @@ hook-in points for applications performing per-element, per-vertex, and so
 forth operations on the grid. It also provides interfaces for dynamic
 load balancing, sophisticated geometry representations, and other features.
 
-# Contents
+# Installation
 
-- [Overview](#overview)
-- [Contents](#contents)
-- [Quickstart](#quickstart)
-- [Availability](#availability)
-- [Dependencies and Prerequisites](#dependencies-and-prerequisites)
-- [Docker and Apptainer](#docker-and-apptainer)
-- [Spack](#spack)
-- [Contributing](#contributing)
-- [Code of Conduct](#code-of-conduct)
-- [License](#license)
-
-# Quickstart
-
-Get started with Peano following our [Quickstart Guide](./QUICKSTART.md).
+Get started with Peano following our [Installation Guide](https://hpcsoftware.pages.gitlab.lrz.de/Peano/html/de/dce/page_installation.html).
 
 # Availability
 
@@ -52,7 +39,6 @@ All software is available as open source through [www.peano-framework.org](http:
 
 Peano's core is plain C++17/C++20 code.
 We however use a whole set of tools around it.
-The most important ones are:
 
 * C++17/C++20-compatible C++ compiler (required).
 * GNU Autotools (automake) to set up the system (required).
@@ -67,15 +53,18 @@ The most important ones are:
 * LIBXSMM (optional).
 * Doxygen if you want to create HTML pages of the documentation (optional).
 
-# Docker and Apptainer
+# Docker
 
-We maintain a collection of Docker and Apptainer [containers](./containers/README.md)
-with all required dependencies.
+We maintain a collection of [Dockerfiles](./docker/).
+
+# Apptainer
+
+We maintain a collection of [Apptainer Definition Files](./apptainer/).
 
 # Spack
 
 To considerably alleviate the installation process of Peano, especially on HPC systems,
-we provide [packages](./spack/README.md) that rely on [Spack](https://github.com/spack/spack/wiki).
+we provide [packages](./spack/) that rely on [Spack](https://github.com/spack/spack/wiki).
 
 # Contributing
 
