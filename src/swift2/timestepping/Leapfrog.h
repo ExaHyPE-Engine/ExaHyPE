@@ -29,12 +29,12 @@ namespace swift2 {
      *  update the particle velocity by a half-timestep using:
      *
      *  Kick1:
-     *     {\bf v}^{n+\frac{1}{2}} &= {\bf v}^{n} + {\bf a}^{n}\frac{\Delta
-     * t}{2}
+     *  @f$ {\bf v}^{n+\frac{1}{2}} &= {\bf v}^{n} +
+     *  {\bf a}^{n}\frac{\Delta * t}{2}@f$
      *
      *  Kick2:
-     *     {\bf v}^{n+1} &= {\bf v}^{n+\frac{1}{2}} + {\bf a}^{n+1}\frac{\Delta
-     * t}{2}
+     *  @f$ {\bf v}^{n+1} &= {\bf v}^{n+\frac{1}{2}} + {\bf a}^{n+1}\frac{\Delta
+     * t}{2} @f$
      *
      * Notice that the last kick in this sequence is implicit if ${\bf a}$
      * depends on ${\bf v}$ (e.g. due to artificial viscosity terms), which in
