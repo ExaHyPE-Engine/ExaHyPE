@@ -5,8 +5,7 @@
 import os, sys
 import argparse
 import peano4
-import multigrid.petsc
-import multigrid.matrixgenerators
+import multigrid
 
 print( """
 
@@ -31,25 +30,26 @@ args = parser.parse_args()
 assert args.dimensions == 2, "not ready for 3d yet"
 
 #! [Create project]
-project = multigrid.petsc.Project(project_name = "DG", 
+project = multigrid.petsc.api.Project(project_name = "DG", 
                                   namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ],
 
                                   # next two arguments let us customise the solver we use in petsc
-                                  preconditioner_type = "LU",
+                                  # see enum class in Peano/src/petsc/LinearEquationSystem.h for implemented options
+                                  preconditioner_type = "JACOBI",
                                   solver_type         = "GMRES"
                                   ) 
 #! [Create project]
 
                         
-matrices = multigrid.matrixgenerators.GaussLobatto(poly_degree            = args.degree,
+matrices = multigrid.api.matrixgenerators.GaussLobatto(poly_degree            = args.degree,
                                                    Dimensions             = args.dimensions,
                                                    unknowns_per_cell_node = args.upcn,
                                                    # this attribute is not used by code written by Alex
                                                    unknowns_per_face_node = args.upfn,
                                                    )
-                        
+
 #! [Create solver]
-solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
+solver = multigrid.petsc.api.solvers.DiscontinuousGalerkinDiscretisation(name                 = "DGPoisson",
                                                                      polynomial_degree    = args.degree,
                                                                      cell_unknowns        = args.upcn,                      # unknowns_per_cell_dof,
                                                                      face_unknowns        = args.upfn,                      # unknowns_per_face_dof,
@@ -60,14 +60,16 @@ solver = multigrid.petsc.solvers.DiscontinuousGalerkinDiscretisation(name       
                                                                      cell_cell_lhs_matrix   = matrices.get_cell_system_matrix_for_laplacian(),
                                                                      cell_cell_lhs_matrix_scaling = args.dimensions-2,
                                                                      cell_cell_rhs_matrix_scaling = args.dimensions,
-                                                                     cell_to_face_matrix     = matrices.get_cell_to_face_matrix(),       
-                                                                     face_to_cell_matrix     = matrices.get_face_to_cell_matrix(), 
+                                                                     cell_to_face_matrix    = matrices.get_cell_to_face_matrix(),       
+                                                                     face_to_cell_matrix    = matrices.get_face_to_cell_matrix(), 
                                                                      
                                                                      # removing scaling for debugging
                                                                      cell_to_face_matrix_scaling  = None,
                                                                      face_to_cell_matrix_scaling  = None, 
                                                                      face_face_Riemann_problem_matrix=matrices.get_face_face_riemann_problem_matrix(),
-                                                                     quadrature_points_in_unit_interval = matrices.get_points_unit_interval()
+                                                                     quadrature_points_in_unit_interval = matrices.get_points_unit_interval(),
+                                                                     gaussian_integration_points= matrices.get_points1d_legendre(),
+                                                                     gaussian_integration_weights=matrices.get_weights1d_legendre()
                                                                      )
 
 project.add_solver( solver )

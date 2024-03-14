@@ -8,11 +8,12 @@ import dastgen2
 import os
 
 from .Solver                                              import Solver
-from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
-from multigrid.petsc.actionsets.InitCellDoFs              import InitCellDoFs
-from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
-from multigrid.petsc.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
-from multigrid.petsc.actionsets.ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod   import ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod 
+from multigrid.petsc.api.actionsets.EnumerateDoFs             import EnumerateDoFs
+from multigrid.petsc.api.actionsets.InitCellDoFs              import InitCellDoFs
+from multigrid.petsc.api.actionsets.ProjectPETScSolutionBackOntoMesh    import ProjectPETScSolutionOnCellsBackOntoMesh
+from multigrid.petsc.api.actionsets.PlotDGDataInPeanoBlockFormat        import PlotDGDataInPeanoBlockFormat
+from multigrid.petsc.api.actionsets.PlotExactSolution         import PlotExactSolution
+from multigrid.petsc.api.actionsets.ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod   import ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod 
 
 from abc import abstractmethod
 
@@ -30,13 +31,6 @@ class AssemblePetscMatrix(ActionSet):
   if (fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior) {
     std::pair<int,int> localCellIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
     int globalCellIndex = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localCellIndex, ::petsc::LocalToGlobalMap::Type::Cell);
-
-    /*
-    This trace is in place just so that we can generate a map of the facets with their
-    global indices. It is not necessary long term and can be deleted soon...
-    */
-    logTraceInWith2Arguments("tcft_experimenter", marker.toString(), globalCellIndex);
-    logTraceOut("tcft_experimenter");
 
     // ================================
     // Left-hand side A_cc contribution
@@ -153,13 +147,6 @@ class AssemblePetscMatrix(ActionSet):
     int globalFirstDoFIndex  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndex, ::petsc::LocalToGlobalMap::Type::Face);
 
     assertion( globalFirstDoFIndex>=0 );
-
-    /*
-    This trace is in place just so that we can generate a map of the facets with their
-    global indices. It is not necessary long term and can be deleted soon...
-    */
-    logTraceInWith2Arguments("tfft_experimenter", marker.toString(), globalFirstDoFIndex);
-    logTraceOut("tfft_experimenter");
 
     logTraceInWith2Arguments("TFFT", globalFirstDoFIndex, RiemannSolverMatrix);
     for (int row=0; row<dofsPerFace; row++)
@@ -593,6 +580,8 @@ class DiscontinuousGalerkinDiscretisation(Solver):
                face_to_cell_matrix_scaling,
                face_face_Riemann_problem_matrix,
                quadrature_points_in_unit_interval,
+               gaussian_integration_points,
+               gaussian_integration_weights
                ):
     """!
    
@@ -681,10 +670,15 @@ the matrix is applied to
     self.face_to_cell_matrix_scaling  = face_to_cell_matrix_scaling
     
     self.quadrature_points_in_unit_interval = quadrature_points_in_unit_interval
+    self.gaussian_integration_points        = gaussian_integration_points
+    self.gaussian_integration_weights       = gaussian_integration_weights
+
+    assert( len( quadrature_points_in_unit_interval ) == len( gaussian_integration_points ) == len( gaussian_integration_weights ), "Something has gone wrong. These should all be same length for fixed polynomial degree" )
     
     self._cell_pde_data   = peano4.datamodel.DaStGen2( name )
-    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",  str(self.number_of_matrix_entries_per_cell) ) )
-    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",    str(self.number_of_matrix_entries_per_cell) ) )
+    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",    str(self.number_of_matrix_entries_per_cell) ) )
+    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",      str(self.number_of_matrix_entries_per_cell) ) )
+    self._cell_pde_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "exactSol", str(self.number_of_matrix_entries_per_cell) ) )
     
     pass
 
@@ -765,6 +759,7 @@ the matrix is applied to
 
   def add_to_map_solution_onto_mesh(self, observer):
     observer.add_action_set( ProjectPETScSolutionOnCellsBackOntoMesh(self) )
+    observer.add_action_set( PlotExactSolution(self) )
     pass
     
   def add_implementation_files_to_project(self, namespace, output):
@@ -801,6 +796,8 @@ the matrix is applied to
         "CELL_TO_FACE_MATRIX":       self.cell_to_face_matrix,
         "FACE_TO_CELL_MATRIX":                   self.face_to_cell_matrix,
         "QUADRATURE_POINTS_IN_UNIT_INTERVAL":    self.quadrature_points_in_unit_interval,
+        "GAUSSIAN_INTEGRATION_POINTS"       :    self.gaussian_integration_points,
+        "GAUSSIAN_INTEGRATION_WEIGHTS"       :    self.gaussian_integration_weights,
         "CELL_CELL_LHS_MATRIX_SCALING": self.cell_cell_lhs_matrix_scaling,
         "CELL_CELL_RHS_MATRIX_SCALING": self.cell_cell_rhs_matrix_scaling,
         "CELL_TO_FACE_MATRIX_SCALING":           self.cell_to_face_matrix_scaling,

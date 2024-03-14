@@ -8,9 +8,9 @@ import dastgen2
 import os
 
 from .Solver                                              import Solver
-from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
-from multigrid.petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
-from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
+from multigrid.petsc.api.actionsets.EnumerateDoFs             import EnumerateDoFs
+from multigrid.petsc.api.actionsets.InitVertexDoFs            import InitVertexDoFs
+from multigrid.petsc.api.actionsets.ProjectPETScSolutionBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
 
 from abc import abstractmethod
 

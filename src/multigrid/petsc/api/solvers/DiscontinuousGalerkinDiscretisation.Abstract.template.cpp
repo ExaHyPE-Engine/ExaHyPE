@@ -9,6 +9,13 @@ const double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::QuadraturePointsInUnitIn
   {{QUADRATURE_POINTS_IN_UNIT_INTERVAL| join(", ")}}
 };
 
+const double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::GaussianIntegrationPoints[] = {
+  {{GAUSSIAN_INTEGRATION_POINTS| join(", ")}}
+};
+
+const double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::GaussianIntegrationWeights[] = {
+  {{GAUSSIAN_INTEGRATION_WEIGHTS| join(", ")}}
+};
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _localToGlobalMap( ::petsc::LocalToGlobalMap::RankGlobalTreeNumber )  {

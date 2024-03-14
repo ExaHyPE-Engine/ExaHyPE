@@ -72,12 +72,13 @@ class ImposeDirichletBoundaryConditions(ActionSet):
           }
           
           // Look up the value: rhs is not relevant here, but I want to reuse the existing signatures 
-          double value, rhs;
+          double value, rhs, exact;
           repositories::{{SOLVER_INSTANCE}}.initNode(
             x,
             marker.h(),
             value,
-            rhs
+            rhs,
+            exact
           );
           
           // @todo We have to discuss this

@@ -16,15 +16,17 @@ void benchmarks::multigrid::petsc::poisson::DGPoisson::initNode(
   const tarch::la::Vector<Dimensions, double>&  h,
   
   double&                                       value,
-  double&                                       rhs
+  double&                                       rhs,
+  double&                                       exactSol
   
 ) {
   logTraceInWith4Arguments("initNode", x, h, value, rhs);
-  rhs = Dimensions * tarch::la::PI * tarch::la::PI;
+  rhs = 4.0 * Dimensions * tarch::la::PI * tarch::la::PI;
+  exactSol = 1.0;
   for (int i = 0; i < Dimensions; i++){
-    rhs *= std::sin( tarch::la::PI * x[i] );
+    rhs *= std::sin( 2.0 * tarch::la::PI * x[i] );
+    exactSol *= std::sin( 2.0 * tarch::la::PI * x[i] );
   }
-  value = 0.0;
   logTraceOutWith4Arguments("initNode", x, h, value, rhs);
 }
 

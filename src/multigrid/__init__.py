@@ -4,5 +4,6 @@
 import multigrid.api
 import multigrid.matrixfree.api
 import multigrid.matrixfree.solvers.api
+import multigrid.petsc.api
 
 print( "Peano 4 - Multigrid extension" )

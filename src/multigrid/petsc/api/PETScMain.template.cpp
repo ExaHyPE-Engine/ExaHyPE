@@ -220,7 +220,7 @@ void step() {
         watch.start();
         repositories::solve();
         watch.stop();
-
+        
         solveMeasurement.setValue( watch.getCalendarTime() );
       }
       break;

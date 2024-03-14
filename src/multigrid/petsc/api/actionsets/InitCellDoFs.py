@@ -19,7 +19,7 @@ Initialise degrees of freedom associated with cells
       {% if CELL_UNKNOWNS>1 %}
       xxxx
       {% else %}
-      double value, rhs;
+      double value, rhs, exactSol;
       tarch::la::Vector<Dimensions,double> x = marker.getOffset();
       for (int d=0; d<Dimensions; d++) {
         x(d) += repositories::{{SOLVER_INSTANCE}}.QuadraturePointsInUnitInterval[ k(d) ] * marker.h()(d);
@@ -28,10 +28,12 @@ Initialise degrees of freedom associated with cells
         x,
         marker.h(),
         value,
-        rhs
+        rhs,
+        exactSol
       );
       fineGridCell{{SOLVER_NAME}}.setValue(dof,value);
       fineGridCell{{SOLVER_NAME}}.setRhs(dof,rhs);
+      fineGridCell{{SOLVER_NAME}}.setExactSol(dof,exactSol);
       dof++;
       {% endif %}
     }
