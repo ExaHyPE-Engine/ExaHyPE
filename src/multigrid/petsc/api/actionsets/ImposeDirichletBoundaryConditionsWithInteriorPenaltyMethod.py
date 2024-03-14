@@ -20,13 +20,6 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
     
     assertion( globalFaceIndex>=0 );
 
-    /*
-    This trace is in place just so that we can generate a map of the facets with their
-    global indices. It is not necessary long term and can be deleted soon...
-    */
-    logTraceInWith2Arguments("tfft_experimenter", marker.toString(), globalFaceIndex);
-    logTraceOut("tfft_experimenter");
-
     logTraceInWith2Arguments("TFFT::Boundary", globalFaceIndex, marker.toString());
     
     /*
