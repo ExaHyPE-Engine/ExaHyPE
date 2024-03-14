@@ -83,7 +83,7 @@ namespace swift2 {
        * an active particle, and updates the local particle.
        *
        *
-       * In this particle-particle interaction loop, we accumulate sevelar
+       * In this particle-particle interaction loop, we accumulate several
        * quantities. For the subsequent force computation, we need to
        * collect the density
        *
