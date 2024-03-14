@@ -19,12 +19,9 @@ class Solver:
     self.min_h = min_h
     self.max_h = max_h
     
-    # don't know what we will store in the future. so keep all of this
     self._vertex_data = peano4.datamodel.DaStGen2( name )
     self._face_data   = peano4.datamodel.DaStGen2( name )
     self._cell_data   = peano4.datamodel.DaStGen2( name )
-
-    #skip adding the array of unknown base number
 
     self._vertex_data.data.add_attribute( dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
     self._face_data.data.add_attribute(   dastgen2.attributes.Enumeration( name="type", variants=["Boundary", "Interior", "Coarse", "Outside", "Undefined"] ) )
