@@ -39,7 +39,9 @@ namespace petsc {
 *   - Handover to PETSc to solve by calling the solve() routine. We currently use no preconditioner and a GMRES solver. These options can be seen in the body of solve()
 *   - Use the get() routine to inspect the solution vector at each index.
 *
-*
+*  At present, we only support a handful of preconditioners and solvers, each of which can yield
+*  quite different results. More info on which preconditioners are supported can be found [here](https://petsc.org/main/manualpages/PC/) 
+*  and solvers can be found [here](https://petsc.org/main/manual/ksp/) (see table 6).
 */
 class petsc::LinearEquationSystem{
   public:
@@ -157,7 +159,9 @@ class petsc::LinearEquationSystem{
 
     /**
     * Enum class to allow us to customise different 
-    * different petsc preconditioner types
+    * different petsc preconditioner types. See documentation
+    * of this class for more info on what preconditioners
+    * are supported within petsc.
     */
     enum class PreconditionerType: int 
     {
@@ -166,7 +170,9 @@ class petsc::LinearEquationSystem{
 
     /**
     * Enum class to allow us to customise different 
-    * different petsc solver types
+    * different petsc solver types. See documentation
+    * of this class for more info on what solvers
+    * are supported within petsc.
     */
     enum class KSPSolverType: int
     {
