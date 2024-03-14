@@ -5,7 +5,7 @@ import jinja2
 
 
 class CollocatedSolver(ActionSet):
-  templateTVFT = """ 
+  templateTouchVertexFirstTime = """ 
   if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
   {
     logTraceInWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
@@ -24,7 +24,7 @@ class CollocatedSolver(ActionSet):
   }
   """
 
-  templateTVLT = """
+  templateTouchVertexLastTime = """
   if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
   {
     logTraceInWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
@@ -45,7 +45,7 @@ class CollocatedSolver(ActionSet):
   }
   """
 
-  templateTCFT = """ 
+  templateTouchCellFirstTime = """ 
   if ( fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior )
   {
     logTraceInWith2Arguments("Solve::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
@@ -108,13 +108,13 @@ class CollocatedSolver(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.templateTVFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchVertexFirstTime).render(**self.d)
       pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result = jinja2.Template(self.templateTVLT).render(**self.d)
+      result = jinja2.Template(self.templateTouchVertexLastTime).render(**self.d)
       pass
     return result
 

@@ -98,7 +98,7 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
 }
 """
 
-  templateTFFT="""
+  templateTouchFaceFirstTime="""
   if (fineGridFace{{SOLVER_NAME}}.getType()!=facedata::{{SOLVER_NAME}}::Type::Coarse)
   {
     logTraceInWith3Arguments("TFFTOutput", marker.x(), fineGridFace{{SOLVER_NAME}}.getSolution(),fineGridFace{{SOLVER_NAME}}.getProjection());
@@ -141,7 +141,7 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = jinja2.Template( self.__Template_EndTraversal).render(**self.d)             
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = jinja2.Template( self.templateTFFT).render(**self.d) 
+      result = jinja2.Template( self.templateTouchFaceFirstTime).render(**self.d) 
     return result
 
 

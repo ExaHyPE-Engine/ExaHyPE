@@ -208,7 +208,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   On the first sweep, this does nothing.
 
   ### UpdateCell
-  Code for this is in actionsets.DGSolver.UpdateCell. We do something nontrivial in TCFT, namely perform the cell update
+  Code for this is in actionsets.DGSolver.UpdateCell. We do something nontrivial in touchCellFirstTime, namely perform the cell update
   rule as above. 
 
   ### ProjectOntoFaces

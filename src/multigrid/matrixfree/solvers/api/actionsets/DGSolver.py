@@ -7,7 +7,7 @@ class UpdateCell(ActionSet):
   """!
   This is for DG solver.
   """
-  templateTCFT="""
+  templateTouchCellFirstTime="""
   if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
   {
     logTraceInWith4Arguments("UpdateCell::TCFT", 
@@ -85,7 +85,7 @@ class UpdateCell(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     return result
 
@@ -130,7 +130,7 @@ class ProjectOntoFaces(ActionSet):
   This is for DG solver.
   """
 
-  templateTCFT="""
+  templateTouchCellFirstTime="""
   /*
   all we need to do here is project updated solution u^c onto the faces
   */
@@ -193,7 +193,7 @@ class ProjectOntoFaces(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     return result
 

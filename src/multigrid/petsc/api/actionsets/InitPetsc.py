@@ -13,7 +13,7 @@ class SendDofsToVertices(ActionSet):
   
   """
 
-  templateTCFT="""
+  templateTouchCellFirstTime="""
   //lambda to insert a value into first uninitialised position.
   //these vectors attached to cells will have all their entries 
   //initialised to -1 otherwise
@@ -72,7 +72,7 @@ class SendDofsToVertices(ActionSet):
     """
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     return result
 

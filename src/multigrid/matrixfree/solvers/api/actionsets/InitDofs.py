@@ -6,7 +6,7 @@ import jinja2
 
 class InitDofsCollocated(ActionSet):
   # need to set the type of the vertex and give it a value
-  templateTVFT = """
+  templateTouchVertexFirstTime = """
   // this is done inside getDofType. included here for sanity check
   auto isOnBoundary = [&]( const tarch::la::Vector< Dimensions, double > & x ) -> bool{
     bool isOnBoundary = false;
@@ -97,7 +97,7 @@ class InitDofsCollocated(ActionSet):
   logTraceOutWith3Arguments("InitDofs::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
    """
 
-  templateTCFT = """
+  templateTouchCellFirstTime = """
   logTraceInWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
   celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
@@ -146,10 +146,10 @@ class InitDofsCollocated(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.templateTVFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchVertexFirstTime).render(**self.d)
       pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     return result
 
@@ -194,7 +194,7 @@ class InitDofsDG(ActionSet):
   Redoing this class for discontinuous galerkin solver.
   Not much is different from above.
   """
-  templateTVFT = """
+  templateTouchVertexFirstTime = """
 
   //logTraceInWith3Arguments("InitDofsDG::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
@@ -230,7 +230,7 @@ class InitDofsDG(ActionSet):
   //logTraceOutWith2Arguments("InitDofsDG::TVFT", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
    """
 
-  templateTCFT = """
+  templateTouchCellFirstTime = """
   logTraceInWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
   celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
@@ -370,10 +370,10 @@ class InitDofsDG(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.templateTVFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchVertexFirstTime).render(**self.d)
       pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = jinja2.Template(self.templateTFFT).render(**self.d)

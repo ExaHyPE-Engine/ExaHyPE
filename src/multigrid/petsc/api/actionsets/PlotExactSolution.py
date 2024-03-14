@@ -19,7 +19,7 @@ class PlotExactSolution(ActionSet):
   we are done
   """
 
-  templateTCFT = """
+  templateTouchCellFirstTime = """
   if ( fineGridCell{{SOLVER_NAME}}PETScData.getType() == celldata::{{SOLVER_NAME}}PETScData::Type::Interior )
   {
     std::pair<int,int> localCellIndex = std::make_pair(_spacetreeId, fineGridCell{{SOLVER_NAME}}PETScData.getUnknownBaseNumber());
@@ -58,10 +58,6 @@ solver: petsc.solvers.CollocatedLowOrderDiscretisation or similar solver where
     self.d = {}
     self.d["SOLVER_INSTANCE"]    = solver.instance_name()
     self.d["SOLVER_NAME"]        = solver.typename()
-    # self.d["VERTEX_CARDINALITY"] = solver.number_of_matrix_entries_per_vertex
-    # self.d["FACE_CARDINALITY"]   = solver.number_of_matrix_entries_per_face
-    # self.d["CELL_CARDINALITY"]   = solver.number_of_matrix_entries_per_cell
-
 
   def get_body_of_operation(self,operation_name):
     """!
@@ -76,7 +72,7 @@ in init().
     """
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass 
 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
