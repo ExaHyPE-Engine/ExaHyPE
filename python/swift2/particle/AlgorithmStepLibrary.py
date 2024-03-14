@@ -332,9 +332,6 @@ def get_algorithm_step_dict(particle):
             v_iter.insert(
                 "::swift2::kernels::legacy::leapfrogKickWithGlobalTimeStepSize"
             )
-            + v_iter.insert(
-                "::swift2::kernels::legacy::leapfrogKickExtraWithGlobalTimeStepSize"
-            )
             + v_iter.insert("::swift2::kernels::legacy::resetPredictedValues")
         ),
         prepare_traversal_kernel=f"::swift2::timestepping::computeCFLTimeStepSizeSPH<globaldata::{PARTICLE}>();",

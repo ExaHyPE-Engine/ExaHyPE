@@ -78,37 +78,6 @@ namespace swift2 {
         resetSmoothingLengthIterationCounter(marker, particle);
       }
 
-
-      /**
-       * @brief Reset acceleration fields of a particle
-       *
-       * Resets all hydro acceleration and time derivative fields in preparation
-       * for the sums taking place in the various force interactions.
-       */
-      template <typename Particle>
-      void hydro_reset_acceleration(Particle* localParticle);
-
-      /**
-       * @todo Is this the correct place? Might belong to the leapfrog maybe?
-       */
-      template <typename Particle>
-      void resetAcceleration(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   localParticle
-      ) {
-        if (::swift2::kernels::
-              localParticleCanBeUpdatedInVertexKernel(marker, localParticle)) {
-          hydro_reset_acceleration(&localParticle);
-        }
-      }
-
-      template <typename Particle>
-      void resetAccelerationWithMasking(
-        const peano4::datamanagement::VertexMarker& marker,
-        Particle&                                   localParticle
-      ) {
-        resetAcceleration(marker, localParticle);
-      }
     } // namespace legacy
   }   // namespace kernels
 } // namespace swift2

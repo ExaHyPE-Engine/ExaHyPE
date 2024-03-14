@@ -20,7 +20,7 @@ namespace swift2 {
        */
       template <typename Particle>
       void leapfrogDriftWithGlobalTimeStepSize(
-        const peano4::datamanagement::VertexMarker& marker, 
+        const peano4::datamanagement::VertexMarker& marker,
         Particle& localParticle
       );
 
@@ -44,7 +44,7 @@ namespace swift2 {
        */
       template <typename Particle>
       void leapfrogKickWithGlobalTimeStepSize(
-        const peano4::datamanagement::VertexMarker& marker, 
+        const peano4::datamanagement::VertexMarker& marker,
         Particle& localParticle
       );
   } // namespace timestepping

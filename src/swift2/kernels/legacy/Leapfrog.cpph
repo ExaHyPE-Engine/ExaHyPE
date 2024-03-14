@@ -27,8 +27,8 @@ void swift2::kernels::legacy::leapfrog_drift_global_time_step_size(
 
   assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
 
-    // Note that original SWIFT predicts the velocities at this point. We moved that
-    // into computePredictHydro()
+  // Note that original SWIFT predicts the velocities at this point. We moved that
+  // into hydroPredictExtra()
 
   /* Flag this particle as Moved */
   particle->setMoveState(Particle::MoveState::Moved);
@@ -89,6 +89,8 @@ void swift2::kernels::legacy::leapfrog_kick_global_time_step_size(
 
   /* Kick the particle */
   particle->setV_full(particle->getV_full() + timeStepSizeKick * particle->getA());
+
+  swift2::kernels::legacy::hydro_kick_extra_global_time_step_size(particle);
 }
 
 
