@@ -11,18 +11,15 @@ template <typename Particle>
 void swift2::kernels::legacy::leapfrog_drift_global_time_step_size(
   Particle* particle
 ) {
-  if (::swift2::kernels::localParticleCanBeUpdatedAndMovedInVertexKernel())
-  {
-    const double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
+  const double timeStepSize = Particle::getSpecies().getMinTimeStepSize();
 
-    // Use V_full here, not V
-    particle->setX(particle->getX() + timeStepSize * particle->getV_full());
+  // Use V_full here, not V
+  particle->setX(particle->getX() + timeStepSize * particle->getV_full());
 
-    assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
+  assertion1(tarch::la::isEntryFinite(particle->getX()), particle->toString());
 
-    // Flag this particle as Moved
-    particle->setMoveState(Particle::MoveState::Moved);
-  }
+  // Flag this particle as Moved
+  particle->setMoveState(Particle::MoveState::Moved);
 }
 
 
