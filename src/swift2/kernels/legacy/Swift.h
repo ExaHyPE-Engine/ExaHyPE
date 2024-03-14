@@ -48,9 +48,8 @@ namespace swift2 {
      * computation algorithms for both a constant search radius as well as a
      * varying search radius.
      */
-    namespace legacy {
-    } // namespace legacy
-  }   // namespace kernels
+    namespace legacy {} // namespace legacy
+  }                     // namespace kernels
 } // namespace swift2
 
 

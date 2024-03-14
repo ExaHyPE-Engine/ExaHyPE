@@ -119,7 +119,8 @@ namespace swift2 {
        * This operation struggles to vectorise, as we have the statement
        *
        * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-       *   if ((tarch::la::smaller(r, iactRi) or tarch::la::smaller(r, iactRj)) and tarch::la::greater(r, 0.0))
+       *   if ((tarch::la::smaller(r, iactRi) or tarch::la::smaller(r, iactRj))
+       * and tarch::la::greater(r, 0.0))
        * {
        * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
        *
