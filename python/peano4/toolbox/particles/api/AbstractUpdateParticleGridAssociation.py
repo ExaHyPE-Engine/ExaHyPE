@@ -200,7 +200,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   _numberOfDrops  = 0;
   _numberOfLiftsIntoSieveSet = 0;
   _numberOfDropsFromSieveSet = 0;
-  _numberOfSkippedDropsFromSieveSet = 0;
   _numberOfDropsIntoHorizontalTreeDecomposition = 0;
 """
     )
@@ -213,7 +212,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
     _numberOfParticleReassignmentsOnCurrentLevel,
     _numberOfLiftsIntoSieveSet,
     _numberOfDropsFromSieveSet,
-    _numberOfSkippedDropsFromSieveSet,
     _numberOfDropsIntoHorizontalTreeDecomposition
   );
 """
@@ -248,6 +246,10 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
    the coarse vertices could be on another rank if the tree is cut vertically.
    If could also be that the green vertex is actually from an adjacent domain
    and hence does not hold any reasonable information.
+   
+   This routine is not used by all action sets. The bucket sort for example 
+   does not need it. The lift drop sets in return however all use this 
+   particular action set.
 
   """
     _Template_Drop = jinja2.Template(
@@ -257,16 +259,18 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
       // Define inside for loop, as sieve will define it as well
       vertexdata::{{PARTICLES_CONTAINER}}::iterator p = coarseGridVertices{{PARTICLES_CONTAINER}}(i).begin();
       while ( p!=coarseGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
-        if ( ::toolbox::particles::dropParticle(**p,marker) ) {
+        if ( 
+          ::toolbox::particles::dropParticle(**p,marker) 
+          and 
+          marker.isParentOfSubtree() 
+          and 
+          toolbox::particles::particleWillBeDroppedFurther(**p, marker)
+        ) {
+          _numberOfDropsIntoHorizontalTreeDecomposition++;
+          fineGridVertex{{PARTICLES_CONTAINER}}.particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(*p);    
+        }
+        else if ( ::toolbox::particles::dropParticle(**p,marker) ) {
           _numberOfDrops++;
-          
-          if (
-            marker.isParentOfSubtree() 
-            and 
-            toolbox::particles::particleWillBeDroppedFurther(**p, marker)
-          ) {
-            _numberOfDropsIntoHorizontalTreeDecomposition++;
-          }
           
           (*p)->setCellH(marker.h());
           toolbox::particles::assignmentchecks::detachParticleFromVertex(
@@ -297,37 +301,19 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   }
 """
     )
-
+    
     _Template_Sieve = jinja2.Template(
         """
-  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices( vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort ) ) {
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
       marker,
-      vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort,
-      _spacetreeId
+      true, // removeReturnedParticlesFromSet,
+      true // onlyReturnParticlesThatWillBeLocal    );
     );
-
+    
     for (auto& newParticle: sievedParticles) {
-      if ( ::toolbox::particles::particleIsDuplicate(
-        newParticle,
-        fineGridVertex{{PARTICLES_CONTAINER}}.begin(),
-        fineGridVertex{{PARTICLES_CONTAINER}}.end()
-      ) != fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
-        _numberOfSkippedDropsFromSieveSet++;
-        delete newParticle;
-      }
-      else {
-        fineGridVertex{{PARTICLES_CONTAINER}}.addParticle( newParticle );
-        _numberOfDropsFromSieveSet++;
-        toolbox::particles::assignmentchecks::assignParticleToVertex(
-          "{{PARTICLE}}",
-          newParticle->getX(),
-          newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          marker.x(),
-          marker.h(),
-          _spacetreeId, "AbstractUpdateParticleGridAssociation::_Template_Sieve"
-        );
-      }
+      _numberOfDropsFromSieveSet++;      
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId );
     }
 
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
@@ -433,7 +419,6 @@ class AbstractUpdateParticleGridAssociation(ActionSet):
   int  _numberOfDrops;
   int  _numberOfLiftsIntoSieveSet;
   int  _numberOfDropsFromSieveSet;
-  int  _numberOfSkippedDropsFromSieveSet;
   int  _numberOfDropsIntoHorizontalTreeDecomposition;
 """
         ).render(**self.d)

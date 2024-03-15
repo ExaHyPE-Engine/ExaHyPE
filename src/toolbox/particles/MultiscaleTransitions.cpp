@@ -132,8 +132,17 @@ toolbox::particles::ParticleReassociationInstruction toolbox::particles::getPart
 
 
 bool toolbox::particles::dropParticle(double searchRadius, const tarch::la::Vector<Dimensions, double>& x, const peano4::datamanagement::VertexMarker& marker) {
-  return internal::fitsIntoLevel(searchRadius, marker)
-         and marker.isContainedInAdjacentCells(x, 0.5, internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE);
+  bool result = internal::fitsIntoLevel(searchRadius, marker)
+            and marker.isContainedInAdjacentCells(x, 0.5, internal::relativeGrabOwnershipSpatialSortingTolerance(marker) * tarch::la::NUMERICAL_ZERO_DIFFERENCE);
+
+  assertion3(
+    not (result and liftParticleAssociatedWithVertex(true, searchRadius, x, marker)==ParticleReassociationInstruction_SieveGlobally),
+    searchRadius,
+    x,
+    marker.toString()
+  );
+
+  return result;
 }
 
 

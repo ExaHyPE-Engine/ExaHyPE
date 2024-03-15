@@ -5,6 +5,9 @@
 
 #include <functional>
 
+#include "tarch/multicore/Tasks.h"
+#include "peano4/datamanagement/VertexMarker.h"
+
 
 namespace swift2 {
   /**
@@ -26,7 +29,7 @@ namespace swift2 {
   template <typename ParticleSet>
   class VertexTask: public tarch::multicore::Task {
   public:
-    typedef std::function<void(ParticleSet& assignedParticles)> Functor;
+    typedef std::function<void(const peano4::datamanagement::VertexMarker&  marker, ParticleSet& assignedParticles)> Functor;
 
     /**
      * Construct a vertex task
@@ -34,7 +37,12 @@ namespace swift2 {
      * Memorize the three parameters, and grab a new task number from the
      * multicore component via
      */
-    VertexTask(const ParticleSet& assignedParticles, Functor functor, bool FuseAndPortToGPU);
+    VertexTask(
+      const peano4::datamanagement::VertexMarker&  marker,
+      const ParticleSet&                           assignedParticles,
+      Functor                                      functor,
+      bool                                         fuseAndPortToGPU
+    );
     ~VertexTask() = default;
 
     virtual bool run() override;
@@ -42,6 +50,7 @@ namespace swift2 {
   private:
     static int TaskTypeId;
 
+    const peano4::datamanagement::VertexMarker  _marker;
     ParticleSet _assignedParticles;
     Functor     _functor;
   };

@@ -1,10 +1,11 @@
 import os
 import argparse
 import numpy as np
+import h5py
 
 import peano4
 import swift2
-import swift2.sphtools as sphtools
+import swift2.sphtools
 import dastgen2
 
 import shutil
@@ -14,7 +15,7 @@ import shutil
 # Parse user input
 ########################################################################################
 
-parser = argparse.ArgumentParser(description="SPH test script")
+parser = argparse.ArgumentParser(description="SPH benchmarking script")
 parser.add_argument(
     "-j", "--parallel-builds", dest="j", type=int, default=-1, help="Parallel builds"
 )
@@ -32,46 +33,6 @@ parser.add_argument(
     dest="clean_temporary_directories",
     action="store_true",
     help="Remove temporary directories before script starts",
-)
-parser.add_argument(
-    "-np",
-    "--particle-number",
-    dest="particle_number",
-    required=True,
-    type=int,
-    help="Particle number (1D)",
-)
-parser.add_argument(
-    "-et",
-    "--end-time",
-    dest="end_time",
-    type=float,
-    default=0.2,
-    help="End of simulation",
-)
-parser.add_argument(
-    "-plot",
-    "--plot-delta",
-    dest="plot_delta",
-    type=float,
-    default=0.01,
-    help="Plot delta (0 switches off)",
-)
-parser.add_argument(
-    "-dt",
-    "--timestep-size",
-    dest="timestep_size",
-    type=float,
-    default=1e-4,
-    help="Global timestep size (initial value)",
-)
-parser.add_argument(
-    "-cfl",
-    "--cfl-factor",
-    dest="cfl_factor",
-    type=float,
-    default=0.1,
-    help="Value of the CFL constant",
 )
 parser.add_argument(
     "-cs",
@@ -97,26 +58,59 @@ parser.add_argument(
     help="Switch on assertions",
 )
 parser.add_argument(
+    "-ic",
+    "--ic-file",
+    dest="ic_filename",
+    default="test_sml_3D.hdf5",
+    help="Initial conditions hdf5 file",
+)
+parser.add_argument(
+    "-n",
+    "--neighbours",
+    dest="nneigh",
+    type=int,
+    default=5,
+    help="Number of neighbours to search for",
+)
+parser.add_argument(
+    "-ht",
+    "--h-tolerance",
+    dest="h_tol",
+    type=float,
+    default=1.0e-6,
+    help="Threshold for convergence of smoothing length",
+)
+parser.add_argument(
     "-k",
     "--kernel",
     dest="kernel",
     type=str,
     default="quartic_spline",
-    choices=sphtools.sph_kernel_list,
     help="SPH kernel function to use.",
+    choices=swift2.sphtools.sph_kernel_list,
 )
-args = parser.parse_args()
 
+args = parser.parse_args()
+nneigh = args.nneigh
+kernel = args.kernel
+h_tol = args.h_tol
 
 ########################################################################################
 # Generate SWIFT project
 ########################################################################################
 
-project_namespace = ["tests", "swift2", "noh"]
+project_namespace = ["tests", "swift2", "testSML3D"]
 
 project = swift2.Project(
-    namespace=project_namespace, project_name="Noh", executable="noh2D"
+    namespace=project_namespace, project_name="TestSML3D", executable="testSML"
 )
+
+cfl_factor = 1e-6
+init_dt = 1.0e-6
+
+offset = [0, 0, 0]
+domain_size = [1, 1, 1]
+periodic_boundary_conditions = [False, False, False]
 
 
 # Initialise the SPH particle --------------------------------------------------
@@ -125,18 +119,18 @@ project = swift2.Project(
 
 name = "hydroPart"
 
-dimensions = 2
-hydro_dimensions = 2  # dimensions for the hydro
+dimensions = 3  # peano needs this for whatever reason...
+hydro_dimensions = 3  # dimensions for the hydro
 
 particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
     name,
     dimensions_hydro=hydro_dimensions,
-    cfl_factor=args.cfl_factor,
-    initial_time_step_size=args.timestep_size,
+    cfl_factor=cfl_factor,
+    initial_time_step_size=init_dt,
     constant_time_step_size=True,
     swift_project_namespace=project_namespace,
     particles_per_cell=20,
-    min_h=args.cell_size / 100,
+    min_h=args.cell_size,
     max_h=args.cell_size,
 )
 
@@ -153,11 +147,16 @@ particle = swift2.particle.SPHLeapfrogFixedSearchRadius(
 HYDRO_DIMENSIONS = hydro_dimensions
 
 # Particle number along 1 dimension
-HYDRO_PART_NUMBER = args.particle_number
+hfile = h5py.File(args.ic_filename, "r")
+header = hfile["Header"]
+npart = header.attrs["NumPart_ThisFile"][0]
+npart_base = header.attrs["NumPart_base"][0]
+hfile.close()
+HYDRO_PART_NUMBER = npart
 
 # Time integration parameters
-GLOBAL_TIME_STEP_SIZE = args.timestep_size
-CFL_CONSTANT = args.cfl_factor
+GLOBAL_TIME_STEP_SIZE = init_dt  # make some stuff up and hope it'll be stable enough
+CFL_CONSTANT = cfl_factor  # make some stuff up and hope it'll be stable enough
 
 # EoS parameter ---------------------------------------------------------------
 gamma_hydro_list = [str(5 / 3), str(7 / 5), str(4 / 3), str(2 / 1)]
@@ -171,22 +170,29 @@ GAMMA = gamma_hydro_list[0]
 GAMMA_HYDRO_SYMBOL = gamma_hydro_list_symbols[0]
 
 # SPH kernel -------------------------------------------------------
+KERNEL_SYMBOL = swift2.sphtools.sph_kernel_macro_name[kernel]
 
-kernel = args.kernel
-KERNEL_SYMBOL = sphtools.sph_kernel_macro_name[kernel]
-KERNEL_SUPPORT_RAD = sphtools.sph_kernel_H_over_h[HYDRO_DIMENSIONS - 1][kernel]
-
-
-hydro_h_max = args.cell_size / 2
+# Additional Particle Parameters -----------------------------------------------
+dx = domain_size[0] / npart_base
+hydro_H_max = 2 * dx
+hydro_h_max = swift2.sphtools.sph_kernel_get_smoothing_length_from_search_radius(
+    hydro_H_max, kernel, hydro_dimensions
+)
+print("HYDRO H MAX", hydro_H_max, hydro_h_max)
 particle.h_hydro_max = hydro_h_max
 
-# particle.h_hydro_min = 1e-6
-# particle.h_max_iterations = 10
-# particle.h_tolerance = 1e-4
-# particle.eta_factor = 1.2348
+# Modify the eta factor to look for a precise number of neighbours.
+# Then round it up a little to avoid round-down errors.
+# In 1D, N_neigh = 2 * kernel_gamma * eta; see Price 2012
+particle.eta_factor = swift2.sphtools.eta_from_number_of_neighbours(
+    nneigh, kernel=kernel, ndim=hydro_dimensions
+)
+
+particle.h_hydro_min = 1e-10
+particle.h_max_iterations = 50
+particle.h_tolerance = h_tol
 # particle.beta_av = 3.0
 # particle.alpha_av = 0.8
-
 # Optional: Reduce the mantissa size for particle attributes -------------------
 # Native size is 53 (double precision)
 # particle.mantissa_size = 23
@@ -207,69 +213,33 @@ else:
     build_mode = peano4.output.CompileMode.Release
 
 # Set Peano4 simulation parameters ---------------------------------------------
-offset = [0, 0, 0]
-domain_size = [1, 1, 1]
-periodic_boundary_conditions = [False, False, False]
-
 project.set_global_simulation_parameters(
     dimensions=dimensions,
     offset=offset,
     domain_size=domain_size,
-    min_end_time=args.end_time,
-    max_end_time=0.0,
+    min_end_time=init_dt,
+    max_end_time=init_dt,
     first_plot_time_stamp=0.0,
-    time_in_between_plots=args.plot_delta,
+    time_in_between_plots=init_dt,
     periodic_BC=periodic_boundary_conditions,
     plotter_precision=8,
 )
 
 project.set_Peano4_installation(args.peanodir, build_mode)
 
-project.set_load_balancing(
-    "toolbox::loadbalancing::strategies::RecursiveBipartition",
-    "new toolbox::loadbalancing::DefaultConfiguration()",
-)
+#  project.set_load_balancing(
+#      "toolbox::loadbalancing::strategies::RecursiveBipartition",
+#      "new toolbox::loadbalancing::DefaultConfiguration()",
+#  )
 
 
 ###############################################################################
 # Initialisation snippet for the particle
 ###############################################################################
 
-# Set up the coordinates for the particles
-# We construct a regular (lattice) configuration.
-Npart = args.particle_number
-offset = 1 / Npart
-
-coords = np.zeros((Npart**HYDRO_DIMENSIONS, 3))
-
-x = np.linspace(offset, 1, Npart, endpoint=False)
-y = np.linspace(offset, 1, Npart, endpoint=False)
-
-xp, yp = np.meshgrid(x, y)
-xp = xp.reshape((np.prod(xp.shape),))
-yp = yp.reshape((np.prod(yp.shape),))
-
-coords[:, 0] = xp
-coords[:, 1] = yp
-
-#  Noh problem (2D) snippet  --------------------------------------------------
-#  The particle attributes are set via an initalisation snippet that sets
-#  the initial conditions specific for this problem, i.e. the velocity field
-#  that converges towards the center of the domain and that generates the
-#  collapse.
-
-ICs = swift2.scenario.NohProblemIC(dimensions=HYDRO_DIMENSIONS)
-initialisation_snippet = ICs.initialisation_snippet
-
-# Finally, pass this configuration to the initialisation script
 project.algorithm_step_initial_conditions.add_action_set(
-    swift2.input.InsertParticlesByCoordinates(
-        particle_set=particle_set,
-        initialisation_call=initialisation_snippet,
-        coordinates=coords,
-        additional_includes="""
-#include "swift2/legacy/equation_of_state.h"
-""",
+    swift2.input.InsertParticlesFromHDF5File(
+        particle_set=particle_set, filename=args.ic_filename
     )
 )
 
@@ -303,6 +273,7 @@ particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat(
     "globaldata::{}::getSpecies().getMinTimeStamp()".format(particle.name),
 )
 particle_plotter.add_attribute_to_plot(particle.part_id, 1)
+# for some reason, using hydro_dimensions here writes wrong output.
 particle_plotter.add_attribute_to_plot(particle.velocity, dimensions)
 particle_plotter.add_attribute_to_plot(particle.acceleration, dimensions)
 particle_plotter.add_attribute_to_plot(particle.mass, 1)
