@@ -100,6 +100,8 @@ class MyClassForStoringData:
   # code goes here
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+More info can be found in the FAQs below.
+
 # C++ conventions / Style Guide
 
 We use fairly standard conventions when writing C++. This includes, but isn't limited to:
@@ -117,12 +119,6 @@ If in doubt, you can use the automatic formatting tool described below, but it i
 that you only format files which you had modified already, i.e. no formatting random files
 in the repo.
 
-
-
-Python
-===============
-
-Please try and follow the <a href="https://peps.python.org/pep-0008/">PEP 8 Style guide</a>.
 
 
 FAQs
