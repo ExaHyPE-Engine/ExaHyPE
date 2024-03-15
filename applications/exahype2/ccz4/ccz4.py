@@ -506,7 +506,7 @@ if __name__ == "__main__":
                                                                 {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
                                                                 fineGridCell{{SOLVER_NAME}}Q.value,
                                                                 fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-                                                                {0,1,2},
+                                                                {17,18,19},
                                                                 {-1,-1,-1},
                                                                 *p
                                                                """
@@ -519,7 +519,7 @@ if __name__ == "__main__":
           particle_set=tracer_particles,
           solver=my_solver,
           filename=args.path+"Tracer-BHTracker",
-          number_of_entries_between_two_db_flushes=50000,
+          number_of_entries_between_two_db_flushes=1000,
           output_precision=8,
           data_delta_between_two_snapsots=1e16,
           position_delta_between_two_snapsots=1e16,
