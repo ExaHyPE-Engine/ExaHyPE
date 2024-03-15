@@ -8,13 +8,11 @@ import swift2
 import jinja2
 
 
-from .AMRLogic import (
-    add_dynamic_mesh_refinement_and_particle_resorting_aggressive_mesh_adoption,
+from .AMRLogic import add_dynamic_mesh_refinement_and_particle_resorting
+from .ParticleSortingAndStorage import (
+   ParticleSortingAndStorage,
+   AddAdditionalDummySweep
 )
-from .AMRLogic import (
-    add_dynamic_mesh_refinement_and_particle_resorting_minimise_resorting_and_add_gathers,
-)
-from .ParticleSorting import ParticleSorting
 from .SpeciesStepOrdering import concatenate_steps_of_species
 from .Utils import (
     does_one_species_require_gather,
@@ -24,19 +22,19 @@ from .Utils import (
 )
 
 
-from enum import Enum
-
-
 def clear_task_numbers_for_all_species(
-    mesh_traversals,
+    new_step,
     species_set,
     verbose,
 ):
     """!
 
     Add the action set to the first sweep that clears all the task numbers of
-    each and every species
+    each and every species. We assume that task numbers are created on-the-fly,
+    so the elimination of task numbers is really just there to ...
 
+    @todo Reuse snippet from task tree translator
+    
     """
     for species in species_set:
         action_set_erase_task_markers = peano4.toolbox.api.ClearNumbersOnMesh(

@@ -9,7 +9,7 @@ permissions, but we do protect some branches.
 
 - Our main branch is called p4, as we work with Peano 4. This one is protected
   and only writable by the PI. 
-- p4 has a couple of high-level subbranches which are editable by a few key
+- p4 has a couple of top-level branches which are editable by a few key
   users. Please assign merge requests to one of these key users if you want your 
   changes to be merged.
   - particles
@@ -46,11 +46,18 @@ branches or top-level branches do not have a name prefix.
 
 # Popular subbranches
 
-- documentation is a subbranch which exclusively fixes documentation and 
-  tutorials. Nothing in here does actually "touch" real code.
-- gpu is a subbranch of infrastructure and collects all the extensions we need 
-  to support various GPU back-ends. Therefore, we call it infrastructure-gpu.
-- particles hosts our SPH work, i.e. Swift 2.
+- ***documentation*** is a top-level branch which exclusively fixes 
+  documentation, tutorials, ... Nothing in here does actually "touch" real 
+  code @ref page_documentation "besides inserting markers such that code sections can be cited".
+- ***infrastructure-gpu*** is a subbranch of infrastructure and collects all 
+  the extensions we need to support various GPU back-ends. 
+- ***infrastructure-cmake*** and similar branches are used for tweaks around
+  the build systems.
+- ***infrastructure-ci*** and similar branches deal with continuous 
+  integration.
+- ***particles*** hosts our SPH work, i.e. Swift 2.
+- ***exahype*** hosts our work around ExaHyPE 2.
+- ***multigrid*** hosts our multigrid work funded under the ExCALIBUR programme. 
 
 
  */
