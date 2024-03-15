@@ -5,6 +5,9 @@
 # Density calculaion test
 # --------------------------------------
 
+# exit on error
+set -e
+
 # set threads number
 export OMP_NUM_THREADS=1
 

@@ -4,8 +4,10 @@
 
 template <typename Iterator>
 Iterator toolbox::particles::particleIsDuplicate(const typename Iterator::value_type& particle, Iterator begin, const Iterator& end) {
+  static tarch::logging::Log _log( "toolbox::particles" );
   while (begin != end) {
     if (tarch::la::equals((*begin)->getX(), particle->getX(), SpatialDuplicateTolerance)) {
+      logDebug( "particleIsDuplicate(...)", "particles " << particle->toString() << " and " << (*begin)->toString() << " are the same" );
       return begin;
     }
     begin++;
@@ -51,6 +53,8 @@ void toolbox::particles::insertParticleIntoCell(
     );
     targetVertex[d] = newParticle->getX()(d) > marker.x()(d);
   }
+
+  assertion3( tarch::la::smaller(2.0 * newParticle->getSearchRadius(), tarch::la::min(marker.h())), marker.toString(), newParticle->toString(), spacetreeId );
 
   newParticle->setParallelState(Particle::ParallelState::Local);
   newParticle->setCellH(marker.h());

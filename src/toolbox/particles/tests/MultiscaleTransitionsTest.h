@@ -86,8 +86,6 @@ private:
   void testLiftDropOfParticleAssociatedWithVertex01();
 
 
-
-
   /*
    * Another test case
    *
@@ -118,6 +116,92 @@ orithmStepUpdates=1,...,dependencyChecksAlgorithmStepMaskOuts=0,...,dependencyCh
    *
    */
   void testLiftDropOfParticleAssociatedWithVertex02();
+
+
+  /**
+   * Another test from the Swift runs where seven particles disappeared
+   *
+   * This is the dump of the seven missing particles. We only focus on the
+   * first one from hereon:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- (HydroPart,[0.0555708,0.322228]): ->(moved-while-associated-to-vertex,[0.05,0.32]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[0,0.333333],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.0556128,0.33212]): ->(moved-while-associated-to-vertex,[0.05,0.33]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[0,0.333333],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.944203,0.618454]): ->(moved-while-associated-to-vertex,[0.95,0.62]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[1,0.666667],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.944236,0.628335]): ->(moved-while-associated-to-vertex,[0.95,0.63]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[1,0.666667],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.944271,0.638218]): ->(moved-while-associated-to-vertex,[0.95,0.64]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[1,0.666667],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.944308,0.648103]): ->(moved-while-associated-to-vertex,[0.95,0.65]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[1,0.666667],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+- (HydroPart,[0.944347,0.65799]): ->(moved-while-associated-to-vertex,[0.95,0.66]->x_new,tree=0,trace=substitute-for-whole-trajectory)->(detach-from-vertex,local=1,x=[1,0.666667],h=[0.111111,0.111111],tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_LiftDrop::__Template_LiftOrReassignParticles)
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * This is due to lifts without the corresponding drops. We can see
+   * the following line for the first particle:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 482512398740 00:08:02     rank:0       core:7       info         benchmarks::swift2::noh::vertexdata::HydroPartSet::mergeWithParticle(...)                           inflying particle=(debugX=[0.05,0.32],debugH=[0,0],x=[0.0555708,0.322228],cellH=[0.111111,0.111111],searchRadius=0.0555556,ParallelState=Virtual,MoveState=Moved,CellHasUpdatedParticle=1,mass=0.0001,v=[0.928474,0.37139],a=[-0.000587972,-0.000240799],density=1.01022,pressure=6.76278e-07,smoothingLength=0.0122854,u=1.00416e-06,uDot=1.39669e-06,v_full=[0.928473,0.37139],u_full=1.00416e-06,wcount=10102.2,wcount_dh=-6995.6,f=-4.27191e-07,hDot=-0.0128069,rho_dh=-0.69956,smoothingLengthIterCount=0,hasNoNeighbours=0,isBoundaryParticle=0,partid=1,cfl=0.1,initialTimeStepSize=0.001,adjustTimeStepSize=0,hydroDimensions=2,etaFactor=1.2348,smlMin=1e-06,smlMax=0.166667,smlTolerance=0.0001,smlMaxIterations=30,alphaAV=0.8,betaAV=3,balsara=0.799889,rot_v=0.000278591,div_v=-2.07604,v_sig_AV=0.140208,soundSpeed=0.00105628,dependencyChecksPeanoEventUsedBySwift=touchVertexFirstTime,dependencyChecksAlgorithmStepLastUpdated=FlagBoundaryParticles,dependencyChecksAlgorithmStepUpdates=1,...,dependencyChecksAlgorithmStepMaskOuts=0,...,dependencyChecksInitStepLastUpdated=FlagBoundaryParticles,dependencyChecksInitStepUpdates=1,...,dependencyChecksInitStepMaskOuts=0,...) at vertex (cell-centre=[0.0555556,0.388889],cell-h=[0.111111,0.111111],local=1111,hanging=0000,select=1,has-been-refined=0000,will-be-refined=0000,is-parent-vertex-local=1111,is-parent-cell-local=1,rel-pos-within-father=[0,0],is-adjacent-cell-local=110110000,x(selected)=[0.111111,0.333333]) is new and will be remote on tree  1 (marker=(cell-centre=[0.0555556,0.388889],cell-h=[0.111111,0.111111],local=1111,hanging=0000,select=1,has-been-refined=0000,will-be-refined=0000,is-parent-vertex-local=1111,is-parent-cell-local=1,rel-pos-within-father=[0,0],is-adjacent-cell-local=110110000,x(selected)=[0.111111,0.333333]))
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * so the particle has been local on tree 0 and remote on tree 1, before it
+   * started to move. Then it moves and is lifted. We obtain only one drop
+   * after that. That drop yields a remote particle on tree 1, i.e. it seems
+   * that it is really only dropped on tree 1. And on this tree 1, it is then
+   * erased, as it is not local. What we'd like to see is that it is
+   *
+   * - dropped on both tree 0 and tree 1, with one of them yielding a local
+   *   particle; or
+   * - dropped on either of the trees where it yields a local particle.
+   *
+   * @image html MultiscaleTransitionsTest_testLiftDropOfParticleAssociatedWithVertex03.png
+   *
+   * After studying the setup, it became clear that the sorting per se was
+   * correct: The problem here is that the particle should never have ended
+   * up on the fine level anyway. If it is there, it should be lifted and
+   * counted there, which it is not apparently. So the lift/drop behaves
+   * correctly, but the constellation is ill-posed in the first place. If
+   * we remove the search radius (as in the implementation of the test), the
+   * code shows the correct behaviour.
+   *
+   * Once we have assessed the original setup, we therefore return to the
+   * large search radius of 0.0555556
+   *
+   */
+  void testLiftDropOfParticleAssociatedWithVertex03();
+
+
+  /**
+   * Another lift/drop test
+   *
+   * I found the following entry in the database after a particle had disappeared:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- (HydroPart,[0.5,0.5]): ->(detach-from-vertex,local=1,x=[0.333333,0.333333],h=[0.333333,0.333333],tree=0,trace=UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles)->(assign-to-sieve-set,local=1,tree=0,trace=UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles) (file:assignmentchecks/TracingAPI.cpp,line:836)
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * This particle resides exactly in the centre of a cell and seems to be
+   * lifted, which contradicts our working assumption that vertices are
+   * careful with releasing particles and not aggressive when it comes to
+   * grabbing them.
+   *
+   * The lift stems from this place:
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ 496656108    00:00:00     rank:0       core:1       info         benchmarks::swift2::noh::observers::StepHydroPartDrift_sweep12peano4_toolbox_particles_api_UpdateParticleGridAssociation_BucketSort0::touchVertexLastTime(...) lift particle (,x=[0.5,0.5],cellH=[0.333333,0.333333],searchRadius=0.15,ParallelState=Local,MoveState=Moved,CellHasUpdatedParticle=1,mass=0.01,v=[-3.51825e-06,3.5199e-06],a=[1.29168e-05,-9.76758e-05],density=1.01558,pressure=6.80968e-07,smoothingLength=0.12252,u=1.00578e-06,uDot=1.15969e-05,v_full=[-3.5176e-06,3.51502e-06],u_full=1.00578e-06,wcount=101.558,wcount_dh=-14.06,f=0,hDot=-1.06525,rho_dh=-0.1406,smoothingLengthIterCount=0,hasNoNeighbours=0,isBoundaryParticle=0,partid=1,cfl=0.1,initialTimeStepSize=0.0001,adjustTimeStepSize=0,hydroDimensions=2,etaFactor=1.2348,smlMin=1e-06,smlMax=0.166667,smlTolerance=0.0001,smlMaxIterations=30,alphaAV=0.8,betaAV=3,balsara=0.8,rot_v=4.39144e-07,div_v=-17.2853,v_sig_AV=3.00064,soundSpeed=0.00105714) globally. Previously assigned to (cell-centre=[0.166667,0.5],cell-h=[0.333333,0.333333],local=1011,hanging=0000,select=1,has-been-refined=0000,will-be-refined=0000,is-parent-vertex-local=1111,is-parent-cell-local=0,rel-pos-within-father=[0,1],is-adjacent-cell-local=000100110,x(selected)=[0.333333,0.333333])
+ 500006642    00:00:00     rank:0       core:2       info         benchmarks::swift2::noh::repositories::GlobalState::finishIntermediateStep() sort statistics: #lifts=0, #drops=0, #lifts-into-sieve-set=1, #drops-from-sieve-set=0, #drops-into-horizontal-tree-decomposition=0, #reassignments=0
+
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   * Funny enough, this particular bug did arise only for two threads, but
+   * passed with eight. Digging into the output revealed that the inflying
+   * particle seems to not to be local on either rank:
+   *
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 1616501080   00:00:01     rank:0       core:7       info         benchmarks::swift2::noh::observers::StepHydroPartDrift_sweep12peano4_toolbox_particles_api_UpdateParticleGridAssociation_BucketSort0::touchVertexLastTime(...) lift particle (,x=[0.5,0.5],cellH=[0.333333,0.333333],searchRadius=0.15,ParallelState=Local,MoveState=Moved,CellHasUpdatedParticle=1,mass=0.01,v=[-3.51825e-06,3.5199e-06],a=[1.29168e-05,-9.76758e-05],density=1.01558,pressure=6.80968e-07,smoothingLength=0.12252,u=1.00578e-06,uDot=1.15969e-05,v_full=[-3.5176e-06,3.51502e-06],u_full=1.00578e-06,wcount=101.558,wcount_dh=-14.06,f=0,hDot=-1.06525,rho_dh=-0.1406,smoothingLengthIterCount=0,hasNoNeighbours=0,isBoundaryParticle=0,partid=1,cfl=0.1,initialTimeStepSize=0.0001,adjustTimeStepSize=0,hydroDimensions=2,etaFactor=1.2348,smlMin=1e-06,smlMax=0.166667,smlTolerance=0.0001,smlMaxIterations=30,alphaAV=0.8,betaAV=3,balsara=0.8,rot_v=4.39144e-07,div_v=-17.2853,v_sig_AV=3.00064,soundSpeed=0.00105714) globally from tree 0. Previously assigned to (cell-centre=[0.166667,0.5],cell-h=[0.333333,0.333333],local=1011,hanging=0000,select=1,has-been-refined=0000,will-be-refined=0000,is-parent-vertex-local=1111,is-parent-cell-local=0,rel-pos-within-father=[0,1],is-adjacent-cell-local=000100110,x(selected)=[0.333333,0.333333])
+ 1620846099   00:00:01     rank:0       core:6       info         benchmarks::swift2::noh::observers::DummyStepHydroPartPredictHydro_sweep22peano4_toolbox_particles_api_UpdateParticleGridAssociation_BucketSort0::touchVertexFirstTime() now we drop particle (,x=[0.5,0.5],cellH=[0.333333,0.333333],searchRadius=0.15,ParallelState=Local,MoveState=Moved,CellHasUpdatedParticle=1,mass=0.01,v=[-3.51825e-06,3.5199e-06],a=[1.29168e-05,-9.76758e-05],density=1.01558,pressure=6.80968e-07,smoothingLength=0.12252,u=1.00578e-06,uDot=1.15969e-05,v_full=[-3.5176e-06,3.51502e-06],u_full=1.00578e-06,wcount=101.558,wcount_dh=-14.06,f=0,hDot=-1.06525,rho_dh=-0.1406,smoothingLengthIterCount=0,hasNoNeighbours=0,isBoundaryParticle=0,partid=1,cfl=0.1,initialTimeStepSize=0.0001,adjustTimeStepSize=0,hydroDimensions=2,etaFactor=1.2348,smlMin=1e-06,smlMax=0.166667,smlTolerance=0.0001,smlMaxIterations=30,alphaAV=0.8,betaAV=3,balsara=0.8,rot_v=4.39144e-07,div_v=-17.2853,v_sig_AV=3.00064,soundSpeed=0.00105714)
+   * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   *
+   *
+   */
+  void testLiftDropOfParticleAssociatedWithVertex04();
 
 public:
   MultiscaleTransitionsTest();

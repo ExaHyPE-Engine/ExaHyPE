@@ -126,8 +126,7 @@ class UpdateParallelState(ActionSet):
         """
   _numberOfRemainingLocalParticles = 0;
   _numberOfExpiredHaloParticles    = 0;
-  _numberOfLeavingParticles        = 0;
-  _numberOfIncomingParticles       = 0;
+  _numberOfParticlesThatHaveLeftTheirDomain        = 0;
 """
     )
 
@@ -136,8 +135,7 @@ class UpdateParallelState(ActionSet):
   vertexdata::{{PARTICLES_CONTAINER}}::updateNumberOfLocalAndExpiredParticles(
     _numberOfRemainingLocalParticles,
     _numberOfExpiredHaloParticles,
-    _numberOfLeavingParticles,
-    _numberOfIncomingParticles
+    _numberOfParticlesThatHaveLeftTheirDomain
   );
 """
     )
@@ -147,19 +145,16 @@ class UpdateParallelState(ActionSet):
 for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
   const bool particleWillBeLocal = toolbox::particles::particleAssignedToVertexWillBeLocal( p->getX(), marker );
 
-  if (particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Virtual ) {
-    p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
-    _numberOfIncomingParticles++;
-    toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
-    toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), true,  marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
-  }
-
-  // Has just left the domain. So we set it to virtual now. Next iteration,
-  // the neighbour who has received this particle due to the movement will
-  // send us an update, i.e. after this iteration we can throw it away.
+  // Have left the domain in the previous mesh sweep. So we set it to virtual 
+  // now. After this iteration, the particle will be thrown away. This can only
+  // happen if the previous mesh sweep has altered the position, i.e. while we 
+  // set the particle to virtual here, some other tree will just receive this 
+  // one and set it local there. In most cases, this will be a replace of an 
+  // existing (virtual) particle copy.
   if (not particleWillBeLocal and p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local ) {
     p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Virtual );
-    _numberOfLeavingParticles++;
+    logDebug( "touchVertexLastTime(...)", "particle has left domain=" << p->toString() << " (attached to vertex " << marker.toString() << ", will be deleted after this sweep but should be inflying on other tree)" );
+    _numberOfParticlesThatHaveLeftTheirDomain++;
     toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", p->getX(), true, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
     toolbox::particles::assignmentchecks::assignParticleToVertex(   "{{PARTICLE}}", p->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexFirstTime" );
   }
@@ -177,18 +172,21 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
   ) {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is local and remains local" );
     _numberOfRemainingLocalParticles++;
-    (*p)->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
     p++;
   }
   else {
     logDebug( "touchVertexLastTime(...)", "particle " << (*p)->toString() << " is virtual. Remove local copy from vertex " << marker.toString() << " on tree " << _treeNumber );
     toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), false, marker.x(), marker.h(), _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
     toolbox::particles::assignmentchecks::eraseParticle( "{{PARTICLE}}", (*p)->getX(), false, _treeNumber, "UpdateParallelState::__Template_TouchVertexLastTime" );
+    #if !defined(Parallel)
+    assertion2(
+      ::peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>1,
+      (*p)->toString(),
+      marker.toString()
+    );
+    #endif
     _numberOfExpiredHaloParticles++;
     p = fineGridVertex{{PARTICLES_CONTAINER}}.deleteParticle(p);
-    #if !defined(Parallel) and !defined(SharedMemoryParallelisation)
-    assertion(false);
-    #endif
   }
 }
 """
@@ -225,6 +223,9 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
             """
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Lock.h"
+
+#include "peano4/parallel/SpacetreeSet.h"
+
 #include "toolbox/particles/MultiscaleTransitions.h"
 #include "toolbox/particles/assignmentchecks/TracingAPI.h"
 
@@ -240,8 +241,7 @@ while ( p!=fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
 
   int  _numberOfRemainingLocalParticles;
   int  _numberOfExpiredHaloParticles;
-  int  _numberOfLeavingParticles;
-  int  _numberOfIncomingParticles;
+  int  _numberOfParticlesThatHaveLeftTheirDomain;
 """
 
     def get_body_of_prepareTraversal(self):

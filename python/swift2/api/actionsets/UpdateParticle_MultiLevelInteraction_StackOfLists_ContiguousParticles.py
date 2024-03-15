@@ -4,9 +4,20 @@ import peano4
 import peano4.toolbox.particles
 
 
+from .TaskGraphKernelWrappers import (
+    construct_touch_vertex_first_time_call,
+    construct_touch_cell_first_time_call,
+    construct_touch_vertex_last_time_call,
+)
+
 class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
     peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles
 ):
+    """!
+    
+    Plain wrapper around peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles that introduces tasks
+    
+    """
     def __init__(
         self,
         particle_set,
@@ -17,6 +28,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
         unprepare_traversal_kernel,
         additional_includes,
         active_particle_set,
+        current_step_alters_particle_position,
         wait_for_all_tasks_to_finish_after_traversal,
     ):
         """!
@@ -25,6 +37,10 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
 
 
         @param wait_for_all_tasks_to_finish_after_traversal: Boolean
+          If this one is set, we insert a wait into the unprepare traversal 
+          event. Each rank then waits for all tasks to be completed before
+          it continues. We have a strong synchronisation point.
+          
 
         """
         if wait_for_all_tasks_to_finish_after_traversal:
@@ -39,19 +55,25 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
             UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles, self
         ).__init__(
             particle_set,
-            particle_particle_interaction_kernel,
-            touch_vertex_first_time_compute_particle_update_kernel,
-            touch_vertex_last_time_compute_particle_update_kernel,
-            prepare_traversal_kernel,
-            unprepare_traversal_kernel,
-            additional_includes
+            particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
+                particle_set,particle_particle_interaction_kernel,current_species_index,True
+            ),
+            touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
+                particle_set,touch_vertex_first_time_compute_particle_update_kernel,current_species_index,True
+            ),
+            touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
+                particle_set,touch_vertex_last_time_compute_particle_update_kernel,current_species_index,True,current_step_alters_particle_position
+            ),
+            prepare_traversal_kernel=prepare_traversal_kernel,
+            unprepare_traversal_kernel=unprepare_traversal_kernel,
+            additional_includes=additional_includes
             + """
 #include "tarch/multicore/Tasks.h"                
 #include "swift2/VertexTask.h"                
 #include "swift2/CellTask.h"                
 #include "swift2/TaskNumber.h"                
                  """,
-            active_particle_set,
+            active_particle_set=active_particle_set,
         )
 
     def get_body_of_operation(self, operation_name):

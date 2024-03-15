@@ -7,17 +7,21 @@ int swift2::VertexTask<ParticleSet>::TaskTypeId = peano4::parallel::getTaskType(
 
 template <typename ParticleSet>
 swift2::VertexTask<ParticleSet>::VertexTask(
-  const ParticleSet& assignedParticles, Functor functor, bool fuseAndPortToGPU
+  const peano4::datamanagement::VertexMarker&  marker,
+  const ParticleSet&                           assignedParticles,
+  Functor                                      functor,
+  bool                                         fuseAndPortToGPU
 ):
   tarch::multicore::Task(
     fuseAndPortToGPU ? TaskTypeId : tarch::multicore::Task::DontFuse, tarch::multicore::Task::DefaultPriority
   ),
+  _marker(marker),
   _assignedParticles(assignedParticles),
   _functor(functor) {}
 
 
 template <typename ParticleSet>
 bool swift2::VertexTask<ParticleSet>::run() {
-  _functor(_assignedParticles);
+  _functor(_marker, _assignedParticles);
   return false;
 }
