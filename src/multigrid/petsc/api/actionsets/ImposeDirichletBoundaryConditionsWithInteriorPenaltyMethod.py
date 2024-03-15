@@ -20,7 +20,7 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
     
     assertion( globalFaceIndex>=0 );
 
-    logTraceInWith2Arguments("TFFT::Boundary", globalFaceIndex, marker.toString());
+    logTraceInWith2Arguments("touchFaceFirstTime::Boundary", globalFaceIndex, marker.toString());
     
     /*
     we want to place -1 on the diagonal for each "interior-side" projection.
@@ -56,7 +56,7 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
         }
       }
 
-      logTraceInWith5Arguments("TFFT::dfore", faceNode, faceNormalAxis, marker.x(), x,repositories::{{SOLVER_INSTANCE}}.FaceUnknowns);
+      logTraceInWith5Arguments("touchFaceFirstTime::dfore", faceNode, faceNormalAxis, marker.x(), x,repositories::{{SOLVER_INSTANCE}}.FaceUnknowns);
           
       // Look up the value: rhs is not relevant here, but I want to reuse the existing signatures 
       double value, rhs, exact;
@@ -72,7 +72,7 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
         // row corresponding to solution
         int globalMatrixRow = globalFaceIndex + row + 2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
         
-        logTraceInWith4Arguments("TFFT:unknownLoop", unknown, globalMatrixRow, row, marker.toString());
+        logTraceInWith4Arguments("touchFaceFirstTime:unknownLoop", unknown, globalMatrixRow, row, marker.toString());
 
         // insert identity into row corresponding to solution at this node / for this unknown
         repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
@@ -141,12 +141,12 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
 
         row++;
 
-        logTraceOut("TFFT:unknownLoop");
+        logTraceOut("touchFaceFirstTime:unknownLoop");
       }
-      logTraceOut("TFFT::dfore");
+      logTraceOut("touchFaceFirstTime::dfore");
 
     }
-    logTraceOut("TFFT::Boundary");
+    logTraceOut("touchFaceFirstTime::Boundary");
   }
   """
   

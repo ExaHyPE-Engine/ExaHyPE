@@ -24,7 +24,7 @@ class InitDofsCollocated(ActionSet):
     return isOnBoundary;
   };
 
-  logTraceInWith3Arguments("InitDofs::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
+  logTraceInWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
   vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
 
@@ -101,11 +101,11 @@ class InitDofsCollocated(ActionSet):
   }
 
 
-  logTraceOutWith3Arguments("InitDofs::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
+  logTraceOutWith3Arguments("InitDofs::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
    """
 
   templateTouchCellFirstTime = """
-  logTraceInWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
   celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
 
@@ -139,7 +139,7 @@ class InitDofsCollocated(ActionSet):
 
   }
   
-  logTraceOutWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  logTraceOutWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
    """
   
   def __init__(self,
@@ -205,7 +205,7 @@ class InitDofsDG(ActionSet):
   """
   templateTouchVertexFirstTime = """
 
-  //logTraceInWith3Arguments("InitDofsDG::TVFT", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
+  //logTraceInWith3Arguments("InitDofsDG::touchVertexFirstTime", marker.toString(), isOnBoundary(marker.x()), fineGridVertex{{SOLVER_NAME}}.toString());
 
   vertexdata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getVertexDoFType(marker.x(),marker.h());
 
@@ -236,11 +236,11 @@ class InitDofsDG(ActionSet):
   }
 
 
-  //logTraceOutWith2Arguments("InitDofsDG::TVFT", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
+  //logTraceOutWith2Arguments("InitDofsDG::touchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
    """
 
   templateTouchCellFirstTime = """
-  logTraceInWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  logTraceInWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
 
   celldata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getCellDoFType(marker.x(),marker.h());
 
@@ -276,7 +276,7 @@ class InitDofsDG(ActionSet):
         // send to init
         repositories::{{SOLVER_INSTANCE}}.initCell(marker.x(), marker.h(), value, rhs, exact);
 
-        logTraceInWith5Arguments("TCFT::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs(), marker.toString(), value, rhs);
+        logTraceInWith5Arguments("touchCellFirstTime::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs(), marker.toString(), value, rhs);
 
         // adding junk data to the solution and rhs for development purposes
         for (int i=0; i<repositories::{{SOLVER_INSTANCE}}.CellUnknowns; i++)
@@ -286,18 +286,18 @@ class InitDofsDG(ActionSet):
           fineGridCell{{SOLVER_NAME}}.setExact(i,exact(i));
         }
 
-        logTraceOutWith2Arguments("TCFT::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs());
+        logTraceOutWith2Arguments("touchCellFirstTime::Interior", fineGridCell{{SOLVER_NAME}}.getSolution(), fineGridCell{{SOLVER_NAME}}.getRhs());
       }
     }
     break;
 
   }
   
-  logTraceOutWith2Arguments("InitDofs::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+  logTraceOutWith2Arguments("InitDofs::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
    """
 
-  templateTFFT = """
-  logTraceInWith2Arguments("InitDofs::TFFT", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
+  templatetouchFaceFirstTime = """
+  logTraceInWith2Arguments("InitDofs::touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
 
   facedata::{{SOLVER_NAME}}::Type dofType = repositories::{{SOLVER_INSTANCE}}.getFaceDoFType(marker.x(),marker.h());
 
@@ -365,7 +365,7 @@ class InitDofsDG(ActionSet):
 
   }
   
-  logTraceOutWith2Arguments("InitDofs::TFFT", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
+  logTraceOutWith2Arguments("InitDofs::touchFaceFirstTime", marker.toString(), fineGridFace{{SOLVER_NAME}}.toString());
    """
   
   def __init__(self,
@@ -385,7 +385,7 @@ class InitDofsDG(ActionSet):
       result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = jinja2.Template(self.templateTFFT).render(**self.d)
+      result = jinja2.Template(self.templatetouchFaceFirstTime).render(**self.d)
       pass
     return result
 

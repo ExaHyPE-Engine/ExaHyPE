@@ -203,7 +203,7 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
 
   ### UpdateFaceSolution
   Code for this is in actionsets.DGSolver.UpdateFaceSolution. This action set only contains something nontrivial at 
-  TFFT. We apply the Riemann matrix that is present in the Abstract Solver class. This action set goes first,
+  touchFaceFirstTime. We apply the Riemann matrix that is present in the Abstract Solver class. This action set goes first,
   the idea being that we updated the face solution using the updated face projections from the previous sweep.
   On the first sweep, this does nothing.
 

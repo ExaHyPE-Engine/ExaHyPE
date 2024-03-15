@@ -81,7 +81,7 @@ class AssemblePetscMatrix(ActionSet):
         int globalFirstDoFIndexOfLeftFace  = repositories::{{SOLVER_INSTANCE}}.getLocalToGlobalMap().getGlobalIndex(localFirstDoFIndexOfLeftFace, ::petsc::LocalToGlobalMap::Type::Face);
       
         assertion1(globalFirstDoFIndexOfLeftFace>=0,  marker.toString());
-        logTraceInWith5Arguments( "TCFT::LeftProjection", globalFirstDoFIndexOfLeftFace, globalCellIndex , projectionCellToFaceMatrix, projectionFaceToCellMatrix, marker.toString() );
+        logTraceInWith5Arguments( "touchCellFirstTime::LeftProjection", globalFirstDoFIndexOfLeftFace, globalCellIndex , projectionCellToFaceMatrix, projectionFaceToCellMatrix, marker.toString() );
 
         for (int row=0; row<dofsPerFace; row++ ) {
           for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
@@ -102,7 +102,7 @@ class AssemblePetscMatrix(ActionSet):
             logTraceOut("FaceToCell");
           }
         }
-        logTraceOut( "TCFT::LeftProjection" );
+        logTraceOut( "touchCellFirstTime::LeftProjection" );
       }
       
       if ( 
@@ -115,7 +115,7 @@ class AssemblePetscMatrix(ActionSet):
       
         assertion1(globalFirstDoFIndexOfRightFace>=0, marker.toString());
 
-        logTraceInWith2Arguments( "TCFT::RightProjection", globalFirstDoFIndexOfRightFace, marker.toString() );
+        logTraceInWith2Arguments( "touchCellFirstTime::RightProjection", globalFirstDoFIndexOfRightFace, marker.toString() );
         
         for (int row=0; row<dofsPerFace; row++ ) {
           for (int col=0; col<repositories::{{SOLVER_INSTANCE}}.DoFsPerCell; col++) {
@@ -133,7 +133,7 @@ class AssemblePetscMatrix(ActionSet):
         }
       } // end of if interior face
 
-      logTraceOut( "TCFT::RightProjection" );
+      logTraceOut( "touchCellFirstTime::RightProjection" );
     }
   
   }
@@ -148,7 +148,7 @@ class AssemblePetscMatrix(ActionSet):
 
     assertion( globalFirstDoFIndex>=0 );
 
-    logTraceInWith2Arguments("TFFT", globalFirstDoFIndex, RiemannSolverMatrix);
+    logTraceInWith2Arguments("touchFaceFirstTime", globalFirstDoFIndex, RiemannSolverMatrix);
     for (int row=0; row<dofsPerFace; row++)
 
     // we have col<2*dofsPerFace here since we have left and right projections here.
@@ -176,7 +176,7 @@ class AssemblePetscMatrix(ActionSet):
       );
     }
 
-  logTraceOut("TFFT");
+  logTraceOut("touchFaceFirstTime");
 
   }
   else if ( fineGridFace{{SOLVER_NAME}}PETScData.getType() == facedata::{{SOLVER_NAME}}PETScData::Type::Boundary ){

@@ -48,7 +48,7 @@ class CollocatedSolver(ActionSet):
   templateTouchCellFirstTime = """ 
   if ( fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior )
   {
-    logTraceInWith2Arguments("Solve::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+    logTraceInWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
     for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
     {
       // collect all of the vertex values into one vector
@@ -93,7 +93,7 @@ class CollocatedSolver(ActionSet):
       }
 
     }
-    logTraceOutWith2Arguments("Solve::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+    logTraceOutWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
   }
   """
   

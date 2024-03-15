@@ -9,7 +9,7 @@ import jinja2
 class SendDofsToVertices(ActionSet):
   """!
 
-  use this class to store some indices on each vertex inside TCFT!
+  use this class to store some indices on each vertex inside touchCellFirstTime!
   
   """
 

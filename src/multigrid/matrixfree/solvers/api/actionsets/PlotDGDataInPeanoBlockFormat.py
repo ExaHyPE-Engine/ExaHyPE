@@ -73,7 +73,7 @@ class PlotDGDataInPeanoBlockFormat(ActionSet):
   Template_TouchCellFirstTime = """ 
 if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior) {
 
-  logTraceInWith1Argument("Plot::TCFT", fineGridCell{{SOLVER_NAME}}.{{GETTER}}());
+  logTraceInWith1Argument("Plot::touchCellFirstTime", fineGridCell{{SOLVER_NAME}}.{{GETTER}}());
   
   int patchIndex = _writer->plotPatch(
     marker.x()-0.5 * marker.h(),
@@ -94,15 +94,15 @@ if (fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::In
 
 
 
-  logTraceOut("Plot::TCFT");
+  logTraceOut("Plot::touchCellFirstTime");
 }
 """
 
   templateTouchFaceFirstTime="""
   if (fineGridFace{{SOLVER_NAME}}.getType()!=facedata::{{SOLVER_NAME}}::Type::Coarse)
   {
-    logTraceInWith3Arguments("TFFTOutput", marker.x(), fineGridFace{{SOLVER_NAME}}.getSolution(),fineGridFace{{SOLVER_NAME}}.getProjection());
-    logTraceOut("TFFTOutput");
+    logTraceInWith3Arguments("touchFaceFirstTimeOutput", marker.x(), fineGridFace{{SOLVER_NAME}}.getSolution(),fineGridFace{{SOLVER_NAME}}.getProjection());
+    logTraceOut("touchFaceFirstTimeOutput");
   }
 """
 
