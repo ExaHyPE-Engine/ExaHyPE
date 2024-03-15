@@ -22,6 +22,41 @@ namespace swift2 {
        * recalculate the density (as it depends on the smoothing length) and
        * then check again if we have converged.
        *
+       * The smoothing length is defined by a user-set parameter @f$\eta @f$
+       * which specifies it in units of the (local) mean interparticle separation:
+       *
+       * @f$ h = \eta \langle x \rangle = \eta \left(\frac{1}{n(\mathbf{x})} \right)^{1/\nu} @f$
+       *
+       * where @f$ n @f$ is the local number density of particles (which is
+       * the same as the inverse of volume), and @f$ \nu @f$ is the number of
+       * dimensions of the problem.
+       *
+       * This is, however, a circular definition: The local number density
+       * of particles is estimated via the smoothing length as
+       *
+       * @f$ n_i = \sum_j W(r_{ij}, h_i)@f$ .
+       *
+       * So we must solve this problem iteratively. We can rewrite the equation
+       * above as:
+       *
+       * @f$ h^\nu n = \eta^\nu \Rightarrow h^\nu n - \eta^\nu = 0 @f$
+       *
+       * And use this equation as a function whose root we're trying to find:
+       * Let @f$ f(h) @f$ be
+       *
+       * @f$ f(h) = h^\nu \sum_j W(r_{ij}, h_i) - \eta^\nu @f$
+       *
+       * It has an analytic derivative:
+       *
+       * @f$ \frac{\partial f(h)}{\partial h} =
+       *   \nu h^{\nu-1} \sum_j W(r_{ij}, h_i) +
+       *   h^\nu \sum_j \frac{\partial W(r_{ij}, h_i)}{\partial h}
+       *   @f$
+       *
+       * With an analytic function and its derivative, we make use of the
+       * Newton-Raphson iterative root finding method to find the @f$h@f$
+       * for which @f$ f(h) = 0 @f$.
+       *
        */
       template <typename Particle>
       void hydro_update_smoothing_length_and_rerun_if_required(

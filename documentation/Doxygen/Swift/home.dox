@@ -130,6 +130,26 @@ h5py which you can install via pip, e.g.
 
 
 
+# Equations for "Minimal" SPH
+
+The equations being solved are documented in the source code. Here, we provide the
+links to the corresponding pages.
+
+To understand the order in which we solve the equations, consider the life cycle
+of a SPH particle during a single simulation time step show in the image below.
+
+
+@image html particle-lifecycle.png "A typical life cycle of a particle for SPH with a kick-drift-kick time integration scheme"  width=50%
+
+
+- A `kick` step is documented in ::swift2::kernels::legacy::leapfrog_kick_global_time_step_size
+- A `drift` step is documented in ::swift2::kernels::legacy::leapfrog_drift_global_time_step_size
+- The "neighbour search" which determines the smoothing lengths and densities
+  of particles are documented in ::swift2::kernels::legacy::density_kernel and
+  ::swift2::kernels::legacy::hydro_update_smoothing_length_and_rerun_if_required
+- The time step computation is given in TODO.
+
+
 
 
 

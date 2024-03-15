@@ -81,6 +81,60 @@ namespace swift2 {
       /**
        * @brief The actual density kernel, which interacts a local particle and
        * an active particle, and updates the local particle.
+       *
+       *
+       * In this particle-particle interaction loop, we accumulate several
+       * quantities. For the subsequent force computation, we need to
+       * collect the density
+       *
+       * @f$ \rho_i = \rho(\mathbf{x}_i) = \sum_j m_j W(r_{ij}, h_i)@f$
+       *
+       * and its derivative w.r.t.  @f$ h  @f$ :
+       *
+       * @f$ \frac{\partial \rho_i}{\partial h}
+       *      = \sum_j m_j  \frac{\partial W(r_{ij}, h_i)}{\partial h}
+       *      @f$
+       *
+       * (see the @f$f_i@f$ in swift2::kernels::legacy::force_kernel to see
+       * where and how it is used)
+       * where @f$ m_j @f$ is the particle mass, @f$ r_{ij} @f$ is the distance
+       * between particle @f$i @f$ and @f$ j @f$, @f$h_i @f$ is the smoothing
+       * length of @f$i @f$ and @f$ W(r, h) @f$ is the SPH kernel function
+       * we use.
+       *
+       * Let
+       *
+       * @f$ W = \frac{1}{h^\nu} f\left( \frac{r}{h}\right) \equiv
+       *         \frac{1}{h^\nu} f( q )
+       * @f$
+       *
+       * for @f$ \nu @f$ dimensions. Then
+       *
+       * @f$ \frac{\partial W(r_{ij}, h_i)}{\partial h}
+       *   = - \nu \frac{1}{h ^ {\nu + 1}} f(r/h) +
+       *      \frac{1}{h^\nu} \frac{\partial f(q)}{\partial h}
+       *   =  - \nu \frac{1}{h ^ {\nu + 1}} f(q) +
+       *      \frac{1}{h^\nu} \frac{\partial f(q)}{\partial q} \frac{\partial q}{\partial h}
+       *   =  - \frac{1}{h} \left( \nu W(q) + q \frac{\partial W(q)}{\partial q} \right)
+       * @f$
+       *
+       * which is a quantity we accumulate in the density interaction kernel
+       * for the estimate of @f$  \frac{\partial \rho_i}{\partial h} @f$.
+       *
+       *
+       * Similarly, for the computation of the smoothing length, we require to
+       * accumulate the analgue number densities (and its derivative w.r.t. h):
+       *
+       * @f$ n_i = \sum_j W(r_{ij}, h_i)@f$
+       *
+       * @f$ \frac{\partial n_i}{\partial h}
+       *      = \sum_j \frac{\partial W(r_{ij}, h_i)}{\partial h}
+       *      @f$
+       *
+       *
+       *
+       *
+       *
        */
       template <typename Particle>
       void density_kernel(
