@@ -3,7 +3,7 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 import dastgen2
 
-from .MFMain import MFMain
+from .MatrixFreeMain import MatrixFreeMain
 
 import os,sys
 
@@ -145,7 +145,7 @@ Construct and return the Peano4 project, i.e. all the action sets et al that
 you require to run this Peano4 application with PETSc. 
      
     """
-    self._project.main = MFMain(self._project,
+    self._project.main = MatrixFreeMain(self._project,
                                 self._domain_offset,
                                 self._domain_size,
                                 )

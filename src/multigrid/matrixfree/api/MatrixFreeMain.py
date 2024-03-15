@@ -1,13 +1,13 @@
 import peano4.runner.DefaultSequence
 import os
 
-class MFMain(peano4.runner.DefaultSequence):
+class MatrixFreeMain(peano4.runner.DefaultSequence):
   def __init__(self,
                project,
                domain_offset,
                domain_size
                ):
-    super(MFMain,self).__init__(project)
+    super(MatrixFreeMain,self).__init__(project)
     self.overwrite     = True
     
     self.d[ "Project_Name"]  = project.project_name
