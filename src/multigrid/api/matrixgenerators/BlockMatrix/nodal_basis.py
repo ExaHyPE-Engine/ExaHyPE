@@ -1,0 +1,131 @@
+from abc import ABC, abstractmethod
+import itertools
+import numpy as np
+from scipy.interpolate import lagrange
+from numpy.polynomial.legendre import leggauss
+
+
+class NodalBasis(ABC):
+    """Abstract base class for nodal basis functions"""
+
+    def __init__(self, dim):
+        """Initialise a new instance
+        :arg dim: dimension
+        """
+        self.dim = dim
+
+    def nodes_C(self, L_C):
+        """Compute nodal points on reference cell"""
+        return [
+            [
+                np.vectorize(self.node1d)(degree, idx)
+                for idx in itertools.product(range(degree), repeat=self.dim)
+            ]
+            for degree in L_C
+        ]
+
+    def nodes_F(self, L_F):
+        """Compute nodal points on reference facet"""
+        return [
+            [
+                [
+                    np.vectorize(self.node1d)(idx[:dir] + (None,) + idx[dir:])
+                    for idx in itertools.product(range(degree), repeat=self.dim - 1)
+                ]
+                for dir in range(self.dim)
+            ]
+            for degree in L_F
+        ]
+
+    @abstractmethod
+    def node1d(self, degree, j):
+        """Return the j-th nodal point of a Lagrange polynomial of given degree
+        :arg degree: polynomial degree
+        :arg j: index of node
+        """
+
+
+class NodalBasisGaussLegendre(NodalBasis):
+    """Concrete implementation for Gauss Legendre nodes"""
+
+    def nodal_points(self, degree):
+        """Set nodal points xi_0,xi_1,...,xi_p"""
+
+        # Equidistant points
+        return np.linspace(-1.0, 1.0, degree + 1)
+
+        # Gauss-Legendre points
+        # print("Gauss-Legendre points are used")
+        # return leggauss(degree + 1)[0]
+
+        # Gauss-Lobatto points
+        # ... to be implemented
+
+    def node1d(self, degree, j):
+        """Return the j-th nodal point of a Lagrange polynomial of given degree
+        :arg degree: polynomial degree
+        :arg j: index of node
+        """
+        assert j in range(degree+1), f'j must be in range [0, m], m = {degree}'
+        return self.nodal_points(degree)[j]
+
+    def lagrange_polynomial(self, degree, k):
+        """Returns k-th basis function L^{(m)}_k(xi) of degree m as a numpy polynomial object
+        :arg degree: polynomial degree
+        :arg k: index of basis function (= index of node)
+        """
+        assert k in range(degree+1), f'k must be in [0, m], m = {degree}'
+
+        x = self.nodal_points(degree)
+        y = np.zeros(degree+1)
+        y[k] = 1.0
+
+        return lagrange(x, y) # scipy.interpolate
+    
+    def evaluate(self, degree, k, xi):
+        """Evaluate the k-th basis function L^{(m)}_k(xi) of degree m at point xi in [-1,+1],
+        return L^{(m)}_k(xi)
+        :arg degree: polynomial degree
+        :arg k: index of basis function
+        :arg xi: position xi
+        """
+        # assert -1.0 <= xi.all() <= 1.0, f'xi must be in [-1,+1]'
+        poly = self.lagrange_polynomial(degree, k)
+        return poly(xi)
+
+    def evaluate_derivative(self, degree, k, xi):
+        """Evaluate the derivative of the k-basis function L^{(m)}_k(xi) of degree m at point xi in [-1,+1]
+        return dL^{(m)}_k(xi)/dxi
+        :arg degree: polynomial degree
+        :arg k: index of basis function
+        :arg xi: position xi
+        """
+        # assert -1.0 <= xi.all() <= 1.0, f'xi must be in [-1,+1]'
+
+        poly = self.lagrange_polynomial(degree, k)
+        deriv = np.polyder(poly)
+        return deriv(xi)
+    
+    def plot_basis_functions(self):
+        """Implement the below code in a method"""
+        # ### Plot basis funtions ###
+        # import matplotlib.pyplot as plt
+        # import matplotlib
+        # matplotlib.use('TkAgg')
+
+        # m = 1
+        # L = Basis1d(m)
+        # x = np.arange(-1.0, 1.0, 0.01)
+
+        # for i in range(m+1):
+        #     plt.scatter(x, L.evaluate(i, x), label = f'L_{i}')
+        #     #plt.scatter(x, L.evaluate_derivative(i, x), label = f'L_{i}')
+
+        # plt.legend()
+        # plt.show()
+        # pass
+        # ############################
+
+# dim = 2
+# GLBasis = NodalBasisGaussLegendre(dim)
+# pass

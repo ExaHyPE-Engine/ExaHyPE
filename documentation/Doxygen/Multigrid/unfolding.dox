@@ -1,0 +1,83 @@
+/**
+
+@page page_multigrid_unfolding Unfolding the linear algebra steps over the mesh entities
+
+A fundamental technique employed in our solver is the unfolding of the compute
+steps over the mesh entities. Discontinuous Galerkin solvers and variants 
+thereof combine different integrals and different solution representations: 
+Some integrals run over the faces, some over cells, some take a function 
+representation and map it back onto the cells, ... To reduce the complexity,
+to be able to combine different solver flavours quickly, and to parallelise 
+things on an exascale solver, we unfold the individual compute steps over the
+mesh entities. That is, we 
+
+1. introduce helper variables on all cells and faces, such that we can
+2. split the compute steps into a sequence of operations (additively and 
+   multiplicative), such that each operation only couples input data from one
+   mesh entity onto outputs tied to exactly one mesh entity.
+   
+The term unfolding for us thus comprises the introduction of auxiliary 
+variables on some mesh entities (faces and cells) plus the subsequent 
+decomposition of the compute steps over these entities.
+
+
+# Auxiliary variables and function representations
+
+Before we start discussing individual solver steps, we follow very few
+guidelines:
+
+- If the representation of a cell solution is required at one point on the
+  faces, we explicitly introduce auxiliary unknowns on the faces: Let @f$ u @f$
+  be the function on the cell. At one point, our numerics require the evaluation
+  @f$ \int _{f} \dots u \dots dS(x) @f$, i.e. we argue over the solution along
+  the face. In DG, such an expression always leads to a formulation 
+  @f$ \int _f \dots \mathcal{R}(u^-, u^+) \dots @f$ where we somehow intermangle
+  the left and the right cell. As we convention, we introduce unknowns for @f$ u^+ @f$
+  and @f$ u^- @f$ explicitly. By definition, they are from the same polynomial
+  space as @f$ u @f$ with the same number of unknowns per degree of freedom.
+- If there is an operator within the numerical scheme which takes an input and 
+  yields an output over the same mesh entity (a matrix takes the cell solution 
+  and returns a residual contribution, or a Riemann solver takes the left and 
+  the right solution and yields some flux), then this output is explicitly 
+  modelled as unknowns within the mesh entity, too. By convention, we pick the
+  same polynomial order for the auxiliary variables as for the primary variables,
+  but the number of unknowns per degree of freedom can be different.
+  
+The conventions can be generalised. Some auxiliary variables can be eliminated
+or don't have to be stored explicitly, as we can directly feed them into 
+subsequent compute steps.  
+
+
+
+# Constraints on the compute steps
+
+We now write down the compute steps into substeps. This decomposition or 
+splitting follows one fundamental principle: Each step takes only input from 
+one mesh entity and maps onto dofs from one other mesh entity. We may not 
+write to two mesh entities at any point, no matter if they are of the same type
+or different.
+  
+If your Riemann solver combines the left and the cell's value and returns an
+output over the face, you first have to decompose it into three steps:
+  
+@f$ \mathcal{R}(u^+, u^-) = \mathcal{\tilde R} \circ \left( P_{f \gets c} u^- + P_{f \gets c} u^+ \right) @f$ 
+
+The Riemann solver takes left plus right solution and hence accepts data from
+two input entities. This is forbidden. Therefore, we introduce two auxiliary 
+operations. They take the solution in the cell and map it onto auxiliary 
+variables on the face (cmp discussion above re auxiliary variables). In
+the formula above, I use @f$ P_{f \gets c} @f$ as generic symbol for this 
+operation. The actual Riemann solver then takes these projections (they now
+both sit on the face and writes it back onto some (auxiliary) face data. 
+It may not directly write back into the cells (as we integrate over the
+outcome in DG subject to a test function), as this would once again violate
+our constraints.
+
+This methodology resembles techniques used in task-based programming.
+In the code, we might slightly weaken the constraint above: If we have, 
+for example, cell data, we might project it onto all @f$ 2d @f$ adjacent
+faces in one rush. Formally, we still have @f$ 2d @f$ operations, but we 
+might combine them into one for convenience.
+
+*/
+ 
