@@ -50,8 +50,6 @@ public:
 
   typedef std::list<T*> ParticleList;
 
-  static constexpr int GlobalSort = -1;
-
   /**
    * Get all the global sieve data consistent
    *
@@ -119,7 +117,8 @@ public:
    * However, it only uses the lock, i.e. is thread-safe for
    * originatingTree==GlobalSort.
    */
-  void addParticleThatCanNotBeLiftedWithinItsTree(T*, int originatingTree);
+  void addParticleThatCanNotBeLiftedWithinItsTree(T*);
+
 
   /**
    * Get particles that are to be sieved into one vertex
@@ -130,10 +129,13 @@ public:
    * removes them from the current set.
    *
    * In line with peano4.toolbox.particles.Particle, we do not alter the
-   * parallel state. That's the job of peano4.toolbox.particles.api.UpdateParticle.
+   * parallel state. That's the job of whoever calls this routine. Most
+   * action sets (notably our sorting action sets) will invoke the boundary
+   * merger and this merger will then take care of the parallel flag.
    *
    * All the particles in the result set are assigned the correct mesh
-   * size h of the corresponding mesh into which we sieve it.
+   * size h of the corresponding mesh into which we sieve it. So this
+   * attribute is changed.
    *
    *
    * ## Thread safety
@@ -147,9 +149,6 @@ public:
    * particles which have not been sieved by a local thread. As the list
    * had been a deep copy, we'd otherwise create a memory leak.
    *
-   * The routine is thread-safe, i.e. uses a lock, i.e. if
-   * originatingTree==GlobalSort.
-   *
    * @see getSievedParticlesForNextGridTraversal() for the deep copy and the
    *   roll-over of particles that cannot be lifted into particles that have
    *   to be sieved.
@@ -159,11 +158,20 @@ public:
    * @param originatingTree Number of tree (positive integer) or GlobalSort. It
    *   indicates where the particles should come from, i.e. are they form a
    *   specific tree or some particles that we have to sort globally.
-   * @param callingTree Number of tree calling this routine. We need this
-   *   information to find out if particles that we deposit are local or
-   *   virtual.
+   *
+   * @param removeReturnedParticlesFromSet If this field is set, we remove the
+   *   particles from the underlying set before we return them. That is, the
+   *   underlying set on which we call getParticlesToBeSievedIntoVertex()
+   *   shrinks monotonously. If you set it to false, the particles will reside
+   *   within the set, but the set will eventually delete them, as it updates
+   *   its content globally. Therefore, you should not use the returned
+   *   particles directly but rather create copies.
    */
-  ParticleList getParticlesToBeSievedIntoVertex(const peano4::datamanagement::VertexMarker& marker, int originatingTree, int callingTree);
+  ParticleList getParticlesToBeSievedIntoVertex(
+    const peano4::datamanagement::VertexMarker& marker,
+    bool  removeReturnedParticlesFromSet,
+    bool  onlyReturnParticlesThatWillBeLocal
+  );
 
   /**
    * Fine out how many particles still to sieve
@@ -172,13 +180,14 @@ public:
    * that have not been sieved so far. Therefore, this routine can not be used
    * for any statistics after a grid sweep to find out how many sieves have
    * been done.
-   *
-   * The routine is thread-safe, i.e. uses a lock, i.e. if
-   * originatingTree==GlobalSort.
-   *
-   * @param originatingTree Number of tree (positive integer) or GlobalSort.
    */
-  bool hasParticlesToBeSievedIntoVertices(int originatingTree) const;
+  bool hasParticlesToBeSievedIntoVertices() const;
+
+  /**
+   * hasParticlesToBeSievedIntoVertices() is equivalent to checking if this
+   * routine returns something greater than 0.
+   */
+  int getNumberOfParticlesThatHaveBeSievedIntoVertices() const;
 
 
 private:
@@ -201,7 +210,7 @@ private:
   static tarch::multicore::BooleanSemaphore _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
   static tarch::multicore::BooleanSemaphore _particlesToBeSievedSemaphore;
 
-  std::map<int, ParticleList> _particlesThatCanNotBeLiftedWithinTheirTree;
+  ParticleList  _particlesThatCanNotBeLiftedWithinTheirTree;
 
   /**
    * Particles that should be sieved
@@ -214,7 +223,7 @@ private:
    *
    * The list is populated by finishedTraversal().
    */
-  std::map<int, ParticleList> _particlesThatHaveToBeSieved;
+  ParticleList  _particlesThatHaveToBeSieved;
 };
 
 

@@ -55,7 +55,7 @@ for i in range(npart):
 # uniform particle distribution.
 
 rng = np.random.RandomState(seed=seed)
-# rng.random returns random numbers in [0, 1). Scale that.
+#  rng.random returns random numbers in [0, 1). Scale that.
 displacement = (2.0 * rng.random(coords.shape) - 1.0) * 0.499 * dx
 coords[:, 0] += displacement[:, 0]
 
@@ -68,6 +68,8 @@ grp.attrs["BoxSize"] = boxSize
 grp.attrs["NumPart_Total"] = [npart, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_Total_HighWord"] = [0, 0, 0, 0, 0, 0]
 grp.attrs["NumPart_ThisFile"] = [npart, 0, 0, 0, 0, 0]
+# This is an addition for this test to be able to estimate the search radius.
+grp.attrs["NumPart_base"] = [npart]
 grp.attrs["Time"] = 0.0
 grp.attrs["NumFilesPerSnapshot"] = 1
 grp.attrs["MassTable"] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

@@ -126,9 +126,7 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(ActionSet):
       activeParticles.push_front( p );
     }
     for (auto* p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
-      if ( marker.isContained( p->getX() ) ) {
-        localParticles.push_front( p );
-      }
+      localParticles.push_front( p );
     }
   }
 

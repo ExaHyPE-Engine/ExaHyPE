@@ -122,6 +122,8 @@
        */
       void particlesCanNotBeLiftedLocally();
 
+      void particlesCanNotBeDroppedLocallySoRollOverForNextMeshSweep(DoFType*  particle);
+
       /**
        * Shallow clear
        *
@@ -142,16 +144,8 @@
        *
        * Consult @ref toolbox_particles_memorypool "the generic discussion of the particle memory management" as well as the documentation of toolbox::particles::ParticleSet for
        * some context and references to other routines.
-       *
-       * @param targetTree You have to tell the code where the particle will
-       *   end up. In most cases, the whole reason behind calling this routine
-       *   is that you don't know. In this case, use the default argument
-       *   GlobalSort. However, there is for example
-       *   peano4.toolbox.particles.UpdateParticleGridAssociation_BucketSort
-       *   which has expert knowledge of where the particle will end up and
-       *   hence can use this to optimise the sorting.
        */
-      Container::iterator particleCanNotBeLiftedLocally( const Container::iterator&   particle, int targetTree = toolbox::particles::SieveParticles< {{CLASSNAME}} >::GlobalSort );
+      Container::iterator particleCanNotBeLiftedLocally( const Container::iterator&   particle );
 
       /**
        * This is a deep delete
@@ -232,23 +226,31 @@
        */
       Container::iterator deleteParticle( const Container::iterator&   particle );
 
-    private:
-      static tarch::logging::Log _log;
-
-      Container  _container;
-
       /**
-       * Extracted into routine of its own, as I need it for both boundary and periodic boundary merges
+       * Extracted into routine of its own
+       *
+       * This routine it used by boundary merges, periodic boundary merges, and
+       * also drops.
+       *
+       * ## Debug data
        *
        * Even if we replace a current particle with an incoming one, we keep
        * the current particle's (debug) location. This way, we ensure that all
        * debug data remain correct also for periodic BCs.
+       *
+       * @param neighbourParticle Will either be incorporated into current data
+       *   structure or the routine will delete it if it decides not to use
+       *   the object the pointer points to.
        */
-      void mergeWithNeighbourParticle(
+      void mergeWithParticle(
         DoFType*                                     neighbourParticle,
         const peano4::datamanagement::VertexMarker&  marker,
         int                                          spacetreeId
       );
+    private:
+      static tarch::logging::Log _log;
+
+      Container  _container;
 };
 
 {% for item in NAMESPACE -%}
