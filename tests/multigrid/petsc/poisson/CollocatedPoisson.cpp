@@ -11,7 +11,7 @@ benchmarks::multigrid::petsc::poisson::CollocatedPoisson::~CollocatedPoisson() {
 }
 
 
-void benchmarks::multigrid::petsc::poisson::CollocatedPoisson::vertexInit(
+void benchmarks::multigrid::petsc::poisson::CollocatedPoisson::initVertex(
   const tarch::la::Vector<Dimensions, double>&  x,
   const tarch::la::Vector<Dimensions, double>&  h,
   tarch::la::Vector< VertexUnknowns, double >&  value,

@@ -5,8 +5,7 @@
 import os, sys
 import argparse
 import peano4
-import multigrid.petsc
-import multigrid.matrixgenerators
+import multigrid
 
 print( """
 
@@ -27,16 +26,17 @@ parser.add_argument("-m",   "--mode",               dest="mode",           choic
 args = parser.parse_args()
 
 
-project = multigrid.petsc.Project(project_name = "CollocatedFEM", 
+project = multigrid.petsc.api.Project(project_name = "CollocatedFEM", 
                                   namespace = [ "benchmarks", "multigrid", "petsc", "poisson" ]
                                   ) 
 
                         
-matrices = multigrid.matrixgenerators.DLinear(dimensions              = args.dimensions,
-                                              unknowns_per_vertex_dof = args.upv,
+matrices = multigrid.api.matrixgenerators.DLinear(dimensions              = args.dimensions,
+                                                  unknowns_per_vertex_dof = args.upv,
+                                                  poly_degree             = 1
                                               )
 
-solver = multigrid.petsc.solvers.CollocatedLowOrderDiscretisation(name                 = "CollocatedPoisson",
+solver = multigrid.petsc.api.solvers.CollocatedLowOrderDiscretisation(name                 = "CollocatedPoisson",
                                                                   unknowns             = args.upv,
                                                                   dimensions           = args.dimensions,
                                                                   min_h                = args.meshsize,
