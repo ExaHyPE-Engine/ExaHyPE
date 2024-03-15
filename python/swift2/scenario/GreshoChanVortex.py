@@ -28,7 +28,7 @@ class GreshoChanVortexIC:
       tarch::la::Vector<Dimensions,double> GridSize = marker.h();
       const double GridSize_x = GridSize(0);
 
-      particle->setSearchRadius( GridSize_x / 2.0);
+      particle->setSearchRadius( 0.9 * GridSize_x / 2.0);
 
       /* Constant density field */
       particle->setDensity ( 1.0 );

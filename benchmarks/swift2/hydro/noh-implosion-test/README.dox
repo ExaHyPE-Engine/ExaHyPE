@@ -15,7 +15,7 @@
  scripts. Furthermore, the Python path has to be set properly:
  
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- export PYTHONPATH=~/git/Peano/python
+ export PYTHONPATH=~/../../../../python
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  The benchmark suite is designed to study three different things:
@@ -32,6 +32,7 @@
  
  # Clean-up data
  
+ No matter which setup you run:
  Once you have created your executables, you might want to get rid of all the
  generated glue code that sits in your directory.
  To clean up all generated data, type in 
@@ -41,8 +42,79 @@
  rm vertexdata celldata globaldata repositories observers
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  
- # The impact of the mesh on the global runtime
+ # Validate correctness
  
+ I've written a variant of the code which automatically checks if particles get
+ losted.
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ export PYTHONPATH=$PYTHONPATH:../../../../python
+ TIMESTEP_SIZE=0.0001
+ PLOT_DELTA=0.0
+ N_PART=100
+ N_PART=10
+ END_TIME=0.01
+ PLOT_DELTA=0.0
+ REALISATION=domain-decomposition.scattered.bucket-sort.no-optimisation
+ python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION-asserts; cp repositories/ModifiedGlobalState.cpp repositories/GlobalState.cpp; clear; make
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ Setups like this build a standard executable with assertions (or release). 
+ After that one is built, they swap in a slightly altered GlobalState.cpp
+ file which is usually overwritten after each Python rerun, i.e. solely 
+ generated. This tweaked state tracks the number of particles after the 
+ first time step and then ensures in each subsequent time step that the 
+ number of particles is preserved. Otherwise it quits (also in release mode)
+ and dumps some relevant particle history information.
+ 
+ 
+ # Impact of memory layouts and sorting
+ 
+ The impact of the various memory layouts and the sorting variations have to be assessed using a 
+ representative and reasonably large setup. Furthermore, it might make sense
+ to restrict the studies to one NUMA node only on a production-level chip. The
+ rationale here is that most codes would deploy one MPI rank per NUMA domain
+ to avoid NUMA effects/penalties.
+ 
+ Before we start, we have to build the executables (build-memory-layout.sh):
+ 
+ \include build-memory-layout.sh
+ 
+ Once all the executables are there, we set the number of available cores 
+ (for OpenMP, setting OMP_NUM_THREADS=xxx does the job) and 
+ submit tests via  
+
+ \include run-memory-layout.sh 
+ 
+ After completion, we zip the outcome via 
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ tar -czvf MyMachine-$OMP_NUM_THREADS-threads.tar.gz *.out 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+  
+ The zipped outcome can be visualised by a call similar to
+  
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+python3 plot-comparison-of-implementation-variants.py -o MyMachine MyMachine-8-threads.tar.gz MyMachine-16-threads.tar.gz ...
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ @image html Hamilton8-2400.png 
+
+ On SuperMUC, we see some irregularities for the biggest setups. Therefore, it
+ makes sense to exclude them from some visualisation:
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ python3 plot-comparison-of-implementation-variants.py -o SuperMUC   SuperMUC-112-threads.tar.gz  SuperMUC-56-threads.tar.gz SuperMUC-28-threads.tar.gz SuperMUC-14-threads.tar.gz
+ python3 plot-comparison-of-implementation-variants.py -o SuperMUC-small                          SuperMUC-56-threads.tar.gz SuperMUC-28-threads.tar.gz SuperMUC-14-threads.tar.gz
+ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ # The impact of the mesh on the global runtime
+
+ @todo This is all to be rewritten 
+  
  The present setup does work with constant cut-off radii. That is, once the 
  particles are created, they do not change their interaction range. This is not
  what you will find in a lot of "realistic" SPH simulations, where the cut-off
@@ -116,60 +188,6 @@
  hosting 20 cells, but the fourth rank will host 21 and the setup hence will
  be imbalanced right from the start.
  
-
-
- # Impact of memory layouts and sorting
- 
- The impact of the various memory layouts and the sorting variations have to be assessed using a 
- representative and reasonably large setup. Furthermore, it might make sense
- to restrict the studies to one NUMA node only on a production-level chip. The
- rationale here is that most codes would deploy one MPI rank per NUMA domain
- to avoid NUMA effects/penalties.
- 
- On a low-spec machine, I usually use the setup
- 
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
- python3 noh.py -np 2400 -plot 0 -et 1e-3 -ppc 1200
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
- 
- as a test starting point. From hereon, the three predominant storage schemes 
- can be enabled via the opt argument: 
- 
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
- module load likwid
- salloc -p multi
- export OMP_NUM_THREADS=8
- for REALISATION in domain-decomposition.scattered \
-                    domain-decomposition.continuous-per-vertex.insert-sorts \
-                    domain-decomposition.continuous-per-vertex.sort-on-the-fly \
-                    domain-decomposition.global-continuous.insert-sorts \
-                    domain-decomposition.global-continuous.sort-on-the-fly \
-                    domain-decomposition.continuous-per-vertex.insert-sorts.vectorise-all \
-                    domain-decomposition.continuous-per-vertex.sort-on-the-fly.vectorise-all \
-                    domain-decomposition.global-continuous.insert-sorts.vectorise-all \
-                    domain-decomposition.global-continuous.sort-on-the-fly.vectorise-all \
-                    domain-decomposition.continuous-per-vertex.insert-sorts.vectorise-distance-checks \
-                    domain-decomposition.continuous-per-vertex.sort-on-the-fly.vectorise-distance-checks \
-                    domain-decomposition.global-continuous.insert-sorts.vectorise-distance-checks \
-                    domain-decomposition.global-continuous.sort-on-the-fly.vectorise-distance-checks 
- do
-   EXEC_FILE=noh2D-np-2400.$OMP_NUM_THREADS.$REALISATION
-   python3 noh.py -np 2400 -plot 0 -et 5e-4 -ppc 1200 -rea $REALISATION --output $EXEC_FILE
-   echo Run ./$EXEC_FILE
-   srun likwid-pin -c 0-7 ./$EXEC_FILE > $EXEC_FILE.out
- done
- tar -czvf Hamilton8-2400-$OMP_NUM_THREADS-threads.tar.gz noh2D*.out 
- 
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-  
- The zipped outcome can be visualised by a call similar to
- 
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
-python3 plots_compare_implemetation_variants.py -o Hamilton8-2400 Hamilton8-2400-8-threads.tar.gz Hamilton8-2400-16-threads.tar.gz Hamilton8-2400-32-threads.tar.gz Hamilton8-2400-64-threads.tar.gz
- ~~~~~~~~~~~~~~~~~~~~~~~~~~
-
- @image html Hamilton8-2400.png 
   
  
  # Old docu

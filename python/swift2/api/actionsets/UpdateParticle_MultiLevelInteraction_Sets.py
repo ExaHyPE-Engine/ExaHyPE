@@ -3,6 +3,12 @@
 import peano4
 import peano4.toolbox.particles
 
+from .TaskGraphKernelWrappers import (
+    construct_touch_vertex_first_time_call,
+    construct_touch_cell_first_time_call,
+    construct_touch_vertex_last_time_call,
+)
+
 
 class UpdateParticle_MultiLevelInteraction_Sets(
     peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets
@@ -17,6 +23,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(
         unprepare_traversal_kernel,
         additional_includes,
         active_particle_set,
+        current_step_alters_particle_position,
         wait_for_all_tasks_to_finish_after_traversal,
     ):
         """!
@@ -37,19 +44,25 @@ class UpdateParticle_MultiLevelInteraction_Sets(
 
         super(UpdateParticle_MultiLevelInteraction_Sets, self).__init__(
             particle_set,
-            particle_particle_interaction_kernel,
-            touch_vertex_first_time_compute_particle_update_kernel,
-            touch_vertex_last_time_compute_particle_update_kernel,
-            prepare_traversal_kernel,
-            unprepare_traversal_kernel,
-            additional_includes
+            particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
+                particle_set,particle_particle_interaction_kernel,True
+            ),
+            touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
+                particle_set,touch_vertex_first_time_compute_particle_update_kernel,True
+            ),
+            touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
+                particle_set,touch_vertex_last_time_compute_particle_update_kernel,True,current_step_alters_particle_position
+            ),
+            prepare_traversal_kernel=prepare_traversal_kernel,
+            unprepare_traversal_kernel=unprepare_traversal_kernel,
+            additional_includes=additional_includes
             + """
 #include "tarch/multicore/Tasks.h"                
 #include "swift2/VertexTask.h"                
 #include "swift2/CellTask.h"                
 #include "swift2/TaskNumber.h"                
                  """,
-            active_particle_set,
+            active_particle_set=active_particle_set,
         )
 
     def get_body_of_operation(self, operation_name):
