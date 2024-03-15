@@ -274,7 +274,12 @@ namespace tarch {
      * @see processPendingTasks(int) describing how we handle pending tasks.
      *
      */
-    void spawnTask(Task* job, const std::set<TaskNumber>& inDependencies = std::set<TaskNumber>(), const TaskNumber& taskNumber = NoDependencies);
+    void spawnTask(
+      Task*                        task,
+      const std::set<TaskNumber>&  inDependencies = std::set<TaskNumber>(),
+      const std::set<TaskNumber>&  conflicts = std::set<TaskNumber>(),
+      const TaskNumber&            taskNumber = NoDependencies
+    );
 
     /**
      * Wait for all tasks which have been spawned by spawnTask. This routine
@@ -440,6 +445,13 @@ namespace tarch {
        * list can be empty. Efficient implementations should spawn the fused
        * tasks as a further ready task and return immediately.
        *
+       * ## No multithreading
+       *
+       * If no multithreading is enabled, then we map it onto a plain task via
+       * a spawnTask(). This spawn has no conflicts and no dependencies.
+       *
+       *
+       *
        * @param firstTask First task. This is a task which can be fused. The pointer
        *   is valid. The ownership of firstTask is handed over to the called routine,
        *   i.e. processFusedTask() has to ensure that it is deleted.
@@ -500,15 +512,34 @@ namespace tarch {
        * does not exist, then we have an anti-dependency. But this one does not
        * matter. It will just be executed sequentially.
        *
-       * taskwait does not work with an if statement, so we have to explicitly
+       * taskwait does not directly work with an if statement (we would need
+       * some workaround with iterators), so we have to explicitly
        * embed it into an if block which checks if we have to wait at all.
        *
-       * The iterator syntax of OpenMP works with [int] accessors only.
-       * Therefore, we have to convert the set into an array. Set remains the
-       * correct way to model the dependencies.
+       * OpenMP models dependencies through addresses. While it does not use
+       * the data to which these addresses point to, it is important that the
+       * addresses are valid, i.e. the system owns these memory locations.
+       * I use an internal std::vector to administer the byte array which I
+       * use for dependencies. See the description of the internal variable
+       * memoryRegionToTrackTaskDependencies and also
+       * tarch::multicore::native::spawnTask() for a discussion of the required
+       * dynamic growth.
        *
+       *
+       * ## No multithreading
+       *
+       * We just execute this task. We know that tasks may not have anti-dependencies.
+       * That is, we know that any incoming task has been spawned before. By
+       * induction, it therefore has already completed. We also don't have any
+       * competition, as there are no competing tasks. So we actually can ignore
+       * all the parameters and just execute the task.
        */
-      void spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber);
+      void spawnTask(
+        Task*                        task,
+        const std::set<TaskNumber>&  inDependencies,
+        const std::set<TaskNumber>&  conflicts,
+        const TaskNumber&            taskNumber
+      );
 
       /**
        * Wait for other task

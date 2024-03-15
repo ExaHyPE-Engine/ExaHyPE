@@ -170,7 +170,12 @@ void tarch::multicore::native::spawnAndWaitAsTaskLoop(const std::vector<tarch::m
 int tarch::multicore::native::getNumberOfPendingTasks() { return numberOfSpawnedTasks; }
 
 
-void tarch::multicore::native::spawnTask(Task* job, const std::set<TaskNumber>& inDependencies, const TaskNumber& taskNumber) {
+void tarch::multicore::native::spawnTask(
+  Task*                        job,
+  const std::set<TaskNumber>&  conflicts,
+  const std::set<TaskNumber>&  inDependencies,
+  const TaskNumber&            taskNumber
+) {
   int* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
 
 #if !defined(OpenMPDependenciesInTaskWait)
@@ -293,7 +298,7 @@ void tarch::multicore::native::processFusedTask(Task* myTask, const std::list<ta
   {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType, device);
     if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), NoDependencies);
+      tarch::multicore::native::spawnTask(myTask, std::set<TaskNumber>(), std::set<TaskNumber>(), NoDependencies);
     } else {
       delete myTask;
     }

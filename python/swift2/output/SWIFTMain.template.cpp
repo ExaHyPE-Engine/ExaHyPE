@@ -127,9 +127,22 @@ bool {{NAMESPACE | join("::")}}::selectNextAlgorithmicStep() {
     repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::CreateGrid
     and
     gridConstructed
+    and
+    not repositories::loadBalancer.hasSplitRecently()
   ) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitialConditions )
+    );
+  }
+  else if (
+    repositories::StepRepository::toStepEnum(peano4::parallel::Node::getInstance().getCurrentProgramStep())==repositories::StepRepository::Steps::CreateGrid
+    and
+    gridConstructed
+    and
+    repositories::loadBalancer.hasSplitRecently()
+  ) {
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::CreateGrid )
     );
   }
   // ======================================================

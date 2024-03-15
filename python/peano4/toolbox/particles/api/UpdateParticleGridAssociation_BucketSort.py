@@ -98,20 +98,13 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
           logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " locally, as it has to be dropped to next level in next iteration" );
           toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles" );
           toolbox::particles::assignmentchecks::assignParticleToSieveSet( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, _spacetreeId, "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles" );
-          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p,_spacetreeId);    
+          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
         }
         else {
           p++;
         }
         break;
       case toolbox::particles::ParticleReassociationInstruction_SieveGlobally:
-        _numberOfLiftsIntoSieveSet++;
-        logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
-        toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles" );
-        toolbox::particles::assignmentchecks::assignParticleToSieveSet( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, _spacetreeId, "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles" );
-        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
-        assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );    
-        break;
       case 0:
       case 1:
       case 2:
@@ -123,16 +116,10 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
       case 7:
       #endif
         _numberOfLiftsIntoSieveSet++;
+        logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " globally. Previously assigned to " << marker.toString() );
         toolbox::particles::assignmentchecks::detachParticleFromVertex( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, marker.x(), marker.h(), _spacetreeId, "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles" );
         toolbox::particles::assignmentchecks::assignParticleToSieveSet( "{{PARTICLE}}", (*p)->getX(), (*p)->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local, _spacetreeId, "UpdateParticleGridAssociation_BucketSort::__Template_LiftParticles" );
-        if (marker.isAdjacentToParallelDomainBoundary()) {
-          logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " on tree " << _spacetreeId << " globally. Previously assigned to " << marker.toString() );
-          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);
-        }
-        else {
-          logDebug( "touchVertexLastTime(...)", "lift particle " << (*p)->toString() << " but exploit knowledge that it will end up in same tree " << _spacetreeId << ". Previously assigned to " << marker.toString() );
-          p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p,_spacetreeId);
-        }
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.particleCanNotBeLiftedLocally(p);    
         assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );    
         break;
       default:
@@ -143,68 +130,30 @@ class UpdateParticleGridAssociation_BucketSort(AbstractUpdateParticleGridAssocia
 """
     )
 
+
+    """!
+        
+    The sieve here differs from the default one in the lift-drop variants. It
+    inserts also remote particles, i.e. directly into the halo layer. It also
+    does not eliminate particles from the sieve set.
+        
+    """
     _Template_Sieve = jinja2.Template(
         """
-  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices(_spacetreeId) ) {
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
     auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( 
-      marker, _spacetreeId, _spacetreeId
+      marker,
+      false, // removeReturnedParticlesFromSet,
+      false  // onlyReturnParticlesThatWillBeLocal
     );
 
-    for (auto& newParticle: sievedParticles) {
-      if ( ::toolbox::particles::particleIsDuplicate(
-        newParticle, 
-        fineGridVertex{{PARTICLES_CONTAINER}}.begin(), 
-        fineGridVertex{{PARTICLES_CONTAINER}}.end() 
-      ) != fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
-        _numberOfSkippedDropsFromSieveSet++;
-        delete newParticle;
-      }
-      else {
-        fineGridVertex{{PARTICLES_CONTAINER}}.addParticle( newParticle );
-        _numberOfDropsFromSieveSet++;
-        toolbox::particles::assignmentchecks::assignParticleToVertex(
-          "{{PARTICLE}}",
-          newParticle->getX(),
-          newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          marker.x(),
-          marker.h(),
-          _spacetreeId, 
-          "UpdateParticleGridAssociation_BucketSort::_Template_Sieve"
-        );
-      }
-    }
-    
-    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
-  }
-  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices( vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort ) ) {
-    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex( 
-      marker, 
-      vertexdata::{{PARTICLES_CONTAINER}}::SieveParticles::GlobalSort,
-      _spacetreeId
-    );
-
-    for (auto& newParticle: sievedParticles) {
-      if ( ::toolbox::particles::particleIsDuplicate(
-        newParticle, 
-        fineGridVertex{{PARTICLES_CONTAINER}}.begin(), 
-        fineGridVertex{{PARTICLES_CONTAINER}}.end() 
-      ) != fineGridVertex{{PARTICLES_CONTAINER}}.end() ) {
-        _numberOfSkippedDropsFromSieveSet++;
-        delete newParticle;
-      }
-      else {
-        fineGridVertex{{PARTICLES_CONTAINER}}.addParticle( newParticle );
-        _numberOfDropsFromSieveSet++;
-        toolbox::particles::assignmentchecks::assignParticleToVertex(
-          "{{PARTICLE}}",
-          newParticle->getX(),
-          newParticle->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local,
-          marker.x(),
-          marker.h(),
-          _spacetreeId,
-          "UpdateParticleGridAssociation_BucketSort::_Template_Sieve"
-        );
-      }
+    for (auto& sievedParticle: sievedParticles) {
+      _numberOfDropsFromSieveSet++;      
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( 
+        new globaldata::{{PARTICLE}}(*sievedParticle), 
+        marker, 
+        _spacetreeId 
+      );
     }
 
     assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
