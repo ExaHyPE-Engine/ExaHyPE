@@ -83,6 +83,29 @@ to the global repo, which is something we don't want to have.
 
 
 
+
+Python
+===============
+
+Please try and follow the <a href="https://peps.python.org/pep-0008/">PEP 8 Style guide</a>.
+
+
+FAQs
+--------------
+
+- Modules should have short, all-lowercase names. Underscores can be used in the module name if it
+  improves readability. Python packages should also have short, all-lowercase names, although the
+  use of underscores is discouraged.
+- Class names should normally use the CapWords (CamelCase) convention.
+- Function names should be lowercase, with words separated by underscores as necessary to improve
+  readability.
+- Variable names follow the same convention as function names.
+
+
+
+
+
+
 Code Formatting
 ===============
 
