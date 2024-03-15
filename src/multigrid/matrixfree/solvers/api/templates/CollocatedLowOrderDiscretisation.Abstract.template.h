@@ -74,6 +74,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
     */
     virtual bool terminationCriterionHolds() { return false; }
 
+    /**
+    * Nothing to do in Collocated Solver (yet)
+    */
+    virtual void clearGlobalResidual() {}
+    virtual std::string toString() { return ""; }
+
   protected:
     static tarch::logging::Log  _log;
 
