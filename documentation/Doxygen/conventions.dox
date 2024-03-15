@@ -80,14 +80,45 @@ enable the autotools pipeline. Every new commit now will add this ignore entry
 to the global repo, which is something we don't want to have.
 
 
+# Python Conventions / Style Guide
 
+Most users will interact with Peano through the Python API, which acts as glue to stick
+together various C++ snippets in a way that can be modified for each experiment. 
 
+We aim for our Python to look something like the [PEP-8 style guide for Python](https://peps.python.org/pep-0008/).
+In particular, methods should be named all in lowercase, with words separated by underscores, such as:
 
+~~~~~~~~~~~~~~~~~~~~~~~
+def my_method_for_calulcating_residuals(*args):
+  # code goes here
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Python
-===============
+Moreover, class names should be in camel case:
 
-Please try and follow the <a href="https://peps.python.org/pep-0008/">PEP 8 Style guide</a>.
+~~~~~~~~~~~~~~~~~~~~~~~
+class MyClassForStoringData:
+  # code goes here
+~~~~~~~~~~~~~~~~~~~~~~~
+
+More info can be found in the FAQs below.
+
+# C++ conventions / Style Guide
+
+We use fairly standard conventions when writing C++. This includes, but isn't limited to:
+
+- CamelCase for methods, variables and classes
+- Indentation with tabs (two spaces wide)
+- Opening brace for ```if``` statements or ```for``` loops should be on same line, eg:
+~~~~~~~~~~~~~~~~~~~~~~~
+for (int i=0; i<10; i++){
+  // code goes here
+}
+~~~~~~~~~~~~~~~~~~~~~~~
+
+If in doubt, you can use the automatic formatting tool described below, but it is crucial
+that you only format files which you had modified already, i.e. no formatting random files
+in the repo.
+
 
 
 FAQs
@@ -145,10 +176,6 @@ python3 format.py --files myfile1.py myCppFile.cpp myCppHeaderFile.h
 The ``--files`` flag doesn't check whether the files you provide are traced by git, and
 will try to format any files you provide. This can be used for instance to run the
 formatter on generated files.
-
-
-
-
 
 
 
