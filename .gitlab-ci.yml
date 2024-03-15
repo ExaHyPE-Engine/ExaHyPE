@@ -25,20 +25,19 @@ stages:
   - benchmarks
   - formatting
   - publish
-  - deploy
 
 include:
   #- .continuous_integration/pipeline-amd.yml
-  - .continuous_integration/pipeline-gcc.yml
-  - .continuous_integration/pipeline-intel.yml
-  - .continuous_integration/pipeline-llvm.yml
-  - .continuous_integration/pipeline-nvidia.yml
+  #- .continuous_integration/pipeline-gcc.yml
+  #- .continuous_integration/pipeline-intel.yml
+  #- .continuous_integration/pipeline-llvm.yml
+  #- .continuous_integration/pipeline-nvidia.yml
 
   #- .continuous_integration/pipeline-amd-cmake.yml
-  - .continuous_integration/pipeline-gcc-cmake.yml
-  - .continuous_integration/pipeline-intel-cmake.yml
-  - .continuous_integration/pipeline-llvm-cmake.yml
-  - .continuous_integration/pipeline-nvidia-cmake.yml
+  #- .continuous_integration/pipeline-gcc-cmake.yml
+  #- .continuous_integration/pipeline-intel-cmake.yml
+  #- .continuous_integration/pipeline-llvm-cmake.yml
+  #- .continuous_integration/pipeline-nvidia-cmake.yml
 
   #- .continuous_integration/pipeline-formatting.yml
   - .continuous_integration/pipeline-documentation.yml
