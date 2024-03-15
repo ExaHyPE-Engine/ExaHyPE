@@ -116,11 +116,14 @@ class Project (object):
     if len(self.output.artefacts)>0:
       print( "some artefacts have already been added to repository ... assume this is intentional (by higher abstraction layer, e.g.)")
 
+    self.output.readme.add_package_description( self.constants.readme_entry() )
+
     self.datamodel.construct_output(self.output)
     self.solversteps.construct_output(self.output)
     self.main.construct_output(self.output,self.project_name + "-main")
-    self.output.generate(overwrite, self.directory)
     self.constants.generate(overwrite, self.directory)
+    self.output.generate(overwrite, self.directory)
+
 
     print( "generation complete" )
 

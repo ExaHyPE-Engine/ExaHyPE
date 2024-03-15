@@ -180,6 +180,22 @@ class Constants(object):
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + ";\n"
     pass
 
+  def readme_entry(self):
+    """!
+    
+    
+    
+    """
+    result = """
+    
+## Exported C++ constants in project
+   
+""" + self.d[ "ADD_CONSTANTS" ] + """
+
+These constants are available to the application within its namespace.
+"""      
+    return result
+
   def generate(self, overwrite, directory):
     filename = directory + "/Constants.h"
     if write_file(overwrite,self.default_overwrite,filename):

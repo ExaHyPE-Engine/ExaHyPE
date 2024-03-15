@@ -91,10 +91,14 @@ paper for previous Peano code generations (generation 2).
     self._executable_name = ""
     self._package_descriptions = set()
     self._entries = []
+    self._constants = None
 
   def add_package_description( self, readme_package_descriptor ): 
     self._package_descriptions.add(readme_package_descriptor)
     pass
+
+  def set_constants(self,description):
+    self._constants = description
 
   def set_executable_name( self, executable_name ):
     self._executable_name = executable_name
