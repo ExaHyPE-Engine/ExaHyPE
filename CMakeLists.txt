@@ -229,7 +229,7 @@ list(APPEND ACCELERATOR_BACKENDS
   "omp"
   "sycl"
   "hip"
-  "cuda"
+#  "cuda"
 )
 set(WITH_GPU "" CACHE STRING "${ACCELERATOR_BACKENDS}")
 set_property(CACHE WITH_GPU PROPERTY STRINGS ${ACCELERATOR_BACKENDS})

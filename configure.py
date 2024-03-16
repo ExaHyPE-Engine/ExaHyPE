@@ -38,10 +38,15 @@ parser.add_argument(
     "--scorep", "-scorep", action="store_true", help="Enable Score-P support"
 )
 parser.add_argument(
-    "--gpu", choices=["omp", "cuda", "sycl", "cpp", "hip"], help="Enable GPU support"
+    "--gpu", choices=["omp",
+                      #"cuda",
+                      "sycl",
+                      "cpp",
+                      "hip"],
+                      help="Enable GPU support"
 )
 parser.add_argument("--asm", action="store_true", help="Dump generated assembly code")
-parser.add_argument("--with-cuda", type=str, help="Path to the CUDA toolkit")
+#parser.add_argument("--with-cuda", type=str, help="Path to the CUDA toolkit")
 parser.add_argument(
     "--arch",
     choices=[
