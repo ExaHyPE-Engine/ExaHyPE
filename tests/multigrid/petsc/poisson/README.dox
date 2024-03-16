@@ -1,0 +1,35 @@
+/**
+
+ @page benchmarks_documentation_multigrid_petsc_poisson Poisson equation
+
+ We solve the Poisson equation 
+ 
+ @f$ -\Delta u = 2 \pi^2 \Pi _d \sin (\pi x_d) @f$ 
+ 
+ over the unit square or cube, respectively.
+
+
+ # Prepare the executable
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+ export PYTHONPATH=../../../../python/
+ python3 fem.py -m release
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
+ # Visualise the outcome
+ 
+ To visualise the outcome, most people translate the resulting Peano patch file
+ into paraview with a command similar to
+ 
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+ /opt/paraview/bin/pvpython ~/git/Peano/python/peano4/visualisation/render.py --filter-fine-grid solution-CollocatedPoisson.peano-patch-file
+ ~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ # Solver description
+ 
+ The Discontinuous Galerkin solver is described as part of the @ref tutorials_documentation_multigrid_petsc_discontinuous_galerkin_poisson "DG tutorial with PETSc".
+ 
+ 
+ 
+ */
+ 
