@@ -325,7 +325,7 @@ endif()
 
 # Set default build type if not specified
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Debug;Release;Asserts;Trace;Stats" CACHE STRING "Choose the type of build (Debug, Release, Asserts, Trace, Stats)" FORCE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug, Release, Asserts, Trace, Stats)" FORCE)
 endif()
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS " " "Debug" "Release" "Asserts" "Trace" "Stats" "Debug\;Release\;Asserts\;Trace\;Stats")
 set(WITH_DIMENSIONS "2;3" CACHE STRING "Dimensions to build with ;-separated list of values")

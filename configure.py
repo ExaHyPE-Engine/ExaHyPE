@@ -13,6 +13,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     "--cmake", help="Use CMake; specify target build folder via --cmake=..."
 )
+parser.add_argument("--ninja", action="store_true", help="Use the Ninja generator")
 parser.add_argument("--exahype", action="store_true", help="Enable ExaHyPE 2")
 parser.add_argument("--swift", action="store_true", help="Enable Swift 2")
 parser.add_argument("--particles", action="store_true", help="Enable particles support")
@@ -341,6 +342,9 @@ if args.libxsmm:
         configure_args.append("--with-libxsmm")
 
 if args.cmake:
+    if args.ninja:
+        configure_args.append("-G Ninja")
+
     # Prepare the environment variables. We don't need any compiler flags here as CMake handles those.
     if args.scorep:
         env_vars = {
