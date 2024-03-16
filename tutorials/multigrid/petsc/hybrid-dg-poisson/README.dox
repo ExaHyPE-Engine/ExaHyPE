@@ -1,0 +1,247 @@
+/**
+ 
+ @page tutorials_documentation_multigrid_petsc_hybrid_galerkin_poisson Hybrid Galerkin for the Poisson equation with PETSc
+
+A brief, informal discussion of hybrid DG methods plus some examples how to solve such equations.
+
+This is a brief discussion of key ideas behind the Hybrid Discontinuous Galerkin (DG) method. 
+While we discuss some of the mathematics behind hybridised DG, the focus
+of this text is informal (from a maths point of view) but puts special emphasis
+on how numerical concepts are mapped onto Peano's data structures and mesh 
+traversal. 
+
+
+Before we dive into details, it is important to study 
+@ref page_multigrid_numerics_Disontinuous_Galerkin "Discontinous Galerkin" methods first, 
+as we generalise some ideas from there. 
+We onte that it is reasonable to skip the Poisson equation example - our 
+all-time classic - for this particular method, as the advection problem is 
+easier to digest.
+
+
+# Method
+
+Whenever we follow the @ref page_multigrid_numerics_Mixed_Galerkin "the mixed Galerkin formulation" 
+or even the basic @ref page_multigrid_numerics_Disontinuous_Galerkin "DG" workflow,
+we end up with the integrals over faces.
+
+
+Let
+
+@f$
+\lambda_u := u|_\text{face} \qquad \text{and} \qquad \lambda_\phi := n \cdot \phi |_\text{face}
+@f$ 
+
+denote the additional variables that "to not exist" on the face, as there
+is a left and a right value at every face where two different cells meet
+We don't know which to pick under the integral a priori. Here our @f$ \lambda_u @f$ is 
+just our solution u, but evaluated on the face. Since we have a jump, this means 
+that we have a different value depending on which cell we are
+considering. Obviously, this example fits to Poisson. If you have another
+PDE (and another number of unknowns per cell dof @f$ K @f$), you will get
+more or fewer @f$ \lambda @f$ values.
+To obtain each of these @f$ \lambda @f$s, we have to solve the underlying Riemann problem, 
+i.e. map the jump onto some quantity.
+
+
+Previously, we took the average e.g. to come up with a meaningful value. 
+The Riemann solver was an explicit function from @f$ (u^+,u^-) \mapsto \hat u @f$.
+In the hybrid mindset, we allow the function to be arbitrary complex, i.e. to follow 
+its own rules. Still, it will depend on @f$ (u^+,u^-) @f$ (and other quantities) somehow,
+but we can interpret it to be free. 
+Further to that, we can couple the individual entries on the face, i.e. make them depend
+upon each other. 
+In the context of CG vs. DG in the mixed formulation, we clarified that it is not a 
+good idea to pick the functions from spaces which are not compatible;
+notably to pick the derivative space in a way that it cannot represent the jumps et al in the derivatives.
+Hybrid DG goes one step further and ensures within the Riemann solver that the outcomes
+are somehow consistent.
+
+
+A popular choice for the "free" variables is to allow the code to 
+pick the quantities freely, as long as the jumps between the 
+@f$ \phi @f$ along the normals disappear weakly:
+
+
+\f$
+  \int _{face} \underbrace{[[ (n,\phi) ]]}_{:= \lambda _\phi} \cdot v _f dS(x) = 0 \quad \forall \quad v_f
+\f$
+
+
+This @f$ \lambda _\phi@f$ is now really an additional degree of freedom which
+we obtain by solving a new equation system. This equation 
+system is represented by the face-to-face matrix. 
+
+
+
+# Example: the Poisson equation
+
+
+We assume that we know the 
+@f$ \lambda _u @f$ (which other manuscript also call @f$ \hat{u} @f$) somehow. 
+If so, we can evaluate 
+
+
+@f$
+  \int _{\partial \text{cell}_{v _u}}  \lambda _u \cdot (n, v _u) dS(x)
+@f$
+
+within the face-to-cell projection. 
+Furthermore, we fix a magic constant @f$ \gamma > 0 @f$ and enforce
+
+
+
+\f{eqnarray*}{
+ \lambda _\phi & := & [[ (n,\phi) ]] + \gamma \left( [[u]] - \lambda _u \right) \\
+   & = & \frac{1}{2} (n,\phi)^+ + \frac{1}{2} (n,\phi)^- + \frac{\gamma}{2} u^+ + \frac{\gamma}{2} u^- - \gamma \cdot \lambda _u.
+\f}
+
+
+
+In this equation, the normal is fixed as pointing parallel to the coordinate 
+axis with axis-aligned cubes/squares serving as finite element cells.
+This means, the very moment we have computed @f$ \lambda _u @f$, we can derive
+@f$ \lambda _\phi @f$ and throw the face integrals back into the cells.
+All that is left now is a rule how to determine this @f$ \lambda _u @f$.
+
+
+
+In HDG, the @f$ \lambda _u @f$ is really an additional degree of freedom, not
+just a mere average of the @f$ u @f$s. The @f$ \lambda _\phi @f$ which we restrict later into 
+the cell in contrast remains a helper variable, which results directly from
+other quantities. HDG's idea is that we allow the code to 
+pick this @f$ \lambda _u @f$ quite freely, as long as the jumps between the 
+@f$ \phi @f$ along the normals disappear weakly:
+
+
+\f{eqnarray*}{
+  \int _{face} [[ (n,\phi) ]] \cdot \psi _f dS(x) & = & 0 \quad \forall \quad \psi _f
+  \\
+  \Rightarrow
+  \int _{face} \lambda _u \cdot \psi _f dS(x) & = & \int _{face} \frac{1}{2} \left( \frac{1}{\gamma} (n,\phi)^+ + \frac{1}{\gamma} (n,\phi)^- + u^+ + u^- \right) \psi _f dS(x) \quad \forall \quad \psi _f.
+\f}
+
+
+Hence, the @f$ \lambda @f$ is now really an additional degree of freedom which
+we obtain by solving a new equation system. This equation 
+system is represented by the face-to-face matrix. 
+
+
+\f{eqnarray*}{
+  \int _{face} [[ (n,\phi) ]] \cdot \psi _f dS(x) & = & 0 \quad \forall \quad \psi _f
+  \\
+  \Rightarrow
+  \int _{face} \lambda _u \cdot \psi _f dS(x) & = & \int _{face} \frac{1}{2} \left( \frac{1}{\gamma} (n,\phi)^+ + \frac{1}{\gamma} (n,\phi)^- + u^+ + u^- \right) \psi _f dS(x) \quad \forall \quad \psi _f.
+\f}
+
+
+Hence, the @f$ \lambda @f$ is now really an additional degree of freedom which
+we obtain by solving a new equation system. This equation 
+system is represented by the face-to-face matrix. 
+
+
+
+The rationale behind the construction of @f$ \lambda _u @f$ is not too difficult:
+
+- We can pick it @f$ \lambda _u @f$ arbitrarily, but we want the jump in 
+  @f$ (n,\phi) @f$ to disappear weakly. 
+- Note that the @f$ (n,\phi) @f$ represents the derivative of @f$ u @f$ along 
+  the normal. What we therefore really want is that this derivative does not
+  jump around, i.e. the solution should not kink and be relatively smooth as we
+  cross a face.
+- The @f$ (n,\phi) @f$ at the face is obviously a value somewhere in-between 
+  the gradient of @f$ u @f$ from the left and the right. By default, we just
+  take the average of the @f$ (n,\phi) @f$. 
+- However, this new @f$ \lambda _u @f$ somehow also determines how the kink behaves.
+  If it equals the average of the solution left and right, then using the average
+  of @f$ (n,\phi) @f$ alone yields a reasonable estimate for @f$ [[(n,\phi)]] @f$.
+
+
+My argument goes as follows: If we walk from the left cell to the right, then the
+average gradient in the sketch
+
+  @image html average_gradient.png
+
+is the average of two blue lines. However, if we do an intermediate step into some 
+@f$ \lambda _u @f$ which is very high (higher than any blue line), then we have 
+afterwards to step down onto the blue line again. The average derivative appears
+to be smaller than the average of the blue lines.
+How much effect the jump has compared to the change 
+  from left to right derivative is controlled via @f$ \gamma @f$. 
+
+
+Different to the @ref page_multigrid_numerics_Mixed_Galerkin "Discontinous Galerkin formulation"
+where we solve the Riemann problem manually, we have fewer degrees of freedom to 
+be stored per face. If we solve the Riemann problem, we manually derive equations
+for @f$ \lambda _u @f$ and @f$ \lambda _\phi @f$, and these "outcomes" can be different
+left and right of the face. This time, we do not manually derive anything and therefore
+stick to
+
+        unknowns_per_face_dof = 2
+        
+for the Poisson equation. The two helper qualities are used to store the projections
+of the solution or the normal of the gradient onto the face.
+
+Once we pick a hybridised mixed solver, the solver will add an additional @f$ \hat K \cdot (p+1)^{d-1} @f$
+quantities to each face, where the @f$ \hat K @f$ is also referred to as 
+
+        hybrid_formulation_unknowns_per_face_dof = 1
+
+We set it to one here, as we always discuss the Poisson equation. The operators passed
+in therefore change:
+
+- cell-to-cell remains exactly the same as in the @ref page_multigrid_numerics_Mixed_Galerkin "mixed formulation". Nothing has changed here.
+- cell-to-face remains exactly the same as in the @ref page_multigrid_numerics_Mixed_Galerkin "mixed formulation". Nothing has changed here.
+- face-to-face becomes a @f$ \mathbb{R}^{ \hat K \cdot (p+1)^{d-1} \times \hat K \cdot (p+1)^{d-1} } @f$ matrix. It describes how the additional hybrid formulation unknowns interact.
+- face-to-cell changes dimensions compared @ref page_multigrid_numerics_Mixed_Galerkin "to the plain mixed formulation". It is now from @f$ \mathbb{R}^{ K \cdot (p+1)^d \times \hat K \cdot (p+1)^{d-1} } @f$, i.e. describes how the outcome of the additioanl equation system (over @f$ \lambda _u @f$ in the example above) is mapped onto the cell data.
+- There is a new operator face-to-rhs which takes the projections and maps them onto the right-hand side of the additional equation system.
+
+The distinction between an explicit cell-to-face projection of the solution and 
+the face-to-rhs is convenient, as the construction of the right-hand side might
+use the projection from left and right and might, in the future, not be linear.
+This means, that we first have to project the solution and then use it to 
+construct the right-hand side.
+
+
+
+
+
+# Example: the advection equation
+
+
+# Realisation with PETSc
+
+If we implement the scheme above for Poisson, we end up with a code similar to
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+solver = petsc.solvers.DiscontinuousGalerkinDiscretisation("Poisson",
+                                    degree = 1,
+                                    unknowns_per_cell_dof = 3, 
+                                    unknowns_per_face_dof = 2, 
+                                    hybrid_formulation_unknowns_per_face_dof = 1,
+                                    [...]
+                                    args.meshsize,
+                                    args.meshsize,
+                                    dimensions = 2,
+                                    [...]
+                                    )
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+## Data storage
+
+The setup above
+
+- allocates 12 doubles per cell, which hold the solution. We need this to visualise the outcome. 
+- allocates 12 doubles per cell, which hold the right hand side within the degrees of freedom. This information will later be used to construct the RHS @f$ b @f$ of the linear equation system.
+- constructs the matrix @f$ A @f$ (eventually we will work with an augmented system. For the time being, we can assume that it is square with @f$ 12 \mathbb{C} @f$) rows.
+- assign each unknown a global index. Since we have 12 unknowns per cell, it is sufficient to store the first index of an unknown within the cell, as the dofs/unknowns within the cell are enumerated consecutively. 
+
+@todo Continue to write
+
+
+# Operators
+
+@todo Eike, Alex maybe you can assist here
+
+  */
