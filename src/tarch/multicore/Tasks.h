@@ -277,7 +277,6 @@ namespace tarch {
     void spawnTask(
       Task*                        task,
       const std::set<TaskNumber>&  inDependencies = std::set<TaskNumber>(),
-      const std::set<TaskNumber>&  conflicts = std::set<TaskNumber>(),
       const TaskNumber&            taskNumber = NoDependencies
     );
 
@@ -448,7 +447,7 @@ namespace tarch {
        * ## No multithreading
        *
        * If no multithreading is enabled, then we map it onto a plain task via
-       * a spawnTask(). This spawn has no conflicts and no dependencies.
+       * a spawnTask(). This spawn has no dependencies.
        *
        *
        *
@@ -537,7 +536,6 @@ namespace tarch {
       void spawnTask(
         Task*                        task,
         const std::set<TaskNumber>&  inDependencies,
-        const std::set<TaskNumber>&  conflicts,
         const TaskNumber&            taskNumber
       );
 
