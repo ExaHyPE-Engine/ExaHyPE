@@ -207,7 +207,7 @@ static std::string swift2::dependencychecks::internal::outputParticle(
 
     // write out counters for sweep stages of that algorithm step
     for (int s = 0; s < nstages; s++) {
-      assertion3(particle->getDependencyChecksAlgorithmStepUpdates(i) >= 0, particle->getDependencyChecksAlgorithmStepUpdates(i), i, particle->toString() );
+      //assertion3(particle->getDependencyChecksAlgorithmStepUpdates(i) >= 0, particle->getDependencyChecksAlgorithmStepUpdates(i), i, particle->toString() );
       std::string state;
       if (particle->getDependencyChecksAlgorithmStepUpdates(i) == 0) {
         state = "no updates";
@@ -215,7 +215,7 @@ static std::string swift2::dependencychecks::internal::outputParticle(
         state = "updated (" + std::to_string(particle->getDependencyChecksAlgorithmStepUpdates(i)) + "x)";
       }
 
-      assertion3(particle->getDependencyChecksAlgorithmStepMaskOuts(i) >= 0, particle->getDependencyChecksAlgorithmStepMaskOuts(i), i, particle->toString() );
+      //assertion3(particle->getDependencyChecksAlgorithmStepMaskOuts(i) >= 0, particle->getDependencyChecksAlgorithmStepMaskOuts(i), i, particle->toString() );
       if (particle->getDependencyChecksAlgorithmStepMaskOuts(i) == 0) {
         state += ", never masked out";
       } else {

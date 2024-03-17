@@ -91,6 +91,11 @@ namespace swift2 {
        * enables us to integrate the messages into mainstream performance
        * analysis workflows.
        *
+       * Even though it might seem to be appealing, the output routine may not
+       * contain any assertion: We use it within assertions, so if there's
+       * another assertion in there, we won't get the full output.
+       *
+       *
        * @param particle: the problematic particle
        * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
        * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
