@@ -14,29 +14,6 @@ class NodalBasis(ABC):
         """
         self.dim = dim
 
-    def nodes_C(self, L_C):
-        """Compute nodal points on reference cell"""
-        return [
-            [
-                np.vectorize(self.node1d)(degree, idx)
-                for idx in itertools.product(range(degree), repeat=self.dim)
-            ]
-            for degree in L_C
-        ]
-
-    def nodes_F(self, L_F):
-        """Compute nodal points on reference facet"""
-        return [
-            [
-                [
-                    np.vectorize(self.node1d)(idx[:dir] + (None,) + idx[dir:])
-                    for idx in itertools.product(range(degree), repeat=self.dim - 1)
-                ]
-                for dir in range(self.dim)
-            ]
-            for degree in L_F
-        ]
-
     @abstractmethod
     def node1d(self, degree, j):
         """Return the j-th nodal point of a Lagrange polynomial of given degree
@@ -49,7 +26,7 @@ class NodalBasisGaussLegendre(NodalBasis):
     """Concrete implementation for Gauss Legendre nodes"""
 
     def nodal_points(self, degree):
-        """Set nodal points xi_0,xi_1,...,xi_p"""
+        """Set nodal points xi_0, xi_1, ..., xi_p"""
 
         # Equidistant points
         return np.linspace(-1.0, 1.0, degree + 1)
@@ -125,7 +102,3 @@ class NodalBasisGaussLegendre(NodalBasis):
         # plt.show()
         # pass
         # ############################
-
-# dim = 2
-# GLBasis = NodalBasisGaussLegendre(dim)
-# pass

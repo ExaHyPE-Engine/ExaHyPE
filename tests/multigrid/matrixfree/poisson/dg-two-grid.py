@@ -102,12 +102,17 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDis
 
 
 #! [Coupling]
-prolongation_matrix = None
-prolongation_matrix_scaling = None
-restriction_matrix = None
-restriction_matrix_scaling = None
-injection_matrix = None
-injection_matrix_scaling = None
+intergrid_operators = mghype.api.matrixgenerators.BlockMatrix.IntergridOperators(
+  dim = args.dimensions,
+  coarse_order = 1,
+  fine_order = 2
+  )
+prolongation_matrix = [intergrid_operators.prolongation()]
+prolongation_matrix_scaling = [0]
+restriction_matrix = [intergrid_operators.restriction()]
+restriction_matrix_scaling = [0]
+injection_matrix = [intergrid_operators.injection()]
+injection_matrix_scaling = [0]
 
 solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.ComputeAndRestrictBiasedHierarchicalResidual(
     solver,                      # dg_solver

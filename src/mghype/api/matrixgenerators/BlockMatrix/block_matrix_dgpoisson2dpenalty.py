@@ -68,14 +68,18 @@ class DGPoisson2dPenaltyBlockMatrix(BlockMatrix):
 
         # Cell elements
         self._fe_C = [None] * len(self._L_C)
+        self._Xi_C = [None] * len(self._L_C)
         for i in range(len(self._L_C)):
             self._fe_C[i] = DGScalarElement(dim, self._L_C[i])
+            self._Xi_C[i] = self._fe_C[i].nodes
 
         # Facet elements
         self._fe_F = [None] * len(self._L_F)
+        self._Xi_F = [None] * len(self._L_F)
         for i in range(len(self._L_F)):
             self._fe_F[i] = DGFacetElement(dim, self._L_F[i])
-
+            self._Xi_F[i] = self._fe_F[i].nodes
+        
 
         self._A_CC = {fs_pair: self._assemble_A_CC(fs_pair) for fs_pair in self._coupling_CC}
 

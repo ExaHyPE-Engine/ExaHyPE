@@ -13,6 +13,7 @@ We use the following elements:
 
 from abc import ABC, abstractmethod
 import numpy as np
+import itertools
 #from basis import Basis1d
 from .nodal_basis import NodalBasisGaussLegendre
 from .quadrature import GaussianQuadrature, Quadrature2d
@@ -51,11 +52,10 @@ class FiniteElement(ABC):
         """
         # implement in derived class
 
-    # @property
-    # def qudrature_rule(self):
-    #     """Define set of quadrarute points and weights for the element
-    #     :arg order: order of the quadrature rule
-    #     """
+    @abstractmethod
+    def nodes(self):
+        """Compute nodal points on reference entity"""
+        # implement in derived class
 
 
 class DGScalarElement(FiniteElement):
@@ -117,14 +117,23 @@ class DGScalarElement(FiniteElement):
         else:
             raise ValueError("Direction can only be 0 (x-direction) or 1 (y-direction)")
 
-    # @property 
-    # def qudrature_rule(self):
-    #     """Return set of quadrarute points and weights for the element.
-    #     Number of points for the 1D quadrature rule is set self.degree + 1
-    #     """
-    #     quad = GaussianQuadrature(self.degree + 1)
-    #     quad2d = Quadrature2d(quad)
-    #     return quad2d
+    @property    
+    def nodes(self):
+        """Compute nodal points on reference entity"""
+
+        nodes = []
+
+        index_set = itertools.product(range(self.degree + 1), repeat=self.dim) # create tuples for possible indices combinations
+        for index in index_set:
+            # reverse (0,1,2) to (2,1,0)
+            # required as itertools.product() generates tuples like (0,0), (0,1), (0,2)
+            # -- with the last index advancing faster, but we need (0,0), (1,0), (2,0)
+            #index = next(index_set)
+            reverse_index = tuple(reversed(index))
+            node_coordinates = [self.basis.node1d(self.degree, idx) for idx in reverse_index]
+            nodes.append(np.asarray(node_coordinates))
+
+        return nodes
 
 
 class DGFacetElement(FiniteElement):
@@ -157,83 +166,14 @@ class DGFacetElement(FiniteElement):
         return self.basis.evaluate(self.degree, k, x_local)
 
     def evaluate_derivative(self, k, x_local):
-        """Evaluate the derivatibe k-th basis function at the point x_local = xi
+        """Evaluate the derivative k-th basis function at the point x_local = xi
 
         :arg k: index of basis function
         :arg x_local: position xi in [-1,+1]
         """
         return self.basis.evaluate_derivative(self.degree, k, x_local)
     
-    # @property 
-    # def qudrature_rule(self):
-    #     """Return set of quadrarute points and weights for the element.
-    #     Number of points for the 1D quadrature rule is set self.degree + 1
-    #     """
-    #     return GaussianQuadrature(self.degree + 1)
-
-# class DGVectorElement(FiniteElement): # to be implemented later
-#     """Vector DG finite element on cells
-
-#     Vector-valued Discontinuous Galerkin functions on reference cell [-1,+1] x [-1,+1]
-#     """
-
-#     def __init__(self, degree):
-#         """Initialise object
-
-#         :arg degree: polynomial degree
-#         """
-#         self.basis = Basis1d(degree)
-
-#     @property
-#     def ndof(self):
-#         """return number of unknowns"""
-#         return 2 * (self.basis.degree + 1) ** 2
-
-#     def evaluate(self, k, x_local):
-#         """Evaluate the k-th basis function at the point x_local = (xi,eta)
-
-#         :arg k: index of basis function
-#         :arg x_local: position (xi,eta) in [-1,+1] x [-1,+1]
-#         """
-#         #raise RuntimeError('Complete implementation of DGVectorElement or consider using scalar elements instead')
-
-#         i, j = (k // 2) % (self.basis.degree + 1), (k // 2) // (self.basis.degree + 1)
-#         print(f'{k}: {i}, {j}')
-#         direction = np.asarray((1.0, 0.0)) if (k % 2) == 0 else np.asarray((0.0, 1.0))
-#         #print(f'{direction}')
-#         return (
-#             direction
-#             * self.basis.evaluate(i, x_local[0])
-#             * self.basis.evaluate(j, x_local[1])
-#         )
-    
-
-#     def evaluate_derivative(self, k, direction, x_local):
-#         """Evaluate the derivative of the k-th basis function at the point
-#         x_local = (xi,eta) in the direction dir which can be 0 (x-direction) or 1 (y-direction)
-
-#         :arg k: index of basis function
-#         :arg direction: direction (0 or 1)
-#         :arg x_local: position (xi,eta) in [-1,+1] x [-1,+1]
-#         """
-#         # IMPLEMENT ME
-#         raise RuntimeError('Complete implementation of DGVectorElement or consider using scalar elements instead')
-#         pass
-
-
-# dim = 2
-# degree = 1
-# fe = DGScalarElement(dim, degree)
-# pass
-
-# import matplotlib.pyplot as plt
-# ScEl = DGVectorElement(2)
-# #val = np.zeros(1,100)
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='3d')
-# for x in np.arange(-1.0, 1.0, 0.05):
-#     for y in np.arange(-1.0, 1.0, 0.05):
-#         val = ScEl.evaluate(7, [x,y])
-#         #val = ScEl.evaluate_derivative(7, 2, [x,y])
-#         ax.scatter(x, y, val, c='b', marker='.')
-#         plt.show()
+    @property
+    def nodes(self):
+        """Compute nodal points on reference facet"""
+        return self.basis.nodal_points(self.degree)

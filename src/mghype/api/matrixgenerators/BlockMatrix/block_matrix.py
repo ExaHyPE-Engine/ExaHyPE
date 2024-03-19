@@ -5,7 +5,7 @@ import numpy as np
 class BlockMatrix(ABC):
     """Base class for block matrix storage format, defining the interface"""
 
-    def __init__(self, dim, basis):
+    def __init__(self, dim, basis): # ! pass degree instead of basis, and construct basis inside
         """Initialise instance
         :arg dim: dimension
         :arg basis: nodal basis
@@ -19,8 +19,8 @@ class BlockMatrix(ABC):
         self._A_FF = {}
         self._fs_labels_C = []
         self._fs_labels_F = []
-        self._Xi_C = basis.nodes_C(self._L_C)
-        self._Xi_F = basis.nodes_F(self._L_F)
+        self._Xi_C = []
+        self._Xi_F = []
 
     @property
     def L_C(self):
