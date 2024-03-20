@@ -26,4 +26,8 @@ from .TaskTree import (
     particle_steps_onto_task_tree_bucket_sort_scattered_memory,
     particle_steps_onto_task_tree_insert_sort_sweeps_coalesced_memory,
     particle_steps_onto_task_tree_sort_on_the_fly_coalesced_memory,
+    initialisation_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory,
+    initialisation_steps_onto_task_tree_bucket_sort_scattered_memory,
+    initialisation_steps_onto_task_tree_insert_sort_sweeps_coalesced_memory,
+    initialisation_steps_onto_task_tree_sort_on_the_fly_coalesced_memory,
 )

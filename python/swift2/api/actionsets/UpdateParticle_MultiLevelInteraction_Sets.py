@@ -13,6 +13,15 @@ from .TaskGraphKernelWrappers import (
 class UpdateParticle_MultiLevelInteraction_Sets(
     peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets
 ):
+    """!
+    
+    Slight modification of toolbox's update particle action set
+    
+    The interesting stuff is actually happing in 
+    TaskGarphKernelWrappers.py however.
+    
+    """
+    
     def __init__(
         self,
         particle_set,
@@ -82,3 +91,8 @@ class UpdateParticle_MultiLevelInteraction_Sets(
           ::swift2::PendingDependencies  _pendingDependencies;
         """
         )
+
+
+
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")

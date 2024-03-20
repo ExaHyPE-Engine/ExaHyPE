@@ -63,7 +63,7 @@ def construct_touch_vertex_first_time_call(
           marker,
           assignedParticles,
           [=,this](const peano4::datamanagement::VertexMarker&  marker, decltype(assignedParticles)& assignedParticles)->void {
-            logInfo( "VertexFirstTask", "have been in vertex of " << marker.toString() );
+            logDebug( "VertexFirstTask", "have been in vertex of " << marker.toString() );
             """
             + touch_vertex_first_time_kernel
             + """
@@ -71,7 +71,7 @@ def construct_touch_vertex_first_time_call(
           false
         );
       
-      tarch::multicore::spawnTask( newTask, ::swift2::flatten(parentTaskNumbers), std::set<tarch::multicore::TaskNumber>(), ::swift2::flatten(taskNumberToBeUsed) );
+      tarch::multicore::spawnTask( newTask, ::swift2::flatten(parentTaskNumbers), ::swift2::flatten(taskNumberToBeUsed) );
     """
         ).render(**d)
 
@@ -98,21 +98,11 @@ def construct_touch_cell_first_time_call(
       };
                   
       std::set<::swift2::TaskNumber> adjacentVertexAndParentTasks;
-      std::set<::swift2::TaskNumber> adjacentCellTasks;
       for (int i=0; i<TwoPowerD; i++) {
         adjacentVertexAndParentTasks.insert( ::swift2::TaskNumber{
           fineGridVertices{{MARKER_NAME}}(i).getNumber(),
           ::swift2::TaskNumber::TaskAssociation::TouchVertexFirstTime
         } );
-        for (int j=0; j<TwoPowerD; j++) {
-          int neighbourNumber = fineGridVertices{{MARKER_NAME}}(i).getAdjacentCellNumber(j);
-          if (neighbourNumber!=fineGridCell{{MARKER_NAME}}.getNumber()) {
-            adjacentCellTasks.insert( ::swift2::TaskNumber{
-              fineGridVertices{{MARKER_NAME}}(i).getAdjacentCellNumber(j),
-              ::swift2::TaskNumber::TaskAssociation::TouchCellFirstTime 
-            } );
-          }
-        }
       }
       
       {% if USE_MULTILEVEL_DEPENDENCIES %}
@@ -136,12 +126,10 @@ def construct_touch_cell_first_time_call(
         localParticles,
         activeParticles,
           [=,this](const peano4::datamanagement::CellMarker&  marker, decltype(localParticles)& localParticles, decltype(activeParticles)& activeParticles)->void {
-            logInfo( "CellTask", "have been in cell of " << marker.toString() );
-            #pragma omp critical (cell_task)
-            {
+            logDebug( "CellTask", "have been in cell of " << marker.toString() );
             """
         + touch_cell_first_time_kernel
-        + """}
+        + """
         },
         false
       );
@@ -149,7 +137,6 @@ def construct_touch_cell_first_time_call(
       tarch::multicore::spawnTask( 
         newTask, 
         ::swift2::flatten( adjacentVertexAndParentTasks ), 
-        ::swift2::flatten( adjacentCellTasks ),
         ::swift2::flatten( taskNumberToBeUsed )
       );
     """
@@ -205,7 +192,7 @@ def construct_touch_vertex_last_time_call(
           marker,
           assignedParticles,
           [=,this](const peano4::datamanagement::VertexMarker&  marker, decltype(assignedParticles)& assignedParticles)->void {
-            logInfo( "VertexLastTask", "have been in vertex of " << marker.toString() );
+            logDebug( "VertexLastTask", "have been in vertex of " << marker.toString() );
             """
         + touch_vertex_last_time_kernel
         + """
@@ -213,7 +200,7 @@ def construct_touch_vertex_last_time_call(
           false
         );
       
-      tarch::multicore::spawnTask( newTask, ::swift2::flatten(adjacentCellTasks), std::set<tarch::multicore::TaskNumber>(), ::swift2::flatten(taskNumberToBeUsed) );
+      tarch::multicore::spawnTask( newTask, ::swift2::flatten(adjacentCellTasks), ::swift2::flatten(taskNumberToBeUsed) );
 
       {% if USE_MULTILEVEL_DEPENDENCIES %}
       for (int i=0; i<TwoPowerD; i++) {

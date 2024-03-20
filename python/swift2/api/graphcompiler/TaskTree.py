@@ -5,7 +5,6 @@ from swift2.actionsets.UpdateParticleMarker import UpdateParticleMarker
 
 import peano4
 import swift2
-import jinja2
 
 
 from .AMRLogic import add_dynamic_mesh_refinement_and_particle_resorting
@@ -20,7 +19,10 @@ from .Utils import (
     get_observer_prefix,
     StepType,
 )
-from .Sequential import map_onto_separate_mesh_traversals_with_generic_mapper
+from .Sequential import (
+    map_onto_separate_mesh_traversals,
+    map_onto_separate_mesh_traversals_with_generic_mapper
+)
 
 
 
@@ -99,6 +101,10 @@ def translate_one_step_of_species_into_mesh_traversal(
     action_set_update_marker.parallel = True
     new_step.add_action_set(action_set_update_marker)
     
+    #
+    # Need to know this for the action sets later down the line, as they have
+    # to know if the tasks have to be waited for immediately.
+    #
     current_step_alters_particle_position = (
         step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
         or 
@@ -232,43 +238,23 @@ def translate_one_step_of_species_into_mesh_traversal(
     # might be the first time stepping step overall. Other than that, all steps
     # plug into creational and destroy events.
     #
-    action_set_erase_task_markers = peano4.toolbox.api.AssignNumbersToMesh(
+    action_set_assign_task_markers = peano4.toolbox.api.AssignNumbersToMesh(
         #current_species_set.particle_model.name,
         current_species_set.name,
     )
-    action_set_erase_task_markers.descend_invocation_order = (
+    action_set_assign_task_markers.descend_invocation_order = (
         new_step.lowest_descend_invocation_order() - 1
     )
-    action_set_erase_task_markers.parallel = True
-    new_step.add_action_set(action_set_erase_task_markers)
+    action_set_assign_task_markers.parallel = True
+    new_step.add_action_set(action_set_assign_task_markers)
     if verbose:
         print(
-            "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} alters particle state and hence uses the peano4.toolbox.ClearTaskNumbersOnMesh action set".format(
+            "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} is added peano4.toolbox.api.AssignNumbersToMesh".format(
                 len(mesh_traversals),
                 step.name,
                 current_species_set.particle_model.name,
             )
         )
-
-    assert step_type==StepType.TIME_STEP
-    if len(mesh_traversals)==0:
-        action_set_erase_task_markers = peano4.toolbox.api.ClearNumbersOnMesh(
-            #current_species_set.particle_model.name,
-            current_species_set.name,
-        )
-        action_set_erase_task_markers.descend_invocation_order = (
-            new_step.lowest_descend_invocation_order() - 1
-        )
-        action_set_erase_task_markers.parallel = True
-        new_step.add_action_set(action_set_erase_task_markers)
-        if verbose:
-            print(
-                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} ({}) on particle {} clears task numbers/markers and hence uses the peano4.toolbox.api.ClearNumbersOnMesh action set".format(
-                    len(mesh_traversals),
-                    step.name,
-                    current_species_set.particle_model.name,
-                )
-            )
 
     mesh_traversals.append(new_step)
 
@@ -332,6 +318,140 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
 # "just" wrappers around the generic map_onto_separate_mesh_traversals() 
 # function calls, yet with different arguments.
 #
+def add_clear_task_number_to_initialisation_steps(algorithm_steps, 
+                                                  species_sets, 
+                                                  verbose):
+    """!
+    
+    Take set of mesh run throughs (algorithm steps) and add clear task number action set
+    
+    Usually called on initialisation routines.
+    
+    """
+
+    for step in algorithm_steps:
+      for current_species_set in species_sets:
+        action_set_erase_task_markers = peano4.toolbox.api.ClearNumbersOnMesh(
+            current_species_set.name,
+        )
+        action_set_erase_task_markers.descend_invocation_order = (
+            step.highest_descend_invocation_order() + 1
+        )
+        action_set_erase_task_markers.parallel = True
+        step.add_action_set(action_set_erase_task_markers)
+        if verbose:
+            print(
+                "GRAPH COMPILER DEBUG [translate_one_step_of_species_into_mesh_traversal]: step no {} on particle {} clears task numbers/markers and hence uses the peano4.toolbox.api.ClearNumbersOnMesh action set".format(
+                    step.name,
+                    current_species_set.particle_model.name,
+                )
+            )
+
+
+# ====================================
+# Public API functions
+# ====================================
+#
+# These functions are made available through the __init__.py file. They are all
+# "just" wrappers around the generic map_onto_separate_mesh_traversals() 
+# function calls, yet with different arguments.
+#
+
+def initialisation_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    result = map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_SCATTERED_PARTICLE_STORAGE,
+        step_type=StepType.INITIALISATION,
+        verbose=verbose,
+    )
+    add_clear_task_number_to_initialisation_steps(result, species_sets, verbose)
+    return result
+
+
+def initialisation_steps_onto_task_tree_bucket_sort_scattered_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    result = map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_SCATTERED_PARTICLE_STORAGE,
+        step_type=StepType.INITIALISATION,
+        verbose=verbose,
+    )
+    add_clear_task_number_to_initialisation_steps(result, species_sets, verbose)
+    return result
+
+
+def initialisation_steps_onto_task_tree_insert_sort_sweeps_coalesced_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    result = map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_WITH_LIFTS_AND_DROPS_COALESCED_PARTICLE_STORAGE,
+        step_type=StepType.INITIALISATION,
+        verbose=verbose,
+    )
+    add_clear_task_number_to_initialisation_steps(result, species_sets, verbose)
+    return result
+
+
+def initialisation_steps_onto_task_tree_sort_on_the_fly_coalesced_memory(
+    species_sets,
+    verbose,
+):
+    """!
+
+    @see map_onto_separate_mesh_traversals()
+
+    @param concatenate_steps_of_species: [Species]
+      Sequence of particle species to be handled.
+
+    @param verbose: {True, False}
+
+    """
+    result = map_onto_separate_mesh_traversals(
+        sequence_of_steps=concatenate_steps_of_species(species_sets, True),
+        particle_sorting_and_storage=ParticleSortingAndStorage.SORT_ON_THE_FLY_COALESCED_PARTICLE_STORAGE,
+        step_type=StepType.INITIALISATION,
+        verbose=verbose,
+    )
+    add_clear_task_number_to_initialisation_steps(result, species_sets, verbose)
+    return result
+
 
 def particle_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory(
     species_sets,
@@ -436,4 +556,8 @@ def particle_steps_onto_task_tree_sort_on_the_fly_coalesced_memory(
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
+
+
+
+
 

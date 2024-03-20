@@ -13,6 +13,15 @@ from .TaskGraphKernelWrappers import (
 class UpdateParticle_SingleLevelInteraction_ContiguousParticles(
     peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles
 ):
+    """!
+    
+    Wrapper around toolbox baseclass
+    
+    Close to trivial wrapper which really only adds a tarch::multicore::waitForAllTasks()
+    iff the particles might move. The interesting stuff is actually happing in 
+    TaskGarphKernelWrappers.py however.
+    
+    """
     def __init__(
         self,
         particle_set,
@@ -61,3 +70,7 @@ class UpdateParticle_SingleLevelInteraction_ContiguousParticles(
                  """,
             active_particle_set=active_particle_set,
         )
+
+
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")

@@ -17,6 +17,9 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
     
     Plain wrapper around peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles that introduces tasks
     
+    The interesting stuff is actually happing in 
+    TaskGarphKernelWrappers.py however.
+    
     """
     def __init__(
         self,
@@ -95,3 +98,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
           ::swift2::PendingDependencies  _pendingDependencies;
         """
         )
+
+
+    def get_action_set_name(self):
+        return __name__.replace(".py", "").replace(".", "_")
