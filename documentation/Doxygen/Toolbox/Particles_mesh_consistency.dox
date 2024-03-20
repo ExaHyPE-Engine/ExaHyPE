@@ -1,6 +1,6 @@
 /**
 
-@page page_toolbox_particles_mesh_consistency Mesh data consistency
+@page page_toolbox_particles_mesh_consistency Sorting: Preserving the mesh-particle data consistency
 
 If a particle moves or changes its search radius, it might be associated
 to the wrong vertex. Consequently, it is important to be always aware of

@@ -30,7 +30,7 @@ levels. This allows us to define our particle sets:
 
 
 
-## Example
+# Example
 
 The illustration below shows two levels of a spacetree with bipartitioning
 (although we use tri-partitioning in Peano). There are eight particles in
@@ -64,9 +64,9 @@ actual cells, as we want to capture all particles of this level that might
 theoretically interact with the particles located within the cell.
 
 
-## Uniqueness, correctness and data consistency
+# Uniqueness, correctness and data consistency
 
-### Multiple particle reads per traversal
+## Multiple particle reads per traversal
 
 If you want to update particles within a cell, you should introduce a boolean per
 particle that indicates if you have already touched it or not.
@@ -89,7 +89,7 @@ The update then sets the marker to keep books which particles have been updated
 and which haven't.
 
 
-### Particle-particle interactions on one level
+## Particle-particle interactions on one level
 
 If you want to update particles of a cell due to particle-particle interactions, you
 should only update particles which hold the right value of the corresponding flag
@@ -139,6 +139,26 @@ between cells. However, you can tailor compute kernels to exploit any symmetry
 you want.
 
 
+# Interaction types
+
+## Single level interactions
+
+If particles can only interact with their level, you can use 
+peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction or 
+peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles.
+Both types differ in their assumptions of how the particles are organised in
+memory. Other than that, their realisation is rather straightforward:
+
+As particles are tied to vertices, we know that a particle has not been 
+read prior to the touchVertexFirstTime() for the corresopnding vertex.
+We let touchVertexFirstTime() imply an event alike touchParticleFirstTime().
+If a cell is hit, we know that all of its vertices have been read, and 
+therefore all of its particles have been.
+After we have touched a vertex for the last time, we also won't access its
+particles anymore.
+
+
+
 ## Multiscale interactions
 
 Each particle has an attribute getCellH() which provides the user code information
@@ -177,7 +197,7 @@ feeds into an accumulation.
 
 
 
-## Moving particles and particle sorting
+# Moving particles and particle sorting
 
 The construction of the active and local sets works if and only if the
 particles are correctly assigned to mesh vertices. That is, they have
@@ -273,22 +293,25 @@ observation that multiscale interactions are mandatory in Peano even
 if you work only with the finest level logically.
 
 
-
-## Set realisations
-
-The particle toolbox offers two actions sets,
-peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles and
-peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets,
-which both assemble the active and local sets while they run throug the mesh.
-These particle sets are not persistent, i.e. they are built up on-the-fly.
-Also, building up the particle sets does not change the particle association
-in any way.
-The sets exclusively consist of pointers to particles, but the particles
-themselves remain
-@ref page_toolbox_particles_mesh_storage "tied to the vertices they belong to".
+The page @ref page_toolbox_particles_mesh_consistency discusses
+various aspects of this sorting and how it helps to keep the mesh-particle
+assocations consistent.
 
 
-## For Swift 2 users:
+# Set realisations
+
+The particle toolbox offers two flavours of both type of particle interactions:
+
+- peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles vs peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_Sets, and
+- peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction vs peano4.toolbox.particles.UpdateParticle_SingleLevelInteraction_ContiguousParticles.
+
+For all of them, particle sets are not persistent, i.e. they are built up 
+on-the-fly.
+Yet, the realisation can make certain assumptions about their memory layout.
+These assumptions are discussed on a subpage of the @ref page_toolbox_particles_realisation.
+
+
+# For Swift 2 users:
 
 - See swift2.particle.Particle for the introduction of the marker
   CellHasUpdatedParticle which we use to ensure that each particle is
