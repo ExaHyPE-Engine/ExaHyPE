@@ -485,6 +485,7 @@ namespace tarch {
        * direct consequence, all dependencies of future tasks are always
        * fulfilled.
        *
+       *
        * ## C++ variant
        *
        * 1. We first check if a task with this number is among the submitted
@@ -503,6 +504,7 @@ namespace tarch {
        *    equals NoDependencies, we know that noone will ever be able to wait
        *    for this task. In this case, we skip the storing.
        *
+       *
        * ## OpenMP
        *
        * In OpenMP, we have less explicit control over the number of alive
@@ -511,18 +513,35 @@ namespace tarch {
        * does not exist, then we have an anti-dependency. But this one does not
        * matter. It will just be executed sequentially.
        *
-       * taskwait does not directly work with an if statement (we would need
-       * some workaround with iterators), so we have to explicitly
-       * embed it into an if block which checks if we have to wait at all.
-       *
        * OpenMP models dependencies through addresses. While it does not use
        * the data to which these addresses point to, it is important that the
        * addresses are valid, i.e. the system owns these memory locations.
-       * I use an internal std::vector to administer the byte array which I
+       * I use an internal array to administer the byte array which I
        * use for dependencies. See the description of the internal variable
-       * memoryRegionToTrackTaskDependencies and also
-       * tarch::multicore::native::spawnTask() for a discussion of the required
+       * memoryRegionToTrackTaskDependencies and notably
+       * canServeDependencyEntry() for a discussion of the required
        * dynamic growth.
+       *
+       * OpenMP now has iterators in taskwait and dependency statements. Yet,
+       * the set of in-dependencies is not iterable. So we create a vector into
+       * which we paste the task numbers. This also contains the outgoing task
+       * number, i.e. if there had been a task with that number before, we
+       * basically impose an inout dependency and ensure this one terminates
+       * first.
+       *
+       * ### Realisation pitfalls
+       *
+       * I originally had
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~
+  #pragma omp atomic
+  numberOfSpawnedTasks++;
+         ~~~~~~~~~~~~~~~~~~~~~
+       *
+       * outside of the if/else cascade. However, that means that the
+       * subsequent canServeDependencyEntry() calls will not increase the
+       * memory used. They assume that the task were already out. Therefore,
+       * it is important to increment this counter as late as possible.
        *
        *
        * ## No multithreading

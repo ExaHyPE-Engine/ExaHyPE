@@ -397,8 +397,7 @@ void tarch::multicore::waitForTasks(const std::set<TaskNumber>& inDependencies) 
 
 
 void tarch::multicore::waitForTask(const int taskNumber) {
-  std::set<int> tmp;
-  tmp.insert(taskNumber);
+  std::set<int> tmp{taskNumber};
   waitForTasks(tmp);
 }
 
