@@ -293,12 +293,22 @@ void toolbox::particles::ParticleSet<T>::finishedTraversal() {
 
 
 template <typename T>
+typename toolbox::particles::ParticleSet<T>::SieveParticles toolbox::particles::ParticleSet<T>::cloneParticlesToBeSieved() {
+  return _sieveParticles.cloneParticlesToBeSieved();
+}
+
+
+template <typename T>
 typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::ParticleSet<T>::getParticlesToBeSievedIntoVertex(
-  const peano4::datamanagement::VertexMarker& marker,
-  bool  removeReturnedParticlesFromSet,
-  bool  onlyReturnParticlesThatWillBeLocal
+  const peano4::datamanagement::VertexMarker& marker
 ) {
-  return _sieveParticles.getParticlesToBeSievedIntoVertex(marker, removeReturnedParticlesFromSet, onlyReturnParticlesThatWillBeLocal);
+  return _sieveParticles.getParticlesToBeSievedIntoVertex(
+    marker, 
+    false,     // removeReturnedParticlesFromSet
+    true,      // onlyReturnParticlesThatWillBeLocal
+    false      // don't have to lock underlying semaphore, as I don't 
+               // alter sieve set
+  );
 }
 
 
