@@ -212,6 +212,10 @@ All of this is realised through a static attribute
 toolbox::particles::ParticleSet::_sieveParticles which holds and instance
 of toolbox::particles::SieveParticles.
 
+Various sieving strategies exist. They are realised by the different subclasses
+of peano4.toolboxes.particles.api.AbstractUpdateParticleGridAssociation.
+However, this superclass holds all the relevant docu and an overview of the
+usage of the sieve set.
 
 
 */
