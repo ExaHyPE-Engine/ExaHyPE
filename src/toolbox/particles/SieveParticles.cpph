@@ -168,10 +168,9 @@ toolbox::particles::SieveParticles<T> toolbox::particles::SieveParticles<T>::clo
 
   for (auto p: _particlesThatHaveToBeSieved) {
     result._particlesThatHaveToBeSieved.push_back( new T(*p) );
-    logInfo( "cloneParticlesToBeSieved()", "clone particle " << result._particlesThatHaveToBeSieved.back()->toString() );
   }
 
-  logInfo( "cloneParticlesToBeSieved()", "created a clone of the particle set: " << this->toString() << "->" << result.toString() );
+  logDebug( "cloneParticlesToBeSieved()", "created a clone of the particle set: " << this->toString() << "->" << result.toString() );
 
   return result;
 }
@@ -179,7 +178,7 @@ toolbox::particles::SieveParticles<T> toolbox::particles::SieveParticles<T>::clo
 
 template <typename T>
 void toolbox::particles::SieveParticles<T>::addParticleThatCanNotBeLiftedWithinItsTree(T* p) {
-  logInfo( "addParticleThatCanNotBeLiftedWithinItsTree(T* p)", "particle cannot be lifted: " << p->toString() );
+  logDebug( "addParticleThatCanNotBeLiftedWithinItsTree(T* p)", "particle cannot be lifted: " << p->toString() );
   _particlesThatCanNotBeLiftedWithinTheirTree.push_back(p);
 }
 
@@ -214,7 +213,7 @@ typename toolbox::particles::SieveParticles<T>::ParticleList toolbox::particles:
       and
       (willBeLocal or not onlyReturnParticlesThatWillBeLocal)
     ) {
-      logInfo("getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString());
+      logDebug("getParticlesToBeSievedIntoVertex(...)", "drop particle " << (*p)->toString() << " from global sieve list into vertex " << marker.toString());
 
       (*p)->setCellH(marker.h());
 
