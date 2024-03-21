@@ -24,24 +24,15 @@ namespace toolbox {
  * Utility class for all flavours of particle sets
  *
  * Particle sets differ in the way they actually manage the particles. However,
- * they all share common stats, operations, ... This is covered by this class.
+ * they all need global sorting routines (sieve sets) at one point including
+ * their stats. These features are provided by this class.
+ *
  * The class is used by toolbox.particles.ParticleSet which usually holds
- * multiple of these classes for different purposes.
- *
- * There's a problem here however: Most of these fields are static fields and
- * hence cannot be modelled as static. If we have them static, they are tied
- * to the base object, not the the particular particle type. However, the fact
- * that we work with templates rides to our rescue. We can assume that this
- * base class is instantiated per particle type. Therefore, all of its static
- * fields are unique again. Along these discussions, this base class is more of
- * an aspect rather than a real base class. The number of real functions and
- * attributes is negligible.
- *
- * An alternative implementation would make this a real class and let the
- * actual particles sets holds a static attribute of this class. I think that
- * would be a valid implementation, too.
- *
- *
+ * one class instance (static attribute) of this class to collect all sieve
+ * information. To drop particles from the global sieve set into the respective
+ * domains, mesh sweeps either use getParticlesToBeSievedIntoVertex() directly
+ * or they create a copy of this sieve set through cloneParticlesToBeSieved()
+ * and then hand out particles from this deep copy.
  */
 template <typename T>
 class toolbox::particles::SieveParticles {
@@ -49,6 +40,28 @@ public:
   typedef T DoFType;
 
   typedef std::list<T*> ParticleList;
+
+  SieveParticles() = default;
+
+  /**
+   * Destructor
+   *
+   * The sieve set works with shallow copies, i.e. we assign particles from
+   * the mesh and the ownership then goes over into the sieve set. However,
+   * when we sort particles into the mesh, each mesh traversal creates its own
+   * copy of the particles. The routine cloneParticlesToBeSieved() creates a
+   * deep copy.
+   *
+   * As we might hand around this deep copy, and as the copy constructor also
+   * creates shallow copies, the destructor does not(!) free the memory. You
+   * have to do this manually via a call to deleteParticles().
+   */
+  virtual ~SieveParticles();
+
+  /**
+   * Deep clear.
+   */
+  void deleteParticles();
 
   /**
    * Get all the global sieve data consistent
@@ -119,6 +132,11 @@ public:
    */
   void addParticleThatCanNotBeLiftedWithinItsTree(T*);
 
+  /**
+   * Clone object, but let it contain only the delivering part, i.e. those
+   * particles that have to be sieved.
+   */
+  SieveParticles<T> cloneParticlesToBeSieved();
 
   /**
    * Get particles that are to be sieved into one vertex
@@ -170,7 +188,8 @@ public:
   ParticleList getParticlesToBeSievedIntoVertex(
     const peano4::datamanagement::VertexMarker& marker,
     bool  removeReturnedParticlesFromSet,
-    bool  onlyReturnParticlesThatWillBeLocal
+    bool  onlyReturnParticlesThatWillBeLocal,
+    bool  lockSemaphore
   );
 
   /**
@@ -189,6 +208,10 @@ public:
    */
   int getNumberOfParticlesThatHaveBeSievedIntoVertices() const;
 
+  /**
+   * @return Overview of set.
+   */
+  std::string toString() const;
 
 private:
   static tarch::logging::Log _log;
@@ -203,9 +226,24 @@ private:
   static int _SieveReductionTag;
 
   /**
+   * Semaphores
+   *
    * This is for the assembly of the set of particles which require global
    * (sieve) data exchange. When we later on sieve the particles into their
    * target vertices, we need another semaphore of its own.
+   *
+   * In the present case, the semaphores don't have to be static, as we assume that
+   * ParticleSet uses this class as a static class. That is, we implicitly
+   * have a static attribute. In return, if someone creates a deep clone
+   * of the present particle set through cloneParticlesToBeSieved(), we
+   * explicitly don't want the semaphores to lock all other particle sets.
+   *
+   * Problems arise once we translate these considerations 1:1 into code,
+   * as semaphores cannot be copied. That is, we cannot omit the static
+   * keyword. To take the synchronisation remark into account (some routines
+   * can work with thread-local copies), we therefore have to make the
+   * semaphores static and "just" not lock them if we work with thread-local
+   * copies.
    */
   static tarch::multicore::BooleanSemaphore _particlesThatCanNotBeLiftedWithinTheirTreeSemaphore;
   static tarch::multicore::BooleanSemaphore _particlesToBeSievedSemaphore;
