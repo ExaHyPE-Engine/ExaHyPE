@@ -20,6 +20,19 @@ class exahype2::fd::tests::CCZ4KernelTest : public tarch::tests::TestCase {
   private:
     void AppleWithAppleTest();
 
+    void prepareFieldData(
+      double** g, 
+      double& phi, 
+      double** K, 
+      double& trK,
+      double& Theta,
+      double* Gamma, 
+      double& alpha, 
+      double* beta,
+      double* b,
+      double x, double y, double z
+    );
+
   public:
     CCZ4KernelTest();
 
@@ -28,3 +41,4 @@ class exahype2::fd::tests::CCZ4KernelTest : public tarch::tests::TestCase {
      */
     virtual void run();
 };
+
