@@ -32,7 +32,7 @@ namespace la {
             T float_data;
         } U;
 
-        static_assert(sizeof(T) * 8 => BITS);
+        static_assert(sizeof(T) * 8 >= BITS);
 
         auto dataLocal = this->data;
 
