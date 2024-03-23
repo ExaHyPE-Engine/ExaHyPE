@@ -67,8 +67,6 @@ class UpdateParticle_MultiLevelInteraction_Sets(
             additional_includes=additional_includes
             + """
 #include "tarch/multicore/Tasks.h"                
-#include "swift2/VertexTask.h"                
-#include "swift2/CellTask.h"                
 #include "swift2/TaskNumber.h"                
                  """,
             active_particle_set=active_particle_set,
@@ -77,8 +75,6 @@ class UpdateParticle_MultiLevelInteraction_Sets(
     def get_body_of_operation(self, operation_name):
         if operation_name == peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
             return "_pendingDependencies.clear();"
-        elif operation_name == peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
-            return "assertion1( _pendingDependencies.empty(), _pendingDependencies.size() );"
         else:
             return super(
                 UpdateParticle_MultiLevelInteraction_Sets, self

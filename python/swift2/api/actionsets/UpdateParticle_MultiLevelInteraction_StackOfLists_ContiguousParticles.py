@@ -18,7 +18,24 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
     Plain wrapper around peano4.toolbox.particles.UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles that introduces tasks
     
     The interesting stuff is actually happing in 
-    TaskGarphKernelWrappers.py however.
+    TaskGarphKernelWrappers.py however. 
+    
+    
+    ## Multiscale task dependencies
+    
+    An interesting feature covered here that is 
+    worth mentioning is the attribute _childCellDependencies. When we hit a 
+    cell, we will create cell tasks. These cell tasks will feed into their 
+    parent. However, we have no access to children cells in Peano's signatures
+    anymore when we backtrack. We also cannot spawn these dependencies 
+    straightaway as we would create anti-dependencies.
+    
+    We therefore implement things differently: While we do not spawn tasks
+    logically for touchCellLastTime(), we technically spawn them (they are 
+    empty) and each touchVertexLastTime() feeds into these helper tasks. 
+    Further to that, we maintain a stack _childCellDependencies which is added
+    the numbers of these helper tasks. Eventually, coarse grid 
+    touchVertexLastTime() events can link against these helper tasks.
     
     """
     def __init__(
@@ -79,15 +96,6 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
             active_particle_set=active_particle_set,
         )
 
-    def get_body_of_operation(self, operation_name):
-        if operation_name == peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
-            return "_pendingDependencies.empty();"
-        else:
-            return super(
-                UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles,
-                self,
-            ).get_body_of_operation(operation_name)
-
     def get_attributes(self):
         return (
             super(
@@ -95,7 +103,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
                 self,
             ).get_attributes()
             + """
-          ::swift2::PendingDependencies  _pendingDependencies;
+          ::swift2::PendingDependencies  _childCellDependencies;
         """
         )
 

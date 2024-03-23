@@ -62,9 +62,7 @@ class UpdateParticle_SingleLevelInteraction(
             unprepare_traversal_kernel=unprepare_traversal_kernel,
             additional_includes=additional_includes
             + """
-#include "tarch/multicore/Tasks.h"                
-#include "swift2/VertexTask.h"                
-#include "swift2/CellTask.h"                
+#include "tarch/multicore/Tasks.h"
 #include "swift2/TaskNumber.h"                
                  """,
             active_particle_set=active_particle_set,
