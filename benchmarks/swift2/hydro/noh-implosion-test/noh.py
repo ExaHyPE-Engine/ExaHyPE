@@ -101,7 +101,7 @@ if __name__ == "__main__":
         "-t",
         "--trees",
         dest="trees",
-        default=None,
+        default=0,
         type=int,
         help="Number of trees to be used",
     )
@@ -263,7 +263,7 @@ if __name__ == "__main__":
             swift2.api.graphcompiler.particle_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_multiscale_sort_sweeps_scattered_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory
         )
     elif (
         args.realisation.split(".")[0] == Parallelisation_TaskTree
@@ -274,7 +274,7 @@ if __name__ == "__main__":
             swift2.api.graphcompiler.particle_steps_onto_task_tree_bucket_sort_scattered_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_separate_mesh_traversals_bucket_sort_scattered_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_task_tree_bucket_sort_scattered_memory
         )
     else:
         assert False, "realisation " + args.realisation + " not supported"
@@ -463,11 +463,10 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation(args.peanodir, build_mode)
 
-    if args.trees != 0:
-        project.set_load_balancing(
-            "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
-            "new toolbox::loadbalancing::DefaultConfiguration()",
-        )
+    project.set_load_balancing(
+        "toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates",
+        "new toolbox::loadbalancing::DefaultConfiguration({})".format(args.trees),
+    )
 
     ###############################################################################
     # Initialisation snippet for the particle
