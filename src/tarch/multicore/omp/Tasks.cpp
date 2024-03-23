@@ -241,7 +241,7 @@ void tarch::multicore::native::spawnTask(
     }
   }
   else if ( canServeDependencyEntry(taskNumber)) {
-    logInfo(
+    logDebug(
       "spawnTask(...)",
       "fire task " << taskNumber <<
       " with outgoing task dependency and " << iterableExistingInDepencencies.size() <<
@@ -330,7 +330,7 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
   }
 
   if (not iterableExistingInDepencencies.empty()) {
-    logInfo( "waitForTasks(...)", "wait for "<< iterableExistingInDepencencies.size() << " tasks to terminate: " << iterableExistingInDepencencies[0] );
+    logDebug( "waitForTasks(...)", "wait for "<< iterableExistingInDepencencies.size() << " tasks to terminate: " << iterableExistingInDepencencies[0] );
     #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
   }
 }
