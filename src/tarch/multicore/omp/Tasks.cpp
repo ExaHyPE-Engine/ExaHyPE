@@ -212,8 +212,6 @@ void tarch::multicore::native::spawnTask(
   const std::set<TaskNumber>&  inDependencies,
   const TaskNumber&            taskNumber
 ) {
-  DependencyTrackingDataType* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
-
   // Administer in-dependencies incl self-dep
   std::vector<TaskNumber>  iterableExistingInDepencencies;
   iterableExistingInDepencencies.reserve( inDependencies.size()+1 );
@@ -225,7 +223,6 @@ void tarch::multicore::native::spawnTask(
   if (canServeDependencyEntry(taskNumber)) {
     iterableExistingInDepencencies.push_back(taskNumber);
   }
-
 
   if (taskNumber == NoDependencies) {
     #pragma omp atomic
@@ -244,7 +241,7 @@ void tarch::multicore::native::spawnTask(
     }
   }
   else if ( canServeDependencyEntry(taskNumber)) {
-    logDebug(
+    logInfo(
       "spawnTask(...)",
       "fire task " << taskNumber <<
       " with outgoing task dependency and " << iterableExistingInDepencencies.size() <<
@@ -255,7 +252,7 @@ void tarch::multicore::native::spawnTask(
     #pragma omp atomic
     numberOfSpawnedTasks++;
 
-    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(out: *outDependencyPointer) untied
+    #pragma omp task priority(job->getPriority()) depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]]) depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
     {
       while (job->run()) {
         #pragma omp taskyield
@@ -333,7 +330,7 @@ void tarch::multicore::native::waitForTasks(const std::set<TaskNumber>& inDepend
   }
 
   if (not iterableExistingInDepencencies.empty()) {
-    logDebug( "waitForTasks(...)", "wait for "<< iterableExistingInDepencencies.size() << " tasks to terminate" );
+    logInfo( "waitForTasks(...)", "wait for "<< iterableExistingInDepencencies.size() << " tasks to terminate: " << iterableExistingInDepencencies[0] );
     #pragma omp taskwait depend(iterator(j=0:iterableExistingInDepencencies.size()), in: dependencyTrackingBaseAddress[iterableExistingInDepencencies[j]])
   }
 }

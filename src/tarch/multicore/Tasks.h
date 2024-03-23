@@ -544,6 +544,26 @@ namespace tarch {
        * it is important to increment this counter as late as possible.
        *
        *
+       * ### Task dependencies
+       *
+       * OpenMP now supports iterators and accessors over arrays. I tried
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~
+      DependencyTrackingDataType* outDependencyPointer = dependencyTrackingBaseAddress + taskNumber;
+      [...]
+      #pragma omp task [...] depend(out: *outDependencyPointer) untied
+         ~~~~~~~~~~~~~~~~~~~~~
+       *
+       * but that didn't work. So it seems that OpenMP struggles with the
+       * dereferencing. However, it seems that
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~
+      #pragma omp task [...] depend(out: dependencyTrackingBaseAddress[taskNumber]) untied
+         ~~~~~~~~~~~~~~~~~~~~~
+       *
+       * does work.
+       *
+       *
        * ## No multithreading
        *
        * We just execute this task. We know that tasks may not have anti-dependencies.
