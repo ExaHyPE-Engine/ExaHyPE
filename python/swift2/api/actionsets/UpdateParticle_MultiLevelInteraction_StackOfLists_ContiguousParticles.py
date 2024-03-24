@@ -76,13 +76,13 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
         ).__init__(
             particle_set,
             particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
-                particle_set,particle_particle_interaction_kernel,current_species_index,True
+                particle_set,particle_particle_interaction_kernel,True
             ),
             touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
-                particle_set,touch_vertex_first_time_compute_particle_update_kernel,current_species_index,True
+                particle_set,touch_vertex_first_time_compute_particle_update_kernel,True
             ),
             touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                particle_set,touch_vertex_last_time_compute_particle_update_kernel,current_species_index,True,current_step_alters_particle_position
+                particle_set,touch_vertex_last_time_compute_particle_update_kernel,True,current_step_alters_particle_position
             ),
             prepare_traversal_kernel=prepare_traversal_kernel,
             unprepare_traversal_kernel=unprepare_traversal_kernel,
