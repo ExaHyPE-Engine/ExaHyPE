@@ -35,6 +35,7 @@ def translate_one_step_of_species_into_mesh_traversal(
     use_lists_to_construct_active_sets,
     step_type: StepType,
     verbose,
+    construct_tree_task_graph = True
 ):
     """!
 
@@ -82,6 +83,14 @@ def translate_one_step_of_species_into_mesh_traversal(
     @param alter_particle_position: [Bool]
       Inout parameter. We append a new marker to this sequence.
 
+     
+    ## Use it to construct task graphs
+    
+    The routine is not expected to have an argument construct_tree_task_graph 
+    in Sequential. But I want to use the routines from Sequential. So I give 
+    this value a default value. This way, I can reuse the routine in TaskGraph,
+    where I simply redefine the default.
+      
     """
     new_step = peano4.solversteps.Step(
         "{}{}{}_sweep{}".format(
@@ -110,7 +119,20 @@ def translate_one_step_of_species_into_mesh_traversal(
         or 
         step.effect == AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS
     )
-    
+
+    #
+    # We have to synchronise after each traversal if we work with a 
+    # tree or alter the global state
+    #
+    synchronise_after_each_mesh_traversal = (
+        step.effect== AlgorithmStep.Effect.CHANGE_POSITION_OR_INTERACTION_RADIUS_AND_MIGHT_RERUN
+        or 
+        step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE
+        or 
+        step.effect == AlgorithmStep.Effect.ALTER_GLOBAL_STATE_AND_MIGHT_RERUN
+        or 
+        construct_tree_task_graph
+    )
 
     #
     # Pick computational kernel
@@ -140,7 +162,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
                 current_step_alters_particle_position=current_step_alters_particle_position,
-                wait_for_all_tasks_to_finish_after_traversal=True,
+                wait_for_all_tasks_to_finish_after_traversal=synchronise_after_each_mesh_traversal,
             )
         else:
             if verbose:
@@ -160,8 +182,8 @@ def translate_one_step_of_species_into_mesh_traversal(
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
-                current_step_alters_particle_position=current_step_alters_particle_position,
-                wait_for_all_tasks_to_finish_after_traversal=True,
+                alter_particle_position_or_global_state=current_step_alters_particle_position,
+                wait_for_all_tasks_to_finish_after_traversal=synchronise_after_each_mesh_traversal,
             )
         action_set_particle_particle_interaction.descend_invocation_order = (
             new_step.highest_descend_invocation_order() + 1
@@ -187,8 +209,9 @@ def translate_one_step_of_species_into_mesh_traversal(
                 prepare_traversal_kernel=step.prepare_traversal_kernel,
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
+                active_particle_set=step.input_particles,
                 current_step_alters_particle_position=current_step_alters_particle_position,
-                wait_for_all_tasks_to_finish_after_traversal=True,
+                wait_for_all_tasks_to_finish_after_traversal=synchronise_after_each_mesh_traversal,
             )
             action_set_particle_update.descend_invocation_order = (
                 new_step.highest_descend_invocation_order() + 1
@@ -215,7 +238,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
                 current_step_alters_particle_position=current_step_alters_particle_position,
-                wait_for_all_tasks_to_finish_after_traversal=True,
+                wait_for_all_tasks_to_finish_after_traversal=synchronise_after_each_mesh_traversal,
             )
             action_set_particle_update.descend_invocation_order = (
                 new_step.highest_descend_invocation_order() + 1
@@ -348,16 +371,7 @@ def add_clear_task_number_to_initialisation_steps(algorithm_steps,
             )
 
 
-# ====================================
-# Public API functions
-# ====================================
-#
-# These functions are made available through the __init__.py file. They are all
-# "just" wrappers around the generic map_onto_separate_mesh_traversals() 
-# function calls, yet with different arguments.
-#
-
-def initialisation_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory(
+def initialisation_steps_onto_task_tree_multiscale_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -381,6 +395,14 @@ def initialisation_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory(
     return result
 
 
+# ====================================
+# Public API functions
+# ====================================
+#
+# These functions are made available through the __init__.py file. They are all
+# "just" wrappers around the generic map_onto_separate_mesh_traversals() 
+# function calls, yet with different arguments.
+#
 def initialisation_steps_onto_task_tree_bucket_sort_scattered_memory(
     species_sets,
     verbose,
@@ -405,7 +427,7 @@ def initialisation_steps_onto_task_tree_bucket_sort_scattered_memory(
     return result
 
 
-def initialisation_steps_onto_task_tree_insert_sort_sweeps_coalesced_memory(
+def initialisation_steps_onto_task_tree_multiscale_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -429,7 +451,7 @@ def initialisation_steps_onto_task_tree_insert_sort_sweeps_coalesced_memory(
     return result
 
 
-def initialisation_steps_onto_task_tree_sort_on_the_fly_coalesced_memory(
+def initialisation_steps_onto_task_tree_bucket_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -453,7 +475,7 @@ def initialisation_steps_onto_task_tree_sort_on_the_fly_coalesced_memory(
     return result
 
 
-def particle_steps_onto_task_tree_multiscale_sort_sweeps_scattered_memory(
+def particle_steps_onto_task_tree_multiscale_sort_scattered_memory(
     species_sets,
     verbose,
 ):
@@ -506,7 +528,7 @@ def particle_steps_onto_task_tree_bucket_sort_scattered_memory(
 
 
 
-def particle_steps_onto_task_tree_insert_sort_sweeps_coalesced_memory(
+def particle_steps_onto_task_tree_multiscale_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -532,7 +554,7 @@ def particle_steps_onto_task_tree_insert_sort_sweeps_coalesced_memory(
     )
 
 
-def particle_steps_onto_task_tree_sort_on_the_fly_coalesced_memory(
+def particle_steps_onto_task_tree_bucket_sort_coalesced_memory(
     species_sets,
     verbose,
 ):
@@ -556,8 +578,4 @@ def particle_steps_onto_task_tree_sort_on_the_fly_coalesced_memory(
         step_type=StepType.TIME_STEP,
         verbose=verbose,
     )
-
-
-
-
 
