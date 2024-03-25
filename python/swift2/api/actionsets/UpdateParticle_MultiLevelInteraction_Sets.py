@@ -32,7 +32,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(
         unprepare_traversal_kernel,
         additional_includes,
         active_particle_set,
-        current_step_alters_particle_position,
+        alter_particle_position_or_global_state,
         wait_for_all_tasks_to_finish_after_traversal,
     ):
         """!
@@ -54,13 +54,20 @@ class UpdateParticle_MultiLevelInteraction_Sets(
         super(UpdateParticle_MultiLevelInteraction_Sets, self).__init__(
             particle_set,
             particle_particle_interaction_kernel=construct_touch_cell_first_time_call(
-                particle_set,particle_particle_interaction_kernel,True
+                particle_set,
+                particle_particle_interaction_kernel,
+                use_multilevel_dependencies=True
             ),
             touch_vertex_first_time_compute_particle_update_kernel=construct_touch_vertex_first_time_call(
-                particle_set,touch_vertex_first_time_compute_particle_update_kernel,True
+                particle_set,
+                touch_vertex_first_time_compute_particle_update_kernel,
+                use_multilevel_dependencies=True
             ),
             touch_vertex_last_time_compute_particle_update_kernel=construct_touch_vertex_last_time_call(
-                particle_set,touch_vertex_last_time_compute_particle_update_kernel,True,current_step_alters_particle_position
+                particle_set,
+                touch_vertex_last_time_compute_particle_update_kernel,
+                use_multilevel_dependencies=True,
+                alter_particle_position_or_global_state=alter_particle_position_or_global_state
             ),
             prepare_traversal_kernel=prepare_traversal_kernel,
             unprepare_traversal_kernel=unprepare_traversal_kernel,
@@ -87,8 +94,6 @@ class UpdateParticle_MultiLevelInteraction_Sets(
           ::swift2::PendingDependencies  _pendingDependencies;
         """
         )
-
-
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
