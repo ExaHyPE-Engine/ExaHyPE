@@ -380,7 +380,7 @@ void exahype2::fd::tests::CCZ4KernelTest::prepareFieldData(
   for (int i=0;i<3;i++)
   for (int j=0;j<3;j++) {
     g[i][j]=phisq*g[i][j]; //\tilde{\gamma}_ij
-    K[i][j]=phisq*(K[i][j]- 1./3. * trK * g[i][j]); //\tilde{A}_ij
+    K[i][j]=phisq*(K[i][j]- 1./3. * trK * g[i][j]/phisq); //\tilde{A}_ij
   }
 
   Theta = 0.27579 + 0.25791 * x + 1.40488 * x * x +
