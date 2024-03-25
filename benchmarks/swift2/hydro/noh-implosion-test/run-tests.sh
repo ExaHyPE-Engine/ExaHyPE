@@ -39,5 +39,9 @@ do
   EXECUTABLE=noh2D.$REALISATION-asserts
   echo $EXECUTABLE
   ./$EXECUTABLE
+  
+  EXECUTABLE=noh2D.$REALISATION-test
+  echo $EXECUTABLE
+  ./$EXECUTABLE
 done
 

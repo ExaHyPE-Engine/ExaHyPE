@@ -8,7 +8,7 @@ export PYTHONPATH=$PYTHONPATH:../../../../python
 TIMESTEP_SIZE=0.0001
 #N_PART=2000
 PLOT_DELTA=0.0
-TREES=4
+TREES=8
 
 rm noh2D.*
 
