@@ -41,6 +41,9 @@ class UpdateParticle_MultiLevelInteraction_Sets(
 
 
         @param wait_for_all_tasks_to_finish_after_traversal: Boolean
+          If this one is set, we insert a wait into the unprepare traversal 
+          event. Each rank then waits for all tasks to be completed before
+          it continues. We have a strong synchronisation point.
 
         """
         if wait_for_all_tasks_to_finish_after_traversal:
@@ -73,7 +76,7 @@ class UpdateParticle_MultiLevelInteraction_Sets(
             unprepare_traversal_kernel=unprepare_traversal_kernel,
             additional_includes=additional_includes
             + """
-#include "tarch/multicore/Tasks.h"                
+#include "tarch/multicore/Tasks.h"
 #include "swift2/TaskNumber.h"                
                  """,
             active_particle_set=active_particle_set,
