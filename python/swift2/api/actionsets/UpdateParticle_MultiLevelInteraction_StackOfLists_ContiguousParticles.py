@@ -88,9 +88,7 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
             unprepare_traversal_kernel=unprepare_traversal_kernel,
             additional_includes=additional_includes
             + """
-#include "tarch/multicore/Tasks.h"                
-#include "swift2/VertexTask.h"                
-#include "swift2/CellTask.h"                
+#include "tarch/multicore/Tasks.h"
 #include "swift2/TaskNumber.h"                
                  """,
             active_particle_set=active_particle_set,
@@ -98,15 +96,21 @@ class UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles(
 
     def get_attributes(self):
         return (
-            super(
-                UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles,
-                self,
-            ).get_attributes()
-            + """
-          ::swift2::PendingDependencies  _childCellDependencies;
-        """
-        )
-
+            super(UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles, self).get_attributes()
+                + """
+                ::swift2::PendingDependencies  _pendingDependencies;
+            """
+            )
 
     def get_action_set_name(self):
         return __name__.replace(".py", "").replace(".", "_")
+
+
+    def get_body_of_operation(self, operation_name):
+        if operation_name == peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
+            return "_pendingDependencies.clear();"
+        else:
+            return super(
+                UpdateParticle_MultiLevelInteraction_StackOfLists_ContiguousParticles, self
+            ).get_body_of_operation(operation_name)
+            
