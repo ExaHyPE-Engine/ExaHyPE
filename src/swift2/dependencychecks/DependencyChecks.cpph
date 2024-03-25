@@ -172,7 +172,7 @@ static std::string swift2::dependencychecks::internal::outputParticle(
   const int                                                                              errors
 ) {
 
-  using PartType = std::remove_pointer<Particle>::type;
+  using PartType = typename std::remove_pointer<Particle>::type;
 
   const int nsteps  = static_cast<int>(PartType::DependencyChecksAlgorithmStepLastUpdated::count);
   const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
@@ -193,7 +193,7 @@ static std::string swift2::dependencychecks::internal::outputParticle(
   for (int s = 0; s < nstages; s++) {
     // all stage names that we account for
     msg << std::setw(ColumnWidth
-    ) << PartType::toString(static_cast<PartType::DependencyChecksPeanoEventUsedBySwift>(s));
+    ) << PartType::toString(static_cast<typename PartType::DependencyChecksPeanoEventUsedBySwift>(s));
   }
 
   // write out what particle has actually done
@@ -203,7 +203,7 @@ static std::string swift2::dependencychecks::internal::outputParticle(
     msg
       << std::endl
       << std::setw(ColumnWidth) << std::setw(ColumnWidth) << std::left
-      << PartType::toString(static_cast<PartType::DependencyChecksAlgorithmStepLastUpdated>(a));
+      << PartType::toString(static_cast<typename PartType::DependencyChecksAlgorithmStepLastUpdated>(a));
 
     // write out counters for sweep stages of that algorithm step
     for (int s = 0; s < nstages; s++) {
@@ -241,7 +241,7 @@ static std::string swift2::dependencychecks::internal::outputParticle(
   const int                                                                           errors
 ) {
 
-  using PartType = std::remove_pointer<Particle>::type;
+  using PartType = typename std::remove_pointer<Particle>::type;
 
   const int nsteps  = static_cast<int>(PartType::DependencyChecksInitStepLastUpdated::count);
   const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
@@ -262,7 +262,7 @@ static std::string swift2::dependencychecks::internal::outputParticle(
   for (int s = 0; s < nstages; s++) {
     // all stage names that we account for
     msg << std::setw(ColumnWidth
-    ) << PartType::toString(static_cast<PartType::DependencyChecksPeanoEventUsedBySwift>(s));
+    ) << PartType::toString(static_cast<typename PartType::DependencyChecksPeanoEventUsedBySwift>(s));
   }
 
   // write out what particle has actually done
@@ -272,7 +272,7 @@ static std::string swift2::dependencychecks::internal::outputParticle(
     msg
       << std::endl
       << std::setw(ColumnWidth) << std::setw(ColumnWidth) << std::left
-      << PartType::toString(static_cast<PartType::DependencyChecksInitStepLastUpdated>(a));
+      << PartType::toString(static_cast<typename PartType::DependencyChecksInitStepLastUpdated>(a));
 
     // write out counters for sweep stages of that algorithm step
     for (int s = 0; s < nstages; s++) {
@@ -315,7 +315,7 @@ static void swift2::dependencychecks::markAlgorithmStep(
             workOnParticle,
   int spacetreeId
 ) {
-  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
   const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
@@ -373,7 +373,7 @@ static void swift2::dependencychecks::markAlgorithmStep(
             workOnParticle,
   int spacetreeId
 ) {
-  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
   const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
@@ -432,7 +432,7 @@ static void swift2::dependencychecks::markInitStep(
       workOnParticle,
       int spacetreeId
 ) {
-  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int algorithmStepMarker = static_cast<int>(initStepMarkerEnum);
   const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
@@ -490,7 +490,7 @@ static void swift2::dependencychecks::markInitStep(
       workOnParticle,
       int spacetreeId
 ) {
-  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int algorithmStepMarker = static_cast<int>(initStepMarkerEnum);
   const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
@@ -551,7 +551,7 @@ void swift2::dependencychecks::checkAlgorithmStep(
       workOnParticle,
       int spacetreeId
 ) {
-  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
   const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
@@ -591,7 +591,7 @@ void swift2::dependencychecks::checkAlgorithmStep(
       workOnParticle,
       int spacetreeId
 ) {
-  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int algorithmStepMarker = static_cast<int>(algorithmStepMarkerEnum);
   const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
@@ -628,8 +628,7 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
     algorithmStep,
   int spacetreeId
 ) {
-
-  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int algorithmStepMarker = static_cast<int>(algorithmStep);
   const int touchVertexLastTime = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime
@@ -670,7 +669,7 @@ static void swift2::dependencychecks::checkInitStep(
     ::swift2::kernels::UpdateParticleAssignedToVertexPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle,
     int spacetreeId
 ) {
-  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int algorithmStepMarker = static_cast<int>(initStepMarkerEnum);
   const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
@@ -715,7 +714,7 @@ static void swift2::dependencychecks::checkInitStep(
   ::swift2::kernels::UpdateParticlePairWithinCellPredicate<typename std::remove_pointer<typename ParticleContainer::value_type>::type>     workOnParticle,
   int spacetreeId
 ) {
-  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int algorithmStepMarker = static_cast<int>(initStepMarkerEnum);
   const int sweepStageMarker    = static_cast<int>(sweepStageMarkerEnum);
@@ -748,8 +747,7 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
     initStep,
     int spacetreeId
 ) {
-
-  using PartType = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
 
   const int initStepMarker      = static_cast<int>(initStep);
   const int touchVertexLastTime = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::touchVertexLastTime
@@ -789,8 +787,7 @@ static void swift2::dependencychecks::checkParticlesAssignedToVertexInTouchLastT
 
 template <typename ParticleContainer>
 static void swift2::dependencychecks::clearDependencyChecksAlgorithmStep(const ParticleContainer& localParticles) {
-
-  using PartType    = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType    = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
   const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
   const int nsteps  = static_cast<int>(PartType::DependencyChecksAlgorithmStepLastUpdated::count);
 
@@ -805,8 +802,7 @@ static void swift2::dependencychecks::clearDependencyChecksAlgorithmStep(const P
 
 template <typename ParticleContainer>
 static void swift2::dependencychecks::clearDependencyChecksInitStep(const ParticleContainer& localParticles) {
-
-  using PartType    = std::remove_pointer<typename ParticleContainer::value_type>::type;
+  using PartType    = typename std::remove_pointer<typename ParticleContainer::value_type>::type;
   const int nstages = static_cast<int>(PartType::DependencyChecksPeanoEventUsedBySwift::count);
   const int nsteps  = static_cast<int>(PartType::DependencyChecksInitStepLastUpdated::count);
 
