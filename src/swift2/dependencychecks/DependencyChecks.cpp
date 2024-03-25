@@ -1,4 +1,4 @@
-#include "../dependencychecks/DependencyChecks.h"
+#include "DependencyChecks.h"
 
 
 std::string swift2::dependencychecks::toString(Invariant policy) {
