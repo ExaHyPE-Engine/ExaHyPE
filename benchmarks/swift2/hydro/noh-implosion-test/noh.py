@@ -285,10 +285,10 @@ if __name__ == "__main__":
         and args.realisation.split(".")[2] == Sorting_MultiscaleSort
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.particle_steps_onto_task_tree_multiscale_sort_sweeps_coalesced_memory
+            swift2.api.graphcompiler.particle_steps_onto_task_tree_multiscale_sort_coalesced_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_task_tree_multiscale_sort_sweeps_coalesced_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_task_tree_multiscale_sort_coalesced_memory
         )
     elif (
         args.realisation.split(".")[0] == Parallelisation_TaskTree
@@ -335,10 +335,10 @@ if __name__ == "__main__":
         and args.realisation.split(".")[2] == Sorting_MultiscaleSort
     ):
         project.algorithm_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.particle_steps_onto_task_graph_multiscale_sort_sweeps_coalesced_memory
+            swift2.api.graphcompiler.particle_steps_onto_task_graph_multiscale_sort_coalesced_memory
         )
         project.initialisation_steps_task_graph_compiler = (
-            swift2.api.graphcompiler.initialisation_steps_onto_task_graph_multiscale_sort_sweeps_coalesced_memory
+            swift2.api.graphcompiler.initialisation_steps_onto_task_graph_multiscale_sort_coalesced_memory
         )
     elif (
         args.realisation.split(".")[0] == Parallelisation_TaskGraph

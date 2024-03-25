@@ -161,7 +161,7 @@ def translate_one_step_of_species_into_mesh_traversal(
                 unprepare_traversal_kernel=step.unprepare_traversal_kernel,
                 additional_includes=step.includes,
                 active_particle_set=step.input_particles,
-                current_step_alters_particle_position=current_step_alters_particle_position,
+                alter_particle_position_or_global_state=current_step_alters_particle_position,
                 wait_for_all_tasks_to_finish_after_traversal=synchronise_after_each_mesh_traversal,
             )
         else:
@@ -333,14 +333,6 @@ def map_onto_separate_mesh_traversals_constructing_task_tree(
     )
 
 
-# ====================================
-# Public API functions
-# ====================================
-#
-# These functions are made available through the __init__.py file. They are all
-# "just" wrappers around the generic map_onto_separate_mesh_traversals() 
-# function calls, yet with different arguments.
-#
 def add_clear_task_number_to_initialisation_steps(algorithm_steps, 
                                                   species_sets, 
                                                   verbose):
