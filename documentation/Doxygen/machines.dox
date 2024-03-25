@@ -56,17 +56,17 @@ on this machine.
 
 - MPI production runs
 ~~~~~~~~~~~~~~~~~~~~~~
-./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran
+./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g -std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes" LDFLAGS="-fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran
 ~~~~~~~~~~~~~~~~~~~~~~
 - Performance analysis runs with single node tracing
 ~~~~~~~~~~~~~~~~~~~~~~
 module load vtune
-./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes -I${VTUNE_HOME}/vtune/latest/include" LDFLAGS="-qopenmp -g -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itt
+./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g -std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes -I${VTUNE_HOME}/vtune/latest/include" LDFLAGS="-qopenmp -g -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itt
 ~~~~~~~~~~~~~~~~~~~~~~
 - MPI performance analysis runs
 ~~~~~~~~~~~~~~~~~~~~~~
 module load vtune
-./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes" LDFLAGS="-qopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itac
+./configure CC=icpx CXX=icpx CXXFLAGS="-I${VTUNE_HOME}/vtune/latest/include -I${VT_ROOT}/include -Ofast -g -std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -qopenmp -Wno-unknown-attributes" LDFLAGS="-qopenmp -g -L${VT_LIB_DIR} -L${VTUNE_HOME}/vtune/latest/lib64" LIBS="-lVT ${VT_ADD_LIBS} -littnotify" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles --with-mpi=mpiicpc FC=gfortran --with-toolchain=itac
 ~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -289,7 +289,7 @@ On SuperMUC-NG Phase 2, we can basically rely on the standard Intel toolchain:
 ~~~~~~~~~~~~~~~~~~~~~~
 module load intel
 module load gcc
-./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g --std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes --gcc-toolchain=/dss/lrzsys/sys/spack/release/24.1.0/opt/x86_64/gcc/13.2.0-gcc-itoa7pi/" LDFLAGS="--gcc-toolchain=/dss/lrzsys/sys/spack/release/24.1.0/opt/x86_64/gcc/13.2.0-gcc-itoa7pi/ -fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles
+./configure CC=icpx CXX=icpx CXXFLAGS="-Ofast -g -std=c++20 -mtune=native -march=native -fma -fomit-frame-pointer -fiopenmp -Wno-unknown-attributes --gcc-toolchain=/dss/lrzsys/sys/spack/release/24.1.0/opt/x86_64/gcc/13.2.0-gcc-itoa7pi/" LDFLAGS="--gcc-toolchain=/dss/lrzsys/sys/spack/release/24.1.0/opt/x86_64/gcc/13.2.0-gcc-itoa7pi/ -fiopenmp -g" --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --enable-particles
 ~~~~~~~~~~~~~~~~~~~~~~
 
 
