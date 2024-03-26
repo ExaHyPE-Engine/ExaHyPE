@@ -8,7 +8,6 @@ from abc import abstractmethod
 import peano4
 
 from .MatrixGenerator import MatrixGenerator
-#from .BlockMatrix.block_matrix_dgpoisson2d import DGPoisson2dBlockMatrix
 from .BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
 
 class GaussLobatto(MatrixGenerator):
@@ -340,15 +339,19 @@ class GLMatrixFree(GaussLobatto):
 
   def get_cell_from_face_matrix(self):
     '''
-    @Alex the shape of this should be:
-    unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions rows (= 4)
-    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *Dimensions cols (= 16)
+    the shape of this should be:
+    unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions rows (= 4 for 2D and 1st order)
+    solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *Dimensions cols (= 16 for 2D and 1st order)
     
     solutions_per_face_node counts u and q
     multiply further by number of nodes per face
     multiply further by number of faces
 
     '''
+
+    cell_unknowns = self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions # number of cell unknowns
+    f_unknowns_per_face = self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) # q^f and u^f unknowns per face
+    f_unknowns = f_unknowns_per_face * 2 * self.Dimensions # total number of q^f and u^f unknowns on all faces 
     
     # SCALING: scaled by h
     A_CF_q_left   = self.block_matrix._A_CF[(0,2)]["left"][(0,1)]
@@ -365,33 +368,19 @@ class GLMatrixFree(GaussLobatto):
     A_CF_u_right  = self.block_matrix._A_CF[(0,5)]["right"][(0,0)] # + block_matrix._A_CF[(0,5)]["right"][(0,1)]
     A_CF_u_top    = self.block_matrix._A_CF[(0,5)]["top"][(0,0)] # + block_matrix._A_CF[(0,5)]["top"][(1,0)]
 
-    # A_CF_left = np.concatenate((A_CF_q_left, A_CF_u_left), axis=1)
-    # A_CF_bottom = np.concatenate((A_CF_q_bottom, A_CF_u_bottom), axis=1)
-    # A_CF_right = np.concatenate((A_CF_q_right, A_CF_u_right), axis=1)
-    # A_CF_top = np.concatenate((A_CF_q_top, A_CF_u_top), axis=1)
+    assert self.Dimensions == 2, "Only works for 2D since DGPoisson2dPenaltyBlockMatrix is currently 2D-specific"
 
-    # A_CF_result = np.concatenate((A_CF_left, A_CF_bottom, A_CF_right, A_CF_top), axis=1)
-    
-    # return A_CF_result
-   
-    matrix_0 = np.zeros((self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
-                      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 * self.Dimensions))
-    matrix_1 = np.zeros((self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions,
-                      self._solutions_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 * self.Dimensions))
-    # Keep specific for debugging
-    assert self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here..."
+    # select indices corresponding to q^f and u^f unknowns
+    q_indices = [ index for index in range(f_unknowns) if (index % f_unknowns_per_face) < ( self.poly_degree + 1 ) ** (self.Dimensions-1) ]
+    # example for degree = 1: index%4 < 2 selects q_indices = [0,1, 4,5, 8,9, 12,13] out of range(16)
+    u_indices = [ index for index in range(f_unknowns) if index not in q_indices]
 
-    matrix_0[ :, [2,3] ] = A_CF_u_left
-    matrix_0[ :, [6,7] ] = A_CF_u_bottom
-    matrix_0[ :, [10,11] ] = A_CF_u_right
-    matrix_0[ :, [14,15] ] = A_CF_u_top
+    # allocate matrices according to their scaling factors
+    matrix_0 = np.zeros((cell_unknowns, f_unknowns)) # scaled by h^0
+    matrix_1 = np.zeros((cell_unknowns, f_unknowns)) # scaled by h^1
+    matrix_0[ :, u_indices ] = np.concatenate((A_CF_u_left, A_CF_u_bottom, A_CF_u_right, A_CF_u_top), axis=1)
+    matrix_1[ :, q_indices ] = np.concatenate((A_CF_q_left, A_CF_q_bottom, A_CF_q_right, A_CF_q_top), axis=1)
 
-    matrix_1[ :, [0,1] ] = A_CF_q_left
-    matrix_1[ :, [4,5] ] = A_CF_q_bottom
-    matrix_1[ :, [8,9] ] = A_CF_q_right
-    matrix_1[ :, [12,13] ] = A_CF_q_top
-    
-    
     output_matrices = [ matrix_0, matrix_1 ]
     output_scalings = [ 0, 1 ]
 
