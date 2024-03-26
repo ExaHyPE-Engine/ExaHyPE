@@ -236,15 +236,15 @@ void exahype2::fd::tests::CCZ4KernelTest::AppleWithAppleTest() {
 
   //examine the output, notice voulme index should between [3,26]^3
   //tarch::la::Vector<3, int> volumeIndex({15,15,15});
-  tarch::la::Vector<3, int> volumeIndex({8,20,17});
-  //tarch::la::Vector<3, int> volumeIndex({23,9,18});
+  //tarch::la::Vector<3, int> volumeIndex({8,20,17});
+  tarch::la::Vector<3, int> volumeIndex({23,9,18});
 
   //15,15,15
   //double dataArrayOfGRChombo[25]={-1.01737, -0.952962, 1.5358, 2.07569, -0.274332, -1.34847, 4.52609, 1.69924, 0.581672, -1.01265, 1.01734, -3.28122, -2.00355, 3.42196, 23.2832, 0.698199, 26.806, -2.87506, -1.21849, -4.32589, 4.44389, 18.9259, -2.17062, -11.1472, -0.0253941};
   //8,20,17
-  double dataArrayOfGRChombo[25]={-1.39787, -0.754864, 1.71128, 1.41365, 1.63204, -0.675397, 6.08035, 2.31647, 1.3964, -1.59352, 1.60353, -4.44641, -0.945263, 2.65077, 36.1263, 2.48858, 36.1493, -5.74057, -4.27386, -8.90803, 3.83137, 29.8071, -3.80586, -10.7919, -0.0296434}; 
+  //double dataArrayOfGRChombo[25]={-1.39787, -0.754864, 1.71128, 1.41365, 1.63204, -0.675397, 6.08035, 2.31647, 1.3964, -1.59352, 1.60353, -4.44641, -0.945263, 2.65077, 36.1263, 2.48858, 36.1493, -5.74057, -4.27386, -8.90803, 3.83137, 29.8071, -3.80586, -10.7919, -0.0296434}; 
   //23,9,18
-  //double dataArrayOfGRChombo[25]={-3.1866, 0.365012, 3.35262, 0.0372327, 3.36914, 1.34624, 4.88302, 3.09191, 0.296349, -3.06936, 0.936401, -2.12479, 3.00939, 9.47752, 35.5824, -9.94656, 42.4051, -0.753163, 3.48535, -2.7644, 10.7661, 34.7114, -11.501, -9.21531, -0.359624};
+  double dataArrayOfGRChombo[25]={-3.1866, 0.365012, 3.35262, 0.0372327, 3.36914, 1.34624, 4.88302, 3.09191, 0.296349, -3.06936, 0.936401, -2.12479, 3.00939, 9.47752, 35.5824, -9.94656, 42.4051, -0.753163, 3.48535, -2.7644, 10.7661, 34.7114, -11.501, -9.21531, -0.359624};
 
   int checkingQ=0;
   exahype2::enumerator::AoSLexicographicEnumerator QInEnumerator (1,numberOfDoFsPerAxisInCell,haloSize,unknowns,auxiliaryVariables);
@@ -274,7 +274,7 @@ void exahype2::fd::tests::CCZ4KernelTest::AppleWithAppleTest() {
     <<2*patchData.QIn[0][QInEnumerator(0, volumeIndex, 54)]*patchData.QOut[0][QOutEnumerator(0, volumeIndex, 54)]
     <<std::endl;*/
 
-  for (checkingQ=0;checkingQ<23;checkingQ++){
+  /*for (checkingQ=0;checkingQ<23;checkingQ++){
     std::cout<<"dtQ["<<checkingQ<<"]\t=  "<<patchData.QOut[0][QOutEnumerator(0, volumeIndex, checkingQ)]
       <<"\tGRChombo result = "<<dataArrayOfGRChombo[checkingQ]<<"\t Ratio = "
       <<100*patchData.QOut[0][QOutEnumerator(0, volumeIndex, checkingQ)]/dataArrayOfGRChombo[checkingQ]
@@ -291,8 +291,15 @@ void exahype2::fd::tests::CCZ4KernelTest::AppleWithAppleTest() {
     <<2*patchData.QIn[0][QInEnumerator(0, volumeIndex, 54)]*dtphi
     <<"\tGRChombo result = "<<dataArrayOfGRChombo[24]<<"\t Ratio = "
     <<100*2*patchData.QIn[0][QInEnumerator(0, volumeIndex, 54)]*dtphi/dataArrayOfGRChombo[24]
-    <<"%"<<std::endl;
+    <<"%"<<std::endl;*/
 
+  /*for (checkingQ=0;checkingQ<23;checkingQ++){
+    validateNumericalEqualsWithParams3(0, 1, 
+      patchData.toString(), 
+      patchData.QOut[0][QOutEnumerator(0, volumeIndex, checkingQ)],
+      volumeCoordinates
+    );
+  }*/
 
 
   #endif
