@@ -112,6 +112,9 @@ int swift2::dependencychecks::internal::checkFutureStages(
 
   for (int step = currentStep + (firstFutureStepToCheck==0 ? 1 : firstFutureStepToCheck); step < nsteps; step++) {
     for (int stage = 0; stage < nstages; stage++) {
+      const int index     = step * nstages + stage;
+      const int partStage = sweepStateProgression[index];
+
       if (partStage<0) errors++;
     }
   }
