@@ -43,11 +43,6 @@ doxygen template holds info), and we summarise their common interface here:
 
 
 
-<!--
-/home/tobias/git/Peano/python/peano4/toolbox/particles/ParticleSet_ScatteredOnHeap_IndexedByStdContainer.template.h
--->
-
-
 # Set traversal operations
 
 Analogous to a C++ standard container, they offer
