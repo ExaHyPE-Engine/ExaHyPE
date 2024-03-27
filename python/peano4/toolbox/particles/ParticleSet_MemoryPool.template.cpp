@@ -77,19 +77,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(), (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
       marker.x(), marker.h(), spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(" + marker.toString() + ")"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
     toolbox::particles::assignmentchecks::eraseParticle(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(), (*iteratorToExistingCopy)->getParallelState()==DoFType::ParallelState::Local,
       spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(" + marker.toString() + ")"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
     toolbox::particles::assignmentchecks::assignParticleToVertex(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(), neighbourParticle->getParallelState()==DoFType::ParallelState::Local,
       marker.x(), marker.h(), spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(" + marker.toString() + ")"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
     
     // See docu of replace(): it will delete p
@@ -116,7 +116,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(
       toolbox::particles::assignmentchecks::pruneTypeName<DoFType>(),
       neighbourParticle->getX(), neighbourParticle->getParallelState()==DoFType::ParallelState::Local,
       marker.x(), marker.h(), spacetreeId,
-      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(" + marker.toString() + ")"
+      "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeWithParticle(marker=" + marker.toString() + ")"
     );
   }
 }
