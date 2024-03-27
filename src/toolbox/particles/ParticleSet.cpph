@@ -304,7 +304,7 @@ typename toolbox::particles::ParticleSet<T>::ParticleList toolbox::particles::Pa
 ) {
   return _sieveParticles.getParticlesToBeSievedIntoVertex(
     marker, 
-    false,     // removeReturnedParticlesFromSet
+    true,     // removeReturnedParticlesFromSet
     true,      // onlyReturnParticlesThatWillBeLocal
     false      // don't have to lock underlying semaphore, as I don't 
                // alter sieve set
