@@ -7,8 +7,10 @@ from abc import abstractmethod
 
 import peano4
 
-from .MatrixGenerator import MatrixGenerator
-from .BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
+# from .MatrixGenerator import MatrixGenerator
+# from .BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
+from MatrixGenerator import MatrixGenerator
+from BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
 
 class GaussLobatto(MatrixGenerator):
   '''
@@ -143,7 +145,8 @@ class GaussLobatto(MatrixGenerator):
     return output
 
   def get_cell_system_matrix_for_laplacian(self):
-    '''Create a cell-cell mass matrix for $\nabla p \cdot \nabla v$
+    '''
+    Create a cell-cell mass matrix for $\nabla p \cdot \nabla v$
     '''
     # dim    = self.cell_nodes * self.unknowns_per_cell_node
     # output = np.zeros((dim,dim))
@@ -376,8 +379,8 @@ class GLMatrixFree(GaussLobatto):
     u_indices = [ index for index in range(f_unknowns) if index not in q_indices]
 
     # allocate matrices according to their scaling factors
-    matrix_0 = np.zeros((cell_unknowns, f_unknowns)) # scaled by h^0
-    matrix_1 = np.zeros((cell_unknowns, f_unknowns)) # scaled by h^1
+    matrix_0 = np.zeros((cell_unknowns, f_unknowns)) # scaled by h**0
+    matrix_1 = np.zeros((cell_unknowns, f_unknowns)) # scaled by h**1
     matrix_0[ :, u_indices ] = np.concatenate((A_CF_u_left, A_CF_u_bottom, A_CF_u_right, A_CF_u_top), axis=1)
     matrix_1[ :, q_indices ] = np.concatenate((A_CF_q_left, A_CF_q_bottom, A_CF_q_right, A_CF_q_top), axis=1)
 
@@ -391,7 +394,7 @@ class GLMatrixFree(GaussLobatto):
 
     return output_matrices, output_scalings
   
-  # SCALING: Consider our case with 4x16 matrix:
+    # SCALING: Consider our case with 4x16 matrix:
     #
     #    by h        by h        by 1        by 1        by h        by h        by 1        by 1        by h        by h        by 1        by 1        by h        by h        by 1        by 1      
     # [[ 0.33333333  0.16666667  0.33333333  0.16666667 -0.33333333 -0.16666667  0.33333333  0.16666667  0.          0.         -0.33333333 -0.16666667  0.          0.         -0.33333333 -0.16666667]
@@ -414,7 +417,12 @@ class GLMatrixFree(GaussLobatto):
 
     """
 
-    ### Compute the normal gradient projections
+    cell_unknowns = self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions # number of cell unknowns
+    nodes_per_face = ( self.poly_degree + 1 ) ** (self.Dimensions-1)
+    proj_unknowns_per_face = 2 * self._projections_per_face_node * nodes_per_face # q^-+, u^-+ projection unknowns per face
+    proj_unknowns = proj_unknowns_per_face * 2 * self.Dimensions # total number of q^-+, u^-+ projection unknowns on all faces
+
+    ### Compute the gradient projections
     A_qp_u_left = self.block_matrix._A_FC[(0,0)]["left"][(0,0)]
     A_qp_u_bottom = self.block_matrix._A_FC[(0,0)]["bottom"][(0,0)]
     A_qm_u_right = self.block_matrix._A_FC[(1,0)]["right"][(0,0)]
@@ -448,33 +456,27 @@ class GLMatrixFree(GaussLobatto):
     P_um_u_right = -np.dot(np.linalg.inv(M_um_um_right), A_um_u_right)
     P_um_u_top = -np.dot(np.linalg.inv(M_um_um_top), A_um_u_top)
 
-    # Components of the resulting matrix  
-    # SCALING: Resulting matrix is made by concatenating P_q matrices and P_u matrices in the following order
-    # P_left = np.concatenate((P_qp_u_left, P_up_u_left), axis=0)
-    # P_bottom = np.concatenate((P_qp_u_bottom, P_up_u_bottom), axis=0)
-    # P_right = np.concatenate((P_qm_u_right, P_um_u_right), axis=0)
-    # P_top = np.concatenate((P_qm_u_top, P_um_u_top), axis=0)
 
-    # Add Zeros for redundant projections
-    # Zeros = np.zeros_like(P_left)
-    # return np.concatenate((Zeros, P_left, Zeros, P_bottom, P_right, Zeros, P_top, Zeros), axis=0)
+    assert self.Dimensions == 2, "Only works for 2D since DGPoisson2dPenaltyBlockMatrix is currently 2D-specific"
+    # q^\pm - gradient projections, scaled by h**-1
+    matrix_0 =  np.zeros((proj_unknowns, cell_unknowns)) # should be 32x4 for 2D 1st order
+    # u^\pm - solution projections, scaled by h**0
+    matrix_1 =  np.zeros((proj_unknowns, cell_unknowns)) # should be 32x4 for 2D 1st order
     
-    # Keep specific for debugging
-    assert self.Dimensions == 2 and self.poly_degree == 1, "Please fix hardcoded stuff here..."
-    # q^\pm - gradient projections, scaled by h^-1
-    matrix_0 =  np.zeros((2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions,
-                      self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions)) # should be 32x4 for 2D 1st order
-    matrix_0[ [4,5],   : ] = P_qp_u_left
-    matrix_0[ [12,13], : ] = P_qp_u_bottom
-    matrix_0[ [16,17], : ] = P_qm_u_right
-    matrix_0[ [24,25], : ] = P_qm_u_top
-    # u^\pm - solution projections, scaled by h^0
-    matrix_1 =  np.zeros((2 * self._projections_per_face_node * ( self.poly_degree + 1 ) ** (self.Dimensions-1) * 2 *self.Dimensions,
-                      self.unknowns_per_cell_node * ( self.poly_degree + 1 ) ** self.Dimensions)) # should be 32x4 for 2D 1st order
-    matrix_1[ [6,7],   : ] = P_up_u_left
-    matrix_1[ [14,15], : ] = P_up_u_bottom
-    matrix_1[ [18,19], : ] = P_um_u_right
-    matrix_1[ [26,27], : ] = P_um_u_top
+    # select indices corresponding to q^+- and u^+- unknowns
+    q_m_indices = [ index for index in range(proj_unknowns) if                       (index % proj_unknowns_per_face) < nodes_per_face ]
+    u_m_indices = [ index for index in range(proj_unknowns) if     nodes_per_face <= (index % proj_unknowns_per_face) < 2 * nodes_per_face ]
+    q_p_indices = [ index for index in range(proj_unknowns) if 2 * nodes_per_face <= (index % proj_unknowns_per_face) < 3 * nodes_per_face ]
+    u_p_indices = [ index for index in range(proj_unknowns) if 3 * nodes_per_face <= (index % proj_unknowns_per_face) < 4 * nodes_per_face ]
+    # example for degree = 1: index%8 < 2 selects q_m_indices = [0,1, 8,9, 16,17, 24,25] out of range(32)
+
+    Zeros = np.zeros_like(P_qp_u_left)
+    # In general, Zeros can be replaced by corresponding matrices from BlockMatrix, as they are all-zeros anyway
+    matrix_0[ q_p_indices, : ] = np.concatenate((P_qp_u_left, P_qp_u_bottom, Zeros, Zeros), axis=0)  
+    matrix_0[ q_m_indices, : ] = np.concatenate((Zeros, Zeros, P_qm_u_right, P_qm_u_top),   axis=0)
+
+    matrix_1[ u_p_indices, : ] = np.concatenate((P_up_u_left, P_up_u_bottom, Zeros, Zeros), axis=0)
+    matrix_1[ u_m_indices, : ] = np.concatenate((Zeros, Zeros, P_um_u_right, P_um_u_top),   axis=0)
 
 
     output_matrices = [ matrix_0, matrix_1 ]
@@ -552,3 +554,9 @@ class GLMatrixFree(GaussLobatto):
     1 for scale factor. Hardcoding the number
     """
     return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]
+
+
+if __name__ == "__main__":
+  GL = GLMatrixFree(Dimensions=2, poly_degree=2)
+  print(f'Created {GL = }')
+  GL.get_face_from_cell_matrix()
