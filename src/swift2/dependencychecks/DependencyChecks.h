@@ -96,6 +96,25 @@ namespace swift2 {
        * another assertion in there, we won't get the full output.
        *
        *
+       * ## Realisation
+       *
+       * I originally inserted some assertions of the type
+       *
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       * assertion3(particle->getDependencyChecksAlgorithmStepUpdates(i) >= 0, particle->getDependencyChecksAlgorithmStepUpdates(i), i, particle->toString() );
+       * ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       *
+       * into the source code. While this seems to be convenient (check that
+       * there's no garbage here), it is the wrong place to add these
+       * assertions: If an assertion fails due to garbage somewhere and wants
+       * to plot the particle status, then the plotting itself should not raise
+       * yet another assertion. Therefore, I now dump the value as "invalid"
+       * and outsource the actual consistency check ensuring that a value is
+       * not invalid to checkFutureStages() and checkPastStages().
+       *
+       *
+       *
+       *
        * @param particle: the problematic particle
        * @param algorithmStepMarkerEnum: Enum representing algorithm step particle is currently in
        * @param sweepStageMarkerEnum: Enum representing traversal sweep stage particle is currently in
