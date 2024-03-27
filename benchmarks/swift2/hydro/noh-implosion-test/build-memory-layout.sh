@@ -8,6 +8,7 @@ export PYTHONPATH=$PYTHONPATH:../../../../python
 TIMESTEP_SIZE=0.0001
 #N_PART=2000
 PLOT_DELTA=0.0
+TREES=8
 
 rm noh2D.*
 
@@ -44,15 +45,16 @@ for REALISATION in domain-decomposition.scattered.bucket-sort.no-optimisation do
                    task-graph.global-continuous.multiscale-sort.no-optimisation task-graph.global-continuous.multiscale-sort.outer-guards \
                    task-graph.global-continuous.multiscale-sort.vectorise-all task-graph.global-continuous.multiscale-sort.vectorise-distance-checks
 do
+  clear
   echo build $REALISATION
   N_PART=1024
   PLOT_DELTA=0.0
   END_TIME=0.1
-  python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION
+  python3 noh.py --trees $TREES -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION
   
   N_PART=120
   PLOT_DELTA=0.001
-  python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION-test
+  python3 noh.py --trees $TREES -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m release -o noh2D.$REALISATION-test
   #
   # See remarks on correctness checks in README.dox in the section "Validate correctness"
   #
@@ -61,7 +63,7 @@ do
   N_PART=120
   END_TIME=0.0005
   PLOT_DELTA=$END_TIME
-  python3 noh.py -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m asserts -o noh2D.$REALISATION-asserts
+  python3 noh.py --trees $TREES -dt $TIMESTEP_SIZE -et $END_TIME -np $N_PART -plot $PLOT_DELTA -rea $REALISATION -v -m asserts -o noh2D.$REALISATION-asserts
   #
   # See remarks on correctness checks in README.dox in the section "Validate correctness"
   #

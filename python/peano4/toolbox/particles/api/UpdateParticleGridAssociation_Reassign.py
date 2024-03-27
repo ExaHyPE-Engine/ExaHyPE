@@ -4,6 +4,9 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 from .AbstractUpdateParticleGridAssociation import AbstractUpdateParticleGridAssociation
+from .UpdateParticleGridAssociation_LiftDrop import (
+    UpdateParticleGridAssociation_LiftDrop,
+)
 
 import jinja2
 
@@ -129,6 +132,8 @@ class UpdateParticleGridAssociation_Reassign(AbstractUpdateParticleGridAssociati
         )
 
         self._drop_into_hanging_vertices = drop_into_hanging_vertices
+
+    _Template_Sieve = UpdateParticleGridAssociation_LiftDrop._Template_Sieve
 
     """
 

@@ -120,6 +120,23 @@ class UpdateParticleGridAssociation_LiftDrop(AbstractUpdateParticleGridAssociati
             particle_set, guard
         )
 
+    _Template_Sieve = jinja2.Template(
+        """
+  if ( vertexdata::{{PARTICLES_CONTAINER}}::hasParticlesToBeSievedIntoVertices() ) {
+    auto sievedParticles = vertexdata::{{PARTICLES_CONTAINER}}::getParticlesToBeSievedIntoVertex(
+      marker
+    );
+    
+    for (auto& newParticle: sievedParticles) {
+      _numberOfDropsFromSieveSet++;      
+      fineGridVertex{{PARTICLES_CONTAINER}}.mergeWithParticle( newParticle, marker, _spacetreeId );
+    }
+
+    assertion1( fineGridVertex{{PARTICLES_CONTAINER}}.isValid(), fineGridVertex{{PARTICLES_CONTAINER}}.toString() );
+  }
+"""
+    )
+
     """!
   
   Takes those particles which are not within h/2 reach of a vertex and lift those.

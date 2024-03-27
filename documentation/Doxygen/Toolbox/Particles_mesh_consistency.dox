@@ -1,6 +1,6 @@
 /**
 
-@page page_toolbox_particles_mesh_consistency Mesh data consistency
+@page page_toolbox_particles_mesh_consistency Sorting: Preserving the mesh-particle data consistency
 
 If a particle moves or changes its search radius, it might be associated
 to the wrong vertex. Consequently, it is important to be always aware of
@@ -33,6 +33,7 @@ It is the subsequent grid sweep that then sorts the particles again into the
 right resolution of the mesh plus associates it with the right vertex.
 So it needs access to UpdateParticleGridAssocation.
 
+
 Please note that you will need potentially multiple follow-up action sets
 aka mesh sweeps: 
 In the first sweep, all particles are put into the right place in space and 
@@ -41,16 +42,6 @@ In the second sweep, we drop them.
 Throughout the drop, we might drop them through a horizontal tree cut.
 We cannot handle this, so have to send out the particle through message passing
 and then drop once more.
-
-
-A similar argument holds if you parallelise:
-If a particle leaves a domain, the owning tree sends it out by the end of the
-mesh sweep.
-The particle is now in transition.
-It is the subsequent grid sweep which works it into the target tree and updates
-its parallel state.
-
-
 
 
 While both a position update of a particle and an
@@ -63,29 +54,15 @@ will simply reside on the coarser level until you decide to issue a new
 sort anyway.
 
 
+# Particle storage
+
 The way how we sort particles is not decoupled from the way that we store the 
 particles. If the particles are all scattered over the memory, you can sort in 
 various ways. However, if you want to store particles en bloc (to vectorise, e.g.)
-then it is important to understand that your sorting has to take this storage
-constraint into account. Some of these aspects are discussed on 
+then it is important to understand that your sorting will likely destory your nice memory layout.
+You will have to reconsolidate (move memory around) after the sorting.
+Some of these aspects are discussed on 
 @ref toolbox_particles_memorypool "in the context of memory pools". 
-
-
-# Tunneling
-
-Tunneling means that a particle moves more than one mesh cell per time
-step. They jump or tunning through cells.
-In the context of Peano's multiscale tree structure, this is equivalent to
-particles which travel more than their search radius per step.
-
-
-Tunneling arises if search radii change suddenly, and if meshes are extremely
-refined where they should likely not refine.
-It also arises if you have particles which do not or only weakly interact 
-with neighbours.
-Peano does support tunneling in principle, but you can tell the update script
-if you want to get a warning if particles tunnel - in some applications, this is
-unphysical.
 
 
 
@@ -168,6 +145,77 @@ for details on these pitfalls. Once again however, I maintain two different part
 states, i.e. a parallel state and a new parallel state. You may assume that the 
 parallel state as used above is always consistent throughout one mesh sweep, but 
 might change between two sweeps.
+
+
+# Tunneling
+
+Tunneling means that a particle moves more than one mesh cell per time
+step. They ***jump*** or ***tunnel*** through cells.
+In the context of Peano's multiscale tree structure, this is equivalent to
+particles which travel more than their search radius per step.
+
+
+Tunneling arises whenever search radii change suddenly, meshes are extremely
+refined where they should likely not refine, and particles suddenly accelerate
+or are inserted.
+It also arises if you have particles which do not or only weakly interact 
+with neighbours or the environment and hence have velocities which are higher
+than the maximum signal velocity otherwise.
+
+
+
+Peano does support tunneling in principle, but you can tell the update script
+if you want to get a warning if particles tunnel - in some applications, this is
+unphysical.
+Tunneling is not handled separatedly.
+Instead, we simply lift a particle to a coarser level on which we can 
+accommodate the movement by just pushing the particle one cell.
+After it is pushed, we drop the particle again.
+
+
+# Parallelisation
+
+Peano's sorting in the context is shaped by the observation that we only ever
+let particles move one cell at a time.
+If this is violated, we first lift particles to a coarser level and then drop
+them again (this is not totally true - see below - but overall indeed a 
+guiding principle).
+
+
+If two cells are held by different trees and a particle leaves the domain of 
+tree A, we send it out at the end of the traversal.
+In the next traversal, it will be received by B (and subsequently dropped
+within the tree hierarchy).
+
+
+# Sieving
+
+Sieving is Peano's word for global sorting: 
+There are cases, where we might not be able to lift particles easily, or we 
+might not want to.
+In this case, we move the particle into the sieve set.
+The sieve set is the set of particles that we cannot push into the right
+cell in an iteration.
+
+In the subsequent mesh traversal, the particles from the sieve set are sieved
+straight into the right cell.
+Sieving means bucket sorting.
+While this is a robust way to handle particle sorting, it can become very
+expensive if the sieve sets grow large.
+
+Each particle type has a sieve set tied to it. 
+So you can tell any particle set that one if its particles has to be lifted
+(moved) into the sieve set and you can ask the global sieve set tied to a 
+particle at any point if there are still particles within that set that have
+to be dumped into the domain.  
+All of this is realised through a static attribute 
+toolbox::particles::ParticleSet::_sieveParticles which holds and instance
+of toolbox::particles::SieveParticles.
+
+Various sieving strategies exist. They are realised by the different subclasses
+of peano4.toolboxes.particles.api.AbstractUpdateParticleGridAssociation.
+However, this superclass holds all the relevant docu and an overview of the
+usage of the sieve set.
 
 
 */

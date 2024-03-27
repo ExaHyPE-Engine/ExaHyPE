@@ -21,7 +21,8 @@ namespace toolbox {
  *
  * Particle sets differ in the way they actually manage the particles. However,
  * they all share common stats, operations, ... This is covered by this class.
- *
+ * All particle types (species) are also tied to a sieve set, which is also
+ * class attribute of this abstract particle supertype.
  *
  *
  * ## Rationale: static attributes vs static aggregation
@@ -47,6 +48,19 @@ namespace toolbox {
  * outsourced into a separate class. All the stats, initialisation and whatever
  * generic stuff is out there is collocated in this very routine.
  *
+ *
+ * ## Sieve semantics
+ * 
+ * Whenever a particle has to be added to the sieve set, the underlying action 
+ * set will inform the particle set or vertex, respectively, to move the 
+ * particle into the sieve set. This step has to be protected by a semaphore, 
+ * as relaised in SieveParticles. After the mesh sweep, all the particles are 
+ * exchanged between ranks, and then we have to sort them into the mesh again.
+ * 
+ * There are two different modes how to use this sieve set: We can either work
+ * against a global sieve set, or we can make each thread first create a copy
+ * of all the particles to be sieved and then hand out thread-local copies. 
+ * Which variant to pick is a choice to be made by the sorting action set.
  */
 template <typename T>
 class toolbox::particles::ParticleSet {
@@ -142,21 +156,26 @@ public:
   static void finishedTraversal();
 
   /**
+   * @return A copy of all the particles that have to be sieved.
+   */
+  static SieveParticles cloneParticlesToBeSieved();
+
+  /**
    * Make routine from SieveParticles public
    *
    * Delegate through. This way, we don't have to expose the actual
    * sieve object. Usually combined with hasParticlesToBeSievedIntoVertices()
    * as guard, which makes the querying faster.
+   * 
+   * This operation always removes particles from the sieve set, and it 
+   * sort exclusively local particles into the domain.
    *
-   * @see SieveParticles::getParticlesToBeSievedIntoVertex() for parameter
-   *   descriptions.
+   * @see SieveParticles::getParticlesToBeSievedIntoVertex()
    */
   static ParticleList getParticlesToBeSievedIntoVertex(
-    const peano4::datamanagement::VertexMarker& marker,
-    bool  removeReturnedParticlesFromSet,
-    bool  onlyReturnParticlesThatWillBeLocal
-  );
-
+    const peano4::datamanagement::VertexMarker& marker
+ );
+    
   /**
    * Make routine from SieveParticles public
    *

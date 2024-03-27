@@ -6,6 +6,10 @@
 #include "ParticleUpdatePredicates.h"
 
 
+#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Lock.h"
+
+
 namespace swift2 {
   namespace kernels {
     /**
@@ -422,6 +426,14 @@ namespace swift2 {
          auto f
     );
 
+    namespace internal {
+      /**
+       * If particles on multiple levels interact, we have to be very
+       * careful and ensure that multiple subcells (if mapped onto tasks)
+       * do not write to the same coarse grid particles concurrently.
+       */
+      extern tarch::multicore::BooleanSemaphore  _multiscaleInteractionSemaphore;
+    }
   } // namespace kernels
 } // namespace swift2
 

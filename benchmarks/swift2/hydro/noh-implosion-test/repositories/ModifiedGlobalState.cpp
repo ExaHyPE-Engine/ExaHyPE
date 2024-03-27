@@ -13,13 +13,17 @@
 #include "vertexdata/HydroPartSet.h"
 
 
+#include "toolbox/loadbalancing/strategies/SpreadOutOnceGridStagnates.h"
+
 
 namespace benchmarks {namespace swift2 {namespace noh {namespace repositories {
 
 
 tarch::logging::Log _log( "benchmarks::swift2::noh::repositories::GlobalState" );
 
-toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates              loadBalancer(new toolbox::loadbalancing::DefaultConfiguration());
+toolbox::loadbalancing::strategies::SpreadOutOnceGridStagnates              loadBalancer(new toolbox::loadbalancing::DefaultConfiguration(2));
+
+
 bool rerunPreviousGridSweep() {
   bool result = false;
   result |= vertexdata::HydroPartSet::getNumberOfDropsIntoHorizontalTreeDecomposition()>0;
