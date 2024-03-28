@@ -7,10 +7,8 @@ from abc import abstractmethod
 
 import peano4
 
-# from .MatrixGenerator import MatrixGenerator
-# from .BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
-from MatrixGenerator import MatrixGenerator
-from BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
+from .MatrixGenerator import MatrixGenerator
+from .BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
 
 class GaussLobatto(MatrixGenerator):
   '''
@@ -554,9 +552,3 @@ class GLMatrixFree(GaussLobatto):
     1 for scale factor. Hardcoding the number
     """
     return [super(GLMatrixFree,self).get_cell_mass_matrix()], [2]
-
-
-if __name__ == "__main__":
-  GL = GLMatrixFree(Dimensions=2, poly_degree=2)
-  print(f'Created {GL = }')
-  GL.get_face_from_cell_matrix()
