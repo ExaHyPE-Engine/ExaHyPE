@@ -12,7 +12,6 @@ from .actionsets.PlotDGDataInPeanoBlockFormat import PlotDGDataInPeanoBlockForma
 
 class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
   """!
-  \f{eqnarray*}{\f}
 
   Discontinuous Galerkin Solver
   

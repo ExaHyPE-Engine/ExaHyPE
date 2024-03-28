@@ -114,6 +114,11 @@ restriction_matrix_scaling = [0]
 injection_matrix = [intergrid_operators.injection()]
 injection_matrix_scaling = [0]
 
+mghype.matrixfree.solvers.api.actionsets.prepare_and_order_DG_CG_solvers(
+    solver,                      # dg_solver
+    correction_equation_solver,  # cg_solver
+)
+
 solver.preprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.ComputeAndRestrictBiasedHierarchicalResidual(
     solver,                      # dg_solver
     correction_equation_solver,  # cg_solver
@@ -129,11 +134,6 @@ solver.postprocessing_action_set = mghype.matrixfree.solvers.api.actionsets.Inje
     prolongation_matrix_scaling,
     injection_matrix,
     injection_matrix_scaling,
-)
-
-mghype.matrixfree.solvers.api.actionsets.order_DG_CG_solvers(
-    solver,                      # dg_solver
-    correction_equation_solver,  # cg_solver
 )
 #! [Coupling]
 

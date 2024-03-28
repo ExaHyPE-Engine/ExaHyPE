@@ -4,9 +4,23 @@ import peano4
 import jinja2
 
 
-def order_DG_CG_solvers( dg_solver,
-                        cg_solver,
-                        ):
+def prepare_and_order_DG_CG_solvers( dg_solver,
+                                     cg_solver,
+                                     ):
+    """!
+    
+    Prepare CG solver for coupling and ensure that both solvers are invoked in the correct order
+    
+    Throughtout the mesh traversal steps from coarse to fine grid (descend), the
+    DG solver is to be executed after the CG solver. 
+    
+    We also introduce a new helper value for the CG solver: injectedValue has, 
+    after each traversal, the injected value of the solution. We can then roll
+    it over if we aim for a FAS-type implementation.
+    
+    """
+    assert cg_solver._unknowns_per_vertex==dg_solver._unknowns_per_cell_node
+    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "injectedValue", str(cg_solver._unknowns_per_vertex) ) )
     dg_solver._basic_descend_order = cg_solver._basic_descend_order + 1
 
 
@@ -171,13 +185,73 @@ class ComputeAndRestrictBiasedHierarchicalResidual(ActionSet):
 class InjectAndProlong(ActionSet):
   """!
 
+  Couple the solution and updates of two different solvers
+  
+  This class takes the solution of a DG solver and injects the current solution
+  onto the vertices. For this, it simply averages the @f$ 2^d @f$ different 
+  values of the DG polynomials into the vertex. We do this only for unrefined
+  vertices obviously. 
+  
+  To realise this behaviour, the touchVertexFirstTime() instantiates the 
+  template templateTouchVertexFirstTime which clears the current solution in 
+  the CG solve, and it also plugs into touchVertexLastTime:
+  
+  - touchVertexFirstTime:
+    - Clear the CG solver's injected value to zero, as we'll accumulate from
+      hereon.
+  - touchVertexLastTime:
+    - Add 
+  
+  Further to that, the operation also.
+  
+  It is important that prepare_and_order_DG_CG_solvers() has been invoked for
+  the two solvers whenever we use this action set. I haven't checked if it 
+  need to be there prior to the instantiation, but the code definitely works
+  if I first couple and then use this class.
   
   """
 
 
   templateTouchVertexFirstTime="""
-  if ( fineGridVertex{{CG_SOLVER_NAME}}.getType() == vertexdata::{{CG_SOLVER_NAME}}::Type::Interior )
+  if ( fineGridVertex{{CG_SOLVER_NAME}}.getType() == vertexdata::{{CG_SOLVER_NAME}}::Type::Interior ) {
+    fineGridVertex{{CG_SOLVER_NAME}}.setInjectedValue( 0.0 );
+  }
+"""
+
+
+  templateTouchCellLastTime="""
   {
+    tarch::la::Vector< TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns, double > injectedValues;
+    
+    assertionEquals( {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::UnknownsPerCellNode );
+
+    constexpr int Rows = TwoPowerD    * {{CG_SOLVER_NAME}}::VertexUnknowns;
+    constexpr int Cols = NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
+
+    static std::vector< tarch::la::Matrix< Rows, Cols, double > > matrices = {
+      {% for MATRIX in INJECTION_MATRIX %}
+      {
+        {{MATRIX[0]| join(", ")}}
+          {% for ROW in MATRIX[1:] %}
+          ,{{ROW | join(", ")}}
+          {% endfor %}
+      },
+      {% endfor %}
+    };
+
+    {% if INJECTION_MATRIX_SCALING is not defined %}
+    #error No scaling for injection matrix available.
+    {% endif %}
+
+    static std::vector<int> scaleFactors = {
+      {% for el in INJECTION_MATRIX_SCALING %}
+        {{el}},
+      {% endfor %}
+    };
+  
+    static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > composedInjectionMatrix = scaleMatrix( matrices, scaleFactors, marker.h() );
+
+    // @todo
   }
 """
 
@@ -187,7 +261,6 @@ class InjectAndProlong(ActionSet):
   {
   }
 """
-
 
   def __init__(self,
                dg_solver,
@@ -232,11 +305,20 @@ class InjectAndProlong(ActionSet):
     self.d["DG_SOLVER_NAME"]        = dg_solver.typename()
     self.d["CG_SOLVER_INSTANCE"]    = cg_solver.instance_name()
     self.d["CG_SOLVER_NAME"]        = cg_solver.typename()
+    
+    self.d["INJECTION_MATRIX"]            = injection_matrix
+    self.d["INJECTION_MATRIX_SCALING"]    = injection_matrix_scaling
+    self.d["PROLONGATION_MATRIX"]         = injection_matrix
+    self.d["PROLONGATION_MATRIX_SCALING"] = injection_matrix_scaling
+    
 
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = jinja2.Template(self.templateTouchVertexFirstTime).render(**self.d)
+      pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+      result = jinja2.Template(self.templateTouchCellLastTime).render(**self.d)
       pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
       result = jinja2.Template(self.templateTouchVertexLastTime).render(**self.d)
