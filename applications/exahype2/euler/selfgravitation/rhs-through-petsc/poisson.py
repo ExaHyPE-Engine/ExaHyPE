@@ -6,8 +6,8 @@ sys.path.insert(0, os.path.abspath('../../../../python'))
 import peano4
 import exahype2
 
-from multigrid.matrixgenerators import DLinear
-import multigrid.petsc as petsc
+# from multigrid.matrixgenerators import DLinear
+# import multigrid.petsc as petsc
 
 modes = {
   "release": peano4.output.CompileMode.Release,
@@ -44,10 +44,6 @@ if args.mode not in modes:
     sys.exit(1)
 
 print("\nConfiguring {}D Euler problem. Buildmode is {}, nbuilds={}.\n".format(args.dimensions, args.mode, args.j))
-
-#generate matrices
-matrices = DLinear(args.dimensions,
-                   1) # unknowns_per_vertex_dof?
 
 #
 # Add the Finite Volumes solver
@@ -93,9 +89,11 @@ if args.type=="global-adaptive":
     eigenvalues = exahype2.solvers.PDETerms.User_Defined_Implementation,
     source_term = exahype2.solvers.PDETerms.User_Defined_Implementation
   )
+
+#generate matrices
   # class DLinearAdaptiveTimeStep(DLinear) # just the LHS matrix modification?
   # matrices = DLinearAdaptiveTimeStep(args.dimensions, args.unknowns_per_vertex_dof)
-matrices = DLinear(args.dimensions, args.unknowns_per_vertex_dof)
+# matrices = DLinear(args.dimensions, args.unknowns_per_vertex_dof)
 
 # # @note: Is it about an individual CollocatedLowOrderDiscretisation for every type of solver?
 # poisson_solver = petsc.solvers.CollocatedLowOrderDiscretisation(
