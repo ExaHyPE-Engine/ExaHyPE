@@ -417,6 +417,12 @@ class DiscontinuousGalerkinDiscretisationPointWiseRiemannSolver(Solver):
     pass
 
   def add_to_solve(self, observer):
+    """!
+    
+    I ignore the order of the action sets here and instead derive my 
+    own ordering starting from _basic_descend_order.
+    
+    """
     descend_order = observer.highest_descend_invocation_order() + self._basic_descend_order
     if self.preprocessing_action_set != None:
       self.preprocessing_action_set.descend_invocation_order = descend_order + 0
