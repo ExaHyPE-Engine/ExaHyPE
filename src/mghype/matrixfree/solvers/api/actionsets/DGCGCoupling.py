@@ -12,15 +12,22 @@ def prepare_and_order_DG_CG_solvers( dg_solver,
     Prepare CG solver for coupling and ensure that both solvers are invoked in the correct order
     
     Throughtout the mesh traversal steps from coarse to fine grid (descend), the
-    DG solver is to be executed after the CG solver. 
+    DG solver is to be executed before(!) the CG solver. It is the DG solver 
+    which we equip with a preprocessing step, so we know that we are on the safe 
+    side here.
     
-    We also introduce a new helper value for the CG solver: injectedValue has, 
+    We also introduce a new helper value for the CG solver: newValue has, 
     after each traversal, the injected value of the solution. We can then roll
-    it over if we aim for a FAS-type implementation.
+    it over if we aim for a FAS-type implementation. Further to that, we have
+    the solvers new rhs, which we again use for the next iteration, and its 
+    previous (old) value which we use to compute the delta.
     
     """
     assert cg_solver._unknowns_per_vertex==dg_solver._unknowns_per_cell_node
-    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "injectedValue", str(cg_solver._unknowns_per_vertex) ) )
+    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "newInjectedValue", str(cg_solver._unknowns_per_vertex) ) )
+    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "oldValue", str(cg_solver._unknowns_per_vertex) ) )
+    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "newRestrictedRhs", str(cg_solver._unknowns_per_vertex) ) )
+    cg_solver._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "delta", str(cg_solver._unknowns_per_vertex) ) )
     dg_solver._basic_descend_order = cg_solver._basic_descend_order + 1
 
 
@@ -197,37 +204,91 @@ class InjectAndProlong(ActionSet):
   the CG solve, and it also plugs into touchVertexLastTime:
   
   - touchVertexFirstTime:
-    - Clear the CG solver's injected value to zero, as we'll accumulate from
-      hereon.
+    - Store the value minus the previous value in delta. We will use delta to
+      interpolate.
+    - Set the value to the injected value which we know is correct from the 
+      previous traversal.
+    - Also set the old value to the injected value. We'll need it in the next
+      traversal to compute delta.
+    - Clear the CG solver's injected value to zero, as we'll accumulate into it
+      from hereon.
   - touchVertexLastTime:
-    - Add 
-  
-  Further to that, the operation also.
+    - Nothing to be done. We are all fine. We know that new injected value is 
+      valid now, but we'll roll it over in touchVertexFirstTime() of the 
+      subsequent mesh sweep.
   
   It is important that prepare_and_order_DG_CG_solvers() has been invoked for
-  the two solvers whenever we use this action set. I haven't checked if it 
-  need to be there prior to the instantiation, but the code definitely works
-  if I first couple and then use this class.
-  
+  the two solvers whenever we use this action set.
+   
   """
 
 
   templateTouchVertexFirstTime="""
   if ( fineGridVertex{{CG_SOLVER_NAME}}.getType() == vertexdata::{{CG_SOLVER_NAME}}::Type::Interior ) {
-    fineGridVertex{{CG_SOLVER_NAME}}.setInjectedValue( 0.0 );
+    fineGridVertex{{CG_SOLVER_NAME}}.setDelta(
+      fineGridVertex{{CG_SOLVER_NAME}}.getValue()
+      -
+      fineGridVertex{{CG_SOLVER_NAME}}.getOldValue()
+    );
+    fineGridVertex{{CG_SOLVER_NAME}}.setValue(
+      fineGridVertex{{CG_SOLVER_NAME}}.getNewInjectedValue()
+    );
+    fineGridVertex{{CG_SOLVER_NAME}}.setOldValue(
+      fineGridVertex{{CG_SOLVER_NAME}}.getNewInjectedValue()
+    );
+    fineGridVertex{{CG_SOLVER_NAME}}.setNewInjectedValue( 0.0 );
   }
 """
 
 
-  templateTouchCellLastTime="""
-  {
-    tarch::la::Vector< TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns, double > injectedValues;
+  templateTouchCellFirstTime="""
+  if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
+    constexpr int Cols = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
+    constexpr int Rows = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
     
+    static std::vector< tarch::la::Matrix< Rows, Cols, double > > matrices = {
+      {% for MATRIX in PROLONGATION_MATRIX %}
+      {
+        {{MATRIX[0]| join(", ")}}
+          {% for ROW in MATRIX[1:] %}
+          ,{{ROW | join(", ")}}
+          {% endfor %}
+      },
+      {% endfor %}
+    };
+
+    {% if PROLONGATION_MATRIX_SCALING is not defined %}
+    #error No scaling for prolongation matrix available.
+    {% endif %}
+
+    static std::vector<int> scaleFactors = {
+      {% for el in PROLONGATION_MATRIX_SCALING %}
+        {{el}},
+      {% endfor %}
+    };
+  
+    tarch::la::Matrix< Rows, Cols, double > composedProlongationMatrix = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, marker.h() );
+
+//    tarch::la::Vector< {{DG_SOLVER_NAME}}::NodesPerCell, double > prolongatedsValues = 
+//      composedInjectionMatrix * fineGridCell{{CG_SOLVER_NAME}}.getDelta();
+      
+//    fineGridCell{{DG_SOLVER_NAME}}.setValue(
+//      fineGridCell{{DG_SOLVER_NAME}}.getValue() + 
+//      prolongatedValues
+//    );
+//      fineGridVertex{{SOLVER_NAME}}.setDelta(dof, val - fineGridVertex{{SOLVER_NAME}}.getValue(dof));
+  }
+"""
+
+
+
+  templateTouchCellLastTime="""
+  if (fineGridCell{{DG_SOLVER_NAME}}.getType() != celldata::{{DG_SOLVER_NAME}}::Type::Coarse) {    
     assertionEquals( {{CG_SOLVER_NAME}}::VertexUnknowns, {{DG_SOLVER_NAME}}::UnknownsPerCellNode );
 
-    constexpr int Rows = TwoPowerD    * {{CG_SOLVER_NAME}}::VertexUnknowns;
-    constexpr int Cols = NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
-
+    constexpr int Rows = TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns;
+    constexpr int Cols = {{DG_SOLVER_NAME}}::NodesPerCell * {{DG_SOLVER_NAME}}::UnknownsPerCellNode;
+    
     static std::vector< tarch::la::Matrix< Rows, Cols, double > > matrices = {
       {% for MATRIX in INJECTION_MATRIX %}
       {
@@ -249,18 +310,23 @@ class InjectAndProlong(ActionSet):
       {% endfor %}
     };
   
-    static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > composedInjectionMatrix = scaleMatrix( matrices, scaleFactors, marker.h() );
+    tarch::la::Matrix< Rows, Cols, double > composedInjectionMatrix = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, marker.h() );
 
-    // @todo
+    tarch::la::Vector< TwoPowerD * {{CG_SOLVER_NAME}}::VertexUnknowns, double > injectedValues = 
+      composedInjectionMatrix * fineGridCell{{DG_SOLVER_NAME}}.getSolution();
+
+    for (int vertex=0; vertex<TwoPowerD; vertex++) {
+      fineGridVertices{{CG_SOLVER_NAME}}(vertex).setInjectedValue(
+        fineGridVertices{{CG_SOLVER_NAME}}(vertex).getInjectedValue()
+        + 
+        1.0 / TwoPowerD 
+        * 
+        tarch::la::slice<{{CG_SOLVER_NAME}}::VertexUnknowns>(injectedValues,vertex*{{CG_SOLVER_NAME}}::VertexUnknowns)
+      );
+    }
   }
 """
 
-
-  templateTouchVertexLastTime="""
-  if ( fineGridVertex{{CG_SOLVER_NAME}}.getType() == vertexdata::{{CG_SOLVER_NAME}}::Type::Interior )
-  {
-  }
-"""
 
   def __init__(self,
                dg_solver,
@@ -308,14 +374,17 @@ class InjectAndProlong(ActionSet):
     
     self.d["INJECTION_MATRIX"]            = injection_matrix
     self.d["INJECTION_MATRIX_SCALING"]    = injection_matrix_scaling
-    self.d["PROLONGATION_MATRIX"]         = injection_matrix
-    self.d["PROLONGATION_MATRIX_SCALING"] = injection_matrix_scaling
+    self.d["PROLONGATION_MATRIX"]         = prolongation_matrix
+    self.d["PROLONGATION_MATRIX_SCALING"] = prolongation_matrix_scaling
     
 
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = jinja2.Template(self.templateTouchVertexFirstTime).render(**self.d)
+      pass
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = jinja2.Template(self.templateTouchCellLastTime).render(**self.d)
@@ -359,4 +428,5 @@ class InjectAndProlong(ActionSet):
     return """
 #include "repositories/SolverRepository.h"
 #include "peano4/utils/Loop.h"
+#include "mghype/mghype.h"
 """

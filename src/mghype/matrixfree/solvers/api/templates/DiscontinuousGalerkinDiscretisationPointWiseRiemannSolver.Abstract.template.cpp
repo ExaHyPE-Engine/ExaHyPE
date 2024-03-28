@@ -1,6 +1,6 @@
 #include "{{CLASSNAME}}.h"
-#include <cmath> // for std::pow
 #include "tarch/multicore/Lock.h"
+#include "mghype/mghype.h"
 
 
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
@@ -22,22 +22,6 @@ bool isOnBoundary(const tarch::la::Vector<Dimensions, double>& x)
   }
   return isOnBoundary;
 }
-
-template<int Rows, int Cols>
-tarch::la::Matrix<Rows,Cols,double> scaleMatrix(
-  const std::vector< tarch::la::Matrix<Rows,Cols,double> >& matrices,
-  const std::vector<int>&                                   scaleFactors,
-  const tarch::la::Vector<Dimensions, double>&  h
-){
-  tarch::la::Matrix<Rows,Cols,double> output(0);
-  assert( matrices.size() == scaleFactors.size() );
-  auto matrixIter = matrices.begin();
-  auto scaleIter  = scaleFactors.begin();
-  for (; matrixIter!=matrices.end(), scaleIter!=scaleFactors.end(); matrixIter++, scaleIter++)
-    output = output + (*matrixIter) * std::pow(h(0), *scaleIter);
-  return output;
-}
-
 
 
 {{NAMESPACE | join("::")}}::vertexdata::{{SOLVER_NAME}}::Type {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getVertexDoFType(
@@ -91,7 +75,9 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
         {{el}},
       {% endfor %}
   };
-  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
+
+  // may not be static, as it depends upon h
+  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
 
   logTraceOutWith1Argument("getMassMatrix", result);
   return result;
@@ -126,7 +112,8 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
       {% endfor %}
   };
 
-  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
+  // may not be static, as it depends upon h
+  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
 
   logTraceOutWith1Argument("getLocalAssemblyMatrix", result);
   return result;
@@ -162,7 +149,8 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::FaceUnknownsProject
       {% endfor %}
   };
 
-  static tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
+  // may not be static, as it depends upon h
+  tarch::la::Matrix< FaceUnknownsProjection * TwoTimesD, CellUnknowns, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
   logTraceOutWith1Argument("getFaceFromCellMatrix", result);
   return result;
 } 
@@ -197,7 +185,8 @@ tarch::la::Matrix<{{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NAM
       {% endfor %}
   };
 
-  static tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
+  // may not be static, as it depends upon h
+  tarch::la::Matrix< CellUnknowns, FaceUnknownsSolution * TwoTimesD, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
   logTraceOutWith1Argument("getCellFromFaceMatrix", result);
   return result;
 } 
@@ -262,7 +251,8 @@ tarch::la::Matrix< {{NAMESPACE | join("::")}}::{{CLASSNAME}}::CellUnknowns, {{NA
       {% endfor %}
   };
 
-  static tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = scaleMatrix( matrices, scaleFactors, cellSize );
+  // may not be static, as it depends upon h
+  tarch::la::Matrix< CellUnknowns, CellUnknowns, double > result = ::mghype::composeMatrixFromHWeightedLinearCombination( matrices, scaleFactors, cellSize );
 
   return result;
 }

@@ -8,6 +8,7 @@ endif
 
 
 MultigridSources = \
+  mghype.cpp \
   matrixfree/solvers/Solver.cpp
   
 

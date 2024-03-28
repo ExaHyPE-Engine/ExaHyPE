@@ -54,7 +54,6 @@ class CollocatedSolver(ActionSet):
         marker.h()(0)
       );
 
-      fineGridVertex{{SOLVER_NAME}}.setDelta(dof, val - fineGridVertex{{SOLVER_NAME}}.getValue(dof));
       fineGridVertex{{SOLVER_NAME}}.setValue(dof, val);
       logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(dof));
     }
@@ -66,6 +65,9 @@ class CollocatedSolver(ActionSet):
   if ( fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior )
   {
     logTraceInWith2Arguments("Solve::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+    
+    // @todo Sean: I think this should be unknown, not dof
+    
     for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
     {
       // collect all of the vertex values into one vector
