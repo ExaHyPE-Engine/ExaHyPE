@@ -21,7 +21,7 @@
 # ---------------------------
 #   make clean
 #   make distclean
-#   git clean -xf
+#   git clean -xdf
 #   rm -rf submodules
 #
 # Summary:
