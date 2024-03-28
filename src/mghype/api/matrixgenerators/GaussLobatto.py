@@ -6,11 +6,10 @@ from   scipy.interpolate import lagrange
 from abc import abstractmethod
 
 import peano4
+import mghype
 
-# from .MatrixGenerator import MatrixGenerator
-# from .BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
-from MatrixGenerator import MatrixGenerator
-from BlockMatrix.block_matrix_dgpoisson2dpenalty import DGPoisson2dPenaltyBlockMatrix
+from .MatrixGenerator import MatrixGenerator
+
 
 class GaussLobatto(MatrixGenerator):
   '''
@@ -47,7 +46,7 @@ class GaussLobatto(MatrixGenerator):
       self.points1d    = self.get_points_()
 
     r_press = self.poly_degree # polynomial order for p
-    self.block_matrix = DGPoisson2dPenaltyBlockMatrix(r_press)
+    self.block_matrix = mghype.api.matrixgenerators.blockmatrix.DGPoisson2dPenaltyBlockMatrix(r_press)
     #self.block_matrix = DGPoisson2dBlockMatrix(r_press)
 
   def get_points1d(self):

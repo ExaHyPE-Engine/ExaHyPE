@@ -102,7 +102,7 @@ correction_equation_solver = mghype.matrixfree.solvers.api.CollocatedLowOrderDis
 
 
 #! [Coupling]
-intergrid_operators = mghype.api.matrixgenerators.BlockMatrix.intergrid_operators.IntergridOperators(
+intergrid_operators = mghype.api.matrixgenerators.blockmatrix.IntergridOperators(
   dim = args.dimensions,
   coarse_order = 1,
   fine_order = 2
