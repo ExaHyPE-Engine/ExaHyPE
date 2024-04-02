@@ -507,7 +507,7 @@ install(FILES
   DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
 )
 
-set(PYTHON_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/parse_cmake_cache.py")
+set(PYTHON_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/python/peano4/output/ParseCMakeCache.py")
 
 add_custom_target(run_script ALL
      COMMAND echo "${PYTHON3_EXECUTABLE} ${PYTHON_SCRIPT} ${CMAKE_BINARY_DIR}/CMakeCache.txt"

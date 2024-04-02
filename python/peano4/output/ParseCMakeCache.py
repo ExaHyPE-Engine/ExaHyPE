@@ -54,7 +54,7 @@ def populate_predefined_strings():
 predefined_strings = populate_predefined_strings()
 
 
-def search_and_copy_strings(input_file_path, predefined_strings, output_directory):
+def search_and_copy_strings(input_file_path, predefined_strings, output_file_path):
     # Check if the input file exists
     if not os.path.exists(input_file_path):
         print("Input file does not exist.")
