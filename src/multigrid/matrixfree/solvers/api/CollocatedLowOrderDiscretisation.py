@@ -15,7 +15,33 @@ from peano4.solversteps.ActionSet import ActionSet
 class CollocatedLowOrderDiscretisation(Solver):
   """!
 
-  Matrix-free remake of the petsc-based collocated solver
+  Matrix-free remake of the petsc-based collocated solver.
+
+  Mathematical and algorithmic descriptions are to follow later. For now, 
+  we describe how to use this solver and a little about how it works under 
+  the hood.
+
+  Each vertex stores a certain number of values, given by the parameter 
+  unknowns_per_vertex. In essence, if this parameter is more than one, 
+  we are solving multiple different equations simultaneously, or we
+  can equivalently think of our PDE being vector-valued.
+
+  The user needs to provide an assembly matrix, and a mass matrix. If 
+  our vector-valued PDE has \f$ K \f$ components, then each of these
+  matrices should be square, with \f$ K * 2^D \f$ rows.
+
+  In particular, they should be structured as block diagonals. Let
+  \f$ A_i \f$ be square with \f$ 2^D \f$ rows. Then the mass/assembly
+  matrices should be structured as follows:
+
+  \f$ diag( A_1, A_2, \dots A_K ) \f$.
+
+  During the actual solver step, we run through each equation one 
+  after another, fetching the appropriate mass and assembly matrices
+  for the equation in hand.
+
+  At present, it hasn't been decided how to plot the output of multiple
+  equations, since only 1 is supported.
 
   """
 
