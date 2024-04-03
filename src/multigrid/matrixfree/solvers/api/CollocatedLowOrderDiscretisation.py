@@ -39,14 +39,17 @@ class CollocatedLowOrderDiscretisation(Solver):
                                                               min_h,
                                                               max_h
                                                               )
+    
+    matrix_dims = (2**dimensions) * unknowns_per_vertex
+    assert mass_matrix.shape == (matrix_dims,matrix_dims), f"Wrong shape given for mass matrix - got {mass_matrix.shape}, but we have {2**dimensions} vertices per cell and {unknowns_per_vertex} unknowns per vertex"
+    assert local_assembly_matrix.shape == (matrix_dims,matrix_dims), f"Wrong shape given for mass matrix - got {local_assembly_matrix.shape}, but we have {2**dimensions} vertices per cell and {unknowns_per_vertex} unknowns per vertex"
   
     self._unknowns_per_vertex = unknowns_per_vertex
 
     # already initialised this in superclass!
-    # self._vertex_pde_data = peano4.datamodel.DaStGen2( name )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "value",      str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "rhs",        str(unknowns_per_vertex) ) )
-    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "fieldDiag", str(unknowns_per_vertex) ) )
+    self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "fieldDiag",  str(unknowns_per_vertex) ) )
     self._vertex_data.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "residual",   str(unknowns_per_vertex) ) )
 
     self._local_assembly_matrix         = local_assembly_matrix

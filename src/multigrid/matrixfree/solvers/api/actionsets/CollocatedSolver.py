@@ -51,25 +51,33 @@ class CollocatedSolver(ActionSet):
     logTraceInWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
     for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
     {
-      // collect all of the vertex values into one vector
+      // Mass and assembly matrix should be block diagonal, 
+      // depending on which dof we are currently dealing with.
+      // We will collect the rhs & solution values from the 
+      // vertices, and apply the correct matrix as we go.
+      // Define the offset:
+      int startIndex = TwoPowerD * dof;
+      
+      auto A       = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h());
+      auto M       = repositories::{{SOLVER_INSTANCE}}.getMassMatrix(marker.x(), marker.h());
+
+      // collect all of the vertex values into one vector - apply the appropriate
+      // part of the matrix as we go.
       tarch::la::Vector<TwoPowerD, double> vertexValues;
       tarch::la::Vector<TwoPowerD, double> rhsValues;
       tarch::la::Vector<TwoPowerD, double> residualValues;
-      for (int i=0; i<TwoPowerD; i++)
-      {
-        vertexValues(i)   = fineGridVertices{{SOLVER_NAME}}(i).getValue(dof);
-        rhsValues(i)      = fineGridVertices{{SOLVER_NAME}}(i).getRhs(dof);
+      for (int i=0; i<TwoPowerD; i++){
+        double solColSum = 0;
+        double rhsColSum = 0;
+        for (int j=0; j<TwoPowerD; j++){
+          solColSum += A(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getValue(dof);
+          rhsColSum += M(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getRhs(dof);
+        }
+      
+        vertexValues(i)   = solColSum;
+        rhsValues(i)      = rhsColSum;
         residualValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getResidual(dof);
       }
-
-      // apply local assembly matrix
-      auto A       = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h());
-      vertexValues = A * vertexValues;
-
-      // apply mass matrix
-      // note - these should be constant throughout. no need to recalculate.
-      auto M    = repositories::{{SOLVER_INSTANCE}}.getMassMatrix(marker.x(), marker.h());
-      rhsValues = M * rhsValues;
 
       // residual = rhs - Ax
       residualValues += rhsValues;
