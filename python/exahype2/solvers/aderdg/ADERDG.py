@@ -9,9 +9,11 @@ import exahype2.grid
 import exahype2.solvers.aderdg.actionsets
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 from exahype2.solvers.PDETerms import PDETerms
-from .kernels import (get_face_overlap_merge_implementation, create_abstract_solver_user_declarations_for_error_measurement,
-  create_abstract_solver_user_definitions_for_error_measurement, create_finish_time_step_implementation_for_error_measurement,
-  add_final_action_for_error_measurement)
+from .kernels import (get_face_overlap_merge_implementation, 
+  create_constructor_implementation_for_error_measurement, create_destructor_implementation_for_error_measurement,
+  create_abstract_solver_user_declarations_for_error_measurement, create_abstract_solver_user_definitions_for_error_measurement,
+  create_finish_time_step_implementation_for_error_measurement, create_abstract_solver_includes_for_error_measurement,
+  add_postprocessing_for_error_measurement)
 from .kernelgenerator import generate_aderdg_kernels, Configuration
 
 import os
@@ -38,24 +40,24 @@ in the naming. If a user wants to name it float because they're more used to C-b
 fine but if they'd rather use single we allow it as well.
 """
 PrecisionType = {
-    "SP": "float",
-    "float": "float",
+    "SP":     "float",
+    "float":  "float",
     "single": "float",
-    "fp32": "float",
-    "DP": "double",
+    "fp32":   "float",
+    "DP":     "double",
     "double": "double",
-    "fp64": "double",
-    "quadruple": "long double",
+    "fp64":   "double",
+    "quadruple":   "long double",
     "long double": "long double",
-    "fp128": "long double",
-    "half_c++23": "std::float16_t",
-    "float16_t": "std::float16_t",
-    "std::float16_t": "std::float16_t",
-    "fp16": "std::float16_t",
-    "bfloat": "std::bfloat16_t",
-    "bfloat16_t": "std::bfloat16_t",
-    "std::bfloat16_t": "std::bfloat16_t",
-    "bf16": "std::bfloat16_t"
+    "fp128":       "long double",
+    "half_c++23":       "std::float16_t",
+    "float16_t":        "std::float16_t",
+    "std::float16_t":   "std::float16_t",
+    "fp16":             "std::float16_t",
+    "bfloat":           "std::bfloat16_t",
+    "bfloat16_t":       "std::bfloat16_t",
+    "std::bfloat16_t":  "std::bfloat16_t",
+    "bf16":             "std::bfloat16_t"
 }
 
 
@@ -143,23 +145,24 @@ class ADERDG(object):
             )
 
         """
-    for kernel optimizations, these all default to the "unoptimized" version but can be set using the function
-    add_kernel_optimizations(). Some of these are currently unused but are left as placeholders because they
-    exist in the kernelgenerator even though they haven't been connected.
-    """
-        self._is_linear = False
+        for kernel optimizations, these all default to the "unoptimized" version but can be set using the function
+        add_kernel_optimizations(). Some of these are currently unused but are left as placeholders because they
+        exist in the kernelgenerator even though they haven't been connected.
+        """
+        self._is_linear   = False
         self._polynomials = Polynomials.Gauss_Legendre
-        self._basis = GaussLegendreBasis(order + 1)
+        self._basis       = GaussLegendreBasis(order + 1)
         self._use_kernel_generator = True
-        self._use_libxsmm = False
-        self._use_BLIS = False
-        self._use_Eigen = False
+        self._architecture  = "noarch"
+        self._use_libxsmm     = False
+        self._use_BLIS        = False
+        self._use_Eigen       = False
         self._use_libxsmm_JIT = False
-        self._use_vectorized_PDE = False
-        self._architecture = "noarch"
-        self._use_CERK_Guess = False
-        self._use_split_CK = False
+        self._use_CERK_Guess      = False
+        self._use_vectorized_PDE  = False
+        self._use_split_CK        = False
         self._predictor_recompute = False
+
         self._initialize_patches = False
 
         self._predictor_computation_precisions      = [PrecisionType["double"]]
@@ -173,34 +176,21 @@ class ADERDG(object):
         self._hold_face_data_on_heap_with_smart_pointer = False
 
         """
-        All of the following are mostly used for limiting, they are set of but some classes that inherit from this
-        may turn them on.
-          Hold previous time step: if this is specified as true, the previous time step will be stored persistently.
-            The old value gets overwritten with the new value at the beginning of the predictor step. 
-            This allows rollback of the solution to a previous state if for some reason the computations
-            yield incorrect results.
-            Used for limiting, where troubled cells are rolled back and recomputed with a more robust
-            scheme and neighbouring cells need their old solution to project values with.
-          PMC: if not none, a user-defined physical admissibility criterion should be checked at the end of
-            the correction step which verifies whether or not the produced solution is physically sensible.
-          number_of_pac_observables: number of variables which the physical admisibility criterion should consider
-          number_of_dmp_observables: if greater than zero, a discrete maximum principle should be checked at the
-            end of the corrector step. This essentially verifies whether shocks have formed.
-          use_troubled_markers: use markers to communicate whether cells are troubled, these are then
-            copied to faces to communicate this status to the neighbours.
+        Hold previous time step: if this is specified as true, the previous time step will be stored persistently.
+          The old value gets overwritten with the new value at the beginning of the predictor step. 
+          This allows rollback of the solution to a previous state if for some reason the computations
+          yield incorrect results.
+          Used for limiting, where troubled cells are rolled back and recomputed with a more robust
+          scheme and neighbouring cells need their old solution to project values with.
         """
         self._hold_previous_time_step           = False
-        self._use_troubled_marker               = False
-        self._use_limiting                      = False
-        self._number_of_dmp_observables         = 0
-        self._physical_admissibility_criterion  = PDETerms.None_Implementation
 
         """
         if this is turned to true, the solver will provide the user with a function to compute the exact solution
         and, using this, it will after the last timestep compute the l1, l2 and linf norms of the total error
         integrated over the entire domain.
         """
-        self._compute_and_display_solver_error = False
+        self._compute_and_store_solver_error = False
         self._error_measurement_implementation = PDETerms.None_Implementation
 
         # whether or not to plot information about the grid as well as information about the content of the patches
@@ -216,64 +206,67 @@ class ADERDG(object):
         self.user_solver_includes = ""
 
         """
-    these specify the time step, they must be set by child classes in order to advance the timestepping
-    these are the main difference between child classes as they all use the same underlying routines
-    """
+        these specify the time step, they must be set by child classes in order to advance the timestepping
+        these are the main difference between child classes as they all use the same underlying routines
+        """
         self._compute_time_step_size = "#error Not yet defined"
         self._compute_new_time_step_size = None
 
         """
-    These are all the optional and mandatory plugins that can be specified by the user.
-    eigenvalues, boundary conditions, refinement criteria and initial conditions must
-    all be specified, all others are optional but can be added via the set_implementation() function.
-    There are four choices for these, three of which are specified in PDETerms:
-    User_Defined_Implementation creates empty stubs that the user must then manually fill.
-    None_implementation leaves out this optional stub and ensures the kernels don't use this function.
-    Empty_implementation does... the same thing as user_defined I think?
-    The final option is to fill these with a string, in which case this string is directly taken as 
-    c++ code and used as the implementation of this function. The user is trusted to provide code that
-    compiles and runs properly, it is never checked.
-    """
-        self._flux_implementation = PDETerms.None_Implementation
-        self._ncp_implementation = PDETerms.None_Implementation
-        self._eigenvalues_implementation = PDETerms.None_Implementation
-        self._source_term_implementation = PDETerms.None_Implementation
-        self._point_sources_implementation = PDETerms.None_Implementation
-        self._number_of_point_sources = 0
-        self._boundary_conditions_implementation = PDETerms.None_Implementation
-        self._refinement_criterion_implementation = PDETerms.None_Implementation
-        self._initial_conditions_implementation = PDETerms.None_Implementation
+        These are all the optional and mandatory plugins that can be specified by the user.
+        eigenvalues, boundary conditions, refinement criteria and initial conditions must
+        all be specified, all others are optional but can be added via the set_implementation() function.
+        There are four choices for these, three of which are specified in PDETerms:
+        User_Defined_Implementation creates empty stubs that the user must then manually fill.
+        None_implementation leaves out this optional stub and ensures the kernels don't use this function.
+        Empty_implementation does... the same thing as user_defined I think?
+        The final option is to fill these with a string, in which case this string is directly taken as 
+        c++ code and used as the implementation of this function. The user is trusted to provide code that
+        compiles and runs properly, it is never checked.
+        """
+        self._flux_implementation           = PDETerms.None_Implementation
+        self._ncp_implementation            = PDETerms.None_Implementation
+        self._source_term_implementation    = PDETerms.None_Implementation
+        self._point_sources_implementation  = PDETerms.None_Implementation
+        self._eigenvalues_implementation    = PDETerms.None_Implementation
         self._material_param_implementation = PDETerms.None_Implementation
-        self._precision_criterion_implementation = PDETerms.None_Implementation
-        self._riemann_solver_implementation = PDETerms.None_Implementation
+
+        self._refinement_criterion_implementation = PDETerms.None_Implementation
+        self._initial_conditions_implementation   = PDETerms.None_Implementation
+        self._boundary_conditions_implementation  = PDETerms.None_Implementation
+
+        self._precision_criterion_implementation  = PDETerms.None_Implementation
+        self._riemann_solver_implementation       = PDETerms.None_Implementation
+        self._number_of_point_sources = 0
 
         """
-    These will be used by children of this class to fill them with the declaration and definition of the
-    above mandatory and optional functions.
-    """
+        These will be used by children of this class to fill them with the declaration and definition of the
+        above mandatory and optional functions.
+        """
         self._abstract_solver_user_declarations = ""
         self._abstract_solver_user_definitions = ""
         self._solver_user_declarations = ""
         self._solver_user_definitions = ""
 
         """
-    Used by child classes, will contain code to be executed at the start and end respectively of the
-    time step. Typically specifies some timestep variable and advances the overall timestamp of the
-    entire solver. 
-    """
-        self._start_time_step_implementation = ""
+        Used by child classes, will contain code to be executed at the start and end respectively of the
+        time step. Typically specifies some timestep variable and advances the overall timestamp of the
+        entire solver. 
+        """
+        self._start_time_step_implementation  = ""
         self._finish_time_step_implementation = ""
 
         self._constructor_implementation = ""
+        self._destructor_implementation = ""
 
         """
-    These are ADER-DG CFL factors        
-    Up to order 4, computed via von Neumann analysis [1]; above, determined empirically by M. Dumbser)
-    [1] M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz, 
-    ‘A unified framework for the construction of one-step finite volume and discontinuous Galerkin schemes on unstructured meshes’, Journal of Computational Physics, vol. 227, no. 18, pp. 8209–8253, Sep. 2008.
-    they are necessary to compute stable timestep sizes as dt <= c*dx / (lambda_max*(2N+1)
-    with c the CFL for given order, lambda_max the maximal eigenvalue, N the order and dx the minimal mesh distance.
-    """
+        These are ADER-DG CFL factors, they help determine the maximal stable timestep size
+        Up to order 4, computed via von Neumann analysis [1]; above, determined empirically by M. Dumbser)
+        [1] M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz, 
+        ‘A unified framework for the construction of one-step finite volume and discontinuous Galerkin schemes on unstructured meshes’, Journal of Computational Physics, vol. 227, no. 18, pp. 8209–8253, Sep. 2008.
+        they are necessary to compute stable timestep sizes as dt <= c*dx / (lambda_max*(2N+1)
+        with c the CFL for given order, lambda_max the maximal eigenvalue, N the order and dx the minimal mesh distance.
+        """
         self._cflAder = [
             1.0,
             0.33,
@@ -297,9 +290,9 @@ class ADERDG(object):
         self._cflSafetyFactor = 0.0
 
         """
-    used if the user wants to add some function to postprocessing, meaning
-    it should be added after every other computation in ADER-DG is done.
-    """
+        used if the user wants to add some function to postprocessing, meaning
+        it should be added after every other computation in ADER-DG is done.
+        """
         self._action_set_postprocess_solution = None
 
         # create initial structures and action_sets, these are re-generated essentially anytime something about the solver is modified
@@ -307,10 +300,10 @@ class ADERDG(object):
         self.create_action_sets()
 
     """
-  Creates all the structures which are attached on the peano grid either in a cell or on the faces.
-  These are defined as peano patches which have given sizes to contain persistent data as well as 
-  conditions for when they should be merged, sent, received, stored, loaded, etc.
-  """
+    Creates all the structures which are attached on the peano grid either in a cell or on the faces.
+    These are defined as peano patches which have given sizes to contain persistent data as well as 
+    conditions for when they should be merged, sent, received, stored, loaded, etc.
+    """
 
     @abstractmethod
     def create_data_structures(self):
@@ -431,12 +424,12 @@ class ADERDG(object):
         self._face_label = exahype2.grid.create_face_label(self._name)
 
     """
-  Creates the action sets, these are actions tied to the grid that are executed at given points of 
-  grid generation, construction or steps of the ader-dg solver. Peano handles grid structures that
-  contain data as well as operations that are executed on that data. These are the latter.
-  The guard here are the conditions for the execution of the operation, as in they are only executed
-  if the guard evaluates to true.
-  """
+    Creates the action sets, these are actions tied to the grid that are executed at given points of 
+    grid generation, construction or steps of the ader-dg solver. Peano handles grid structures that
+    contain data as well as operations that are executed on that data. These are the latter.
+    The guard here are the conditions for the execution of the operation, as in they are only executed
+    if the guard evaluates to true.
+    """
 
     @abstractmethod
     def create_action_sets(self):
@@ -453,7 +446,7 @@ class ADERDG(object):
         )
 
         self._action_set_handle_boundary = (
-            exahype2.solvers.aderdg.actionsets.HandleDGBoundary(
+            exahype2.solvers.aderdg.actionsets.HandleBoundary(
                 self, self._store_boundary_data_default_guard()
             )
         )
@@ -513,19 +506,17 @@ class ADERDG(object):
 
         self._action_set_initial_conditions.descend_invocation_order = 1
         self._action_set_initial_conditions_for_grid_construction.descend_invocation_order = 1
-        self._action_set_handle_boundary.descend_invocation_order = 1
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = (
-            1
-        )
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.descend_invocation_order = 1
+
+        self._action_set_handle_boundary.descend_invocation_order = 1        
         self._action_set_prediction.descend_invocation_order = 1
         self._action_set_prediction_on_hanging_cells.descend_invocation_order = 1
-        self._action_set_correction.descend_invocation_order = (
-            1  # needs to happen after handle_boundary but this is done on faces anyway
-        )
 
-        self._action_set_AMR.descend_invocation_order = 2
-        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 2
-        self._action_set_postprocess_solution.descend_invocation_order = 2
+        self._action_set_correction.descend_invocation_order = 2  # needs to happen after handle_boundary
+
+        self._action_set_AMR.descend_invocation_order = 3
+        self._action_set_AMR_commit_without_further_analysis.descend_invocation_order = 3
+        self._action_set_postprocess_solution.descend_invocation_order = 3
 
     def create_readme_descriptor(self, domain_offset, domain_size):
         return (
@@ -669,7 +660,7 @@ class ADERDG(object):
 
     def _get_default_includes(self):
         return """
-#include "tarch/la/Vector.h" 
+#include "tarch/la/Vector.h"
 
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
@@ -679,10 +670,10 @@ class ADERDG(object):
 
 
     """
-  The following functions will be called by the peano4 project,
-  they tell peano which of our generated data it should attach
-  to each grid element and use.
-  """
+    The following functions will be called by the peano4 project,
+    they tell peano which of our generated data it should attach
+    to each grid element and use.
+    """
 
     def add_to_Peano4_datamodel(self, datamodel, verbose):
         """
@@ -757,7 +748,7 @@ class ADERDG(object):
 #include "../repositories/SolverRepository.h"
 """,
                 precision="PlotterPrecision",
-                time_stamp_evaluation="repositories::getMinTimeStamp()",
+                time_stamp_evaluation="0.5*(repositories::getMinTimeStamp()+repositories::getMaxTimeStamp())",
                 plot_cell_data=False,
                 dataType=self._solution_persistent_storage_precision,
             )
@@ -875,12 +866,12 @@ class ADERDG(object):
         )
 
         """" 
-    this is a very ugly fix that should be replaced asap ;)
-    essentially, the libxsmm kernel generator generates faulty code if
-    'noarch' is specified. This code works fine except that it contains a
-    #ifdef which is missing its corresponding #endif.
-    This code just inserts that missing endif
-     """
+        this is a very ugly fix that should be replaced asap ;)
+        essentially, the libxsmm kernel generator generates faulty code if
+        'noarch' is specified. This code works fine except that it contains a
+        #ifdef which is missing its corresponding #endif.
+        This code just inserts that missing endif
+        """
         if self._use_libxsmm and self._architecture == "noarch":
             file = open("generated/kernels/aderdg/" + is_linear + "/asm_fstpvi.c", "r")
             content = file.read()
@@ -1050,8 +1041,8 @@ class ADERDG(object):
         self._solver_constants += datastring
 
     @property
-    def patch_size(self):
-        return self._patch_size
+    def order(self):
+        return (self._order)
 
     @property
     def unknowns(self):
@@ -1060,24 +1051,6 @@ class ADERDG(object):
     @property
     def auxiliary_variables(self):
         return self._auxiliary_variables
-
-    @patch_size.setter
-    def patch_size(self, value):
-        self._patch_size = value
-        self.create_data_structures()
-        self.create_action_sets()
-
-    @patch_size.setter
-    def unknowns(self, value):
-        self._unknowns = value
-        self.create_data_structures()
-        self.create_action_sets()
-
-    @patch_size.setter
-    def auxiliary_variables(self, value):
-        self._auxiliary_variables = value
-        self.create_data_structures()
-        self.create_action_sets()
 
     @abstractmethod
     def add_entries_to_text_replacement_dictionary(self, d):
@@ -1088,30 +1061,28 @@ class ADERDG(object):
     information from the solver or which was specified by the user.
     """
     def _init_dictionary_with_default_parameters(self, d):
-        d["ORDER"] = self._order
-        d["SOLVER_INSTANCE"] = self.get_name_of_global_instance()
-        d["SOLVER_NAME"] = self._name
+        d["ORDER"]              = self._order
+        d["SOLVER_INSTANCE"]    = self.get_name_of_global_instance()
+        d["SOLVER_NAME"]        = self._name
         d["UNKNOWN_IDENTIFIER"] = self._unknown_identifier()
-        d["NUMBER_OF_UNKNOWNS"] = self._unknowns
-        d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._auxiliary_variables
+        d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
+        d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
 
-        d["CFL_SAFETY_FACTOR"] = self._cflSafetyFactor
-        d["CFL_ADER"] = self._cflAder[self._order]  # /(2*(self._order+1)+1)
-
-        d["NUMBER_OF_DOFS_PER_CELL_2D"] = (self._order + 1) * (self._order + 1)
-        d["NUMBER_OF_DOFS_PER_CELL_3D"] = (self._order + 1) * (self._order + 1) * (self._order + 1)
+        d["CFL_SAFETY_FACTOR"]  = self._cflSafetyFactor
+        d["CFL_ADER"]           = self._cflAder[self._order]  # /(2*(self._order+1)+1)
 
         d["USE_KERNEL_GENERATOR"] = self._use_kernel_generator
-        d["USE_LIMITER"]          = self._use_limiting
         d["USE_HALF_PRECISION"]   = self._use_half_precision
+        d["IS_LINEAR"] = self._is_linear
+        d["LINEARITY"] = "linear" if self._is_linear else "nonlinear"
 
         d["USE_GAUSS_LOBATTO"] = ( "true" if self._polynomials is Polynomials.Gauss_Lobatto else "false" )
-        d["POLYNOMIAL_TYPE"] = ( "lobatto" if self._polynomials is Polynomials.Gauss_Lobatto else "legendre" )
+        d["POLYNOMIAL_TYPE"]   = ( "lobatto" if self._polynomials is Polynomials.Gauss_Lobatto else "legendre" )
 
         d["SOLUTION_STORAGE_PRECISION"] = self._solution_persistent_storage_precision
 
         d["PREDICTOR_COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions
-        d["CORRECTOR_COMPUTATION_PRECISION"] = self._corrector_computation_precision
+        d["CORRECTOR_COMPUTATION_PRECISION"]  = self._corrector_computation_precision
 
         d["COMPUTATION_PRECISIONS"] = self._predictor_computation_precisions[:]
         if self._corrector_computation_precision not in d["COMPUTATION_PRECISIONS"]:
@@ -1121,23 +1092,13 @@ class ADERDG(object):
         d["NUMBER_OF_PREDICTOR_PRECISIONS"] = len(d["PREDICTOR_COMPUTATION_PRECISIONS"])
         d["NUMBER_OF_PRECISIONS"] = len(d["COMPUTATION_PRECISIONS"])
 
-        d["ASSERTION_WITH_1_ARGUMENTS"] = "nonCriticalAssertion1"
-        d["ASSERTION_WITH_2_ARGUMENTS"] = "nonCriticalAssertion2"
-        d["ASSERTION_WITH_3_ARGUMENTS"] = "nonCriticalAssertion3"
-        d["ASSERTION_WITH_4_ARGUMENTS"] = "nonCriticalAssertion4"
-        d["ASSERTION_WITH_5_ARGUMENTS"] = "nonCriticalAssertion5"
-        d["ASSERTION_WITH_6_ARGUMENTS"] = "nonCriticalAssertion6"
-
-        d["IS_LINEAR"] = self._is_linear
-        d["LINEARITY"] = "linear" if self._is_linear else "nonlinear"
-
         if self._min_cell_h > self._max_cell_h:
             raise Exception("min/max h are inconsistent")
         d["MAX_CELL_H"] = self._max_cell_h
         d["MIN_CELL_H"] = self._min_cell_h
 
         d["SOLVER_CONSTANTS"] = self._solver_constants
-        d["SOLVER_INCLUDES"] = self.get_user_solver_includes()
+        d["SOLVER_INCLUDES"]  = self.get_user_solver_includes()
 
         d["BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
         d["REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
@@ -1169,6 +1130,9 @@ class ADERDG(object):
         d["CONSTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
             self._constructor_implementation, undefined=jinja2.DebugUndefined
         ).render(**d)
+        d["DESTRUCTOR_IMPLEMENTATION"] = jinja2.Template(
+            self._destructor_implementation, undefined=jinja2.DebugUndefined
+        ).render(**d)
         d["COMPUTE_TIME_STEP_SIZE"] = jinja2.Template(
             self._compute_time_step_size, undefined=jinja2.DebugUndefined
         ).render(**d)
@@ -1177,7 +1141,8 @@ class ADERDG(object):
         ).render(**d)
         d["ARCHITECTURE_ALIGNMENT"] = Configuration.alignmentPerArchitectures[self._architecture]
 
-        if self._compute_and_display_solver_error:
+        if self._compute_and_store_solver_error:
+            d["SOLVER_INCLUDES"] += create_abstract_solver_includes_for_error_measurement()
             d["ABSTRACT_SOLVER_USER_DECLARATIONS"] += create_abstract_solver_user_declarations_for_error_measurement()
             d["ABSTRACT_SOLVER_USER_DEFINITIONS"]  += jinja2.Template(
                 create_abstract_solver_user_definitions_for_error_measurement(), undefined=jinja2.DebugUndefined
@@ -1185,6 +1150,13 @@ class ADERDG(object):
             d["FINISH_TIME_STEP_IMPLEMENTATION"] += jinja2.Template(
                 create_finish_time_step_implementation_for_error_measurement(), undefined=jinja2.DebugUndefined
             ).render(**d)
+            d["CONSTRUCTOR_IMPLEMENTATION"] += jinja2.Template(
+                create_constructor_implementation_for_error_measurement(), undefined=jinja2.DebugUndefined
+            ).render(**d)
+            d["DESTRUCTOR_IMPLEMENTATION"] += jinja2.Template(
+                create_destructor_implementation_for_error_measurement(), undefined=jinja2.DebugUndefined
+            ).render(**d)
+
 
         d["USE_FLUX"]                 = self._flux_implementation
         d["USE_NCP"]                  = self._ncp_implementation
@@ -1258,12 +1230,12 @@ class ADERDG(object):
         self,
         error_measurement_implementation=PDETerms.User_Defined_Implementation
     ):
-        self._compute_and_display_solver_error = True
+        self._compute_and_store_solver_error = True
         self._error_measurement_implementation = error_measurement_implementation
         self._action_set_postprocess_solution = (
             exahype2.solvers.aderdg.actionsets.EmptyPostprocessSolution(solver=self)
         )
-        self._action_set_postprocess_solution._compute_kernel += add_final_action_for_error_measurement()
+        self._action_set_postprocess_solution._compute_kernel += add_postprocessing_for_error_measurement()
         self._action_set_postprocess_solution.descend_invocation_order = 3
 
 

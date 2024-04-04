@@ -345,6 +345,11 @@ thus appreciate any citation of the original release paper
 
     def set_output_path(self, path):
         self._output_path = path
+        if not os.path.exists(self._output_path):
+            try:
+                os.makedirs(self._output_path)
+            except:
+                print("Couldn't create the defined output path, please ensure that this path exists")
         if not self._output_path.endswith("/"):
             self._output_path += "/"
             
@@ -484,6 +489,8 @@ thus appreciate any citation of the original release paper
         - peano4.toolbox.particles.api.UpdateParticleGridAssociation_LiftDrop to each and every time step,
           particles can move at any point. We always resort them immediately.
 
+        Both action sets are assigned the standard priority of sort_descend_invocation_order_within_action_sets.
+
 
         ## Arguments
 
@@ -503,8 +510,14 @@ thus appreciate any citation of the original release paper
           do so if they dump the tracer data independently into another database
           anyway.
 
-        Returns the particle set that you can use to modify further.
-        
+        sort_descend_invocation_order_within_action_sets: Integer
+          You have to clarify what the priority of the tracer is within the
+          action sets. By default, all ExaHyPE solvers start with priority
+          0 and then up to n. So you are fine with using the default of -1
+          which means that the tracer precedes any solver. However, there
+          might be cases where you wanna move the priorities manually.
+
+        Returns the particle set that you can use to modify further
         """
         particle = peano4.toolbox.particles.Particle(name)
 

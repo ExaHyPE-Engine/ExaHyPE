@@ -18,6 +18,7 @@ ToolboxParticles_SOURCES = \
   assignmentchecks/TracingAPI.cpp \
   potentials/Springs.cpp \
   tests/MultiscaleTransitionsTest.cpp \
+  tests/TestHelpers.cpp \
   tests/TestParticle.cpp
   
 

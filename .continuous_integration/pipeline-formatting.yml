@@ -7,3 +7,4 @@ formatting:
   script:
     - singularity exec -e --bind "$PWD" $SINGULARITY_CACHEDIR/${BASE_IMAGE_TAG} python3 format.py -d -v -f=.
   retry: 0
+  when: always
