@@ -163,6 +163,8 @@ generation of AMD chips, you can compile on Cosma8 and ship the executable to
 DINE.
 
 ~~~~~~~~~~~~~~~~~~~~~~~
+module load git
+module load autoconf 
 module load python/3.10.12
 
 module load oneAPI
