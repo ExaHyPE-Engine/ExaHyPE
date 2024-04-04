@@ -121,3 +121,7 @@ void petsc::LocalToGlobalMap::increaseCountOfFacetType(Type type, int count)
 int petsc::LocalToGlobalMap::getTotalNumberOfIndices() const {
   return _totalNumberOfIndices;
 }
+
+int petsc::LocalToGlobalMap::getTotalNumberOfCells() const {
+  return _numberOfCells;
+}

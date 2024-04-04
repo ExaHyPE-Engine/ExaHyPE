@@ -53,11 +53,11 @@ degrees of freedom and the global mapping for indices on faces and cells
       fineGridFace{{SOLVER_NAME}}.setType(facedata::{{SOLVER_NAME}}::Type::Interior);
     }
 
-    //init vectors for value and rhs. modify them in faceInit()
+    //init vectors for value and rhs. modify them in initFace()
     tarch::la::Vector<{{FACE_CARDINALITY}}, double>   value;
     tarch::la::Vector<{{FACE_CARDINALITY}}, double>   rhs;
 
-    repositories::{{SOLVER_INSTANCE}}.faceInit(
+    repositories::{{SOLVER_INSTANCE}}.initFace(
       marker.x(),
       marker.h(),
       value,

@@ -49,6 +49,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
 
     static const double         QuadraturePointsInUnitInterval[];
 
+    static const double         GaussianIntegrationPoints[];
+    static const double         GaussianIntegrationWeights[];
+
     static constexpr int        Order    = {{POLYNOMIAL_DEGREE}};
     static constexpr int        CellUnknowns = {{CELL_UNKNOWNS}};
     static constexpr int        FaceUnknowns = {{FACE_UNKNOWNS}};
@@ -76,13 +79,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
       const tarch::la::Vector<Dimensions, double>&  cellH,
       {% if CELL_UNKNOWNS==1 %}
       double&                                       value,
-      double&                                       rhs
+      double&                                       rhs,
+      double&                                       exactSol
       {% else %}
       tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  value,
       tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  rhs
+      tarch::la::Vector< {{CELL_UNKNOWNS}}, double >&  exactSol
       {% endif %}
     ) = 0;
 
+    double EvalGaussianIntegral( double val );
 
     /**
      * In the DG case, there is no data tied to the vertices. Hence, this

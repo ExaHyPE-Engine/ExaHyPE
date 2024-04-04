@@ -153,6 +153,12 @@ We can then put these together:
 ./configure ... --enable-finiteelements --with-petsc CXXFLAGS=$(CXXFLAGS) LDFLAGS=$(LDFLAGS)
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The following is an example call to the configure script that works on cosma
+(assuming the environment variables are present). We use the intel compiler.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~
+./configure CC=icc CXX=icpx --enable-loadbalancing --enable-exahype --enable-blockstructured --enable-finiteelements --with-mpi=mpiicpc --with-multithreading=omp --with-petsc CXXFLAGS="--std=c++20 -w -fopenmp -g -funroll-loops -O3 -g3 -I$PETSC_DIR/include -I$PETSC_DIR/$PETSC_ARCH/include" LDFLAGS="-fopenmp -Wl,-rpath,$PETSC_DIR/$PETSC_ARCH/lib -L$PETSC_DIR/$PETSC_ARCH/lib -L/cosma/local/gcc/11.1.0/lib64 -lpetsc"
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
  
 

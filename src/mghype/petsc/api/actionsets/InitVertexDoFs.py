@@ -30,9 +30,9 @@ the solver in the first place. This happens in get_includes().
     tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> value;
     tarch::la::Vector<{{VERTEX_CARDINALITY}}, double> rhs;
 
-    // use vertexInit to get all the values we want to place
+    // use initVertex to get all the values we want to place
     // into each vertex dof
-    repositories::{{SOLVER_INSTANCE}}.vertexInit(
+    repositories::{{SOLVER_INSTANCE}}.initVertex(
       marker.x(),
       marker.h(),
       value,

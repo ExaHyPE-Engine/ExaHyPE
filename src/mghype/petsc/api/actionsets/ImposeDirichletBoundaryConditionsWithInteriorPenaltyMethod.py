@@ -20,14 +20,7 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
     
     assertion( globalFaceIndex>=0 );
 
-    /*
-    This trace is in place just so that we can generate a map of the facets with their
-    global indices. It is not necessary long term and can be deleted soon...
-    */
-    logTraceInWith2Arguments("tfft_experimenter", marker.toString(), globalFaceIndex);
-    logTraceOut("tfft_experimenter");
-
-    logTraceInWith2Arguments("TFFT::Boundary", globalFaceIndex, marker.toString());
+    logTraceInWith2Arguments("touchFaceFirstTime::Boundary", globalFaceIndex, marker.toString());
     
     /*
     we want to place -1 on the diagonal for each "interior-side" projection.
@@ -63,22 +56,23 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
         }
       }
 
-      logTraceInWith5Arguments("TFFT::dfore", faceNode, faceNormalAxis, marker.x(), x,repositories::{{SOLVER_INSTANCE}}.FaceUnknowns);
+      logTraceInWith5Arguments("touchFaceFirstTime::dfore", faceNode, faceNormalAxis, marker.x(), x,repositories::{{SOLVER_INSTANCE}}.FaceUnknowns);
           
       // Look up the value: rhs is not relevant here, but I want to reuse the existing signatures 
-      double value, rhs;
+      double value, rhs, exact;
       repositories::{{SOLVER_INSTANCE}}.initNode(
         x,
         marker.h(),
         value,
-        rhs
+        rhs,
+        exact
       );
       
       for (int unknown = 0; unknown<repositories::{{SOLVER_INSTANCE}}.FaceUnknowns; unknown++) {
         // row corresponding to solution
         int globalMatrixRow = globalFaceIndex + row + 2*repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns;
         
-        logTraceInWith4Arguments("TFFT:unknownLoop", unknown, globalMatrixRow, row, marker.toString());
+        logTraceInWith4Arguments("touchFaceFirstTime:unknownLoop", unknown, globalMatrixRow, row, marker.toString());
 
         // insert identity into row corresponding to solution at this node / for this unknown
         repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
@@ -127,36 +121,32 @@ class ImposeDirichletBoundaryConditionsWithInteriorPenaltyMethod(ActionSet):
         }
 
         /*
-        Custom behaviour for u unknown. We want to:
-          - find the row associated with the u^f solution (already done)
-          - write +1 on diagonal (already done)
-          - write -0.5 in column associated with u^-
-          - write -0.5 in column associated with u^+
-        The effect being we have u^f - 0.5 * u^+ - 0.5 * u^-
+        Alternative behaviour for u unknown. Same as for q: If u^- projection is on the inside of the cell,
+        then we want the equation to read u^f - u^- = 0
         */
         if ( row >= repositories::{{SOLVER_INSTANCE}}.FaceUnknowns  )
         {
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalMatrixRow,
             globalFaceIndex + row, // u^-
-            -0.5
+            writeToNegativeProjection ? -1 : 0
           );
+
           repositories::{{SOLVER_INSTANCE}}.getLinearEquationSystem().insert(
             globalMatrixRow,
             globalFaceIndex + row + repositories::{{SOLVER_INSTANCE}}.NodesPerFace*repositories::{{SOLVER_INSTANCE}}.FaceUnknowns, // u^+
-            -0.5
+            writeToNegativeProjection ? 0 : -1
           );
         }
 
-
         row++;
 
-        logTraceOut("TFFT:unknownLoop");
+        logTraceOut("touchFaceFirstTime:unknownLoop");
       }
-      logTraceOut("TFFT::dfore");
+      logTraceOut("touchFaceFirstTime::dfore");
 
     }
-    logTraceOut("TFFT::Boundary");
+    logTraceOut("touchFaceFirstTime::Boundary");
   }
   """
   

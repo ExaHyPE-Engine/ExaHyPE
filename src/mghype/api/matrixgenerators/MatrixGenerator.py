@@ -35,14 +35,6 @@ class MatrixGenerator:
     self.Dimensions    = dimensions
     self.poly_degree   = poly_degree
 
-    '''
-    The next four attributes are set here, and 
-    are promoted to 2/3 dimensions by calling
-    get_polynomial, for instance.
-    Each comes with a default argument of 
-    self.Dimensions, but this can be modified if
-    a lower dimension of polynomial is required
-    '''
     self.polynomials1d = self.get_polynomial1d()
     self.derivatives1d = [ p.deriv() for p in self.polynomials1d ]
     self.points1d      = self.get_points1d()

@@ -167,7 +167,6 @@ void petsc::LinearEquationSystem::solve(PreconditionerType pctype, KSPSolverType
   VecAssemblyBegin(_b);
   VecAssemblyEnd(_b);
 
-  // for now, we stuff everything into this method
   Vec         u; // exact soln
   KSP         ksp;     /* KSP context */
   PC          pc;      /* PC context */
@@ -226,6 +225,10 @@ PCType petsc::LinearEquationSystem::getPreconditionerTypeFromEnum(Preconditioner
     case PreconditionerType::LU:
     {
       output = PCLU;
+    } break;
+    case PreconditionerType::JACOBI:
+    {
+      output = PCJACOBI;
     } break;
     default:
     {

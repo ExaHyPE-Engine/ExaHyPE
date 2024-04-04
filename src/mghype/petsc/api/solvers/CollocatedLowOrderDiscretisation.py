@@ -8,9 +8,9 @@ import dastgen2
 import os
 
 from .Solver                                              import Solver
-from multigrid.petsc.actionsets.EnumerateDoFs             import EnumerateDoFs
-from multigrid.petsc.actionsets.InitVertexDoFs            import InitVertexDoFs
-from multigrid.petsc.actionsets.ProjectPETScSolutionBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
+from multigrid.petsc.api.actionsets.EnumerateDoFs             import EnumerateDoFs
+from multigrid.petsc.api.actionsets.InitVertexDoFs            import InitVertexDoFs
+from multigrid.petsc.api.actionsets.ProjectPETScSolutionBackOntoMesh import ProjectPETScSolutionOnVerticesBackOntoMesh
 
 from abc import abstractmethod
 
@@ -60,7 +60,7 @@ class AssemblePetscMatrix(ActionSet):
         // rhs
         auto   rhs = repositories::{{SOLVER_INSTANCE}}.getRhsMatrix(marker.x(),marker.h());
         for (int i=0; i<TwoPowerD; i++) {
-        logTraceInWith2Arguments( "TCFT::RHS", marker.toString(), rhs );
+        logTraceInWith2Arguments( "touchCellFirstTime::RHS", marker.toString(), rhs );
           if (fineGridVertices{{SOLVER_NAME}}PETScData(i).getType() == vertexdata::{{SOLVER_NAME}}PETScData::Type::Interior) {
             double rhsContribution = 0.0;
             for (int j=0; j<TwoPowerD; j++) {
@@ -84,7 +84,7 @@ class AssemblePetscMatrix(ActionSet):
         }
 
       }
-      logTraceOut( "TCFT::RHS" );
+      logTraceOut( "touchCellFirstTime::RHS" );
   }
   """
 

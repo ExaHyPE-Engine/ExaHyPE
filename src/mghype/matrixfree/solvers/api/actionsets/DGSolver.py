@@ -7,10 +7,10 @@ class UpdateCell(ActionSet):
   """!
   This is for DG solver.
   """
-  templateTCFT="""
+  templateTouchCellFirstTime="""
   if ( fineGridCell{{SOLVER_NAME}}.getType() != celldata::{{SOLVER_NAME}}::Type::Coarse )
   {
-    logTraceInWith4Arguments("UpdateCell::TCFT", 
+    logTraceInWith4Arguments("UpdateCell::touchCellFirstTime", 
       fineGridCell{{SOLVER_NAME}}.getSolution(),
       fineGridCell{{SOLVER_NAME}}.getRhs(),
       marker.toString(),
@@ -66,7 +66,7 @@ class UpdateCell(ActionSet):
     }
     logTraceOutWith1Argument("UpdateCell::UpdateSol", fineGridCell{{SOLVER_NAME}}.getSolution());
 
-    logTraceOut("UpdateCell::TCFT");
+    logTraceOut("UpdateCell::touchCellFirstTime");
   }
   """
 
@@ -86,7 +86,7 @@ class UpdateCell(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     return result
 
@@ -131,7 +131,7 @@ class ProjectOntoFaces(ActionSet):
   This is for DG solver.
   """
 
-  templateTCFT="""
+  templateTouchCellFirstTime="""
   /*
   all we need to do here is project updated solution u^c onto the faces
   */
@@ -194,7 +194,7 @@ class ProjectOntoFaces(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     return result
 
@@ -241,7 +241,7 @@ class UpdateFaceSolution(ActionSet):
   """
 
 
-  templateTFFT="""
+  templatetouchFaceFirstTime="""
   if ( fineGridFace{{SOLVER_NAME}}.getType() == facedata::{{SOLVER_NAME}}::Type::Interior )
   {
     // project the u^\pm into a temporary vector
@@ -309,7 +309,7 @@ class UpdateFaceSolution(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = jinja2.Template(self.templateTFFT).render(**self.d)
+      result = jinja2.Template(self.templatetouchFaceFirstTime).render(**self.d)
       pass
     return result
 

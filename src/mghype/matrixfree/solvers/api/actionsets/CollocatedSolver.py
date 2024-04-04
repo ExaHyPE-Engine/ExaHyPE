@@ -5,46 +5,39 @@ import jinja2
 
 
 class CollocatedSolver(ActionSet):
-  """!
-  
-  Simple action set for solver for collocated discretisations
-  
-  """
-  
-  
-  templateTVFT = """ 
+  templateTouchVertexFirstTime = """ 
   if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
   {
     logTraceInWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
-    for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
       // set residual to 0
       // we can pass the whole vector around, but intent is clearer this way
-      fineGridVertex{{SOLVER_NAME}}.setResidual( dof, 0);
+      fineGridVertex{{SOLVER_NAME}}.setResidual( unknown, 0);
 
       // set diag to 0
-      fineGridVertex{{SOLVER_NAME}}.setFieldDiag(dof, 0.0);
+      fineGridVertex{{SOLVER_NAME}}.setFieldDiag(unknown, 0.0);
     }
     
     logTraceOutWith2Arguments("TouchVertexFirstTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
   """
 
-  templateTVLT = """
+  templateTouchVertexLastTime = """
   if (fineGridVertex{{SOLVER_NAME}}.getType() != vertexdata::{{SOLVER_NAME}}::Type::Coarse)
   {
     logTraceInWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
 
-    for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
-      logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(dof), fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof), fineGridVertex{{SOLVER_NAME}}.getResidual(dof));
-      assertion( fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof) > 0 );
+      logTraceInWith3Arguments("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(unknown), fineGridVertex{{SOLVER_NAME}}.getFieldDiag(unknown), fineGridVertex{{SOLVER_NAME}}.getResidual(unknown));
+      assertion( fineGridVertex{{SOLVER_NAME}}.getFieldDiag(unknown) > 0 );
       
-      double r   = tarch::la::abs(fineGridVertex{{SOLVER_NAME}}.getResidual(dof));
-      double val = fineGridVertex{{SOLVER_NAME}}.getValue(dof) 
+      double r   = tarch::la::abs(fineGridVertex{{SOLVER_NAME}}.getResidual(unknown));
+      double val = fineGridVertex{{SOLVER_NAME}}.getValue(unknown) 
                   + repositories::{{SOLVER_INSTANCE}}.Omega 
-                    * ( 1.0 / fineGridVertex{{SOLVER_NAME}}.getFieldDiag(dof) )
+                    * ( 1.0 / fineGridVertex{{SOLVER_NAME}}.getFieldDiag(unknown) )
                     * r;
 
       repositories::{{SOLVER_INSTANCE}}.updateGlobalResidual(
@@ -54,41 +47,46 @@ class CollocatedSolver(ActionSet):
         marker.h()(0)
       );
 
-      fineGridVertex{{SOLVER_NAME}}.setValue(dof, val);
-      logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(dof));
+      fineGridVertex{{SOLVER_NAME}}.setValue(unknown, val);
+      logTraceOutWith1Argument("updateValue", fineGridVertex{{SOLVER_NAME}}.getValue(unknown));
     }
     logTraceOutWith2Arguments("TouchVertexLastTime", marker.toString(), fineGridVertex{{SOLVER_NAME}}.toString());
   }
   """
 
-  templateTCFT = """ 
+  templateTouchCellFirstTime = """ 
   if ( fineGridCell{{SOLVER_NAME}}.getType() == celldata::{{SOLVER_NAME}}::Type::Interior )
   {
-    logTraceInWith2Arguments("Solve::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
-    
-    // @todo Sean: I think this should be unknown, not dof
-    
-    for (int dof=0; dof<{{VERTEX_CARDINALITY}}; dof++)
+    logTraceInWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+    for (int unknown=0; unknown<{{VERTEX_CARDINALITY}}; unknown++)
     {
-      // collect all of the vertex values into one vector
+      // Mass and assembly matrix should be block diagonal, 
+      // depending on which unknown we are currently dealing with.
+      // We will collect the rhs & solution values from the 
+      // vertices, and apply the correct matrix as we go.
+      // Define the offset:
+      int startIndex = TwoPowerD * unknown;
+      
+      auto A       = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h());
+      auto M       = repositories::{{SOLVER_INSTANCE}}.getMassMatrix(marker.x(), marker.h());
+
+      // collect all of the vertex values into one vector - apply the appropriate
+      // part of the matrix as we go.
       tarch::la::Vector<TwoPowerD, double> vertexValues;
       tarch::la::Vector<TwoPowerD, double> rhsValues;
       tarch::la::Vector<TwoPowerD, double> residualValues;
-      for (int i=0; i<TwoPowerD; i++)
-      {
-        vertexValues(i)   = fineGridVertices{{SOLVER_NAME}}(i).getValue(dof);
-        rhsValues(i)      = fineGridVertices{{SOLVER_NAME}}(i).getRhs(dof);
-        residualValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getResidual(dof);
+      for (int i=0; i<TwoPowerD; i++){
+        double solColSum = 0;
+        double rhsColSum = 0;
+        for (int j=0; j<TwoPowerD; j++){
+          solColSum += A(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getValue(unknown);
+          rhsColSum += M(startIndex+i, startIndex+j) * fineGridVertices{{SOLVER_NAME}}(j).getRhs(unknown);
+        }
+      
+        vertexValues(i)   = solColSum;
+        rhsValues(i)      = rhsColSum;
+        residualValues(i) = fineGridVertices{{SOLVER_NAME}}(i).getResidual(unknown);
       }
-
-      // apply local assembly matrix
-      auto A       = repositories::{{SOLVER_INSTANCE}}.getLocalAssemblyMatrix(marker.x(), marker.h());
-      vertexValues = A * vertexValues;
-
-      // apply mass matrix
-      // note - these should be constant throughout. no need to recalculate.
-      auto M    = repositories::{{SOLVER_INSTANCE}}.getMassMatrix(marker.x(), marker.h());
-      rhsValues = M * rhsValues;
 
       // residual = rhs - Ax
       residualValues += rhsValues;
@@ -100,19 +98,19 @@ class CollocatedSolver(ActionSet):
 
         // increment fieldDiag
         // get current val
-        double diagVal = fineGridVertices{{SOLVER_NAME}}(i).getFieldDiag(dof);
+        double diagVal = fineGridVertices{{SOLVER_NAME}}(i).getFieldDiag(unknown);
         // increment it
         diagVal += A(i,i);
-        fineGridVertices{{SOLVER_NAME}}(i).setFieldDiag(dof, diagVal);
+        fineGridVertices{{SOLVER_NAME}}(i).setFieldDiag(unknown, diagVal);
 
         // put new residual values back
-        fineGridVertices{{SOLVER_NAME}}(i).setResidual(dof, residualValues(i));
+        fineGridVertices{{SOLVER_NAME}}(i).setResidual(unknown, residualValues(i));
         
         logTraceOutWith1Argument("puttingValuesBack", fineGridVertices{{SOLVER_NAME}}(i).toString());
       }
 
     }
-    logTraceOutWith2Arguments("Solve::TCFT", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
+    logTraceOutWith2Arguments("Solve::touchCellFirstTime", marker.toString(), fineGridCell{{SOLVER_NAME}}.toString());
   }
   """
   
@@ -127,13 +125,13 @@ class CollocatedSolver(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = jinja2.Template(self.templateTVFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchVertexFirstTime).render(**self.d)
       pass 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = jinja2.Template(self.templateTCFT).render(**self.d)
+      result = jinja2.Template(self.templateTouchCellFirstTime).render(**self.d)
       pass
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
-      result = jinja2.Template(self.templateTVLT).render(**self.d)
+      result = jinja2.Template(self.templateTouchVertexLastTime).render(**self.d)
       pass
     return result
 

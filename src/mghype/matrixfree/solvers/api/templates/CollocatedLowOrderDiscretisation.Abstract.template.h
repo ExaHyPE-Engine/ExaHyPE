@@ -71,6 +71,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public mghype::matrixfree::solv
       const tarch::la::Vector<Dimensions, double>&  cellSize
     ) {% if MASS_MATRIX is not defined  %} = 0 {% endif %};
 
+    /**
+    * Nothing to do in Collocated Solver (yet)
+    */
+    virtual void clearGlobalResidual() {}
+    virtual std::string toString() { return ""; }
+
   protected:
     static tarch::logging::Log  _log;
 };
