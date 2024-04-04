@@ -87,7 +87,9 @@ namespace tbb {
       dynamic_task_graph_node_number get_number() const;
 
     private:
-      bool _is_submitted;
+      bool _submitted;
+      std::vector<dynamic_task_graph_node_number>  _in_dependency;
+      std::vector<dynamic_task_graph_node_number>  _out_dependency;
   };
 
   /**

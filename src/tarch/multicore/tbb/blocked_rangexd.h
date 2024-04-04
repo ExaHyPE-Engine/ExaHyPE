@@ -296,7 +296,7 @@ public:
 
     blocked_rangexd( blocked_rangexd& r, split ):
       my_subranges(RangeDimensions, range_type(1,1,1) ),
-      my_optimise_for_vectorisation(r.optimise_for_vectorisation) {
+      my_optimise_for_vectorisation(r.my_optimise_for_vectorisation) {
       for (int d=0; d<RangeDimensions; d++) {
         my_subranges[d] = r.my_subranges[d];
       }
